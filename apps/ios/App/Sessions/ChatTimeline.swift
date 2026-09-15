@@ -30,7 +30,7 @@ final class ChatTimelineController: UIViewController {
 
     private var collection: UICollectionView!
     private var source: UICollectionViewDiffableDataSource<Int, String>!
-    private var items: [String: JSONValue] = [:]
+    private var items: [String: ChatTimelineEntry] = [:]
     private var lastRevision = -1
     private var pendingUpdate: ([JSONValue], Int)?
     private var displayLink: CADisplayLink?
@@ -57,7 +57,13 @@ final class ChatTimelineController: UIViewController {
             [weak self] cell, _, id in
             guard let self, let item = self.items[id] else { return }
             cell.contentConfiguration = UIHostingConfiguration {
-                ChatTimelineRow(item: item, client: self.client, chatID: self.chatID)
+                Group {
+                    if item.isWork {
+                        ChatWorkLog(items: item.items, client: self.client, chatID: self.chatID)
+                    } else if let message = item.items.first {
+                        ChatTimelineRow(item: message, client: self.client, chatID: self.chatID)
+                    }
+                }
             }.margins(.horizontal, 20).margins(.vertical, 10)
             cell.backgroundConfiguration = .clear()
         }
@@ -83,13 +89,11 @@ final class ChatTimelineController: UIViewController {
         pendingUpdate = nil
         let atBottom = collection.contentOffset.y + collection.bounds.height >= collection.contentSize.height - 100
         let previous = items
-        items = Dictionary(
-            values.compactMap { item in item["id"]?.stringValue.map { ($0, item) } },
-            uniquingKeysWith: { _, newest in newest })
+        let entries = ChatTimelineEntry.group(values)
+        items = Dictionary(entries.map { ($0.id, $0) }, uniquingKeysWith: { _, newest in newest })
         var snapshot = NSDiffableDataSourceSnapshot<Int, String>()
         snapshot.appendSections([0])
-        var seen = Set<String>()
-        let ids = values.compactMap { $0["id"]?.stringValue }.filter { seen.insert($0).inserted }
+        let ids = entries.map(\.id)
         snapshot.appendItems(ids)
         let existing = Set(source.snapshot().itemIdentifiers)
         snapshot.reconfigureItems(ids.filter { existing.contains($0) && previous[$0] != items[$0] })
@@ -104,6 +108,69 @@ final class ChatTimelineController: UIViewController {
         super.viewDidDisappear(animated)
         displayLink?.invalidate()
         displayLink = nil
+    }
+}
+
+private struct ChatTimelineEntry: Equatable {
+    let id: String
+    let isWork: Bool
+    var items: [JSONValue]
+
+    static func group(_ values: [JSONValue]) -> [Self] {
+        var entries: [Self] = []
+        var seen = Set<String>()
+        for item in values {
+            guard let id = item["id"]?.stringValue, seen.insert(id).inserted else { continue }
+            let isWork = ["tool", "thinking", "subagent"].contains(item["kind"]?.stringValue ?? "")
+            if isWork, entries.last?.isWork == true {
+                entries[entries.count - 1].items.append(item)
+            } else {
+                entries.append(Self(id: id, isWork: isWork, items: [item]))
+            }
+        }
+        return entries
+    }
+}
+
+private struct ChatWorkLog: View {
+    let items: [JSONValue]
+    let client: any MachineRequesting
+    let chatID: String
+    @State private var expanded = false
+
+    private var active: Bool {
+        items.contains { $0["state"]?.stringValue == "running" || $0["status"]?.stringValue == "running" }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Button {
+                expanded.toggle()
+            } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: "terminal").font(.footnote)
+                    Text("Work log").font(.system(.footnote, design: .monospaced))
+                    Text("· \(items.count)").font(.footnote).monospacedDigit()
+                    if active { ProgressView().controlSize(.mini) }
+                    Spacer(minLength: 0)
+                    Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundStyle(.secondary).frame(minHeight: 44).contentShape(Rectangle())
+            }.buttonStyle(.plain).accessibilityValue(expanded ? "Expanded" : "Collapsed")
+            if expanded {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                        ChatTimelineRow(item: item, client: client, chatID: chatID)
+                    }
+                }
+                .padding(.leading, 14)
+                .overlay(alignment: .leading) { Rectangle().fill(MobileStyle.border).frame(width: 1) }
+            }
+        }
+        .frame(maxWidth: 720)
+        .frame(maxWidth: .infinity)
+        .tint(MobileStyle.accent)
     }
 }
 
@@ -131,13 +198,11 @@ private struct ChatTimelineRow: View {
                     }
                 }
                 .padding(.horizontal, 16).padding(.vertical, 12)
-                .background(MobileStyle.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 20))
+                .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 18))
                 .frame(maxWidth: 620, alignment: .trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .accessibilityLabel("You")
             case "assistant":
-                Label("Assistant", systemImage: "sparkle")
-                    .font(.caption.weight(.medium)).foregroundStyle(.secondary)
                 MarkdownMessage(text: item["text"]?.stringValue ?? "")
             case "thinking":
                 DisclosureGroup("Reasoning") { MarkdownMessage(text: item["text"]?.stringValue ?? "") }.foregroundStyle(

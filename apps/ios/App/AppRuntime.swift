@@ -26,6 +26,7 @@ final class AppRuntime {
     private var sessions: [String: SharedMachineSession] = [:]
     private var initialized = false
     private var sessionRevision = 0
+    private(set) var connectionRevision = 0
 
     init(
         client: AddressBookClient = AddressBookClient(), vault: SessionVault? = nil, defaults: UserDefaults = .standard,
@@ -171,6 +172,7 @@ final class AppRuntime {
     }
 
     private func invalidateMachine(_ id: String, forgetPairing: Bool) {
+        connectionRevision += 1
         sessions.removeValue(forKey: id)?.invalidate()
         connections.forget(machineID: id)
         if forgetPairing { pairings.forget(machineID: id) }

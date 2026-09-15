@@ -41,26 +41,49 @@ struct PairMachinePage: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("https://machine/pair#token", text: $text).keyboardType(.URL).textInputAutocapitalization(
-                        .never
-                    ).autocorrectionDisabled()
-                } header: {
-                    Text("Pairing link")
-                } footer: {
-                    Text(
-                        "Create a pairing link on your machine in Remote settings. The machine needs HTTPS and a secure broker for remote access."
-                    )
+                    VStack(alignment: .leading, spacing: 14) {
+                        MobileIcon(symbol: "link")
+                        Text("Connect your computer").font(.title2.weight(.bold))
+                        Text(
+                            "In Ruimte on your computer, open Remote settings and create a pairing link. Paste it below to bring your projects here."
+                        )
+                        .font(.body).foregroundStyle(.secondary)
+                    }.padding(.vertical, 12)
+                }.listRowBackground(Color.clear)
+                Section("Pairing link") {
+                    TextField("https://…/pair#…", text: $text, axis: .vertical)
+                        .lineLimit(2...4).keyboardType(.URL).textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .accessibilityIdentifier("pairing.link")
+                    PasteButton(payloadType: String.self) { values in
+                        if let value = values.first {
+                            text = value
+                            problem = nil
+                        }
+                    }.disabled(pairing)
                 }
-                if pairing { ProgressView("Pairing with your machine") }
-                if let problem { Text(problem).foregroundStyle(.red) }
-            }.navigationTitle("Add a machine")
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(pairing) }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Pair") { Task { await pair() } }.disabled(
-                            pairing || (try? SecurePairingLink(text)) == nil)
+                Section {
+                    Button {
+                        Task { await pair() }
+                    } label: {
+                        HStack {
+                            if pairing { ProgressView().tint(.primary) }
+                            Text(pairing ? "Connecting…" : "Connect computer")
+                        }.font(.body.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 32)
                     }
-                }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(pairing || (try? SecurePairingLink(text)) == nil)
+                } footer: {
+                    Text("No account needed. Your projects stay on your computer.")
+                }.listRowBackground(Color.clear)
+                if let problem { Text(problem).foregroundStyle(.red) }
+            }
+            .navigationTitle("Pair a computer")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(pairing) }
+            }
+            .interactiveDismissDisabled(pairing)
         }
     }
     private func pair() async {

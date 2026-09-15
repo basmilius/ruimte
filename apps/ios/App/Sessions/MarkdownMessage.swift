@@ -134,7 +134,7 @@ struct MarkdownMessage: View {
                 }
             }
         }
-        .lineSpacing(3)
+        .lineSpacing(4)
         .textSelection(.enabled)
         .task(id: text) {
             let source = text
@@ -145,10 +145,19 @@ struct MarkdownMessage: View {
     }
 
     private func inline(_ text: String) -> Text {
-        Text(
+        var attributed =
             (try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
-                ?? AttributedString(text))
+            ?? AttributedString(text)
+        let codeRanges = attributed.runs.compactMap { run in
+            run.inlinePresentationIntent?.contains(.code) == true ? run.range : nil
+        }
+        for range in codeRanges {
+            attributed[range].swiftUI.font = .system(.body, design: .monospaced)
+            attributed[range].swiftUI.backgroundColor = MobileStyle.panel
+        }
+        return Text(attributed)
     }
+
 }
 
 struct CodeMessage: View {
@@ -156,24 +165,49 @@ struct CodeMessage: View {
     var language = ""
     @Environment(\.colorScheme) private var colorScheme
     @State private var highlighted: AttributedString?
+    @State private var wrapsLines = false
+    @State private var copied = false
     private var taskID: String { "\(colorScheme == .dark):\(language):\(text)" }
     var body: some View {
         if !text.isEmpty {
-            VStack(alignment: .leading, spacing: 4) {
-                if !language.isEmpty {
-                    Text(language.uppercased()).font(.caption2.weight(.medium)).tracking(0.6)
-                        .foregroundStyle(.secondary).padding(.horizontal, 14).padding(.top, 10)
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 0) {
+                    Text(language.isEmpty ? "Code" : language)
+                        .font(.caption.weight(.medium)).foregroundStyle(.secondary)
+                        .padding(.leading, 14)
+                    Spacer()
+                    Button {
+                        wrapsLines.toggle()
+                    } label: {
+                        Image(systemName: "arrow.turn.down.left")
+                            .foregroundStyle(wrapsLines ? MobileStyle.accent : Color.secondary)
+                            .frame(width: 44, height: 44)
+                    }.accessibilityLabel(wrapsLines ? "Scroll code horizontally" : "Wrap code lines")
+                    Button {
+                        UIPasteboard.general.string = text
+                        copied = true
+                    } label: {
+                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                            .frame(width: 44, height: 44)
+                    }.accessibilityLabel(copied ? "Copied" : "Copy code")
                 }
-                ScrollView(.horizontal) {
-                    Text(highlighted ?? AttributedString(text)).font(.system(.footnote, design: .monospaced))
-                        .textSelection(.enabled).padding(.horizontal, 14).padding(.vertical, 12)
-                        .accessibilityIdentifier(highlighted == nil ? "code.loading" : "code.highlighted")
+                .font(.footnote).buttonStyle(.plain).foregroundStyle(.secondary)
+                Divider().overlay(MobileStyle.border)
+                if wrapsLines {
+                    codeText.frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    ScrollView(.horizontal) { codeText }
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .fixedSize(horizontal: false, vertical: true)
             }
             .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 12))
             .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(MobileStyle.border) }
             .contextMenu { Button("Copy", systemImage: "doc.on.doc") { UIPasteboard.general.string = text } }
+            .task(id: copied) {
+                guard copied else { return }
+                do { try await Task.sleep(for: .seconds(1.5)) } catch { return }
+                copied = false
+            }
             .task(id: taskID) {
                 highlighted = nil
                 do { try await Task.sleep(for: .milliseconds(80)) } catch { return }
@@ -183,6 +217,14 @@ struct CodeMessage: View {
             }
         }
     }
+    private var codeText: some View {
+        Text(highlighted ?? AttributedString(text)).font(.system(.footnote, design: .monospaced))
+            .textSelection(.enabled).lineSpacing(3)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 14).padding(.vertical, 12)
+            .accessibilityIdentifier(highlighted == nil ? "code.loading" : "code.highlighted")
+    }
+
 }
 
 actor CodeHighlighter {

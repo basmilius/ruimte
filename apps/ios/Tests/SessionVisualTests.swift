@@ -46,8 +46,15 @@ final class SessionVisualTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: "ruimte.visual.home") }
         let runtime = AppRuntime(client: client, defaults: defaults)
         await runtime.start()
-        for (name, dark, signedIn) in [
-            ("welcome-iphone", false, false), ("machines-iphone", false, true), ("machines-dark", true, true),
+        for (name, dark, signedIn, size, typeSize) in [
+            ("welcome-iphone", false, false, CGSize(width: 402, height: 874), DynamicTypeSize.large),
+            ("welcome-dark", true, false, CGSize(width: 402, height: 874), .large),
+            ("welcome-ipad", false, false, CGSize(width: 1024, height: 768), .large),
+            ("welcome-large-type", false, false, CGSize(width: 402, height: 874), .xxxLarge),
+            ("projects-iphone", false, true, CGSize(width: 402, height: 874), .large),
+            ("projects-dark", true, true, CGSize(width: 402, height: 874), .large),
+            ("projects-ipad", false, true, CGSize(width: 1024, height: 768), .large),
+            ("projects-large-type", false, true, CGSize(width: 402, height: 874), .xxxLarge),
         ] {
             runtime.account = signedIn ? Account(id: "visual", provider: .github, login: "basmilius") : nil
             runtime.machines =
@@ -55,21 +62,63 @@ final class SessionVisualTests: XCTestCase {
                 ? [
                     Machine(
                         id: "visual", name: "MacBook Pro", icon: nil, publicKey: DeviceKey().publicKey,
-                        brokerUrl: "wss://broker.example.test", lastSeenAt: nil),
+                        brokerUrl: nil, lastSeenAt: nil),
                     Machine(
                         id: "studio", name: "Mac Studio", icon: nil, publicKey: DeviceKey().publicKey,
-                        brokerUrl: "wss://broker.example.test", lastSeenAt: nil),
+                        brokerUrl: nil, lastSeenAt: nil),
                 ] : []
+            for machine in runtime.machines {
+                let summaries: [JSONValue] =
+                    machine.id == "visual"
+                    ? [
+                        visualProject("ruimte", name: "Ruimte", opened: 30),
+                        visualProject("homey", name: "Homey dashboard", opened: 10),
+                        visualProject("website", name: "Personal website", opened: 0, closed: 40),
+                    ]
+                    : [
+                        visualProject("flux", name: "Flux", opened: 20),
+                        visualProject("archive", name: "Design experiments", opened: 0, closed: 20, available: false),
+                    ]
+                defaults.set(try JSONValue.array(summaries).encoded(), forKey: "ruimte.ios.projects.\(machine.id)")
+                defaults.set(machine.publicKey, forKey: "ruimte.ios.projects.\(machine.id).publicKey")
+            }
+            let model = UnifiedProjects(defaults: defaults)
             let host = UIHostingController(
-                rootView: AppHome(runtime: runtime).tint(MobileStyle.accent).preferredColorScheme(dark ? .dark : .light)
-            )
-            let window = makeWindow(host, size: CGSize(width: 402, height: 874))
+                rootView: AppHome(runtime: runtime, projects: model).tint(MobileStyle.accent)
+                    .preferredColorScheme(dark ? .dark : .light).dynamicTypeSize(typeSize))
+            let window = makeWindow(host, size: size)
             for _ in 0..<20 { await displayFrame() }
             capture(window, name: name)
+            if signedIn {
+                XCTAssertEqual(model.open.map { $0.summary.text("name") }, ["Ruimte", "Flux", "Homey dashboard"])
+            }
             window.isHidden = true
             window.rootViewController = nil
+            model.stop()
         }
         runtime.connections.shutdown()
+    }
+
+    private func visualProject(
+        _ id: String, name: String, opened: Double, closed: Double? = nil, available: Bool = true
+    ) -> JSONValue {
+        .object([
+            "projectId": .string(id), "name": .string(name), "color": .string("#155dfc"), "folder": .null,
+            "lastOpenedAt": .number(opened), "closedAt": closed.map(JSONValue.number) ?? .null,
+            "available": .bool(available),
+            "icon": .object(["kind": .string("initial"), "value": .string(String(name.prefix(1)))]),
+            "nameSource": .string("chosen"),
+        ])
+    }
+
+    @MainActor func testPairingAtPhoneWidth() async {
+        let runtime = AppRuntime()
+        let host = UIHostingController(rootView: PairMachinePage(runtime: runtime).tint(MobileStyle.accent))
+        let window = makeWindow(host, size: CGSize(width: 402, height: 874))
+        for _ in 0..<20 { await displayFrame() }
+        capture(window, name: "pairing-iphone")
+        window.isHidden = true
+        window.rootViewController = nil
     }
 
     @MainActor func testTerminalSnapshotAtPhoneWidth() async throws {

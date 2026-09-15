@@ -12,6 +12,7 @@ struct ChatScreen: View {
     @State private var photo: PhotosPickerItem?
     @State private var question: JSONValue?
     @State private var expandedRequest: String?
+    @FocusState private var composerFocused: Bool
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.colorScheme) private var colorScheme
     let title: String
@@ -40,8 +41,8 @@ struct ChatScreen: View {
                 composer
             }
             .frame(maxWidth: 760)
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
             .padding(.bottom, 10)
             .frame(maxWidth: .infinity)
             .background(Color(uiColor: .systemBackground))
@@ -111,85 +112,121 @@ struct ChatScreen: View {
         }
     }
 
+    private var isEditing: Bool {
+        composerFocused || !model.draft.isEmpty || !model.attachments.isEmpty
+    }
+
+    private var hasDraft: Bool {
+        !model.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !model.attachments.isEmpty
+    }
+
+    private var isWorking: Bool { model.info["activeTurnId"]?.stringValue != nil }
+
     private var composer: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 0) {
             if !model.attachments.isEmpty {
                 ScrollView(.horizontal) {
-                    HStack {
+                    HStack(spacing: 6) {
                         ForEach(model.attachments) { upload in
                             Button {
                                 model.attachments.removeAll { $0.id == upload.id }
                             } label: {
-                                Label(upload.name, systemImage: "xmark.circle.fill").font(.caption).padding(8)
+                                Label(upload.name, systemImage: "xmark.circle.fill")
+                                    .font(.caption).lineLimit(1).padding(.horizontal, 10).frame(minHeight: 44)
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(.plain)
+                            .background(MobileStyle.inset, in: Capsule())
                             .accessibilityLabel("Remove \(upload.name)")
                         }
                     }
-                }
+                }.scrollIndicators(.hidden).padding(.horizontal, 12).padding(.top, 10)
             }
-            if let queue = model.info["queue"]?.arrayValue, !queue.isEmpty {
-                Text("\(queue.count) message\(queue.count == 1 ? "" : "s") queued").font(.caption).foregroundStyle(
-                    .secondary
-                ).monospacedDigit()
+            HStack(alignment: .bottom, spacing: 4) {
+                TextField("Message the agent…", text: $model.draft, axis: .vertical)
+                    .lineLimit(1...6)
+                    .font(.body)
+                    .focused($composerFocused)
+                    .padding(.leading, 16)
+                    .padding(.trailing, isEditing ? 16 : 0)
+                    .padding(.vertical, isEditing ? 15 : 10)
+                    .frame(minHeight: 52)
+                    .accessibilityIdentifier("chat.composer")
+                if !isEditing { primaryAction.padding(.trailing, 6).padding(.bottom, 4) }
             }
-            TextField("Message", text: $model.draft, axis: .vertical)
-                .lineLimit(1...6)
-                .font(.body)
-                .padding(.horizontal, 8)
-                .padding(.top, 10)
-                .padding(.bottom, 4)
-                .accessibilityIdentifier("chat.composer")
-            HStack(spacing: 4) {
-                Menu {
-                    Button("Attach files", systemImage: "doc") { showingFiles = true }
-                    Button("Mention a file", systemImage: "at") { pickerKind = "@" }
-                    Button("Use a skill", systemImage: "sparkles") { pickerKind = "$" }
-                    Button("Command", systemImage: "slash.circle") { pickerKind = "/" }
-                } label: {
-                    Image(systemName: "plus").frame(width: 44, height: 44)
+            if isEditing {
+                if let queue = model.info["queue"]?.arrayValue, !queue.isEmpty {
+                    Text("\(queue.count) message\(queue.count == 1 ? "" : "s") queued")
+                        .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                        .padding(.horizontal, 16).padding(.bottom, 6)
                 }
-                .accessibilityLabel("Add context")
-                PhotosPicker(selection: $photo, matching: .images) {
-                    Image(systemName: "photo").frame(width: 44, height: 44)
-                }
-                .accessibilityLabel("Attach photo")
-                modelMenu
-                Spacer(minLength: 0)
-                if model.info["activeTurnId"]?.stringValue != nil {
-                    Button {
-                        Task { await model.perform("chat.cancel") }
+                HStack(spacing: 0) {
+                    Menu {
+                        Button("Attach files", systemImage: "doc") { showingFiles = true }
+                        Button("Mention a file", systemImage: "at") { pickerKind = "@" }
+                        Button("Use a skill", systemImage: "sparkles") { pickerKind = "$" }
+                        Button("Command", systemImage: "slash.circle") { pickerKind = "/" }
                     } label: {
-                        Image(systemName: "stop.fill").font(.system(size: 14, weight: .semibold))
-                            .frame(width: 32, height: 32)
-                            .background(MobileStyle.inset, in: Circle())
-                            .frame(width: 44, height: 44)
-                    }.accessibilityLabel("Stop turn")
+                        Image(systemName: "plus").frame(width: 44, height: 44)
+                    }.accessibilityLabel("Add context")
+                    PhotosPicker(selection: $photo, matching: .images) {
+                        Image(systemName: "photo").frame(width: 44, height: 44)
+                    }.accessibilityLabel("Attach photo")
+                    modelMenu.frame(maxWidth: 200, alignment: .leading)
+                    Spacer(minLength: 0)
+                    if composerFocused {
+                        Button {
+                            composerFocused = false
+                        } label: {
+                            Image(systemName: "keyboard.chevron.compact.down").frame(width: 44, height: 44)
+                        }.accessibilityLabel("Hide keyboard")
+                    }
+                    if isWorking && hasDraft { stopAction }
+                    primaryAction
                 }
-                Button {
-                    send()
-                } label: {
+                .font(.system(.subheadline, weight: .medium))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 6).padding(.bottom, 6)
+            }
+        }
+        .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(MobileStyle.border) }
+        .disabled(!model.connected || model.loading)
+    }
+
+    @ViewBuilder private var primaryAction: some View {
+        if isWorking && !hasDraft {
+            stopAction
+        } else {
+            Button {
+                send()
+            } label: {
+                Group {
                     if model.sending {
-                        ProgressView().frame(width: 44, height: 44)
+                        ProgressView()
                     } else {
-                        Image(systemName: "arrow.up.circle.fill").font(.system(size: 32, weight: .medium))
-                            .frame(width: 44, height: 44)
+                        Image(systemName: "arrow.up").font(.system(size: 15, weight: .semibold))
                     }
                 }
-                .disabled(
-                    !model.connected || model.loading || model.sending
-                        || (model.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            && model.attachments.isEmpty)
-                )
-                .accessibilityLabel("Send message")
-                .keyboardShortcut(.return, modifiers: .command)
+                .foregroundStyle(colorScheme == .dark ? Color.black : Color.white)
+                .frame(width: 32, height: 32)
+                .background(hasDraft ? MobileStyle.accent : MobileStyle.accent.opacity(0.25), in: Circle())
+                .frame(width: 44, height: 44)
             }
-            .font(.system(size: 18, weight: .regular))
-            .disabled(!model.connected || model.loading)
+            .buttonStyle(.plain)
+            .disabled(!model.connected || model.loading || model.sending || !hasDraft)
+            .accessibilityLabel("Send message")
+            .keyboardShortcut(.return, modifiers: .command)
         }
-        .padding(6)
-        .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 22))
-        .overlay { RoundedRectangle(cornerRadius: 22).strokeBorder(MobileStyle.border) }
+    }
+
+    private var stopAction: some View {
+        Button {
+            Task { await model.perform("chat.cancel") }
+        } label: {
+            Image(systemName: "stop.fill").font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.primary).frame(width: 32, height: 32)
+                .background(MobileStyle.inset, in: Circle()).frame(width: 44, height: 44)
+        }.buttonStyle(.plain).accessibilityLabel("Stop turn")
     }
 
     private var modelMenu: some View {
