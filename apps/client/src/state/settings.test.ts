@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { settingsFrom } from './settings';
+import { DEFAULT_STUN_SERVER, iceServersFrom, settingsFrom } from './settings';
 
 describe('a view an agent asks for', () => {
     test('is not followed until a person says so', () => {
@@ -89,5 +89,23 @@ describe('the rest of a stored blob', () => {
         expect(settings.fontSize).toBe(20);
         expect(settings.filesShowHidden).toBe(true);
         expect(settings.browseStartFolder).toBe('/Users/bas');
+    });
+});
+
+describe('the STUN servers of a direct connection', () => {
+    test('start on the coturn Ruimte runs, which answers without a credential', () => {
+        expect(settingsFrom({}).directStunServers).toBe('stun:turn.ruimte.app:3478');
+        expect(iceServersFrom(DEFAULT_STUN_SERVER)).toEqual([{ urls: ['stun:turn.ruimte.app:3478'] }]);
+    });
+
+    test('leave the value under the old key behind, which for nearly every client was the previous default', () => {
+        const stored = { directStunServer: 'stun:stun.example.com:19302' } as Partial<Parameters<typeof settingsFrom>[0]>;
+        expect(settingsFrom(stored).directStunServers).toBe(DEFAULT_STUN_SERVER);
+    });
+
+    test('keep what is stored under the new key, an empty field for this network only included', () => {
+        expect(settingsFrom({ directStunServers: 'stun:a.example.com stun:b.example.com' }).directStunServers).toBe('stun:a.example.com stun:b.example.com');
+        expect(settingsFrom({ directStunServers: '' }).directStunServers).toBe('');
+        expect(settingsFrom({ directStunServers: 3 as unknown as string }).directStunServers).toBe(DEFAULT_STUN_SERVER);
     });
 });

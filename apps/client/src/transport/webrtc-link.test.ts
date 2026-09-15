@@ -194,7 +194,7 @@ describe('webRtcLink and the relay', () => {
         const routes: boolean[] = [];
         const opened: number[] = [];
         webRtcLink({
-            iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }],
+            iceServers: [{ urls: ['stun:turn.ruimte.app:3478'] }],
             timeoutMs: 60_000,
             pingTickMs: 10,
             createPeer: (configuration) => {
@@ -214,7 +214,7 @@ describe('webRtcLink and the relay', () => {
             route: (relayed) => routes.push(relayed)
         });
         await tick();
-        expect(configurations).toEqual([{ iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }, turn] }]);
+        expect(configurations).toEqual([{ iceServers: [{ urls: ['stun:turn.ruimte.app:3478'] }, turn] }]);
         expect(sent.map((signal) => signal.kind)).toEqual(['offer']);
 
         routeEvents!.signal({ kind: 'answer', sdp: ANSWER });

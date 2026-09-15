@@ -103,11 +103,11 @@ export interface Settings {
     browserSwipe: boolean;
     /* The STUN servers a direct connection asks for this client's public address, separated by spaces.
        Empty offers the addresses of this machine's own interfaces only, which is enough on one network. */
-    directStunServer: string;
+    directStunServers: string;
 }
 
-// A public one, so a direct connection across two networks works without anybody running a server.
-export const DEFAULT_STUN_SERVER = 'stun:stun.l.google.com:19302';
+// The STUN answer of Ruimte's own coturn, so a direct connection across two networks asks no third party.
+export const DEFAULT_STUN_SERVER = 'stun:turn.ruimte.app:3478';
 
 /* What `RTCPeerConnection` takes for the servers in the setting; none for an empty field. */
 export const iceServersFrom = (value: string): RTCIceServer[] => {
@@ -143,7 +143,7 @@ const DEFAULT_SETTINGS: Settings = {
     agentsTurnNotify: true,
     agentsTurnSound: false,
     browserSwipe: true,
-    directStunServer: DEFAULT_STUN_SERVER
+    directStunServers: DEFAULT_STUN_SERVER
 };
 
 // Rounded as well as clamped: the stepper used to move in halves, so a browser can still hand back
@@ -177,7 +177,9 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     // Same rule as the block: nothing makes a sound unless a stored `true` asked for it.
     agentsTurnSound: stored.agentsTurnSound === true,
     browserSwipe: stored.browserSwipe !== false,
-    directStunServer: typeof stored.directStunServer === 'string' ? stored.directStunServer : DEFAULT_SETTINGS.directStunServer
+    // The key before it, `directStunServer`, held the previous default for nearly every client, since the field was hidden
+    // and every save writes the whole blob; a new key leaves that value behind instead of recognizing it.
+    directStunServers: typeof stored.directStunServers === 'string' ? stored.directStunServers : DEFAULT_SETTINGS.directStunServers
 });
 
 const read = (): Settings => {
@@ -248,7 +250,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 agentsTurnNotify,
                 agentsTurnSound,
                 browserSwipe,
-                directStunServer
+                directStunServers
             } = get();
             const next: Settings = {
                 accent,
@@ -272,7 +274,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 agentsTurnNotify,
                 agentsTurnSound,
                 browserSwipe,
-                directStunServer,
+                directStunServers,
                 ...patch
             };
             next.fontSize = clampSize(next.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize);

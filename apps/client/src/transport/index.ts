@@ -42,7 +42,7 @@ const linkFor =
                           brokerSignaling({ brokerUrl: route.brokerUrl, machineKey: route.machineKey, key: clientKey, verify: verifyDaemon, ...access })
                   }
                 : {}),
-            iceServers: iceServersFrom(useSettings.getState().directStunServer),
+            iceServers: iceServersFrom(useSettings.getState().directStunServers),
             prove: (challenge, binding) => directProof(endpointId(), challenge, binding),
             accepted: (ticket) => {
                 if (ticket !== null) {

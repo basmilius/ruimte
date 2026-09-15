@@ -6,8 +6,8 @@ const report = (entries: Array<Record<string, unknown>>) => new Map(entries.map(
 describe('mergeIceServers', () => {
     test('keeps the own STUN servers first and adds what the route handed out, a STUN URL only once', () => {
         const turn = { urls: ['turn:turn.example.com:3478?transport=udp', 'turn:turn.example.com:3478?transport=tcp'], username: '1:c-x', credential: 'y' };
-        expect(mergeIceServers([{ urls: ['stun:stun.l.google.com:19302'] }], [{ urls: 'stun:stun.l.google.com:19302' }, turn])).toEqual([
-            { urls: ['stun:stun.l.google.com:19302'] },
+        expect(mergeIceServers([{ urls: ['stun:turn.ruimte.app:3478'] }], [{ urls: 'stun:turn.ruimte.app:3478' }, turn])).toEqual([
+            { urls: ['stun:turn.ruimte.app:3478'] },
             turn
         ]);
         expect(mergeIceServers([], [])).toEqual([]);
