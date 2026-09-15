@@ -12,12 +12,12 @@ import { useLatency } from '@/transport/ping';
 import { useEndpointConnection } from '@/transport/status';
 import { describeConnection, describePing, REACHABILITY_LABELS } from '@/shell/connection-info';
 import { AccountSection, AddToAccountButton } from '@/shell/settings/AccountSection';
+import { IS_STATION } from '@/station';
 import { MachineIdentityDialog } from '@/shell/settings/MachineIdentityDialog';
 import { RefuseStatementsSection } from '@/shell/settings/RefuseStatementsSection';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Skeleton, Toggle } from '@/shell/settings/controls';
-import { useSettings } from '@/state/settings';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
@@ -458,39 +458,6 @@ function LocalRow({ endpoint }: { endpoint: Endpoint }) {
     );
 }
 
-/* Where a direct connection learns this client's public address. Saved when the field is left, so a half-typed URL is never tried. */
-function DirectConnectionSection() {
-    const stored = useSettings((s) => s.directStunServer);
-    // This field is the only thing that writes the setting, so the draft never has to catch up with it.
-    const [draft, setDraft] = useState(stored);
-
-    return (
-        <SettingsSection title="Direct connections" description="An experiment. A machine with Direct on is reached over WebRTC instead of its socket.">
-            <SettingsRow
-                label="STUN server"
-                description="Tells this app its public address, so a machine on another network can reach it. Separate several with spaces, or leave it empty to stay on this network."
-                control={
-                    <input
-                        className="field w-64 font-mono text-code"
-                        aria-label="STUN server"
-                        placeholder="stun:host:port"
-                        spellCheck={false}
-                        value={draft}
-                        onChange={(e) => setDraft(e.target.value)}
-                        onBlur={() => useSettings.getState().update({ directStunServer: draft.trim() })}
-                        onKeyDown={(e) => {
-                            e.stopPropagation();
-                            if (e.key === 'Enter') {
-                                e.currentTarget.blur();
-                            }
-                        }}
-                    />
-                }
-            />
-        </SettingsSection>
-    );
-}
-
 /* The machines this client knows, in the sections the rest of the settings screen is built from. */
 export function EndpointsSection() {
     const endpoints = useEndpoints((s) => s.endpoints);
@@ -515,7 +482,8 @@ export function EndpointsSection() {
             {/* Its own section rather than the first row of the list below: where you are is not one more
                 server, and a heading of the same kind as the rest is what keeps that clear on a screen
                 where every other group has one. */}
-            {local && (
+            {/* The web client has no machine behind its own origin, so there is nothing to say about one. */}
+            {local && !IS_STATION && (
                 <SettingsSection title="This machine" description="The machine this app runs on.">
                     <LocalRow endpoint={local} />
                 </SettingsSection>
@@ -541,7 +509,6 @@ export function EndpointsSection() {
                 ))}
             </SettingsSection>
             <AccountSection />
-            <DirectConnectionSection />
             <PairedClients key={activeId} />
             <RefuseStatementsSection />
             <AddMachineDialog open={addOpen} onOpenChange={setAddOpen} />
