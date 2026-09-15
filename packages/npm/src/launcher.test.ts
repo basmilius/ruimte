@@ -15,7 +15,6 @@ const installed =
 describe('platformPackageOf', () => {
     test('one package per supported platform', () => {
         expect(platformPackageOf({ platform: 'darwin', arch: 'arm64' })).toBe('@ruimte/darwin-arm64');
-        expect(platformPackageOf({ platform: 'darwin', arch: 'x64' })).toBe('@ruimte/darwin-x64');
         expect(platformPackageOf({ platform: 'linux', arch: 'x64' })).toBe('@ruimte/linux-x64');
         expect(platformPackageOf({ platform: 'linux', arch: 'arm64' })).toBe('@ruimte/linux-arm64');
     });
@@ -27,6 +26,7 @@ describe('platformPackageOf', () => {
     test('names a platform or architecture it has no build for', () => {
         expect(() => platformPackageOf({ platform: 'freebsd', arch: 'x64' })).toThrow('Ruimte has no build for freebsd on x64.');
         expect(() => platformPackageOf({ platform: 'linux', arch: 'ia32' })).toThrow(LauncherError);
+        expect(() => platformPackageOf({ platform: 'darwin', arch: 'x64' })).toThrow('Ruimte has no build for darwin on x64.');
     });
 });
 

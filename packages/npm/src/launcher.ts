@@ -17,7 +17,7 @@ export type Resolve = (request: string) => string;
 
 export class LauncherError extends Error {}
 
-export const WINDOWS_REFUSAL = 'Ruimte does not run on Windows yet. It runs on macOS and Linux, on arm64 and x64.';
+export const WINDOWS_REFUSAL = 'Ruimte does not run on Windows yet. It runs on Macs with Apple silicon and on Linux, on arm64 and x64.';
 
 export const platformPackageOf = (host: Host): string => {
     if (host.platform === 'win32') {
@@ -25,7 +25,7 @@ export const platformPackageOf = (host: Host): string => {
     }
     const target = TARGETS.find((candidate) => candidate.os === host.platform && candidate.cpu === host.arch);
     if (!target) {
-        throw new LauncherError(`Ruimte has no build for ${host.platform} on ${host.arch}. It runs on macOS and Linux, on arm64 and x64.`);
+        throw new LauncherError(`Ruimte has no build for ${host.platform} on ${host.arch}. It runs on Macs with Apple silicon and on Linux, on arm64 and x64.`);
     }
     return packageNameOf(target);
 };

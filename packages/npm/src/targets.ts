@@ -8,8 +8,8 @@ export interface Target {
 }
 
 export const TARGETS: readonly Target[] = [
+    // Apple silicon only: an Intel Mac gets no build.
     { os: 'darwin', cpu: 'arm64' },
-    { os: 'darwin', cpu: 'x64' },
     { os: 'linux', cpu: 'x64' },
     { os: 'linux', cpu: 'arm64' }
 ];

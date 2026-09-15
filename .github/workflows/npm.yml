@@ -1,6 +1,6 @@
 name: npm
 
-# Publishes `ruimte` and its four `@ruimte/<os>-<cpu>` binary packages with the version of a release.
+# Publishes `ruimte` and its three `@ruimte/<os>-<cpu>` binary packages (Apple silicon only on macOS) with the version of a release.
 # npm trusts this workflow through OIDC (Trusted Publishing, configured per package on npmjs.com for
 # `npm.yml` and the `npm` environment), so there is no token anywhere. A version that is already on
 # the registry is skipped, so a run that failed halfway can simply run again.
@@ -42,8 +42,6 @@ jobs:
       matrix:
         include:
           - target: darwin-arm64
-            runner: macos-latest
-          - target: darwin-x64
             runner: macos-latest
           - target: linux-x64
             runner: ubuntu-latest

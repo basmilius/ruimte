@@ -34,7 +34,6 @@ describe('launcherManifest', () => {
             license: 'FSL-1.1-MIT',
             optionalDependencies: {
                 '@ruimte/darwin-arm64': '0.3.1',
-                '@ruimte/darwin-x64': '0.3.1',
                 '@ruimte/linux-x64': '0.3.1',
                 '@ruimte/linux-arm64': '0.3.1'
             }

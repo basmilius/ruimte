@@ -11,9 +11,9 @@ for x64 and arm64 on Ubuntu 22.04 runners, as AppImage, deb and rpm; see `docs/L
 Publishing a release also publishes `ruimte` on npm, Ruimte for a machine without the app, with the
 same version. `.github/workflows/npm.yml` runs on `release: published` and by hand
 (`gh workflow run npm.yml -f version=0.2.0`, for a tag that exists). It compiles the daemon for
-`darwin-arm64` and `darwin-x64` on macOS and for `linux-x64` and `linux-arm64` on Ubuntu, lays out
-the packages with `packages/npm/scripts/build.ts` and publishes them with
-`packages/npm/scripts/publish.ts`: the four `@ruimte/<os>-<cpu>` packages first and `ruimte` last,
+`darwin-arm64` on macOS (Apple silicon only, no Intel build) and for `linux-x64` and `linux-arm64`
+on Ubuntu, lays out the packages with `packages/npm/scripts/build.ts` and publishes them with
+`packages/npm/scripts/publish.ts`: the three `@ruimte/<os>-<cpu>` packages first and `ruimte` last,
 a version already on the registry skipped, and a prerelease under the `next` tag. A run that failed
 halfway can run again.
 
@@ -31,7 +31,7 @@ To try the packages without publishing:
 ```sh
 RUIMTE_VERSION=0.0.0-local bun apps/server/scripts/compile.ts --target darwin-arm64 --outdir /tmp/npm/binaries/darwin-arm64
 bun packages/npm/scripts/build.ts --version 0.0.0-local --binaries /tmp/npm/binaries --out /tmp/npm/out --only darwin-arm64
-bun packages/npm/scripts/publish.ts --out /tmp/npm/out --dry-run    # wants all four platforms
+bun packages/npm/scripts/publish.ts --out /tmp/npm/out --dry-run    # wants all three platforms
 ```
 
 `bun run test:integration` does the first two and runs `node <launcher> --version` against the result.
