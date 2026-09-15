@@ -829,7 +829,8 @@ describe('the same project in two clients', () => {
         return { a, b };
     };
 
-    const namesIn = (client: Client): Array<string | null> => client.stores.document.getState().views.map((view) => ('name' in view ? (view.name ?? null) : null));
+    const namesIn = (client: Client): Array<string | null> =>
+        client.stores.document.getState().views.map((view) => ('name' in view ? (view.name ?? null) : null));
 
     test('a view renamed in one shows in the other at once', async () => {
         const { a, b } = await twoClients();
