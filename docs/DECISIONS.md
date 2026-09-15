@@ -1933,7 +1933,23 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
 - A machine a person removes is remembered on the account (`removed_machine`), not in one client: a list
   kept per client would let the next client that reaches the machine put it straight back. An `automatic`
   registration of such a machine answers `removed`; a registration without the flag clears the row, and
-  that is what the button on the machine's row sends. The button stays only there, as the way back.
+  that is what a person pressing a button sends.
+- Removing a machine from the account removes it from every signed-in client, a row paired by link
+  included. A client learns it from `removedMachineIds` on the account list (on sign in, on every
+  refresh, and when the Machines pane opens) and forgets the row exactly as "Forget on this client"
+  does (`pulsar/removal-watch.ts`, the rule in `pulsar/removal.ts`). Only a fresh list triggers it,
+  never a new row. The row of this machine stays, since the app runs on it, and its dialog keeps "Add
+  to your account again". A signed-out client cannot know and keeps its row; the Worker needed no
+  change, since the list already carried the removals.
+- Pairing a removed machine again by link while signed in is a person saying they want it: the client
+  marks it `reclaiming`, waits until the machine answers, and sends a registration without `automatic`,
+  which clears the removal. The mark keeps the removal rule off the new row meanwhile, and a
+  registration that fails keeps it for the life of the page, with a toast. Auto-registration still
+  skips every removed machine.
+- The Machines pane is one list: the rows of this client joined with the account list on the machine
+  id (`shell/settings/machine-list.ts`), each saying "Paired", "On your account" or both. Everything
+  that is done to a machine lives in the dialog its row opens, so the two separate lists that showed
+  the same machine twice, and the sections of switches with a row per machine, are gone.
 
 ### Skipped on purpose
 
