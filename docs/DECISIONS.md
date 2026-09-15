@@ -1973,6 +1973,70 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   paired machine that was not active only synced after a switch to it, and the lists of machines had no
   icon for it.
 
+### The machine as a background service
+
+- Phase 6 of remote access: the daemon outlives the app, so a machine stays reachable from station and
+  other clients once Ruimte quits. All of it lives in the shell (`apps/desktop/src/service`); the daemon
+  only learned to say which build it is.
+- On macOS a plist in `~/Library/LaunchAgents/app.ruimte.daemon.plist`, loaded with `launchctl bootstrap
+  gui/<uid>` and ended with `bootout`. SMAppService (Electron's `setLoginItemSettings` with `type:
+  'agentService'`) was the cleaner registration, but it takes a plist sealed inside the bundle, where the
+  login shell's `PATH` and a log path in the home cannot be written, and nothing about it can be tried
+  without a signed package. The plist runs the binary inside the bundle with `RUIMTE_HOME=~/.ruimte`, the
+  login shell's `PATH` as the app worked it out, `RunAtLoad`, `KeepAlive`, logs in
+  `~/Library/Logs/Ruimte/daemon.log`, and `ProcessType` Interactive, because launchd throttles CPU and I/O
+  of a job that leaves it out.
+- Signing: the daemon already ships as its own signed Mach-O (`mac.binaries` in `electron-builder.yml`,
+  hardened runtime, the JIT entitlements of `entitlements.mac.plist`), and hardened runtime entitlements
+  belong to the binary rather than to whoever starts it, so launchd needs nothing the app's spawn did not.
+  The plist is written at runtime and is no part of the seal or the notarization. What changes is who
+  macOS holds responsible: Background Task Management lists the job under Login Items (named after the
+  signing team) and shows a notification the first time, a person can switch it off there, and a privacy
+  prompt for a folder is asked on behalf of `ruimte` rather than of Ruimte.app. Neither is verified on a
+  packaged build yet. A job switched off in Login Items fails `bootstrap`, and the app falls back.
+- On Linux a user unit in `~/.config/systemd/user/ruimte-daemon.service`, enabled for `default.target`,
+  with `Restart=always`. It ends at logout unless lingering is on, and `loginctl enable-linger` is a
+  button in the machine's dialog behind a confirmation, never a step the app takes alone. An AppImage
+  gets no service: it runs from a mount that is gone once it quits. Windows gets none yet, and the row
+  says so.
+- The dev app never installs, starts or stops a service (`serviceSupport` answers `dev` for anything
+  unpackaged and the controller then has no manager at all). It spawns its daemon on 4211 with
+  `~/.ruimte-dev` as before.
+- On start the app asks `/health`, which now carries `build` next to `version`: an id
+  `scripts/compile.ts` stamps into the binary and writes beside it as `ruimte.build`. Two local builds of
+  0.0.0 are not the same daemon, which a version cannot say. The decision (`service/decide.ts`): the same
+  build answering is attached to; an older one (or one without a build) is restarted onto the binary in
+  the bundle, with a bootout, a wait until launchd lets go of the label, and a bootstrap; nothing
+  answering starts the service; with the service off nothing answering is spawned as before, and anything
+  that answers is used and left alone, as the app did when its spawn found the port taken. A service that
+  does not come up with the expected build within 20 seconds is stopped, the app runs its own daemon, and
+  the reason stands in the dialog.
+- "Keep this machine running when Ruimte quits" is kept by the shell in `userData/background-service.json`,
+  since it is needed before any window exists. Unset means on in a packaged app. Its row is in the dialog
+  of This machine and only where the bridge has `backgroundService`, so never on station or in a tab.
+- A switch never ends the daemon that runs, since that would end every session under the person's hands.
+  On writes the definition and the service takes over when the app quits: the app ends its own daemon and
+  starts the service, which may find the port still held, exits, and is brought back by its keep-alive.
+  Off removes the definition at once (nothing starts it at login any more) and stops the running daemon
+  when the app quits. A start that finds a definition while the switch is off (a quit that never ran)
+  removes and stops it before it asks the port.
+- Quitting with the service running leaves it running, and the question asked while an agent works says
+  they keep running instead of warning that they end. "Stop the machine" (the application menu and a
+  button in the dialog) is a quit that also stops the service and removes its definition, so it stays
+  down until the next start of the app puts it back; nothing is left disabled in launchd's database.
+- Removing it by hand. macOS: `launchctl bootout gui/$(id -u)/app.ruimte.daemon`, then
+  `rm ~/Library/LaunchAgents/app.ruimte.daemon.plist`. Linux: `systemctl --user disable --now
+  ruimte-daemon.service`, `rm ~/.config/systemd/user/ruimte-daemon.service`, `systemctl --user
+  daemon-reload`, and `loginctl disable-linger` if it was turned on. Turning the switch off and quitting
+  does the same, lingering apart.
+- Trying launchd without a package: `bun scripts/service-plist.ts` in `apps/desktop` prints the same plist
+  pointed at `apps/server/dist/mac-<arch>/ruimte` with another label, port 4212 and
+  `~/.ruimte-service-try`, so it never meets an installed Ruimte. That exercises launchd, `PATH` and the
+  logs; the attach decisions need a packaged app.
+- Not done: log rotation for `daemon.log`, `LANG` and the rest of the login environment beyond `PATH`
+  (the app's own spawn never had them either), and the process panel still looks for the app around the
+  daemon, which is launchd now.
+
 ### Skipped on purpose
 
 Skipped: kanban, loop and trigger nodes, minimap, dictation, notch HUD, agent-to-agent
@@ -2168,10 +2232,10 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
    shell and a release build (`docs/research/windows.md` is the design for a project in its own
    window, not for the platform). Linux runs, see `docs/LINUX.md`; the signed and notarized
    macOS build, the icon and the update path are done, see `docs/RELEASE.md`.
-3. **The daemon as a background service**, so closing the app keeps sessions alive. The
-   ruimte.app landing page comes later and gets an issue when it starts. A known gap in the
-   checkpoints: the turn diff is of the whole folder, so an edit the person made during a turn
-   lands in the card too.
+3. **The daemon as a background service** is built (see "The machine as a background service")
+   and waits for a packaged release to be tried. The ruimte.app landing page comes later and gets
+   an issue when it starts. A known gap in the checkpoints: the turn diff is of the whole folder,
+   so an edit the person made during a turn lands in the card too.
 4. **A third chat provider** (Gemini, Copilot or opencode) as the proof that the backend seam
    holds: a provider value, a backend and a protocol mapper, plus one literal in `AgentKind`.
    Hooks for Gemini and Copilot are a day per CLI on top.
