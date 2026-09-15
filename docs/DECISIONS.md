@@ -1596,7 +1596,8 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   one offer and one answer and nothing trickles. The daemon takes `--stun` (Google's public server by
   default), `--no-stun`, `--direct-ports` and `--direct-host-address`. The Docker containers publish a
   UDP range and announce `127.0.0.1`, which is how a client on the host reaches a werift inside
-  Docker Desktop's VM. The client's STUN servers are a setting (`directStunServer`).
+  Docker Desktop's VM. The client's STUN servers are a stored setting (`directStunServer`, Google's public
+  server by default); since the web client the field is no longer drawn, see "The web client" below.
 - Phase 3: the bytes an `<img>` or a `<video>` draws (a chat attachment, a project icon, an image or a
   video file) travel as `bytes.read` over a direct connection and as the HTTP routes over a socket.
   One hook decides, `useMachineUrl`, from the row's `direct` flag and never from whether the address
@@ -1792,8 +1793,9 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   desktop without a keyring) nothing is written and the session ends with the app. `SessionVault` in
   `packages/pulsar` does one refresh at a time, since the address book ends a session when a spent refresh
   token comes back.
-- A plain browser gets no sign-in: it has no loopback listener and nowhere a script cannot read, so the
-  Account section says signing in works in the desktop app. Everything else keeps working.
+- A plain browser got no sign-in at first: it has no loopback listener and nowhere a script cannot read.
+  Since the web client it signs in on an origin the address book sends a login back to, with the session
+  bound to its key; see "The web client" below. Anywhere else the Account section still says where it works.
 - A machine joins an account through the client: `endpoint.signRegistration` has the daemon sign
   `machineRegistrationMessage` for the account id the client names, and the client posts it with its own
   session. Any client that got in may ask, since it already reaches everything the account would lead to.
@@ -1837,6 +1839,73 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
 - Not built: the statement log in a client (the Worker keeps it, the machine's own list is what a person
   sees), revoking a device at the address book, and asking for two-factor beyond one sentence in the Account
   section.
+
+### The web client
+
+- `apps/station` serves the client at `https://station.ruimte.app` from a Worker with static assets, so a
+  person on an iPad reaches a machine at home through the account and a broker. A Worker rather than Pages,
+  because the address book is one already and the deploy, the token and the Custom Domain work the same
+  way. The Worker runs first on every path (`run_worker_first`) so no answer leaves without its headers,
+  and a path that is no file is the page (`/pulsar/callback`).
+- The policy has no inline script. `'wasm-unsafe-eval'` stays for Shiki's WebAssembly grammar engine and
+  `style-src 'unsafe-inline'` for the `<style>` elements xterm, CodeMirror and the markdown renderer add.
+  `connect-src` is `'self'`, the address book, `wss:` and `https:`. The last one is wider than the address
+  book alone: a machine behind a tunnel answers its challenge over HTTPS, and with every `wss:` host open
+  already, closing `https:` would not keep a script that got in from sending anything anywhere. Plus
+  `frame-ancestors 'none'`, `no-referrer` (a login comes back with a code in the query) and two years of HSTS.
+- The web build has no daemon behind its origin. The row of this machine stays in the list, since much of
+  the client assumes it is there, but its transport is a `DormantTransport` that never dials, and the main
+  column shows a welcome (sign in, then the account's machines) until one is picked. An https page may not
+  open plain http or ws, so pairing with such a machine is refused with a sentence before anything is tried.
+- Safari on iPadOS stops sockets and timers in the background, so a page that turns visible reconnects
+  every machine that is closed or waiting out a backoff. A Home Screen web app is exempt from Safari
+  clearing a site's storage after seven days without a visit, which is why the build carries a manifest
+  with the app icons and the page asks for persistent storage after signing in. A key or a session that
+  is gone anyway is the ordinary way back: the page says the session on this device ended and offers
+  signing in, not an error.
+
+### A session bound to a key
+
+- A login may only come back to the redirects `isAppRedirectUri` allows: the app scheme, a loopback
+  listener, `https://station.ruimte.app/pulsar/callback` and `http://localhost:5173/pulsar/callback`. An
+  exact list, with no prefix match and no query, because signing in opens machines: an open redirect would
+  let any page start a login and collect the code, and PKCE does not help when the attacker started the
+  login and holds the verifier.
+- The provider state stays bound to the browser with the `__Host-pulsar-login` cookie. It survives the
+  round trip in Safari with ITP because the cookie is HttpOnly and set by the server, the navigations are
+  top-level GETs, and `station.ruimte.app` and `pulsar.ruimte.app` are the same site. The page keeps its
+  verifier and state in localStorage rather than sessionStorage, since a Home Screen app may come back from
+  GitHub in another browsing context.
+- Every session is bound to a key, on every client. The exchange carries a public key and a signature over
+  `sessionKeyMessage` (the login code and the key), and every refresh a signature over
+  `sessionRefreshMessage` (the refresh token and the time, ten minutes of skew). The token in the signed
+  bytes makes a signature good for one rotation; a nonce from the Worker would cost a round trip and buy
+  nothing a single-use token does not already give. The web client binds to its own non-extractable
+  ed25519 key in IndexedDB, the desktop shell to a key of its own encrypted with `safeStorage` in
+  `pulsar-key.bin` beside the session, so a refresh token read off a disk or out of a page refreshes
+  nothing elsewhere.
+- Nothing happens to a session before the signature holds. A refresh token that was already spent still
+  ends the session, but only when the right key signed it: two holders of the key and the token are a copy,
+  a token without the key is just a refused request and must not sign the real device out. Migration
+  `0003` adds `session_key` as a nullable column so the running Worker keeps working while it applies; the
+  new Worker refuses to refresh a session without one, which signs every older session in again.
+- Access tokens stay in memory. The refresh token sits in IndexedDB on the web, where script on the origin
+  could read it. Keeping it in a `__Host-` HttpOnly cookie on the address book was considered and left
+  out: CORS with credentials for one origin, a second storage model beside the desktop shell's, a Vite dev
+  origin that is not same-site and so would not send the cookie, and script injected into the page could
+  drive a refresh with credentials anyway. The key binding is the one rule for both clients.
+
+### Machines join the account on their own
+
+- A signed-in client puts every machine it reaches on the account, this machine and every paired one,
+  without a button (`pulsar/auto-register.ts`). The machine signs `endpoint.signRegistration` as before
+  and the client posts it marked `automatic`. Once per machine per account for the life of the page, and
+  only for a machine the list does not have; a failure waits 30 seconds, doubling up to 30 minutes, so an
+  address book that is down or a machine that cannot sign costs a request now and then.
+- A machine a person removes is remembered on the account (`removed_machine`), not in one client: a list
+  kept per client would let the next client that reaches the machine put it straight back. An `automatic`
+  registration of such a machine answers `removed`; a registration without the flag clears the row, and
+  that is what the button on the machine's row sends. The button stays only there, as the way back.
 
 ### Skipped on purpose
 

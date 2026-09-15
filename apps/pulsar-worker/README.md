@@ -16,12 +16,12 @@ are under "The address book" in `docs/DECISIONS.md`.
 | `GET /health`                      | The public statement key the Worker signs with and which providers work |
 | `GET /auth/github/start`           | Opened by the app in the system browser                                 |
 | `GET /auth/github/callback`        | Where GitHub sends the browser back                                     |
-| `POST /v1/session`                 | The one-time code plus the PKCE verifier for a session                  |
-| `POST /v1/session/refresh`         | A new access and refresh token; a spent refresh token ends the session  |
+| `POST /v1/session`                 | The one-time code, the PKCE verifier and the key the session is bound to |
+| `POST /v1/session/refresh`         | A new access and refresh token, signed with the session key             |
 | `DELETE /v1/session`               | Sign out                                                                |
-| `GET /v1/machines`                 | The machines on this account                                            |
-| `POST /v1/machines`                | Register a machine with the daemon's signature, its icon and broker URL |
-| `DELETE /v1/machines/<id>`         | Take a machine off the list                                             |
+| `GET /v1/machines`                 | The machines on this account, and the ids a person removed from it      |
+| `POST /v1/machines`                | Register a machine with the daemon's signature; `automatic` skips a removed one |
+| `DELETE /v1/machines/<id>`         | Take a machine off the list and remember that it was removed            |
 | `POST /v1/statements`              | A signed statement for one machine and one client key, two minutes      |
 
 ## Local dev
@@ -74,7 +74,13 @@ bun run deploy                   # migrations on the remote database, then wrang
 
 A migration is a new numbered file in `migrations/`, committed with the code that reads it. Migrations
 run before the new Worker is live, so a migration must keep the Worker that is still running working;
-`0002_machine_broker.sql` adds `broker_url` as a nullable column for that reason.
+`0002_machine_broker.sql` adds `broker_url` as a nullable column for that reason, and `0003_session_key.sql`
+adds `session_key` the same way: the new Worker refuses to refresh a session without a key, so every session
+from before the binding signs in again.
+
+A login may only come back to the redirects `isAppRedirectUri` in `packages/pulsar` allows: the app scheme, a
+loopback listener, `https://station.ruimte.app/pulsar/callback` and the Vite dev origin. `ALLOWED_ORIGINS` in
+`wrangler.jsonc` names the web client, so its page may read the answers of `/v1/*`.
 
 ## Secrets
 
