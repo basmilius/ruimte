@@ -38,7 +38,9 @@ struct BrowserPage: View {
                 }.labelStyle(.iconOnly)
             }.padding(12).background(.bar)
             if let problem = state.problem { Text(problem).font(.caption).foregroundStyle(.red).padding() }
-            BrowserContent(state: state)
+            MobileScrollViewport(edges: .bottom) { insets in
+                BrowserContent(state: state, viewportInsets: insets)
+            }
         }.toolbar {
             ToolbarItemGroup(placement: .bottomBar) {
                 Button("Back", systemImage: "chevron.left") { state.webView?.goBack() }.disabled(!state.back)
@@ -54,6 +56,7 @@ struct BrowserPage: View {
 
 private struct BrowserContent: UIViewRepresentable {
     let state: BrowserState
+    let viewportInsets: UIEdgeInsets
     func makeCoordinator() -> Coordinator { Coordinator(state) }
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
@@ -63,11 +66,15 @@ private struct BrowserContent: UIViewRepresentable {
         view.navigationDelegate = context.coordinator
         view.uiDelegate = context.coordinator
         view.allowsBackForwardNavigationGestures = true
+        view.scrollView.contentInsetAdjustmentBehavior = .never
         state.webView = view
         state.navigate()
         return view
     }
-    func updateUIView(_ view: WKWebView, context: Context) {}
+    func updateUIView(_ view: WKWebView, context: Context) {
+        view.scrollView.contentInset = viewportInsets
+        view.scrollView.scrollIndicatorInsets = viewportInsets
+    }
     static func dismantleUIView(_ view: WKWebView, coordinator: Coordinator) {
         view.stopLoading()
         view.navigationDelegate = nil

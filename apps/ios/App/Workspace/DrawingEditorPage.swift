@@ -19,11 +19,13 @@ struct DrawingEditorPage: View {
     var body: some View {
         Group {
             if let scene = model.scene {
-                DrawingCanvas(
-                    scene: scene, elements: model.elements, tool: tool, color: color, width: width,
-                    append: model.append, erase: model.erase
-                )
-                .ignoresSafeArea(edges: .bottom)
+                MobileScrollViewport { insets in
+                    DrawingCanvas(
+                        scene: scene, elements: model.elements, tool: tool, color: color, width: width,
+                        viewportInsets: insets,
+                        append: model.append, erase: model.erase
+                    )
+                }
             } else if let problem = model.problem {
                 ContentUnavailableView("Could not open drawing", systemImage: "pencil.tip", description: Text(problem))
             } else {
@@ -105,10 +107,13 @@ private struct DrawingCanvas: UIViewRepresentable {
     let tool: DrawingTool
     let color: String
     let width: Int
+    let viewportInsets: UIEdgeInsets
     let append: (JSONValue) -> Void
     let erase: (String) -> Void
     func makeUIView(context: Context) -> DrawingCanvasScrollView { DrawingCanvasScrollView() }
     func updateUIView(_ view: DrawingCanvasScrollView, context: Context) {
+        view.contentInset = viewportInsets
+        view.scrollIndicatorInsets = viewportInsets
         view.configure(
             scene: scene, elements: elements, tool: tool, color: color, width: width, append: append, erase: erase)
     }
@@ -121,6 +126,7 @@ private final class DrawingCanvasScrollView: UIScrollView, UIScrollViewDelegate 
     override init(frame: CGRect) {
         super.init(frame: frame)
         delegate = self
+        contentInsetAdjustmentBehavior = .never
         minimumZoomScale = 0.1
         maximumZoomScale = 8
         backgroundColor = .systemBackground
@@ -170,12 +176,13 @@ private final class DrawingCanvasScrollView: UIScrollView, UIScrollViewDelegate 
         super.layoutSubviews()
         if let initialBounds, bounds.width > 0, bounds.height > 0 {
             self.initialBounds = nil
+            let viewport = bounds.inset(by: contentInset)
             let scale = min(
-                1, min((bounds.width - 48) / initialBounds.width, (bounds.height - 120) / initialBounds.height))
+                1, min((viewport.width - 48) / initialBounds.width, (viewport.height - 48) / initialBounds.height))
             setZoomScale(max(minimumZoomScale, scale), animated: false)
             contentOffset = CGPoint(
-                x: (initialBounds.minX - surface.documentOrigin.x + 32) * zoomScale - 24,
-                y: (initialBounds.minY - surface.documentOrigin.y + 32) * zoomScale - 24)
+                x: (initialBounds.minX - surface.documentOrigin.x + 32) * zoomScale - contentInset.left - 24,
+                y: (initialBounds.minY - surface.documentOrigin.y + 32) * zoomScale - contentInset.top - 24)
         }
         updateDrawing()
     }

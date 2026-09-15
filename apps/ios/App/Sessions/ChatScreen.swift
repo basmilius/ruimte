@@ -31,11 +31,13 @@ struct ChatScreen: View {
             if let error = model.error {
                 SessionErrorBanner(message: error) { model.attach() }
             }
-            ChatTimeline(
-                items: model.items, revision: model.revision, client: model.client, chatID: model.chatID,
-                bottomInset: composerHeight, dismissKeyboard: { composerFocused = false },
-                scrollToLatest: scrollToLatest, onMessagesBelowChanged: { messagesBelow = $0 }
-            )
+            MobileScrollViewport(edges: .top) { insets in
+                ChatTimeline(
+                    items: model.items, revision: model.revision, client: model.client, chatID: model.chatID,
+                    topInset: insets.top, bottomInset: composerHeight, dismissKeyboard: { composerFocused = false },
+                    scrollToLatest: scrollToLatest, onMessagesBelowChanged: { messagesBelow = $0 }
+                )
+            }
             .overlay {
                 if model.loading {
                     ProgressView("Loading conversation…")

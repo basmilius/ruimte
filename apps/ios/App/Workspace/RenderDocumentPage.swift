@@ -16,7 +16,9 @@ struct RenderDocumentPage: View {
     var body: some View {
         Group {
             if let scene {
-                NativeScene(scene: scene)
+                MobileScrollViewport { insets in
+                    NativeScene(scene: scene, viewportInsets: insets)
+                }
             } else if let problem {
                 ContentUnavailableView(
                     "Could not load \(kind)", systemImage: "exclamationmark.triangle", description: Text(problem))
@@ -56,17 +58,29 @@ struct RenderDocumentPage: View {
 
 private struct NativeScene: UIViewRepresentable {
     let scene: JSONValue
+    let viewportInsets: UIEdgeInsets
     func makeUIView(context: Context) -> SceneScrollView { SceneScrollView() }
-    func updateUIView(_ view: SceneScrollView, context: Context) { view.setScene(scene) }
+    func updateUIView(_ view: SceneScrollView, context: Context) {
+        view.viewportInsets = viewportInsets
+        view.setScene(scene)
+    }
 }
 
 private final class SceneScrollView: UIScrollView, UIScrollViewDelegate {
+    var viewportInsets = UIEdgeInsets.zero {
+        didSet {
+            guard viewportInsets != oldValue else { return }
+            scrollIndicatorInsets = viewportInsets
+            setNeedsLayout()
+        }
+    }
     private let surface = SceneSurface()
     private var scene: JSONValue?
     private var needsFit = true
     override init(frame: CGRect) {
         super.init(frame: frame)
         delegate = self
+        contentInsetAdjustmentBehavior = .never
         minimumZoomScale = 0.05
         maximumZoomScale = 6
         backgroundColor = .systemBackground
@@ -87,18 +101,20 @@ private final class SceneScrollView: UIScrollView, UIScrollViewDelegate {
     }
     override func layoutSubviews() {
         super.layoutSubviews()
+        let viewport = bounds.inset(by: viewportInsets)
         if needsFit && bounds.width > 0 && bounds.height > 0 {
             needsFit = false
             setZoomScale(
                 max(
                     minimumZoomScale,
-                    min(1, min(bounds.width / surface.bounds.width, bounds.height / surface.bounds.height))),
+                    min(1, min(viewport.width / surface.bounds.width, viewport.height / surface.bounds.height))),
                 animated: false)
         }
         updateDrawing()
         contentInset = UIEdgeInsets(
-            top: max(0, (bounds.height - contentSize.height) / 2), left: max(0, (bounds.width - contentSize.width) / 2),
-            bottom: 0, right: 0)
+            top: viewportInsets.top + max(0, (viewport.height - contentSize.height) / 2),
+            left: viewportInsets.left + max(0, (viewport.width - contentSize.width) / 2),
+            bottom: viewportInsets.bottom, right: viewportInsets.right)
     }
     func viewForZooming(in scrollView: UIScrollView) -> UIView? { surface }
     func scrollViewDidScroll(_ scrollView: UIScrollView) { updateDrawing() }

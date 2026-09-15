@@ -8,6 +8,7 @@ struct ChatTimeline: UIViewControllerRepresentable {
     let revision: Int
     let client: any MachineRequesting
     let chatID: String
+    var topInset: CGFloat = 0
     var bottomInset: CGFloat = 0
     var dismissKeyboard: () -> Void = {}
     var scrollToLatest = 0
@@ -19,7 +20,7 @@ struct ChatTimeline: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: ChatTimelineController, context: Context) {
         controller.dismissKeyboard = dismissKeyboard
         controller.onMessagesBelowChanged = onMessagesBelowChanged
-        controller.setComposerInset(bottomInset)
+        controller.setViewportInsets(top: topInset, bottom: bottomInset)
         controller.update(items: items, revision: revision)
         controller.scrollToLatest(command: scrollToLatest)
     }
@@ -137,7 +138,8 @@ final class ChatTimelineCollection: UICollectionView {
     }
 
     override func layoutSubviews() {
-        super.layoutSubviews()
+        // UIKit also animates later self-sizing passes, independently of the SwiftUI transaction.
+        UIView.performWithoutAnimation { super.layoutSubviews() }
         defer { viewportChanged?() }
         guard !adjustingOffset, !userIsScrolling, !scrollingToLatest, bounds.height > 0 else { return }
         let anchorOffset = readingAnchor.flatMap { anchor in
@@ -152,6 +154,12 @@ final class ChatTimelineCollection: UICollectionView {
         }
         // Hosted text can finish measuring after a snapshot. Keep the same reading position on those later passes too.
         if !viewport.followsLatest { readingAnchor = captureReadingAnchor?() }
+    }
+}
+
+private final class ChatTimelineLayout: UICollectionViewCompositionalLayout {
+    override func invalidateLayout(with context: UICollectionViewLayoutInvalidationContext) {
+        UIView.performWithoutAnimation { super.invalidateLayout(with: context) }
     }
 }
 
@@ -183,8 +191,11 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         var configuration = UICollectionLayoutListConfiguration(appearance: .plain)
         configuration.showsSeparators = false
         configuration.backgroundColor = .systemBackground
-        collection = ChatTimelineCollection(
-            frame: .zero, collectionViewLayout: UICollectionViewCompositionalLayout.list(using: configuration))
+        let layout = ChatTimelineLayout { _, environment in
+            NSCollectionLayoutSection.list(using: configuration, layoutEnvironment: environment)
+        }
+        layout.configuration.contentInsetsReference = .none
+        collection = ChatTimelineCollection(frame: .zero, collectionViewLayout: layout)
         collection.keyboardDismissMode = .interactive
         collection.contentInsetAdjustmentBehavior = .never
         collection.alwaysBounceVertical = true
@@ -202,6 +213,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
             return self.collection.layoutAttributesForItem(at: index)?.frame.minY
         }
         view.addSubview(collection)
+        setContentScrollView(collection, for: .top)
         NSLayoutConstraint.activate([
             collection.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collection.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -237,13 +249,13 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         }
     }
 
-    func setComposerInset(_ height: CGFloat) {
+    func setViewportInsets(top: CGFloat, bottom: CGFloat) {
         loadViewIfNeeded()
-        let inset = max(0, height)
-        guard collection.contentInset.bottom != inset else { return }
+        let insets = UIEdgeInsets(top: max(0, top), left: 0, bottom: max(0, bottom), right: 0)
+        guard collection.contentInset != insets else { return }
         collection.prepareForContentChange()
-        collection.contentInset.bottom = inset
-        collection.verticalScrollIndicatorInsets.bottom = inset
+        collection.contentInset = insets
+        collection.verticalScrollIndicatorInsets = insets
         collection.setNeedsLayout()
     }
 
@@ -313,17 +325,19 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         snapshot.reconfigureItems(changed)
         lastRevision = revision
         applyingSnapshot = true
-        source.apply(snapshot, animatingDifferences: false) { [weak self] in
-            guard let self else { return }
-            self.applyingSnapshot = false
-            if self.lastRevision == revision,
-                self.collection.viewport.interactionRevision == interactionRevision,
-                !self.collection.userIsScrolling
-            {
-                self.collection.setNeedsLayout()
-                self.collection.layoutIfNeeded()
+        UIView.performWithoutAnimation {
+            source.apply(snapshot, animatingDifferences: false) { [weak self] in
+                guard let self else { return }
+                self.applyingSnapshot = false
+                if self.lastRevision == revision,
+                    self.collection.viewport.interactionRevision == interactionRevision,
+                    !self.collection.userIsScrolling
+                {
+                    self.collection.setNeedsLayout()
+                    UIView.performWithoutAnimation { self.collection.layoutIfNeeded() }
+                }
+                self.scheduleUpdate()
             }
-            self.scheduleUpdate()
         }
     }
 

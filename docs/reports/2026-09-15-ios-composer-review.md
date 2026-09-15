@@ -135,3 +135,45 @@ even though the draft text persists across restarts.
 
 Future development builds may be installed on both Bas's iPhone and iPad Pro, following
 his explicit authorization. Keep the short device-review iteration loop.
+
+## Toolbar underlap and remaining chat motion
+
+Full review of scroll boundaries and chat layout updates in the SwiftUI shell and
+UIKit views. Retain native toolbar materials and the existing styling. This is a
+source review and device build, with physical motion review left to Bas.
+
+| Category | Evidence inspected | Result |
+| --- | --- | --- |
+| Typography | Chat row hosting and file/diff previews | No typography changes needed |
+| Surfaces | Chat, canvas, drawing, diagram, browser, project lists, file/diff previews, terminal | Two repeated viewport findings corrected |
+| Animations | Snapshot application, self-sizing invalidation and collection layout | Suppress UIKit row-resize animations |
+| Icons | Existing toolbar controls | Retained; no icon changes needed |
+| Performance | Display-link update batching and visible canvas drawing | Retained; no full-history remeasurement added |
+
+| Severity | Location | Before | After | Why |
+| --- | --- | --- | --- | --- |
+| MEDIUM | `ChatScreen.swift`, `CanvasPage.swift`, `DrawingEditorPage.swift`, `RenderDocumentPage.swift` | Native viewport ends at toolbar safe areas | Shared `MobileScrollViewport` extends the viewport behind bars and passes the original insets to UIKit | Content can scroll behind controls while its resting position and canvas fit remain unobscured |
+| MEDIUM | `BrowserPage.swift` | Web content stops above the bottom toolbar | Extend the browser viewport underneath it and inset the scroll content | Preserve continuity while scrolling |
+| MEDIUM | `ChatTimeline.swift` | SwiftUI transactions and snapshots disable animation, but later UIKit self-sizing passes can still animate | Disable animation during layout invalidation, collection layout and snapshot application | Rows should stay in place relative to the conversation while it scrolls |
+
+Chat registers its collection as the controller's top content scroll view. Insets
+come from the surrounding SwiftUI safe area, including rotation and window layout,
+without extending through the keyboard. Drawing and canvas fit use the space between
+the toolbars. Existing reader anchors and the deliberate scroll-to-latest animation
+remain active.
+
+| Location | Candidate | Rejected because |
+| --- | --- | --- |
+| Native project lists, file previews and Git diffs | Add the same viewport wrapper | These already use SwiftUI List/ScrollView safe-area behavior; the defect is in the UIKit wrappers |
+| Terminal | Extend the emulator behind its status and keyboard rows | Those are occupied layout regions around a fixed remote terminal grid; this requires a separate terminal layout change |
+| Chat | Disable self-sizing or measure every message upfront | This would break dynamic content or remove timeline virtualization |
+
+Validation: `bun run format` and `bun run check` passed, with existing desktop lint
+warnings. The signed device build passed and was installed on Bas's iPhone and iPad
+Pro. Build log: `/tmp/ruimte-ios-scroll-toolbar-device.log`. No simulator run or new
+test suite was added.
+Apple documents the separate UIKit resize animation in
+[What's new in UIKit](https://developer.apple.com/videos/play/wwdc2022/10068/).
+
+Verdict: approve the inspected code. Toolbar underlap, long streaming conversations,
+rotation, iPad window resizing and motion at 10% speed are not physically verified.

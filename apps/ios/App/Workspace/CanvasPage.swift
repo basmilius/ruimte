@@ -26,15 +26,17 @@ struct CanvasPage: View {
                     }.contextMenu { nodeActions(node) }
                 }
             } else {
-                CanvasViewport(
-                    canvas: canvas, statuses: workspace.session.attention.statuses,
-                    unseen: workspace.session.attention.unseen,
-                    needingYou: Set(
-                        canvas.list("nodes").filter { workspace.session.attention.needsYou($0.stableID) }.map(
-                            \.stableID)), camera: workspace.camera(for: viewID), fit: fit,
-                    open: { selectedID = $0 }, menu: { menuID = $0 },
-                    cameraChanged: { workspace.setCamera($0, viewID: viewID) }
-                )
+                MobileScrollViewport { insets in
+                    CanvasViewport(
+                        canvas: canvas, statuses: workspace.session.attention.statuses,
+                        unseen: workspace.session.attention.unseen,
+                        needingYou: Set(
+                            canvas.list("nodes").filter { workspace.session.attention.needsYou($0.stableID) }.map(
+                                \.stableID)), camera: workspace.camera(for: viewID), fit: fit, viewportInsets: insets,
+                        open: { selectedID = $0 }, menu: { menuID = $0 },
+                        cameraChanged: { workspace.setCamera($0, viewID: viewID) }
+                    )
+                }
                 .overlay {
                     if canvas.list("nodes").isEmpty && canvas.list("texts").isEmpty {
                         ContentUnavailableView {
@@ -214,11 +216,14 @@ private struct CanvasViewport: UIViewRepresentable {
     let needingYou: Set<String>
     let camera: JSONValue?
     let fit: Int
+    let viewportInsets: UIEdgeInsets
     let open: (String) -> Void
     let menu: (String) -> Void
     let cameraChanged: (JSONValue) -> Void
     func makeUIView(context: Context) -> CanvasScrollView { CanvasScrollView() }
     func updateUIView(_ view: CanvasScrollView, context: Context) {
+        view.contentInset = viewportInsets
+        view.scrollIndicatorInsets = viewportInsets
         view.setAttention(statuses: statuses, unseen: unseen, needingYou: needingYou)
         view.open = open
         view.menu = menu
@@ -241,6 +246,7 @@ final class CanvasScrollView: UIScrollView, UIScrollViewDelegate {
     override init(frame: CGRect) {
         super.init(frame: frame)
         delegate = self
+        contentInsetAdjustmentBehavior = .never
         minimumZoomScale = 0.1
         maximumZoomScale = 4
         alwaysBounceVertical = true
@@ -297,9 +303,12 @@ final class CanvasScrollView: UIScrollView, UIScrollViewDelegate {
                     zoom: camera.number("zoom", fallback: 1))
             } else {
                 let fitBounds = surface.worldBounds
+                let viewport = bounds.inset(by: contentInset)
                 let zoom = min(
                     1,
-                    min((bounds.width - 48) / max(1, fitBounds.width), (bounds.height - 48) / max(1, fitBounds.height)))
+                    min(
+                        (viewport.width - 48) / max(1, fitBounds.width),
+                        (viewport.height - 48) / max(1, fitBounds.height)))
                 apply(center: CGPoint(x: fitBounds.midX, y: fitBounds.midY), zoom: zoom)
             }
             restored = true
@@ -309,16 +318,16 @@ final class CanvasScrollView: UIScrollView, UIScrollViewDelegate {
     }
     private var worldCenter: CGPoint {
         CGPoint(
-            x: (contentOffset.x + bounds.width / 2) / zoomScale + surface.origin.x,
-            y: (contentOffset.y + bounds.height / 2) / zoomScale + surface.origin.y)
+            x: bounds.inset(by: contentInset).midX / zoomScale + surface.origin.x,
+            y: bounds.inset(by: contentInset).midY / zoomScale + surface.origin.y)
     }
     private func apply(center: CGPoint, zoom: CGFloat) {
         let center = CGPoint(
             x: max(-10_000_000, min(10_000_000, center.x)), y: max(-10_000_000, min(10_000_000, center.y)))
         setZoomScale(max(minimumZoomScale, min(maximumZoomScale, zoom)), animated: false)
         contentOffset = CGPoint(
-            x: (center.x - surface.origin.x) * zoomScale - bounds.width / 2,
-            y: (center.y - surface.origin.y) * zoomScale - bounds.height / 2)
+            x: (center.x - surface.origin.x) * zoomScale - contentInset.left - bounds.inset(by: contentInset).width / 2,
+            y: (center.y - surface.origin.y) * zoomScale - contentInset.top - bounds.inset(by: contentInset).height / 2)
         previousZoom = zoomScale
     }
     func viewForZooming(in scrollView: UIScrollView) -> UIView? { surface }
