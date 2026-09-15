@@ -4,6 +4,7 @@ import {
     AccountSchema,
     AddressBookClient,
     ADDRESS_BOOK_URL,
+    ProviderIdSchema,
     SessionVault,
     isAppRedirectUri,
     type ProviderId,
@@ -38,7 +39,11 @@ const PendingLoginSchema = z.object({
     redirectUri: z.string(),
     startedAt: z.number(),
     /* A login that adds a provider to the signed-in account, whose code goes to the account rather than the keeper. */
-    link: z.boolean().optional()
+    link: z.boolean().optional(),
+    /* Started from the account section, which the page opens again on the way back to say how it went. */
+    confirm: z.boolean().optional(),
+    /* What the confirmation names; a login written down before it was kept was GitHub's. */
+    provider: ProviderIdSchema.optional()
 });
 export type PendingLogin = z.infer<typeof PendingLoginSchema>;
 
@@ -57,7 +62,7 @@ export const webRedirectUriFor = (origin: string): string | null => {
 /* Writes down what the return needs and answers the start URL to leave for. */
 export const beginWebLogin = async (
     storage: LoginStorage,
-    options: { addressBookUrl: string; redirectUri: string; provider?: ProviderId; link?: string; now?: number }
+    options: { addressBookUrl: string; redirectUri: string; provider?: ProviderId; link?: string; confirm?: boolean; now?: number }
 ): Promise<string> => {
     const pkce = await createPkce();
     const state = createLoginState();
@@ -66,7 +71,9 @@ export const beginWebLogin = async (
         state,
         redirectUri: options.redirectUri,
         startedAt: options.now ?? Date.now(),
-        link: options.link !== undefined
+        link: options.link !== undefined,
+        confirm: options.confirm === true,
+        provider: options.provider ?? 'github'
     };
     storage.setItem(PENDING_LOGIN_KEY, JSON.stringify(pending));
     return loginStartUrl({
@@ -87,7 +94,7 @@ export const completeWebLogin = (
     storage: LoginStorage,
     query: URLSearchParams,
     now = Date.now()
-): { code: string; verifier: string; redirectUri: string; link: boolean } => {
+): { code: string; verifier: string; redirectUri: string; link: boolean; confirm: boolean; provider: ProviderId } => {
     const raw = storage.getItem(PENDING_LOGIN_KEY);
     storage.removeItem(PENDING_LOGIN_KEY);
     let pending: PendingLogin | null = null;
@@ -104,7 +111,14 @@ export const completeWebLogin = (
         throw new LoginError('The sign-in took too long. Sign in again.');
     }
     const code = codeFromCallback({ code: query.get('code'), state: query.get('state'), error: query.get('error') }, pending.state);
-    return { code, verifier: pending.verifier, redirectUri: pending.redirectUri, link: pending.link === true };
+    return {
+        code,
+        verifier: pending.verifier,
+        redirectUri: pending.redirectUri,
+        link: pending.link === true,
+        confirm: pending.confirm === true,
+        provider: pending.provider ?? 'github'
+    };
 };
 
 const StoredSessionSchema = z.object({ refreshToken: z.string().min(1), expiresAt: z.number().int(), account: AccountSchema });

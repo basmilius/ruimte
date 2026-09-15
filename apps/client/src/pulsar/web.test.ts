@@ -18,8 +18,8 @@ const memoryStorage = (): LoginStorage & { items: Map<string, string> } => {
 
 const REDIRECT = 'https://station.ruimte.app/pulsar/callback';
 
-const leave = async (storage: LoginStorage, now = 1_000) => {
-    const start = new URL(await beginWebLogin(storage, { addressBookUrl: 'https://pulsar.ruimte.app', redirectUri: REDIRECT, now }));
+const leave = async (storage: LoginStorage, now = 1_000, confirm?: boolean) => {
+    const start = new URL(await beginWebLogin(storage, { addressBookUrl: 'https://pulsar.ruimte.app', redirectUri: REDIRECT, confirm, now }));
     return LoginStartQuerySchema.parse(Object.fromEntries(start.searchParams));
 };
 
@@ -39,7 +39,17 @@ describe('signing in on the web', () => {
         expect(back.code).toBe('c'.repeat(43));
         expect(back.redirectUri).toBe(REDIRECT);
         expect(back.verifier.length).toBeGreaterThanOrEqual(43);
+        expect(back.confirm).toBe(false);
         expect(storage.items.size).toBe(0);
+    });
+
+    test('a login started from the account section comes back once saying so', async () => {
+        const storage = memoryStorage();
+        const query = await leave(storage, 1_000, true);
+        const back = completeWebLogin(storage, new URLSearchParams({ code: 'c'.repeat(43), state: query.state }), 2_000);
+        expect(back.confirm).toBe(true);
+        expect(back.provider).toBe('github');
+        expect(() => completeWebLogin(storage, new URLSearchParams({ code: 'c'.repeat(43), state: query.state }), 2_000)).toThrow('did not start');
     });
 
     test('a return for another login, a second return and a return nobody started are refused', async () => {

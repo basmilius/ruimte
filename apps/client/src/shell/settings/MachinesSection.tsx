@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { ChevronRight, KeyRound, Link2, LogOut, Plus } from 'lucide-react';
+import { Check, ChevronRight, CircleAlert, KeyRound, Link2, LogOut, Plus, X } from 'lucide-react';
 import { PROVIDER_NAMES, type ProviderId } from '@ruimte/pulsar';
 import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
 import { pairEndpoint } from '@/endpoint';
@@ -16,6 +16,7 @@ import {
     usePulsarAccount
 } from '@/pulsar/account';
 import { PROVIDER_ORDER, identityDetail, signedInLabel, takeoverWarning } from '@/pulsar/account-name';
+import { dismissAccountConfirmation, useAccountConfirmation } from '@/pulsar/confirmation';
 import { forgetAccountMachines, reclaimAfterPairing, refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
 import { describeConnection, describeLastSeen, describePing, REACHABILITY_LABELS } from '@/shell/connection-info';
 import { MachineDialog } from '@/shell/settings/MachineDialog';
@@ -179,12 +180,41 @@ function IdentityRow({ provider }: { provider: ProviderId }) {
     );
 }
 
+/*
+ * How the last sign-in or added provider went, first in the section it came back to: a success that
+ * takes itself away, or a failure that waits until it is dismissed or the next attempt starts.
+ */
+function AccountOutcome() {
+    const confirmation = useAccountConfirmation((s) => s.text);
+    const error = usePulsarAccount((s) => s.error);
+    const text = confirmation ?? error;
+    if (text === null) {
+        return null;
+    }
+    const failed = confirmation === null;
+    return (
+        <div className="flex min-w-0 items-start gap-2 px-4 py-2.5" role={failed ? 'alert' : 'status'} aria-live="polite">
+            <span className="grid h-(--text-sm--line-height) w-4 shrink-0 place-items-center">
+                <Icon icon={failed ? CircleAlert : Check} size={16} className={failed ? 'text-status-error' : 'text-status-idle'} />
+            </span>
+            <span className={clsx('min-w-0 grow text-sm break-words', failed ? 'text-status-error' : 'text-text')}>{text}</span>
+            <Tooltip label="Dismiss" name>
+                <button
+                    className="icon-btn -my-0.5 h-6 w-6 shrink-0"
+                    onClick={() => (failed ? usePulsarAccount.setState({ error: null }) : dismissAccountConfirmation())}
+                >
+                    <Icon icon={X} size={12} />
+                </button>
+            </Tooltip>
+        </div>
+    );
+}
+
 /* Signing in is what lets a client reach a machine it never paired with: the account vouches for this client's key. */
 function AccountRows() {
     const status = usePulsarAccount((s) => s.status);
     const account = usePulsarAccount((s) => s.account);
     const identities = usePulsarAccount((s) => s.identities);
-    const error = usePulsarAccount((s) => s.error);
     const notice = usePulsarAccount((s) => s.notice);
 
     // An open pane asks which identities the account has, since another client may have added or removed one.
@@ -196,6 +226,7 @@ function AccountRows() {
 
     return (
         <>
+            <AccountOutcome />
             {status === 'unavailable' && (
                 <SettingsRow
                     muted
@@ -208,7 +239,7 @@ function AccountRows() {
                 <SettingsRow
                     label="Not signed in"
                     description={notice ?? 'Machines you reach while signed in join your account on their own, and its machines show up here.'}
-                    control={<SignInButtons className="justify-end" />}
+                    control={<SignInButtons className="justify-end" confirm />}
                 />
             )}
             {status === 'signing-in' && (
@@ -232,7 +263,6 @@ function AccountRows() {
                     {identities !== null && PROVIDER_ORDER.map((provider) => <IdentityRow key={provider} provider={provider} />)}
                 </>
             )}
-            {error !== null && <SettingsRow muted label={<span className="break-words text-status-error">{error}</span>} />}
         </>
     );
 }

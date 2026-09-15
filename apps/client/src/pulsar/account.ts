@@ -10,7 +10,9 @@ import {
     type ProviderId
 } from '@ruimte/pulsar';
 import { currentClientLabel } from '@/endpoint/client-label';
+import { useUi } from '@/state/ui';
 import { offeredProviders } from './account-name';
+import { confirmAccount, dismissAccountConfirmation, linkedConfirmation, signedInConfirmation } from './confirmation';
 import { desktopPulsar, type PulsarPlatform } from './desktop';
 import { linkIdentity, signIn } from './login';
 import { AccessTokens } from './session';
@@ -57,6 +59,11 @@ let book: Promise<AddressBookClient> | null = null;
 export const messageOf = (e: unknown): string =>
     (e instanceof Error ? e.message : String(e)).replace(/^Error invoking remote method '[^']+': (?:[A-Za-z]*Error: )?/, '');
 
+/* The Remote pane, where the account section says how a sign-in it started went, even when the dialog was closed meanwhile. */
+const openAccountSection = (): void => {
+    useUi.getState().setSettings({ open: true, section: 'machines' });
+};
+
 const signedOut = (error: string | null, notice: string | null = null): void => {
     tokens?.set(null);
     usePulsarAccount.setState({ status: 'signed-out', account: null, error, notice, identities: null, linking: null });
@@ -82,24 +89,34 @@ const finishWebSignIn = async (given: PulsarPlatform, web: NonNullable<PulsarPla
     const query = new URLSearchParams(location.search);
     history.replaceState(null, '', '/');
     usePulsarAccount.setState({ status: 'signing-in', error: null, notice: null });
+    // Known once the pending login is read, which spends it, so a reload of this page confirms nothing twice.
+    let confirm = false;
     try {
-        const { code, verifier, redirectUri, link } = completeWebLogin(web.storage, query);
+        const { code, verifier, redirectUri, link, provider, confirm: fromSection } = completeWebLogin(web.storage, query);
+        confirm = fromSection;
         if (link) {
-            await finishWebLink(given, { code, codeVerifier: verifier, redirectUri });
+            await finishWebLink(given, provider, { code, codeVerifier: verifier, redirectUri });
             return;
         }
         const view = await given.keeper.exchange({ code, codeVerifier: verifier, redirectUri, label: currentClientLabel().slice(0, 80) });
         tokens?.set(view);
         usePulsarAccount.setState({ status: 'signed-in', account: view.account, error: null, notice: null });
         keepStorage();
+        if (confirm) {
+            confirmAccount(signedInConfirmation(provider, view.account));
+            openAccountSection();
+        }
     } catch (e) {
         const restored = await given.keeper.restore().catch(() => null);
         usePulsarAccount.setState({ status: restored ? 'signed-in' : 'signed-out', account: restored?.account ?? null, error: messageOf(e), notice: null });
+        if (confirm) {
+            openAccountSection();
+        }
     }
 };
 
 /* The page came back from adding a provider: the session it left with trades the code, and stays signed in whatever the answer. */
-const finishWebLink = async (given: PulsarPlatform, payload: IdentityLinkCompletePayload): Promise<void> => {
+const finishWebLink = async (given: PulsarPlatform, provider: ProviderId, payload: IdentityLinkCompletePayload): Promise<void> => {
     const restored = await given.keeper.restore().catch(() => null);
     if (!restored) {
         signedOut(null, SESSION_ENDED);
@@ -108,9 +125,12 @@ const finishWebLink = async (given: PulsarPlatform, payload: IdentityLinkComplet
     usePulsarAccount.setState({ status: 'signed-in', account: restored.account, error: null, notice: null });
     try {
         applyAccountResult(await completeLink(payload));
+        confirmAccount(linkedConfirmation(provider));
     } catch (e) {
         usePulsarAccount.setState({ error: messageOf(e), linking: null });
     }
+    // Adding a provider only starts in the account section, so the way back always leads there.
+    openAccountSection();
 };
 
 /* Which providers to offer. A failure keeps what is on screen: the address book may be down, and GitHub is the one it always had. */
@@ -150,15 +170,23 @@ export const startPulsarAccount = async (given: PulsarPlatform | null = desktopP
     }
 };
 
-export const signInToPulsar = async (provider: ProviderId = 'github'): Promise<void> => {
+/*
+ * `confirm` is for a sign-in started in the account section: the Remote pane opens with how it went.
+ * A flow with a step of its own after signing in (approving a machine, picking one) leaves it off.
+ */
+export const signInToPulsar = async (provider: ProviderId = 'github', options: { confirm?: boolean } = {}): Promise<void> => {
     if (!platform || !tokens) {
         return;
     }
     const { web, redirect } = platform;
+    const confirm = options.confirm === true;
+    dismissAccountConfirmation();
     usePulsarAccount.setState({ status: 'signing-in', error: null, notice: null });
     if (web) {
         try {
-            location.assign(await beginWebLogin(web.storage, { addressBookUrl: await platform.addressBook(), redirectUri: web.redirectUri, provider }));
+            location.assign(
+                await beginWebLogin(web.storage, { addressBookUrl: await platform.addressBook(), redirectUri: web.redirectUri, provider, confirm })
+            );
         } catch (e) {
             const { account } = usePulsarAccount.getState();
             usePulsarAccount.setState({ status: account ? 'signed-in' : 'signed-out', error: messageOf(e) });
@@ -178,9 +206,16 @@ export const signInToPulsar = async (provider: ProviderId = 'github'): Promise<v
         });
         tokens.set(view);
         usePulsarAccount.setState({ status: 'signed-in', account: view.account, error: null });
+        if (confirm) {
+            confirmAccount(signedInConfirmation(provider, view.account));
+            openAccountSection();
+        }
     } catch (e) {
         const { account } = usePulsarAccount.getState();
         usePulsarAccount.setState({ status: account ? 'signed-in' : 'signed-out', error: messageOf(e) });
+        if (confirm) {
+            openAccountSection();
+        }
     }
 };
 
@@ -203,6 +238,7 @@ export const linkPulsarProvider = async (provider: ProviderId): Promise<void> =>
         return;
     }
     const { web, redirect } = platform;
+    dismissAccountConfirmation();
     usePulsarAccount.setState({ linking: provider, error: null });
     const requestLink = async (): Promise<string> => (await withAccessToken((client, token) => client.startIdentityLink(token, { provider }))).linkToken;
     try {
@@ -216,8 +252,11 @@ export const linkPulsarProvider = async (provider: ProviderId): Promise<void> =>
             return;
         }
         applyAccountResult(await linkIdentity({ redirect, addressBookUrl, provider, requestLink, complete: completeLink }));
+        confirmAccount(linkedConfirmation(provider));
+        openAccountSection();
     } catch (e) {
         usePulsarAccount.setState({ linking: null, error: messageOf(e) });
+        openAccountSection();
     }
 };
 
@@ -239,6 +278,7 @@ export const signOutOfPulsar = async (): Promise<void> => {
         return;
     }
     await platform.keeper.signOut().catch(() => undefined);
+    dismissAccountConfirmation();
     signedOut(null);
 };
 

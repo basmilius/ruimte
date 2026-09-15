@@ -24,13 +24,16 @@ export function ProviderButton({ provider, verb, disabled, onClick }: ProviderBu
     );
 }
 
-/* Every provider the address book offers, wherever signing in is offered. */
-export function SignInButtons({ className }: { className?: string }) {
+/*
+ * Every provider the address book offers, wherever signing in is offered. `confirm` opens the account
+ * section with how it went; a flow with a next step of its own leaves it off, so nothing covers that step.
+ */
+export function SignInButtons({ className, confirm = false }: { className?: string; confirm?: boolean }) {
     const providers = usePulsarAccount((s) => s.providers);
     return (
         <div className={clsx('flex flex-wrap items-center gap-2', className)}>
             {providers.map((provider) => (
-                <ProviderButton key={provider} provider={provider} verb="Sign in" onClick={() => void signInToPulsar(provider)} />
+                <ProviderButton key={provider} provider={provider} verb="Sign in" onClick={() => void signInToPulsar(provider, { confirm })} />
             ))}
         </div>
     );
