@@ -73,9 +73,17 @@ import RuimtePulsar
 
     public func close() { end(nil) }
 
+    private func trace(_ message: String) {
+        #if DEBUG
+        guard ProcessInfo.processInfo.environment["RUIMTE_TRACE_CONNECTION"] == "1" else { return }
+        print("[connection \(connectionID.prefix(8))] \(message)")
+        #endif
+    }
+
     private func negotiate(_ route: [JSONValue]) {
         guard !ended, !negotiationStarted else { return }
         negotiationStarted = true
+        trace("broker ready, \(route.count) ICE servers")
         do {
             let configuration = RTCConfiguration()
             configuration.sdpSemantics = .unifiedPlan
@@ -133,6 +141,8 @@ import RuimtePulsar
     private func offer() {
         guard !ended, offerSDP == nil, let sdp = peer?.localDescription?.sdp else { return }
         offerSDP = sdp
+        candidates.offered(sdp)
+        trace("offer with \(sdp.components(separatedBy: "a=candidate:").count - 1) candidates")
         accessTask = Task { [weak self] in
             guard let self else { return }
             do {
@@ -141,6 +151,7 @@ import RuimtePulsar
                 guard !ended, !Task.isCancelled else { return }
                 let envelope = try WireSchema.validate("SignalEnvelopeSchema", .object(["connectionId": .string(connectionID), "signal": .object(signal)]))
                 if let id = try membership?.relay(to: machineKey, envelope: envelope) { relayIDs.insert(id) }
+                trace("offer sent")
             } catch { if !Task.isCancelled { end(error) } }
         }
     }
@@ -158,6 +169,7 @@ import RuimtePulsar
             let signal = try field(envelope, "signal")
             switch try string(signal, "kind") {
             case "answer":
+                trace("answer received")
                 guard let peer, let offerSDP, binding == nil else { return }
                 let sdp = try string(signal, "sdp")
                 binding = try DirectIdentity.channelBinding(offer: offerSDP, answer: sdp)
@@ -165,7 +177,10 @@ import RuimtePulsar
                     Task { @MainActor in
                         guard let self, !self.ended else { return }
                         if let error { self.end(error); return }
-                        for candidate in self.candidates.answerApplied() { self.relayCandidate(candidate) }
+                        self.trace("answer applied")
+                        let pending = self.candidates.answerApplied()
+                        self.trace("forwarding \(pending.count) additional candidates")
+                        for candidate in pending { self.relayCandidate(candidate) }
                     }
                 }
             case "candidate":
@@ -192,6 +207,8 @@ import RuimtePulsar
 
     private func generatedCandidate(_ candidate: RTCIceCandidate) {
         guard !ended, !authenticated else { return }
+        let kind = candidate.sdp.components(separatedBy: " typ ").last?.components(separatedBy: " ").first ?? "unknown"
+        trace("local candidate \(kind)")
         let signal: JSONValue = .object([
             "kind": .string("candidate"), "candidate": .string(candidate.sdp),
             "sdpMid": candidate.sdpMid.map(JSONValue.string) ?? .null,
@@ -214,6 +231,7 @@ import RuimtePulsar
     }
 
     private func handshake(_ frame: JSONValue) throws {
+        trace("handshake frame")
         if !proofSent {
             guard let binding else { throw TransportFailure.invalid("The channel opened before its answer was applied.") }
             let proof = try DirectIdentity.proof(challenge: frame, binding: binding, machineID: machineID, machineKey: machineKey, signer: signer)
@@ -226,6 +244,7 @@ import RuimtePulsar
             throw TransportFailure.invalid(verdict["reason"]?.stringValue ?? "The machine refused this connection.")
         }
         authenticated = true
+        trace("authenticated")
         cancelTimeout?()
         cancelTimeout = nil
         membership?.leave()
@@ -303,6 +322,7 @@ import RuimtePulsar
     private func end(_ error: Error?) {
         guard !ended else { return }
         ended = true
+        trace("ended: \(error?.localizedDescription ?? "closed")")
         cancelTimeout?()
         cancelGather?()
         cancelTick?()
@@ -349,6 +369,7 @@ extension NativeWebRTCLink: RTCPeerConnectionDelegate, RTCDataChannelDelegate {
     nonisolated public func peerConnectionShouldNegotiate(_ peerConnection: RTCPeerConnection) {}
     nonisolated public func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCIceConnectionState) {
         Task { @MainActor [weak self] in
+            self?.trace("ICE state \(newState.rawValue)")
             if newState == .failed { self?.end(TransportFailure.invalid("No network path to the machine: ICE failed.")) }
         }
     }

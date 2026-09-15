@@ -482,3 +482,11 @@ Projects now open through a public UIKit navigation controller with an interacti
 The signed build passed and was installed and launched on the physical iPhone and iPad. No simulator or additional device test suite was used. Live screenshots and gesture acceptance are recorded separately below.
 
 The first device check was blocked by connection failures. The daemon log showed repeated negotiation timeouts after the previous iteration's candidate-free offer change. Initial ICE gathering was restored with its existing five-second cap; late candidate forwarding and the direct/relay policy remain unchanged. A new connection opened after installing this recovery build, but the log does not identify which device connected. The final captured iPhone screen was Projects, so the chat appearance and back gesture are not yet visually verified. Both devices received the recovery build, and the build, format and check commands passed.
+
+## iPhone connection diagnosis
+
+Device console tracing identified the remaining failure: after receiving the answer, the iPhone replayed candidates already included in its offer. A single connection could announce about 30 candidates, exceeding the broker's 20-frames-per-second limit when replayed. The broker then refused the attempt and interrupted other negotiations on the shared socket.
+
+Candidate forwarding now excludes routes present in the SDP and suppresses duplicates. Matching uses the candidate's core fields and TCP type because native delegate strings and SDP can differ in optional extensions. Candidates gathered after the offer still go out after the answer. Direct connection preference and TURN availability are unchanged.
+
+Three focused tests passed on the physical iPad. On the physical iPhone, tracing confirmed zero replayed candidates and successful authentication to both the VPS and the Mac. The Projects screenshot then showed both machines online with loaded custom project icons. The Mac needed retries during this observation, including one negotiation timeout and one liveness failure before the latest connection completed. This confirms that the rate-limit regression is fixed, but does not establish long-term network stability. Connection tracing is debug-only, opt-in with `RUIMTE_TRACE_CONNECTION=1`, and excludes SDP, addresses, keys, tokens and chat contents.
