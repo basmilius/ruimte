@@ -1,3 +1,5 @@
+// werift's @peculiar/x509 imports this before tsyringe, but a compiled bundle runs tsyringe first and the daemon dies on start.
+import 'reflect-metadata';
 import { forgetInheritedSession, parseServerArgs } from './config.ts';
 
 /*

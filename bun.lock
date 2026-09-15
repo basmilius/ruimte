@@ -113,6 +113,7 @@
         "@ruimte/pulsar": "workspace:*",
         "@xterm/addon-serialize": "^0.14.0",
         "@xterm/headless": "^6.0.0",
+        "reflect-metadata": "0.2.2",
         "werift": "0.24.4",
         "zod": "^4.5.4",
       },
