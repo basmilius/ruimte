@@ -9,7 +9,7 @@ struct RuimteApp: App {
         WindowGroup {
             AppHome(runtime: runtime)
                 .foregroundStyle(MobileStyle.text)
-                .background(MobileStyle.canvas)
+                .modifier(MobilePageSurface())
                 .tint(MobileStyle.accent)
                 .toggleStyle(SystemToggleStyle())
         }

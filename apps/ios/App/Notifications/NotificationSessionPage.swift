@@ -36,6 +36,7 @@ struct NotificationSessionPage: View {
                 ProgressView().accessibilityLabel("Connecting to your machine")
             }
         }
+        .modifier(MobilePageSurface())
         .environment(\.mobileMachineSession, session)
         .task {
             guard lease == nil else { return }

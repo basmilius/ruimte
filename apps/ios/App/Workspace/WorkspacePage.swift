@@ -23,6 +23,7 @@ struct WorkspacePage: View {
                 openingStatus
             }
         }
+        .modifier(MobilePageSurface())
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
                 if workspace.ready && !workspace.session.connected {
@@ -60,10 +61,6 @@ struct WorkspacePage: View {
         .navigationTitle(isSidebar ? "" : workspace.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if isSidebar {
-                ToolbarItem(placement: .topBarLeading) { SidebarBrand() }
-                    .sharedBackgroundVisibility(.hidden)
-            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Usage", lucideIcon: "chart-no-axes-column") { showUsage = true }
                     .disabled(!workspace.ready)
@@ -213,9 +210,10 @@ struct WorkspacePage: View {
                     if section.id != sections.first?.id || section.title != nil || isSidebar {
                         VStack(alignment: .leading, spacing: 8) {
                             if isSidebar && section.id == sections.first?.id {
-                                Text(workspace.title).font(.footnote.weight(.medium))
-                                    .foregroundStyle(MobileStyle.muted).lineLimit(1).truncationMode(.tail)
-                                    .textCase(nil).padding(.bottom, 8)
+                                Text(workspace.title).font(.title3.weight(.semibold))
+                                    .foregroundStyle(MobileStyle.text).lineLimit(1).truncationMode(.tail)
+                                    .textCase(nil).padding(.vertical, 8)
+                                    .accessibilityAddTraits(.isHeader)
                             }
                             if section.id != sections.first?.id {
                                 MobileStyle.border.frame(height: 1).padding(.vertical, 10)
@@ -383,6 +381,7 @@ struct ProjectItemPage: View {
                 }
             }
         }
+        .modifier(MobilePageSurface())
         .accessibilityIdentifier("workspace.destination.\(item.stableID)")
         .navigationTitle(title).navigationBarTitleDisplayMode(.inline)
         .onAppear {

@@ -3,6 +3,7 @@ import SwiftUI
 private struct MobileSheetSurface: ViewModifier {
     func body(content: Content) -> some View {
         content
+            .modifier(MobilePageSurface())
             .foregroundStyle(MobileStyle.text)
             .tint(MobileStyle.accent)
             .toggleStyle(SystemToggleStyle())

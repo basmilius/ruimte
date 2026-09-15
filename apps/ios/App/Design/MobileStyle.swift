@@ -34,6 +34,15 @@ enum MobileStyle {
     }
 }
 
+struct MobilePageSurface: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(MobileStyle.surface.ignoresSafeArea(.container))
+            .containerBackground(MobileStyle.surface, for: .navigation)
+    }
+}
+
 struct MobileList<Content: View>: View {
     @ViewBuilder var content: Content
 

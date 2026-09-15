@@ -128,6 +128,7 @@ struct FileContentPage: View {
                 }
             }.padding()
         }
+        .modifier(MobilePageSurface())
         .navigationTitle(URL(fileURLWithPath: path).lastPathComponent)
         .toolbar {
             if ["md", "markdown"].contains(URL(fileURLWithPath: path).pathExtension.lowercased()) {

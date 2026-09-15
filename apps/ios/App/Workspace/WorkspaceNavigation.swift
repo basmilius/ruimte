@@ -54,10 +54,10 @@ struct WorkspaceDetail: View {
                         "Select a view", lucideIcon: "panel-left",
                         description: Text("Choose a view in the sidebar to get started.")
                     )
-                    .background(MobileStyle.surface)
                 }
             }
         }
+        .modifier(MobilePageSurface())
         .environment(\.mobileMachineSession, workspace.session)
     }
 }

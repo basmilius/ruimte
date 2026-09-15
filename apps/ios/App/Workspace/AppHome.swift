@@ -95,6 +95,7 @@ struct AppHome: View {
                     NotificationSessionPage(runtime: runtime, destination: destination)
                 }
         }
+        .containerBackground(MobileStyle.surface, for: .navigation)
     }
 
     private var tabletNavigation: some View {
@@ -121,8 +122,10 @@ struct AppHome: View {
                 .navigationTitle("")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    ToolbarItem(placement: .topBarLeading) { SidebarBrand() }
-                        .sharedBackgroundVisibility(.hidden)
+                    if activeProject == nil {
+                        ToolbarItem(placement: .topBarLeading) { SidebarBrand() }
+                            .sharedBackgroundVisibility(.hidden)
+                    }
                 }
                 .navigationDestination(item: $activeProject) { project in
                     WorkspacePage(navigation: project, isSidebar: true)

@@ -542,3 +542,11 @@ View-group separators and labels now live in noninteractive list rows instead of
 Navigation labels gain a lighter pressed background. A simultaneous gesture updates transient state and resets on release or movement, following SwiftUI's [gesture-state pattern](https://developer.apple.com/documentation/swiftui/gesturestate). The native button action remains responsible for opening the destination.
 
 Build, format and repository checks passed. The focused phone/tablet activation check passed; it now skips decorative rows before asserting that the first view opens the real canvas. Its final iPad screenshot confirms that the left-aligned Ruimte name is fully visible. The physical iPhone was showing Notifications when captured, so that screenshot does not verify the Projects title. Press appearance during a physical touch and scrolling separator behavior still need device acceptance. No simulator was used.
+
+## Page surfaces while loading
+
+The shared page surface now fills the viewport with the app's surface color before content loads, including its safe-area background. Navigation containers use that color too. Project loading, view preparation, removed/error states, notification destinations, file previews and app sheets use this surface, so a spinner no longer leaves the system background exposed. Content keeps its existing safe-area and keyboard layout.
+
+Ruimte branding is limited to the main iPad sidebar. A project's sidebar toolbar has no title or branding; its project name uses a larger semibold heading within the scrolling list. iPhone project titles keep their existing toolbar placement.
+
+The signed device build, Swift formatting, repository format and check commands passed. No simulator or additional device test suite was used in this iteration. Transient loading appearance and navigation transitions still need visual acceptance on a device.
