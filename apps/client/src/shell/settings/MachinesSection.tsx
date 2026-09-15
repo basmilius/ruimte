@@ -97,6 +97,7 @@ const useRowFailure = (endpoint: Endpoint | null): string | null => {
 function MachineRow({ entry, onOpen }: { entry: MachineEntry; onOpen(): void }) {
     const icon = useMachineIcon(entry);
     const failure = useRowFailure(entry.endpoint);
+    const relayed = useEndpointConnection(entry.endpoint?.id ?? '').relayed === true;
     const name = nameOf(entry);
 
     return (
@@ -110,7 +111,7 @@ function MachineRow({ entry, onOpen }: { entry: MachineEntry; onOpen(): void }) 
                 <MachineGlyph icon={icon} className="shrink-0 text-text-muted" />
                 <span className="flex min-w-0 grow flex-col">
                     <span className="truncate text-sm text-text">{name}</span>
-                    <span className="text-xs leading-snug break-words text-text-faint">{reachLabel(entry)}</span>
+                    <span className="text-xs leading-snug break-words text-text-faint">{relayed ? `${reachLabel(entry)} · via relay` : reachLabel(entry)}</span>
                     {failure !== null && <span className="text-xs leading-snug break-words text-status-error">{failure}</span>}
                 </span>
                 <Icon icon={ChevronRight} size={16} className="shrink-0 text-text-faint" />
