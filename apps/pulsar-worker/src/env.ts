@@ -8,4 +8,6 @@ export interface Env {
     GITHUB_CLIENT_SECRET?: string;
     // The private half of the statement key, pkcs8 DER in base64url.
     STATEMENT_PRIVATE_KEY?: string;
+    // Where a person approves a machine's code, when it is not the web client in production.
+    DEVICE_LINK_PAGE_URL?: string;
 }

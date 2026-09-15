@@ -5,6 +5,7 @@ import {
     accessRequestMessage,
     accessStatementMessage,
     brokerHelloMessage,
+    deviceLinkStartMessage,
     machineRegistrationMessage,
     sessionKeyMessage,
     sessionRefreshMessage,
@@ -24,7 +25,8 @@ const everyPurpose = (): Record<keyof typeof SIGNING_PURPOSES, string> => ({
     accessRequest: accessRequestMessage('machine-1', key, nonce),
     accessStatement: accessStatementMessage('machine-1', key, nonce, 0, 120_000),
     sessionKey: sessionKeyMessage(nonce, key),
-    sessionRefresh: sessionRefreshMessage(nonce, 0)
+    sessionRefresh: sessionRefreshMessage(nonce, 0),
+    deviceLinkStart: deviceLinkStartMessage('machine-1', key, 'machine', 0)
 });
 
 describe('signed bytes', () => {

@@ -16,6 +16,20 @@ import {
     type SessionRefreshPayload,
     type SessionResult
 } from './address-book.ts';
+import {
+    DeviceLinkCompleteResultSchema,
+    DeviceLinkLookupResultSchema,
+    DeviceLinkPollResultSchema,
+    DeviceLinkStartResultSchema,
+    type DeviceCodePayload,
+    type DeviceLinkCompletePayload,
+    type DeviceLinkCompleteResult,
+    type DeviceLinkLookupResult,
+    type DeviceLinkPollResult,
+    type DeviceLinkStartPayload,
+    type DeviceLinkStartResult,
+    type UserCodePayload
+} from './device-link.ts';
 
 /* `network` is no answer at all; `bad-answer` is an answer this client cannot read. */
 export type AddressBookFailure = AddressBookErrorCode | 'network' | 'bad-answer';
@@ -85,6 +99,34 @@ export class AddressBookClient {
 
     requestStatement(accessToken: string, payload: AccessRequestPayload): Promise<AccessStatement> {
         return this.call({ method: 'POST', path: '/v1/statements', token: accessToken, body: payload, schema: AccessStatementSchema });
+    }
+
+    startDeviceLink(payload: DeviceLinkStartPayload): Promise<DeviceLinkStartResult> {
+        return this.call({ method: 'POST', path: '/v1/device/start', body: payload, schema: DeviceLinkStartResultSchema });
+    }
+
+    pollDeviceLink(payload: DeviceCodePayload): Promise<DeviceLinkPollResult> {
+        return this.call({ method: 'POST', path: '/v1/device/poll', body: payload, schema: DeviceLinkPollResultSchema });
+    }
+
+    completeDeviceLink(payload: DeviceLinkCompletePayload): Promise<DeviceLinkCompleteResult> {
+        return this.call({ method: 'POST', path: '/v1/device/complete', body: payload, schema: DeviceLinkCompleteResultSchema });
+    }
+
+    async cancelDeviceLink(payload: DeviceCodePayload): Promise<void> {
+        await this.call({ method: 'POST', path: '/v1/device/cancel', body: payload, schema: null });
+    }
+
+    lookupDeviceLink(accessToken: string, payload: UserCodePayload): Promise<DeviceLinkLookupResult> {
+        return this.call({ method: 'POST', path: '/v1/device/lookup', token: accessToken, body: payload, schema: DeviceLinkLookupResultSchema });
+    }
+
+    approveDeviceLink(accessToken: string, payload: UserCodePayload): Promise<DeviceLinkLookupResult> {
+        return this.call({ method: 'POST', path: '/v1/device/approve', token: accessToken, body: payload, schema: DeviceLinkLookupResultSchema });
+    }
+
+    async denyDeviceLink(accessToken: string, payload: UserCodePayload): Promise<void> {
+        await this.call({ method: 'POST', path: '/v1/device/deny', token: accessToken, body: payload, schema: null });
     }
 
     private async call<T>(call: Call<T>): Promise<T> {

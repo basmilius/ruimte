@@ -16,7 +16,8 @@ export const SIGNING_PURPOSES = {
     accessRequest: 'pulsar-access-request-v1',
     accessStatement: 'pulsar-access-statement-v1',
     sessionKey: 'pulsar-session-key-v1',
-    sessionRefresh: 'pulsar-session-refresh-v1'
+    sessionRefresh: 'pulsar-session-refresh-v1',
+    deviceLinkStart: 'pulsar-device-link-start-v1'
 } as const;
 export type SigningPurpose = (typeof SIGNING_PURPOSES)[keyof typeof SIGNING_PURPOSES];
 
@@ -88,3 +89,10 @@ export const sessionKeyMessage = (code: string, sessionKey: string): string => s
  * good for one rotation only, and the time is in it, so one read off a request long ago is worth nothing.
  */
 export const sessionRefreshMessage = (refreshToken: string, issuedAt: number): string => signedBytes(SIGNING_PURPOSES.sessionRefresh, [refreshToken, issuedAt]);
+
+/*
+ * A machine asking to be linked with a code. It names no account, so it can put the machine on none:
+ * it only proves the key the approval page shows, and a registration signed later does the rest.
+ */
+export const deviceLinkStartMessage = (machineId: string, publicKey: string, name: string, issuedAt: number): string =>
+    signedBytes(SIGNING_PURPOSES.deviceLinkStart, [machineId, publicKey, name, issuedAt]);

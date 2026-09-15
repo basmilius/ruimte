@@ -83,34 +83,51 @@ export const registerMachine = async (request: Request, env: Env): Promise<Respo
         if (removed) {
             return failure('removed', 'This machine was taken off the account; add it again from its row');
         }
-    } else {
-        await env.DB.prepare('DELETE FROM removed_machine WHERE account_id = ?1 AND machine_id = ?2').bind(session.account.id, payload.id).run();
+    }
+    const stored = await storeMachine(env.DB, session.account.id, { ...payload, brokerUrl: payload.brokerUrl ?? null }, payload.automatic !== true, now);
+    return 'response' in stored ? stored.response : json({ machine: stored.machine });
+};
+
+export interface SignedMachine {
+    id: string;
+    name: string;
+    icon: MachineIcon | null;
+    brokerUrl: string | null;
+    publicKey: string;
+}
+
+/*
+ * Puts a machine whose signature already held on an account. A registration a person asked for clears
+ * a removal; the caller refuses an automatic one for a removed machine before it gets here.
+ */
+export const storeMachine = async (
+    db: D1Database,
+    accountId: string,
+    machine: SignedMachine,
+    clearsRemoval: boolean,
+    now: number
+): Promise<{ machine: Machine } | { response: Response }> => {
+    if (clearsRemoval) {
+        await db.prepare('DELETE FROM removed_machine WHERE account_id = ?1 AND machine_id = ?2').bind(accountId, machine.id).run();
     }
     /*
      * An upsert only by the key the machine is listed with: anyone who can sign a registration for another
      * key could otherwise take over the row, and every client that opens the machine pins the listed key.
      * A machine with a new key comes back after a person removes it from the account.
      */
-    const row = await env.DB.prepare(
-        `INSERT INTO machine (account_id, id, name, icon, broker_url, public_key, last_seen_at, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
+    const row = await db
+        .prepare(
+            `INSERT INTO machine (account_id, id, name, icon, broker_url, public_key, last_seen_at, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?7)
          ON CONFLICT (account_id, id) DO UPDATE SET name = excluded.name, icon = excluded.icon, broker_url = excluded.broker_url, last_seen_at = excluded.last_seen_at
          WHERE machine.public_key = excluded.public_key
          RETURNING id, name, icon, broker_url, public_key, last_seen_at`
-    )
-        .bind(
-            session.account.id,
-            payload.id,
-            payload.name,
-            payload.icon ? JSON.stringify(payload.icon) : null,
-            payload.brokerUrl ?? null,
-            payload.publicKey,
-            now
         )
+        .bind(accountId, machine.id, machine.name, machine.icon ? JSON.stringify(machine.icon) : null, machine.brokerUrl, machine.publicKey, now)
         .first<MachineRow>();
     if (!row) {
-        return failure('bad-signature', 'This machine is on the account with another key; remove it from the account and add it again');
+        return { response: failure('bad-signature', 'This machine is on the account with another key; remove it from the account and add it again') };
     }
-    return json({ machine: machineOf(row) });
+    return { machine: machineOf(row) };
 };
 
 // `DELETE /v1/machines/<id>`: off the list only; the machine keeps every pairing it has.

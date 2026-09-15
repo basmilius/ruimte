@@ -3,12 +3,23 @@ import { statementKeyOf } from './crypto.ts';
 import type { Env } from './env.ts';
 import { allowedOrigin, corsHeaders, failure, json } from './http.ts';
 import { endSession, exchangeLoginCode, finishLogin, refreshSession, startLogin } from './login.ts';
+import { approveDeviceLink, cancelDeviceLink, completeDeviceLink, denyDeviceLink, lookupDeviceLink, pollDeviceLink, startDeviceLink } from './device.ts';
 import { deleteMachine, listMachines, registerMachine } from './machines.ts';
 import { PROVIDERS } from './providers.ts';
 import { issueStatement } from './statements.ts';
 
 // Rows past use for this long are dropped by the daily cleanup; the statement log is kept.
 const REVOKED_SESSION_RETENTION_MS = 30 * 24 * 60 * 60_000;
+
+const DEVICE_ROUTES: Record<string, (request: Request, env: Env) => Promise<Response>> = {
+    start: startDeviceLink,
+    poll: pollDeviceLink,
+    complete: completeDeviceLink,
+    cancel: cancelDeviceLink,
+    lookup: lookupDeviceLink,
+    approve: approveDeviceLink,
+    deny: denyDeviceLink
+};
 
 const health = async (env: Env): Promise<Response> => {
     let statementKey: string | null = null;
@@ -37,6 +48,13 @@ const api = async (request: Request, env: Env, path: string): Promise<Response> 
     }
     if (path === '/v1/statements' && method === 'POST') {
         return issueStatement(request, env);
+    }
+    const device = /^\/v1\/device\/([a-z]+)$/.exec(path)?.[1];
+    if (device !== undefined && method === 'POST') {
+        const handler = DEVICE_ROUTES[device];
+        if (handler) {
+            return handler(request, env);
+        }
     }
     if (path === '/v1/session') {
         if (method === 'POST') {
@@ -95,6 +113,7 @@ export default {
         await env.DB.batch([
             env.DB.prepare('DELETE FROM login_attempt WHERE expires_at <= ?1').bind(now),
             env.DB.prepare('DELETE FROM login_code WHERE expires_at <= ?1').bind(now),
+            env.DB.prepare('DELETE FROM device_link WHERE expires_at <= ?1').bind(now),
             env.DB.prepare('DELETE FROM rate_limit WHERE window_start < ?1').bind(now - 60 * 60_000),
             env.DB.prepare('DELETE FROM session WHERE expires_at <= ?1 OR revoked_at <= ?2').bind(now, now - REVOKED_SESSION_RETENTION_MS)
         ]);

@@ -6,11 +6,16 @@ import {
     PULSAR_STATEMENT_PUBLIC_KEYS,
     accessRequestMessage,
     accessStatementMessage,
+    deviceLinkStartMessage,
     machineRegistrationMessage,
     sessionKeyMessage,
     sessionRefreshMessage,
     type AccessStatement,
     type AddressBookError,
+    type DeviceLinkCompleteResult,
+    type DeviceLinkLookupResult,
+    type DeviceLinkPollResult,
+    type DeviceLinkStartResult,
     type MachineListResult,
     type SessionResult
 } from '@ruimte/pulsar';
@@ -683,6 +688,210 @@ describe('statements', () => {
         expect(limited).not.toBeNull();
         expect(await errorCode(limited as Response)).toBe('rate-limited');
         expect(limited?.headers.get('retry-after')).not.toBeNull();
+    });
+});
+
+describe('linking a machine with a code', () => {
+    const linkStart = (machine: KeyPair, id: string, signer = machine, issuedAt = Date.now()) => {
+        const name = `Linked ${id}`;
+        return {
+            id,
+            name,
+            icon: { kind: 'lucide', value: 'server' },
+            brokerUrl: 'wss://broker.ruimte.test',
+            publicKey: machine.publicKey,
+            issuedAt,
+            signature: signWith(signer, deviceLinkStartMessage(id, machine.publicKey, name, issuedAt))
+        };
+    };
+
+    const start = async (machine: KeyPair, id: string): Promise<DeviceLinkStartResult> => {
+        const response = await dispatch('/v1/device/start', { method: 'POST', body: linkStart(machine, id) });
+        expect(response.status).toBe(200);
+        return (await response.json()) as DeviceLinkStartResult;
+    };
+
+    const poll = async (deviceCode: string): Promise<Response> => dispatch('/v1/device/poll', { method: 'POST', body: { deviceCode } });
+
+    const pollStatus = async (deviceCode: string): Promise<DeviceLinkPollResult> => {
+        const response = await poll(deviceCode);
+        expect(response.status).toBe(200);
+        return (await response.json()) as DeviceLinkPollResult;
+    };
+
+    const byCode = (route: 'lookup' | 'approve' | 'deny', session: SessionResult | null, userCode: string): Promise<Response> =>
+        dispatch(`/v1/device/${route}`, { method: 'POST', headers: session ? bearer(session) : {}, body: { userCode } });
+
+    const completion = (link: DeviceLinkStartResult, machine: KeyPair, id: string, accountId: string, issuedAt = Date.now()) => ({
+        deviceCode: link.deviceCode,
+        issuedAt,
+        signature: signWith(machine, machineRegistrationMessage(accountId, id, machine.publicKey, `Linked ${id}`, issuedAt))
+    });
+
+    test('a start with a signature from another key is refused', async () => {
+        const response = await dispatch('/v1/device/start', { method: 'POST', body: linkStart(newKeyPair(), 'forged', newKeyPair()) });
+        expect(response.status).toBe(403);
+        expect(await errorCode(response)).toBe('bad-signature');
+    });
+
+    test('a start signed long ago is refused', async () => {
+        const response = await dispatch('/v1/device/start', { method: 'POST', body: linkStart(newKeyPair(), 'stale', undefined, Date.now() - 11 * 60_000) });
+        expect(response.status).toBe(400);
+    });
+
+    test('a start answers a code of two groups of four letters, the page and the interval', async () => {
+        const link = await start(newKeyPair(), 'format');
+        expect(link.userCode).toMatch(/^[BCDFGHJKLMNPQRSTVWXZ]{4}-[BCDFGHJKLMNPQRSTVWXZ]{4}$/);
+        expect(link.verificationUri).toBe('https://station.ruimte.app/link');
+        expect(new URL(link.verificationUriComplete).searchParams.get('code')).toBe(link.userCode);
+        expect(link.interval).toBe(5);
+        expect(link.expiresAt - Date.now()).toBeGreaterThan(9 * 60_000);
+    });
+
+    test('a person approves, the machine signs for that account, and it is listed once', async () => {
+        const machine = newKeyPair();
+        const link = await start(machine, 'linked');
+        expect(await pollStatus(link.deviceCode)).toEqual({ status: 'pending', interval: 5, account: null });
+
+        const session = await signIn(5001);
+        const lookup = await byCode('lookup', session, link.userCode.toLowerCase());
+        expect(lookup.status).toBe(200);
+        expect(((await lookup.json()) as DeviceLinkLookupResult).machine).toEqual({
+            id: 'linked',
+            name: 'Linked linked',
+            icon: { kind: 'lucide', value: 'server' },
+            publicKey: machine.publicKey
+        });
+        expect((await byCode('approve', session, link.userCode)).status).toBe(200);
+
+        const approved = await pollStatus(link.deviceCode);
+        expect(approved.status).toBe('approved');
+        expect(approved.account?.id).toBe(session.account.id);
+
+        const forOther = await dispatch('/v1/device/complete', { method: 'POST', body: completion(link, machine, 'linked', 'another-account') });
+        expect(forOther.status).toBe(403);
+        expect(await errorCode(forOther)).toBe('bad-signature');
+
+        const complete = await dispatch('/v1/device/complete', { method: 'POST', body: completion(link, machine, 'linked', session.account.id) });
+        expect(complete.status).toBe(200);
+        const result = (await complete.json()) as DeviceLinkCompleteResult;
+        expect(result.account.login).toBe('user-5001');
+        expect(result.machine.brokerUrl).toBe('wss://broker.ruimte.test');
+
+        const list = (await (await dispatch('/v1/machines', { headers: bearer(session) })).json()) as MachineListResult;
+        expect(list.machines.map((entry) => entry.id)).toEqual(['linked']);
+
+        // The device code is spent, and so is the user code.
+        const again = await dispatch('/v1/device/complete', { method: 'POST', body: completion(link, machine, 'linked', session.account.id) });
+        expect(again.status).toBe(404);
+        expect((await poll(link.deviceCode)).status).toBe(404);
+        expect((await byCode('approve', session, link.userCode)).status).toBe(404);
+    });
+
+    test('a code is approved once, and a second account gets nothing for it', async () => {
+        const link = await start(newKeyPair(), 'contested');
+        expect((await byCode('approve', await signIn(5002), link.userCode)).status).toBe(200);
+        const late = await byCode('approve', await signIn(5003), link.userCode);
+        expect(late.status).toBe(404);
+        expect(await errorCode(late)).toBe('not-found');
+    });
+
+    test('nothing happens to a code without a session', async () => {
+        const link = await start(newKeyPair(), 'no-session');
+        for (const route of ['lookup', 'approve', 'deny'] as const) {
+            const response = await byCode(route, null, link.userCode);
+            expect(response.status).toBe(401);
+        }
+        expect((await pollStatus(link.deviceCode)).status).toBe('pending');
+    });
+
+    test('a complete before anyone approved is refused', async () => {
+        const machine = newKeyPair();
+        const link = await start(machine, 'early');
+        const response = await dispatch('/v1/device/complete', { method: 'POST', body: completion(link, machine, 'early', 'anyone') });
+        expect(response.status).toBe(404);
+    });
+
+    test('a denial and a cancel are told to the terminal', async () => {
+        const denied = await start(newKeyPair(), 'denied');
+        expect((await byCode('deny', await signIn(5004), denied.userCode)).status).toBe(204);
+        expect((await pollStatus(denied.deviceCode)).status).toBe('denied');
+
+        const cancelled = await start(newKeyPair(), 'cancelled');
+        expect((await dispatch('/v1/device/cancel', { method: 'POST', body: { deviceCode: cancelled.deviceCode } })).status).toBe(204);
+        expect((await pollStatus(cancelled.deviceCode)).status).toBe('cancelled');
+        expect((await byCode('lookup', await signIn(5005), cancelled.userCode)).status).toBe(404);
+    });
+
+    test('an expired code is refused on the page and said so to the terminal', async () => {
+        const link = await start(newKeyPair(), 'expired');
+        const db = await mf.getD1Database('DB');
+        await db
+            .prepare('UPDATE device_link SET expires_at = ?1 WHERE user_code = ?2')
+            .bind(Date.now() - 1, link.userCode.replace('-', ''))
+            .run();
+        expect((await pollStatus(link.deviceCode)).status).toBe('expired');
+        expect((await byCode('lookup', await signIn(5006), link.userCode)).status).toBe(404);
+        expect((await poll(base64url(randomBytes(32)))).status).toBe(404);
+    });
+
+    test('linking a machine a person removed puts it back', async () => {
+        const machine = newKeyPair();
+        const session = await signIn(5007);
+        await dispatch('/v1/machines', { method: 'POST', headers: bearer(session), body: { ...registration(session, machine, 'returns') } });
+        expect((await dispatch('/v1/machines/returns', { method: 'DELETE', headers: bearer(session) })).status).toBe(204);
+
+        const issuedAt = Date.now();
+        const body = { ...linkStart(machine, 'returns', machine, issuedAt), name: 'Machine returns' };
+        body.signature = signWith(machine, deviceLinkStartMessage('returns', machine.publicKey, 'Machine returns', issuedAt));
+        const link = (await (await dispatch('/v1/device/start', { method: 'POST', body })).json()) as DeviceLinkStartResult;
+        expect((await byCode('approve', session, link.userCode)).status).toBe(200);
+        const complete = await dispatch('/v1/device/complete', {
+            method: 'POST',
+            body: {
+                deviceCode: link.deviceCode,
+                issuedAt,
+                signature: signWith(machine, machineRegistrationMessage(session.account.id, 'returns', machine.publicKey, 'Machine returns', issuedAt))
+            }
+        });
+        expect(complete.status).toBe(200);
+        const list = (await (await dispatch('/v1/machines', { headers: bearer(session) })).json()) as MachineListResult;
+        expect(list.machines.map((entry) => entry.id)).toEqual(['returns']);
+        expect(list.removedMachineIds).toEqual([]);
+    });
+
+    // Twice the limit plus two, so one window holds more than the limit even when the minute turns halfway.
+    const firstRefusal = async (attempts: number, send: () => Promise<Response>): Promise<Response | null> => {
+        for (let i = 0; i < attempts; i++) {
+            const response = await send();
+            if (response.status === 429) {
+                return response;
+            }
+            await response.arrayBuffer();
+        }
+        return null;
+    };
+
+    test('an address that starts too many links is told to wait', async () => {
+        const ip = nextIp();
+        const limited = await firstRefusal(22, () => dispatch('/v1/device/start', { method: 'POST', body: linkStart(newKeyPair(), 'burst'), ip }));
+        expect(limited).not.toBeNull();
+        expect(await errorCode(limited as Response)).toBe('rate-limited');
+    });
+
+    test('an account that guesses codes is told to wait', async () => {
+        const session = await signIn(5008);
+        const limited = await firstRefusal(42, () => byCode('lookup', session, 'BCDF-GHJK'));
+        expect(limited).not.toBeNull();
+        expect(await errorCode(limited as Response)).toBe('rate-limited');
+    });
+
+    test('an address that polls too often is told to wait', async () => {
+        const link = await start(newKeyPair(), 'eager');
+        const ip = nextIp();
+        const limited = await firstRefusal(122, () => dispatch('/v1/device/poll', { method: 'POST', body: { deviceCode: link.deviceCode }, ip }));
+        expect(limited).not.toBeNull();
+        expect(await errorCode(limited as Response)).toBe('rate-limited');
     });
 });
 

@@ -13,7 +13,12 @@ export const LIMITS = {
     registerAccount: 20,
     registerIp: 30,
     statementAccount: 30,
-    statementIp: 60
+    statementIp: 60,
+    // A terminal starts one link per `ruimte login` and polls every five seconds; a person types a code a few times.
+    deviceStartIp: 10,
+    devicePollIp: 60,
+    deviceCodeAccount: 20,
+    deviceCodeIp: 30
 } as const;
 
 /*
