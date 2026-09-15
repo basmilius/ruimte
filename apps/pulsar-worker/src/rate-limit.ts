@@ -1,25 +1,7 @@
 import { failure } from './http.ts';
+import { retryAfterSeconds, windowStartOf } from './rate-window.ts';
 
-const WINDOW_MS = 60_000;
-
-/*
- * Requests per minute for the routes that sign, mint or verify something. A person signs in once and
- * asks for a statement per connection attempt, and the daemon's reconnect loop tops out at one attempt
- * per 10 seconds, so these are only ever met by a script.
- */
-export const LIMITS = {
-    loginIp: 20,
-    sessionIp: 30,
-    registerAccount: 20,
-    registerIp: 30,
-    statementAccount: 30,
-    statementIp: 60,
-    // A terminal starts one link per `ruimte login` and polls every five seconds; a person types a code a few times.
-    deviceStartIp: 10,
-    devicePollIp: 60,
-    deviceCodeAccount: 20,
-    deviceCodeIp: 30
-} as const;
+export { LIMITS } from './rate-window.ts';
 
 /*
  * A fixed window in D1 rather than the platform's rate limiting binding, which counts per location and
@@ -27,7 +9,7 @@ export const LIMITS = {
  * signature they guard.
  */
 export const overLimit = async (db: D1Database, bucket: string, limit: number, now = Date.now()): Promise<Response | null> => {
-    const windowStart = now - (now % WINDOW_MS);
+    const windowStart = windowStartOf(now);
     const row = await db
         .prepare(
             'INSERT INTO rate_limit (bucket, window_start, count) VALUES (?1, ?2, 1) ON CONFLICT (bucket, window_start) DO UPDATE SET count = count + 1 RETURNING count'
@@ -35,7 +17,7 @@ export const overLimit = async (db: D1Database, bucket: string, limit: number, n
         .bind(bucket, windowStart)
         .first<{ count: number }>();
     if (row && row.count > limit) {
-        const retryAfter = Math.ceil((windowStart + WINDOW_MS - now) / 1000);
+        const retryAfter = retryAfterSeconds(now);
         return failure('rate-limited', `Too many requests, try again in ${retryAfter} s`, { 'retry-after': String(retryAfter) });
     }
     return null;
