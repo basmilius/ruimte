@@ -1,5 +1,4 @@
 import { isRecentProject, type ProjectSummary } from '@ruimte/contracts';
-import { nameOf, type MachineEntry } from '@/shell/settings/machine-list';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProjectList, type ProjectRow } from '@/state/project-list';
 import { pool, transportFor } from '@/transport';
@@ -122,30 +121,6 @@ export const menuProjects = (rows: ProjectRow[], endpoints: Endpoint[], connecte
         recent: listed.filter((row) => isRecentProject(row.summary)).sort((a, b) => (b.summary.closedAt ?? 0) - (a.summary.closedAt ?? 0))
     };
 };
-
-export interface MachineToOpen {
-    /* The row the machine is under, or the id the row will be made under. */
-    endpointId: string;
-    label: string;
-    entry: MachineEntry;
-}
-
-/*
- * The machines the switcher offers a way into although it lists none of their projects: what only the
- * account has, and a row that never answered with a list. What is on such a machine is unknown until
- * it is connected, so its row opens the folder browser there rather than guessing. This machine is
- * left out, since "Open folder" is already about it, and so is a record without a broker, which
- * nothing outside its own network reaches.
- */
-export const machinesToOpen = (entries: readonly MachineEntry[], rows: readonly ProjectRow[]): MachineToOpen[] =>
-    entries.flatMap((entry) => {
-        const endpointId = entry.endpoint?.id ?? entry.id;
-        const unreachable = entry.endpoint === null && !entry.machine?.brokerUrl;
-        if (entry.local || unreachable || rows.some((row) => row.endpointId === endpointId)) {
-            return [];
-        }
-        return [{ endpointId, label: nameOf(entry), entry }];
-    });
 
 /*
  * Keeps the union in step with the machines that are up: a socket that opens answers with its list,

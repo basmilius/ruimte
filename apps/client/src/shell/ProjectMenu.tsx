@@ -4,16 +4,12 @@ import { Menu } from '@base-ui-components/react/menu';
 import { Check, ChevronDown, ChevronRight, FolderOpen, History, Plus } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { projectClient } from '@/project';
-import { machinesToOpen, menuProjects, type MachineToOpen, type ProjectMenuRow } from '@/project/list';
+import { menuProjects, type ProjectMenuRow } from '@/project/list';
 import { openProject } from '@/project/open';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ProjectNameDialog } from '@/shell/ProjectNameDialog';
-import { iconOfEntry } from '@/shell/settings/machine-icon';
-import { mergeMachines } from '@/shell/settings/machine-list';
-import { usePulsarAccount } from '@/pulsar/account';
-import { usePulsarMachines } from '@/pulsar/machines';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
-import { hasLocalMachine, listedEndpoints } from '@/state/local-machine';
+import { listedEndpoints } from '@/state/local-machine';
 import { useProjectList } from '@/state/project-list';
 import { useProject } from '@/state/project';
 import { useServers } from '@/state/server';
@@ -62,17 +58,6 @@ function ProjectRow({ row, showMachine, current }: ProjectRowProps) {
     );
 }
 
-/* A machine whose projects are unknown here; picking it opens the folder browser on it, connecting first. */
-function MachineOpenRow({ machine }: { machine: MachineToOpen }) {
-    const answered = useServers((s) => s.byEndpoint[machine.endpointId]?.icon ?? null);
-    return (
-        <Menu.Item className="menu-item" onClick={() => useUi.getState().openFolderBrowser(machine.endpointId)}>
-            <MachineGlyph icon={iconOfEntry(machine.entry, answered)} size={14} />
-            <span className="min-w-0 truncate">Open a project on {machine.label}</span>
-        </Menu.Item>
-    );
-}
-
 /* The project segment of the toolbar's breadcrumb: every project this client can reach, and the two
    ways to bring in one that is not listed yet. What you can do to the project that is open is not
    here but in the toolbar's own menu, because those are options of a canvas rather than ways in. */
@@ -84,18 +69,8 @@ export function ProjectMenu() {
     const endpoints = useMemo(() => listedEndpoints(stored), [stored]);
     const activeId = useEndpoints((s) => s.activeId);
     const connected = useOpenEndpoints();
-    const accountStatus = usePulsarAccount((s) => s.status);
-    const accountMachines = usePulsarMachines((s) => s.machines);
     const [newOpen, setNewOpen] = useState(false);
     const { open, recent } = useMemo(() => menuProjects(rows, endpoints, connected), [rows, endpoints, connected]);
-    const toOpen = useMemo(
-        () =>
-            machinesToOpen(
-                mergeMachines({ endpoints: stored, accountMachines: accountStatus === 'signed-in' ? accountMachines : null, showLocal: hasLocalMachine() }),
-                rows
-            ),
-        [stored, accountMachines, accountStatus, rows]
-    );
     const showMachine = endpoints.length > 1;
     /* The project's own machine, or the one the shell is pointed at while no project is open. */
     const machineId = currentEndpointId ?? activeId;
@@ -167,16 +142,7 @@ export function ProjectMenu() {
                                     </Menu.SubmenuRoot>
                                 </>
                             )}
-                            {toOpen.length > 0 && (
-                                <>
-                                    {(open.length > 0 || recent.length > 0) && <Menu.Separator className={MENU_SEPARATOR} />}
-                                    <div className={MENU_LABEL}>Other machines</div>
-                                    {toOpen.map((machine) => (
-                                        <MachineOpenRow key={machine.endpointId} machine={machine} />
-                                    ))}
-                                </>
-                            )}
-                            {(open.length > 0 || recent.length > 0 || toOpen.length > 0) && <Menu.Separator className={MENU_SEPARATOR} />}
+                            {(open.length > 0 || recent.length > 0) && <Menu.Separator className={MENU_SEPARATOR} />}
                             <Menu.Item className="menu-item" onClick={() => setNewOpen(true)}>
                                 <Icon icon={Plus} size={14} /> New project
                             </Menu.Item>
