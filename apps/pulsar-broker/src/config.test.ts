@@ -1,11 +1,12 @@
 import { describe, expect, test } from 'bun:test';
+import { isCloudflareAddress } from './cloudflare.ts';
 import { clientIpOf, DEFAULT_LIMITS, DEFAULT_PORT, nameFor, parseBrokerArgs } from './config.ts';
 import { RateLimiter } from './rate-limit.ts';
 
 describe('parseBrokerArgs', () => {
     test('defaults to loopback, its own port and the default limits', () => {
         const config = parseBrokerArgs([], {});
-        expect(config).toEqual({ host: '127.0.0.1', port: DEFAULT_PORT, names: [], trustProxy: false, limits: DEFAULT_LIMITS });
+        expect(config).toEqual({ host: '127.0.0.1', port: DEFAULT_PORT, names: [], trustProxy: false, trustCloudflare: false, limits: DEFAULT_LIMITS });
     });
 
     test('flags win over the environment, and the environment over the defaults', () => {
@@ -42,12 +43,44 @@ describe('nameFor', () => {
 });
 
 describe('clientIpOf', () => {
+    const proxy = { trustProxy: true, trustCloudflare: false };
+    const none = { trustProxy: false, trustCloudflare: false };
+    const forwarded = (forwardedFor: string | null, cfConnectingIp: string | null = null) => ({ forwardedFor, cfConnectingIp });
+
     test('believes the last forwarded entry only behind a trusted proxy on loopback', () => {
-        expect(clientIpOf('::ffff:203.0.113.9', null, false)).toBe('203.0.113.9');
-        expect(clientIpOf('127.0.0.1', '198.51.100.1, 203.0.113.9', true)).toBe('203.0.113.9');
-        expect(clientIpOf('127.0.0.1', '203.0.113.9', false)).toBe('127.0.0.1');
+        expect(clientIpOf('::ffff:203.0.113.9', forwarded(null), none)).toBe('203.0.113.9');
+        expect(clientIpOf('127.0.0.1', forwarded('198.51.100.1, 203.0.113.9'), proxy)).toBe('203.0.113.9');
+        expect(clientIpOf('127.0.0.1', forwarded('203.0.113.9'), none)).toBe('127.0.0.1');
         // A client that reaches the broker directly cannot pick its own address with the header.
-        expect(clientIpOf('203.0.113.9', '198.51.100.1', true)).toBe('203.0.113.9');
+        expect(clientIpOf('203.0.113.9', forwarded('198.51.100.1'), proxy)).toBe('203.0.113.9');
+    });
+
+    test('believes CF-Connecting-IP only from a Cloudflare address, and only when told to', () => {
+        const cloudflare = { trustProxy: true, trustCloudflare: true };
+        // Cloudflare's edge in front of Caddy: the proxy saw an edge address and passes the real client on.
+        expect(clientIpOf('127.0.0.1', forwarded('198.51.100.1, 172.70.1.2', '198.51.100.1'), cloudflare)).toBe('198.51.100.1');
+        expect(clientIpOf('127.0.0.1', forwarded('2400:cb00:1::5', '2001:db8::7'), cloudflare)).toBe('2001:db8::7');
+        // Straight from the edge, without a proxy of its own.
+        expect(clientIpOf('::ffff:104.16.0.9', forwarded(null, '198.51.100.1'), { trustProxy: false, trustCloudflare: true })).toBe('198.51.100.1');
+        // Anyone else who writes the header, directly or through the local proxy, is counted as themselves.
+        expect(clientIpOf('203.0.113.9', forwarded(null, '198.51.100.1'), cloudflare)).toBe('203.0.113.9');
+        expect(clientIpOf('127.0.0.1', forwarded('172.70.1.2, 203.0.113.9', '198.51.100.1'), cloudflare)).toBe('203.0.113.9');
+        // Without the switch an edge address is only an address, and a header that is no address is ignored.
+        expect(clientIpOf('127.0.0.1', forwarded('172.70.1.2', '198.51.100.1'), proxy)).toBe('172.70.1.2');
+        expect(clientIpOf('127.0.0.1', forwarded('172.70.1.2', 'not an address'), cloudflare)).toBe('172.70.1.2');
+        // A trusted local proxy is still required before its header counts as what the connection came from.
+        expect(clientIpOf('127.0.0.1', forwarded('172.70.1.2', '198.51.100.1'), { trustProxy: false, trustCloudflare: true })).toBe('127.0.0.1');
+    });
+
+    test('knows the edge ranges, IPv4 and IPv6, and nothing next to them', () => {
+        expect(isCloudflareAddress('173.245.48.1')).toBe(true);
+        expect(isCloudflareAddress('173.245.64.1')).toBe(false);
+        expect(isCloudflareAddress('::ffff:162.159.255.255')).toBe(true);
+        expect(isCloudflareAddress('2a06:98c7:ffff::1')).toBe(true);
+        expect(isCloudflareAddress('2a06:98c8::1')).toBe(false);
+        expect(isCloudflareAddress('2606:4700:3033::6815:2be0')).toBe(true);
+        expect(isCloudflareAddress('127.0.0.1')).toBe(false);
+        expect(isCloudflareAddress('garbage')).toBe(false);
     });
 });
 

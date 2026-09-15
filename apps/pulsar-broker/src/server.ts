@@ -32,7 +32,11 @@ export const startBroker = (config: BrokerConfig): RunningBroker => {
             if (name === null) {
                 return new Response('This broker does not answer to that host', { status: 421 });
             }
-            const ip = clientIpOf(bun.requestIP(request)?.address ?? '', request.headers.get('x-forwarded-for'), config.trustProxy);
+            const ip = clientIpOf(
+                bun.requestIP(request)?.address ?? '',
+                { forwardedFor: request.headers.get('x-forwarded-for'), cfConnectingIp: request.headers.get('cf-connecting-ip') },
+                config
+            );
             const refusal = broker.admit(ip);
             if (refusal) {
                 return new Response(refusal.message, { status: 429, headers: { 'retry-after': String(Math.ceil(refusal.retryAfterMs / 1000)) } });

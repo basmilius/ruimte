@@ -11,7 +11,9 @@ User=pulsar
 Group=pulsar
 WorkingDirectory=/opt/ruimte
 # Loopback only: Caddy is the one thing that reaches it, which is also why --trust-proxy is safe here.
-ExecStart=/usr/local/bin/bun apps/pulsar-broker/src/main.ts --host 127.0.0.1 --port 4400 --name broker.ruimte.app --trust-proxy
+# --trust-cloudflare believes CF-Connecting-IP only from Cloudflare's ranges, so it is harmless without the proxy.
+# A daemon on this host dialing ws://127.0.0.1:4400 gets a 421 unless --name 127.0.0.1:4400 is added.
+ExecStart=/usr/local/bin/bun apps/pulsar-broker/src/main.ts --host 127.0.0.1 --port 4400 --name broker.ruimte.app --trust-proxy --trust-cloudflare
 Restart=always
 RestartSec=2
 # One descriptor per socket; the default of 1024 would cap the broker long before memory does.

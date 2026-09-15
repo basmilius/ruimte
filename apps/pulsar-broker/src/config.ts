@@ -1,4 +1,6 @@
+import { isIP } from 'node:net';
 import { parseArgs } from 'node:util';
+import { isCloudflareAddress } from './cloudflare.ts';
 
 export interface BrokerLimits {
     /* A frame larger than this closes the socket. An offer is a few KiB; the schema caps an SDP at 32 KiB. */
@@ -25,6 +27,8 @@ export interface BrokerConfig {
     names: string[];
     /* Read the client address from `X-Forwarded-For`, for a broker behind a proxy on the same host. */
     trustProxy: boolean;
+    /* Read the client address from `CF-Connecting-IP`, but only on a connection that came from Cloudflare's edge. */
+    trustCloudflare: boolean;
     limits: BrokerLimits;
 }
 
@@ -83,6 +87,7 @@ export const parseBrokerArgs = (argv: string[], env: Record<string, string | und
             port: { type: 'string' },
             name: { type: 'string', multiple: true, default: [] },
             'trust-proxy': { type: 'boolean', default: false },
+            'trust-cloudflare': { type: 'boolean', default: false },
             ...Object.fromEntries(LIMIT_FLAGS.map((flag) => [flag, { type: 'string' as const }]))
         },
         strict: true,
@@ -97,6 +102,7 @@ export const parseBrokerArgs = (argv: string[], env: Record<string, string | und
         port: number('port', 0, 65_535, DEFAULT_PORT),
         names: names.map((name) => name.trim().toLowerCase()).filter((name) => name !== ''),
         trustProxy: values['trust-proxy'] || env.PULSAR_BROKER_TRUST_PROXY === '1',
+        trustCloudflare: values['trust-cloudflare'] || env.PULSAR_BROKER_TRUST_CLOUDFLARE === '1',
         limits: {
             maxMessageBytes: number('max-message-bytes', 1024, 1024 * 1024, DEFAULT_LIMITS.maxMessageBytes),
             maxSocketsPerIp: number('max-sockets-per-ip', 1, 100_000, DEFAULT_LIMITS.maxSocketsPerIp),
@@ -127,16 +133,36 @@ const stripMappedPrefix = (address: string): string => (address.startsWith('::ff
 
 const isLoopback = (address: string): boolean => address === '::1' || address.startsWith('127.');
 
+export interface ClientHeaders {
+    forwardedFor: string | null;
+    cfConnectingIp: string | null;
+}
+
+export interface ProxyTrust {
+    trustProxy: boolean;
+    trustCloudflare: boolean;
+}
+
 /*
  * The address a limit counts against. Behind a proxy every socket comes from loopback, so the proxy's
  * own `X-Forwarded-For` says who it is: the last entry, the one the proxy appended itself, since
  * anything before it is whatever the client chose to send. Only a loopback peer is believed.
+ *
+ * Behind Cloudflare that address is an edge, shared by everyone near it, and the real client is in
+ * `CF-Connecting-IP`. The header is believed only when the address the connection came from (the
+ * socket, or what a trusted local proxy saw) is one of Cloudflare's: anyone else could write it and
+ * pick the bucket they are counted in.
  */
-export const clientIpOf = (socketAddress: string, forwardedFor: string | null, trustProxy: boolean): string => {
-    const address = stripMappedPrefix(socketAddress);
-    if (!trustProxy || forwardedFor === null || !isLoopback(address)) {
-        return address;
+export const clientIpOf = (socketAddress: string, headers: ClientHeaders, trust: ProxyTrust): string => {
+    const socket = stripMappedPrefix(socketAddress);
+    let seen = socket;
+    if (trust.trustProxy && headers.forwardedFor !== null && isLoopback(socket)) {
+        const last = headers.forwardedFor.split(',').at(-1)?.trim() ?? '';
+        seen = last === '' ? socket : stripMappedPrefix(last);
     }
-    const last = forwardedFor.split(',').at(-1)?.trim() ?? '';
-    return last === '' ? address : stripMappedPrefix(last);
+    const connecting = headers.cfConnectingIp?.trim() ?? '';
+    if (trust.trustCloudflare && isIP(connecting) !== 0 && isCloudflareAddress(seen)) {
+        return stripMappedPrefix(connecting);
+    }
+    return seen;
 };

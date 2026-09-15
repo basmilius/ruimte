@@ -30,6 +30,7 @@ Every flag also reads an environment variable, `PULSAR_BROKER_` plus the flag in
 | `--port`                         | `4400`      | Port for the peers and `/health`.                                                                                                                                          |
 | `--name <host>`                  | none        | A host name the broker answers to and signs into its challenge. Repeatable (`PULSAR_BROKER_NAMES` takes a comma-separated list). Without one the `Host` header is taken as it is. |
 | `--trust-proxy`                  | off         | Count limits against the last `X-Forwarded-For` entry, for a socket from loopback only. For a broker behind Caddy on the same host.                                       |
+| `--trust-cloudflare` | off | Count limits against `CF-Connecting-IP`, but only when the connection came from one of Cloudflare's published ranges (the socket itself, or the last `X-Forwarded-For` entry with `--trust-proxy`). For a broker behind Cloudflare's proxy. |
 | `--max-message-bytes`            | `65536`     | A frame larger than this closes the socket.                                                                                                                                |
 | `--max-sockets-per-ip`           | `32`        | Open sockets one address may hold; the next upgrade gets a 429.                                                                                                            |
 | `--ip-connections-per-minute`    | `30`        | Upgrades per address per minute; the next gets a 429 with `Retry-After`.                                                                                                   |
@@ -48,6 +49,11 @@ against the name it put in the challenge. With `--name` set, a service in the mi
 broker under its own `Host` gets no challenge at all (421), so it cannot hand a peer this broker's nonce
 and announce that peer's key here. Without a name the header is believed, which is fine on a laptop and
 not on a public host.
+
+The same check applies to a daemon on the broker's own host. With `--name broker.example.com` set, a
+daemon there that dials `ws://127.0.0.1:4400` sends `Host: 127.0.0.1:4400` and gets a 421. Either give
+the broker a second name for that, `--name 127.0.0.1:4400` beside the public one, or let the daemon dial
+the public `wss://` URL like every other machine.
 
 ## Wire
 
@@ -132,9 +138,36 @@ Replace `broker.ruimte.app` in both with the name you use.
     ```
 
 5. Check it: `curl -s https://broker.ruimte.app/health`, and `journalctl -u pulsar-broker -f` for the log.
-6. Start a daemon with `--broker wss://broker.ruimte.app` (or `RUIMTE_BROKER_URL`).
+6. A daemon is on `wss://broker.ruimte.app` without any flag. For another name, start it with
+   `--broker wss://<name>` (or `RUIMTE_BROKER_URL`), or pick a custom broker for the machine under
+   Settings, Machines. A daemon on the same host that dials the broker on loopback needs the second
+   `--name` from "Why a name".
 
 The unit raises the descriptor limit to 65536, since every machine that is online holds one socket. To
 update: `git pull`, `bun install`, `sudo systemctl restart pulsar-broker`. A restart drops every socket;
 the daemons come back within their backoff (at most 30 seconds, with jitter), and open channels are not
 affected.
+
+## Behind Cloudflare's proxy
+
+Only signaling crosses the broker, and the channel itself goes direct, so the broker can sit behind
+Cloudflare's proxy (the orange cloud) at no cost in bandwidth. Three things change.
+
+- **The client address.** Every socket now comes from a Cloudflare edge, and Caddy's `X-Forwarded-For`
+  names that edge. Start the broker with `--trust-cloudflare` (the unit does) so the limits count
+  against `CF-Connecting-IP`. The header is believed only when the connection came from one of the
+  ranges in `src/cloudflare.ts`, so a client that reaches the origin directly cannot pick its own bucket.
+  Refresh that list from https://www.cloudflare.com/ips-v4 and https://www.cloudflare.com/ips-v6 when
+  Cloudflare announces a change.
+- **Idle sockets.** Cloudflare closes a WebSocket that carried nothing for 100 seconds. The broker pings
+  every 25 seconds (`--heartbeat-seconds` stops at 40), so none is idle that long. Cloudflare can still
+  reset a long-lived socket during its own deploys; a daemon reconnects with its backoff and a client
+  tries again on its next attempt, and an open channel does not notice.
+- **The origin.** Open ports 80 and 443 only to Cloudflare's ranges, for example with ufw, one rule per
+  range from the two lists above. Caddy's `trusted_proxies` in `deploy/Caddyfile` lists the same ranges,
+  so its logs and `{client_ip}` name the client. Caddy gets its certificate with the HTTP challenge on
+  port 80, which passes the proxy as long as the zone does not redirect `/.well-known/acme-challenge/` to
+  HTTPS before it reaches the origin. If it does, or the challenge fails for another reason, use a
+  Cloudflare Origin CA certificate in the site block (`tls /etc/caddy/origin.pem /etc/caddy/origin.key`),
+  or a Caddy build with the Cloudflare DNS module and an API token that may edit the zone's DNS. Keep
+  the zone's SSL mode on Full (strict) either way.

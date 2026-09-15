@@ -11,7 +11,8 @@ try {
 
 const running = startBroker(config);
 const names = config.names.length > 0 ? config.names.join(', ') : 'any Host header';
-console.log(`pulsar broker listening on ws://${config.host}:${running.port} (answers to ${names}${config.trustProxy ? ', behind a proxy' : ''})`);
+const behind = [config.trustProxy ? 'a proxy' : null, config.trustCloudflare ? 'Cloudflare' : null].filter((entry) => entry !== null).join(' and ');
+console.log(`pulsar broker listening on ws://${config.host}:${running.port} (answers to ${names}${behind === '' ? '' : `, behind ${behind}`})`);
 
 const shutdown = (signal: string): void => {
     console.log(`pulsar broker received ${signal}, closing sockets`);
