@@ -18,11 +18,7 @@ struct WorkspacePage: View {
     var body: some View {
         Group {
             if workspace.ready {
-                if isSidebar {
-                    sidebarContent
-                } else {
-                    projectTabs
-                }
+                projectTabs
             } else {
                 openingStatus
             }
@@ -161,12 +157,16 @@ struct WorkspacePage: View {
                 Label("Views", lucideIcon: "layout-grid")
             }
             Tab(value: ProjectSection.files) {
-                MachineFilesPage(client: workspace.client, path: workspace.folder)
+                if isSidebar {
+                    viewList(query: "")
+                } else {
+                    MachineFilesPage(client: workspace.client, path: workspace.folder)
+                }
             } label: {
                 Label("Files", lucideIcon: "folder")
             }
             Tab(value: ProjectSection.git) {
-                GitPage(client: workspace.client, cwd: workspace.folder)
+                if isSidebar { viewList(query: "") } else { GitPage(client: workspace.client, cwd: workspace.folder) }
             } label: {
                 Label("Git", lucideIcon: "git-branch")
             }
@@ -178,27 +178,10 @@ struct WorkspacePage: View {
         }
         .tabViewStyle(.tabBarOnly)
         .tabViewSearchActivation(.searchTabSelection)
+        // The sidebar is a narrow navigator; the separate detail column keeps its regular iPad traits.
+        .environment(\.horizontalSizeClass, .compact)
+        .environment(\.inProjectSidebar, isSidebar)
         .onChange(of: navigation.section) { _, selected in searching = selected == .search }
-    }
-
-    private var sidebarContent: some View {
-        searchResults
-            .searchable(text: $search, isPresented: $searching, prompt: "Find a view")
-            .toolbar {
-                ToolbarItemGroup(placement: .bottomBar) {
-                    ForEach(ProjectSection.allCases) { section in
-                        Button(section.title, lucideIcon: section.icon) {
-                            withAnimation(reduceMotion ? nil : .default) {
-                                navigation.section = section
-                                searching = section == .search
-                            }
-                        }
-                        .foregroundStyle(navigation.section == section ? Color.primary : Color.secondary)
-                        .accessibilityAddTraits(navigation.section == section ? .isSelected : [])
-                    }
-                }
-            }
-            .environment(\.inProjectSidebar, true)
     }
 
     private var searchResults: some View {
@@ -285,8 +268,7 @@ struct WorkspacePage: View {
     }
 
     private var sidebarBackground: Color {
-        let selected = workspace.views.first { $0.stableID == navigation.selectedViewID }
-        return selected?.text("kind") == "canvas" ? MobileStyle.canvas : Color(uiColor: .systemBackground)
+        Color(uiColor: .systemBackground)
     }
 
     private func viewRow(_ item: JSONValue) -> some View {

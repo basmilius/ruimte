@@ -80,6 +80,7 @@
 		B949A220D4C8ECC4FF9AA838 /* RuimteTransport in Frameworks */ = {isa = PBXBuildFile; productRef = 6FFA42FE75679D801B5D68D6 /* RuimteTransport */; };
 		BA4E5634A953498E6EC34816 /* RemotePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4717D1FF657FE5861D33BE92 /* RemotePage.swift */; };
 		BA623D7F1AD8EA29890E9E41 /* UnifiedProjects.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A672F255CAFCD537E1F2A74 /* UnifiedProjects.swift */; };
+		BCC27CF32DABE9F578EDC78C /* MobileSidebarList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78E4415FA265BC3864D12E58 /* MobileSidebarList.swift */; };
 		BD2BF8096B72184143296EA2 /* Lucide-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3B40C228DD8D4FB4A5D62BB5 /* Lucide-LICENSE.txt */; };
 		C077E0093362AFCFC0EE2B3F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2C204ABF7BF115B3485C914E /* Assets.xcassets */; };
 		C22613F143FD3C92F3C92D76 /* MachineRemovalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE8B97161FC6E9CE587F95C /* MachineRemovalTests.swift */; };
@@ -194,6 +195,7 @@
 		732B16DF3002A0A3499B1ADF /* DrawingCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawingCanvas.swift; sourceTree = "<group>"; };
 		75DA6517FBC9FBF6C79776E2 /* document-scenes.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "document-scenes.json"; sourceTree = "<group>"; };
 		78AF6CD8C27D406B882C8FA0 /* CanvasPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasPage.swift; sourceTree = "<group>"; };
+		78E4415FA265BC3864D12E58 /* MobileSidebarList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileSidebarList.swift; sourceTree = "<group>"; };
 		7B02D669F665402B085C9E9C /* MachineIconTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineIconTests.swift; sourceTree = "<group>"; };
 		7B61834D13B0B0A358C25F44 /* Build.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Build.xcconfig; sourceTree = "<group>"; };
 		7C81823373467CED5DF67CB7 /* PairMachinePage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairMachinePage.swift; sourceTree = "<group>"; };
@@ -337,6 +339,7 @@
 				92115E2E20A2788AC95AD41F /* LucideIcon.swift */,
 				8449B851575DF02B5169572E /* MobileScrollViewport.swift */,
 				5196DB934834DA206C75471E /* MobileSheet.swift */,
+				78E4415FA265BC3864D12E58 /* MobileSidebarList.swift */,
 				A8954363C79663F275CDF04A /* MobileStyle.swift */,
 			);
 			path = Design;
@@ -774,6 +777,7 @@
 				5C706502AEBC21A671990235 /* MobileJSON.swift in Sources */,
 				CAF7E05732303B93FF25B469 /* MobileScrollViewport.swift in Sources */,
 				8270B0185E659FCCEDE90765 /* MobileSheet.swift in Sources */,
+				BCC27CF32DABE9F578EDC78C /* MobileSidebarList.swift in Sources */,
 				451BCDFFE5D34B03207983C4 /* MobileStyle.swift in Sources */,
 				62D36AE12D4AFBB7A1AECA5C /* MobileWorkspace.swift in Sources */,
 				D3AE70D4B71CD32DD8D34D42 /* NotificationCoordinator.swift in Sources */,

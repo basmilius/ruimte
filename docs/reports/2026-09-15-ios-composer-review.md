@@ -500,3 +500,11 @@ iPad keeps one NavigationSplitView after sign-in or pairing. Its main sidebar co
 One focused device test passed for phone and tablet layouts. It opens a real canvas from the view list, checks the native iPhone navigation stack and enabled interactive-pop recognizer, then pops back through the view and project. The iPad case starts with no canvas and mounts it only after row activation. This is structural and activation coverage, not a recording of a physical finger gesture or Liquid Glass animation. Transition appearance and cancellation still need device acceptance.
 
 Installed and launched the final build on both devices. Actual device screenshots confirmed the iPad main sidebar and loaded Projects detail, and the unchanged iPhone Projects entry screen. The iPad check caught selected-row contrast and list margins extending under the sidebar; both were corrected and recaptured. The sidebar keeps native selection styling with readable foreground text, and project-list spacing adds to the split view's safe area. Build, format and repository checks passed.
+
+## Sidebar consistency
+
+The main sidebar now uses the project's inset-grouped rows, primary text, secondary icons and a checkmark for selection. Both use the system background. A one-point separator is attached to the persistent sidebar column so it survives navigation between the main menu and a project.
+
+The project sidebar reuses the iPhone TabView with Views, Files, Git and a native Search tab. Only this narrow tab subtree receives the compact horizontal size class; the split view, native navigation stacks and detail column retain their own traits. The permanent searchable list and substitute bottom-toolbar buttons are removed. Files and Git still open in the detail column.
+
+The focused device test passed, including the tabbar's lower-half position and bounds inside the iPad sidebar, plus native iPhone back navigation. An actual iPad screenshot showed the loaded project, its separator, no top search field and the bottom native tabs. The test's current screenshot confirmed the same project-tab layout. Installed and launched on iPhone and iPad; build, format and check passed. Search activation and animated transitions remain device acceptance items.

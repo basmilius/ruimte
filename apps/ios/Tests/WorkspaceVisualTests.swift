@@ -138,8 +138,13 @@ final class WorkspaceVisualTests: XCTestCase {
                 XCTAssertFalse(navigation.isNavigationBarHidden)
                 XCTAssertEqual(navigation.interactivePopGestureRecognizer?.isEnabled, true)
             } else {
-                XCTAssertNotNil(childController(UISplitViewController.self, in: host))
-                XCTAssertNil(childController(UITabBarController.self, in: host))
+                let split = try XCTUnwrap(childController(UISplitViewController.self, in: host))
+                let sidebar = try XCTUnwrap(split.viewController(for: .primary))
+                let tabs = try XCTUnwrap(childController(UITabBarController.self, in: sidebar))
+                let bar = tabs.tabBar.convert(tabs.tabBar.bounds, to: sidebar.view)
+                XCTAssertGreaterThan(bar.minY, sidebar.view.bounds.height / 2)
+                XCTAssertLessThanOrEqual(bar.maxX, sidebar.view.bounds.width + 1)
+                XCTAssertEqual(tabs.tabs.count, 4)
             }
             let list = try XCTUnwrap(descendant(UICollectionView.self, in: host.view))
             let first = try XCTUnwrap(

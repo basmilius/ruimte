@@ -100,17 +100,37 @@ struct AppHome: View {
     private var tabletNavigation: some View {
         NavigationSplitView {
             NavigationStack {
-                List(HomeSection.allCases, selection: $homeSection) { section in
-                    Label(section.title, lucideIcon: section.icon)
-                        .foregroundStyle(homeSection == section ? MobileStyle.onAccent : Color.primary)
-                        .tag(section)
+                List {
+                    Section {
+                        ForEach(HomeSection.allCases) { section in
+                            Button {
+                                withAnimation(reduceMotion ? nil : .default) { homeSection = section }
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(lucide: section.icon).foregroundStyle(.secondary)
+                                    Text(section.title).frame(maxWidth: .infinity, alignment: .leading)
+                                    if homeSection == section {
+                                        Image(lucide: "check").accessibilityLabel("Selected")
+                                    }
+                                }
+                                .foregroundStyle(.primary)
+                                .contentShape(Rectangle())
+                            }
+                        }
+                    }
                 }
-                .listStyle(.sidebar)
+                .modifier(MobileSidebarList())
                 .navigationTitle("")
                 .navigationBarTitleDisplayMode(.inline)
                 .navigationDestination(item: $activeProject) { project in
                     WorkspacePage(navigation: project, isSidebar: true)
                 }
+            }
+            .containerBackground(Color(uiColor: .systemBackground), for: .navigation)
+            .overlay(alignment: .trailing) {
+                Color(uiColor: .separator).frame(width: 1)
+                    .ignoresSafeArea(.container, edges: .vertical)
+                    .allowsHitTesting(false)
             }
             .navigationSplitViewColumnWidth(min: 280, ideal: 340, max: 420)
         } detail: {
