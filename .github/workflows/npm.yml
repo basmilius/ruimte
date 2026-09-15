@@ -1,0 +1,97 @@
+name: npm
+
+# Publishes `ruimte` and its four `@ruimte/<os>-<cpu>` binary packages with the version of a release.
+# npm trusts this workflow through OIDC (Trusted Publishing, configured per package on npmjs.com for
+# `npm.yml` and the `npm` environment), so there is no token anywhere. A version that is already on
+# the registry is skipped, so a run that failed halfway can simply run again.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The release to publish, without the v (0.2.0); its tag has to exist
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - id: version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          INPUT: ${{ inputs.version }}
+        run: |
+          version="${INPUT:-${TAG#v}}"
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+            echo "Not a version: $version" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  # A macOS binary has to be re-signed with codesign after Bun writes it, or the kernel kills it on
+  # launch, so the darwin targets build on macOS. Bun cross-compiles the Linux ones from anywhere.
+  binaries:
+    needs: version
+    strategy:
+      matrix:
+        include:
+          - target: darwin-arm64
+            runner: macos-latest
+          - target: darwin-x64
+            runner: macos-latest
+          - target: linux-x64
+            runner: ubuntu-latest
+          - target: linux-arm64
+            runner: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.version.outputs.version }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: Compile the daemon
+        env:
+          RUIMTE_VERSION: ${{ needs.version.outputs.version }}
+        run: bun apps/server/scripts/compile.ts --target ${{ matrix.target }} --outdir binaries/${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: binaries/${{ matrix.target }}
+          if-no-files-found: error
+
+  publish:
+    needs: [version, binaries]
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.version.outputs.version }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+      # Trusted Publishing needs npm 11.5.1 or newer.
+      - run: npm install -g npm@latest && npm --version
+      - uses: actions/download-artifact@v4
+        with:
+          path: binaries
+      - name: Lay out the packages
+        run: bun packages/npm/scripts/build.ts --version ${{ needs.version.outputs.version }} --binaries binaries --out npm-packages
+      - name: Publish, platform packages first
+        run: bun packages/npm/scripts/publish.ts --out npm-packages

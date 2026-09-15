@@ -66,6 +66,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@ruimte/pulsar": "workspace:*",
+        "@ruimte/service": "workspace:*",
         "zod": "^4.5.4",
       },
       "devDependencies": {
@@ -111,6 +112,7 @@
         "@ruimte/diagram": "workspace:*",
         "@ruimte/drawing": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
+        "@ruimte/service": "workspace:*",
         "@xterm/addon-serialize": "^0.14.0",
         "@xterm/headless": "^6.0.0",
         "reflect-metadata": "0.2.2",
@@ -169,12 +171,28 @@
         "typescript": "~6.0.2",
       },
     },
+    "packages/npm": {
+      "name": "@ruimte/npm",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@types/bun": "^1.4.0",
+        "typescript": "~6.0.2",
+      },
+    },
     "packages/pulsar": {
       "name": "@ruimte/pulsar",
       "version": "0.0.0",
       "dependencies": {
         "zod": "^4.5.4",
       },
+      "devDependencies": {
+        "@types/bun": "^1.4.0",
+        "typescript": "~6.0.2",
+      },
+    },
+    "packages/service": {
+      "name": "@ruimte/service",
+      "version": "0.0.0",
       "devDependencies": {
         "@types/bun": "^1.4.0",
         "typescript": "~6.0.2",
@@ -517,6 +535,8 @@
 
     "@ruimte/drawing": ["@ruimte/drawing@workspace:packages/drawing"],
 
+    "@ruimte/npm": ["@ruimte/npm@workspace:packages/npm"],
+
     "@ruimte/pulsar": ["@ruimte/pulsar@workspace:packages/pulsar"],
 
     "@ruimte/pulsar-broker": ["@ruimte/pulsar-broker@workspace:apps/pulsar-broker"],
@@ -524,6 +544,8 @@
     "@ruimte/pulsar-worker": ["@ruimte/pulsar-worker@workspace:apps/pulsar-worker"],
 
     "@ruimte/server": ["@ruimte/server@workspace:apps/server"],
+
+    "@ruimte/service": ["@ruimte/service@workspace:packages/service"],
 
     "@ruimte/station": ["@ruimte/station@workspace:apps/station"],
 

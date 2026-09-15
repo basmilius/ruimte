@@ -1,0 +1,19 @@
+{
+  "name": "@ruimte/darwin-x64",
+  "version": "0.0.0",
+  "description": "Placeholder for the Ruimte binary for darwin on x64, published once so npm can trust the release workflow. Install ruimte instead.",
+  "license": "FSL-1.1-MIT",
+  "author": "Bas Milius",
+  "homepage": "https://ruimte.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/basmilius/ruimte.git",
+    "directory": "packages/npm"
+  },
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64"
+  ]
+}
