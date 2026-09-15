@@ -424,7 +424,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 if (request.method !== 'GET') {
                     return new Response('Method not allowed', { status: 405 });
                 }
-                return Response.json({ ok: true, version: VERSION, build: BUILD });
+                return Response.json({ ok: true, version: VERSION, build: BUILD, service: config.underService });
             }
 
             if (url.pathname === '/auth/pairing-token') {

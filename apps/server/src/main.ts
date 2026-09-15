@@ -1,6 +1,18 @@
 // werift's @peculiar/x509 imports this before tsyringe, but a compiled bundle runs tsyringe first and the daemon dies on start.
 import 'reflect-metadata';
+import { askRunningMachine, debugFrom, describeError, isAddressInUse, portInUseMessage } from './cli/fatal.ts';
 import { forgetInheritedSession, parseServerArgs } from './config.ts';
+
+/*
+ * Without a listener Bun prints an uncaught error with a code frame, which in the compiled binary is
+ * minified bundle source. A throw at the top level of this module lands here as well.
+ */
+const fail = (error: unknown): never => {
+    console.error(describeError(error, debugFrom(process.env)));
+    process.exit(1);
+};
+process.on('uncaughtException', fail);
+process.on('unhandledRejection', fail);
 
 /*
  * One binary, several jobs: `ruimte` serves, `ruimte pair` prints a pairing URL, `ruimte login` puts
@@ -45,5 +57,16 @@ forgetInheritedSession(process.env);
 // Read into the config already; a shell must not pass it on to a daemon started by hand inside a session.
 delete process.env.RUIMTE_SERVICE;
 
-const { startDaemon } = await import('./daemon.ts');
-await startDaemon(config);
+// The daemon installs listeners of its own that let a lost TURN server pass, which these would end the process on.
+process.off('uncaughtException', fail);
+process.off('unhandledRejection', fail);
+try {
+    const { startDaemon } = await import('./daemon.ts');
+    await startDaemon(config);
+} catch (e) {
+    if (!isAddressInUse(e)) {
+        fail(e);
+    }
+    console.error(portInUseMessage(config.port, await askRunningMachine(config.port)));
+    process.exit(1);
+}
