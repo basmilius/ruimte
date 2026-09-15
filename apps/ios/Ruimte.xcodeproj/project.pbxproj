@@ -19,6 +19,7 @@
 		1D2828131C689B78A675A365 /* TerminalCompatibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA81AFC7F3E726AB38C0EE96 /* TerminalCompatibilityTests.swift */; };
 		2039449EB696024C64A7D640 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 7DD6852AA11DD8F3D8DDDBDF /* SwiftTerm */; };
 		269F292047616E3FDBF0B071 /* SessionScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E238C46B1CEFBCE9B7DB5E24 /* SessionScreenTests.swift */; };
+		2713C14E0E58D28E9F2CC645 /* DrawingEditorPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4DF3856CE6E52165FC2B919 /* DrawingEditorPage.swift */; };
 		27F033AF6D9F55F874FD2E76 /* MachineUsagePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B44926C3693450CF4C1FC /* MachineUsagePage.swift */; };
 		2A5A29AD37DB5525CEEB9105 /* PairMachinePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C81823373467CED5DF67CB7 /* PairMachinePage.swift */; };
 		2BBA3A08D2566FBC4229CC85 /* UnifiedProjectsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F056296AB12E6228D09966E2 /* UnifiedProjectsTests.swift */; };
@@ -55,7 +56,9 @@
 		8B77DAF04DE9F9840327A5CC /* ProjectSVGRasterizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AB9B459492C2AF8E3631D88 /* ProjectSVGRasterizer.swift */; };
 		8C9FF1DDE620F87C9C84679C /* AppHome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22EEF67D1BFFD71DFA7FA021 /* AppHome.swift */; };
 		902C7797057362CD5310734B /* RuntimeStartupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF0183BD88185DD4301FC7B9 /* RuntimeStartupTests.swift */; };
+		93687A4E25E26ACA4330A642 /* ChatDraftSyntax.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F5AB9F07A9DA47A43714BB /* ChatDraftSyntax.swift */; };
 		93B147F9D1DC4B6DFF986E91 /* RuimteNotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3DED45634E156A5B8CE75374 /* RuimteNotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		994370BF753F1907C78FE8EE /* DrawingEditorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 492DA55F2EB18352FC26B750 /* DrawingEditorModel.swift */; };
 		9DE1A20BEBFF846DDB83A793 /* UsageMoneyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D74F291DD8E4AE6C0AC54175 /* UsageMoneyTests.swift */; };
 		9DEFD88C67729CA71F4C0DD5 /* ChatScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111FDB97EC13D539638EFBEC /* ChatScreen.swift */; };
 		9E88FFD2A389FE45658CA72E /* RuimteActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B79DEDEC6E3DBF60AE5EA23 /* RuimteActivityWidget.swift */; };
@@ -80,6 +83,8 @@
 		D43CDF040DF82F5E2C648BE7 /* RuimteActivityWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 453AE6630A2DEA42EDBA0A7D /* RuimteActivityWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D6FD6C3785D1017DC74B3E80 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 360CC2CFC02B68B045C92968 /* NotificationService.swift */; };
 		DCDA9FE7463803051C29BB51 /* TerminalModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A531355B6DBA1AEA2747E700 /* TerminalModel.swift */; };
+		DD033916C188637B3EA2D645 /* DrawingEditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 073C4EC8E14E8D8910DEF111 /* DrawingEditorTests.swift */; };
+		E2188F2FE2D263B6F0876E58 /* RichChatComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3831E0DF8E82C62D0BB8F805 /* RichChatComposer.swift */; };
 		E95A1AC133CF67657CEA99A3 /* ProjectArtworkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ABABCDEEE659AD8B4D227A8 /* ProjectArtworkTests.swift */; };
 		EE74DF5514DD201C33ACEA3E /* NotificationSessionPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8658D05270F5D27871DF224 /* NotificationSessionPage.swift */; };
 		EF671DDC2475C1E41165F98F /* MachineIconTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B02D669F665402B085C9E9C /* MachineIconTests.swift */; };
@@ -133,6 +138,7 @@
 		0416D221A1F144614E3E9A43 /* DocumentSceneTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentSceneTests.swift; sourceTree = "<group>"; };
 		055B44926C3693450CF4C1FC /* MachineUsagePage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineUsagePage.swift; sourceTree = "<group>"; };
 		070AB913E963308BAD40498B /* ChatModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatModel.swift; sourceTree = "<group>"; };
+		073C4EC8E14E8D8910DEF111 /* DrawingEditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawingEditorTests.swift; sourceTree = "<group>"; };
 		089B611A941366002AA1307E /* RenderDocumentPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderDocumentPage.swift; sourceTree = "<group>"; };
 		09CCDDD483546BE641151534 /* RuimteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuimteApp.swift; sourceTree = "<group>"; };
 		09EE2B3374AED0CCAB042E24 /* MobileJSON.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileJSON.swift; sourceTree = "<group>"; };
@@ -153,15 +159,18 @@
 		2C204ABF7BF115B3485C914E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		313990724FDCDDA5DE155DCF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		360CC2CFC02B68B045C92968 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		3831E0DF8E82C62D0BB8F805 /* RichChatComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RichChatComposer.swift; sourceTree = "<group>"; };
 		3B40C228DD8D4FB4A5D62BB5 /* Lucide-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Lucide-LICENSE.txt"; sourceTree = "<group>"; };
 		3DED45634E156A5B8CE75374 /* RuimteNotificationService.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = RuimteNotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		4494CB22D3C1F93514921B21 /* MobileWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileWorkspace.swift; sourceTree = "<group>"; };
 		453AE6630A2DEA42EDBA0A7D /* RuimteActivityWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = RuimteActivityWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		4717D1FF657FE5861D33BE92 /* RemotePage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemotePage.swift; sourceTree = "<group>"; };
+		492DA55F2EB18352FC26B750 /* DrawingEditorModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawingEditorModel.swift; sourceTree = "<group>"; };
 		49B30EC9B23C65C35FC2E1B0 /* ConnectionScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionScreen.swift; sourceTree = "<group>"; };
 		49F9EC9D98983F163B9AE62C /* MachineFilesPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachineFilesPage.swift; sourceTree = "<group>"; };
 		4CDF5772B5F82C25BC5C9B54 /* ChatScrollTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatScrollTests.swift; sourceTree = "<group>"; };
 		4DE8F49A62B6E21105CD8F6A /* GitPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitPage.swift; sourceTree = "<group>"; };
+		50F5AB9F07A9DA47A43714BB /* ChatDraftSyntax.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatDraftSyntax.swift; sourceTree = "<group>"; };
 		5566FA42E11FDC5B932C0F2E /* ChatTimeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTimeline.swift; sourceTree = "<group>"; };
 		5748DC9D2A5D211B6913A122 /* RuimteTransport */ = {isa = PBXFileReference; lastKnownFileType = folder; name = RuimteTransport; path = Packages/RuimteTransport; sourceTree = SOURCE_ROOT; };
 		58EC9A184CB76F10292FAF1E /* SessionVisualTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionVisualTests.swift; sourceTree = "<group>"; };
@@ -203,6 +212,7 @@
 		D779BA807ED5F459698AC2C0 /* BrowserPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserPage.swift; sourceTree = "<group>"; };
 		DD1AADEED69848ED7D305964 /* TerminalSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSnapshot.swift; sourceTree = "<group>"; };
 		E238C46B1CEFBCE9B7DB5E24 /* SessionScreenTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionScreenTests.swift; sourceTree = "<group>"; };
+		E4DF3856CE6E52165FC2B919 /* DrawingEditorPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrawingEditorPage.swift; sourceTree = "<group>"; };
 		E8658D05270F5D27871DF224 /* NotificationSessionPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSessionPage.swift; sourceTree = "<group>"; };
 		EB380C5765BB27F525DE31C0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		EE323EA02FEEF12048A2D3A8 /* AppRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRuntime.swift; sourceTree = "<group>"; };
@@ -270,6 +280,8 @@
 				D779BA807ED5F459698AC2C0 /* BrowserPage.swift */,
 				78AF6CD8C27D406B882C8FA0 /* CanvasPage.swift */,
 				1872DE55827E2897B8AFB130 /* DocumentSceneLoader.swift */,
+				492DA55F2EB18352FC26B750 /* DrawingEditorModel.swift */,
+				E4DF3856CE6E52165FC2B919 /* DrawingEditorPage.swift */,
 				0E13420E1D28A681FA26B33B /* MachineIconState.swift */,
 				CA401CA82CE41046F457D507 /* MachineProjectsPage.swift */,
 				09EE2B3374AED0CCAB042E24 /* MobileJSON.swift */,
@@ -384,6 +396,7 @@
 				EE5B1DCD63DC630D3ABFE455 /* CanvasRenderTests.swift */,
 				4CDF5772B5F82C25BC5C9B54 /* ChatScrollTests.swift */,
 				0416D221A1F144614E3E9A43 /* DocumentSceneTests.swift */,
+				073C4EC8E14E8D8910DEF111 /* DrawingEditorTests.swift */,
 				7B02D669F665402B085C9E9C /* MachineIconTests.swift */,
 				ABE8B97161FC6E9CE587F95C /* MachineRemovalTests.swift */,
 				28AB5F59239AB27AD0434DE3 /* PhaseZeroTests.swift */,
@@ -464,10 +477,12 @@
 			isa = PBXGroup;
 			children = (
 				FC93B189294B4D798A653EDC /* ChatAttachmentButton.swift */,
+				50F5AB9F07A9DA47A43714BB /* ChatDraftSyntax.swift */,
 				070AB913E963308BAD40498B /* ChatModel.swift */,
 				111FDB97EC13D539638EFBEC /* ChatScreen.swift */,
 				5566FA42E11FDC5B932C0F2E /* ChatTimeline.swift */,
 				9BE4363568E169F410A081A3 /* MarkdownMessage.swift */,
+				3831E0DF8E82C62D0BB8F805 /* RichChatComposer.swift */,
 				A531355B6DBA1AEA2747E700 /* TerminalModel.swift */,
 				17236BE0F16BF4DE8C134009 /* TerminalScreen.swift */,
 				DD1AADEED69848ED7D305964 /* TerminalSnapshot.swift */,
@@ -676,6 +691,7 @@
 				0E75E028596697B06343F2F1 /* CanvasRenderTests.swift in Sources */,
 				F874D15FCB67EC40A7D42242 /* ChatScrollTests.swift in Sources */,
 				36FDA8A2969517F544C26207 /* DocumentSceneTests.swift in Sources */,
+				DD033916C188637B3EA2D645 /* DrawingEditorTests.swift in Sources */,
 				EF671DDC2475C1E41165F98F /* MachineIconTests.swift in Sources */,
 				C22613F143FD3C92F3C92D76 /* MachineRemovalTests.swift in Sources */,
 				CBEDB2E1BC1FB79D8CF7BC7D /* PhaseZeroTests.swift in Sources */,
@@ -710,12 +726,15 @@
 				3391D7C7568ED8FABAA9E13F /* BrowserPage.swift in Sources */,
 				3AF2536CFF4F274E9CA1F5B2 /* CanvasPage.swift in Sources */,
 				163336C54358D26ACE3FBF53 /* ChatAttachmentButton.swift in Sources */,
+				93687A4E25E26ACA4330A642 /* ChatDraftSyntax.swift in Sources */,
 				3F688FC111081CCF1B4670DF /* ChatModel.swift in Sources */,
 				9DEFD88C67729CA71F4C0DD5 /* ChatScreen.swift in Sources */,
 				3D31A6E3A8580B2F81EE4763 /* ChatTimeline.swift in Sources */,
 				AFB579E716E1378515894206 /* ConnectionProbe.swift in Sources */,
 				F224DF80655AF5E08A5C578A /* ConnectionScreen.swift in Sources */,
 				6E1E9DBFECB1FDABD1209FFE /* DocumentSceneLoader.swift in Sources */,
+				994370BF753F1907C78FE8EE /* DrawingEditorModel.swift in Sources */,
+				2713C14E0E58D28E9F2CC645 /* DrawingEditorPage.swift in Sources */,
 				6FA11605D9DE166F6C21D25C /* GitPage.swift in Sources */,
 				A0DBF00425A7018625CCB128 /* LucideIcon.swift in Sources */,
 				71F165040D575E124BBD716E /* MachineDetailsPage.swift in Sources */,
@@ -736,6 +755,7 @@
 				8B77DAF04DE9F9840327A5CC /* ProjectSVGRasterizer.swift in Sources */,
 				BA4E5634A953498E6EC34816 /* RemotePage.swift in Sources */,
 				F6559A2EF1AE52B8885568D7 /* RenderDocumentPage.swift in Sources */,
+				E2188F2FE2D263B6F0876E58 /* RichChatComposer.swift in Sources */,
 				A29BA09E98A9386B690A002A /* RuimteApp.swift in Sources */,
 				AEFABCFC364116F1A99CC8A8 /* SharedMachineSession.swift in Sources */,
 				DCDA9FE7463803051C29BB51 /* TerminalModel.swift in Sources */,

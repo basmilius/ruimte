@@ -16,7 +16,11 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   Projects use native grouped lists with a separate recently closed page. Custom image icons,
   including `.idea/icon.svg`, use the existing authenticated `projectIcon` byte resource and dark variant.
 - Native chat timeline, streaming, markdown/code highlighting, model options, drafts,
-  attachments, context selection, approvals and questions.
+  attachments, context selection, approvals and questions. The composer styles Markdown
+  while editing and shows selected files and skills as inline badges.
+- Drawing with a finger or Apple Pencil, pressure, pen colors and widths, whole-element
+  erasing, undo, pan and zoom. Existing shapes survive edits; shape and text creation
+  tools are not yet included. Unsaved drawing drafts persist locally for recovery.
 - SwiftTerm terminals with snapshots, output, resync, keyboard controls and paste confirmation.
   `session.attach` uses `follow:true` so opening a phone never resizes the desktop PTY.
 - File and media previews, filesystem updates, Git changes/staging/commits, processes and
@@ -53,8 +57,9 @@ Lucide icons use native SwiftUI paths from [LucideSwift](https://github.com/ajax
 pinned to 0.9.5 with upstream icons 1.46.0. Custom project SVG files are rendered separately.
 The package and upstream ISC notices are in `App/Design/Lucide-LICENSE.txt`.
 
-For small UI iterations, build and install directly on the development iPhone for
-review. Use targeted regression tests for connection, protocol and state changes;
+For small UI iterations, build and install directly on Bas's development iPhone and
+iPad Pro for review. Both devices are authorized installation targets. Use targeted
+regression tests for connection, protocol and state changes;
 reserve the full simulator suite for changes that need broader coverage.
 
 For simulator tests, replace the destination with an installed simulator if needed:
@@ -123,10 +128,11 @@ GitHub sign-in is unchanged. See the Worker README for the Apple configuration.
   unknown object keys like Zod. The statement lifetime refinement is an explicit generator
   override because JSON Schema does not preserve Zod refinements.
 
-The authentication callback is exactly `ruimte://pulsar/callback`, checked with the
+The web authentication callback is exactly `ruimte://pulsar/callback`, checked with the
 pending state before exchange. `/v1/providers` controls the login options; Apple uses
-its existing Worker redirect flow. Native Apple token exchange remains separate future work. HTTPS pairing links are accepted
-from the Add machine sheet; redirects are refused to keep a token on its intended origin. This app contains no local daemon.
+the native token exchange described above. HTTPS pairing links are accepted from the
+welcome screen and Projects page; redirects are refused to keep a token on its intended
+origin. This app contains no local daemon.
 
 ## Device checks for Bas
 

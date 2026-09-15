@@ -10,14 +10,18 @@ struct ChatTimeline: UIViewControllerRepresentable {
     let chatID: String
     var bottomInset: CGFloat = 0
     var dismissKeyboard: () -> Void = {}
+    var scrollToLatest = 0
+    var onMessagesBelowChanged: (Bool) -> Void = { _ in }
 
     func makeUIViewController(context: Context) -> ChatTimelineController {
         ChatTimelineController(client: client, chatID: chatID)
     }
     func updateUIViewController(_ controller: ChatTimelineController, context: Context) {
         controller.dismissKeyboard = dismissKeyboard
+        controller.onMessagesBelowChanged = onMessagesBelowChanged
         controller.setComposerInset(bottomInset)
         controller.update(items: items, revision: revision)
+        controller.scrollToLatest(command: scrollToLatest)
     }
 }
 
@@ -53,6 +57,12 @@ struct ChatViewportState {
         followsLatest = false
     }
 
+    mutating func followLatest() {
+        interactionRevision += 1
+        isInteracting = false
+        followsLatest = true
+    }
+
     func offset(geometry: ChatViewportGeometry, readingAnchor: CGFloat?) -> CGFloat? {
         guard !isInteracting else { return nil }
         if followsLatest { return geometry.bottom }
@@ -72,8 +82,10 @@ final class ChatTimelineCollection: UICollectionView {
     private(set) var viewport = ChatViewportState()
     var captureReadingAnchor: (() -> ChatReadingAnchor?)?
     var itemTop: ((String) -> CGFloat?)?
+    var viewportChanged: (() -> Void)?
     private var readingAnchor: ChatReadingAnchor?
     private var adjustingOffset = false
+    private var scrollingToLatest = false
 
     var geometry: ChatViewportGeometry {
         ChatViewportGeometry(
@@ -87,6 +99,7 @@ final class ChatTimelineCollection: UICollectionView {
     }
 
     func beginUserScroll() {
+        scrollingToLatest = false
         viewport.beginInteraction()
         readingAnchor = nil
     }
@@ -98,13 +111,35 @@ final class ChatTimelineCollection: UICollectionView {
     }
 
     func expandAtCurrentPosition() {
+        scrollingToLatest = false
         viewport.readHere()
         readingAnchor = captureReadingAnchor?()
     }
 
+    func scrollToLatest(animated: Bool) {
+        viewport.followLatest()
+        readingAnchor = nil
+        scrollingToLatest = animated && abs(contentOffset.y - geometry.bottom) >= 1
+        setContentOffset(CGPoint(x: contentOffset.x, y: geometry.bottom), animated: scrollingToLatest)
+        setNeedsLayout()
+    }
+
+    func finishScrollingToLatest() {
+        scrollingToLatest = false
+        setNeedsLayout()
+    }
+
+    func targetOffset(_ proposed: CGPoint) -> CGPoint {
+        guard !userIsScrolling, !scrollingToLatest, !viewport.followsLatest,
+            let anchor = readingAnchor, let top = itemTop?(anchor.id)
+        else { return proposed }
+        return CGPoint(x: proposed.x, y: geometry.clamped(anchor.offset(itemTop: top, inset: adjustedContentInset.top)))
+    }
+
     override func layoutSubviews() {
         super.layoutSubviews()
-        guard !adjustingOffset, !userIsScrolling, bounds.height > 0 else { return }
+        defer { viewportChanged?() }
+        guard !adjustingOffset, !userIsScrolling, !scrollingToLatest, bounds.height > 0 else { return }
         let anchorOffset = readingAnchor.flatMap { anchor in
             itemTop?(anchor.id).map { anchor.offset(itemTop: $0, inset: adjustedContentInset.top) }
         }
@@ -123,6 +158,9 @@ final class ChatTimelineCollection: UICollectionView {
 @MainActor
 final class ChatTimelineController: UIViewController, UICollectionViewDelegate, UIGestureRecognizerDelegate {
     var dismissKeyboard: () -> Void = {}
+    var onMessagesBelowChanged: (Bool) -> Void = { _ in }
+    private var lastScrollCommand = 0
+    private var messagesBelow = false
     private let client: any MachineRequesting
     private let chatID: String
     init(client: any MachineRequesting, chatID: String) {
@@ -153,6 +191,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         collection.translatesAutoresizingMaskIntoConstraints = false
         collection.accessibilityIdentifier = "chat.timeline"
         collection.delegate = self
+        collection.viewportChanged = { [weak self] in self?.reportMessagesBelow() }
         let tap = UITapGestureRecognizer(target: self, action: #selector(dismissComposerKeyboard))
         tap.cancelsTouchesInView = false
         tap.delegate = self
@@ -183,6 +222,9 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
                     }
                 }
                 .id(id)
+                .environment(\.chatWillExpand, { [weak self] in self?.collection.expandAtCurrentPosition() })
+                .disclosureGroupStyle(ChatDisclosureStyle())
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .transaction { transaction in
                     transaction.animation = nil
                     transaction.disablesAnimations = true
@@ -203,6 +245,23 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         collection.contentInset.bottom = inset
         collection.verticalScrollIndicatorInsets.bottom = inset
         collection.setNeedsLayout()
+    }
+
+    func scrollToLatest(command: Int) {
+        guard command != lastScrollCommand else { return }
+        lastScrollCommand = command
+        loadViewIfNeeded()
+        collection.scrollToLatest(animated: !UIAccessibility.isReduceMotionEnabled)
+    }
+
+    private func reportMessagesBelow() {
+        let below = !collection.geometry.isNearBottom(collection.contentOffset.y)
+        guard below != messagesBelow else { return }
+        messagesBelow = below
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.onMessagesBelowChanged(self.messagesBelow)
+        }
     }
 
     @objc private func dismissComposerKeyboard() {
@@ -283,6 +342,13 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
     }
 
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) { collection.beginUserScroll() }
+    func scrollViewDidScroll(_ scrollView: UIScrollView) { reportMessagesBelow() }
+    func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) { collection.finishScrollingToLatest() }
+    func collectionView(
+        _ collectionView: UICollectionView, targetContentOffsetForProposedContentOffset proposedContentOffset: CGPoint
+    ) -> CGPoint {
+        collection.targetOffset(proposedContentOffset)
+    }
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         if !decelerate { collection.finishUserScroll() }
     }
@@ -318,6 +384,35 @@ private struct ChatTimelineEntry: Equatable {
             }
         }
         return entries
+    }
+}
+
+extension EnvironmentValues {
+    @Entry fileprivate var chatWillExpand: () -> Void = {}
+}
+
+private struct ChatDisclosureStyle: DisclosureGroupStyle {
+    @Environment(\.chatWillExpand) private var willExpand
+
+    func makeBody(configuration: Configuration) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                willExpand()
+                configuration.isExpanded.toggle()
+            } label: {
+                HStack(spacing: 8) {
+                    configuration.label
+                    Spacer(minLength: 0)
+                    Image(systemName: configuration.isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
+                }
+                .frame(minHeight: 44).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(configuration.isExpanded ? "Expanded" : "Collapsed")
+            if configuration.isExpanded { configuration.content }
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
 

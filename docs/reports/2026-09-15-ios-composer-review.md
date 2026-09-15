@@ -97,3 +97,41 @@ assets and their generator have been removed; custom project SVGs keep their
 separate renderer. `bun run format` and `bun run check` passed.
 The signed build succeeded and installed on Bas's iPhone. Build log:
 `/tmp/ruimte-ios-native-lucide-device.log`. No simulator or test suite was run.
+
+## Chat layout, rich composer and drawing follow-up
+
+- Center conversation loading in the timeline. Extend the background and messages
+  through the bottom safe area, with 12-point composer spacing on the sides and bottom.
+- Show a glass scroll-to-latest button when messages are below the viewport. Respect
+  reduced motion and resume following incoming messages after pressing it.
+- Anchor the reader before expanding work logs and disclosure groups. Align hosted
+  row content to the top and preserve the target offset during collection layout changes.
+- Replace the plain composer field with a native text view that styles Markdown and
+  selected file/skill tokens. Keep raw text, native selection, undo and IME composition.
+  Insert selections at the caret and send metadata only for tokens still in the draft.
+- Open drawings in an editable native surface. Support finger and Apple Pencil input,
+  pressure, colors, widths, whole-element erasing, undo, pan and pinch zoom. Save shared
+  freehand elements through the existing drawing protocol; preserve existing shapes.
+- Keep unsaved drawings locally and merge independent remote edits. Conflicts retain
+  the draft with Retry and explicit Discard actions. An own-save echo preserves an undo
+  performed while the save was pending.
+
+### Verification and remaining acceptance
+
+The signed iPhone and iPad device builds passed. The final build was installed and
+launched successfully on Bas's iPhone and iPad Pro. Logs:
+`/tmp/ruimte-ios-drawing-chat-device.log` and
+`/tmp/ruimte-ios-drawing-chat-ipad.log`.
+
+The composer passed standalone Swift type checking and focused syntax checks for
+UTF-16 caret insertion, token boundaries, filenames with spaces and code exclusion.
+Repository type checks passed; lint reports existing desktop warnings. Four focused
+drawing model tests were added but not run. No simulator run was performed.
+
+Physical keyboard behavior, expansion motion, bottom spacing and Apple Pencil feel
+still need device acceptance. Drawing supports freehand editing; creating or moving
+shape/text objects is not included. Selected composer token metadata remains in memory
+even though the draft text persists across restarts.
+
+Future development builds may be installed on both Bas's iPhone and iPad Pro, following
+his explicit authorization. Keep the short device-review iteration loop.

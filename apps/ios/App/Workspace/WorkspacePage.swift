@@ -262,7 +262,11 @@ struct ProjectItemPage: View {
                 case "browser": BrowserPage(url: current.text("url"))
                 case "file": FileContentPage(client: workspace.client, path: absolutePath(current.text("path")))
                 case "note": NotePage(workspace: workspace, nodeID: current.stableID, bodyText: current.text("body"))
-                case "drawing", "diagram":
+                case "drawing":
+                    DrawingEditorPage(
+                        client: workspace.client, machineID: workspace.session.machine.id,
+                        projectID: workspace.projectID, viewID: current.text("viewId", fallback: current.stableID))
+                case "diagram":
                     RenderDocumentPage(
                         client: workspace.client, projectID: workspace.projectID,
                         viewID: current.text("viewId", fallback: current.stableID), kind: current.text("kind"))

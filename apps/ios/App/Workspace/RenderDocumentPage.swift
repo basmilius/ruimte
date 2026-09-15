@@ -108,7 +108,7 @@ private final class SceneScrollView: UIScrollView, UIScrollViewDelegate {
     }
 }
 
-private final class SceneSurface: UIView {
+class SceneSurface: UIView {
     private var scene: JSONValue = .object([:])
     private var paths: [String: CGPath] = [:]
     private let drawing = SceneDrawing()

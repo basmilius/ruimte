@@ -173,15 +173,20 @@ final class ChatModel {
         defer { sending = false }
         let text = draft
         let uploads = attachments
+        let tokens = ChatDraftSyntax.tokens(in: text, mentions: mentions, skills: skills)
+        let activeMentions = mentions.filter { value in tokens.contains { $0.kind == "@" && $0.value == value } }
+        let activeSkills = skills.filter { value in tokens.contains { $0.kind == "$" && $0.value == value } }
         let values: [String: JSONValue] = [
-            "text": .string(text), "mentions": .array(mentions.map(JSONValue.string)),
-            "skills": .array(skills.map(JSONValue.string)), "attachments": .array(uploads.map(\.payload)),
+            "text": .string(text), "mentions": .array(activeMentions.map(JSONValue.string)),
+            "skills": .array(activeSkills.map(JSONValue.string)), "attachments": .array(uploads.map(\.payload)),
         ]
         if await perform("chat.send", values) {
-            if draft == text { draft = "" }
+            if draft == text {
+                draft = ""
+                mentions.removeAll()
+                skills.removeAll()
+            }
             attachments.removeAll { upload in uploads.contains { $0.id == upload.id } }
-            mentions.removeAll()
-            skills.removeAll()
         }
     }
 
@@ -222,10 +227,15 @@ final class ChatModel {
         } catch is CancellationError {} catch { self.error = error.localizedDescription }
     }
 
-    func chooseSuggestion(_ value: String) {
+    @discardableResult
+    func chooseSuggestion(_ value: String, selection: NSRange? = nil) -> NSRange {
         if suggestionKind == "@" { mentions = Array(Set(mentions + [value])).sorted() }
         if suggestionKind == "$" { skills = Array(Set(skills + [value])).sorted() }
-        draft += (draft.isEmpty || draft.hasSuffix(" ") ? "" : " ") + suggestionKind + value + " "
+        let insertion = ChatDraftSyntax.insertion(
+            text: draft, selection: selection ?? NSRange(location: (draft as NSString).length, length: 0),
+            kind: suggestionKind, value: value)
+        draft = insertion.text
+        return insertion.selection
     }
 }
 

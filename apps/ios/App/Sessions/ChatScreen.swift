@@ -13,7 +13,10 @@ struct ChatScreen: View {
     @State private var question: JSONValue?
     @State private var expandedRequest: String?
     @FocusState private var composerFocused: Bool
+    @State private var composerSelection = NSRange(location: 0, length: 0)
     @State private var composerHeight: CGFloat = 72
+    @State private var messagesBelow = false
+    @State private var scrollToLatest = 0
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.colorScheme) private var colorScheme
     let title: String
@@ -28,13 +31,17 @@ struct ChatScreen: View {
             if let error = model.error {
                 SessionErrorBanner(message: error) { model.attach() }
             }
-            if model.loading { ProgressView("Loading conversation…").padding() }
             ChatTimeline(
                 items: model.items, revision: model.revision, client: model.client, chatID: model.chatID,
-                bottomInset: composerHeight, dismissKeyboard: { composerFocused = false }
+                bottomInset: composerHeight, dismissKeyboard: { composerFocused = false },
+                scrollToLatest: scrollToLatest, onMessagesBelowChanged: { messagesBelow = $0 }
             )
             .overlay {
-                if model.items.isEmpty && !model.loading {
+                if model.loading {
+                    ProgressView("Loading conversation…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .allowsHitTesting(false)
+                } else if model.items.isEmpty {
                     ContentUnavailableView(
                         "Start a conversation", systemImage: "bubble.left.and.bubble.right",
                         description: Text("Messages and agent work appear here.")
@@ -51,15 +58,31 @@ struct ChatScreen: View {
                 }
                 .frame(maxWidth: 760)
                 .padding(.horizontal, 12)
-                .padding(.vertical, 10)
+                .padding(.vertical, 12)
                 .frame(maxWidth: .infinity)
                 .onGeometryChange(for: CGFloat.self) {
                     $0.size.height
                 } action: {
                     composerHeight = $0
                 }
+                .overlay(alignment: .top) {
+                    if messagesBelow && !model.loading {
+                        Button {
+                            scrollToLatest += 1
+                        } label: {
+                            Image(systemName: "arrow.down").font(.body.weight(.semibold))
+                                .frame(width: 44, height: 44)
+                        }
+                        .buttonStyle(.glass)
+                        .accessibilityLabel("Scroll to latest message")
+                        .accessibilityIdentifier("chat.scroll-to-bottom")
+                        .offset(y: -48)
+                    }
+                }
             }
         }
+        .ignoresSafeArea(.container, edges: .bottom)
+        .background(Color(uiColor: .systemBackground).ignoresSafeArea())
         .tint(MobileStyle.accent)
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
@@ -119,7 +142,14 @@ struct ChatScreen: View {
             }
         }
         .sheet(isPresented: Binding(get: { pickerKind != nil }, set: { if !$0 { pickerKind = nil } })) {
-            ChatSuggestionPicker(model: model, kind: pickerKind ?? "@") { pickerKind = nil }
+            ChatSuggestionPicker(
+                model: model, kind: pickerKind ?? "@",
+                choose: { value in
+                    composerSelection = model.chooseSuggestion(value, selection: composerSelection)
+                    pickerKind = nil
+                    composerFocused = true
+                }
+            ) { pickerKind = nil }
         }
         .sheet(isPresented: Binding(get: { question != nil }, set: { if !$0 { question = nil } })) {
             if let question { ChatQuestionSheet(model: model, item: question) }
@@ -156,17 +186,17 @@ struct ChatScreen: View {
                 }.scrollIndicators(.hidden).padding(.horizontal, 12).padding(.top, 10)
             }
             HStack(alignment: .bottom, spacing: 4) {
-                TextField("Message the agent…", text: $model.draft, axis: .vertical)
-                    .lineLimit(1...6)
-                    .font(.body)
-                    .focused($composerFocused)
-                    .padding(.leading, 16)
-                    .padding(.trailing, isEditing ? 16 : 0)
-                    .padding(.vertical, isEditing ? 15 : 10)
-                    .frame(maxWidth: .infinity, minHeight: 52)
-                    .contentShape(Rectangle())
-                    .onTapGesture { composerFocused = true }
-                    .accessibilityIdentifier("chat.composer")
+                RichChatComposer(
+                    text: $model.draft, selection: $composerSelection,
+                    mentions: model.mentions, skills: model.skills, focused: $composerFocused
+                )
+                .padding(.leading, 16)
+                .padding(.trailing, isEditing ? 16 : 0)
+                .padding(.vertical, isEditing ? 15 : 10)
+                .frame(maxWidth: .infinity, minHeight: 52)
+                .contentShape(Rectangle())
+                .onTapGesture { composerFocused = true }
+                .accessibilityIdentifier("chat.composer")
                 if !isEditing { primaryAction.padding(.trailing, 6).padding(.bottom, 4) }
             }
             if isEditing {
@@ -406,14 +436,14 @@ struct SessionErrorBanner: View {
 private struct ChatSuggestionPicker: View {
     @Bindable var model: ChatModel
     let kind: String
+    let choose: (String) -> Void
     let close: () -> Void
     @State private var query = ""
     var body: some View {
         NavigationStack {
             List(model.suggestions, id: \.self) { value in
                 Button(kind + value) {
-                    model.chooseSuggestion(value)
-                    close()
+                    choose(value)
                 }
             }
             .overlay { if model.suggestions.isEmpty { ContentUnavailableView.search(text: query) } }
