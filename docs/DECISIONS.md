@@ -1633,11 +1633,11 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   again. The sentence stands under the machine's name. A connection that quietly turned back into a
   socket would test nothing.
 - ICE is gathered whole before the offer and before the answer (at most 5 s each), so an attempt is
-  one offer and one answer and nothing trickles. The daemon takes `--stun` (Google's public server by
-  default), `--no-stun`, `--direct-ports` and `--direct-host-address`. The Docker containers publish a
+  one offer and one answer and nothing trickles. The daemon takes `--stun` (`stun:turn.ruimte.app:3478` by
+  default, see "TURN"), `--no-stun`, `--direct-ports` and `--direct-host-address`. The Docker containers publish a
   UDP range and announce `127.0.0.1`, which is how a client on the host reaches a werift inside
-  Docker Desktop's VM. The client's STUN servers are a stored setting (`directStunServer`, Google's public
-  server by default); since the web client the field is no longer drawn, see "The web client" below.
+  Docker Desktop's VM. The client's STUN servers are a stored setting (`directStunServers`, the same server by
+  default); since the web client the field is no longer drawn, see "The web client" below.
 - Phase 3: the bytes an `<img>` or a `<video>` draws (a chat attachment, a project icon, an image or a
   video file) travel as `bytes.read` over a direct connection and as the HTTP routes over a socket.
   One hook decides, `useMachineUrl`, from the row's `direct` flag and never from whether the address
@@ -1787,6 +1787,15 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   on 5349 once there is a certificate, relays on UDP 49152 to 49999. Nothing in Ruimte chooses the relay:
   both ends hand ICE every server they have and ICE prefers a direct pair on its own. A fallback of our
   own would second-guess the one component that measures the paths.
+- The same coturn is the STUN server, `stun:turn.ruimte.app:3478`, the default of the daemon's `--stun` and the client's
+  `directStunServers`, so a direct connection asks no third party for its address. A binding answer needs
+  no credential and costs one packet, so `no-stun` is gone from its config. The default is a constant in
+  both apps rather than something the broker hands out: a machine without a broker or with a broker that
+  has no TURN still gets its public address. A provider may still hand out STUN URLs of its own
+  (Cloudflare's does); `mergeIceServers` keeps a URL both lists carry once, and werift takes the first STUN
+  URL, which is the daemon's own. A client moved to the new default through a new key: the old
+  `directStunServer` held the previous default for nearly everyone, since every save writes the whole
+  blob, and a hidden field left nobody a way to change it.
 - The broker hands out the credentials, because it is the one place that already knows a key proved
   itself. After `ready` a peer sends `ice` and gets `ice` back with `servers` and `expiresAt`, limited per
   key like announcements (`--key-ice-per-minute`, 10). The credential is TURN REST (`use-auth-secret`):
