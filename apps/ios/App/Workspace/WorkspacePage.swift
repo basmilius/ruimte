@@ -236,7 +236,7 @@ struct WorkspacePage: View {
                             openView(item.stableID)
                         } label: {
                             viewRow(item)
-                                .modifier(MobileSidebarLabel(selected: isSidebar && selected))
+                                .modifier(MobileSidebarLabel())
                         }
                         .foregroundStyle(MobileStyle.text)
                         .modifier(MobileSidebarRow(selected: isSidebar && selected))

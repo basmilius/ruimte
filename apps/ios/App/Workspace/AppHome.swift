@@ -112,9 +112,10 @@ struct AppHome: View {
                                     Text(section.title).lineLimit(1).truncationMode(.tail)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                 }
-                                .modifier(MobileSidebarLabel(selected: homeSection == section && activeProject == nil))
+                                .modifier(MobileSidebarLabel())
                             }
                             .modifier(MobileSidebarRow(selected: homeSection == section && activeProject == nil))
+                            .accessibilityIdentifier("sidebar.\(section.rawValue)")
                         }
                     }.listSectionSeparator(.hidden)
                 }
@@ -370,6 +371,7 @@ private struct ProjectLinks: View {
             }
             .disabled(row.summary["available"] == .bool(false))
             .modifier(MobileSidebarRow())
+            .accessibilityIdentifier("projects.project.\(row.id.projectID)")
         }
     }
 }

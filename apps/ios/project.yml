@@ -146,6 +146,17 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.ruimte.mobile.tests
         GENERATE_INFOPLIST_FILE: YES
+  RuimteUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: Ruimte
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.ruimte.mobile.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Ruimte
 schemes:
   Ruimte:
     build:
@@ -153,3 +164,10 @@ schemes:
         Ruimte: all
     test:
       targets: [RuimteTests]
+  RuimteDeviceChecks:
+    build:
+      targets:
+        Ruimte: all
+        RuimteUITests: [test]
+    test:
+      targets: [RuimteUITests]

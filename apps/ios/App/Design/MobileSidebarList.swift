@@ -18,6 +18,7 @@ struct MobileSidebarRow: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            .buttonStyle(MobileSidebarButtonStyle(selected: selected))
             .listRowInsets(EdgeInsets(top: 1, leading: 18, bottom: 1, trailing: 18))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
@@ -26,41 +27,55 @@ struct MobileSidebarRow: ViewModifier {
 }
 
 struct MobileSidebarLabel: ViewModifier {
-    var selected = false
-    @State private var hovered = false
-    @GestureState private var pressed = false
-
     func body(content: Content) -> some View {
         content
             .font(.callout)
-            .foregroundStyle(selected || hovered || pressed ? MobileStyle.text : MobileStyle.muted)
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+private struct MobileSidebarButtonStyle: ButtonStyle {
+    var selected: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        MobileSidebarButtonSurface(selected: selected, pressed: configuration.isPressed, label: configuration.label)
+    }
+}
+
+private struct MobileSidebarButtonSurface<Label: View>: View {
+    let selected: Bool
+    let pressed: Bool
+    let label: Label
+    @State private var hovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        label
+            .foregroundStyle(selected || hovered || pressed ? MobileStyle.text : MobileStyle.muted)
             .background(
                 pressed ? MobileStyle.pressed : selected ? MobileStyle.active : hovered ? MobileStyle.hover : .clear,
                 in: RoundedRectangle(cornerRadius: 8)
             )
-            .contentShape(RoundedRectangle(cornerRadius: 8))
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: pressed)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
             .onHover { hovered = $0 }
-            // Keep the native List button action; this gesture only tracks visual feedback.
-            .simultaneousGesture(
-                LongPressGesture(minimumDuration: .infinity, maximumDistance: 10)
-                    .updating($pressed) { value, pressed, _ in pressed = value }
-            )
     }
 }
 
 struct SidebarBrand: View {
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Image("RuimteLogo").renderingMode(.original)
                 .resizable().scaledToFit()
                 .padding(4)
-                .frame(width: 28, height: 28)
-                .background(.white, in: RoundedRectangle(cornerRadius: 7))
-            Text("Ruimte").font(.headline).foregroundStyle(MobileStyle.text)
+                .frame(width: 32, height: 32)
+                .background(.white, in: RoundedRectangle(cornerRadius: 8))
+            Text("Ruimte").font(.title3.weight(.semibold)).foregroundStyle(MobileStyle.text)
         }
+        .padding(.leading, 18)
         .fixedSize(horizontal: true, vertical: false)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Ruimte")

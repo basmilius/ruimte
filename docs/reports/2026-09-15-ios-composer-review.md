@@ -556,3 +556,13 @@ The signed device build, Swift formatting, repository format and check commands 
 The phone view list now explicitly removes the default top content margin and uses a 24-point bottom content margin. These scroll-content margins retain the native toolbar and tabbar safe areas. The same spacing applies when searching views; iPad sidebar margins remain automatic.
 
 The signed build, format and repository checks passed. No additional tests or simulator were used. The physical iPhone was showing Projects when captured, so the view-list spacing still needs visual acceptance.
+
+## Restore row taps and refine feedback
+
+The long-press gesture added for visual feedback intercepted real touches, preventing navigation. Shared rows now use SwiftUI's `ButtonStyle.configuration.isPressed`; the label has no gesture recognizer. Buttons and navigation links retain their normal activation behavior. Press feedback uses a 120 ms ease-out transition, respects Reduce Motion and has a background shade between resting and selected in both appearances.
+
+The main iPad sidebar branding now has a 32-point mark and a larger semibold name. Its leading inset aligns the mark with the sidebar item icons. A physical iPad screenshot confirms the size and alignment.
+
+The earlier activation check called the collection-view delegate directly and missed this touch regression. It has been replaced by one opt-in XCUITest in the `RuimteDeviceChecks` scheme, which requires a signed-in device with an available project. Actual synthesized taps opened Recently closed, a project and a view on both physical devices; the iPad run also switched to Machines and back to Projects. Both runs passed. The standard test scheme remains independent of device account state.
+
+The signed builds, Swift formatting and repository checks passed, with existing lint warnings. Both devices have the updated app installed and launched. No simulator was used. The press transition timing and light appearance were not visually recorded.
