@@ -62,10 +62,10 @@ const appleKey = async (kid: string): Promise<JsonWebKey | undefined> => {
 
 /*
  * The `id_token` from the token endpoint, checked the way Apple's documentation asks: a signature from one
- * of Apple's keys, Apple as the issuer, this Services ID as the audience, not expired, and the nonce this
+ * of Apple's keys, Apple as the issuer, an audience the caller accepts, not expired, and the nonce this
  * login sent. The token came straight from Apple over TLS, but checking it anyway costs one cached fetch.
  */
-export const verifyAppleIdToken = async (idToken: string, input: { clientId: string; nonce: string; now?: number }): Promise<string> => {
+export const verifyAppleIdToken = async (idToken: string, input: { audiences: readonly string[]; nonce: string; now?: number }): Promise<string> => {
     const jwt = decodeJwt(idToken);
     if (!jwt || jwt.header.alg !== 'RS256' || typeof jwt.header.kid !== 'string') {
         throw new Error('Apple answered with an id_token this address book cannot read');
@@ -77,7 +77,7 @@ export const verifyAppleIdToken = async (idToken: string, input: { clientId: str
     const claims = jwt.payload;
     const nowS = Math.floor((input.now ?? Date.now()) / 1000);
     const audience = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
-    if (claims.iss !== APPLE_ISSUER || !audience.includes(input.clientId)) {
+    if (claims.iss !== APPLE_ISSUER || !audience.some((entry) => typeof entry === 'string' && input.audiences.includes(entry))) {
         throw new Error('The id_token is for another issuer or audience');
     }
     if (typeof claims.exp !== 'number' || claims.exp + CLOCK_SKEW_S <= nowS) {
@@ -135,7 +135,8 @@ export const apple: OAuthProvider = {
             throw new Error(`Apple refused the code: ${typeof token?.error === 'string' ? token.error : response.status}`);
         }
         // Apple's access and refresh tokens are dropped with the response: the address book never acts on Apple for anyone.
-        const subject = await verifyAppleIdToken(token.id_token, { clientId, nonce: await sha256(input.codeVerifier) });
+        // The web flow's own Services ID only; a native app's token carries its bundle id and would pass its own list.
+        const subject = await verifyAppleIdToken(token.id_token, { audiences: [clientId], nonce: await sha256(input.codeVerifier) });
         return { subject, login: null };
     }
 };
