@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { LoginStartQuerySchema, type SessionLoginCode } from '@ruimte/pulsar';
-import { signIn, type LoginRedirect } from './login';
+import { linkIdentity, signIn, type LoginRedirect } from './login';
 import type { LoginCallback } from './pkce';
 import type { SessionKeeper, SessionView } from './session';
 
@@ -70,5 +70,50 @@ describe('signIn', () => {
             'no browser'
         );
         expect(route.cancelled()).toBe(1);
+    });
+});
+
+describe('linkIdentity', () => {
+    test('asks for a link token first, starts the provider with it, and completes with the code and its verifier', async () => {
+        const route = fakeRoute((state) => ({ code: 'link-code', state, error: null }));
+        const order: string[] = [];
+        const result = await linkIdentity({
+            redirect: route.redirect,
+            addressBookUrl: 'https://pulsar.ruimte.app',
+            provider: 'apple',
+            requestLink: async () => {
+                order.push('link');
+                return 't'.repeat(43);
+            },
+            complete: async (login) => {
+                order.push('complete');
+                return login;
+            }
+        });
+        expect(order).toEqual(['link', 'complete']);
+        const start = new URL(route.opened[0]!);
+        expect(start.pathname).toBe('/auth/apple/start');
+        expect(start.searchParams.get('link')).toBe('t'.repeat(43));
+        expect(LoginStartQuerySchema.safeParse(Object.fromEntries(start.searchParams)).success).toBe(true);
+        expect(result).toMatchObject({ code: 'link-code', redirectUri: REDIRECT });
+        // A link never opens a session of its own.
+        expect(route.exchanged).toEqual([]);
+    });
+
+    test('a redirect with another state completes nothing', async () => {
+        const route = fakeRoute(() => ({ code: 'stolen', state: 'someone-elses', error: null }));
+        let completed = 0;
+        await expect(
+            linkIdentity({
+                redirect: route.redirect,
+                addressBookUrl: 'https://pulsar.ruimte.app',
+                provider: 'apple',
+                requestLink: async () => 't'.repeat(43),
+                complete: async () => {
+                    completed += 1;
+                }
+            })
+        ).rejects.toThrow('does not belong');
+        expect(completed).toBe(0);
     });
 });

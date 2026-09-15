@@ -58,4 +58,24 @@ describe('signing in on the web', () => {
         const cancelled = await leave(storage);
         expect(() => completeWebLogin(storage, new URLSearchParams({ error: 'access_denied', state: cancelled.state }), 2_000)).toThrow('cancelled');
     });
+
+    test('a login that adds a provider says so on the way back, and a sign-in does not', async () => {
+        const storage = memoryStorage();
+        const start = new URL(
+            await beginWebLogin(storage, {
+                addressBookUrl: 'https://pulsar.ruimte.app',
+                redirectUri: REDIRECT,
+                provider: 'apple',
+                link: 't'.repeat(43),
+                now: 1_000
+            })
+        );
+        expect(start.pathname).toBe('/auth/apple/start');
+        const query = LoginStartQuerySchema.parse(Object.fromEntries(start.searchParams));
+        expect(query.link).toBe('t'.repeat(43));
+        expect(completeWebLogin(storage, new URLSearchParams({ code: 'c'.repeat(43), state: query.state }), 2_000).link).toBe(true);
+
+        const plain = await leave(storage);
+        expect(completeWebLogin(storage, new URLSearchParams({ code: 'c'.repeat(43), state: plain.state }), 2_000).link).toBe(false);
+    });
 });

@@ -32,7 +32,14 @@ const PENDING_LOGIN_KEY = 'ruimte.pulsar.pendingLogin';
 export const PENDING_LOGIN_LIFETIME_MS = 10 * 60_000;
 
 /* The part of a login that has to outlive the page: in localStorage, since a Home Screen app may come back in another browsing context. */
-const PendingLoginSchema = z.object({ verifier: z.string(), state: z.string(), redirectUri: z.string(), startedAt: z.number() });
+const PendingLoginSchema = z.object({
+    verifier: z.string(),
+    state: z.string(),
+    redirectUri: z.string(),
+    startedAt: z.number(),
+    /* A login that adds a provider to the signed-in account, whose code goes to the account rather than the keeper. */
+    link: z.boolean().optional()
+});
 export type PendingLogin = z.infer<typeof PendingLoginSchema>;
 
 export interface LoginStorage {
@@ -50,18 +57,25 @@ export const webRedirectUriFor = (origin: string): string | null => {
 /* Writes down what the return needs and answers the start URL to leave for. */
 export const beginWebLogin = async (
     storage: LoginStorage,
-    options: { addressBookUrl: string; redirectUri: string; provider?: ProviderId; now?: number }
+    options: { addressBookUrl: string; redirectUri: string; provider?: ProviderId; link?: string; now?: number }
 ): Promise<string> => {
     const pkce = await createPkce();
     const state = createLoginState();
-    const pending: PendingLogin = { verifier: pkce.verifier, state, redirectUri: options.redirectUri, startedAt: options.now ?? Date.now() };
+    const pending: PendingLogin = {
+        verifier: pkce.verifier,
+        state,
+        redirectUri: options.redirectUri,
+        startedAt: options.now ?? Date.now(),
+        link: options.link !== undefined
+    };
     storage.setItem(PENDING_LOGIN_KEY, JSON.stringify(pending));
     return loginStartUrl({
         addressBookUrl: options.addressBookUrl,
         provider: options.provider ?? 'github',
         redirectUri: options.redirectUri,
         state,
-        challenge: pkce.challenge
+        challenge: pkce.challenge,
+        link: options.link
     });
 };
 
@@ -69,7 +83,11 @@ export const beginWebLogin = async (
  * The code and the verifier, when the query this page came back with belongs to the login it started.
  * The pending login is spent whatever the answer, so a reload of the callback address tries nothing twice.
  */
-export const completeWebLogin = (storage: LoginStorage, query: URLSearchParams, now = Date.now()): { code: string; verifier: string; redirectUri: string } => {
+export const completeWebLogin = (
+    storage: LoginStorage,
+    query: URLSearchParams,
+    now = Date.now()
+): { code: string; verifier: string; redirectUri: string; link: boolean } => {
     const raw = storage.getItem(PENDING_LOGIN_KEY);
     storage.removeItem(PENDING_LOGIN_KEY);
     let pending: PendingLogin | null = null;
@@ -86,7 +104,7 @@ export const completeWebLogin = (storage: LoginStorage, query: URLSearchParams, 
         throw new LoginError('The sign-in took too long. Sign in again.');
     }
     const code = codeFromCallback({ code: query.get('code'), state: query.get('state'), error: query.get('error') }, pending.state);
-    return { code, verifier: pending.verifier, redirectUri: pending.redirectUri };
+    return { code, verifier: pending.verifier, redirectUri: pending.redirectUri, link: pending.link === true };
 };
 
 const StoredSessionSchema = z.object({ refreshToken: z.string().min(1), expiresAt: z.number().int(), account: AccountSchema });

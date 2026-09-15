@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { Check, KeyRound, LogIn, X } from 'lucide-react';
+import { Check, KeyRound, X } from 'lucide-react';
 import { ProjectIconChoiceSchema } from '@ruimte/contracts';
 import { keyFingerprint, normalizeUserCode, type DeviceLinkLookupResult } from '@ruimte/pulsar';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { messageOf, signInToPulsar, usePulsarAccount, withAccessToken } from '@/pulsar/account';
+import { messageOf, usePulsarAccount, withAccessToken } from '@/pulsar/account';
+import { accountName } from '@/pulsar/account-name';
 import { linkStep, typedCode } from '@/pulsar/link-request';
 import { refreshAccountMachines } from '@/pulsar/machines';
+import { SignInButtons } from '@/shell/SignInButtons';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 
@@ -121,9 +123,7 @@ export function LinkMachineDialog({ open, onOpenChange, initialCode, nested = fa
                         <div className="mt-3 flex flex-col items-start gap-2">
                             <p className="text-sm text-text">Sign in to the account the machine should join.</p>
                             {accountError !== null && <p className="text-xs break-words text-status-error">{accountError}</p>}
-                            <Button variant="primary" onClick={() => void signInToPulsar()}>
-                                <Icon icon={LogIn} size={12} /> Sign in with GitHub
-                            </Button>
+                            <SignInButtons />
                         </div>
                     )}
                     {step === 'enter-code' && (
@@ -145,9 +145,7 @@ export function LinkMachineDialog({ open, onOpenChange, initialCode, nested = fa
                                 }}
                             />
                             {account !== null && (
-                                <p className="mt-1.5 text-xs break-words text-text-faint">
-                                    The machine joins the account of {account.login ?? 'the GitHub user you signed in as'}.
-                                </p>
+                                <p className="mt-1.5 text-xs break-words text-text-faint">The machine joins the account of {accountName(account)}.</p>
                             )}
                         </>
                     )}
@@ -161,8 +159,8 @@ export function LinkMachineDialog({ open, onOpenChange, initialCode, nested = fa
                                 </span>
                             </div>
                             <p className="text-xs break-words text-text-muted">
-                                Check that the terminal printed this key fingerprint. Once added, every client signed in as {account?.login ?? 'you'} can open
-                                this machine, and the machine can see who opens it.
+                                Check that the terminal printed this key fingerprint. Once added, every client signed in to this account can open this machine,
+                                and the machine can see who opens it.
                             </p>
                         </div>
                     )}

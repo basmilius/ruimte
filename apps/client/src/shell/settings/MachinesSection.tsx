@@ -1,14 +1,25 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
-import { ChevronRight, KeyRound, Link2, LogIn, LogOut, Plus } from 'lucide-react';
+import { ChevronRight, KeyRound, Link2, LogOut, Plus } from 'lucide-react';
+import { PROVIDER_NAMES, type ProviderId } from '@ruimte/pulsar';
 import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
 import { pairEndpoint } from '@/endpoint';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { cancelPulsarSignIn, messageOf, signInToPulsar, signOutOfPulsar, usePulsarAccount } from '@/pulsar/account';
+import {
+    cancelPulsarSignIn,
+    linkPulsarProvider,
+    messageOf,
+    refreshPulsarIdentities,
+    signOutOfPulsar,
+    unlinkPulsarProvider,
+    usePulsarAccount
+} from '@/pulsar/account';
+import { PROVIDER_ORDER, identityDetail, signedInLabel, takeoverWarning } from '@/pulsar/account-name';
 import { forgetAccountMachines, reclaimAfterPairing, refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
 import { describeConnection, describeLastSeen, describePing, REACHABILITY_LABELS } from '@/shell/connection-info';
 import { MachineDialog } from '@/shell/settings/MachineDialog';
+import { ProviderButton, SignInButtons } from '@/shell/SignInButtons';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Skeleton } from '@/shell/settings/controls';
@@ -24,6 +35,7 @@ import { useLatency } from '@/transport/ping';
 import { useEndpointConnection, useLastSeenAt } from '@/transport/status';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
+import { SignInMark } from '@/ui/SignInMark';
 import { Tooltip } from '@/ui/Tooltip';
 
 const DOT: Record<TransportStatus, string> = {
@@ -121,12 +133,66 @@ function MachineRow({ entry, onOpen }: { entry: MachineEntry; onOpen(): void }) 
     );
 }
 
+/* One way to sign in to the account: remove it while another remains, or add it when the address book offers it. */
+function IdentityRow({ provider }: { provider: ProviderId }) {
+    const identities = usePulsarAccount((s) => s.identities);
+    const linking = usePulsarAccount((s) => s.linking);
+    const offered = usePulsarAccount((s) => s.providers.includes(provider));
+    const identity = identities?.find((entry) => entry.provider === provider) ?? null;
+    const name = PROVIDER_NAMES[provider];
+    const label = (
+        <span className="flex items-center gap-2">
+            <SignInMark provider={provider} size={14} /> {name}
+        </span>
+    );
+
+    if (identity !== null) {
+        const last = identities?.length === 1;
+        return (
+            <SettingsRow
+                label={label}
+                description={
+                    last ? `${identityDetail(identity)}. The only way to sign in to this account, so it stays until you add another.` : identityDetail(identity)
+                }
+                control={last ? undefined : <Button onClick={() => void unlinkPulsarProvider(provider)}>Remove</Button>}
+            />
+        );
+    }
+    if (!offered) {
+        return null;
+    }
+    if (linking === provider) {
+        return (
+            <SettingsRow
+                label={label}
+                description={`Finish signing in with ${name}, then come back here.`}
+                control={<Button onClick={() => void cancelPulsarSignIn()}>Cancel</Button>}
+            />
+        );
+    }
+    return (
+        <SettingsRow
+            label={label}
+            description={`Not added. Add it to open this account with ${name} as well.`}
+            control={<ProviderButton provider={provider} verb="Continue" disabled={linking !== null} onClick={() => void linkPulsarProvider(provider)} />}
+        />
+    );
+}
+
 /* Signing in is what lets a client reach a machine it never paired with: the account vouches for this client's key. */
 function AccountRows() {
     const status = usePulsarAccount((s) => s.status);
     const account = usePulsarAccount((s) => s.account);
+    const identities = usePulsarAccount((s) => s.identities);
     const error = usePulsarAccount((s) => s.error);
     const notice = usePulsarAccount((s) => s.notice);
+
+    // An open pane asks which identities the account has, since another client may have added or removed one.
+    useEffect(() => {
+        if (status === 'signed-in') {
+            void refreshPulsarIdentities();
+        }
+    }, [status]);
 
     return (
         <>
@@ -141,33 +207,30 @@ function AccountRows() {
             {status === 'signed-out' && (
                 <SettingsRow
                     label="Not signed in"
-                    description={
-                        notice ?? 'Signing in opens GitHub. Machines you reach while signed in join your account on their own, and its machines show up here.'
-                    }
-                    control={
-                        <Button variant="primary" onClick={() => void signInToPulsar()}>
-                            <Icon icon={LogIn} size={12} /> Sign in with GitHub
-                        </Button>
-                    }
+                    description={notice ?? 'Machines you reach while signed in join your account on their own, and its machines show up here.'}
+                    control={<SignInButtons className="justify-end" />}
                 />
             )}
             {status === 'signing-in' && (
                 <SettingsRow
                     label="Signing in"
-                    description="Finish signing in with GitHub, then come back here."
+                    description="Finish signing in in the browser, then come back here."
                     control={<Button onClick={() => void cancelPulsarSignIn()}>Cancel</Button>}
                 />
             )}
             {status === 'signed-in' && account && (
-                <SettingsRow
-                    label={account.login === null ? 'Signed in with GitHub' : `Signed in as ${account.login}`}
-                    description="Anyone who takes over this GitHub account can reach your machines, so turn on two-factor authentication there."
-                    control={
-                        <Button onClick={() => void signOutOfPulsar()}>
-                            <Icon icon={LogOut} size={12} /> Sign out
-                        </Button>
-                    }
-                />
+                <>
+                    <SettingsRow
+                        label={signedInLabel(account)}
+                        description={takeoverWarning(identities?.map((identity) => identity.provider) ?? [account.provider])}
+                        control={
+                            <Button onClick={() => void signOutOfPulsar()}>
+                                <Icon icon={LogOut} size={12} /> Sign out
+                            </Button>
+                        }
+                    />
+                    {identities !== null && PROVIDER_ORDER.map((provider) => <IdentityRow key={provider} provider={provider} />)}
+                </>
             )}
             {error !== null && <SettingsRow muted label={<span className="break-words text-status-error">{error}</span>} />}
         </>

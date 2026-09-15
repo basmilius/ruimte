@@ -37,6 +37,8 @@ export interface LoginStart {
     redirectUri: string;
     state: string;
     challenge: string;
+    /* A link token: the login adds this provider to the signed-in account instead of opening a session. */
+    link?: string;
 }
 
 export const loginStartUrl = (start: LoginStart): string => {
@@ -45,7 +47,8 @@ export const loginStartUrl = (start: LoginStart): string => {
         redirect_uri: start.redirectUri,
         state: start.state,
         code_challenge: start.challenge,
-        code_challenge_method: 'S256'
+        code_challenge_method: 'S256',
+        ...(start.link === undefined ? {} : { link: start.link })
     }).toString();
     return url.toString();
 };

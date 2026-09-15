@@ -4,9 +4,10 @@ import { LogIn, MonitorSmartphone } from 'lucide-react';
 import { activateEndpoint } from '@/endpoint';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { ensureMachine } from '@/endpoint/reach';
-import { messageOf, signInToPulsar, usePulsarAccount } from '@/pulsar/account';
+import { messageOf, usePulsarAccount } from '@/pulsar/account';
 import { usePulsarMachines } from '@/pulsar/machines';
 import { linkDot, linkHint, machineLink, type LinkWait } from '@/shell/palette-browse';
+import { SignInButtons } from '@/shell/SignInButtons';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { mergeMachines, nameOf, type MachineEntry } from '@/shell/settings/machine-list';
 import { stationBoot } from '@/station';
@@ -88,14 +89,7 @@ export function StationWelcome() {
                 </EmptyState>
             )}
             {boot === 'sign-in' && (
-                <EmptyState
-                    icon={<Icon icon={LogIn} size={20} />}
-                    action={
-                        <Button variant="primary" onClick={() => void signInToPulsar()}>
-                            <Icon icon={LogIn} size={12} /> Sign in with GitHub
-                        </Button>
-                    }
-                >
+                <EmptyState icon={<Icon icon={LogIn} size={20} />} action={<SignInButtons className="justify-center" />}>
                     {notice ?? error ?? 'Sign in to open the machines on your account from this browser.'}
                 </EmptyState>
             )}
