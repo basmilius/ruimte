@@ -59,6 +59,8 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
         },
         setKeepRunning: (keepRunning: boolean): Promise<unknown> => ipcRenderer.invoke('service:set-keep-running', keepRunning),
         enableLinger: (): Promise<unknown> => ipcRenderer.invoke('service:enable-linger'),
+        restartNow: (): Promise<unknown> => ipcRenderer.invoke('service:restart-now'),
+        restartWhenIdle: (): Promise<unknown> => ipcRenderer.invoke('service:restart-when-idle'),
         stopMachine: (): void => ipcRenderer.send('service:stop-machine')
     },
     pulsar: {

@@ -1,4 +1,4 @@
-import { decideStart, sameBuild, type BuildIdentity } from './decide';
+import { decideRestart, decideStart, sameBuild, type BuildIdentity, type MachineWork } from './decide';
 import type { ServiceManager } from './manager';
 import type { KeepRunningSetting, ServiceSupport } from './settings';
 
@@ -15,6 +15,12 @@ export interface BackgroundServiceState {
     failure: string | null;
     /* Linux only: whether services outlive the session. Null elsewhere. */
     linger: boolean | null;
+    /*
+     * The service runs an older build and work was running on it, so the app attached instead of
+     * restarting. `work` is what a restart ends (null when the daemon cannot say), `answered` whether
+     * the person already picked "When idle". Null once the new build runs.
+     */
+    pendingRestart: { work: number | null; answered: boolean } | null;
 }
 
 export interface ServiceControllerDeps {
@@ -27,6 +33,8 @@ export interface ServiceControllerDeps {
     expected: BuildIdentity;
     /* One ask of `/health`; null when nothing answers. */
     probe(): Promise<BuildIdentity | null>;
+    /* One ask of `/machine/work` with the local secret; null when the daemon cannot say. */
+    work(): Promise<MachineWork | null>;
     /* Resolves once `/health` answers and `accept` takes the answer, rejects when it never does. */
     waitForHealth(accept: (health: BuildIdentity) => boolean): Promise<void>;
     spawnDaemon(): void;
@@ -44,6 +52,12 @@ export interface ServiceController {
     /* What quitting does to the daemon. `stopMachine` ends the service too, until the next start. */
     quit(stopMachine: boolean): void;
     enableLinger(): BackgroundServiceState;
+    /* "Restart now": the service moves onto the binary in this bundle, ending what runs on it. */
+    restartNow(): Promise<BackgroundServiceState>;
+    /* "When idle": the old daemon stays for this session and restarts itself once nothing runs. */
+    restartWhenIdle(): BackgroundServiceState;
+    /* Asks the port again, and drops a pending restart once the new build answers. */
+    refresh(): Promise<BackgroundServiceState>;
 }
 
 const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
@@ -51,6 +65,7 @@ const messageOf = (e: unknown): string => (e instanceof Error ? e.message : Stri
 export const createServiceController = (deps: ServiceControllerDeps): ServiceController => {
     let owner: DaemonOwner | null = null;
     let failure: string | null = null;
+    let pendingRestart: BackgroundServiceState['pendingRestart'] = null;
     const manager = deps.support === 'supported' ? deps.manager : null;
     const keepRunning = (): boolean => manager !== null && deps.setting.read();
 
@@ -63,7 +78,7 @@ export const createServiceController = (deps: ServiceControllerDeps): ServiceCon
                 linger = null;
             }
         }
-        return { support: deps.support, keepRunning: keepRunning(), owner, failure, linger };
+        return { support: deps.support, keepRunning: keepRunning(), owner, failure, linger, pendingRestart };
     };
 
     const spawn = async (): Promise<void> => {
@@ -124,7 +139,14 @@ export const createServiceController = (deps: ServiceControllerDeps): ServiceCon
             } else if (decision === 'spawn' || !manager) {
                 await spawn();
             } else if (decision === 'restart-service') {
-                await runService(manager, () => manager.restart());
+                const work = await deps.work();
+                if (decideRestart(work) === 'restart') {
+                    await runService(manager, () => manager.restart());
+                } else {
+                    // The old daemon keeps the port for now: a restart would end what runs on it without a word.
+                    owner = 'service';
+                    pendingRestart = { work: work === null ? null : work.terminals + work.agents, answered: false };
+                }
             } else {
                 await runService(manager, () => manager.start());
             }
@@ -190,6 +212,31 @@ export const createServiceController = (deps: ServiceControllerDeps): ServiceCon
                 } catch (e) {
                     failure = messageOf(e);
                 }
+            }
+            return state();
+        },
+        async restartNow() {
+            if (!manager || pendingRestart === null) {
+                return state();
+            }
+            pendingRestart = null;
+            failure = null;
+            await runService(manager, () => manager.restart());
+            return state();
+        },
+        restartWhenIdle() {
+            if (pendingRestart !== null) {
+                pendingRestart = { ...pendingRestart, answered: true };
+            }
+            return state();
+        },
+        async refresh() {
+            if (pendingRestart === null) {
+                return state();
+            }
+            const health = await deps.probe();
+            if (health !== null && sameBuild(health, deps.expected)) {
+                pendingRestart = null;
             }
             return state();
         }

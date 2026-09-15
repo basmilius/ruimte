@@ -1,7 +1,30 @@
 import { describe, expect, test } from 'bun:test';
-import { decideStart, healthFrom, sameBuild } from './decide';
+import { decideRestart, decideStart, healthFrom, sameBuild, workFrom } from './decide';
 
 const EXPECTED = { version: '0.1.0', build: '0.1.0-new' };
+
+describe('decideRestart', () => {
+    test('an idle machine is restarted without asking', () => {
+        expect(decideRestart({ terminals: 0, agents: 0 })).toBe('restart');
+    });
+
+    test('a running terminal or agent is asked about', () => {
+        expect(decideRestart({ terminals: 1, agents: 0 })).toBe('ask');
+        expect(decideRestart({ terminals: 0, agents: 2 })).toBe('ask');
+    });
+
+    test('a daemon that cannot say what runs is asked about', () => {
+        expect(decideRestart(null)).toBe('ask');
+    });
+});
+
+describe('workFrom', () => {
+    test('reads the counts and nothing else', () => {
+        expect(workFrom({ terminals: 1, agents: 2 })).toEqual({ terminals: 1, agents: 2 });
+        expect(workFrom({ terminals: -1, agents: 2 })).toBeNull();
+        expect(workFrom('Not found')).toBeNull();
+    });
+});
 
 describe('decideStart', () => {
     test('the same build answering is attached to', () => {

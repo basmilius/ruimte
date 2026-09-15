@@ -8,7 +8,7 @@ import { listenForLogin, type LoopbackLogin } from './pulsar-login';
 import { fileSessionKey, fileSessionStore } from './pulsar-store';
 import { createReleaseNotes } from './release-notes';
 import { createServiceController, type BackgroundServiceState } from './service/controller';
-import { healthFrom, type BuildIdentity } from './service/decide';
+import { healthFrom, workFrom, type BuildIdentity, type MachineWork } from './service/decide';
 import { LAUNCH_AGENT_LABEL, launchAgentPlist, systemdUnit, type ServiceSpec } from './service/definitions';
 import { launchdManager, systemdManager, type CommandRunner, type ServiceManager } from './service/manager';
 import { diskFiles, keepRunningSetting, serviceSupport } from './service/settings';
@@ -139,6 +139,20 @@ const probeDaemon = async (): Promise<BuildIdentity | null> => {
     }
 };
 
+/* What a restart would end, asked with the local secret; null for a daemon from before the route or one that does not answer. */
+const probeWork = async (): Promise<MachineWork | null> => {
+    try {
+        const secret = (await readFile(join(ruimteHome, 'local.key'), 'utf8')).trim();
+        const response = await fetch(`http://127.0.0.1:${port}/machine/work`, {
+            headers: { authorization: `Bearer ${secret}` },
+            signal: AbortSignal.timeout(2000)
+        });
+        return response.ok ? workFrom(await response.json()) : null;
+    } catch {
+        return null;
+    }
+};
+
 /* Long enough for a daemon that is snapshotting its sessions on the way out of a restart. */
 const waitForDaemon = async (accept: (health: BuildIdentity) => boolean): Promise<void> => {
     const deadline = Date.now() + 20_000;
@@ -202,7 +216,8 @@ const serviceDefinition = (): string => {
         label: LAUNCH_AGENT_LABEL,
         program: target.command,
         args: target.args,
-        environment: { RUIMTE_HOME: ruimteHome, PATH: loginShellPath() ?? process.env.PATH ?? '/usr/bin:/bin' },
+        // `RUIMTE_SERVICE` tells the daemon that something starts it again when it exits, so it may update itself.
+        environment: { RUIMTE_HOME: ruimteHome, PATH: loginShellPath() ?? process.env.PATH ?? '/usr/bin:/bin', RUIMTE_SERVICE: '1' },
         workingDirectory: homedir(),
         logFile: join(app.getPath('logs'), 'daemon.log')
     };
@@ -216,6 +231,7 @@ const serviceController = createServiceController({
     definition: serviceDefinition,
     expected: { version: app.getVersion(), build: bundledBuild() },
     probe: probeDaemon,
+    work: probeWork,
     waitForHealth: waitForDaemon,
     spawnDaemon,
     killDaemon: () => daemon?.kill('SIGTERM')
@@ -240,6 +256,30 @@ ipcMain.handle('service:set-keep-running', (event, keepRunning: boolean) =>
 );
 ipcMain.handle('service:enable-linger', (event) =>
     event.sender === mainWindow?.webContents ? pushServiceState(serviceController.enableLinger()) : serviceController.state()
+);
+/*
+ * While an older build keeps the machine, the port is asked now and then, so the question and the
+ * row in the settings go away once the daemon restarted itself onto the new build.
+ */
+const watchPendingRestart = (): void => {
+    if (serviceController.state().pendingRestart === null) {
+        return;
+    }
+    const timer = setInterval(() => {
+        void serviceController.refresh().then((state) => {
+            if (state.pendingRestart === null) {
+                clearInterval(timer);
+                pushServiceState(state);
+            }
+        });
+    }, 30_000);
+};
+
+ipcMain.handle('service:restart-now', async (event) =>
+    event.sender === mainWindow?.webContents ? pushServiceState(await serviceController.restartNow()) : serviceController.state()
+);
+ipcMain.handle('service:restart-when-idle', (event) =>
+    event.sender === mainWindow?.webContents ? pushServiceState(serviceController.restartWhenIdle()) : serviceController.state()
 );
 ipcMain.on('service:stop-machine', (event) => {
     if (event.sender === mainWindow?.webContents) {
@@ -1018,6 +1058,7 @@ if (!app.requestSingleInstanceLock()) {
             return;
         }
         setupUpdates();
+        watchPendingRestart();
     });
 
     app.on('activate', () => {

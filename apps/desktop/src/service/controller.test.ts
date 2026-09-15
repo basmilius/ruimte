@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServiceController, type ServiceControllerDeps } from './controller';
-import type { BuildIdentity } from './decide';
+import type { BuildIdentity, MachineWork } from './decide';
 import type { ServiceManager } from './manager';
 import { keepRunningSetting, serviceSupport, type KeepRunningSetting, type ServiceSupport } from './settings';
 
@@ -55,7 +55,13 @@ const memorySetting = (initial: boolean): KeepRunningSetting & { value: boolean 
     return setting;
 };
 
-const setup = (options: { support?: ServiceSupport; keepRunning?: boolean; fake?: ReturnType<typeof fakeManager>; answering?: BuildIdentity | null }) => {
+const setup = (options: {
+    support?: ServiceSupport;
+    keepRunning?: boolean;
+    fake?: ReturnType<typeof fakeManager>;
+    answering?: BuildIdentity | null;
+    work?: MachineWork | null;
+}) => {
     const fake = options.fake ?? fakeManager();
     const events: string[] = [];
     let child: BuildIdentity | null = null;
@@ -67,6 +73,7 @@ const setup = (options: { support?: ServiceSupport; keepRunning?: boolean; fake?
         definition: () => '<plist/>',
         expected: EXPECTED,
         probe: async () => behindPort(),
+        work: async () => (options.work === undefined ? { terminals: 0, agents: 0 } : options.work),
         waitForHealth: async (accept) => {
             const health = behindPort();
             if (!health || !accept(health)) {
@@ -99,6 +106,45 @@ describe('start', () => {
         await controller.start();
         expect(fake.calls).toEqual(['install', 'restart']);
         expect(controller.state().owner).toBe('service');
+    });
+
+    test('an older build with work running is attached to and the restart is left to the person', async () => {
+        const old = { version: '0.0.9', build: 'old' };
+        const { controller, fake } = setup({ fake: fakeManager({ installed: true, running: old }), work: { terminals: 2, agents: 1 } });
+        await controller.start();
+        expect(fake.calls).toEqual(['install']);
+        expect(controller.state()).toMatchObject({ owner: 'service', pendingRestart: { work: 3, answered: false } });
+    });
+
+    test('an older build that cannot say what runs is asked about too', async () => {
+        const { controller, fake } = setup({ fake: fakeManager({ installed: true, running: { version: '0.0.9', build: 'old' } }), work: null });
+        await controller.start();
+        expect(fake.calls).toEqual(['install']);
+        expect(controller.state().pendingRestart).toEqual({ work: null, answered: false });
+    });
+
+    test('"Restart now" restarts onto the new build and clears the question', async () => {
+        const { controller, fake } = setup({
+            fake: fakeManager({ installed: true, running: { version: '0.0.9', build: 'old' } }),
+            work: { terminals: 1, agents: 0 }
+        });
+        await controller.start();
+        const next = await controller.restartNow();
+        expect(fake.calls).toEqual(['install', 'restart']);
+        expect(next).toMatchObject({ owner: 'service', pendingRestart: null });
+    });
+
+    test('"When idle" keeps the old build and marks the question answered until the new build answers', async () => {
+        const { controller, fake } = setup({
+            fake: fakeManager({ installed: true, running: { version: '0.0.9', build: 'old' } }),
+            work: { terminals: 0, agents: 1 }
+        });
+        await controller.start();
+        expect(controller.restartWhenIdle().pendingRestart).toEqual({ work: 1, answered: true });
+        expect((await controller.refresh()).pendingRestart).toEqual({ work: 1, answered: true });
+        fake.service.running = EXPECTED;
+        expect((await controller.refresh()).pendingRestart).toBeNull();
+        expect(fake.calls).toEqual(['install']);
     });
 
     test('nothing answering starts the service', async () => {

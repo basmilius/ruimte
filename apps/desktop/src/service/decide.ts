@@ -43,6 +43,28 @@ export const sameBuild = (running: BuildIdentity, expected: BuildIdentity): bool
     return running.version === expected.version;
 };
 
+/* What a restart would end, from the daemon's `/machine/work`. Mirrors `apps/server/src/service/work.ts`. */
+export interface MachineWork {
+    terminals: number;
+    agents: number;
+}
+
+/* The answer of `/machine/work`, or null for anything else (a daemon from before the route answers 404). */
+export const workFrom = (body: unknown): MachineWork | null => {
+    if (typeof body !== 'object' || body === null) {
+        return null;
+    }
+    const { terminals, agents } = body as Record<string, unknown>;
+    const count = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value >= 0;
+    return count(terminals) && count(agents) ? { terminals, agents } : null;
+};
+
+/*
+ * An older build under the service: restarted at once when nothing runs, asked about otherwise. A
+ * daemon that cannot say what runs is asked about too, since a silent restart is the thing to avoid.
+ */
+export const decideRestart = (work: MachineWork | null): 'restart' | 'ask' => (work !== null && work.terminals === 0 && work.agents === 0 ? 'restart' : 'ask');
+
 export const decideStart = (health: BuildIdentity | null, expected: BuildIdentity, serviceOn: boolean): StartDecision => {
     if (health === null) {
         return serviceOn ? 'start-service' : 'spawn';
