@@ -1,6 +1,7 @@
 export * from './address-book.ts';
 export * from './address-book-client.ts';
 export * from './broker.ts';
+export * from './broker-url.ts';
 export * from './keys.ts';
 export * from './peer.ts';
 export * from './session-vault.ts';
