@@ -128,7 +128,7 @@ struct AppHome: View {
             }
             .containerBackground(Color(uiColor: .systemBackground), for: .navigation)
             .overlay(alignment: .trailing) {
-                Color(uiColor: .separator).frame(width: 1)
+                MobileStyle.border.frame(width: 1)
                     .ignoresSafeArea(.container, edges: .vertical)
                     .allowsHitTesting(false)
             }

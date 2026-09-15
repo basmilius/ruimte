@@ -318,6 +318,14 @@ struct ProjectItemPage: View {
                 ContentUnavailableView(
                     "This view was removed", lucideIcon: "square-x",
                     description: Text("Return to the project to choose another view."))
+            } else if current.text("kind") == "chat" {
+                VStack(spacing: 0) {
+                    if let problem {
+                        SessionErrorBanner(message: problem) { Task { await prepare() } }
+                    }
+                    ChatScreen(
+                        client: workspace.client, chatID: current.stableID, title: title, isPrepared: ready)
+                }
             } else if let problem {
                 ContentUnavailableView {
                     Label("Could not open", lucideIcon: "triangle-alert", iconSize: 48)
@@ -331,7 +339,6 @@ struct ProjectItemPage: View {
             } else {
                 switch current.text("kind") {
                 case "canvas": CanvasPage(workspace: workspace, viewID: current.stableID)
-                case "chat": ChatScreen(client: workspace.client, chatID: current.stableID, title: title)
                 case "terminal": TerminalScreen(client: workspace.client, sessionID: current.stableID, title: title)
                 case "browser": BrowserPage(url: current.text("url"))
                 case "file": FileContentPage(client: workspace.client, path: absolutePath(current.text("path")))

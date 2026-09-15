@@ -13,11 +13,29 @@ struct MachineUsagePage: View {
     private var buckets: [JSONValue] { state.value?.list("buckets") ?? [] }
     private var money: UsageMoneyFormatter { UsageMoneyFormatter(locale: locale, rate: state.value?["rate"]) }
     var body: some View {
-        List {
+        VStack(spacing: 0) {
             Picker("Period", selection: $days) {
                 Text("Week").tag(7)
                 Text("Month").tag(30)
             }.pickerStyle(.segmented)
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+            usageList
+        }
+        .navigationTitle("Usage")
+        .task(id: days) {
+            await RemotePageLifecycle.run(
+                client: client, events: ["usage.changed", "usage.limitsChanged"],
+                subscription: {
+                    client.acquireSubscription(
+                        start: "usage.subscribe", stop: "usage.unsubscribe", payload: .object([:]),
+                        stopPayload: .object([:]))
+                }, load: load)
+        }
+    }
+
+    private var usageList: some View {
+        List {
             RemotePageStatus(state: state) { Task { await load() } }
             if let value = state.value {
                 Section("Overview") {
@@ -106,16 +124,6 @@ struct MachineUsagePage: View {
                     }
                 }
             }
-        }
-        .navigationTitle("Usage")
-        .task(id: days) {
-            await RemotePageLifecycle.run(
-                client: client, events: ["usage.changed", "usage.limitsChanged"],
-                subscription: {
-                    client.acquireSubscription(
-                        start: "usage.subscribe", stop: "usage.unsubscribe", payload: .object([:]),
-                        stopPayload: .object([:]))
-                }, load: load)
         }
         .refreshable { await load() }
     }

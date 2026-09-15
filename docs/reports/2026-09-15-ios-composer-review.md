@@ -508,3 +508,11 @@ The main sidebar now uses the project's inset-grouped rows, primary text, second
 The project sidebar reuses the iPhone TabView with Views, Files, Git and a native Search tab. Only this narrow tab subtree receives the compact horizontal size class; the split view, native navigation stacks and detail column retain their own traits. The permanent searchable list and substitute bottom-toolbar buttons are removed. Files and Git still open in the detail column.
 
 The focused device test passed, including the tabbar's lower-half position and bounds inside the iPad sidebar, plus native iPhone back navigation. An actual iPad screenshot showed the loaded project, its separator, no top search field and the bottom native tabs. The test's current screenshot confirmed the same project-tab layout. Installed and launched on iPhone and iPad; build, format and check passed. Search activation and animated transitions remain device acceptance items.
+
+## Toolbar readiness and page details
+
+Project chats now mount their screen and conversation menu before session preparation finishes. The menu stays in place throughout loading, with its actions disabled until the session is ready. Preparation errors retain a retry banner, and the chat model starts only after preparation succeeds. This removes the late toolbar insertion that prevented the forward navigation transition from including the ellipsis button.
+
+The usage period picker sits above the list without a section background. Files no longer shows the absolute folder path as a separate row. The iPad sidebar separator uses the existing border color at 35% opacity.
+
+The signed device build, format and repository checks passed; existing lint warnings remain. Installed on both physical devices. No simulator or additional test suite was used. The animated toolbar transition still needs visual acceptance on a device.

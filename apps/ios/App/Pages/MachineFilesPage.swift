@@ -20,9 +20,6 @@ struct MachineFilesPage: View {
     var body: some View {
         List {
             RemotePageStatus(state: state) { Task { await load() } }
-            if let resolved = state.value?.text("path") {
-                Text(resolved).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
-            }
             ForEach(entries, id: \.stableID) { entry in
                 NavigationLink {
                     if entry.text("kind") == "directory" {

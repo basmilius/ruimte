@@ -25,10 +25,12 @@ struct ChatScreen: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.colorScheme) private var colorScheme
     let title: String
+    let isPrepared: Bool
 
-    init(client: any MachineRequesting, chatID: String, title: String) {
+    init(client: any MachineRequesting, chatID: String, title: String, isPrepared: Bool = true) {
         _model = State(initialValue: ChatModel(client: client, chatID: chatID))
         self.title = title
+        self.isPrepared = isPrepared
     }
 
     var body: some View {
@@ -44,7 +46,7 @@ struct ChatScreen: View {
                 )
             }
             .overlay {
-                if model.loading {
+                if !isPrepared || model.loading {
                     ProgressView().accessibilityLabel("Loading conversation…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .allowsHitTesting(false)
@@ -109,12 +111,15 @@ struct ChatScreen: View {
                     Image(lucide: "ellipsis")
                 }
                 .accessibilityLabel("Conversation actions")
+                .disabled(!isPrepared)
             }
         }
         .onAppear {
             visible = true
-            model.start()
-            machineSession?.viewedChat(model.chatID, title: title, info: model.info)
+            if isPrepared { start() }
+        }
+        .onChange(of: isPrepared) { _, prepared in
+            if prepared && visible { start() }
         }
         .onChange(of: model.info) { _, info in
             if visible { machineSession?.viewedChat(model.chatID, title: title, info: info) }
@@ -178,6 +183,11 @@ struct ChatScreen: View {
         .mobileSheet(isPresented: Binding(get: { question != nil }, set: { if !$0 { question = nil } })) {
             if let question { ChatQuestionSheet(model: model, item: question) }
         }
+    }
+
+    private func start() {
+        model.start()
+        machineSession?.viewedChat(model.chatID, title: title, info: model.info)
     }
 
     private var hasDraft: Bool {
