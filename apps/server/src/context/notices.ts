@@ -54,6 +54,7 @@ export class NoticeStore {
     readonly dir: string;
     private readonly queues = new Map<string, Notice[]>();
     private readonly now: () => number;
+    private lastDrop: Promise<void> = Promise.resolve();
 
     constructor(home: string, now: () => number = Date.now) {
         this.dir = join(home, 'notices');
@@ -115,8 +116,13 @@ export class NoticeStore {
             return [];
         }
         this.queues.delete(targetId);
-        void this.persist(targetId).catch((e) => console.error(`Dropping the messages of ${targetId} failed`, e));
+        this.lastDrop = this.persist(targetId).catch((e) => console.error(`Dropping the messages of ${targetId} failed`, e));
         return queue;
+    }
+
+    /* Resolves once the file the last `take` dropped is gone; `take` cannot hand that promise back itself. */
+    settled(): Promise<void> {
+        return this.lastDrop;
     }
 
     /* What waits for a node, without taking it; the stale ones are already gone from the answer. */
