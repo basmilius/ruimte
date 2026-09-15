@@ -1,6 +1,7 @@
 import { BrokerSettingSchema, RegisterMachinePayloadSchema } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { ProjectIconChoiceSchema } from './project.ts';
+import { ProtocolVersionSchema } from './protocol.ts';
 
 // How a client reaches a daemon; the loopback one is what the app starts with.
 export const ReachabilitySchema = z.enum(['loopback', 'lan', 'tunnel', 'public']);
@@ -33,6 +34,8 @@ export const EndpointInfoSchema = z.object({
     refuseStatements: z.boolean().optional(),
     platform: z.string(),
     version: z.string(),
+    // The wire version (`PROTOCOL_VERSION`). Absent from a daemon from before versions, which a client reads as older.
+    protocol: ProtocolVersionSchema.optional(),
     reachability: ReachabilitySchema,
     // False for a client that presented the local secret, which has no paired session.
     authenticated: z.boolean(),

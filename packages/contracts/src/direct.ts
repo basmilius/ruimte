@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { SignalEnvelopeSchema } from '@ruimte/pulsar';
+import { ProtocolVersionSchema } from './protocol.ts';
 
 /*
  * A direct connection: the client's wire over a WebRTC DataChannel instead of a WebSocket. Until
@@ -22,6 +23,8 @@ export const DIRECT_CHANNEL_LABEL = 'ruimte';
  */
 export const DirectChallengeFrameSchema = z.object({
     type: z.literal('direct.challenge'),
+    // The daemon's wire version, before the client proves anything. Absent from a daemon from before versions.
+    protocol: ProtocolVersionSchema.optional(),
     challenge: z.string().min(1).max(256),
     daemon: z.object({
         id: z.string().min(1).max(256),
@@ -33,6 +36,8 @@ export type DirectChallengeFrame = z.infer<typeof DirectChallengeFrameSchema>;
 
 export const DirectKeyProofFrameSchema = z.object({
     type: z.literal('direct.key'),
+    // The client's wire version; a client from before versions sends none.
+    protocol: ProtocolVersionSchema.optional(),
     challenge: z.string().min(1).max(256),
     publicKey: z.string().min(1).max(256),
     signature: z.string().min(1).max(512)
@@ -41,6 +46,7 @@ export const DirectKeyProofFrameSchema = z.object({
 // The app on the daemon's own machine holds the local secret instead of a paired key; it proves it without sending it.
 export const DirectSecretProofFrameSchema = z.object({
     type: z.literal('direct.secret'),
+    protocol: ProtocolVersionSchema.optional(),
     challenge: z.string().min(1).max(256),
     proof: z.string().min(1).max(256)
 });
@@ -57,7 +63,9 @@ export const DirectAcceptedFrameSchema = z.object({
 
 export const DirectRefusedFrameSchema = z.object({
     type: z.literal('direct.refused'),
-    reason: z.string().max(512)
+    reason: z.string().max(512),
+    // Set when the refusal is about the wire version: the daemon's own, so the client can say which side is behind.
+    protocol: ProtocolVersionSchema.optional()
 });
 
 export const DirectVerdictFrameSchema = z.discriminatedUnion('type', [DirectAcceptedFrameSchema, DirectRefusedFrameSchema]);
