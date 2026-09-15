@@ -140,7 +140,6 @@ struct WorkspacePage: View {
                         }
                         .foregroundStyle(.primary)
                         .accessibilityIdentifier("workspace.view.\(item.stableID)")
-                        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                         .contextMenu {
                             Button("Rename", systemImage: "pencil") {
                                 renameText = item.text("name")
@@ -173,7 +172,6 @@ struct WorkspacePage: View {
             }
         }
         .listStyle(.insetGrouped)
-        .environment(\.defaultMinListRowHeight, 44)
         .searchable(text: $search, prompt: "Find a view")
         .accessibilityIdentifier("workspace.views")
     }

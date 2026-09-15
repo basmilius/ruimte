@@ -1,5 +1,5 @@
 {
-  "originHash" : "5d2d64c879272b964242c588d9512ee9fb9c6ef9a118f4c45de72714aea3ae2b",
+  "originHash" : "cef7e300b25a3840eec7b49fee4ef87aa7edfd5c5cadc2fc1c7b779829f47c6e",
   "pins" : [
     {
       "identity" : "highlightr",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "05e7fcc63b33925cd0c1faaa205cdd5681e7bbef",
         "version" : "2.3.0"
+      }
+    },
+    {
+      "identity" : "lucide-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ajaxjiang96/lucide-swift.git",
+      "state" : {
+        "revision" : "f3780ea265f9f704fb8beaa58604ce9876900424",
+        "version" : "0.9.5"
       }
     },
     {

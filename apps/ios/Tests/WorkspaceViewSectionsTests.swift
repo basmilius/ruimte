@@ -84,7 +84,7 @@ final class WorkspaceViewSectionsTests: XCTestCase {
                 views + [separator("next"), view("a")], sectionID: .leading, expectedIDs: ["a", "b"], from: [0], to: 2))
     }
 
-    @MainActor func testDesktopViewGlyphsAndChosenIconsHaveBundledLucideAssets() {
+    @MainActor func testDesktopViewGlyphsAndChosenIconsHaveNativeLucideShapes() {
         let expected = [
             "canvas": "frame", "chat": "message-square", "terminal": "terminal", "browser": "globe",
             "drawing": "pen-tool", "diagram": "workflow", "file": "file-text", "unknown": "circle-question-mark",
@@ -92,11 +92,11 @@ final class WorkspaceViewSectionsTests: XCTestCase {
         for (kind, icon) in expected {
             let item = view(kind).setting("kind", .string(kind))
             XCTAssertEqual(WorkspaceViewIcon.name(for: item), icon)
-            XCTAssertNotNil(UIImage(named: "Lucide-\(icon)"), "Missing Lucide asset \(icon)")
+            XCTAssertNotNil(LucideIcon.icon(named: icon), "Missing Lucide shape \(icon)")
         }
         let chosen = view("chat").setting("icon", .object(["kind": .string("lucide"), "value": .string("rocket")]))
         XCTAssertEqual(WorkspaceViewIcon.name(for: chosen), "rocket")
-        XCTAssertNotNil(UIImage(named: "Lucide-rocket"))
+        XCTAssertNotNil(LucideIcon.icon(named: "rocket"))
         XCTAssertEqual(WorkspaceViewIcon.name(for: chosen.setting("kind", .string("unknown"))), "circle-question-mark")
     }
 

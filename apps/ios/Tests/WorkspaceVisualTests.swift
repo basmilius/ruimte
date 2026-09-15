@@ -138,7 +138,6 @@ final class WorkspaceVisualTests: XCTestCase {
                 })
             let row = try XCTUnwrap(list.cellForItem(at: first))
             XCTAssertGreaterThanOrEqual(row.bounds.height, 44)
-            XCTAssertLessThanOrEqual(row.bounds.height, 46, "Insets must not add height beyond the 44-point row")
             XCTAssertNil(descendant(CanvasScrollView.self, in: host.view))
             // UIKit separates row selection from its primary action, which activates a SwiftUI List button.
             XCTAssertEqual(list.delegate?.collectionView?(list, canPerformPrimaryActionForItemAt: first), true)

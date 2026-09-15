@@ -6,6 +6,9 @@ options:
     iOS: '26.0'
   createIntermediateGroups: true
 packages:
+  LucideSwift:
+    url: https://github.com/ajaxjiang96/lucide-swift.git
+    exactVersion: 0.9.5
   Highlightr:
     url: https://github.com/raspu/Highlightr.git
     exactVersion: 2.3.0
@@ -38,6 +41,7 @@ targets:
         type: file
         buildPhase: resources
     dependencies:
+      - package: LucideSwift
       - package: RuimtePulsar
       - package: RuimteTransport
       - package: SwiftTerm
@@ -134,6 +138,7 @@ targets:
     sources: [Tests]
     dependencies:
       - target: Ruimte
+      - package: LucideSwift
       - package: RuimtePulsar
       - package: RuimteTransport
     settings:

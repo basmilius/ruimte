@@ -1,21 +1,25 @@
+import LucideSwift
 import RuimtePulsar
 import SwiftUI
-import UIKit
 
 struct LucideIcon: View {
     let name: String
     var size: CGFloat = 20
 
     var body: some View {
-        Image(
-            uiImage: UIImage(named: "Lucide-\(name)") ?? UIImage(
-                named: "Lucide-circle-question-mark") ?? UIImage()
-        )
-        .renderingMode(.template)
-        .resizable()
-        .aspectRatio(contentMode: .fit)
-        .frame(width: size, height: size)
-        .accessibilityHidden(true)
+        (Self.icon(named: name) ?? .circleQuestionMark).shape
+            .stroke(style: StrokeStyle(lineWidth: size / 12, lineCap: .round, lineJoin: .round))
+            .frame(width: size, height: size)
+            .accessibilityHidden(true)
+    }
+
+    static func icon(named name: String) -> LucideIconName? {
+        if name == "package" { return .packageIcon }
+        let words = name.split(separator: "-")
+        let key =
+            (words.first.map(String.init) ?? "")
+            + words.dropFirst().map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
+        return LucideIconName(rawValue: key)
     }
 }
 

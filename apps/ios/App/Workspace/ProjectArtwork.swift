@@ -32,7 +32,6 @@ struct ProjectArtwork: View {
             }
         }
         .frame(width: size, height: size)
-        .background(MobileStyle.accent.opacity(0.07), in: RoundedRectangle(cornerRadius: (size * 0.26).rounded()))
         .accessibilityHidden(true)
         .task(id: ProjectArtworkLoadID(request: request, generation: session.generation, connected: session.connected))
         {

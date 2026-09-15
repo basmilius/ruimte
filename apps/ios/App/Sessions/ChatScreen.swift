@@ -201,7 +201,7 @@ struct ChatScreen: View {
             Color.clear.contentShape(RoundedRectangle(cornerRadius: 24))
                 .onTapGesture { composerFocused = true }
         }
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 24))
+        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 24))
         .disabled(!model.connected || model.loading)
     }
 

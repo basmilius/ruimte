@@ -256,7 +256,7 @@ struct ProjectHomeRow: View {
     let connected: Bool
     var session: SharedMachineSession? = nil
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .top, spacing: 12) {
             if summary["icon"]?.text("kind") == "image", let session {
                 ProjectArtwork(session: session, project: summary, size: 32)
             } else {
@@ -311,7 +311,6 @@ private struct ProjectHomeGlyph: View {
             }
         }
         .frame(width: 32, height: 32)
-        .background(MobileStyle.accent.opacity(0.09), in: RoundedRectangle(cornerRadius: 8))
         .accessibilityHidden(true)
     }
 }

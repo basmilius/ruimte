@@ -49,9 +49,9 @@ Commit the generated project and resolved packages, excluding user state and bui
 SwiftTerm is pinned to 1.15.0, Highlightr to 2.3.0 and WebRTC to 153.0.0. SwiftTerm's
 shader compilation requires Apple's separate Metal Toolchain.
 
-Lucide assets are checked in as template vectors. After changing the desktop icon set,
-run `bun apps/ios/Scripts/generate-lucide-icons.ts` to regenerate them from the installed
-`lucide-react` package. Its ISC license is included in `App/Design/Lucide-LICENSE.txt`.
+Lucide icons use native SwiftUI paths from [LucideSwift](https://github.com/ajaxjiang96/lucide-swift),
+pinned to 0.9.5 with upstream icons 1.46.0. Custom project SVG files are rendered separately.
+The package and upstream ISC notices are in `App/Design/Lucide-LICENSE.txt`.
 
 For small UI iterations, build and install directly on the development iPhone for
 review. Use targeted regression tests for connection, protocol and state changes;

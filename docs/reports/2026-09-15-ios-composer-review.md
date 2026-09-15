@@ -77,3 +77,23 @@ conversion script runs in an isolated content world.
 
 The signed iPhone build passed. No simulator run was performed for this iteration;
 the physical rendering remains to be confirmed. Log: `/tmp/ruimte-ios-svg-device.log`.
+
+## List spacing and touch follow-up
+
+| Severity | Location | Before | After | Why |
+| --- | --- | --- | --- | --- |
+| LOW | `AppHome.swift`, `ProjectArtwork.swift` | Project icons had a tinted tile and centered row alignment | Remove the tile and align the icon slot to the top of the project text | Keep the original artwork visible without a second background |
+| MEDIUM | `WorkspacePage.swift` | View rows forced zero vertical insets and a 44-point minimum | Use native list insets, as the Projects action rows do | Restore comfortable spacing while retaining one-line titles |
+| MEDIUM | `ChatScreen.swift` | Glass appearance had no interactive response | Enable native interactive glass | Provide system touch feedback without a custom gesture animation |
+| MEDIUM | `LucideIcon.swift` | Icons depended on Xcode's SVG asset conversion | Use native SwiftUI paths from a pinned open-source Lucide package | Avoid the reported SVG rendering defects |
+
+This iteration uses the existing typography and colors. No custom animation was
+added; touch response follows the system. Device build and physical review replace
+a simulator run, following the agreed shorter iteration loop.
+
+LucideSwift is pinned to 0.9.5. The wrapper translates the protocol's kebab-case
+names to package identifiers and scales the stroke with the icon. Generated SVG
+assets and their generator have been removed; custom project SVGs keep their
+separate renderer. `bun run format` and `bun run check` passed.
+The signed build succeeded and installed on Bas's iPhone. Build log:
+`/tmp/ruimte-ios-native-lucide-device.log`. No simulator or test suite was run.

@@ -11,13 +11,13 @@
 		01A24DD7477F2A95C9EF42E0 /* document-renderer.js in Resources */ = {isa = PBXBuildFile; fileRef = A8C83388F2EE72EDED082639 /* document-renderer.js */; };
 		036421AA923C27CCC1A4FE3A /* UsageMoneyFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13B248061C8BA76C3B7DC1F8 /* UsageMoneyFormatter.swift */; };
 		0ADF4AA4572DAF49C8A26900 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = A84B645FE2D16EFA24FD14F6 /* AppIcon.icon */; };
-		0B547D0A6B2838F62FB295E9 /* RuimtePulsar in Frameworks */ = {isa = PBXBuildFile; productRef = D356DC5C4DF0605AD7A64646 /* RuimtePulsar */; };
+		0B547D0A6B2838F62FB295E9 /* LucideSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 06F665001E0BC007A06510C8 /* LucideSwift */; };
 		0E75E028596697B06343F2F1 /* CanvasRenderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5B1DCD63DC630D3ABFE455 /* CanvasRenderTests.swift */; };
 		10DF53C41E4349033B09883C /* MachineProjectsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA401CA82CE41046F457D507 /* MachineProjectsPage.swift */; };
 		13BAE6AC89AFF1FD2B6383B4 /* AttentionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91AE65432A65D98C4A7FE2CA /* AttentionStore.swift */; };
 		163336C54358D26ACE3FBF53 /* ChatAttachmentButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC93B189294B4D798A653EDC /* ChatAttachmentButton.swift */; };
 		1D2828131C689B78A675A365 /* TerminalCompatibilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA81AFC7F3E726AB38C0EE96 /* TerminalCompatibilityTests.swift */; };
-		2039449EB696024C64A7D640 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 37621C952E69C77E98AD85B1 /* Highlightr */; };
+		2039449EB696024C64A7D640 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 7DD6852AA11DD8F3D8DDDBDF /* SwiftTerm */; };
 		269F292047616E3FDBF0B071 /* SessionScreenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E238C46B1CEFBCE9B7DB5E24 /* SessionScreenTests.swift */; };
 		27F033AF6D9F55F874FD2E76 /* MachineUsagePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B44926C3693450CF4C1FC /* MachineUsagePage.swift */; };
 		2A5A29AD37DB5525CEEB9105 /* PairMachinePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C81823373467CED5DF67CB7 /* PairMachinePage.swift */; };
@@ -40,13 +40,13 @@
 		59959A4B0DD426A2CB3F1DCF /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7152C947C98B90BAB9EC4D82 /* PrivacyInfo.xcprivacy */; };
 		5C706502AEBC21A671990235 /* MobileJSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EE2B3374AED0CCAB042E24 /* MobileJSON.swift */; };
 		62D36AE12D4AFBB7A1AECA5C /* MobileWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4494CB22D3C1F93514921B21 /* MobileWorkspace.swift */; };
-		6DB0A1C6FE1BF1BEB67EFF37 /* RuimteTransport in Frameworks */ = {isa = PBXBuildFile; productRef = 11D5B18726EAC79012111C1C /* RuimteTransport */; };
+		6DB0A1C6FE1BF1BEB67EFF37 /* RuimtePulsar in Frameworks */ = {isa = PBXBuildFile; productRef = D356DC5C4DF0605AD7A64646 /* RuimtePulsar */; };
 		6E1E9DBFECB1FDABD1209FFE /* DocumentSceneLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1872DE55827E2897B8AFB130 /* DocumentSceneLoader.swift */; };
 		6FA11605D9DE166F6C21D25C /* GitPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DE8F49A62B6E21105CD8F6A /* GitPage.swift */; };
 		71F165040D575E124BBD716E /* MachineDetailsPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17E81862798892622B5D43D1 /* MachineDetailsPage.swift */; };
 		732C447BB97BFB93D6C23AD5 /* WorkspaceVisualTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D26BE9B9E4DD5A3540DE45FB /* WorkspaceVisualTests.swift */; };
 		74C49C8FF69574D8408DE421 /* WorkspaceViewSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19E795084D99E041A22F82D5 /* WorkspaceViewSections.swift */; };
-		7790DAA9D3367EA110B768DD /* RuimteTransport in Frameworks */ = {isa = PBXBuildFile; productRef = 6FFA42FE75679D801B5D68D6 /* RuimteTransport */; };
+		7790DAA9D3367EA110B768DD /* RuimtePulsar in Frameworks */ = {isa = PBXBuildFile; productRef = 9C53340AF650FD1171130411 /* RuimtePulsar */; };
 		7A520DCC7261AB8C8C61F18C /* WelcomePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FAE5DD971FEE4F7A8B224B1 /* WelcomePage.swift */; };
 		7A56FE4D5A125ECE0A147680 /* MarkdownMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BE4363568E169F410A081A3 /* MarkdownMessage.swift */; };
 		802A9A9A193CDB146D037CE7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7152C947C98B90BAB9EC4D82 /* PrivacyInfo.xcprivacy */; };
@@ -62,19 +62,21 @@
 		A0DBF00425A7018625CCB128 /* LucideIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92115E2E20A2788AC95AD41F /* LucideIcon.swift */; };
 		A11951888F286F8452A731D0 /* MachineFilesPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49F9EC9D98983F163B9AE62C /* MachineFilesPage.swift */; };
 		A29BA09E98A9386B690A002A /* RuimteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09CCDDD483546BE641151534 /* RuimteApp.swift */; };
-		A4018BFBF14D0FA6CDCECEA2 /* RuimtePulsar in Frameworks */ = {isa = PBXBuildFile; productRef = 9C53340AF650FD1171130411 /* RuimtePulsar */; };
+		A4018BFBF14D0FA6CDCECEA2 /* LucideSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 10DFA2EA63182CCBE1B7810F /* LucideSwift */; };
 		AEFABCFC364116F1A99CC8A8 /* SharedMachineSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653536E5B98BEFB676B13733 /* SharedMachineSession.swift */; };
 		AFB579E716E1378515894206 /* ConnectionProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25A4F1FA154BE05D96BDFC6E /* ConnectionProbe.swift */; };
 		B8D72A9CB141E5034E0596D4 /* WorkspaceViewSectionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEE3E762A08E656C5BF5C92C /* WorkspaceViewSectionsTests.swift */; };
-		B949A220D4C8ECC4FF9AA838 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 7DD6852AA11DD8F3D8DDDBDF /* SwiftTerm */; };
+		B949A220D4C8ECC4FF9AA838 /* RuimteTransport in Frameworks */ = {isa = PBXBuildFile; productRef = 6FFA42FE75679D801B5D68D6 /* RuimteTransport */; };
 		BA4E5634A953498E6EC34816 /* RemotePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4717D1FF657FE5861D33BE92 /* RemotePage.swift */; };
 		BA623D7F1AD8EA29890E9E41 /* UnifiedProjects.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A672F255CAFCD537E1F2A74 /* UnifiedProjects.swift */; };
 		BD2BF8096B72184143296EA2 /* Lucide-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3B40C228DD8D4FB4A5D62BB5 /* Lucide-LICENSE.txt */; };
 		C077E0093362AFCFC0EE2B3F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2C204ABF7BF115B3485C914E /* Assets.xcassets */; };
 		C22613F143FD3C92F3C92D76 /* MachineRemovalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABE8B97161FC6E9CE587F95C /* MachineRemovalTests.swift */; };
 		C245FE68B77F65BA226290AA /* document-renderer-licenses.txt in Resources */ = {isa = PBXBuildFile; fileRef = D5D4B5EDC969E1EDFF6BF202 /* document-renderer-licenses.txt */; };
+		C7B1C89782EBA8CF74012E0C /* RuimteTransport in Frameworks */ = {isa = PBXBuildFile; productRef = 11D5B18726EAC79012111C1C /* RuimteTransport */; };
 		CBEDB2E1BC1FB79D8CF7BC7D /* PhaseZeroTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28AB5F59239AB27AD0434DE3 /* PhaseZeroTests.swift */; };
 		D3AE70D4B71CD32DD8D34D42 /* NotificationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E5C2124CCC572A4A3D407AB /* NotificationCoordinator.swift */; };
+		D43A11554C08D7C39C95FAE9 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 37621C952E69C77E98AD85B1 /* Highlightr */; };
 		D43CDF040DF82F5E2C648BE7 /* RuimteActivityWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 453AE6630A2DEA42EDBA0A7D /* RuimteActivityWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D6FD6C3785D1017DC74B3E80 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 360CC2CFC02B68B045C92968 /* NotificationService.swift */; };
 		DCDA9FE7463803051C29BB51 /* TerminalModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A531355B6DBA1AEA2747E700 /* TerminalModel.swift */; };
@@ -230,10 +232,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A4018BFBF14D0FA6CDCECEA2 /* RuimtePulsar in Frameworks */,
-				7790DAA9D3367EA110B768DD /* RuimteTransport in Frameworks */,
-				B949A220D4C8ECC4FF9AA838 /* SwiftTerm in Frameworks */,
-				2039449EB696024C64A7D640 /* Highlightr in Frameworks */,
+				A4018BFBF14D0FA6CDCECEA2 /* LucideSwift in Frameworks */,
+				7790DAA9D3367EA110B768DD /* RuimtePulsar in Frameworks */,
+				B949A220D4C8ECC4FF9AA838 /* RuimteTransport in Frameworks */,
+				2039449EB696024C64A7D640 /* SwiftTerm in Frameworks */,
+				D43A11554C08D7C39C95FAE9 /* Highlightr in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -241,8 +244,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0B547D0A6B2838F62FB295E9 /* RuimtePulsar in Frameworks */,
-				6DB0A1C6FE1BF1BEB67EFF37 /* RuimteTransport in Frameworks */,
+				0B547D0A6B2838F62FB295E9 /* LucideSwift in Frameworks */,
+				6DB0A1C6FE1BF1BEB67EFF37 /* RuimtePulsar in Frameworks */,
+				C7B1C89782EBA8CF74012E0C /* RuimteTransport in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -509,6 +513,7 @@
 			);
 			name = RuimteTests;
 			packageProductDependencies = (
+				06F665001E0BC007A06510C8 /* LucideSwift */,
 				D356DC5C4DF0605AD7A64646 /* RuimtePulsar */,
 				11D5B18726EAC79012111C1C /* RuimteTransport */,
 			);
@@ -533,6 +538,7 @@
 			);
 			name = Ruimte;
 			packageProductDependencies = (
+				10DFA2EA63182CCBE1B7810F /* LucideSwift */,
 				9C53340AF650FD1171130411 /* RuimtePulsar */,
 				6FFA42FE75679D801B5D68D6 /* RuimteTransport */,
 				7DD6852AA11DD8F3D8DDDBDF /* SwiftTerm */,
@@ -596,6 +602,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				AEF0A7420442EE44D62A6523 /* XCRemoteSwiftPackageReference "Highlightr" */,
+				A8B13974FE087991024A3FCD /* XCRemoteSwiftPackageReference "lucide-swift" */,
 				E4F09FC52CA242014D05DB21 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
 				82AD56BBD81D53B5F164E4FA /* XCLocalSwiftPackageReference "Packages/RuimtePulsar" */,
 				26AAEDEB62D7609C88958B40 /* XCLocalSwiftPackageReference "Packages/RuimteTransport" */,
@@ -1102,6 +1109,14 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		A8B13974FE087991024A3FCD /* XCRemoteSwiftPackageReference "lucide-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ajaxjiang96/lucide-swift.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.9.5;
+			};
+		};
 		AEF0A7420442EE44D62A6523 /* XCRemoteSwiftPackageReference "Highlightr" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/raspu/Highlightr.git";
@@ -1121,6 +1136,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		06F665001E0BC007A06510C8 /* LucideSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A8B13974FE087991024A3FCD /* XCRemoteSwiftPackageReference "lucide-swift" */;
+			productName = LucideSwift;
+		};
+		10DFA2EA63182CCBE1B7810F /* LucideSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A8B13974FE087991024A3FCD /* XCRemoteSwiftPackageReference "lucide-swift" */;
+			productName = LucideSwift;
+		};
 		11D5B18726EAC79012111C1C /* RuimteTransport */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = RuimteTransport;
