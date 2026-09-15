@@ -113,7 +113,15 @@ describe('readOrCreateEndpointIdentity', () => {
         expect(first).toEqual([
             {
                 event: 'endpoint.changed',
-                payload: { id: identity.id, label: 'Studio', nameSource: 'chosen', icon: null, agentsDeleteAnyView: false, refuseStatements: false }
+                payload: {
+                    id: identity.id,
+                    label: 'Studio',
+                    nameSource: 'chosen',
+                    icon: null,
+                    agentsDeleteAnyView: false,
+                    refuseStatements: false,
+                    broker: { mode: 'default' }
+                }
             }
         ]);
         expect(second).toHaveLength(1);
@@ -139,6 +147,44 @@ describe('readOrCreateEndpointIdentity', () => {
         await identity.setIdentity('Studio again', null, { agentsDeleteAnyView: false });
         const written = JSON.parse(await readFile(join(home, 'endpoint.json'), 'utf8')) as Record<string, unknown>;
         expect(written.agentsDeleteAnyView).toBeUndefined();
+    });
+
+    test('the broker setting survives a restart, is applied before clients hear it, and a default one is not written', async () => {
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        expect(identity.broker).toEqual({ mode: 'default' });
+        const events: unknown[] = [];
+        identity.subscribe('c1', (event) => events.push(event));
+        const applied: string[] = [];
+        identity.attachBroker({
+            apply: async () => {
+                applied.push(identity.broker.mode);
+            },
+            describe: () => ({ brokerUrl: null, brokerFixed: false })
+        });
+
+        await identity.setIdentity(null, null, { broker: { mode: 'off' } });
+        expect(applied).toEqual(['off']);
+        expect(events.at(-1)).toMatchObject({ payload: { broker: { mode: 'off' }, brokerUrl: null, brokerFixed: false } });
+        expect((await readOrCreateEndpointIdentity(home, 'the-hostname')).broker).toEqual({ mode: 'off' });
+
+        // A rename does not touch the relay.
+        await identity.setIdentity('Studio', null);
+        expect(applied).toEqual(['off']);
+
+        await identity.setIdentity(null, null, { broker: { mode: 'default' } });
+        const written = JSON.parse(await readFile(join(home, 'endpoint.json'), 'utf8')) as Record<string, unknown>;
+        expect(written.broker).toBeUndefined();
+    });
+
+    test('a broker setting that will not read falls back to the default', async () => {
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        await identity.persist();
+        const path = join(home, 'endpoint.json');
+        const file = JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>;
+        await writeFile(path, JSON.stringify({ ...file, broker: { mode: 'custom', url: 'http://nope' } }));
+        const again = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        expect(again.id).toBe(identity.id);
+        expect(again.broker).toEqual({ mode: 'default' });
     });
 
     test('a name or an icon that will not read is dropped, and the machine keeps its id', async () => {

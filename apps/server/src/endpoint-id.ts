@@ -3,6 +3,7 @@ import { mkdir, readFile } from 'node:fs/promises';
 import { hostname } from 'node:os';
 import { dirname, join } from 'node:path';
 import { ProjectIconChoiceSchema, type EndpointNameSource, type ProjectIconChoice } from '@ruimte/contracts';
+import { BrokerSettingSchema, type BrokerSetting } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { generateKeyPair, signMessage } from './auth/keys.ts';
 import { isNotFound, writeAtomic } from './fs.ts';
@@ -31,7 +32,10 @@ const FileSchema = z.object({
     /* Whether a statement from the address book is turned away, which leaves a pairing link as the only
        way in. Here for the same reason as the switch above: the daemon is what takes a statement or
        does not. Absent is off, which is what "logging in grants access" means. */
-    refuseStatements: z.boolean().optional().catch(undefined)
+    refuseStatements: z.boolean().optional().catch(undefined),
+    /* Which broker this machine announces itself to, set from a client. Absent is the build's default;
+       one that will not read falls back to it too, since a machine on the default broker is findable. */
+    broker: BrokerSettingSchema.optional().catch(undefined)
 });
 
 interface IdentityOptions {
@@ -45,12 +49,20 @@ interface IdentityOptions {
     icon: ProjectIconChoice | null;
     agentsDeleteAnyView: boolean;
     refuseStatements: boolean;
+    broker: BrokerSetting;
+}
+
+/* What the daemon's broker switch lends the identity: a way to follow a new setting and to say where it ended up. */
+export interface IdentityBroker {
+    apply(): Promise<void>;
+    describe(): { brokerUrl: string | null; brokerFixed: boolean };
 }
 
 /* The switches a client sets on the machine; one left out stays as it stands. */
 export interface IdentityFlags {
     agentsDeleteAnyView?: boolean;
     refuseStatements?: boolean;
+    broker?: BrokerSetting;
 }
 
 /*
@@ -71,6 +83,8 @@ export class EndpointIdentity {
     private chosenIcon: ProjectIconChoice | null;
     private deleteAnyView: boolean;
     private noStatements: boolean;
+    private brokerSetting: BrokerSetting;
+    private brokerSwitch: IdentityBroker | null = null;
 
     constructor(options: IdentityOptions) {
         this.path = options.path;
@@ -82,6 +96,7 @@ export class EndpointIdentity {
         this.chosenIcon = options.icon;
         this.deleteAnyView = options.agentsDeleteAnyView;
         this.noStatements = options.refuseStatements;
+        this.brokerSetting = options.broker;
     }
 
     /* What clients call this machine: the name a person gave it, or the one it started with. */
@@ -108,6 +123,16 @@ export class EndpointIdentity {
         return this.noStatements;
     }
 
+    /* The broker a person picked for this machine, which a flag or the environment may still override. */
+    get broker(): BrokerSetting {
+        return this.brokerSetting;
+    }
+
+    /* Hands a changed broker setting to the switch that runs the relay, and lets the event say what it became. */
+    attachBroker(broker: IdentityBroker): void {
+        this.brokerSwitch = broker;
+    }
+
     /* Signs a message with the daemon's private key; the private half never leaves this object. */
     sign(message: string): string {
         return signMessage(this.privateKey, message);
@@ -132,7 +157,11 @@ export class EndpointIdentity {
         this.chosenIcon = icon;
         this.deleteAnyView = flags.agentsDeleteAnyView ?? this.deleteAnyView;
         this.noStatements = flags.refuseStatements ?? this.noStatements;
+        this.brokerSetting = flags.broker ?? this.brokerSetting;
         await this.persist();
+        if (flags.broker !== undefined) {
+            await this.brokerSwitch?.apply();
+        }
         const event: SessionEvent = {
             event: 'endpoint.changed',
             payload: {
@@ -141,7 +170,9 @@ export class EndpointIdentity {
                 nameSource: this.nameSource,
                 icon: this.chosenIcon,
                 agentsDeleteAnyView: this.deleteAnyView,
-                refuseStatements: this.noStatements
+                refuseStatements: this.noStatements,
+                broker: this.brokerSetting,
+                ...this.brokerSwitch?.describe()
             }
         };
         for (const sink of this.sinks.values()) {
@@ -159,7 +190,8 @@ export class EndpointIdentity {
             ...(this.chosenName === null ? {} : { name: this.chosenName }),
             ...(this.chosenIcon === null ? {} : { icon: this.chosenIcon }),
             ...(this.deleteAnyView ? { agentsDeleteAnyView: true } : {}),
-            ...(this.noStatements ? { refuseStatements: true } : {})
+            ...(this.noStatements ? { refuseStatements: true } : {}),
+            ...(this.brokerSetting.mode === 'default' ? {} : { broker: this.brokerSetting })
         };
         await mkdir(dirname(this.path), { recursive: true, mode: 0o700 });
         await writeAtomic(this.path, `${JSON.stringify(file, null, 2)}\n`, 0o600);
@@ -190,7 +222,8 @@ export const readOrCreateEndpointIdentity = async (home: string, defaultName: st
         name: file?.name ?? null,
         icon: file?.icon ?? null,
         agentsDeleteAnyView: file?.agentsDeleteAnyView ?? false,
-        refuseStatements: file?.refuseStatements ?? false
+        refuseStatements: file?.refuseStatements ?? false,
+        broker: file?.broker ?? { mode: 'default' }
     });
     if (!keys) {
         await identity.persist();

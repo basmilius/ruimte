@@ -10,6 +10,7 @@ import { connectionOpener, socketChannel, type ClientChannel, type OpenConnectio
 import { authenticateChannel } from './pulsar/channel-auth.ts';
 import { AUTHENTICATED_FRAME_CHARS } from './pulsar/data-channel.ts';
 import { BrokerRelay } from './pulsar/broker-relay.ts';
+import { BrokerSwitch } from './pulsar/broker-switch.ts';
 import { StatementGate, TEST_STATEMENT_KEY_VARIABLE, trustedStatementKeys } from './pulsar/statement.ts';
 import { DirectPeers } from './pulsar/peers.ts';
 import { registerDirectHandlers } from './handlers/direct.ts';
@@ -19,7 +20,7 @@ import { readOrCreateLocalSecret } from './auth/local-secret.ts';
 import { pairingUrl } from './cli/pairing.ts';
 import { AuthStore } from './auth/auth-store.ts';
 import { Handshake } from './auth/handshake.ts';
-import { NoRelay, type Relay } from './auth/relay.ts';
+import type { Relay } from './auth/relay.ts';
 import { HOOKS_PATH, handleHookRequest } from './agents/hook-receiver.ts';
 import { HOOK_EVENTS } from './agents/hooks.ts';
 import { defaultHookPaths, installHooks } from './agents/install.ts';
@@ -95,8 +96,6 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const identity = await readOrCreateEndpointIdentity(config.home, config.label);
     const auth = new AuthStore(config.home);
     const handshake = new Handshake(auth, identity);
-    // What a client is told to dial; the machine itself may reach the same broker under another name.
-    const brokerUrl = config.brokerAdvertise ?? config.broker;
     const access = { allowedOrigins: config.allowedOrigins, localSecret: await readOrCreateLocalSecret(config.home), tickets: handshake };
 
     const snapshots = new SnapshotStore(config.home);
@@ -238,7 +237,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerAuthHandlers(dispatcher, auth, {
         identity,
         version: VERSION,
-        brokerUrl,
+        broker: () => brokerSwitch.describe(),
         pairingUrl: () => pairingUrl(config.host, server.port ?? config.port, auth.issuePairingToken()),
         disconnect: (sessionId) => {
             handshake.revoke(sessionId);
@@ -292,18 +291,24 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         refusesStatements: () => identity.refuseStatements,
         store: auth
     });
-    // The broker is the second way a signal reaches `peers`, next to `direct.signal` on a socket.
-    const relay: Relay =
-        config.broker === null
-            ? new NoRelay()
-            : new BrokerRelay({
-                  url: config.broker,
-                  publicKey: identity.publicKey,
-                  sign: (message) => identity.sign(message),
-                  isPaired: async (publicKey) => (await auth.sessionForPublicKey(publicKey)) !== null,
-                  admitStatement: (publicKey, access) => statements.admit(publicKey, access),
-                  receive: (envelope, reply) => peers.receive(envelope, reply)
-              });
+    /* The broker is the second way a signal reaches `peers`, next to `direct.signal` on a socket. The
+       switch follows the machine's setting, so a client that changes it needs no restart here. */
+    const brokerSwitch = new BrokerSwitch({
+        override: config.broker,
+        advertise: config.brokerAdvertise,
+        setting: () => identity.broker,
+        relayFor: (url) =>
+            new BrokerRelay({
+                url,
+                publicKey: identity.publicKey,
+                sign: (message) => identity.sign(message),
+                isPaired: async (publicKey) => (await auth.sessionForPublicKey(publicKey)) !== null,
+                admitStatement: (publicKey, access) => statements.admit(publicKey, access),
+                receive: (envelope, reply) => peers.receive(envelope, reply)
+            })
+    });
+    identity.attachBroker(brokerSwitch);
+    const relay: Relay = brokerSwitch;
 
     if (config.installHooks) {
         // Only the CLIs the daemon has a normalizer for are listed; the others run without status.
@@ -352,7 +357,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         reachability,
         authenticated,
         publicKey: identity.publicKey,
-        brokerUrl
+        broker: identity.broker,
+        ...brokerSwitch.describe()
     });
 
     const server = Bun.serve<ClientAccess>({

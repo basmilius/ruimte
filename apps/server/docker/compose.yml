@@ -37,8 +37,9 @@ services:
     environment:
       RUIMTE_LABEL: docker-linux
       # Off unless set when compose runs (apps/pulsar-broker/README.md): the broker this container
-      # dials, and the address a client on this machine is told to dial for the same broker.
-      RUIMTE_BROKER_URL: ${RUIMTE_BROKER_URL:-}
+      # dials, and the address a client on this machine is told to dial for the same broker. `off`
+      # rather than empty, since an empty value leaves the daemon on the public default broker.
+      RUIMTE_BROKER_URL: ${RUIMTE_BROKER_URL:-off}
       RUIMTE_BROKER_ADVERTISE_URL: ${RUIMTE_BROKER_ADVERTISE_URL:-}
     # A named volume, not a bind mount: the file system has to be the container's own, which is
     # what makes paths, permissions and checkouts here not this machine's.

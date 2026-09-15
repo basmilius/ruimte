@@ -1,4 +1,4 @@
-import { RegisterMachinePayloadSchema } from '@ruimte/pulsar';
+import { BrokerSettingSchema, RegisterMachinePayloadSchema } from '@ruimte/pulsar';
 import { z } from 'zod';
 import { ProjectIconChoiceSchema } from './project.ts';
 
@@ -40,8 +40,14 @@ export const EndpointInfoSchema = z.object({
     publicKey: z.string().optional(),
     /* The Pulsar broker this machine announces itself to, which a client dials to signal a direct
        connection without reaching the machine's own address. Null when it has none, absent from a
-       daemon from before the broker. */
-    brokerUrl: z.string().nullish()
+       daemon from before the broker. It follows the effective broker: a flag or the environment, then
+       `broker` below, then the build's default. */
+    brokerUrl: z.string().nullish(),
+    /* The broker a person picked for this machine, kept in `endpoint.json`. Absent from a daemon from
+       before the setting. */
+    broker: BrokerSettingSchema.optional(),
+    // True when a flag or the environment decides the broker, so `broker` is kept but changes nothing.
+    brokerFixed: z.boolean().optional()
 });
 export type EndpointInfo = z.infer<typeof EndpointInfoSchema>;
 
@@ -74,7 +80,9 @@ export const EndpointSetIdentityPayloadSchema = z.object({
        that names a machine does not touch it, so leaving it out leaves the machine as it stands. */
     agentsDeleteAnyView: z.boolean().optional(),
     // Whether statements from the address book are turned away; left out, the machine stays as it stands.
-    refuseStatements: z.boolean().optional()
+    refuseStatements: z.boolean().optional(),
+    // Which broker the machine announces itself to; left out, the machine stays on the one it has.
+    broker: BrokerSettingSchema.optional()
 });
 export type EndpointSetIdentityPayload = z.infer<typeof EndpointSetIdentityPayloadSchema>;
 
@@ -85,7 +93,11 @@ export const EndpointChangedEventSchema = z.object({
     nameSource: EndpointNameSourceSchema,
     icon: ProjectIconChoiceSchema.nullable(),
     agentsDeleteAnyView: z.boolean().optional(),
-    refuseStatements: z.boolean().optional()
+    refuseStatements: z.boolean().optional(),
+    broker: BrokerSettingSchema.optional(),
+    // What the machine hands clients as its broker now, so a client follows a change without asking again.
+    brokerUrl: z.string().nullish(),
+    brokerFixed: z.boolean().optional()
 });
 export type EndpointChangedEvent = z.infer<typeof EndpointChangedEventSchema>;
 

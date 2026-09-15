@@ -47,7 +47,7 @@ beforeEach(async () => {
     registerAuthHandlers(dispatcher, store, {
         identity,
         version: '0.0.0',
-        brokerUrl: null,
+        broker: () => ({ brokerUrl: identity.broker.mode === 'custom' ? identity.broker.url : null, brokerFixed: false }),
         pairingUrl: () => `http://box:4210/pair#${store.issuePairingToken()}${minted++}`,
         disconnect: (sessionId) => disconnected.push(sessionId)
     });
@@ -111,7 +111,8 @@ describe('auth handlers', () => {
                     nameSource: 'chosen',
                     icon: { kind: 'lucide', value: 'server' },
                     agentsDeleteAnyView: false,
-                    refuseStatements: false
+                    refuseStatements: false,
+                    broker: { mode: 'default' }
                 }
             }
         ]);
@@ -166,6 +167,31 @@ describe('auth handlers', () => {
         expect(identity.refuseStatements).toBe(true);
         const renamed = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: 'Studio 2', icon: null });
         expect(renamed).toMatchObject({ ok: true, result: { refuseStatements: true } });
+    });
+
+    test('the broker setting is set from any client, checked, and endpoint.info carries the broker it leads to', async () => {
+        expect(await ask({ reachability: 'loopback', sessionId: null }, 'endpoint.info')).toMatchObject({
+            ok: true,
+            result: { broker: { mode: 'default' }, brokerUrl: null, brokerFixed: false }
+        });
+        const custom = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', {
+            name: null,
+            icon: null,
+            broker: { mode: 'custom', url: 'wss://mine.example.com' }
+        });
+        expect(custom).toMatchObject({ ok: true, result: { broker: { mode: 'custom', url: 'wss://mine.example.com' }, brokerUrl: 'wss://mine.example.com' } });
+        const plain = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', {
+            name: null,
+            icon: null,
+            broker: { mode: 'custom', url: 'ws://mine.example.com' }
+        });
+        expect(plain).toMatchObject({ ok: false });
+        expect(identity.broker).toEqual({ mode: 'custom', url: 'wss://mine.example.com' });
+        // A rename leaves the broker where it stands.
+        expect(await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: 'Studio', icon: null })).toMatchObject({
+            ok: true,
+            result: { broker: { mode: 'custom' } }
+        });
     });
 
     test('a registration carries the name and icon a person chose, and the name the machine started with until then', async () => {

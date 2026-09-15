@@ -3,13 +3,14 @@ import { RequestError, type ClientAccess, type Dispatcher } from '../dispatcher.
 import { mayInvite } from '../auth/access.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
+import type { BrokerDescription } from '../pulsar/broker-switch.ts';
 
 interface EndpointHost {
     /* The machine itself: its id, its key pair and what it calls itself right now. */
     identity: EndpointIdentity;
     version: string;
-    // The broker clients are told to dial, or null when this machine announces itself to none.
-    brokerUrl: string | null;
+    // The broker clients are told to dial right now (null when this machine announces itself to none), and whether a flag decides it.
+    broker(): BrokerDescription;
     // Mints a one-time pairing URL; what `ruimte pair` and the settings dialog hand to another machine.
     pairingUrl(): string;
     // Revoking must take effect now, not at the next connection, so the daemon drops that session's sockets here.
@@ -32,7 +33,8 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
         reachability: access?.reachability ?? 'loopback',
         authenticated: access?.sessionId !== null && access?.sessionId !== undefined,
         publicKey: identity.publicKey,
-        brokerUrl: host.brokerUrl
+        broker: identity.broker,
+        ...host.broker()
     });
 
     dispatcher.register('endpoint.info', (_payload, client) => info(client.access));
@@ -44,7 +46,8 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
     dispatcher.register('endpoint.setIdentity', async (payload, client) => {
         await identity.setIdentity(payload.name, payload.icon, {
             agentsDeleteAnyView: payload.agentsDeleteAnyView,
-            refuseStatements: payload.refuseStatements
+            refuseStatements: payload.refuseStatements,
+            broker: payload.broker
         });
         return info(client.access);
     });
@@ -64,7 +67,7 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
                 id: identity.id,
                 name,
                 icon: icon.success ? icon.data : null,
-                brokerUrl: host.brokerUrl,
+                brokerUrl: host.broker().brokerUrl,
                 publicKey: identity.publicKey,
                 issuedAt,
                 signature: identity.sign(machineRegistrationMessage(payload.accountId, identity.id, identity.publicKey, name, issuedAt))

@@ -1,6 +1,7 @@
 import { homedir, hostname } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
+import { brokerUrlProblem, type BrokerOverride } from '@ruimte/pulsar';
 
 export interface ServerConfig {
     host: string;
@@ -24,8 +25,8 @@ export interface ServerConfig {
     directPorts: [number, number] | null;
     // Addresses announced as candidates on top of the interfaces, such as the one a container is published on.
     directHostAddresses: string[];
-    // The Pulsar broker this machine announces itself to, so a client can signal a direct connection without its address; null is off.
-    broker: string | null;
+    // A broker forced by `--broker`, `--no-broker` or `RUIMTE_BROKER_URL`; null leaves it to the machine's setting and then the default.
+    broker: BrokerOverride;
     // The broker URL clients are told to dial, when it is not the one this machine dials (a container reaching the host by another name).
     brokerAdvertise: string | null;
     // `pair` asks the running daemon for a pairing URL; `context` is the agent-side CLI (`ruimte-context`).
@@ -63,22 +64,26 @@ export const parsePortRange = (value: string): [number, number] => {
     return [first, last];
 };
 
-/* A `ws:` or `wss:` URL, or null for nothing at all; an empty value is nothing, so compose can pass an unset variable through. */
+/* A broker URL, or null for nothing at all; an empty value is nothing, so compose can pass an unset variable through. */
 export const parseBrokerUrl = (value: string | undefined, flag: string): string | null => {
     const trimmed = value?.trim() ?? '';
     if (trimmed === '') {
         return null;
     }
-    let url: URL;
-    try {
-        url = new URL(trimmed);
-    } catch {
-        throw new Error(`Invalid ${flag}: ${trimmed}`);
-    }
-    if (url.protocol !== 'ws:' && url.protocol !== 'wss:') {
-        throw new Error(`Invalid ${flag}: ${trimmed} (a broker URL starts with ws:// or wss://)`);
+    const problem = brokerUrlProblem(trimmed);
+    if (problem !== null) {
+        throw new Error(`Invalid ${flag}: ${trimmed} (${problem})`);
     }
     return trimmed;
+};
+
+/* `--no-broker` and the word `off` turn the broker off whatever the machine's setting says; a URL picks one. */
+export const parseBrokerOverride = (noBroker: boolean, value: string | undefined): BrokerOverride => {
+    if (noBroker || value?.trim().toLowerCase() === 'off') {
+        return { mode: 'off' };
+    }
+    const url = parseBrokerUrl(value, '--broker');
+    return url === null ? null : { mode: 'custom', url };
 };
 
 export const parseServerArgs = (argv: string[], env: Record<string, string | undefined> = process.env): ServerConfig => {
@@ -100,6 +105,7 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
             'direct-ports': { type: 'string' },
             'direct-host-address': { type: 'string', multiple: true, default: [] },
             broker: { type: 'string' },
+            'no-broker': { type: 'boolean', default: false },
             'broker-advertise': { type: 'string' }
         },
         strict: true,
@@ -128,7 +134,7 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         stun: values['no-stun'] ? [] : values.stun.length > 0 ? values.stun : [DEFAULT_STUN_SERVER],
         directPorts: values['direct-ports'] === undefined ? null : parsePortRange(values['direct-ports']),
         directHostAddresses: values['direct-host-address'],
-        broker: parseBrokerUrl(values.broker ?? env.RUIMTE_BROKER_URL, '--broker'),
+        broker: parseBrokerOverride(values['no-broker'], values.broker ?? env.RUIMTE_BROKER_URL),
         brokerAdvertise: parseBrokerUrl(values['broker-advertise'] ?? env.RUIMTE_BROKER_ADVERTISE_URL, '--broker-advertise'),
         command,
         args: cli ? argv.slice(1) : positionals.slice(1)

@@ -54,18 +54,30 @@ describe('parseServerArgs', () => {
         });
     });
 
-    test('a broker is off by default, and read from the flag or the environment', () => {
+    test('no broker flag leaves it to the machine, and the flag or the environment forces one', () => {
         expect(parseServerArgs([], {})).toMatchObject({ broker: null, brokerAdvertise: null });
-        // An unset compose variable arrives as an empty string, which is still off.
+        // An unset compose variable arrives as an empty string, which says nothing either.
         expect(parseServerArgs([], { RUIMTE_BROKER_URL: '', RUIMTE_BROKER_ADVERTISE_URL: '' })).toMatchObject({ broker: null, brokerAdvertise: null });
         expect(
             parseServerArgs(['--broker', 'wss://broker.example.com'], {
-                RUIMTE_BROKER_URL: 'ws://ignored:1',
+                RUIMTE_BROKER_URL: 'ws://127.0.0.1:1',
                 RUIMTE_BROKER_ADVERTISE_URL: 'ws://127.0.0.1:4400'
             })
-        ).toMatchObject({ broker: 'wss://broker.example.com', brokerAdvertise: 'ws://127.0.0.1:4400' });
+        ).toMatchObject({ broker: { mode: 'custom', url: 'wss://broker.example.com' }, brokerAdvertise: 'ws://127.0.0.1:4400' });
+        expect(parseServerArgs([], { RUIMTE_BROKER_URL: 'ws://host.docker.internal:4420' }).broker).toEqual({
+            mode: 'custom',
+            url: 'ws://host.docker.internal:4420'
+        });
         expect(() => parseServerArgs(['--broker', 'https://broker.example.com'], {})).toThrow('Invalid --broker');
+        expect(() => parseServerArgs(['--broker', 'ws://broker.example.com'], {})).toThrow('Invalid --broker');
         expect(() => parseServerArgs([], { RUIMTE_BROKER_ADVERTISE_URL: 'not a url' })).toThrow('Invalid --broker-advertise');
+    });
+
+    test('--no-broker and off turn the broker off, over a URL as well', () => {
+        expect(parseServerArgs(['--no-broker'], {}).broker).toEqual({ mode: 'off' });
+        expect(parseServerArgs(['--no-broker', '--broker', 'wss://broker.example.com'], {}).broker).toEqual({ mode: 'off' });
+        expect(parseServerArgs([], { RUIMTE_BROKER_URL: 'off' }).broker).toEqual({ mode: 'off' });
+        expect(parseServerArgs(['--broker', 'off'], {}).broker).toEqual({ mode: 'off' });
     });
 
     test('rejects a port that is not a number', () => {
