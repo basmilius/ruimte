@@ -207,7 +207,7 @@ export function MachineDialog({ entry, open, onOpenChange }: MachineDialogProps)
         <Dialog.Root open={open && entry !== null} onOpenChange={onOpenChange}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop dialog-backdrop-nested" forceRender />
-                <Dialog.Popup className="dialog-popup dialog-popup-nested touch-roomy flex max-h-[calc(100dvh-32px)] w-[560px] flex-col">
+                <Dialog.Popup className="dialog-popup dialog-popup-nested flex max-h-[calc(100dvh-32px)] w-[560px] flex-col">
                     {entry && <MachineDialogBody entry={entry} />}
                 </Dialog.Popup>
             </Dialog.Portal>

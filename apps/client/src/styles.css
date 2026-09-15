@@ -566,17 +566,6 @@
     .dialog-backdrop-nested { z-index: calc(var(--z-dialog) + 1); }
     .dialog-popup-nested { z-index: calc(var(--z-dialog) + 2); }
 
-    /* A finger needs 44 pixels where a mouse is fine with 28 or 32. Only inside a surface that asks
-       for it and only where the pointer is coarse, so the desktop keeps its density. A minimum
-       rather than a size, because the size utilities sit in a later layer and would win. A switch
-       keeps the size it is drawn at and takes the finger on an invisible area around it. */
-    @media (pointer: coarse) {
-        .touch-roomy button:not([role='switch']), .touch-roomy .field, .touch-roomy a[href] { min-height: 44px; min-width: 44px; }
-        .touch-roomy [role='switch'] { position: relative; }
-        .touch-roomy [role='switch']::after { content: ''; position: absolute; inset: -12px; }
-        .menu-item { min-height: 44px; }
-    }
-
     /* Tooltips. The positioner animates its position, so a tooltip slides to the next button
        instead of blinking; the popup fades and scales from its anchor side. Both drop the motion
        while Base UI says the tooltip is instant. */

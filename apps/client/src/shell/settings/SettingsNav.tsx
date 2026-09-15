@@ -20,7 +20,7 @@ export function SettingsNav() {
                         <Tabs.Tab
                             key={section.id}
                             value={section.id}
-                            className="flex h-8 min-w-0 items-center gap-2.5 rounded-md px-2.5 text-sm pointer-coarse:h-11 text-text-muted outline-none hover:bg-surface-hover hover:text-text focus-visible:ring-2 focus-visible:ring-accent data-active:bg-surface-active data-active:text-text"
+                            className="flex h-8 min-w-0 items-center gap-2.5 rounded-md px-2.5 text-sm text-text-muted outline-none hover:bg-surface-hover hover:text-text focus-visible:ring-2 focus-visible:ring-accent data-active:bg-surface-active data-active:text-text"
                         >
                             <Icon icon={section.icon} size={16} className="shrink-0 text-text-faint" />
                             <span className="truncate">{section.label}</span>

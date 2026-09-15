@@ -59,7 +59,7 @@ export function MachineUpdateDialog() {
         >
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop dialog-backdrop-nested" forceRender />
-                <Dialog.Popup className="dialog-popup dialog-popup-nested touch-roomy w-[400px] p-5">
+                <Dialog.Popup className="dialog-popup dialog-popup-nested w-[400px] p-5">
                     <Dialog.Title className="text-base font-semibold break-words text-text">{prompt.title}</Dialog.Title>
                     <Dialog.Description className="mt-1 text-xs break-words text-text-muted">{prompt.description}</Dialog.Description>
                     <div className="mt-4 flex flex-wrap items-center justify-end gap-2">

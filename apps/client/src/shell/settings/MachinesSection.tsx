@@ -208,7 +208,7 @@ function AddMachineDialog({ open, onOpenChange }: { open: boolean; onOpenChange(
         <Dialog.Root open={open} onOpenChange={onOpenChange}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop dialog-backdrop-nested" forceRender />
-                <Dialog.Popup className="dialog-popup dialog-popup-nested touch-roomy w-[460px] p-5">
+                <Dialog.Popup className="dialog-popup dialog-popup-nested w-[460px] p-5">
                     <Dialog.Title className="text-base font-semibold text-text">Add a machine</Dialog.Title>
                     <Dialog.Description className="mt-1 text-xs text-text-muted">Paste a pairing link from the other machine.</Dialog.Description>
                     <input

@@ -117,7 +117,7 @@ export function MachineIdentityForm({ endpointId, label, disabledReason }: Machi
             </div>
 
             <div className={`${SECTION_LABEL} mt-4 mb-1.5`}>Icon</div>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(28px,1fr))] gap-1 pointer-coarse:grid-cols-[repeat(auto-fill,minmax(44px,1fr))]">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(28px,1fr))] gap-1">
                 {PROJECT_ICON_NAMES.map((entry) => (
                     <Tooltip key={entry} label={entry} name>
                         <button
