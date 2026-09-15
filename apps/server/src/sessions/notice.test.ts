@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { CLEAN_PATH, Recorder, SH, SH_ARGS, makeHarness, waitFor, type Harness } from './test-helpers.ts';
+import { Recorder, makeHarness, type Harness } from './test-helpers.ts';
 
 let harness: Harness;
 let recorder: Recorder;
@@ -8,10 +8,7 @@ let waiting: string[];
 beforeEach(async () => {
     recorder = new Recorder();
     waiting = [];
-    harness = await makeHarness({
-        env: { PATH: CLEAN_PATH, PS1: '$ ' },
-        firstNotices: () => waiting.splice(0, waiting.length)
-    });
+    harness = await makeHarness({ firstNotices: () => waiting.splice(0, waiting.length) });
     harness.manager.subscribe('client', recorder.sink());
 });
 
@@ -20,7 +17,7 @@ afterEach(async () => {
 });
 
 const start = async (sessionId: string): Promise<void> => {
-    await harness.manager.create({ sessionId, cols: 80, rows: 24, shell: SH, args: SH_ARGS, cwd: harness.home });
+    await harness.manager.create({ sessionId, cols: 80, rows: 24, cwd: harness.home });
     await harness.manager.attach(sessionId, 'client', 80, 24);
 };
 
@@ -29,18 +26,19 @@ test('a message left before the node started stands above its first prompt', asy
     await start('term-a');
     expect(await harness.manager.get('term-a')!.plainText()).toContain('sent you a message: read the plan');
     expect(waiting).toEqual([]);
+    expect(harness.adapter.forSession('term-a').input).toEqual([]);
 });
 
 test('a message to a running shell reaches the screen and whoever watches it, and never the shell', async () => {
     await start('term-b');
     const session = harness.manager.get('term-b')!;
     // A prompt first, so the notice lands in the middle of a session rather than on an empty screen.
-    session.write('echo ready\n');
-    await waitFor(() => recorder.output.includes('ready'), 'the shell to answer');
+    harness.adapter.forSession('term-b').emit('$ ');
     session.notice('Ruimte: node term-1 ("shell") sent you a message: the build is green');
-    await waitFor(() => recorder.output.includes('the build is green'), 'the message on the wire');
+    session.flush();
+    // On a line of its own, since the prompt was half drawn where it landed.
+    expect(recorder.output).toStartWith('$ \r\n');
+    expect(recorder.output).toContain('the build is green');
     expect(await session.plainText()).toContain('the build is green');
-    // Nothing was typed into the shell, so it never tried to run any of it.
-    await Bun.sleep(50);
-    expect(recorder.output).not.toContain('not found');
+    expect(harness.adapter.forSession('term-b').input).toEqual([]);
 });

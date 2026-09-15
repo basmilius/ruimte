@@ -1,8 +1,9 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { AgentInfo } from '@ruimte/contracts';
 import { AgentStore } from '../agents/agent-store.ts';
-import { BunPtyAdapter } from '../pty/bun-pty.ts';
+import { FakePtyAdapter } from '../pty/fake-pty.ts';
 import { SessionManager, type SessionEvent, type SessionManagerOptions, type SessionSink } from './manager.ts';
 import { SnapshotStore } from './snapshot-store.ts';
 
@@ -64,45 +65,71 @@ export class Recorder {
     }
 }
 
+/*
+ * The manager writes an agent record without awaiting it (an exit, a title found later), so a test
+ * that reads the record back awaits `settled` instead of guessing how long the write takes.
+ */
+export class TrackedAgentStore extends AgentStore {
+    private readonly pending = new Set<Promise<void>>();
+
+    override write(sessionId: string, info: AgentInfo): Promise<void> {
+        return this.track(super.write(sessionId, info));
+    }
+
+    override delete(sessionId: string): Promise<void> {
+        return this.track(super.delete(sessionId));
+    }
+
+    async settled(): Promise<void> {
+        while (this.pending.size > 0) {
+            await Promise.allSettled([...this.pending]);
+        }
+    }
+
+    private track(work: Promise<void>): Promise<void> {
+        this.pending.add(work);
+        const done = (): void => {
+            this.pending.delete(work);
+        };
+        work.then(done, done);
+        return work;
+    }
+}
+
 export interface Harness {
     manager: SessionManager;
+    adapter: FakePtyAdapter;
     snapshots: SnapshotStore;
-    agents: AgentStore;
+    agents: TrackedAgentStore;
     home: string;
     cleanup(): Promise<void>;
 }
-
-// A real shell with no login flag and a minimal environment, so the user's profile cannot leak into the screen.
-export const SH = '/bin/sh';
-export const SH_ARGS: string[] = [];
-
-// A PATH with no agent CLI on it: every line the daemon types is then an echo on the screen and
-// nothing else. With the machine's own PATH a test that asserts a launch line would start a real
-// Claude Code, and one that asserts a failing resume would be reading that CLI's answer instead.
-export const CLEAN_PATH = '/usr/bin:/bin';
 
 // A daemon over its own fresh directory, or over the one an earlier harness left behind, which is a
 // daemon restarting: the same sessions, the same stores on disk, nothing kept in memory.
 export const makeHarness = async (extra: Partial<SessionManagerOptions> = {}, over?: string): Promise<Harness> => {
     const home = over ?? (await mkdtemp(join(tmpdir(), 'ruimte-test-')));
+    const adapter = new FakePtyAdapter();
     const snapshots = new SnapshotStore(home);
-    const agents = new AgentStore(home);
+    const agents = new TrackedAgentStore(home);
     const manager = new SessionManager({
-        adapter: new BunPtyAdapter(),
+        adapter,
         snapshots,
         agents,
-        env: { PATH: process.env.PATH, HOME: home, PS1: '$ ' },
+        env: { PATH: '/usr/bin:/bin', HOME: home },
         hookUrl: 'http://127.0.0.1:1/hooks',
         ...extra
     });
     return {
         manager,
+        adapter,
         snapshots,
         agents,
         home,
         async cleanup() {
             manager.killAll();
-            await waitFor(() => manager.list().every((session) => session.exited), 'every shell to exit').catch(() => undefined);
+            await Promise.all(adapter.spawned.map((pty) => pty.exited));
+            await agents.settled();
             await rm(home, { recursive: true, force: true });
         }
     };
