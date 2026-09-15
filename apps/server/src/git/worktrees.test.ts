@@ -1,34 +1,27 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, realpath, rm, stat, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
+import { gitIn, initRepo, repoTemplate, type RepoTemplate } from './test-repo.ts';
 import { Worktrees } from './worktrees.ts';
 
+let template: RepoTemplate;
 let root: string;
 let repo: string;
 let worktrees: Worktrees;
 
-const git = async (args: string[]): Promise<void> => {
-    const proc = Bun.spawn(['git', ...args], {
-        cwd: repo,
-        stdout: 'ignore',
-        stderr: 'pipe',
-        env: { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' }
-    });
-    if ((await proc.exited) !== 0) {
-        throw new Error(await new Response(proc.stderr).text());
-    }
-};
+const git = (args: string[]): Promise<string> => gitIn(repo, args);
+
+beforeAll(async () => {
+    template = await repoTemplate('ruimte-git', (dir) => initRepo(join(dir, 'repo'), { 'README.md': 'hi' }));
+});
+
+afterAll(async () => {
+    await template.dispose();
+});
 
 beforeEach(async () => {
-    // Git reports real paths, and the temp dir sits behind a symlink on macOS (/var to /private/var).
-    root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-git-')));
+    root = await template.copy();
     repo = join(root, 'repo');
-    await mkdir(repo);
-    await git(['init', '-q', '-b', 'main']);
-    await writeFile(join(repo, 'README.md'), 'hi');
-    await git(['add', '.']);
-    await git(['commit', '-q', '-m', 'init']);
     worktrees = new Worktrees(join(root, 'home'));
 });
 

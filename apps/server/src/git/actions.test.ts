@@ -1,31 +1,20 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { GitActionPayload, GitActionPhase } from '@ruimte/contracts';
 import { GitActions, checkoutArgs, isDirty } from './actions.ts';
 import { readLog } from './log.ts';
 import { listRefs } from './refs.ts';
 import { forgetBase, readStatus } from './status.ts';
+import { gitIn, initRepo, repoTemplate, type RepoTemplate } from './test-repo.ts';
 
+let template: RepoTemplate;
 let root: string;
 let repo: string;
 let remote: string;
 let actions: GitActions;
 
-const run = async (args: string[], cwd: string = repo): Promise<string> => {
-    const proc = Bun.spawn(['git', ...args], {
-        cwd,
-        stdout: 'pipe',
-        stderr: 'pipe',
-        env: { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' }
-    });
-    const [stdout, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
-    if (code !== 0) {
-        throw new Error(await new Response(proc.stderr).text());
-    }
-    return stdout;
-};
+const run = (args: string[], cwd: string = repo): Promise<string> => gitIn(cwd, args);
 
 const write = (name: string, body: string): Promise<void> => writeFile(join(repo, name), body);
 
@@ -43,16 +32,22 @@ const act = async (payload: Omit<GitActionPayload, 'cwd' | 'actionId'> & { cwd?:
     });
 };
 
+beforeAll(async () => {
+    template = await repoTemplate('ruimte-actions', async (dir) => {
+        await gitIn(dir, ['init', '--quiet', '--bare', '--initial-branch=main', join(dir, 'remote.git')]);
+        await initRepo(join(dir, 'repo'), { 'one.txt': 'one\n' });
+    });
+});
+
+afterAll(async () => {
+    await template.dispose();
+});
+
 beforeEach(async () => {
-    root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-actions-')));
+    root = await template.copy();
     remote = join(root, 'remote.git');
     repo = join(root, 'repo');
-    await mkdir(repo);
-    await run(['init', '--quiet', '--bare', '--initial-branch=main', remote], root);
-    await run(['init', '--quiet', '--initial-branch=main']);
-    await write('one.txt', 'one\n');
-    await run(['add', '.']);
-    await run(['commit', '--quiet', '--message', 'init']);
+    // Added per copy rather than in the template, so every test pushes to a bare repository of its own.
     await run(['remote', 'add', 'origin', remote]);
     actions = new GitActions();
     forgetBase();

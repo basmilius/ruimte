@@ -1,36 +1,29 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { diffFile } from './diff.ts';
 import { forgetBase, mergeBaseOf, parsePorcelain, readStatus } from './status.ts';
+import { gitIn, initRepo, repoTemplate, type RepoTemplate } from './test-repo.ts';
 
+let template: RepoTemplate;
 let root: string;
 let repo: string;
 
-const git = async (args: string[], cwd: string = repo): Promise<void> => {
-    const proc = Bun.spawn(['git', ...args], {
-        cwd,
-        stdout: 'ignore',
-        stderr: 'pipe',
-        env: { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' }
-    });
-    if ((await proc.exited) !== 0) {
-        throw new Error(await new Response(proc.stderr).text());
-    }
-};
+const git = (args: string[], cwd: string = repo): Promise<string> => gitIn(cwd, args);
 
 const write = (name: string, body: string): Promise<void> => writeFile(join(repo, name), body);
 
+beforeAll(async () => {
+    template = await repoTemplate('ruimte-status', (dir) => initRepo(join(dir, 'repo'), { 'tracked.txt': 'one\ntwo\nthree\n' }));
+});
+
+afterAll(async () => {
+    await template.dispose();
+});
+
 beforeEach(async () => {
-    // Git reports real paths, and the temp dir sits behind a symlink on macOS (/var to /private/var).
-    root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-status-')));
+    root = await template.copy();
     repo = join(root, 'repo');
-    await mkdir(repo);
-    await git(['init', '-q', '-b', 'main']);
-    await write('tracked.txt', 'one\ntwo\nthree\n');
-    await git(['add', '.']);
-    await git(['commit', '-q', '-m', 'init']);
     forgetBase();
 });
 

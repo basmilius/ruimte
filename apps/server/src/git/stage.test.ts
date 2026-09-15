@@ -1,39 +1,31 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { discardPaths, stagePaths, unstagePaths } from './stage.ts';
 import { forgetBase, readStatus } from './status.ts';
+import { gitIn, initRepo, repoTemplate, type RepoTemplate } from './test-repo.ts';
 
+let template: RepoTemplate;
 let root: string;
 let repo: string;
 
-const git = async (args: string[]): Promise<string> => {
-    const proc = Bun.spawn(['git', ...args], {
-        cwd: repo,
-        stdout: 'pipe',
-        stderr: 'pipe',
-        env: { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' }
-    });
-    const [stdout, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
-    if (code !== 0) {
-        throw new Error(await new Response(proc.stderr).text());
-    }
-    return stdout;
-};
+const git = (args: string[]): Promise<string> => gitIn(repo, args);
 
 const write = (name: string, body: string): Promise<void> => writeFile(join(repo, name), body);
 
 const statesOf = async (): Promise<string[]> => (await readStatus(repo)).files.map((file) => `${file.path} ${file.state}`);
 
+beforeAll(async () => {
+    template = await repoTemplate('ruimte-stage', (dir) => initRepo(join(dir, 'repo'), { 'tracked.txt': 'one\n' }));
+});
+
+afterAll(async () => {
+    await template.dispose();
+});
+
 beforeEach(async () => {
-    root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-stage-')));
+    root = await template.copy();
     repo = join(root, 'repo');
-    await mkdir(repo);
-    await git(['init', '-q', '-b', 'main']);
-    await write('tracked.txt', 'one\n');
-    await git(['add', '.']);
-    await git(['commit', '-q', '-m', 'init']);
     forgetBase();
 });
 

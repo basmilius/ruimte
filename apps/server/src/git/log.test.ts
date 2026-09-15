@@ -1,10 +1,11 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { diffCommit } from './diff.ts';
 import { LOG_FORMAT, parseLog, readCommit, readLog } from './log.ts';
 import { parseRefs, parseWorktreeBranches } from './refs.ts';
+import { gitIn } from './test-repo.ts';
 
 // The separator both formats put between their fields, which no branch or subject can hold.
 const FIELD = '\u001f';
@@ -12,21 +13,10 @@ const FIELD = '\u001f';
 let root: string;
 let repo: string;
 
-const run = async (args: string[], cwd: string = repo): Promise<string> => {
-    const proc = Bun.spawn(['git', ...args], {
-        cwd,
-        stdout: 'pipe',
-        stderr: 'pipe',
-        env: { ...process.env, GIT_AUTHOR_NAME: 'Ada', GIT_AUTHOR_EMAIL: 'a@a', GIT_COMMITTER_NAME: 'Ada', GIT_COMMITTER_EMAIL: 'a@a' }
-    });
-    const [stdout, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
-    if (code !== 0) {
-        throw new Error(await new Response(proc.stderr).text());
-    }
-    return stdout;
-};
+const run = (args: string[], cwd: string = repo): Promise<string> => gitIn(cwd, args);
 
-beforeEach(async () => {
+// Built once for the file: every test here only reads the history, and each commit is two processes.
+beforeAll(async () => {
     root = await realpath(await mkdtemp(join(tmpdir(), 'ruimte-log-')));
     repo = join(root, 'repo');
     await mkdir(repo);
@@ -38,7 +28,7 @@ beforeEach(async () => {
     }
 });
 
-afterEach(async () => {
+afterAll(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
