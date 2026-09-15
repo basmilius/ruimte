@@ -524,6 +524,42 @@ describe('machines', () => {
         expect(list.machines.map((entry) => entry.brokerUrl)).toEqual(['ws://127.0.0.1:4420']);
     });
 
+    test('registering again with the same key updates the record, and another key for that machine is refused', async () => {
+        const session = await signIn(3007);
+        const machine = newKeyPair();
+        expect((await dispatch('/v1/machines', { method: 'POST', headers: bearer(session), body: registration(session, machine, 'laptop') })).status).toBe(200);
+
+        const issuedAt = Date.now();
+        const renamed = {
+            id: 'laptop',
+            name: 'Laptop',
+            icon: { kind: 'emoji', value: '💻' },
+            brokerUrl: 'wss://other-broker.ruimte.test',
+            publicKey: machine.publicKey,
+            issuedAt,
+            signature: signWith(machine, machineRegistrationMessage(session.account.id, 'laptop', machine.publicKey, 'Laptop', issuedAt)),
+            automatic: true
+        };
+        expect((await dispatch('/v1/machines', { method: 'POST', headers: bearer(session), body: renamed })).status).toBe(200);
+        let list = (await (await dispatch('/v1/machines', { headers: bearer(session) })).json()) as MachineListResult;
+        expect(list.machines).toEqual([
+            expect.objectContaining({ id: 'laptop', name: 'Laptop', icon: { kind: 'emoji', value: '💻' }, brokerUrl: 'wss://other-broker.ruimte.test' })
+        ]);
+
+        const intruder = newKeyPair();
+        for (const automatic of [true, false]) {
+            const taken = await dispatch('/v1/machines', {
+                method: 'POST',
+                headers: bearer(session),
+                body: { ...registration(session, intruder, 'laptop'), automatic }
+            });
+            expect(taken.status).toBe(403);
+            expect(await errorCode(taken)).toBe('bad-signature');
+        }
+        list = (await (await dispatch('/v1/machines', { headers: bearer(session) })).json()) as MachineListResult;
+        expect(list.machines).toEqual([expect.objectContaining({ name: 'Laptop', publicKey: machine.publicKey })]);
+    });
+
     test('a registration with a wrong signature is refused', async () => {
         const session = await signIn(3002);
         const machine = newKeyPair();
