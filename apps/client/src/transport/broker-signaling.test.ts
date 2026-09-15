@@ -43,7 +43,7 @@ class FakeSocket {
     }
 }
 
-const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 5));
+const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
 const setup = (access?: (key: ClientKey) => Promise<SignalAccess>) => {
     const client = newKey();

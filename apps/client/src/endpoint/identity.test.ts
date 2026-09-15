@@ -26,6 +26,9 @@ const local = (daemonId: string | null): Endpoint =>
         daemonId
     });
 
+// Merging a row awaits nothing but promises that are already settled, and no timer of the code under test is due this soon.
+const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+
 /* What a daemon answers `endpoint.info` with, without a public key: nothing here is about pinning. */
 const answers = (id: string): EndpointInfo => ({ id, label: id, platform: 'linux', version: '0.0.0', reachability: 'lan', authenticated: true });
 
@@ -39,7 +42,7 @@ describe('a row that turns out to be a machine already in the list', () => {
         useEndpoints.setState({ endpoints: [local('daemon-here'), row('10.0.0.4:4210', { daemonId: null })] });
 
         expect(noteDaemonIdentity('10.0.0.4:4210', answers('daemon-here'))).toBe(LOCAL_ENDPOINT_ID);
-        await Bun.sleep(1);
+        await settle();
 
         expect(useEndpoints.getState().endpoints.map((entry) => entry.id)).toEqual([LOCAL_ENDPOINT_ID]);
         expect(useToasts.getState().toasts[0]?.description).toContain('another address of This machine');
@@ -49,7 +52,7 @@ describe('a row that turns out to be a machine already in the list', () => {
         useEndpoints.setState({ endpoints: [local(null), row('daemon-here')] });
 
         expect(noteDaemonIdentity(LOCAL_ENDPOINT_ID, answers('daemon-here'))).toBe(LOCAL_ENDPOINT_ID);
-        await Bun.sleep(1);
+        await settle();
 
         const rows = useEndpoints.getState().endpoints;
         expect(rows.map((entry) => entry.id)).toEqual([LOCAL_ENDPOINT_ID]);
@@ -67,7 +70,7 @@ describe('a row that turns out to be a machine already in the list', () => {
         });
 
         expect(noteDaemonIdentity('192.168.1.9:4210', answers('daemon-a'))).toBe('daemon-a');
-        await Bun.sleep(1);
+        await settle();
 
         const rows = useEndpoints.getState().endpoints;
         expect(rows.map((entry) => entry.id)).toEqual([LOCAL_ENDPOINT_ID, 'daemon-a']);
@@ -82,7 +85,7 @@ describe('a row that turns out to be a machine already in the list', () => {
         useEndpoints.setState({ endpoints: [local(null), row('daemon-a'), row('daemon-b')] });
 
         expect(noteDaemonIdentity('daemon-a', answers('daemon-b'))).toBe('daemon-a');
-        await Bun.sleep(1);
+        await settle();
 
         expect(useEndpoints.getState().endpoints.map((entry) => entry.id)).toEqual([LOCAL_ENDPOINT_ID, 'daemon-a', 'daemon-b']);
         expect(useEndpoints.getState().mismatched['daemon-a']).toBe('daemon-b');

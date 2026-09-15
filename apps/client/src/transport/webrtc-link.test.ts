@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { channelBinding, splitFrame, type DirectChallengeFrame } from '@ruimte/contracts';
 import type { LinkEvents } from './link-transport';
 import { webRtcLink, type WebRtcLinkOptions } from './webrtc-link';
@@ -104,9 +104,24 @@ class FakePeer {
     }
 }
 
-const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+// Fake timers leave setImmediate alone, so this drains every pending promise without letting a timer run.
+const tick = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+// Each step runs the timers due in that millisecond, then every promise they started.
+const sleep = async (ms: number): Promise<void> => {
+    for (let i = 0; i < ms; i++) {
+        jest.advanceTimersByTime(1);
+        await tick();
+    }
+};
+
+beforeEach(() => {
+    jest.useFakeTimers();
+});
+
+afterEach(() => {
+    jest.useRealTimers();
+});
 
 const setup = (extra: Partial<WebRtcLinkOptions> = {}) => {
     const socket = new FakeSocket();

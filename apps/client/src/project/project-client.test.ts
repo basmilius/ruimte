@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import type {
     EventMap,
     EventType,
@@ -192,7 +192,21 @@ const makeSink = () => {
     return { sink, state };
 };
 
-const tick = (ms = 5): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+// Fake timers leave setImmediate alone: each step runs the timers due in that millisecond, then every promise they started.
+const tick = async (ms = 5): Promise<void> => {
+    for (let i = 0; i < ms; i++) {
+        jest.advanceTimersByTime(1);
+        await new Promise((resolve) => setImmediate(resolve));
+    }
+};
+
+beforeEach(() => {
+    jest.useFakeTimers();
+});
+
+afterEach(() => {
+    jest.useRealTimers();
+});
 
 /* The three calls `ProjectClient` makes on the storage it is given, over a map a test can read. */
 const fakeStorage = (storage: Map<string, string>) => ({

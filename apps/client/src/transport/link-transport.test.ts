@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { LinkTransport, type Link, type LinkEvents } from './link-transport';
 import type { TransportStatus } from './transport';
 
@@ -24,7 +24,22 @@ class FakeLink implements Link {
     }
 }
 
-const tick = (ms = 0): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+// Fake timers leave setImmediate alone: each step runs the timers due in that millisecond, then every promise they started.
+const tick = async (ms = 0): Promise<void> => {
+    for (let i = 0; i < ms; i++) {
+        jest.advanceTimersByTime(1);
+        await new Promise((resolve) => setImmediate(resolve));
+    }
+    await new Promise((resolve) => setImmediate(resolve));
+};
+
+beforeEach(() => {
+    jest.useFakeTimers();
+});
+
+afterEach(() => {
+    jest.useRealTimers();
+});
 
 const setup = (onOpen?: (events: LinkEvents) => void) => {
     const links: FakeLink[] = [];

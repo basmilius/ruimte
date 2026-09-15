@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import type { EventMap, EventType, RequestMap, RequestType } from '@ruimte/contracts';
 import type { Endpoint } from '../state/endpoints';
 import { TransportPool, type PooledTransport } from './pool';
@@ -84,7 +84,21 @@ const setup = (idleMs = 1) => {
     return { pool, opened };
 };
 
-const idle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 10));
+// Fake timers leave setImmediate alone: each step runs the timers due in that millisecond, then every promise they started.
+const idle = async (): Promise<void> => {
+    for (let i = 0; i < 10; i++) {
+        jest.advanceTimersByTime(1);
+        await new Promise((resolve) => setImmediate(resolve));
+    }
+};
+
+beforeEach(() => {
+    jest.useFakeTimers();
+});
+
+afterEach(() => {
+    jest.useRealTimers();
+});
 
 describe('TransportPool', () => {
     test('one socket per endpoint, and the same one on every ask', () => {

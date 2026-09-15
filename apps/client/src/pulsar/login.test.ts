@@ -55,10 +55,9 @@ describe('signIn', () => {
 
     test('a redirect with another state trades nothing', async () => {
         const route = fakeRoute(() => ({ code: 'stolen', state: 'someone-elses', error: null }));
-        expect(signIn({ redirect: route.redirect, keeper: route.keeper, addressBookUrl: 'https://pulsar.ruimte.app', label: 'x' })).rejects.toThrow(
+        await expect(signIn({ redirect: route.redirect, keeper: route.keeper, addressBookUrl: 'https://pulsar.ruimte.app', label: 'x' })).rejects.toThrow(
             'does not belong'
         );
-        await new Promise((resolve) => setTimeout(resolve, 5));
         expect(route.exchanged).toEqual([]);
     });
 
@@ -67,10 +66,9 @@ describe('signIn', () => {
         route.redirect.open = async () => {
             throw new Error('no browser');
         };
-        expect(signIn({ redirect: route.redirect, keeper: route.keeper, addressBookUrl: 'https://pulsar.ruimte.app', label: 'x' })).rejects.toThrow(
+        await expect(signIn({ redirect: route.redirect, keeper: route.keeper, addressBookUrl: 'https://pulsar.ruimte.app', label: 'x' })).rejects.toThrow(
             'no browser'
         );
-        await new Promise((resolve) => setTimeout(resolve, 5));
         expect(route.cancelled()).toBe(1);
     });
 });

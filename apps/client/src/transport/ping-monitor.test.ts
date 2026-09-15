@@ -1,5 +1,8 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, jest, test } from 'bun:test';
 import { PingMonitor } from './ping-monitor';
+
+// Fake timers leave setImmediate alone, so this drains every pending promise without letting a timer run.
+const flush = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 
 const deferred = <T>(): { promise: Promise<T>; resolve(value: T): void; reject(error: unknown): void } => {
     let resolve!: (value: T) => void;
@@ -79,27 +82,37 @@ describe('PingMonitor', () => {
     });
 
     test('polls while it runs and stops on stop', async () => {
-        const reported: (number | null)[] = [];
-        let clock = 0;
-        const monitor = new PingMonitor({
-            send: async () => {
-                clock += 1;
-            },
-            report: (latency) => reported.push(latency),
-            now: () => clock,
-            intervalMs: 5
-        });
+        jest.useFakeTimers();
+        try {
+            const reported: (number | null)[] = [];
+            let clock = 0;
+            const monitor = new PingMonitor({
+                send: async () => {
+                    clock += 1;
+                },
+                report: (latency) => reported.push(latency),
+                now: () => clock,
+                intervalMs: 5
+            });
 
-        monitor.start();
-        expect(monitor.running).toBe(true);
-        await Bun.sleep(18);
-        const whileRunning = reported.length;
-        monitor.stop();
-        await Bun.sleep(15);
+            monitor.start();
+            expect(monitor.running).toBe(true);
+            await flush();
+            expect(reported).toEqual([1]);
+            // One interval at a time, so each measurement has settled before the next one fires.
+            for (let i = 0; i < 3; i++) {
+                jest.advanceTimersByTime(5);
+                await flush();
+            }
+            expect(reported).toEqual([1, 1, 1, 1]);
 
-        expect(whileRunning).toBeGreaterThan(1);
-        expect(monitor.running).toBe(false);
-        expect(reported.at(-1)).toBeNull();
-        expect(reported.length).toBe(whileRunning + 1);
+            monitor.stop();
+            jest.advanceTimersByTime(15);
+            await flush();
+            expect(monitor.running).toBe(false);
+            expect(reported).toEqual([1, 1, 1, 1, null]);
+        } finally {
+            jest.useRealTimers();
+        }
     });
 });

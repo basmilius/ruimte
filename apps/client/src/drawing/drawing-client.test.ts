@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import type { DrawingDocument, DrawingElement, EventMap, EventType, ProjectDocument, ProjectSummary, RequestMap, RequestType } from '@ruimte/contracts';
 import { useDocument } from '@/state/document';
 import { createDrawingStore, type DrawingState } from '@/state/drawing';
@@ -108,7 +108,13 @@ class FakeTransport implements Transport {
     }
 }
 
-const tick = (ms = 5): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+// Fake timers leave setImmediate alone: each step runs the timers due in that millisecond, then every promise they started.
+const tick = async (ms = 5): Promise<void> => {
+    for (let i = 0; i < ms; i++) {
+        jest.advanceTimersByTime(1);
+        await new Promise((resolve) => setImmediate(resolve));
+    }
+};
 
 let transport: FakeTransport;
 let client: DrawingClient;
@@ -134,10 +140,16 @@ const setup = (): void => {
     });
 };
 
-beforeEach(setup);
+beforeEach(() => {
+    jest.useFakeTimers();
+    setup();
+});
 
 // A client that outlives its test would keep saving into the next one.
-afterEach(() => client.dispose());
+afterEach(() => {
+    client.dispose();
+    jest.useRealTimers();
+});
 
 describe('DrawingClient', () => {
     test('a drawing coming up is opened, loaded and given the camera this machine remembers', async () => {
