@@ -55,7 +55,8 @@ the implementation here was written independently for Ruimte's existing contract
 - `xcodebuild ... test CODE_SIGN_IDENTITY=-` used the iPhone 18 Pro iOS 27 simulator. The latest full result is `Test-Ruimte-2026.09.15_19-12-55-+0200.xcresult`. Section/chat captures are in `/tmp/ruimte-ios-refinements-captures`; final welcome/project captures are in `/tmp/ruimte-ios-monochrome-home-captures`.
 - The Pulsar Swift package passed 35 tests. The native Apple Worker suite passed 76 tests with one existing secret-dependent test skipped. The isolated Apple-only deployment bundle also passed its dry run and tests.
 - `bun run check`, `bun run format` and `git diff --check` passed. Existing client lint warnings remain unchanged.
-- Signed development build for Bas's iPhone 15 Pro Max passed, including both extensions. The previous build is installed on that device. Installing this revision follows deployment of the native Apple routes; production approval is pending.
+- Signed development build for Bas's iPhone 15 Pro Max passed, including both extensions. `codesign --verify --deep --strict` passed. `devicectl` installed and launched this revision on the device.
+- With Bas's approval, migration `0007_native_apple.sql` and the isolated Apple-only Pulsar update were deployed. Worker version: `30be96f9-baf9-4112-a02b-03c4f2c70882`. Live checks confirmed healthy service, Apple/GitHub availability, native nonce creation, invalid-credential rejection and one-use attempt enforcement. No account or authenticated session was created by these checks.
 - The first cache fixture exposed an unknown-schema lookup that silently discarded stored projects. It now uses the generated event schema; offline cache tests pass.
 
 Not verified: live Apple/GitHub authorization, a new physical pairing, live keyboard
