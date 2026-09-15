@@ -1,5 +1,4 @@
 import { randomBytes } from 'node:crypto';
-import { watch, type FSWatcher } from 'node:fs';
 import { mkdir, readFile, rm, rmdir, stat } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import {
@@ -24,6 +23,7 @@ import {
 } from '@ruimte/contracts';
 import { z } from 'zod';
 import { isNotFound, writeAtomic } from '../fs.ts';
+import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from '../fs/watch-seam.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import {
     diagramsDirOf,
@@ -111,8 +111,8 @@ interface OpenProject {
     rev: number;
     // The exact text last written or read, so the watcher can tell our own write from someone else's.
     lastText: string;
-    watcher: FSWatcher | null;
-    settle: ReturnType<typeof setTimeout> | null;
+    watcher: DirectoryWatcher | null;
+    cancelSettle: (() => void) | null;
     // The burst that is settling touched an icon file, so the folder has to be read again.
     iconTouched: boolean;
     // The drawing and diagram views of the document as it stands, so an orphan file can be told from a live one.
@@ -150,8 +150,11 @@ export class ProjectStore {
     // Registry changes run one after the other; two clients opening at once must not lose an entry.
     private chain: Promise<unknown> = Promise.resolve();
 
-    constructor(home: string) {
+    private readonly seams: WatchSeams;
+
+    constructor(home: string, seams: WatchSeams = SYSTEM_WATCH) {
         this.home = home;
+        this.seams = seams;
     }
 
     /* The drawing store follows this one: it hears about a save and about a project closing. */
@@ -313,7 +316,7 @@ export class ProjectStore {
             rev: document.rev,
             lastText: text,
             watcher: null,
-            settle: null,
+            cancelSettle: null,
             iconTouched: false,
             drawingIds: drawingIdsIn(document.views),
             diagramIds: diagramIdsIn(document.views)
@@ -532,9 +535,7 @@ export class ProjectStore {
         this.drawings?.closeProject(projectId);
         this.diagrams?.closeProject(projectId);
         state.watcher?.close();
-        if (state.settle) {
-            clearTimeout(state.settle);
-        }
+        state.cancelSettle?.();
         this.open.delete(projectId);
     }
 
@@ -659,18 +660,16 @@ export class ProjectStore {
     private startWatching(state: OpenProject, path: string): void {
         try {
             // The directory, not the file: an atomic rename replaces the inode a file watcher would hold.
-            state.watcher = watch(dirname(path), (_event, filename) => {
+            state.watcher = this.seams.watch(dirname(path), { recursive: false }, (_event, filename) => {
                 if (filename && filename !== PROJECT_FILE && !isIconFile(filename)) {
                     return;
                 }
                 // A platform that reports no name could have touched either file.
                 state.iconTouched ||= !filename || isIconFile(filename);
-                if (state.settle) {
-                    clearTimeout(state.settle);
-                }
-                state.settle = setTimeout(() => {
-                    state.settle = null;
-                    void this.reload(state, path);
+                state.cancelSettle?.();
+                state.cancelSettle = this.seams.schedule(() => {
+                    state.cancelSettle = null;
+                    return this.reload(state, path);
                 }, WATCH_SETTLE_MS);
             });
             state.watcher.on('error', () => undefined);

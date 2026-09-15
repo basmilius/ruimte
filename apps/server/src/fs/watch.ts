@@ -1,7 +1,7 @@
-import { watch, type FSWatcher } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
 import type { SessionSink } from '../sessions/manager.ts';
 import { forgetSearchCache } from './search.ts';
+import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from './watch-seam.ts';
 
 // A save, a formatter and a build all touch the same folder in a burst; one event per burst is enough.
 const SETTLE_MS = 250;
@@ -22,10 +22,10 @@ const isUnder = (path: string, ancestor: string): boolean => path === ancestor |
 interface Watch {
     root: string;
     recursive: boolean;
-    watcher: FSWatcher;
+    watcher: DirectoryWatcher;
     // The directories that changed since the last flush, absolute.
     touched: Set<string>;
-    settle: ReturnType<typeof setTimeout> | null;
+    cancelSettle: (() => void) | null;
 }
 
 /*
@@ -37,9 +37,13 @@ export class FolderWatcher {
     private readonly sinks = new Map<string, SessionSink>();
     private readonly byClient = new Map<string, Map<string, Watch>>();
     private readonly platform: NodeJS.Platform;
+    private readonly seams: WatchSeams;
+    private readonly streamStartMs: number;
 
-    constructor(platform: NodeJS.Platform = process.platform) {
+    constructor(platform: NodeJS.Platform = process.platform, seams: WatchSeams = SYSTEM_WATCH, streamStartMs: number = STREAM_START_MS) {
         this.platform = platform;
+        this.seams = seams;
+        this.streamStartMs = streamStartMs;
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
@@ -63,24 +67,22 @@ export class FolderWatcher {
             }
         }
         const recursive = supportsRecursive(this.platform);
-        let watcher: FSWatcher;
+        let watcher: DirectoryWatcher;
         try {
-            watcher = watch(root, { recursive });
+            // The platform reports a change only after this call returned, so `state` is there by then.
+            watcher = this.seams.watch(root, { recursive }, (_event, filename) => {
+                const name = typeof filename === 'string' ? filename : null;
+                // A platform that reports no name could have touched anything under the root.
+                state.touched.add(name === null ? root : dirname(join(root, name)));
+                state.cancelSettle?.();
+                state.cancelSettle = this.seams.schedule(() => this.flush(clientId, state), SETTLE_MS);
+            });
         } catch {
             // A folder that cannot be watched still lists; the tree just goes stale until a refresh.
             return Promise.resolve();
         }
-        const state: Watch = { root, recursive, watcher, touched: new Set(), settle: null };
+        const state: Watch = { root, recursive, watcher, touched: new Set(), cancelSettle: null };
         watcher.on('error', () => undefined);
-        watcher.on('change', (_event, filename) => {
-            const name = typeof filename === 'string' ? filename : null;
-            // A platform that reports no name could have touched anything under the root.
-            state.touched.add(name === null ? root : dirname(join(root, name)));
-            if (state.settle) {
-                clearTimeout(state.settle);
-            }
-            state.settle = setTimeout(() => this.flush(clientId, state), SETTLE_MS);
-        });
         if (recursive) {
             // The new watch covers them, and two watchers over one directory would report twice.
             for (const [key, existing] of watches) {
@@ -91,7 +93,7 @@ export class FolderWatcher {
             }
         }
         watches.set(root, state);
-        return this.platform === 'darwin' ? Bun.sleep(STREAM_START_MS) : Promise.resolve();
+        return this.platform === 'darwin' && this.streamStartMs > 0 ? Bun.sleep(this.streamStartMs) : Promise.resolve();
     }
 
     unwatch(clientId: string, path: string): void {
@@ -116,7 +118,7 @@ export class FolderWatcher {
     }
 
     private flush(clientId: string, state: Watch): void {
-        state.settle = null;
+        state.cancelSettle = null;
         const paths = [...state.touched].sort();
         state.touched.clear();
         if (paths.length === 0) {
@@ -128,9 +130,7 @@ export class FolderWatcher {
     }
 
     private static stop(state: Watch): void {
-        if (state.settle) {
-            clearTimeout(state.settle);
-        }
+        state.cancelSettle?.();
         state.watcher.close();
     }
 }

@@ -1,6 +1,6 @@
-import { watch, type FSWatcher } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import type { GitStatus } from '@ruimte/contracts';
+import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from '../fs/watch-seam.ts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { ignoredPaths } from './ignore.ts';
 import { git } from './run.ts';
@@ -23,10 +23,10 @@ const isNoise = (path: string): boolean => path.includes(`${sep}objects${sep}`) 
 interface Watch {
     cwd: string;
     root: string;
-    watchers: FSWatcher[];
+    watchers: DirectoryWatcher[];
     /* The paths that moved since the last flush, absolute. */
     touched: Set<string>;
-    settle: ReturnType<typeof setTimeout> | null;
+    cancelSettle: (() => void) | null;
     /* What was last published, so an unchanged status is not sent again. */
     fingerprint: string | null;
     running: boolean;
@@ -50,9 +50,13 @@ export class GitStatusWatcher {
     /* Repository roots that proved too expensive to watch; they stay that way for this run. */
     private readonly degraded = new Set<string>();
     private readonly platform: NodeJS.Platform;
+    private readonly seams: WatchSeams;
+    private readonly now: () => number;
 
-    constructor(platform: NodeJS.Platform = process.platform) {
+    constructor(platform: NodeJS.Platform = process.platform, seams: WatchSeams = SYSTEM_WATCH, now: () => number = Date.now) {
         this.platform = platform;
+        this.seams = seams;
+        this.now = now;
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
@@ -81,7 +85,7 @@ export class GitStatusWatcher {
         if (!root) {
             return;
         }
-        const state: Watch = { cwd: key, root, watchers: [], touched: new Set(), settle: null, fingerprint: null, running: false, again: false };
+        const state: Watch = { cwd: key, root, watchers: [], touched: new Set(), cancelSettle: null, fingerprint: null, running: false, again: false };
         watches.set(key, state);
         if ((await trackedFiles(root)) > MAX_TRACKED_FILES) {
             this.degraded.add(root);
@@ -116,28 +120,25 @@ export class GitStatusWatcher {
     }
 
     private attach(state: Watch, dir: string, clientId: string): void {
-        let watcher: FSWatcher;
+        let watcher: DirectoryWatcher;
         try {
-            watcher = watch(dir, { recursive: supportsRecursive(this.platform) });
+            watcher = this.seams.watch(dir, { recursive: supportsRecursive(this.platform) }, (_event, filename) => {
+                const name = typeof filename === 'string' ? filename : null;
+                // A platform that reports no name could have touched anything under the directory.
+                state.touched.add(name === null ? dir : join(dir, name));
+                state.cancelSettle?.();
+                state.cancelSettle = this.seams.schedule(() => this.flush(clientId, state), SETTLE_MS);
+            });
         } catch {
             // A directory that cannot be watched leaves the panel on its refresh button.
             return;
         }
         watcher.on('error', () => undefined);
-        watcher.on('change', (_event, filename) => {
-            const name = typeof filename === 'string' ? filename : null;
-            // A platform that reports no name could have touched anything under the directory.
-            state.touched.add(name === null ? dir : join(dir, name));
-            if (state.settle) {
-                clearTimeout(state.settle);
-            }
-            state.settle = setTimeout(() => void this.flush(clientId, state), SETTLE_MS);
-        });
         state.watchers.push(watcher);
     }
 
     private async flush(clientId: string, state: Watch): Promise<void> {
-        state.settle = null;
+        state.cancelSettle = null;
         const touched = [...state.touched];
         state.touched.clear();
         if (touched.length === 0 || !(await this.matters(state, touched))) {
@@ -148,10 +149,10 @@ export class GitStatusWatcher {
             return;
         }
         state.running = true;
-        const started = Date.now();
+        const started = this.now();
         try {
             const status = await this.status(state.cwd);
-            if (Date.now() - started > SLOW_STATUS_MS) {
+            if (this.now() - started > SLOW_STATUS_MS) {
                 this.degraded.add(state.root);
                 GitStatusWatcher.stop(state);
                 status.live = false;
@@ -185,10 +186,8 @@ export class GitStatusWatcher {
     }
 
     private static stop(state: Watch): void {
-        if (state.settle) {
-            clearTimeout(state.settle);
-            state.settle = null;
-        }
+        state.cancelSettle?.();
+        state.cancelSettle = null;
         for (const watcher of state.watchers) {
             watcher.close();
         }

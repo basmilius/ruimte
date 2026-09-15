@@ -1,7 +1,7 @@
-import { watch, type FSWatcher } from 'node:fs';
 import { mkdir, readFile, readdir, rm } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { EMPTY_DIAGRAM, diagramProblemIn, isDiagramView, type DiagramContent, type DiagramDocument, type ProjectView } from '@ruimte/contracts';
+import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from '../fs/watch-seam.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { diagramsDirOf, parseDiagram, readDiagram, viewFilePathIn, viewIdOfFile, writeDiagram } from './project-files.ts';
 import { ProjectError, type ProjectStore, type ProjectViewFiles } from './project-store.ts';
@@ -29,8 +29,8 @@ interface OpenDiagram {
 
 interface OpenProjectDiagrams {
     dir: string;
-    watcher: FSWatcher | null;
-    settles: Map<string, ReturnType<typeof setTimeout>>;
+    watcher: DirectoryWatcher | null;
+    cancelSettles: Map<string, () => void>;
     open: Map<string, OpenDiagram>;
 }
 
@@ -58,8 +58,11 @@ export class DiagramStore implements ProjectViewFiles {
     // One file operation at a time, so a client's save and an agent's write never interleave on a rev.
     private chain: Promise<unknown> = Promise.resolve();
 
-    constructor(projects: ProjectStore) {
+    private readonly seams: WatchSeams;
+
+    constructor(projects: ProjectStore, seams: WatchSeams = SYSTEM_WATCH) {
         this.projects = projects;
+        this.seams = seams;
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
@@ -223,8 +226,8 @@ export class DiagramStore implements ProjectViewFiles {
             return;
         }
         state.watcher?.close();
-        for (const settle of state.settles.values()) {
-            clearTimeout(settle);
+        for (const cancel of state.cancelSettles.values()) {
+            cancel();
         }
         this.states.delete(projectId);
     }
@@ -260,7 +263,7 @@ export class DiagramStore implements ProjectViewFiles {
         if (known) {
             return known;
         }
-        const state: OpenProjectDiagrams = { dir: diagramsDirOf(path), watcher: null, settles: new Map(), open: new Map() };
+        const state: OpenProjectDiagrams = { dir: diagramsDirOf(path), watcher: null, cancelSettles: new Map(), open: new Map() };
         this.states.set(projectId, state);
         await mkdir(state.dir, { recursive: true });
         this.startWatching(projectId, state);
@@ -269,22 +272,19 @@ export class DiagramStore implements ProjectViewFiles {
 
     private startWatching(projectId: string, state: OpenProjectDiagrams): void {
         try {
-            state.watcher = watch(state.dir, (_event, filename) => {
+            state.watcher = this.seams.watch(state.dir, { recursive: false }, (_event, filename) => {
                 // A platform that reports no name could have touched any diagram of this project.
                 const touched = filename ? [viewIdOfFile(basename(filename))] : [...state.open.keys()];
                 for (const viewId of touched) {
                     if (!viewId || !state.open.has(viewId)) {
                         continue;
                     }
-                    const settle = state.settles.get(viewId);
-                    if (settle) {
-                        clearTimeout(settle);
-                    }
-                    state.settles.set(
+                    state.cancelSettles.get(viewId)?.();
+                    state.cancelSettles.set(
                         viewId,
-                        setTimeout(() => {
-                            state.settles.delete(viewId);
-                            void this.reload(projectId, state, viewId);
+                        this.seams.schedule(() => {
+                            state.cancelSettles.delete(viewId);
+                            return this.reload(projectId, state, viewId);
                         }, WATCH_SETTLE_MS)
                     );
                 }
