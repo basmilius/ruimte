@@ -43,6 +43,19 @@ const codeOf = (work: () => void): string => {
 
 const resumes = (output: string): number => output.split("--resume 'claude-1'").length - 1;
 
+/*
+ * A line typed before the shell is up is echoed by the tty as it is, and typed again by readline once
+ * it starts; a line typed after is echoed by readline alone, which breaks it with " \r" at the edge of
+ * the screen. Which of the two a test got depended on how fast the shell started, so a test with a line
+ * longer than its row waits for the prompt and uses a screen wide enough for that line.
+ */
+const WIDE = 200;
+
+const promptOf = async (manager: Harness['manager'], sessionId: string): Promise<void> => {
+    const session = manager.get(sessionId)!;
+    await waitForAsync(async () => (await session.plainText()).split('\n').at(-1)?.trimEnd() === '$', 'the prompt');
+};
+
 const hook = (event: string, extra: Record<string, unknown> = {}) => ({
     session_id: 'claude-1',
     transcript_path: transcript,
@@ -172,7 +185,8 @@ describe('agent status via hooks', () => {
         await waitFor(() => harness.manager.get('s8')?.exited === true, 'the shell to end');
 
         await createAgent('s8', { kind: 'codex', runtimeMode: 'full-access' });
-        await harness.manager.attach('s8', 'c1', 80, 24);
+        await harness.manager.attach('s8', 'c1', WIDE, 24);
+        await promptOf(harness.manager, 's8');
         harness.manager.resumeAgent('s8');
         await waitFor(
             () =>
@@ -221,9 +235,10 @@ describe('agent status via hooks', () => {
         const restarted = await makeHarness({ env: { PATH: CLEAN_PATH, PS1: '$ ' } }, home);
         const recorder = new Recorder();
         restarted.manager.subscribe('c1', recorder.sink());
-        const info = await restarted.manager.create({ sessionId: 's10', cols: 80, rows: 24, shell: SH, args: SH_ARGS, cwd: home, agent: launch });
+        const info = await restarted.manager.create({ sessionId: 's10', cols: WIDE, rows: 24, shell: SH, args: SH_ARGS, cwd: home, agent: launch });
         expect(info.agent).toMatchObject({ agentSessionId: 'claude-1', live: false });
-        await restarted.manager.attach('s10', 'c1', 80, 24);
+        await restarted.manager.attach('s10', 'c1', WIDE, 24);
+        await promptOf(restarted.manager, 's10');
         // Nothing is typed at create: the client answers the restored agent with `agent.resume`.
         expect(recorder.output).not.toContain('claude');
 
