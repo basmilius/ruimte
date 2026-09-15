@@ -31,8 +31,8 @@ export interface ServerConfig {
     brokerAdvertise: string | null;
     // Started by the background service (`RUIMTE_SERVICE=1` in its definition), which starts it again when it exits.
     underService: boolean;
-    // `pair` asks the running daemon for a pairing URL; `context` is the agent-side CLI (`ruimte-context`).
-    command: 'serve' | 'pair' | 'context';
+    // `pair` asks the running daemon for a pairing URL; `login` puts it on an account with a code; `context` is the agent-side CLI (`ruimte-context`).
+    command: 'serve' | 'pair' | 'login' | 'context';
     // What follows the command, for `context`.
     args: string[];
 }
@@ -114,7 +114,7 @@ export const parseServerArgs = (argv: string[], env: Record<string, string | und
         allowPositionals: true
     });
     const command = positionals[0] ?? 'serve';
-    if (command !== 'serve' && command !== 'pair' && command !== 'context') {
+    if (command !== 'serve' && command !== 'pair' && command !== 'login' && command !== 'context') {
         throw new Error(`Unknown command: ${command}`);
     }
 

@@ -1,7 +1,7 @@
 import { PROTOCOL_VERSION } from '@ruimte/contracts';
-import { MachineIconSchema, machineRegistrationMessage } from '@ruimte/pulsar';
 import { RequestError, type ClientAccess, type Dispatcher } from '../dispatcher.ts';
 import { mayInvite } from '../auth/access.ts';
+import { signRegistration } from '../auth/registration.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import type { EndpointIdentity } from '../endpoint-id.ts';
 import type { BrokerDescription } from '../pulsar/broker-switch.ts';
@@ -57,25 +57,11 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
     /*
      * The machine agreeing to be listed on one address book account. Any client that got in may ask,
      * since it already reaches everything the account would lead to; the client posts the answer with
-     * its own session, so no account token ever reaches the daemon. The name is signed as the machine
-     * calls itself, cut to what the address book stores, and the icon and the broker travel unsigned.
+     * its own session, so no account token ever reaches the daemon.
      */
-    dispatcher.register('endpoint.signRegistration', (payload) => {
-        const name = identity.label.slice(0, 80);
-        const issuedAt = Date.now();
-        const icon = MachineIconSchema.safeParse(identity.icon);
-        return {
-            registration: {
-                id: identity.id,
-                name,
-                icon: icon.success ? icon.data : null,
-                brokerUrl: host.broker().brokerUrl,
-                publicKey: identity.publicKey,
-                issuedAt,
-                signature: identity.sign(machineRegistrationMessage(payload.accountId, identity.id, identity.publicKey, name, issuedAt))
-            }
-        };
-    });
+    dispatcher.register('endpoint.signRegistration', (payload) => ({
+        registration: signRegistration(identity, host.broker().brokerUrl, payload.accountId)
+    }));
 
     /*
      * The way over to a key pair for a client that paired when a session token was all there was.

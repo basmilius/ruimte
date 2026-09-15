@@ -27,6 +27,9 @@ import { registerDirectHandlers } from './handlers/direct.ts';
 import { suggestChatTitle } from './chat/chat-title.ts';
 import { decideAccess, isLoopbackAddress, mayInvite, reachabilityOf } from './auth/access.ts';
 import { readOrCreateLocalSecret } from './auth/local-secret.ts';
+import { signLinkRequest, signRegistration } from './auth/registration.ts';
+import { AccountSchema } from '@ruimte/pulsar';
+import { z } from 'zod';
 import { pairingUrl } from './cli/pairing.ts';
 import { AuthStore } from './auth/auth-store.ts';
 import { Handshake } from './auth/handshake.ts';
@@ -83,6 +86,10 @@ import { UsageService } from './usage/usage-service.ts';
 // A client on another origin pairs and signs in from its own page, so the auth routes answer preflights and open CORS.
 // What would end if this daemon restarted, as counts; `service/work.ts` says what counts.
 const MACHINE_WORK_PATH = '/machine/work';
+// What `ruimte login` has the machine sign; local secret only, like the work.
+const MACHINE_LINK_PATH = '/machine/link-request';
+const MACHINE_REGISTRATION_PATH = '/machine/registration';
+const RegistrationRequestSchema = z.object({ accountId: AccountSchema.shape.id });
 
 const AUTH_CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST', 'access-control-allow-headers': 'content-type' };
 
@@ -491,6 +498,26 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                     return new Response('Forbidden', { status: 403 });
                 }
                 return Response.json(machineWork());
+            }
+
+            if (url.pathname === MACHINE_LINK_PATH || url.pathname === MACHINE_REGISTRATION_PATH) {
+                // `ruimte login` on the local secret: the machine signs, the terminal talks to the address book.
+                if (request.method !== 'POST') {
+                    return new Response('Method not allowed', { status: 405 });
+                }
+                const decision = await decideAccess(request, remote, auth, access);
+                if (!decision.ok || decision.access.sessionId !== null) {
+                    return new Response('Forbidden', { status: 403 });
+                }
+                const { brokerUrl } = brokerSwitch.describe();
+                if (url.pathname === MACHINE_LINK_PATH) {
+                    return Response.json(signLinkRequest(identity, brokerUrl));
+                }
+                const parsed = RegistrationRequestSchema.safeParse(await request.json().catch(() => null));
+                if (!parsed.success) {
+                    return new Response('Expected an account id', { status: 400 });
+                }
+                return Response.json(signRegistration(identity, brokerUrl, parsed.data.accountId));
             }
 
             if (url.pathname === '/ws') {
