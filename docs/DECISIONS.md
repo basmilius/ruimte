@@ -612,6 +612,24 @@ canvas, against Ruimte, one verdict each.
   made again against the rev the merge took in rather than dropping into the dialog. The daemon
   emits `project.changed` from inside the same lock it refuses the save under, so the document is
   always at the client before the refusal is.
+- A save sends `project.changed` to every client but the one that made it (`ProjectStore.save`
+  with the sender's client id), over a socket and a direct channel alike, since both are a
+  connection of the same opener. Until 2026-09-15 it sent nothing: the watcher reads a write the
+  daemon made itself as its own (`lastText`) and stays quiet, so a view renamed, moved or added in
+  one client reached a second one only when it opened the project again. The sender is left out
+  because its screen is already ahead of what it wrote, and taking the echo in would undo a drag
+  that went on while the save was out.
+- With a second client writing, the merge takes more than additions. The name (with its
+  `titleSource`) and the icon of a view merge three-way per label: a side that left one as `base`
+  had it takes the other side's. The order of the list merges the same way over the views both
+  sides have, and a view only one side has goes right behind the view it followed there. The dialog
+  stays for the same label changed differently on both sides, and for both sides moving views into
+  different orders. Nodes, deletions, the project's own name, color and icon, and arrangements are
+  as before.
+- A document that arrives on a clean client goes through the merge first too, and is only loaded
+  whole when the merge refuses. A load swaps every editor out and blanks the canvas until it is
+  measured, which a rename in another window should not cost. A node moved in another client still
+  takes the load.
 - The first prompt of an agent node is held by the daemon against the node id, not written into
   `project.json` (`apps/server/src/agents/pending-prompts.ts`). It is not part of the canvas two
   people share, and a project open in two windows would deliver it twice; the daemon is the only
