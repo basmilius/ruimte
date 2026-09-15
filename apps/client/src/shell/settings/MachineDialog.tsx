@@ -17,7 +17,7 @@ import { forgetOnClient, machineDialogModel, removeFromAccount, type MachineActi
 import { nameOf, reachLabel, type MachineEntry } from '@/shell/settings/machine-list';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
-import { useEndpointConnection } from '@/transport/status';
+import { useEndpointConnection, useMachineHold } from '@/transport/status';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 
@@ -32,6 +32,8 @@ const ACTION_DEPS: MachineActionDeps = {
 type Confirming = 'forget' | 'remove' | null;
 
 function MachineDialogBody({ entry }: { entry: MachineEntry }) {
+    // The dialog is a person looking at this machine, the one place in the pane that connects to it: its name, broker and paired clients are live.
+    useMachineHold(entry.endpoint);
     const connection = useEndpointConnection(entry.endpoint?.id ?? entry.id);
     const signedIn = usePulsarAccount((s) => s.status === 'signed-in');
     const removedMachineIds = usePulsarMachines((s) => s.removedMachineIds);

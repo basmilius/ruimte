@@ -7,7 +7,8 @@ import { listedEndpoints } from '@/state/local-machine';
 import { useEndpointId } from '@/state/keys';
 import { useUi } from '@/state/ui';
 import { askedKey, UsageEndpointContext, USAGE_PERIODS, useUsage, useUsageStore, windowFor, type UsageMetric, type UsagePeriod } from '@/state/usage';
-import { useEndpointConnection, useHeldTransport } from '@/transport/status';
+import { machineTransport } from '@/transport';
+import { useEndpointConnection } from '@/transport/status';
 import type { Transport } from '@/transport/transport';
 import { usageEndpointFor } from '@/shell/usage/picker';
 import { EmptyState } from '@/ui/EmptyState';
@@ -158,11 +159,11 @@ function LoadingBody() {
  */
 function MachineNote({ endpointId, stale }: { endpointId: string; stale: boolean }) {
     const label = useEndpoints((s) => s.endpoints.find((entry) => entry.id === endpointId)?.label ?? 'This machine');
-    const { status } = useEndpointConnection(endpointId);
+    const { status, noLink } = useEndpointConnection(endpointId);
     if (status === 'open') {
         return null;
     }
-    const line = status === 'connecting' ? `Connecting to ${label}...` : `${label} is not answering.`;
+    const line = noLink === true ? `${label} is not connected.` : status === 'connecting' ? `Connecting to ${label}...` : `${label} is not answering.`;
     return <p className="text-xs text-text-muted">{stale ? `${line} These are the numbers of the last scan that reached it.` : line}</p>;
 }
 
@@ -193,10 +194,11 @@ function Page({ endpointId }: { endpointId: string }) {
     const summary = useUsage((s) => s.summary);
     const asked = useUsage((s) => s.asked);
     const loading = useUsage((s) => s.loading);
-    const transport = useHeldTransport(endpointId);
+    // Not held: a page about usage connects to nothing, and shows the numbers of a machine that is connected for another reason.
+    const transport = useMemo(() => machineTransport(endpointId), [endpointId]);
     const reload = useSummary(endpointId, transport, period);
     const money = useMoney();
-    const answering = transport?.status === 'open';
+    const answering = useEndpointConnection(endpointId).status === 'open';
 
     const shown = summary !== null && asked === askedKey(windowFor(period)) ? summary : null;
     const derived = shown === null ? null : deriveUsage(shown, metric);

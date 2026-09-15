@@ -5,7 +5,6 @@ import { startAttentionWatch } from '@/state/attention';
 import { startSessionLifecycle } from '@/terminal/lifecycle';
 import { startServerInfo } from '@/transport/server-info';
 import { startPing } from '@/transport/ping';
-import { startEndpointSelection } from '@/endpoint';
 import { startEndpointWatch } from '@/endpoint/watch';
 import { startProcessWarnings } from '@/processes/watch';
 import { startProjectList } from '@/project/list';
@@ -19,6 +18,7 @@ import { pool } from '@/transport';
 import { startWakeReconnect } from '@/transport/wake';
 import { desktop } from '@/desktop/bridge';
 import { startKeepAwake } from '@/state/keep-awake';
+import { startLastSeen } from '@/state/last-seen-watch';
 import { startInputModality } from '@/ui/modality';
 import { useTheme } from '@/state/theme';
 import { exposeTerminalTestHooks } from '@/terminal/registry';
@@ -33,9 +33,8 @@ startAgentNotifications();
 startAttentionWatch();
 startServerInfo();
 startPing();
-/* Before anything opens a socket: the machine the work was left on decides which daemon boots. */
+/* Before the workspace is built: the machine the work was left on is the only one a boot connects to. */
 restoreLastEndpoint();
-startEndpointSelection();
 startEndpointWatch();
 startProcessWarnings();
 startConnections();
@@ -47,6 +46,7 @@ void startPulsarAccount();
 startAutoRegistration();
 startRemovalWatch();
 startWakeReconnect(pool);
+startLastSeen();
 /* The shell dresses its native chrome and every page it hosts in the theme the client is in. The
    background travels with it, so `styles.css` stays the only place the token is written down. */
 const reportTheme = (): void => {

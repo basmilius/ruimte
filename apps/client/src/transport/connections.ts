@@ -6,7 +6,8 @@ import { foldList } from '@/project/list';
 import { panelsPort } from '@/project/panels-port';
 import { ProjectClient, type ProjectSink } from '@/project/project-client';
 import { chatSinkFor } from '@/state/chats';
-import { activeEndpoint, useEndpoints, type Endpoint } from '@/state/endpoints';
+import { browserStorage, readLastProject } from '@/project/last-project';
+import { activeEndpoint, endpointById, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
 import { providerSinkFor } from '@/state/providers';
 import { sessionSinkFor } from '@/state/sessions';
@@ -15,9 +16,10 @@ import { createWorkspaceStores, defaultWorkspaceStores } from '@/state/workspace
 import { setCurrentWorkspace, type WorkspaceStores } from '@/state/workspace-stores';
 import { endProjectSessions } from '@/terminal/lifecycle';
 import { SessionClient } from '@/terminal/session-client';
-import { pool } from '@/transport';
+import { machineTransport, pool } from '@/transport';
 import { useOptionalConnection } from '@/transport/context';
 import type { Transport } from '@/transport/transport';
+import { LinkHold, wantsLink } from '@/transport/workspace-hold';
 
 /*
  * One daemon, as everything inside a workspace sees it. The address and the token are deliberately
@@ -45,7 +47,9 @@ export interface Machine {
 
 /*
  * One open project. The stores under it live as long as the workspace does; the clients over it are
- * rebuilt whenever the daemon changes, which is what a machine switch is. Two workspaces on two
+ * rebuilt whenever the daemon changes, which is what a machine switch is. The clients sit on the
+ * machine's transport rather than on its link, so the link may close while nothing is open and
+ * come back without a rebuild. Two workspaces on two
  * machines are two of these, each saving to its own `project.json` over its own socket.
  */
 export interface Workspace {
@@ -61,12 +65,12 @@ export const MAIN_WORKSPACE_ID = 'main';
 
 const machines = new Map<string, Machine>();
 const workspaces = new Map<string, Workspace>();
-/*
- * The hold each workspace connection keeps on its machine's socket. A workspace keeps the transport
- * it was built on and nothing rebuilds it when the pool closes that socket, so on a machine that is
- * not the active one (which nothing else holds) its project client would go quiet for good.
- */
-const connectionHolds = new WeakMap<Connection, () => void>();
+/* The hold each workspace connection keeps on its machine's link while a project is open there (`wantsLink`). */
+const connectionHolds = new WeakMap<Connection, LinkHold>();
+/* The connections whose project client already tried the project its machine remembered. */
+const bootedConnections = new WeakSet<Connection>();
+/* What each workspace listens to for its hold, dropped with the workspace. */
+const holdWatches = new Map<string, () => void>();
 /* The same array until the set changes, so a React store reading it gets a stable snapshot. */
 let workspaceList: Workspace[] = [];
 const listeners = new Set<() => void>();
@@ -92,7 +96,7 @@ const projectSink = (stores: WorkspaceStores, endpointId: () => string): Project
 };
 
 const buildMachine = (endpoint: Endpoint): Machine => {
-    const transport = pool.require(endpoint);
+    const transport = machineTransport(endpoint.id);
     const sessions = new SessionClient(transport, sessionSinkFor(endpoint.id));
     // Every machine hears the same answer, since the switch is about this client and not about one of them.
     sessions.setApprovals(useSettings.getState().agentsApprovals);
@@ -109,13 +113,12 @@ const buildMachine = (endpoint: Endpoint): Machine => {
     };
 };
 
-/* One machine's clients, kept until the pool replaces the socket they were built on. */
+/* One machine's clients, kept until the machine is forgotten; they follow its link as it opens and closes. */
 const machineOn = (endpoint: Endpoint): Machine => {
     const existing = machines.get(endpoint.id);
-    if (existing && existing.transport === pool.peek(endpoint.id)) {
+    if (existing) {
         return existing;
     }
-    existing?.dispose();
     const machine = buildMachine(endpoint);
     machines.set(machine.endpointId, machine);
     return machine;
@@ -165,13 +168,20 @@ const connect = (id: string, stores: WorkspaceStores, endpoint: Endpoint): Conne
         afterResume: async (): Promise<void> => {
             await Promise.all([drawings.resume(), diagrams.resume()]);
         },
+        onBooted: (): void => {
+            bootedConnections.add(connection);
+            const workspace = workspaces.get(id);
+            if (workspace) {
+                syncHold(workspace);
+            }
+        },
         endpointId
     });
     const connection: Connection = {
         endpointId: endpoint.id,
         transport,
-        /* Asked for rather than held: the sessions and the threads belong to the machine, and the
-           pool replacing its socket replaces them while this connection stays the same object. */
+        /* Asked for rather than held: the sessions and the threads belong to the machine, and a row
+           that is forgotten drops them while this connection stays the same object. */
         get sessions(): SessionClient {
             return machineOn(endpoint).sessions;
         },
@@ -182,12 +192,32 @@ const connect = (id: string, stores: WorkspaceStores, endpoint: Endpoint): Conne
         drawings,
         diagrams
     };
-    connectionHolds.set(connection, pool.hold(endpoint));
+    connectionHolds.set(connection, new LinkHold((row) => pool.hold(row)));
     return connection;
 };
 
+/*
+ * Holds the workspace's machine while a project is open there and lets go when none is: a machine
+ * nobody works on keeps no link, which over a broker is a WebRTC channel on both ends.
+ */
+const syncHold = (workspace: Workspace): void => {
+    const { connection, stores } = workspace;
+    const hold = connectionHolds.get(connection);
+    if (!hold) {
+        return;
+    }
+    const { current, switching } = stores.project.getState();
+    const wanted = wantsLink({
+        current: current !== null,
+        switching,
+        remembered: readLastProject(browserStorage(), null).byEndpoint[connection.endpointId] !== undefined,
+        booted: bootedConnections.has(connection)
+    });
+    hold.set(wanted ? endpointById(connection.endpointId) : null);
+};
+
 const disposeConnection = (connection: Connection): void => {
-    connectionHolds.get(connection)?.();
+    connectionHolds.get(connection)?.set(null);
     connectionHolds.delete(connection);
     connection.projects.dispose();
     connection.drawings.dispose();
@@ -210,6 +240,8 @@ const workspaceOn = (id: string, endpoint: Endpoint): Workspace => {
         stores,
         connection: connect(id, stores, endpoint),
         dispose(): void {
+            holdWatches.get(id)?.();
+            holdWatches.delete(id);
             disposeConnection(workspace.connection);
             workspaces.delete(id);
             if (focusedId === id) {
@@ -219,6 +251,15 @@ const workspaceOn = (id: string, endpoint: Endpoint): Workspace => {
         }
     };
     workspaces.set(id, workspace);
+    holdWatches.set(
+        id,
+        stores.project.subscribe((state, before) => {
+            if (state.current !== before.current || state.switching !== before.switching) {
+                syncHold(workspace);
+            }
+        })
+    );
+    syncHold(workspace);
     focusedId ??= id;
     emit();
     return workspace;
@@ -227,24 +268,29 @@ const workspaceOn = (id: string, endpoint: Endpoint): Workspace => {
 /* The daemon a workspace is on, after a machine switch or a row that learned its daemon's id. */
 const moveTo = (workspace: Workspace, endpoint: Endpoint): void => {
     const { connection } = workspace;
-    const socket = pool.peek(endpoint.id);
-    if (connection.endpointId === endpoint.id && connection.transport === socket) {
+    const target = machineTransport(endpoint.id);
+    if (connection.endpointId === endpoint.id && connection.transport === target) {
         return;
     }
-    if (connection.transport === socket) {
-        // A row that learned the id of its daemon is the same machine under another name; the socket stayed put.
+    if (connection.transport === target) {
+        // A row that learned the id of its daemon is the same machine under another name; the link stayed put.
         const renamed = { ...connection, endpointId: endpoint.id };
         const hold = connectionHolds.get(connection);
         if (hold) {
             connectionHolds.delete(connection);
             connectionHolds.set(renamed, hold);
         }
+        if (bootedConnections.has(connection)) {
+            bootedConnections.add(renamed);
+        }
         workspace.connection = renamed;
+        syncHold(workspace);
         emit();
         return;
     }
     disposeConnection(connection);
     workspace.connection = connect(workspace.id, workspace.stores, endpoint);
+    syncHold(workspace);
     emit();
 };
 
@@ -334,10 +380,11 @@ export const sessionClientFor = (endpointId: string): SessionClient | null => ma
 
 export const chatClientFor = (endpointId: string): ChatClient | null => machineFor(endpointId)?.chats ?? null;
 
-/* A machine whose socket the pool closed has no clients left to keep; the next call builds them again. */
+/* A machine this client no longer knows under that id (forgotten, or a row that moved onto its daemon id) keeps no clients. */
 const prune = (): void => {
+    const known = new Set(useEndpoints.getState().endpoints.map((endpoint) => endpoint.id));
     for (const [endpointId, machine] of [...machines]) {
-        if (pool.peek(endpointId) !== machine.transport) {
+        if (!known.has(endpointId)) {
             machines.delete(endpointId);
             machine.dispose();
         }
@@ -353,13 +400,16 @@ export const dropMachine = (endpointId: string): void => {
 
 /*
  * The active machine's clients exist from the first frame, because the project client is what opens
- * the project the person left off in as soon as its socket answers.
+ * the project the person left off in as soon as its link answers. The link itself opens only when
+ * that machine remembers a project (`syncHold`), which makes it the one machine a boot connects to.
  */
 export const startConnections = (): (() => void) => {
     activeMachine();
     mainWorkspace();
-    const offPool = pool.subscribe(prune);
     const offEndpoints = useEndpoints.subscribe((state, before) => {
+        if (state.endpoints !== before.endpoints) {
+            prune();
+        }
         if (state.activeId !== before.activeId) {
             activeMachine();
             mainWorkspace();
@@ -373,7 +423,6 @@ export const startConnections = (): (() => void) => {
         }
     });
     return () => {
-        offPool();
         offEndpoints();
         offSettings();
     };

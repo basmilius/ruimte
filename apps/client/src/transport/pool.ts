@@ -6,7 +6,7 @@ import type { SocketAddress } from './link-transport';
 const IDLE_CLOSE_MS = 30_000;
 
 /* One object for "there is no socket", so a React store reading the pool gets a stable snapshot. */
-const NO_SOCKET: ConnectionState = { status: 'closed', attempts: 0, retryAt: null };
+const NO_SOCKET: ConnectionState = { status: 'closed', attempts: 0, retryAt: null, noLink: true };
 
 /* What the pool needs of a socket on top of `Transport`: a way to move it and a way to end it. */
 export interface PooledTransport extends Transport {
@@ -53,17 +53,15 @@ export class TransportPool {
         this.idleMs = options.idleMs ?? IDLE_CLOSE_MS;
     }
 
-    /* The socket for an endpoint, opened on the first call. */
-    require(endpoint: Endpoint): Transport {
-        return this.entryFor(endpoint).transport;
-    }
-
-    /* The socket if there is one; null when nothing has asked for this endpoint yet. */
+    /* The socket if there is one; null when nothing holds this endpoint and its grace period ran out. Never opens one. */
     peek(endpointId: string): Transport | null {
         return this.byId.get(endpointId)?.transport ?? null;
     }
 
-    /* Takes a hold: the socket stays up until every holder releases it. */
+    /*
+     * Takes a hold, opening the socket when there is none: the only way a socket opens. It stays up
+     * until every holder releases it and the idle countdown after the last one runs out.
+     */
     hold(endpoint: Endpoint): () => void {
         const entry = this.entryFor(endpoint);
         entry.holds += 1;

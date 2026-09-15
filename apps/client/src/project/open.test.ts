@@ -58,10 +58,19 @@ const spyDeps = (over: Partial<FolderDeps> = {}): { deps: FolderDeps; steps: str
 };
 
 describe('opening a folder on the machine it is on', () => {
-    test('the machine that is already active opens the folder and moves nothing', async () => {
+    test('the machine that is already active is reached, opens the folder and moves nothing', async () => {
         const { deps, steps } = spyDeps();
         await openFolderOn('local', '/work/atlas', false, deps);
-        expect(steps).toEqual(['open:/work/atlas:false']);
+        // No machine keeps a link while nothing is open on it, the active one included.
+        expect(steps).toEqual(['ensure:local', 'open:/work/atlas:false']);
+    });
+
+    test('the active machine that cannot be reached opens nothing', async () => {
+        const { deps, steps } = spyDeps({
+            ensure: () => Promise.reject(new Error('That machine is not answering'))
+        });
+        await expect(openFolderOn('local', '/work/atlas', false, deps)).rejects.toThrow('That machine is not answering');
+        expect(steps).toEqual([]);
     });
 
     test('another machine is reached first, then takes over, and only then is the folder opened', async () => {

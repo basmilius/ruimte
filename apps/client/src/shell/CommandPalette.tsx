@@ -128,13 +128,13 @@ interface BrowseAnswer {
 }
 
 /*
- * One listing from one machine, which is not always the machine the app is pointed at. A machine
- * this client has forgotten mid-browse has no socket left, and falling back to the active one lists
- * something rather than throwing.
+ * One listing from one machine, which is not always the machine the app is pointed at. Browsing a
+ * machine is asking for it, so its link is brought up first; a machine forgotten mid-browse fails
+ * there with its reason.
  */
 const requestBrowse = async (endpointId: string, partialPath: string, cwd: string | null, fallback: Transport): Promise<BrowseAnswer> => {
-    const socket = transportFor(endpointId) ?? fallback;
     try {
+        const socket = transportFor(await ensureMachine(endpointId)) ?? fallback;
         return { result: await socket.request('fs.browse', { partialPath, cwd: cwd ?? undefined }), failure: null };
     } catch (e) {
         return { result: null, failure: e instanceof Error ? e.message : 'That path cannot be read' };

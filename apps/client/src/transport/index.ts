@@ -10,6 +10,7 @@ import { brokerSignaling } from './broker-signaling';
 import { directProof } from './direct-auth';
 import { DormantTransport } from './dormant-transport';
 import { LinkTransport, type LinkOpener } from './link-transport';
+import { MachineTransports } from './machine-transport';
 import { TransportPool } from './pool';
 import type { Transport } from './transport';
 import { webRtcLink } from './webrtc-link';
@@ -65,7 +66,7 @@ export const connectionAddressFor = (endpointId: string): Promise<string> => {
 
 /*
  * One connection per daemon, each with its own reconnect loop; nothing here opens one until it is
- * asked for. The address is worked out per attempt, because every connection signs for its own ticket.
+ * held. The address is worked out per attempt, because every connection signs for its own ticket.
  * On the web client the row of this machine opens nothing: no daemon answers on the page's own origin.
  */
 export const pool = new TransportPool({
@@ -88,10 +89,16 @@ export const transport: Transport = new ActiveTransport({
 });
 
 /*
- * The socket of one machine by id, opened if this client has none for it yet. Null for a machine
- * this client does not know, which is what a row that was forgotten leaves behind.
+ * The link of one machine by id if this client has one, and null otherwise. It never opens one: a
+ * link opens only for a hold (a workspace with a project, a dialog about the machine) or through
+ * `ensureMachine`, so a call site that means to reach a machine takes one of those first.
  */
-export const transportFor = (endpointId: string): Transport | null => {
-    const endpoint = useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId);
-    return endpoint ? pool.require(endpoint) : null;
-};
+export const transportFor = (endpointId: string): Transport | null => pool.peek(endpointId);
+
+const machineTransports = new MachineTransports(pool);
+
+/* One machine as a transport that outlives its link; see `MachineTransports`. */
+export const machineTransport = (endpointId: string): Transport => machineTransports.of(endpointId);
+
+/* Before `pool.rekey`, so the clients on the transport of a row that learned its daemon id keep their link. */
+export const rekeyMachineTransport = (oldId: string, newId: string): void => machineTransports.rekey(oldId, newId);

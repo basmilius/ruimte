@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { describeConnection, describeMachine, describePing, describeVersion } from './connection-info';
+import { LOCAL_ENDPOINT_ID } from '../state/endpoints';
+import { describeConnection, describeLastSeen, describeMachine, describePing, describeVersion, tooltipMachines } from './connection-info';
 
 describe('describeConnection', () => {
     test('says connected while the socket is open', () => {
@@ -63,5 +64,28 @@ describe('describeVersion and describePing', () => {
     test('rounds the round trip to whole milliseconds', () => {
         expect(describeVersion('0.4.2')).toBe('Version 0.4.2');
         expect(describePing(11.6)).toBe('Ping 12 ms');
+    });
+});
+
+describe('a machine without a link', () => {
+    test('is not connected rather than disconnected', () => {
+        expect(describeConnection({ status: 'closed', attempts: 0, retryAt: null, noLink: true }, 0)).toBe('Not connected');
+    });
+
+    test('says when it was last connected, and nothing when it never was', () => {
+        expect(describeLastSeen(0, 5 * 60_000)).toBe('Last connected 5m ago');
+        expect(describeLastSeen(null, 5 * 60_000)).toBeNull();
+    });
+});
+
+describe('the machines the connection tooltip lists', () => {
+    const rows = [{ id: LOCAL_ENDPOINT_ID }, { id: 'vps' }, { id: 'macbook' }];
+
+    test('a station build lists no local row, even with a link for it in the pool', () => {
+        expect(tooltipMachines(rows, [LOCAL_ENDPOINT_ID, 'vps', 'macbook'], false).map((row) => row.id)).toEqual(['vps', 'macbook']);
+    });
+
+    test('an app with a daemon behind it lists this machine too, and only machines with a link', () => {
+        expect(tooltipMachines(rows, [LOCAL_ENDPOINT_ID, 'vps'], true).map((row) => row.id)).toEqual([LOCAL_ENDPOINT_ID, 'vps']);
     });
 });

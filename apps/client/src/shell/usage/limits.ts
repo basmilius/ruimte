@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { UsageLimitsSnapshot } from '@ruimte/contracts';
 import { useUsage, useUsageEndpointId, useUsageStore } from '@/state/usage';
-import { transportFor } from '@/transport';
+import { machineTransport } from '@/transport';
 
 const MINUTE = 60_000;
 
@@ -14,11 +14,9 @@ interface Hold {
 /* Asking the CLIs is expensive, so the sidebar and the page share one read per machine. */
 const holds = new Map<string, Hold>();
 
+/* On the machine's transport rather than its link, so the bars fill the moment that machine connects for any reason, and never make it connect. */
 const hold = (endpointId: string): Hold => {
-    const link = transportFor(endpointId);
-    if (!link) {
-        return { readers: 0, release: () => undefined };
-    }
+    const link = machineTransport(endpointId);
     const ask = (): void => {
         link.request('usage.limits', {})
             .then((snapshot) => useUsageStore.getState().setLimits(endpointId, snapshot))

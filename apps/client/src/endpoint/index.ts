@@ -6,6 +6,7 @@ import { projectClient } from '@/project';
 import { forgetCachedList } from '@/project/list';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
+import { useLastSeen } from '@/state/last-seen';
 import { LOCAL_ENDPOINT_ID, activeEndpoint, endpointForDaemon, parsePairingUrl, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
 import { useProject } from '@/state/project';
@@ -115,18 +116,6 @@ const refuseOwnDaemon = (daemonId: string | null): void => {
     }
 };
 
-/*
- * The machine that is active keeps its socket for as long as it is active. The pool lets go of the
- * one before it, which then has half a minute to be picked again before it closes.
- */
-let releaseActive: (() => void) | null = null;
-
-const holdActive = (): void => {
-    const release = releaseActive;
-    releaseActive = pool.hold(activeEndpoint());
-    release?.();
-};
-
 /* Moves the whole client to another daemon: the canvas empties first, so nothing of the old one is recreated on the new. */
 export const activateEndpoint = async (id: string): Promise<void> => {
     if (id === useEndpoints.getState().activeId) {
@@ -162,6 +151,7 @@ const forgetEndpointState = (id: string): void => {
     useUsageStore.getState().forget(id);
     useProcesses.getState().forget(id);
     useProcessWarnings.getState().forget(id);
+    useLastSeen.getState().forget(id);
     dropClientLocalOf(browserStorage(), id);
 };
 
@@ -182,23 +172,3 @@ export const revokePairedClient = async (session: AuthSession): Promise<void> =>
 
 /* What the daemon lists this client as; `client-label.ts` holds the reading of it. */
 const clientLabel = (): string => currentClientLabel();
-
-/* Opens the sockets this client keeps up on its own: the daemon that served the page, and the machine that is active. */
-export const startEndpointSelection = (): (() => void) => {
-    /* The machine that took over gets the socket it needs. What the machine that left answered stays
-       where it is: every store is keyed on the endpoint, so nothing of it can show up under the new
-       one. Its projects stay listed too, under its own name, which is what makes the menu a union. */
-    const off = useEndpoints.subscribe((state, before) => {
-        if (state.activeId !== before.activeId) {
-            holdActive();
-        }
-    });
-    // The page's own daemon never closes: it is where the app lands when a machine is forgotten or stops answering.
-    const local = useEndpoints.getState().endpoints.find((endpoint) => endpoint.id === LOCAL_ENDPOINT_ID);
-    const releaseLocal = local ? pool.hold(local) : null;
-    holdActive();
-    return () => {
-        off();
-        releaseLocal?.();
-    };
-};

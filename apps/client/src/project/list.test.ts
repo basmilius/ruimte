@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
+import type { ConnectionState, TransportStatus } from '../transport/transport';
 import type { ProjectSummary } from '@ruimte/contracts';
 import { useEndpoints, type Endpoint } from '../state/endpoints';
 import { useProjectList } from '../state/project-list';
-import { menuProjects, primeCachedLists, readCachedList, writeCachedList } from './list';
+import { pool } from '../transport';
+import { listProjects, menuProjects, primeCachedLists, readCachedList, watchOpenLists, writeCachedList, type OpenListSource } from './list';
 
 const summary = (projectId: string, lastOpenedAt = 0, closedAt: number | null = null): ProjectSummary => ({
     projectId,
@@ -135,5 +137,58 @@ describe('the list a machine is remembered by', () => {
 
         primeCachedLists(fakeStorage(storage));
         expect(useProjectList.getState().projects.map((row) => `${row.endpointId}:${row.summary.projectId}`)).toEqual(['daemon-a:p2', 'daemon-b:q1']);
+    });
+});
+
+/* The part of the pool the list reads, with links a test opens and closes by hand. */
+const fakeLinks = () => {
+    const states = new Map<string, TransportStatus>();
+    const listeners = new Set<() => void>();
+    const source: OpenListSource = {
+        ids: () => [...states.keys()],
+        statusOf: (endpointId): ConnectionState => ({
+            status: states.get(endpointId) ?? 'closed',
+            attempts: 0,
+            retryAt: null,
+            noLink: !states.has(endpointId)
+        }),
+        subscribe: (handler) => {
+            listeners.add(handler);
+            return () => {
+                listeners.delete(handler);
+            };
+        }
+    };
+    const set = (endpointId: string, status: TransportStatus): void => {
+        states.set(endpointId, status);
+        for (const listener of [...listeners]) {
+            listener();
+        }
+    };
+    return { source, set };
+};
+
+describe('the list and the links', () => {
+    test('listing a machine without a link asks nothing and opens no link', async () => {
+        useEndpoints.setState({ endpoints: [endpoint('daemon-idle', 'Idle')], activeId: 'daemon-idle' });
+        expect(await listProjects('daemon-idle')).toEqual([]);
+        expect(pool.peek('daemon-idle')).toBeNull();
+        expect(pool.ids()).not.toContain('daemon-idle');
+    });
+
+    test('a link that opens for any reason is asked for its list, and one that only connects is not', () => {
+        const { source, set } = fakeLinks();
+        let refreshed = 0;
+        watchOpenLists(source, () => {
+            refreshed += 1;
+        });
+        expect(refreshed).toBe(1);
+
+        set('daemon-a', 'connecting');
+        expect(refreshed).toBe(1);
+        set('daemon-a', 'open');
+        expect(refreshed).toBe(2);
+        set('daemon-a', 'open');
+        expect(refreshed).toBe(2);
     });
 });

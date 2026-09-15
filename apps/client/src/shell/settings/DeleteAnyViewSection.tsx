@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -7,7 +7,7 @@ import { LOCAL_ENDPOINT_ID, useEndpoints, type Endpoint } from '@/state/endpoint
 import { listedEndpoints } from '@/state/local-machine';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
-import { pool, transportFor } from '@/transport';
+import { transportFor } from '@/transport';
 import { useEndpointConnection } from '@/transport/status';
 
 /*
@@ -18,7 +18,8 @@ import { useEndpointConnection } from '@/transport/status';
  */
 function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
     const info = useServers((s) => s.byEndpoint[endpoint.id]);
-    const connected = useEndpointConnection(endpoint.id).status === 'open';
+    const connection = useEndpointConnection(endpoint.id);
+    const connected = connection.status === 'open';
     const [busy, setBusy] = useState(false);
     // The row is one of several machines, so the switch says which one it speaks for.
     const label = `Agents on ${endpoint.label} may delete any view or node`;
@@ -66,7 +67,9 @@ function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
             description={
                 connected
                     ? 'Off, an agent only deletes views and nodes it created. On, it can delete any view or node in any project there, including yours.'
-                    : 'Not answering. Change this once the machine is back.'
+                    : connection.noLink === true
+                      ? "Not connected. Change this from the machine's dialog under Remote, or while a project on it is open."
+                      : 'Not answering. Change this once the machine is back.'
             }
             control={
                 <Toggle checked={info?.agentsDeleteAnyView === true} onChange={(checked) => void set(checked)} label={label} disabled={busy || !connected} />
@@ -82,15 +85,7 @@ function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
 export function DeleteAnyViewSection() {
     const stored = useEndpoints((s) => s.endpoints);
     const endpoints = useMemo(() => listedEndpoints(stored), [stored]);
-    // Every machine on the list keeps a socket while the pane is open, or its switch has nothing to read.
-    useEffect(() => {
-        const released = endpoints.map((endpoint: Endpoint) => pool.hold(endpoint));
-        return () => {
-            for (const release of released) {
-                release();
-            }
-        };
-    }, [endpoints]);
+    // Nothing here holds a link: opening settings must not connect to every machine, so a switch reads what a connected machine last said.
 
     // This machine first, which is the one a person with a single machine is looking at.
     const ordered = [

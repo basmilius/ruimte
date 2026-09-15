@@ -10,6 +10,8 @@ export interface ConnectionState {
     retryAt: number | null;
     /* Why the last connection failed, when that is worth telling a person (a direct connection that did not come up); cleared on open. */
     failure?: string | null;
+    /* Set when this client has no link to the machine at all, which is a machine nobody is using rather than one that failed. */
+    noLink?: boolean;
 }
 
 export interface Transport {

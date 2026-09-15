@@ -93,6 +93,8 @@ interface ProjectClientOptions {
     endSessions?: (endpointId: string, views: readonly ProjectView[]) => void;
     /* Runs once the project is open on the daemon again after the link came back, so the drawings on screen can follow. */
     afterResume?: () => Promise<void>;
+    /* The boot tried the project this machine remembered, whether it opened or not; a link that dropped halfway does not count. */
+    onBooted?: () => void;
     /* Left out in tests, where there is no window to listen on. */
     window?: Pick<Window, 'addEventListener' | 'removeEventListener'> | null;
 }
@@ -123,6 +125,7 @@ export class ProjectClient {
     private readonly beforeSwitch: () => Promise<void>;
     private readonly endSessions: (endpointId: string, views: readonly ProjectView[]) => void;
     private readonly afterResume: () => Promise<void>;
+    private readonly onBooted: () => void;
     private readonly unsubscribe: Array<() => void> = [];
     private saveTimer: ReturnType<typeof setTimeout> | null = null;
     private localTimer: ReturnType<typeof setTimeout> | null = null;
@@ -153,6 +156,7 @@ export class ProjectClient {
         this.beforeSwitch = options.beforeSwitch ?? (() => Promise.resolve());
         this.endSessions = options.endSessions ?? ((): void => undefined);
         this.afterResume = options.afterResume ?? (() => Promise.resolve());
+        this.onBooted = options.onBooted ?? ((): void => undefined);
         this.unsubscribe.push(
             transport.on('project.changed', ({ projectId, document }) => this.onChanged(projectId, document)),
             transport.on('project.summary', ({ summary }) => this.applySummary(summary)),
@@ -364,10 +368,12 @@ export class ProjectClient {
             if (target) {
                 await this.open({ projectId: target.projectId });
             }
+            this.onBooted();
         } catch (e) {
             this.booted = false;
             if (!isConnectionError(e)) {
                 this.sink.setError(e instanceof Error ? e.message : 'The project could not be opened');
+                this.onBooted();
             }
         }
     }

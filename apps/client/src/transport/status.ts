@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
-import { useEndpoints } from '@/state/endpoints';
-import { pool, transport, type ConnectionState, type Transport, type TransportStatus } from '@/transport';
+import type { Endpoint } from '@/state/endpoints';
+import { useLastSeen } from '@/state/last-seen';
+import { pool, transport, type ConnectionState, type TransportStatus } from '@/transport';
 
 const subscribe = (onChange: () => void): (() => void) => transport.subscribeStatus(onChange);
 const read = (): TransportStatus => transport.status;
@@ -30,19 +31,16 @@ export const useEndpointConnection = (endpointId: string): ConnectionState =>
     );
 
 /*
- * The socket of one machine, opened and kept from going idle for as long as this is on screen. Null
- * for a machine this client does not know. A page that is about a machine it is not working on has to
- * hold its own socket; nothing else does, and the pool closes what nobody holds.
+ * Keeps one machine's link up for as long as this is on screen, opening it when there is none. Only
+ * for a surface that is an explicit look at that machine (its dialog): a list, a dot or a page about
+ * every machine never holds, or opening settings would connect to all of them.
  */
-export const useHeldTransport = (endpointId: string): Transport | null => {
-    const endpoint = useEndpoints((s) => s.endpoints.find((entry) => entry.id === endpointId) ?? null);
-    const link = useSyncExternalStore(
-        useCallback((onChange: () => void) => pool.subscribeStatus(endpointId, onChange), [endpointId]),
-        useCallback(() => pool.peek(endpointId), [endpointId])
-    );
+export const useMachineHold = (endpoint: Endpoint | null): void => {
     useEffect(() => (endpoint === null ? undefined : pool.hold(endpoint)), [endpoint]);
-    return link;
 };
+
+/* When a machine last had an open link on this client, or null when it never had one. */
+export const useLastSeenAt = (endpointId: string): number | null => useLastSeen((s) => s.byEndpoint[endpointId] ?? null);
 
 /* The machines this client holds a socket for, in the order the pool opened them. */
 export const useConnectedEndpoints = (): string[] => useSyncExternalStore(subscribePool, readPoolIds);

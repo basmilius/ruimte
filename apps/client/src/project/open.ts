@@ -8,20 +8,18 @@ import { useProject } from '@/state/project';
 /*
  * Opens a project on the machine it belongs to. The only way in: a project id means nothing without
  * the daemon that minted it, so picking one out of the union is also picking a machine. That machine
- * is reached before anything moves, so one that does not answer leaves the project on screen where
- * it was; the old project is then flushed on its own endpoint's socket, which is what the order below
- * is for.
+ * is reached before anything moves, the active one included, since no machine keeps a link while
+ * nothing is open on it; one that does not answer leaves the project on screen where it was. The old
+ * project is then flushed on its own endpoint's socket, which is what the order below is for.
  */
 export const openProject = async (endpointId: string, projectId: string): Promise<void> => {
-    if (endpointId === useEndpoints.getState().activeId) {
-        await projectClient.openProject(projectId);
-        return;
-    }
     try {
         const id = await ensureMachine(endpointId);
-        // Written before the switch, so the machine that takes over boots into this project and not into what it had last.
-        rememberProject(id, projectId);
-        await activateEndpoint(id);
+        if (id !== useEndpoints.getState().activeId) {
+            // Written before the switch, so the machine that takes over boots into this project and not into what it had last.
+            rememberProject(id, projectId);
+            await activateEndpoint(id);
+        }
         await projectClient.settled();
         const { current, currentEndpointId } = useProject.getState();
         if (current?.projectId !== projectId || currentEndpointId !== id) {
@@ -54,11 +52,12 @@ const REAL_FOLDER_DEPS: FolderDeps = {
  * offer to make a path that is not there, and the daemon makes the whole missing chain.
  */
 export const openFolderOn = async (endpointId: string, folder: string, createFolder = false, deps: FolderDeps = REAL_FOLDER_DEPS): Promise<void> => {
-    if (endpointId === useEndpoints.getState().activeId) {
+    // The active machine too: with nothing open on it, it has no link to open the folder over.
+    const id = await deps.ensure(endpointId);
+    if (id === useEndpoints.getState().activeId) {
         await deps.openFolder(folder, createFolder);
         return;
     }
-    const id = await deps.ensure(endpointId);
     await deps.activate(id);
     // The machine that took over may still be opening what it had last; a folder on top of that would race.
     await deps.settle();

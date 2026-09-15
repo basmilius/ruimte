@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
+import type { ProjectSummary } from '@ruimte/contracts';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
+import { defaultWorkspaceStores } from '@/state/workspace';
 import { pool } from '@/transport';
 import { dropMachine, openWorkspace } from './connections';
 
@@ -18,9 +20,28 @@ const other: Endpoint = {
     daemonPublicKey: null
 };
 
-describe('a workspace on a machine that is not the active one', () => {
+/* The first workspace in a process is built on the module's own stores, which other test files write to as well. */
+const resetDefaultProject = (): void => {
+    defaultWorkspaceStores.project.getState().setSwitching(false);
+    defaultWorkspaceStores.project.getState().setCurrent(null, 0, null);
+};
+
+const project: ProjectSummary = {
+    projectId: 'project-1',
+    name: 'Atlas',
+    color: '#000',
+    folder: '/work/atlas',
+    lastOpenedAt: 0,
+    closedAt: null,
+    available: true,
+    icon: { kind: 'initial', value: 'A' },
+    nameSource: 'chosen'
+};
+
+describe('a workspace and the link of its machine', () => {
     beforeEach(() => {
         jest.useFakeTimers();
+        resetDefaultProject();
         useEndpoints.getState().add(other);
     });
 
@@ -29,19 +50,51 @@ describe('a workspace on a machine that is not the active one', () => {
         dropMachine(other.id);
         pool.drop(other.id);
         useEndpoints.getState().remove(other.id);
+        resetDefaultProject();
         jest.useRealTimers();
     });
 
-    test('keeps the socket it was built on for as long as it is open, and lets go of it when it goes', () => {
+    test('a workspace with nothing open connects to nothing', () => {
+        const workspace = openWorkspace('empty', other);
+        expect(pool.peek(other.id)).toBeNull();
+        workspace.dispose();
+    });
+
+    test('keeps its machine connected while a project is open, and lets go after the grace period once it closes', () => {
         const workspace = openWorkspace('side', other);
-        const socket = workspace.connection.transport;
+        workspace.stores.project.getState().setCurrent(project, 1, other.id);
+        const link = pool.peek(other.id);
+        expect(link).not.toBeNull();
 
         jest.advanceTimersByTime(PAST_IDLE_MS);
-        // A socket the pool closed under a workspace is never replaced there, so its project client would be talking to nothing.
-        expect(pool.peek(other.id)).toBe(socket);
+        expect(pool.peek(other.id)).toBe(link);
+
+        workspace.stores.project.getState().setCurrent(null, 0, null);
+        expect(pool.peek(other.id)).toBe(link);
+        jest.advanceTimersByTime(PAST_IDLE_MS);
+        expect(pool.peek(other.id)).toBeNull();
+        workspace.dispose();
+    });
+
+    test('a project on its way in holds the link as well, and closing the workspace lets it go', () => {
+        const workspace = openWorkspace('opening', other);
+        workspace.stores.project.getState().setSwitching(true);
+        expect(pool.peek(other.id)).not.toBeNull();
 
         workspace.dispose();
         jest.advanceTimersByTime(PAST_IDLE_MS);
         expect(pool.peek(other.id)).toBeNull();
+    });
+
+    test('the clients of a workspace stay on the same transport while the link comes and goes', () => {
+        const workspace = openWorkspace('steady', other);
+        const transport = workspace.connection.transport;
+        workspace.stores.project.getState().setSwitching(true);
+        workspace.stores.project.getState().setSwitching(false);
+        jest.advanceTimersByTime(PAST_IDLE_MS);
+        expect(pool.peek(other.id)).toBeNull();
+        expect(workspace.connection.transport).toBe(transport);
+        expect(transport.status).toBe('closed');
+        workspace.dispose();
     });
 });

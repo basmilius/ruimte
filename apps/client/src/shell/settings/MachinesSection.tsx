@@ -6,7 +6,7 @@ import { pairEndpoint } from '@/endpoint';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { cancelPulsarSignIn, messageOf, signInToPulsar, signOutOfPulsar, usePulsarAccount } from '@/pulsar/account';
 import { forgetAccountMachines, reclaimAfterPairing, refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
-import { describeConnection, describePing, REACHABILITY_LABELS } from '@/shell/connection-info';
+import { describeConnection, describeLastSeen, describePing, REACHABILITY_LABELS } from '@/shell/connection-info';
 import { MachineDialog } from '@/shell/settings/MachineDialog';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -17,9 +17,10 @@ import { brokerRouteOf, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useServers } from '@/state/server';
 import { useToasts } from '@/state/toasts';
 import { hasLocalMachine } from '@/state/local-machine';
-import { pool, type TransportStatus } from '@/transport';
+import type { TransportStatus } from '@/transport';
+import { useMinute } from '@/shell/usage/limits';
 import { useLatency } from '@/transport/ping';
-import { useEndpointConnection } from '@/transport/status';
+import { useEndpointConnection, useLastSeenAt } from '@/transport/status';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
@@ -38,11 +39,15 @@ const DOT: Record<TransportStatus, string> = {
 function ConnectionDot({ endpoint }: { endpoint: Endpoint }) {
     const connection = useEndpointConnection(endpoint.id);
     const latency = useLatency(endpoint.id);
+    const lastSeenAt = useLastSeenAt(endpoint.id);
     const reachability = useServers((s) => s.byEndpoint[endpoint.id]?.reachability ?? endpoint.reachability);
+    const now = useMinute();
+    const lastSeen = connection.noLink === true ? describeLastSeen(lastSeenAt, now) : null;
 
     const tooltip = (
         <span className="flex flex-col items-start gap-0.5">
             <span>{describeConnection(connection, null)}</span>
+            {lastSeen !== null && <span className="text-text-muted">{lastSeen}</span>}
             <span className="text-text-muted">{REACHABILITY_LABELS[reachability]}</span>
             <span className="font-mono text-text-muted">{endpoint.httpBaseUrl === '' ? 'Reached through the broker only' : endpoint.httpBaseUrl}</span>
             {endpoint.direct === true && (
@@ -57,7 +62,7 @@ function ConnectionDot({ endpoint }: { endpoint: Endpoint }) {
     return (
         <Tooltip label={tooltip}>
             <span className="grid h-8 w-6 shrink-0 place-items-center" role="status" aria-label={`${endpoint.label}. ${describeConnection(connection, null)}`}>
-                <span className={clsx('h-2 w-2 rounded-full', DOT[connection.status])} />
+                <span className={clsx('h-2 w-2 rounded-full', connection.noLink === true ? 'border border-border-strong' : DOT[connection.status])} />
             </span>
         </Tooltip>
     );
@@ -253,16 +258,6 @@ export function MachinesSection() {
     const machinesError = usePulsarMachines((s) => s.error);
     const [addOpen, setAddOpen] = useState(false);
     const [dialog, setDialog] = useState<{ id: string; open: boolean } | null>(null);
-
-    // Every machine on the list keeps a socket while the pane is open, which is what the dots and the dialog read.
-    useEffect(() => {
-        const released = endpoints.map((endpoint: Endpoint) => pool.hold(endpoint));
-        return () => {
-            for (const release of released) {
-                release();
-            }
-        };
-    }, [endpoints]);
 
     // An open pane is one of the moments a client learns what the account says, removals included.
     useEffect(() => {

@@ -1,7 +1,7 @@
 import { isRecentProject, type ProjectSummary } from '@ruimte/contracts';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProjectList, type ProjectRow } from '@/state/project-list';
-import { pool, transportFor } from '@/transport';
+import { pool, transportFor, type ConnectionState } from '@/transport';
 
 const CACHE_PREFIX = 'ruimte.projects.';
 /* Enough to hold every project a machine is likely to have; a list this long is scrolled, not read. */
@@ -48,7 +48,7 @@ export const foldList = (endpointId: string, summaries: ProjectSummary[]): void 
     writeCachedList(endpointId, summaries);
 };
 
-/* `project.list` on one endpoint, folded into the union. */
+/* `project.list` on one endpoint over the link it already has, folded into the union. A machine without one lists nothing new. */
 export const listProjects = async (endpointId: string): Promise<ProjectRow[]> => {
     const transport = transportFor(endpointId);
     if (!transport) {
@@ -122,20 +122,40 @@ export const menuProjects = (rows: ProjectRow[], endpoints: Endpoint[], connecte
     };
 };
 
+/* What the list reads of the pool, so a test can hand it one of its own. */
+export interface OpenListSource {
+    ids(): string[];
+    statusOf(endpointId: string): ConnectionState;
+    subscribe(handler: () => void): () => void;
+}
+
 /*
- * Keeps the union in step with the machines that are up: a socket that opens answers with its list,
- * one that closes leaves the rows it last gave behind, dimmed.
+ * Asks again whenever the set of open links changes. It only reads the pool: a machine without a link
+ * keeps the list it last answered, and is asked the moment its link opens for any other reason.
  */
-export const startProjectList = (): (() => void) => {
-    primeCachedLists();
-    let open = openEndpointIds().join(',');
-    void refreshAllLists();
-    return pool.subscribe(() => {
-        const next = openEndpointIds().join(',');
+export const watchOpenLists = (source: OpenListSource, refresh: () => void): (() => void) => {
+    const openOf = (): string =>
+        source
+            .ids()
+            .filter((endpointId) => source.statusOf(endpointId).status === 'open')
+            .join(',');
+    let open = openOf();
+    refresh();
+    return source.subscribe(() => {
+        const next = openOf();
         if (next === open) {
             return;
         }
         open = next;
-        void refreshAllLists();
+        refresh();
     });
+};
+
+/*
+ * Keeps the union in step with the machines that are up: a link that opens answers with its list,
+ * one that closes leaves the rows it last gave behind, dimmed. Nothing here opens a link.
+ */
+export const startProjectList = (): (() => void) => {
+    primeCachedLists();
+    return watchOpenLists(pool, () => void refreshAllLists());
 };

@@ -1,5 +1,8 @@
 import type { Reachability } from '@ruimte/contracts';
+import type { Endpoint } from '@/state/endpoints';
+import { listedEndpoints } from '@/state/local-machine';
 import type { ConnectionState } from '@/transport';
+import { relativeTime } from '@/shell/panels/commit-log';
 
 /* How far away a machine is, in the words a row's tooltip and the About pane show. */
 export const REACHABILITY_LABELS: Record<Reachability, string> = {
@@ -24,6 +27,9 @@ export const describeConnection = (connection: ConnectionState, now: number | nu
     if (connection.status === 'open') {
         return 'Connected';
     }
+    if (connection.noLink === true) {
+        return 'Not connected';
+    }
     if (connection.attempts === 0) {
         return connection.status === 'connecting' ? 'Connecting' : 'Disconnected';
     }
@@ -40,6 +46,17 @@ export const describeConnection = (connection: ConnectionState, now: number | nu
     const seconds = Math.max(0, Math.ceil((connection.retryAt - now) / 1000));
     return `${attempt}, next try in ${seconds}s`;
 };
+
+/*
+ * The machines the tooltip lists: every one with a link, in the order of the list. The local row of
+ * the web client is no machine, so it is left out even when something put it in the pool.
+ */
+export const tooltipMachines = <T extends Pick<Endpoint, 'id'>>(endpoints: readonly T[], connected: readonly string[], local?: boolean): T[] =>
+    listedEndpoints(endpoints, local).filter((endpoint) => connected.includes(endpoint.id));
+
+/* When a machine without a link last had one here; null when this client never reached it. */
+export const describeLastSeen = (at: number | null, now: number): string | null =>
+    at === null ? null : `Last connected ${relativeTime(Math.floor(at / 1000), Math.floor(now / 1000))}`;
 
 /* The machine on the other end. A daemon on this machine is named after the machine itself,
    because "This machine · bas-mbp" says the same thing twice. */

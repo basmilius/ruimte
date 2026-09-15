@@ -1,8 +1,8 @@
 import clsx from 'clsx';
 import { useEffect, useState } from 'react';
 import { Tooltip } from '@/ui/Tooltip';
-import { describeConnection, describeMachine, describePing, describeVersion } from '@/shell/connection-info';
-import { useConnectedEndpoints, useConnection, useEndpointConnection } from '@/transport/status';
+import { describeConnection, describeLastSeen, describeMachine, describePing, describeVersion, tooltipMachines } from '@/shell/connection-info';
+import { useConnectedEndpoints, useConnection, useEndpointConnection, useLastSeenAt } from '@/transport/status';
 import { pingNow, useLatency } from '@/transport/ping';
 import { SLOW_PING_MS } from '@/transport/ping-monitor';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
@@ -49,23 +49,26 @@ function ConnectionDetails({ connection }: { connection: ConnectionState }) {
     const endpoints = useEndpoints((s) => s.endpoints);
     const connected = useConnectedEndpoints();
     const latency = useLatency(activeId);
+    const lastSeenAt = useLastSeenAt(activeId);
     const endpointLabel = endpoints.find((entry) => entry.id === activeId)?.label ?? 'This machine';
     const machineLabel = useServer((s) => s.label);
     const reachability = useServer((s) => s.reachability);
     const platform = useServer((s) => s.platform);
     const version = useServer((s) => s.version);
     const now = useCountdown(connection.retryAt !== null);
+    const lastSeen = connection.noLink === true ? describeLastSeen(lastSeenAt, now) : null;
 
     useEffect(() => {
         pingNow();
     }, []);
 
-    // Every machine with a socket, so "is my other daemon still up" is answerable without opening settings.
-    const machines = endpoints.filter((endpoint) => connected.includes(endpoint.id));
+    // Every machine with a link, so "is my other daemon still up" is answerable without opening settings.
+    const machines = tooltipMachines(endpoints, connected);
 
     return (
         <span className="flex flex-col items-start gap-0.5">
             <span>{describeConnection(connection, now)}</span>
+            {lastSeen !== null && <span className="text-text-muted">{lastSeen}</span>}
             <span className="text-text-muted">{describeMachine({ endpointLabel, machineLabel, reachability, platform })}</span>
             <span className="text-text-muted">{describeVersion(version)}</span>
             <span className="text-text-muted">{describePing(latency)}</span>
@@ -94,7 +97,13 @@ export function ConnectionDot() {
                 aria-label={`${describeConnection(connection, null)}. ${describePing(latency)}`}
             >
                 {/* A ring instead of another color: the state keeps the dot, a slow line only halos it. */}
-                <span className={clsx('h-2 w-2 rounded-full', COLOR[connection.status], slow && 'ring-2 ring-status-needs-you/40')} />
+                <span
+                    className={clsx(
+                        'h-2 w-2 rounded-full',
+                        connection.noLink === true ? 'border border-border-strong' : COLOR[connection.status],
+                        slow && 'ring-2 ring-status-needs-you/40'
+                    )}
+                />
             </span>
         </Tooltip>
     );

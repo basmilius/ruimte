@@ -101,13 +101,24 @@ afterEach(() => {
 });
 
 describe('TransportPool', () => {
-    test('one socket per endpoint, and the same one on every ask', () => {
+    test('one socket per endpoint, and the same one on every hold', () => {
         const { pool, opened } = setup();
-        const first = pool.require(endpoint('a'));
-        expect(pool.require(endpoint('a'))).toBe(first);
-        expect(pool.require(endpoint('b'))).not.toBe(first);
+        pool.hold(endpoint('a'));
+        const first = pool.peek('a');
+        pool.hold(endpoint('a'));
+        pool.hold(endpoint('b'));
+        expect(pool.peek('a')).toBe(first);
+        expect(pool.peek('b')).not.toBe(first);
         expect(opened).toHaveLength(2);
         expect(pool.ids()).toEqual(['a', 'b']);
+    });
+
+    test('peeking never opens a socket', () => {
+        const { pool, opened } = setup();
+        expect(pool.peek('a')).toBeNull();
+        expect(pool.statusOf('a').noLink).toBe(true);
+        expect(opened).toHaveLength(0);
+        expect(pool.ids()).toEqual([]);
     });
 
     test('a hold keeps the socket up and the last release closes it', async () => {
@@ -128,13 +139,15 @@ describe('TransportPool', () => {
         expect(pool.ids()).toEqual([]);
     });
 
-    test('a socket nothing holds closes on its own, and asking again opens a fresh one', async () => {
-        const { pool, opened } = setup();
-        pool.require(endpoint('a'));
-        await idle();
+    test('a socket whose last hold went stays up for the grace period, and a hold after that opens a fresh one', async () => {
+        const { pool, opened } = setup(1_000);
+        pool.hold(endpoint('a'))();
+        jest.advanceTimersByTime(999);
+        expect(pool.peek('a')).not.toBeNull();
+        jest.advanceTimersByTime(1);
         expect(pool.peek('a')).toBeNull();
 
-        pool.require(endpoint('a'));
+        pool.hold(endpoint('a'));
         expect(opened).toHaveLength(2);
         expect(opened[1]?.disposed).toBe(false);
     });
@@ -151,7 +164,8 @@ describe('TransportPool', () => {
 
     test('reconnecting a machine keeps its transport, so every client built on it stays', () => {
         const { pool, opened } = setup();
-        const held = pool.require(endpoint('a'));
+        pool.hold(endpoint('a'));
+        const held = pool.peek('a');
         pool.reconnect('a');
         pool.reconnect('nobody');
         expect(pool.peek('a')).toBe(held);
