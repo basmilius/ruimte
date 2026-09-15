@@ -335,11 +335,12 @@ export class ProjectStore {
         };
     }
 
-    save(projectId: string, baseRev: number, content: ProjectContent): Promise<number> {
-        return this.locked(() => this.saveUnlocked(projectId, baseRev, content));
+    /* `origin` is the client that sent the save: it already holds the document, and every other client is told. */
+    save(projectId: string, baseRev: number, content: ProjectContent, origin: string | null = null): Promise<number> {
+        return this.locked(() => this.saveUnlocked(projectId, baseRev, content, origin));
     }
 
-    private async saveUnlocked(projectId: string, baseRev: number, content: ProjectContent): Promise<number> {
+    private async saveUnlocked(projectId: string, baseRev: number, content: ProjectContent, origin: string | null): Promise<number> {
         const state = this.require(projectId);
         if (baseRev !== state.rev) {
             throw new ProjectError('rev-conflict', `The canvas is at rev ${state.rev}, the save was based on ${baseRev}`);
@@ -367,6 +368,13 @@ export class ProjectStore {
             await this.saveRegistry(entries.map((entry) => (entry.projectId === projectId ? state.entry : entry)));
             this.publish(state.entry);
         }
+        /* The watcher reads this write as our own and stays quiet, so a second client with the project
+           on screen hears about it here or not at all. Not the sender: its screen is already ahead of
+           this document, and taking it in would undo a drag that went on while the save was out. Inside
+           the lock, so a save of another client that this one makes stale finds the document there
+           before its refusal. */
+        const daemonSide = fromPortable(document, state.entry.folder);
+        this.emit({ event: 'project.changed', payload: { projectId, document: daemonSide } }, origin);
         return document.rev;
     }
 
@@ -725,9 +733,11 @@ export class ProjectStore {
             .catch(() => undefined);
     }
 
-    private emit(event: SessionEvent): void {
-        for (const sink of this.sinks.values()) {
-            sink(event);
+    private emit(event: SessionEvent, except: string | null = null): void {
+        for (const [clientId, sink] of this.sinks) {
+            if (clientId !== except) {
+                sink(event);
+            }
         }
     }
 

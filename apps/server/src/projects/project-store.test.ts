@@ -100,7 +100,8 @@ describe('ProjectStore', () => {
 
     test('an outside edit is reported once with what is on disk, and our own write is not', async () => {
         const opened = await store.openProject({ folder });
-        await store.save(opened.summary.projectId, 0, content());
+        // Saved by the one client listening, which already holds what it wrote.
+        await store.save(opened.summary.projectId, 0, content(), 'c1');
         projectDirWatcher().emit('project.json');
         await fake.settle();
         expect(changed).toEqual([]);
