@@ -1,14 +1,12 @@
-import type { Subprocess } from 'bun';
 import { chatPrompt } from '../context/context-note.ts';
 import { claudeArgs, promptPrefix } from '../providers/claude.ts';
 import type { ApprovalDecision, BackendHost, BackendLaunch, ChatBackend, TurnInput } from './backend.ts';
+import { spawnChatProcess, type ChatProcess } from './chat-process.ts';
 import { ClaudeProtocol } from './claude-protocol.ts';
 import { buildUserMessage } from './input.ts';
 
 // After stdin closed, a CLI that is still around is not going to say more.
 const EXIT_GRACE_MS = 3000;
-
-type ChatProcess = Subprocess<'pipe', 'pipe', 'pipe'>;
 
 /*
  * One `claude -p` process on the stream-json protocol: flags from the selection and the modes,
@@ -47,13 +45,12 @@ export class ClaudeBackend implements ChatBackend {
         const args = [...this.launch.command, ...claudeArgs({ selection, runtimeMode, resume })];
         args.push('--append-system-prompt', chatPrompt(this.launch.hasContext));
         this.stdinClosed = false;
-        const process: ChatProcess = Bun.spawn(args, {
+        const spawn = this.launch.spawn ?? spawnChatProcess;
+        const process: ChatProcess = spawn({
+            command: args,
             cwd: this.launch.cwd,
             env: this.launch.env,
-            stdin: 'pipe',
-            stdout: 'pipe',
-            stderr: 'pipe',
-            onExit: (subprocess, exitCode) => this.handleExit(subprocess as ChatProcess, exitCode)
+            onExit: (exitCode) => this.handleExit(process, exitCode)
         });
         this.process = process;
         void this.readLines(process);

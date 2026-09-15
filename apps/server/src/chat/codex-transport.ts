@@ -1,4 +1,4 @@
-import type { Subprocess } from 'bun';
+import { spawnChatProcess, type ChatProcess, type SpawnChatProcess } from './chat-process.ts';
 
 export type CodexFrame = Record<string, unknown>;
 
@@ -6,6 +6,7 @@ interface CodexTransportOptions {
     command: string[];
     cwd: string;
     env: Record<string, string>;
+    spawn?: SpawnChatProcess;
     // Notifications and server requests; responses to our own requests settle their promise instead.
     onFrame(frame: CodexFrame): void;
     onExit(exitCode: number | null): void;
@@ -30,7 +31,7 @@ type Settle = { resolve(value: unknown): void; reject(reason: Error): void; meth
  * has no id. The app-server also sends requests of its own (approvals), answered with `respond`.
  */
 export class CodexTransport {
-    private readonly process: Subprocess<'pipe', 'pipe', 'pipe'>;
+    private readonly process: ChatProcess;
     private readonly options: CodexTransportOptions;
     private readonly pending = new Map<number, Settle>();
     private nextId = 1;
@@ -38,13 +39,12 @@ export class CodexTransport {
 
     constructor(options: CodexTransportOptions) {
         this.options = options;
-        this.process = Bun.spawn(options.command, {
+        const spawn = options.spawn ?? spawnChatProcess;
+        this.process = spawn({
+            command: options.command,
             cwd: options.cwd,
             env: options.env,
-            stdin: 'pipe',
-            stdout: 'pipe',
-            stderr: 'pipe',
-            onExit: (_subprocess, exitCode) => this.handleExit(exitCode)
+            onExit: (exitCode) => this.handleExit(exitCode)
         });
         void this.readLines();
     }

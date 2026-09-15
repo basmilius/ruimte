@@ -15,6 +15,7 @@ import type { CheckpointService } from '../git/checkpoints.ts';
 import type { ChatProvider } from '../providers/provider.ts';
 import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import type { BackendEvent, BackendLaunch, ChatBackend } from './backend.ts';
+import type { SpawnChatProcess } from './chat-process.ts';
 import type { ChatTitleInput } from './chat-title.ts';
 import { ChatError } from './errors.ts';
 import { ThreadProjector } from './projector.ts';
@@ -27,6 +28,7 @@ interface ChatSessionOptions {
     // The executable and leading arguments; a test points this at a fake CLI.
     command: string[];
     env: Record<string, string>;
+    spawn?: SpawnChatProcess;
     // Whether the person linked something to this chat; the CLI is told where to look when so.
     hasContext(): boolean;
     // The links as they are now; a change between two turns is put in front of the next prompt.
@@ -493,7 +495,8 @@ export class ChatSession {
             runtimeMode: info.runtimeMode,
             resume: info.agentSessionId,
             generation,
-            hasContext: this.options.hasContext()
+            hasContext: this.options.hasContext(),
+            ...(this.options.spawn ? { spawn: this.options.spawn } : {})
         };
         const made: { backend: ChatBackend | null } = { backend: null };
         try {

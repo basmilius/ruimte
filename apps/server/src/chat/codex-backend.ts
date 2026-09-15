@@ -75,6 +75,7 @@ export class CodexBackend implements ChatBackend {
             command: this.launch.command,
             cwd: this.launch.cwd,
             env: this.launch.env,
+            ...(this.launch.spawn ? { spawn: this.launch.spawn } : {}),
             onFrame: (frame) => this.handleFrame(transport, frame),
             onExit: (exitCode) => this.handleExit(transport, exitCode)
         });

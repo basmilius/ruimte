@@ -19,6 +19,7 @@ import type { SessionSink } from '../sessions/manager.ts';
 import { SkillIndex } from '../skills/skills.ts';
 import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import type { AttachmentStore } from './attachment-store.ts';
+import type { SpawnChatProcess } from './chat-process.ts';
 import { ChatSession, type ChatSendExtras } from './chat-session.ts';
 import type { ChatTitleInput } from './chat-title.ts';
 import type { ChatStore } from './chat-store.ts';
@@ -44,6 +45,8 @@ interface ChatManagerOptions {
     // Put in front of PATH, so `ruimte-context` is there for the CLI's shell.
     binDir?: string;
     codexCommand?: string[];
+    // How a CLI is started; a test runs a fake in the same process instead of spawning one.
+    spawn?: SpawnChatProcess;
     // Where the skill folders are looked for; a test points it at a temporary tree.
     skills?: SkillIndex;
     // Where the files people attach are written.
@@ -69,6 +72,7 @@ export class ChatManager {
     private readonly onLimits: ((update: LimitsUpdate) => void) | null;
     private readonly env: Record<string, string>;
     private readonly commands: Partial<Record<AgentKind, string[]>>;
+    private readonly spawn: SpawnChatProcess | null;
     private readonly chats = new Map<string, ChatSession>();
     private readonly sinks = new Map<string, SessionSink>();
     private readonly attached = new Map<string, Set<string>>();
@@ -107,6 +111,7 @@ export class ChatManager {
             ...(options.command ? { claude: options.command } : {}),
             ...(options.codexCommand ? { codex: options.codexCommand } : {})
         };
+        this.spawn = options.spawn ?? null;
         this.env = {};
         for (const [key, value] of Object.entries(options.env ?? process.env)) {
             // The hook variables belong to terminal sessions; a chat reports through its own stream.
@@ -172,6 +177,7 @@ export class ChatManager {
             items,
             provider,
             command: this.commands[kind] ?? provider.command,
+            ...(this.spawn ? { spawn: this.spawn } : {}),
             env: this.contextUrl ? { ...this.env, RUIMTE_CONTEXT_URL: this.contextUrl, RUIMTE_CONTEXT_TOKEN: token } : this.env,
             hasContext: () => this.hasContext(payload.chatId),
             contextSources: () => this.contextSources(payload.chatId),
