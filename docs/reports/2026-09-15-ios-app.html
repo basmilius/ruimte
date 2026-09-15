@@ -173,11 +173,11 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
 <header>
   <p class="eyebrow">Ruimte / Onderzoek / 15 september 2026</p>
   <h1>Een eigen app voor iPhone en iPad, zonder machine aan boord</h1>
-  <p class="intro">De eerste native iOS-testapp staat op main. Hij biedt inloggen, de machinelijst en een WebRTC-verbinding met route- en tijdmetingen. Direct verbinden is standaard; TURN is terugval. Chat, terminal, canvas en meldingen volgen in de latere fasen, na de apparaattest.</p>
-  <p class="status">Fase 0 lokaal afgerond; apparaattest nog open</p>
+  <p class="intro">De native app is uitgebreid met projecten, chat, terminal, canvas, bestanden en machinebeheer. Meldingen en Live Activities hebben nu een implementatie aan beide kanten. Direct verbinden blijft standaard; TURN is terugval. De lokale integratie en tests bepalen hieronder wat daadwerkelijk is aangetoond.</p>
+  <p class="status">Lokaal gebouwd en getest; apparaattests en distributie staan open</p>
   <p class="caption">Hercontrole op 15 september 2026 tegen <code>8b3fe0646fe158c5ce2add19920bba9ba551affb</code>, gelijk aan opgehaalde <code>origin/main</code>. Het oorspronkelijke onderzoek gebruikte <code>44315a5</code>. De hercontrole toetst de code, de wijzigingen sinds die revisie en de uitvoerbaarheid van de startprompt. Bibliotheekgroottes, platformlimieten en doorlooptijden uit het eerdere onderzoek zijn geen nieuwe metingen.</p>
   <nav aria-label="Inhoud">
-    <a href="#uitvoering">Uitvoering fase 0</a>
+    <a href="#uitvoering">Huidige uitvoering</a>
     <a href="#samenvatting">Oorspronkelijk plan</a>
     <a href="#hercontrole">Hercontrole main</a>
     <a href="#uitgangspunt">Uitgangspunt</a>
@@ -201,8 +201,31 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
 <main>
 
 <section id="uitvoering" class="recommendation">
-  <h2>Uitvoering van fase 0</h2>
-  <p>De implementatie staat op <code>main</code> in <code>705f5ee</code>, <code>feat: add native iOS connection test app</code>, met de reconnectfix in <code>bbc8f4a</code>, <code>fix: reconnect paired iOS machines without new statements</code>. De uitvoering is gedaan door Codex-sub-agents. Er is niets gepusht of gedeployd.</p>
+  <h2>Huidige uitvoering</h2>
+  <p>Bas gaf na de verbindingstest opdracht om de app af te maken. De eerdere pauze na iedere fase is vervallen. Codex-sub-agents hebben de app, daemonaanpassingen en pushketen geïmplementeerd. De lokale integratie omvat builds, tests en visuele controle. De implementatie staat op <code>main</code> in <code>fbc8050</code>, <code>feat: add native iOS workspace and notifications</code>. Er is niets gepusht, gedeployd of naar TestFlight geüpload.</p>
+  <div class="table" role="region" aria-label="Gebouwde appfuncties" tabindex="0"><table>
+    <thead><tr><th scope="col">Onderdeel</th><th scope="col">Implementatie</th></tr></thead><tbody>
+      <tr><th scope="row">Contracts en transport</th><td>286 gegenereerde schema’s, 93 requests en 21 events uit Zod, request/result/event-validatie, resourcechunks met versiecontrole, gedeelde verbindingen en attachments per machine.</td></tr>
+      <tr><th scope="row">Projecten</th><td>Machinelijst, HTTPS-koppeling, projecten openen en maken, sidebar, iPad-detail, hernoemen en volgorde, conflictbehoud en drieversiemerge. Camera en selectie blijven lokaal per project.</td></tr>
+      <tr><th scope="row">Chat en terminal</th><td>Native timeline, streaming, markdown en Highlightr, composer, bijlagen, context, modellen, approvals en vragen. SwiftTerm 1.15.0 volgt de bestaande PTY-maat; <code>session.attach follow:true</code> past de desktop niet aan.</td></tr>
+      <tr><th scope="row">Canvas en pagina's</th><td>Zoomen, pannen, zichtbare nodes tekenen, lijstweergave en VoiceOver; nodes en links beheren, sessie als view openen. Bestanden, Git, processen, usage, browserpagina's en native daemonpaden voor tekeningen en diagrammen.</td></tr>
+      <tr><th scope="row">Push en ActivityKit</th><td>Device- en activiteitregistratie, volgen per sessie, daemontriggers, account- en sessiecontrole in de Worker, APNs-provider, decryptie-extensie en widget. De inhoud gebruikt X25519/HKDF/AES-GCM plus een machinehandtekening, met replay- en verloopcontrole. Echte APNs-bezorging is nog niet uitgevoerd.</td></tr>
+      <tr><th scope="row">Build en distributie</th><td>XcodeGen, vastgepinde packages, bestaande Ruimte-appicon, privacy-manifest en Xcode Cloud-scripts. Het gegenereerde project staat voortaan in git zodat Xcode Cloud het kan vinden. Apple-team, pushsecrets en een TestFlight-workflow vereisen externe configuratie.</td></tr>
+    </tbody></table></div>
+  <div id="volledige-validatie">
+    <h3>Validatie van de volledige implementatie</h3>
+    <div class="table" role="region" aria-label="Laatste integratiecontrole" tabindex="0"><table>
+      <thead><tr><th scope="col">Controle</th><th scope="col">Resultaat op 15 september 2026</th></tr></thead><tbody>
+        <tr><th scope="row">Repository</th><td><code>bun install --frozen-lockfile</code>, <code>bun run check</code> en <code>bun run format:check</code> slagen. Bun: 2.921 geslaagd, 69 overgeslagen, nul fouten. Bestaande lintwaarschuwingen zijn geen nieuwe fouten.</td></tr>
+        <tr><th scope="row">Swift-packages</th><td>24 Pulsar-tests en 28 transporttests slagen, inclusief pushcrypto, requestcorrelatie, resources, intrekking van koppelingen en verse approval-validatie.</td></tr>
+        <tr><th scope="row">Native app</th><td>27 tests slagen op de iPhone 18 Pro-simulator met iOS 27. De build gebruikt de echte Metal-toolchain. De unsigned Release-build voor een generiek iOS-apparaat compileert, inclusief beide extensies; dit is geen ondertekend distributiearchief.</td></tr>
+        <tr><th scope="row">Weergave</th><td>Fixture-schermen voor chat op telefoon- en tabletbreedte, terminal en canvas zijn gerenderd en bekeken. De controle vond en verholp een lege eerste canvasweergave en te lage markdowncellen. Deze screenshots zijn geen live daemon- of iPad-multitaskingtest.</td></tr>
+        <tr><th scope="row">Nog te meten</th><td>Login en reconnect op een echt apparaat, Wi-Fi/5G, geselecteerde direct/TURN-route, iPad-scenes, geheugen en vloeiendheid. APNs-bezorging, achtergrondacties en TestFlight vereisen Apple-configuratie en externe acceptatie. Er is niets gedeployd.</td></tr>
+      </tbody></table></div>
+    <p>De tests voor protocol en push gebruiken lokale fixtures en fakes waar externe diensten nodig zijn. Ze bewijzen geen productieverbinding of APNs-bezorging. Minimum iOS 26 compileert; de uitgevoerde runtimetests gebruiken iOS 27.</p>
+  </div>
+  <h3>Eerder afgeronde verbindingstest</h3>
+  <p>De verbindingstest staat op <code>main</code> in <code>705f5ee</code>, <code>feat: add native iOS connection test app</code>, met de reconnectfix in <code>bbc8f4a</code>, <code>fix: reconnect paired iOS machines without new statements</code>. De uitvoering is gedaan door Codex-sub-agents. Er is niets gepusht of gedeployd.</p>
   <p>De app bevat Keychain-opslag, PKCE-login via de bestaande providers, de machinelijst, gedeelde brokersockets, ICE-credentials, gesigneerde WebRTC-signaling, de directe handshake, framing en reconnect. De generator levert 67 wire-schema's en de bijbehorende Swift-modellen en TypeScript-fixtures. De testapp toont <code>server.hello</code>, de geselecteerde ICE-route en de verbindingstijd. Na de eerste geauthenticeerde acceptatie bewaart de app de koppeling per machine en beide sleutels; volgende verbindingen vragen geen nieuw statement aan het adresboek.</p>
   <p><strong>Direct waar mogelijk.</strong> De gewone verbinding gebruikt normale ICE-selectie. Alleen de schakelaar "Require relay for this test" forceert TURN voor een bewuste bereikbaarheidstest; hij staat standaard uit.</p>
   <div class="table" role="region" aria-label="Validatie van de eerste implementatie" tabindex="0"><table>
@@ -216,7 +239,7 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
     </tbody>
   </table></div>
   <p>Open de app met <code>xcodegen generate --spec apps/ios/project.yml</code> en daarna <code>open apps/ios/Ruimte.xcodeproj</code>. Kies voor een echt apparaat je development team in Xcode. De <a href="../../apps/ios/README.md">build- en apparaatteststappen</a> beschrijven iedere meting.</p>
-  <p class="caption">De hercontrole hieronder beschrijft main vóór de implementatie, op <code>8b3fe06</code>. De overige secties bewaren het faseplan en de uitgevoerde startprompt; ze zijn geen opdracht om bestaande fase-0-code opnieuw te bouwen.</p>
+  <p class="caption">De hercontrole hieronder beschrijft main vóór de implementatie, op <code>8b3fe06</code>. De overige secties bewaren de architectuur, oorspronkelijke ramingen en acceptatiecriteria. De startprompt is bijgewerkt voor voortzetting van de bestaande app; apparaattests zijn geen pauze voor lokaal uitvoerbaar werk.</p>
 </section>
 
 
@@ -624,13 +647,13 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
   <ol>
     <li><strong>Relay-pad nog niet op een telefoon geverifieerd.</strong> <span class="badge warning">open</span> TURN-code staat op main. Fase 0 controleert deployment, credentialverversing en de geselecteerde ICE-kandidaat op Wi-Fi en 5G.</li>
     <li><strong>Antwoorden vanuit een melding haalt de 30 seconden niet.</strong> <span class="badge warning">middel</span> Broker plus ICE plus handshake plus request moeten binnen de beschikbare achtergrondtijd passen. Val terug op "tik opent de node" en meet ook trage pogingen en fouten op een echte telefoon; een gemiddelde onder 5 s bewijst geen betrouwbare achtergrondactie.</li>
-    <li><strong>SwiftTerm 2.0 breekt de API</strong> <span class="badge warning">middel</span> tijdens de bouw. Pin op een geteste release of exacte commit en plan de migratie als aparte stap; of begin direct op <code>main</code> als 2.0 vóór fase 4 getagd is.</li>
+    <li><strong>SwiftTerm is vastgepind.</strong> <span class="badge confirmed">1.15.0</span> De app gebruikt een exacte release. De Metal-renderer vraagt de aanvullende Apple Metal Toolchain; een toekomstige majorversie is een afzonderlijke migratie.</li>
     <li><strong>De IPA is groot.</strong> <span class="badge info">laag</span> libwebrtc met codecs die niemand gebruikt. Meten na thinning; libdatachannel is de uitweg, tegen een eigen buildpipeline.</li>
     <li><strong>Twee clients, twee looks.</strong> <span class="badge info">laag</span> Code-highlighting zonder Shiki, markdown zonder de rehype-pipeline, een canvas zonder rough.js op het apparaat. Aanvaardbaar zolang de daemon de paden voor tekeningen en diagrammen levert.</li>
     <li><strong>Protocolbump sluit de app buiten.</strong> <span class="badge warning">middel</span> Strikte gelijkheid en een store-review van dagen. Het versievenster moet er zijn vóór de eerste bump na de store-release.</li>
     <li><strong>De push-route lekt metadata.</strong> <span class="badge info">laag, maar benoemen</span> Het adresboek ziet wanneer welke machine welke telefoon wekt, en de Live Activity draagt een nodetitel in klare tekst. Alert-inhoud wordt versleuteld. De Live Activity en het verzendritme vormen expliciete uitzonderingen.</li>
     <li><strong>Richtlijn 4.8 en een GitHub-only login.</strong> <span class="badge info">laag</span> Apple-login via de Worker bestaat; de native tokenroute nog niet. Controleer de accountflow en actuele reviewvoorwaarden vóór TestFlight; de repo bewijst geen acceptatie door Apple.</li>
-    <li><strong>Attach zet de PTY-maat van iedereen.</strong> <span class="badge warning">middel tot de fix</span> Zonder de daemon-wijziging maakt een telefoon die meekijkt het desktopscherm 40 kolommen breed. Fase 4 begint met die fix.</li>
+    <li><strong>Attach volgt de desktopmaat.</strong> <span class="badge confirmed">gebouwd</span> De nieuwe <code>follow:true</code>-optie laat de PTY-maat staan. De bestaande attachvorm blijft compatibel. Tests controleren dat meekijken niet resizet; TUI-weergave op hardware blijft te testen.</li>
   </ol>
 </section>
 
@@ -657,14 +680,14 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
   </div>
   <h3>Nog open</h3>
   <ul>
-    <li><strong>Push-cryptografie</strong>: X25519 deriveBits werkt lokaal. Leg in fase 6 de nonce, HKDF-context, authenticated data, replay-preventie en een Bun/CryptoKit-testvector vast. Dit is implementatiewerk, geen voorkeurvraag aan Bas.</li>
+    <li><strong>Push-cryptografie, uitgevoerd</strong>: X25519 + HKDF-SHA256 + AES-256-GCM met canonieke routing-AAD en ed25519-handtekening. AES-GCM vervangt het overwogen ChaCha20-Poly1305, dat de lokale Bun 1.4-runtime niet ondersteunt. De Bun/CryptoKit-testvector controleert interoperabiliteit; de backendtests controleren intrekking, replay en verloop.</li>
     <li><strong>Favicons</strong>: tellen de favicons van een browser-node op iOS mee in <code>panels.favicons</code>?</li>
   </ul>
 </section>
 
 <section id="plan">
   <h2>Het plan in fasen</h2>
-  <p>Elke fase eindigt in iets dat op een echte iPhone en iPad te proberen is. Omvang in weken voor één agent met Bas als tester; TURN-code bestaat al. Elke weekschatting is een raming; fase 0 start nu, de volgende fase pas na de apparaattest door Bas.</p>
+  <p>Elke fase eindigt in iets dat op een echte iPhone en iPad te proberen is. Omvang in weken voor één agent met Bas als tester; TURN-code bestaat al. Elke weekschatting is een raming; de oorspronkelijke volgorde staat hieronder ter referentie. Bas heeft inmiddels opdracht gegeven alle fasen lokaal uit te voeren; echte apparaatmetingen blijven afzonderlijke acceptatiecriteria.</p>
   <ol class="steps">
     <li class="step"><div>
       <h3>Fase 0: de verbinding als Swift-package <span class="badge">1 week</span></h3>
@@ -715,25 +738,22 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
 
 <section id="prompt">
   <h2>Startprompt voor een schone sessie</h2>
-  <p>Deze startprompt geeft toestemming voor fase 0 na de hercontrole. De uitvoerende agent meldt zijn plan en begint; de volgende fase wacht op de apparaattest door Bas.</p>
-<pre><code>Lees docs/reports/2026-09-15-ios-app.html helemaal, CLAUDE.md, README.md en de relevante delen van docs/DECISIONS.md over Pulsar, signing in and statements, TURN, directe verbindingen, sessiesleutels en de station-build.
+  <p>Deze vervolgprompt beschrijft de actuele opdracht en verwijst naar de bestaande implementatie. Hij voorkomt dat een nieuwe sessie terugvalt op de vervallen pauze na fase 0.</p>
+<pre><code>Lees docs/reports/2026-09-15-ios-app.html, apps/ios/README.md, CLAUDE.md en de iOS-besluiten in docs/DECISIONS.md. Controleer eerst git status en de huidige main: de verbindingstest en de app zijn al gebouwd. Bouw ze niet opnieuw vanaf nul.
 
-Bas heeft na hercontrole van het rapport op main 8b3fe0646fe158c5ce2add19920bba9ba551affb toestemming gegeven om met de app te beginnen. Maak een kort fase-0-plan, meld dat en begin direct. Vraag niet opnieuw om goedkeuring voor fase 0. Volgende fasen pas na zijn apparaattest van de vorige.
+Bas heeft opdracht gegeven de app af te maken. De eerdere pauze na iedere fase geldt niet meer. Werk autonoom door aan implementatie, integratie en noodzakelijke tests. Gebruik uitsluitend Codex-sub-agents, geen Claude. Geef regelmatig een korte voortgangsupdate. Respecteer het werk van andere agents en laat één integrator commits maken.
 
-Doel: een native iPhone- en iPad-app in apps/ios, minimum iOS/iPadOS 26, bundle ID app.ruimte.mobile. SwiftUI, UIKit waar nodig. Nooit een lokale daemon. Eén ed25519-sleutel voor sessie en machines, callback ruimte://pulsar/callback, koppellinks uitsluitend HTTPS. Canvasnodes krijgen een eigen pagina; bestaande nodes worden niet verplaatst of geresized. Native Apple-tokenuitwisseling en de latere UI-fasen vallen buiten fase 0.
+Doel: native iPhone- en iPad-app in apps/ios, minimum iOS/iPadOS 26, bundle ID app.ruimte.mobile. SwiftUI, UIKit voor canvas/timeline en SwiftTerm voor terminal. Geen lokale daemon. Eén ed25519-sleutel en SessionVault voor sessies en machines, callback ruimte://pulsar/callback, koppellinks uitsluitend HTTPS. Bestaande canvasnodes mogen niet worden verplaatst of geresized. Browserpagina&#x27;s hebben geen privileged bridge.
 
-Fase 0:
-1. Maak een XcodeGen-project met een minimale iOS-testapp, plus Swift-packages RuimtePulsar en RuimteTransport. Begin met generatie van de benodigde modellen uit packages/pulsar en packages/contracts; definieer geen wire-shapes met de hand. Fase 1 breidt de generator uit naar de volledige API. Genereer ook protocolVersion uit de bestaande constante.
-2. Implementeer Keychain-opslag met AfterFirstUnlockThisDeviceOnly, zonder synchronisatie, PKCE via ASWebAuthenticationSession met volledige callback- en statecontrole, machinelijst, access statements en de bestaande SessionVault-semantiek. Lees GET /v1/providers. De Apple-redirectflow in de Worker bestaat; bouw geen nieuwe Apple-loginroute.
-3. Port BrokerPeer en BrokerSockets: deel een socket per broker-URL en sleutel; vraag na ready de bestaande ice-response, wacht daarop, ververs verlopen credentials en voeg de servers samen met eigen STUN vóór gathering. TURN is al gebouwd. Gebruik normale ICE-selectie zoals de bestaande clients: direct verbinden wanneer mogelijk, TURN alleen wanneer een directe route niet lukt. Geen relay-only policy voor normaal gebruik; relay forceren mag uitsluitend als expliciete testdiagnostiek. Houd productieconfiguratie en gemeten relaybereikbaarheid apart van codebeschikbaarheid. Geen productie-infrastructuur wijzigen of deployen.
-4. Pin stasel/WebRTC op een exacte release. Implementeer gesigneerde signaling, pinned machine key, channelBinding, protocolcontrole, challenge/proof, framing met UTF-16-grenzen en liveness exact volgens de bron. Eén transportverbinding per machine. Bij achtergrond/voorgrond rekening houden met meerdere scenes; opnieuw verbinden voor gehouden links. Gebruik NWPathMonitor voor padwijzigingen, nooit een eigen NWConnection alsof die libwebrtc observeert.
-5. Test de byte-afspraken tegen vanuit TypeScript gegenereerde fixtures. Test Unicode, defaults, optional versus null, ongeldige handtekeningen, verkeerde machine/binding/protocol, parallelle brokerpogingen, verlopen ICE-credentials, annuleren en reconnect deterministisch. Maak server.hello zichtbaar in de testapp.
-6. Bouw en test lokaal met xcodegen, swift test waar passend en xcodebuild test op een beschikbare simulator. Geen dev server starten. Geen package.json in apps/ios; houd .xcodeproj en buildoutput buiten git. Controleer bun install --frozen-lockfile. Bij TypeScript-wijzigingen: bun run format, bun run check en bun test; herstel timingtests met fakes, nooit langere timeouts.
-7. Geef Bas daarna exacte stappen voor Wi-Fi, 5G, geselecteerde relay-kandidaat, background/foreground, auth.sessions origin statement en reconnectmetingen. Meld alleen daadwerkelijk uitgevoerde checks als geslaagd. Fase 0 is niet volledig geaccepteerd tot deze apparaattests gedaan zijn.
+Verbind met normale ICE-selectie, zoals de andere clients: direct wanneer mogelijk, TURN als terugval. Forceer relay alleen met de expliciete diagnostische schakelaar. Verifieer altijd de pinned machine key, gesigneerde signaling, channelBinding en protocolversie. De bestaande Apple Worker-redirectflow blijft de loginroute; native Apple-tokenuitwisseling is afzonderlijk vervolgwerk.
 
-Werk binnen deze fase autonoom. Gebruik uitsluitend Codex-sub-agents, geen Claude. De overdracht vraagt één uitvoerende Codex-sub-agent; splits alleen verder wanneer dat nodig en toegestaan is. Respecteer bestaande wijzigingen van anderen, inclusief het bijgewerkte rapport. Werk CLAUDE.md en docs/DECISIONS.md bij met apps/ios en besluiten die niet uit de code blijken. Commit afgeronde eigen deelstappen op main met Engelse conventional commits, zonder Co-Authored-By of andere attributie; niet pushen. Houd Bas op de hoogte van bevindingen, checks en wat nog nodig is.
+Controleer de volledige gegenereerde daemon-API en gedeelde MachineClient, projectnavigatie en merges, chat inclusief streaming/composer/approvals, terminal follow zonder resize, canvas, bestanden/Git/processen/usage, encrypted notifications en ActivityKit. Bewaar onbekende node- en viewsoorten. Controleer dat meerdere iPad-vensters dezelfde machineverbinding en attachments delen en elkaar niet afmelden. Het sluiten van een pagina mag geen sessie op de machine stoppen.
 
-Conventies: 4 spaties, accolades waar Swift ze kent, geen éénlettervariabelen buiten i, e, x en y, commentaar alleen voor het waarom, Amerikaans Engels in code en UI, &quot;machine&quot; in tekst voor de gebruiker.</code></pre>
+Push gebruikt X25519 + HKDF-SHA256 + AES-256-GCM, canonieke routing-AAD en een ed25519-machinehandtekening. Controleer de gedeelde Bun/CryptoKit-fixture, account/session-binding, intrekking, replay, expiry en limieten. Een achtergrondantwoord krijgt een begrensde poging en een route naar de sessie als die niet lukt. Alleen de toegestane Live Activity-titel en fase reizen onversleuteld.
+
+Bouw met XcodeGen en test met swift test en xcodebuild test op een geïnstalleerde simulator. Xcode/SwiftTerm vraagt de Metal Toolchain. Gebruik ad-hoc signing voor echte simulator-Keychain-tests. project.yml blijft de bron; het gegenereerde Xcode-project en Package.resolved staan in git voor Xcode Cloud. Geen package.json in apps/ios, geen buildoutput of xcuserdata in git. Bij TypeScript-wijzigingen: bun run format, bun run check, bun test en bun install --frozen-lockfile. Gebruik deterministische fakes voor timingtests.
+
+Werk het HTML-rapport, README en besluiten bij met werkelijke testresultaten. Bekijk de native schermen en het rapport visueel. Benoem afzonderlijk wat nog alleen op hardware of met externe Apple-configuratie te verifiëren is: Wi-Fi/5G/TURN, achtergrondacties, iPad-multitasking, performance, APNs-bezorging en distributiesigning/TestFlight. Geen ongeteste acceptatieclaim en geen productie-deployment of upload. Commit afgerond werk op main met Engelse conventional commits, zonder attributie; niet pushen.</code></pre>
 </section>
 
 <section id="bronnen">
