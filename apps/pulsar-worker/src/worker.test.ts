@@ -20,6 +20,7 @@ import {
     type SessionResult
 } from '@ruimte/pulsar';
 import { Miniflare } from 'miniflare';
+import { LIMITS, WINDOW_MS, retryAfterSeconds, windowStartOf } from './rate-window.ts';
 
 /*
  * The Worker bundled the way wrangler would, in workerd through Miniflare, against an in-memory D1
@@ -228,6 +229,22 @@ const accessRequest = (machineId: string, client: KeyPair, signer = client) => {
 
 const errorCode = async (response: Response): Promise<string> => ((await response.json()) as AddressBookError).error.code;
 
+/*
+ * A bucket already at its limit, so the next request through the route is the refusal. Filling it with
+ * real requests costs a round trip each, and a slow runner spent seconds on it. The Worker reads its own
+ * clock, so the next window is filled too, in case the minute turns between this and the request.
+ */
+const spendLimit = async (bucket: string, limit: number): Promise<void> => {
+    const db = await mf.getD1Database('DB');
+    const now = Date.now();
+    for (const windowStart of [now - (now % WINDOW_MS), now - (now % WINDOW_MS) + WINDOW_MS]) {
+        await db
+            .prepare('INSERT INTO rate_limit (bucket, window_start, count) VALUES (?1, ?2, ?3) ON CONFLICT (bucket, window_start) DO UPDATE SET count = ?3')
+            .bind(bucket, windowStart, limit)
+            .run();
+    }
+};
+
 beforeAll(async () => {
     script = await bundle();
     mf = new Miniflare({
@@ -249,6 +266,22 @@ beforeAll(async () => {
 
 afterAll(async () => {
     await mf.dispose();
+});
+
+describe('rate limit windows', () => {
+    const windowStart = 1_700_000_040_000;
+
+    test('every moment of a minute counts in the window that minute starts', () => {
+        expect(windowStartOf(windowStart)).toBe(windowStart);
+        expect(windowStartOf(windowStart + WINDOW_MS - 1)).toBe(windowStart);
+        expect(windowStartOf(windowStart + WINDOW_MS)).toBe(windowStart + WINDOW_MS);
+    });
+
+    test('a refusal names the seconds left in its window, rounded up', () => {
+        expect(retryAfterSeconds(windowStart + 15_000)).toBe(45);
+        expect(retryAfterSeconds(windowStart + 59_001)).toBe(1);
+        expect(retryAfterSeconds(windowStart)).toBe(60);
+    });
 });
 
 describe('health', () => {
@@ -674,20 +707,11 @@ describe('statements', () => {
     test('an account that asks too often is told to wait', async () => {
         const session = await signIn(4006);
         await dispatch('/v1/machines', { method: 'POST', headers: bearer(session), body: registration(session, newKeyPair(), 'busy') });
-        let limited: Response | null = null;
-        // Twice the limit plus two, so one window holds more than the limit even when the minute turns halfway.
-        for (let i = 0; i < 62 && !limited; i++) {
-            const response = await dispatch('/v1/statements', { method: 'POST', headers: bearer(session), body: accessRequest('busy', newKeyPair()) });
-            if (response.status === 429) {
-                limited = response;
-            } else {
-                expect(response.status).toBe(200);
-                await response.arrayBuffer();
-            }
-        }
-        expect(limited).not.toBeNull();
-        expect(await errorCode(limited as Response)).toBe('rate-limited');
-        expect(limited?.headers.get('retry-after')).not.toBeNull();
+        await spendLimit(`account:${session.account.id}:statement`, LIMITS.statementAccount);
+        const limited = await dispatch('/v1/statements', { method: 'POST', headers: bearer(session), body: accessRequest('busy', newKeyPair()) });
+        expect(limited.status).toBe(429);
+        expect(limited.headers.get('retry-after')).not.toBeNull();
+        expect(await errorCode(limited)).toBe('rate-limited');
     });
 });
 
@@ -860,38 +884,29 @@ describe('linking a machine with a code', () => {
         expect(list.removedMachineIds).toEqual([]);
     });
 
-    // Twice the limit plus two, so one window holds more than the limit even when the minute turns halfway.
-    const firstRefusal = async (attempts: number, send: () => Promise<Response>): Promise<Response | null> => {
-        for (let i = 0; i < attempts; i++) {
-            const response = await send();
-            if (response.status === 429) {
-                return response;
-            }
-            await response.arrayBuffer();
-        }
-        return null;
-    };
-
     test('an address that starts too many links is told to wait', async () => {
         const ip = nextIp();
-        const limited = await firstRefusal(22, () => dispatch('/v1/device/start', { method: 'POST', body: linkStart(newKeyPair(), 'burst'), ip }));
-        expect(limited).not.toBeNull();
-        expect(await errorCode(limited as Response)).toBe('rate-limited');
+        await spendLimit(`ip:${ip}:device-start`, LIMITS.deviceStartIp);
+        const limited = await dispatch('/v1/device/start', { method: 'POST', body: linkStart(newKeyPair(), 'burst'), ip });
+        expect(limited.status).toBe(429);
+        expect(await errorCode(limited)).toBe('rate-limited');
     });
 
     test('an account that guesses codes is told to wait', async () => {
         const session = await signIn(5008);
-        const limited = await firstRefusal(42, () => byCode('lookup', session, 'BCDF-GHJK'));
-        expect(limited).not.toBeNull();
-        expect(await errorCode(limited as Response)).toBe('rate-limited');
+        await spendLimit(`account:${session.account.id}:device-code`, LIMITS.deviceCodeAccount);
+        const limited = await byCode('lookup', session, 'BCDF-GHJK');
+        expect(limited.status).toBe(429);
+        expect(await errorCode(limited)).toBe('rate-limited');
     });
 
     test('an address that polls too often is told to wait', async () => {
         const link = await start(newKeyPair(), 'eager');
         const ip = nextIp();
-        const limited = await firstRefusal(122, () => dispatch('/v1/device/poll', { method: 'POST', body: { deviceCode: link.deviceCode }, ip }));
-        expect(limited).not.toBeNull();
-        expect(await errorCode(limited as Response)).toBe('rate-limited');
+        await spendLimit(`ip:${ip}:device-poll`, LIMITS.devicePollIp);
+        const limited = await dispatch('/v1/device/poll', { method: 'POST', body: { deviceCode: link.deviceCode }, ip });
+        expect(limited.status).toBe(429);
+        expect(await errorCode(limited)).toBe('rate-limited');
     });
 });
 
