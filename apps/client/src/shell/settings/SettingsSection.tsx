@@ -11,15 +11,15 @@ interface SettingsSectionProps {
 /* A titled group of rows in one card; rows divide themselves with a hairline. */
 export function SettingsSection({ title, description, action, children }: SettingsSectionProps) {
     return (
-        <section className="flex flex-col gap-2" aria-label={title}>
-            <div className="flex items-end gap-3">
-                <div className="min-w-0 grow">
+        <section className="flex min-w-0 flex-col gap-2" aria-label={title}>
+            <div className="flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2">
+                <div className="min-w-0 grow basis-48">
                     <h3 className="text-sm font-medium text-text">{title}</h3>
-                    {description && <p className="mt-0.5 text-xs text-text-muted">{description}</p>}
+                    {description && <p className="mt-0.5 text-xs break-words text-text-muted">{description}</p>}
                 </div>
                 {action}
             </div>
-            <div className="divide-y divide-border rounded-xl border border-border bg-surface">{children}</div>
+            <div className="min-w-0 divide-y divide-border rounded-xl border border-border bg-surface">{children}</div>
         </section>
     );
 }
