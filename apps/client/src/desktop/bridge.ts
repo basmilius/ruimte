@@ -84,6 +84,33 @@ export interface PulsarBridge {
     signOut(): Promise<void>;
 }
 
+/* Where the shell can run the daemon as a background service. Mirrors `apps/desktop/src/service/settings.ts`. */
+export type ServiceSupport = 'supported' | 'dev' | 'windows' | 'appimage';
+
+/* The background service of this machine. Mirrors `BackgroundServiceState` in `apps/desktop/src/service/controller.ts`. */
+export interface BackgroundServiceState {
+    support: ServiceSupport;
+    /* "Keep this machine running when Ruimte quits". Always false where the service is not supported. */
+    keepRunning: boolean;
+    /* Who runs the daemon now: the service, the app itself, or one the app found and does not manage. Null while starting. */
+    owner: 'service' | 'app' | 'external' | null;
+    /* Why the service did not take the daemon this time. */
+    failure: string | null;
+    /* Linux only: whether the person's services outlive their session. */
+    linger: boolean | null;
+}
+
+/* The switch and the stop button of This machine, which only the shell can carry out. */
+export interface BackgroundServiceBridge {
+    state(): Promise<BackgroundServiceState>;
+    onState(listener: (state: BackgroundServiceState) => void): () => void;
+    setKeepRunning(keepRunning: boolean): Promise<BackgroundServiceState>;
+    /* Runs `loginctl enable-linger`, which is a person's decision and never taken on their behalf. */
+    enableLinger(): Promise<BackgroundServiceState>;
+    /* Stops the service and quits the app; the next start of the app brings the machine back. */
+    stopMachine(): void;
+}
+
 /* The shell's API, present only inside the desktop app. Mirrors `apps/desktop/src/preload.ts`. */
 export interface DesktopBridge {
     platform: string;
@@ -145,6 +172,9 @@ export interface DesktopBridge {
        pairing: a loopback address is no proof of anything. Null while the daemon has not written it.
        Optional for the same reason `onBrowserContextMenu` is; without it the local row has to pair. */
     localSecret?(): Promise<string | null>;
+    /* The background service. Optional for the same reason `onBrowserContextMenu` is; without it
+       This machine offers no switch, which is also what a browser and the web client get. */
+    backgroundService?: BackgroundServiceBridge;
     /* Signing in to an account. Optional for the same reason `onBrowserContextMenu` is; without it
        the account section says signing in works in the desktop app, which is also what a browser gets. */
     pulsar?: PulsarBridge;

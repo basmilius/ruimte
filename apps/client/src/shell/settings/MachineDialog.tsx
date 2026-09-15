@@ -6,6 +6,7 @@ import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { messageOf, usePulsarAccount, withAccessToken } from '@/pulsar/account';
 import { useRegistrationFailures } from '@/pulsar/auto-register-watch';
 import { addMachineToAccount, openAccountMachine, refreshAccountMachines, usePulsarMachines } from '@/pulsar/machines';
+import { BackgroundServiceSection } from '@/shell/settings/BackgroundServiceSection';
 import { ConfirmDialog } from '@/shell/settings/ConfirmDialog';
 import { MachineIdentityForm } from '@/shell/settings/MachineIdentityForm';
 import { BrokerRow, DirectRow, MachineAccess, RefuseStatementsRow, WithReason } from '@/shell/settings/MachineSettings';
@@ -112,6 +113,7 @@ function MachineDialogBody({ entry }: { entry: MachineEntry }) {
                                 disabledReason={reason}
                             />
                         </SettingsSection>
+                        {entry.local && <BackgroundServiceSection />}
                         <SettingsSection title="Connection">
                             <DirectRow endpoint={entry.endpoint} available={model.direct} />
                             <BrokerRow endpoint={entry.endpoint} reason={reason} />
