@@ -107,5 +107,6 @@ passed. Both migrations are additive.
 A physical-device smoke run used two temporary terminals on development machine
 `YW9IZV86g20` (one running, one transitioning to attention, then both idle). The device
 registered an ActivityKit update token with Pulsar. No new Ruimte crash report appeared
-on the iPhone after the run. Visible counts, the final end state and notification-tap
-navigation still require Bas's observation; an update token alone does not prove them.
+on the iPhone after the run. Bas confirmed: "Live Activity en openen werken allebei." The two temporary test
+terminals were removed after that confirmation. The end state and more detailed count
+transitions were not separately reported. Production-signed delivery remains untested.
