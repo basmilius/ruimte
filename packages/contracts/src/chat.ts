@@ -365,6 +365,20 @@ export const ChatConfigurePayloadSchema = z.object({
 });
 export type ChatConfigurePayload = z.infer<typeof ChatConfigurePayloadSchema>;
 
+/*
+ * The composer preference of this client, for a chat the daemon starts with no client mounting it.
+ * One socket's answer, dropped with it. Among the clients connected the newest `changedAt` wins, so
+ * a client that reconnects with an older pick does not override a fresher one made elsewhere.
+ */
+export const ChatPreferencesPayloadSchema = z.object({
+    runtimeMode: RuntimeModeSchema.optional(),
+    // Per provider, because a model slug only means something in its own CLI's catalog.
+    selections: z.partialRecord(AgentKindSchema, ModelSelectionSchema).optional(),
+    // When the person last changed it, in milliseconds since the epoch; absent is older than any pick.
+    changedAt: z.number().nonnegative().optional()
+});
+export type ChatPreferencesPayload = z.infer<typeof ChatPreferencesPayloadSchema>;
+
 export const ChatTargetPayloadSchema = z.object({ chatId: ChatIdSchema });
 export type ChatTargetPayload = z.infer<typeof ChatTargetPayloadSchema>;
 

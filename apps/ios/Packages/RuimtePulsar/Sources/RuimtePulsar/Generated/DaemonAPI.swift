@@ -29,6 +29,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `chatAnswer` = "chat.answer"
     case `chatDismiss` = "chat.dismiss"
     case `chatConfigure` = "chat.configure"
+    case `chatSetPreferences` = "chat.setPreferences"
     case `chatCompact` = "chat.compact"
     case `chatClear` = "chat.clear"
     case `chatTurnDiff` = "chat.turnDiff"

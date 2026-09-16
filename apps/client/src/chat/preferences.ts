@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AgentKind, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type { AgentKind, ChatPreferencesPayload, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 
 const STORAGE_KEY = 'ruimte.chat.preferences';
 
@@ -11,13 +11,16 @@ export interface ChatPreferences {
     runtimeMode: RuntimeMode;
     // What an agent started as a terminal node runs in; a chat picks its own mode in the composer.
     terminalRuntimeMode: RuntimeMode;
+    /* When a person last changed any of it; what settles whose pick a machine uses when several clients told it one. */
+    changedAt: number;
 }
 
 export const DEFAULT_CHAT_PREFERENCES: ChatPreferences = {
     selectionByProvider: {},
     lastProvider: null,
     runtimeMode: 'full-access',
-    terminalRuntimeMode: 'full-access'
+    terminalRuntimeMode: 'full-access',
+    changedAt: 0
 };
 
 /*
@@ -35,7 +38,8 @@ export const parseChatPreferences = (raw: string | null): ChatPreferences => {
             selectionByProvider: { ...stored.selectionByProvider },
             lastProvider: stored.lastProvider ?? null,
             runtimeMode: stored.runtimeMode ?? DEFAULT_CHAT_PREFERENCES.runtimeMode,
-            terminalRuntimeMode: stored.terminalRuntimeMode ?? DEFAULT_CHAT_PREFERENCES.terminalRuntimeMode
+            terminalRuntimeMode: stored.terminalRuntimeMode ?? DEFAULT_CHAT_PREFERENCES.terminalRuntimeMode,
+            changedAt: typeof stored.changedAt === 'number' ? stored.changedAt : 0
         };
     } catch {
         return DEFAULT_CHAT_PREFERENCES;
@@ -61,6 +65,13 @@ export const withSelection = (preferences: ChatPreferences, provider: AgentKind,
     lastProvider: provider
 });
 
+/* What a machine starts a chat with when it starts one with no client mounting it. */
+export const chatPreferencesPayload = (preferences: ChatPreferences): ChatPreferencesPayload => ({
+    runtimeMode: preferences.runtimeMode,
+    selections: preferences.selectionByProvider,
+    changedAt: preferences.changedAt
+});
+
 const read = (): ChatPreferences => {
     try {
         return parseChatPreferences(localStorage.getItem(STORAGE_KEY));
@@ -74,7 +85,8 @@ export const useChatPreferences = create<ChatPreferences>(() => read());
 
 export const readChatPreferences = (): ChatPreferences => useChatPreferences.getState();
 
-const write = (next: ChatPreferences): void => {
+const write = (preferences: ChatPreferences): void => {
+    const next = { ...preferences, changedAt: Date.now() };
     useChatPreferences.setState(next);
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));

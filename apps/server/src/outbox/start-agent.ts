@@ -1,5 +1,6 @@
 import type { ChatCreatePayload } from '@ruimte/contracts';
 import { errorText } from '../error-text.ts';
+import type { ComposerPreference } from '../chat/composer-preferences.ts';
 import type { StartAgentEntry } from './outbox.ts';
 
 /*
@@ -13,6 +14,8 @@ export interface StartAgentDeps {
     placed(nodeId: string): boolean;
     hasChat(chatId: string): boolean;
     createChat(payload: ChatCreatePayload): Promise<unknown>;
+    /* The composer preference of the connected clients for this provider, read when the chat is made. */
+    composerPreference(provider: StartAgentEntry['payload']['provider']): ComposerPreference;
     killChat(chatId: string): Promise<void>;
     hasSession(sessionId: string): boolean;
     createSession(options: {
@@ -47,11 +50,15 @@ export const startAgentHandler =
                 if (deps.hasChat(nodeId)) {
                     return;
                 }
+                // The mode of the chat that opened it beats the person's pick, which fills in the rest.
+                const preference = deps.composerPreference(provider);
+                const mode = runtimeMode ?? preference.runtimeMode;
                 await deps.createChat({
                     chatId: nodeId,
                     provider,
                     ...(cwd === null ? {} : { cwd }),
-                    ...(runtimeMode === undefined ? {} : { runtimeMode })
+                    ...(preference.selection ? { selection: preference.selection } : {}),
+                    ...(mode === undefined ? {} : { runtimeMode: mode })
                 });
             } else {
                 if (deps.hasSession(nodeId)) {

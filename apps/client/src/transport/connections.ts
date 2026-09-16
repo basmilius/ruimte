@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { ChatClient } from '@/chat/chat-client';
+import { chatPreferencesPayload, useChatPreferences } from '@/chat/preferences';
 import { DiagramClient } from '@/diagram/diagram-client';
 import { DrawingClient } from '@/drawing/drawing-client';
 import { foldList } from '@/project/list';
@@ -103,6 +104,7 @@ const buildMachine = (endpoint: Endpoint): Machine => {
     // Every machine hears the same answer, since the switch is about this client and not about one of them.
     sessions.setApprovals(useSettings.getState().agentsApprovals);
     const chats = new ChatClient(transport, chatSinkFor(endpoint.id), providerSinkFor(endpoint.id));
+    chats.setPreferences(chatPreferencesPayload(useChatPreferences.getState()));
     return {
         endpointId: endpoint.id,
         transport,
@@ -425,8 +427,16 @@ export const startConnections = (): (() => void) => {
             }
         }
     });
+    const offChatPreferences = useChatPreferences.subscribe((state, before) => {
+        if (state.changedAt !== before.changedAt) {
+            for (const machine of machines.values()) {
+                machine.chats.setPreferences(chatPreferencesPayload(state));
+            }
+        }
+    });
     return () => {
         offEndpoints();
         offSettings();
+        offChatPreferences();
     };
 };

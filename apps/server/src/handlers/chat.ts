@@ -20,6 +20,12 @@ export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManage
 
     dispatcher.register('chat.configure', (payload) => translate(() => manager.configure(payload)));
 
+    // What a chat the daemon starts on its own is made with, while this socket is connected.
+    dispatcher.register('chat.setPreferences', (payload, client) => {
+        manager.composerPreferences.set(client.id, payload);
+        return {};
+    });
+
     dispatcher.register('chat.attach', (payload, client) => translate(() => manager.attach(payload.chatId, client.id, payload.historyLimit, payload.since)));
 
     dispatcher.register('chat.history', (payload) => translate(() => manager.history(payload.chatId, payload.cursor, payload.limit)));

@@ -1,6 +1,14 @@
 import { describe, expect, test } from 'bun:test';
 import type { ModelSelection } from '@ruimte/contracts';
-import { DEFAULT_CHAT_PREFERENCES, defaultProvider, parseChatPreferences, selectionFor, withSelection, type ChatPreferences } from './preferences';
+import {
+    chatPreferencesPayload,
+    DEFAULT_CHAT_PREFERENCES,
+    defaultProvider,
+    parseChatPreferences,
+    selectionFor,
+    withSelection,
+    type ChatPreferences
+} from './preferences';
 
 const sonnet: ModelSelection = { model: 'claude-sonnet-5', options: { effort: 'high' } };
 const gpt: ModelSelection = { model: 'gpt-5-codex', options: {} };
@@ -59,7 +67,24 @@ describe('reading what is stored', () => {
     });
 
     test('what is stored wins over the defaults', () => {
-        const stored = { selectionByProvider: { claude: sonnet }, lastProvider: 'claude', runtimeMode: 'auto', terminalRuntimeMode: 'supervised' };
+        const stored = {
+            selectionByProvider: { claude: sonnet },
+            lastProvider: 'claude',
+            runtimeMode: 'auto',
+            terminalRuntimeMode: 'supervised',
+            changedAt: 42
+        };
         expect(parseChatPreferences(JSON.stringify(stored))).toEqual(stored as ChatPreferences);
+    });
+
+    test('preferences written before the moment of a change was kept count as the oldest pick', () => {
+        expect(parseChatPreferences(JSON.stringify({ runtimeMode: 'auto' })).changedAt).toBe(0);
+    });
+});
+
+describe('what a machine is told', () => {
+    test('the mode, a model per provider and the moment of the last change; the terminal mode stays with the client', () => {
+        const remembered = preferences({ selectionByProvider: { claude: sonnet, codex: gpt }, lastProvider: 'codex', runtimeMode: 'supervised', changedAt: 7 });
+        expect(chatPreferencesPayload(remembered)).toEqual({ runtimeMode: 'supervised', selections: { claude: sonnet, codex: gpt }, changedAt: 7 });
     });
 });

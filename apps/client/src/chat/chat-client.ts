@@ -4,6 +4,7 @@ import type {
     ChatCheckpointDiff,
     ChatConfigurePayload,
     ChatInfo,
+    ChatPreferencesPayload,
     ChatSkill,
     FsSearchResult,
     ModelSelection,
@@ -56,6 +57,7 @@ export class ChatClient {
     private readonly providers: ProviderSink | null;
     private readonly mounted = new Map<string, Mounted>();
     private readonly unsubscribe: Array<() => void> = [];
+    private preferences: ChatPreferencesPayload | null = null;
 
     constructor(transport: Transport, sink: ChatSink, providers: ProviderSink | null = null) {
         this.transport = transport;
@@ -104,6 +106,15 @@ export class ChatClient {
         await this.transport.request('chat.kill', { chatId });
         this.sink.forget(chatId);
         await this.open(chatId, { ...options, provider, selection });
+    }
+
+    /*
+     * Tells the daemon what a chat it starts on its own is made with while this socket is connected,
+     * since no client mounting that chat sends a composer preference. Said again on every fresh socket.
+     */
+    setPreferences(preferences: ChatPreferencesPayload): void {
+        this.preferences = preferences;
+        this.sendPreferences();
     }
 
     async detach(chatId: string): Promise<void> {
@@ -255,8 +266,16 @@ export class ChatClient {
         this.sink.reset(chatId, result.info, result.items);
     }
 
+    private sendPreferences(): void {
+        if (this.preferences === null) {
+            return;
+        }
+        void this.transport.request('chat.setPreferences', this.preferences).catch(() => undefined);
+    }
+
     private onStatus(status: TransportStatus): void {
         if (status === 'open') {
+            this.sendPreferences();
             void this.loadProviders();
             void this.reattachAll();
             return;

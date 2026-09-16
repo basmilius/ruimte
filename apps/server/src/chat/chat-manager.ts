@@ -28,6 +28,7 @@ import { ChatSession, type ChatSendExtras } from './chat-session.ts';
 import { ChatLog, COMPACT_ABOVE_BYTES } from './chat-log.ts';
 import type { ChatTitleInput } from './chat-title.ts';
 import type { ChatRecord, ChatStore } from './chat-store.ts';
+import { ComposerPreferences } from './composer-preferences.ts';
 import { DeltaCoalescer } from './delta-coalescer.ts';
 import { ChatError } from './errors.ts';
 import { SubagentReader, type SubagentReaderOptions } from './subagent-reader.ts';
@@ -184,6 +185,7 @@ export class ChatManager {
     }
 
     private readonly observers = new Set<SessionSink>();
+    readonly composerPreferences = new ComposerPreferences();
 
     observe(sink: SessionSink): () => void {
         this.observers.add(sink);
@@ -197,6 +199,7 @@ export class ChatManager {
         return () => {
             if (this.sinks.get(clientId) === sink) {
                 this.sinks.delete(clientId);
+                this.composerPreferences.forget(clientId);
             }
         };
     }

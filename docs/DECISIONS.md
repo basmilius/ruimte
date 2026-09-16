@@ -2418,10 +2418,21 @@ code will not say on its own.
   a project still places the node before and after the create, for a delete that did not come
   with a kill.
 - A terminal the daemon starts is 120 columns by 40 rows and the first client that attaches sizes
-  it to itself, like every attach. A chat opened by a chat takes that chat's permission mode; any
-  other chat takes the mode a new chat gets on the daemon, not the composer preference a mounting
-  client would have sent, and a terminal node carries no mode, so its launch has none. Phase 5 puts
-  the ceiling on the mode.
+  it to itself, like every attach. A chat opened by a chat takes that chat's permission mode, and a
+  terminal node carries no mode, so its launch has none. Phase 5 puts the ceiling on the mode.
+- Any other chat the daemon starts takes the composer preference a mounting client would have sent
+  (decided by Bas after phase 3): the mode, and the model with its options for the chat's CLI, with
+  the parent's mode beating the preference's. A client tells every machine it has a socket to with
+  `chat.setPreferences`, on every fresh socket and on every change, the way `agent.setApprovals`
+  travels, and the daemon holds it per socket and drops it with the socket. Among several clients
+  the newest `changedAt` (the moment a person last changed it, kept in the client's localStorage)
+  wins rather than the client that spoke last, since a laptop that reconnects says an old pick again;
+  a tie goes to the one told last. It is read when the chat is made, not when the entry is written:
+  after a restart no socket has spoken yet either way, and the entry keeps its shape. With no client
+  connected the chat gets what it got before, `full-access` and the CLI's own default model; a machine
+  never remembers a person's pick after that person's client is gone, since on a shared machine it
+  would start someone else's agents with it. The iPhone app sends nothing, so with only the phone
+  connected the defaults apply as well. No ceiling: that is phase 5, with the one on the verb.
 - Nothing about approvals changed: a terminal agent with nobody attached has no client that wants
   a request held, so its CLI's own prompt asks (or an offline device through a push), and a client
   that mounts the node later sees the prompt on the screen.

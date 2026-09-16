@@ -11331,6 +11331,67 @@
       "createdAt"
     ]
   },
+  "request.chat.setPreferences.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "runtimeMode": {
+        "type": "string",
+        "enum": [
+          "supervised",
+          "auto-accept-edits",
+          "auto",
+          "full-access"
+        ]
+      },
+      "selections": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "enum": [
+            "claude",
+            "codex",
+            "gemini",
+            "copilot"
+          ]
+        },
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "minLength": 1
+            },
+            "options": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "boolean"
+                ]
+              }
+            }
+          },
+          "required": [
+            "model",
+            "options"
+          ]
+        }
+      },
+      "changedAt": {
+        "type": "number",
+        "minimum": 0
+      }
+    }
+  },
+  "request.chat.setPreferences.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.chat.compact.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

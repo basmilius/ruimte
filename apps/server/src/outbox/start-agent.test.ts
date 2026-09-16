@@ -122,6 +122,7 @@ const boot = async (): Promise<Daemon> => {
                 placed: (nodeId) => store.index.locate(nodeId) !== null,
                 hasChat: (chatId) => chats.get(chatId) !== undefined,
                 createChat: (payload) => chats.create(payload),
+                composerPreference: (provider) => chats.composerPreferences.for(provider),
                 killChat: (chatId) => chats.kill(chatId),
                 hasSession: (sessionId) => sessions.get(sessionId) !== undefined,
                 createSession: (options) => sessions.create(options),
@@ -343,6 +344,7 @@ describe('the start of one agent node', () => {
             createChat: async (payload) => {
                 calls.push(`create chat ${JSON.stringify(payload)}`);
             },
+            composerPreference: () => ({}),
             killChat: async (chatId) => {
                 calls.push(`kill chat ${chatId}`);
             },
@@ -366,6 +368,18 @@ describe('the start of one agent node', () => {
         expect(calls).toEqual([
             'create chat {"chatId":"chat-1","provider":"claude","cwd":"/work","runtimeMode":"supervised"}',
             'create session {"sessionId":"terminal-1","cols":120,"rows":40,"cwd":"/work","agent":{"kind":"claude"}}'
+        ]);
+    });
+
+    test('a chat takes the model and mode of the composer preference, and the mode of the chat that opened it beats it', async () => {
+        const opus = { model: 'claude-opus-5', options: { effort: 'high' } };
+        const { calls, deps } = fakeDeps({ composerPreference: () => ({ runtimeMode: 'auto', selection: opus }) });
+        await startAgentHandler(deps)(entry('chat'));
+        const unopened = entry('chat');
+        await startAgentHandler(deps)({ ...unopened, payload: { node: 'chat', provider: 'claude', cwd: '/work' } });
+        expect(calls).toEqual([
+            `create chat {"chatId":"chat-1","provider":"claude","cwd":"/work","selection":${JSON.stringify(opus)},"runtimeMode":"supervised"}`,
+            `create chat {"chatId":"chat-1","provider":"claude","cwd":"/work","selection":${JSON.stringify(opus)},"runtimeMode":"auto"}`
         ]);
     });
 

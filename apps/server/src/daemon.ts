@@ -221,6 +221,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 placed: (nodeId) => projects.index.locate(nodeId) !== null,
                 hasChat: (chatId) => chats.get(chatId) !== undefined,
                 createChat: (payload) => chats.create(payload),
+                composerPreference: (provider) => chats.composerPreferences.for(provider),
                 killChat: (chatId) => chats.kill(chatId),
                 hasSession: (sessionId) => manager.get(sessionId) !== undefined,
                 createSession: (options) => manager.create(options),

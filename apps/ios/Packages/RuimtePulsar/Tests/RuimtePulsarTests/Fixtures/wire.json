@@ -121,6 +121,7 @@
     "chat.answer",
     "chat.dismiss",
     "chat.configure",
+    "chat.setPreferences",
     "chat.compact",
     "chat.clear",
     "chat.turnDiff",

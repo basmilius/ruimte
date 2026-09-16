@@ -139,6 +139,20 @@ describe('ChatClient', () => {
         expect(sink.resets).toEqual([{ chatId: 'c', items: transport.items }]);
     });
 
+    test('tells the daemon the composer preference once it has one, and says it again on a fresh socket', () => {
+        const { transport, client } = setup();
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        expect(transport.of('chat.setPreferences')).toEqual([]);
+
+        const preference = { runtimeMode: 'supervised' as const, selections: { claude: { model: 'claude-opus-5', options: {} } }, changedAt: 3 };
+        client.setPreferences(preference);
+        // A reconnect is a new client over there, so the pick has to travel again.
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        expect(transport.of('chat.setPreferences').map((call) => call.payload)).toEqual([preference, preference]);
+    });
+
     test('events reach the store, whatever chat they are for', () => {
         const { transport, sink } = setup();
         transport.emit('chat.event', { chatId: 'c', event: { type: 'delta', itemId: 'a1', text: 'x' } });
