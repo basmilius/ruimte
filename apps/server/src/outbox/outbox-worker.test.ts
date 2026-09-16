@@ -36,6 +36,7 @@ test('an entry is on disk until its work is done, and then it is gone', async ()
         clock,
         handlers: {
             'resume-run': unused,
+            'wake-parent': unused,
             'start-agent': (entry) => {
                 seen.push(entry.target);
                 return new Promise((resolve) => {
@@ -67,6 +68,7 @@ test('what an earlier run owed is started once after a restart, and not again af
             clock,
             handlers: {
                 'resume-run': unused,
+                'wake-parent': unused,
                 'start-agent': async (entry) => {
                     runs.push(entry.target);
                 }
@@ -95,6 +97,7 @@ test('entries for one target run one after the other, oldest first, while other 
         clock,
         handlers: {
             'resume-run': unused,
+            'wake-parent': unused,
             'start-agent': (entry) => {
                 const key = `${entry.target}:${entry.payload.node}`;
                 order.push(key);
@@ -132,6 +135,7 @@ test('a failure waits 1, 5 and 30 seconds on the clock and is then given up on',
         clock,
         handlers: {
             'resume-run': unused,
+            'wake-parent': unused,
             'start-agent': async () => {
                 attempts += 1;
                 throw new Error('no');
@@ -163,6 +167,7 @@ test('a retry that was waiting survives a restart with its attempts', async () =
         clock,
         handlers: {
             'resume-run': unused,
+            'wake-parent': unused,
             'start-agent': async () => {
                 throw new Error('no');
             }
@@ -188,4 +193,75 @@ test('pruning drops what a project owed for nodes it no longer places', async ()
         ['other', 'gone']
     ]);
     expect(await filesOnDisk()).toHaveLength(2);
+});
+
+const wakeWork = (taskId: string): OutboxWork => ({ kind: 'wake-parent', payload: { taskId } });
+
+test('an entry that waits keeps its file, costs no attempt, holds no lane and runs again only once its target is woken', async () => {
+    let busy = true;
+    const runs: string[] = [];
+    const worker = new OutboxWorker({
+        store,
+        clock,
+        handlers: {
+            'start-agent': unused,
+            'wake-parent': async (entry) => {
+                runs.push(entry.payload.taskId);
+                return busy ? 'wait' : undefined;
+            },
+            // The resume of the same chat behind it is not held up by a wake that waits for that resume.
+            'resume-run': async (entry) => {
+                runs.push(`resume ${entry.payload.turnId}`);
+            }
+        }
+    });
+    worker.start();
+    await worker.enqueue('project', 'chat-1', wakeWork('task-1'));
+    await worker.enqueue('project', 'chat-1', { kind: 'resume-run', payload: { turnId: 'turn-1', attempt: 2 } });
+    await worker.settled();
+    expect(runs).toEqual(['task-1', 'resume turn-1']);
+    expect(store.list().map((entry) => [entry.kind, entry.attempts])).toEqual([['wake-parent', 0]]);
+
+    // No clock brings it back: only a wake of its own target does.
+    clock.advance(RETRY_DELAYS_MS.at(-1)! * 10);
+    worker.wake('chat-2');
+    await worker.settled();
+    expect(runs).toEqual(['task-1', 'resume turn-1']);
+
+    busy = false;
+    worker.wake('chat-1');
+    await Promise.resolve();
+    await worker.settled();
+    expect(runs).toEqual(['task-1', 'resume turn-1', 'task-1']);
+    expect(store.list()).toEqual([]);
+});
+
+test('a wake that lands while the entry is still deciding to wait runs it again instead of losing it', async () => {
+    let decide: (outcome: 'wait' | undefined) => void = () => undefined;
+    let calls = 0;
+    const worker = new OutboxWorker({
+        store,
+        clock,
+        handlers: {
+            'start-agent': unused,
+            'resume-run': unused,
+            'wake-parent': () => {
+                calls += 1;
+                if (calls > 1) {
+                    return Promise.resolve();
+                }
+                return new Promise((resolve) => {
+                    decide = resolve;
+                });
+            }
+        }
+    });
+    worker.start();
+    await worker.enqueue('project', 'chat-1', wakeWork('task-1'));
+    // The chat ends its turn while the handler still believes it busy.
+    worker.wake('chat-1');
+    decide('wait');
+    await worker.settled();
+    expect(calls).toBe(2);
+    expect(store.list()).toEqual([]);
 });

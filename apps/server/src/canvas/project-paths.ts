@@ -53,6 +53,7 @@ const checkInsideProject = async (
 
 const CWD_RULE: InsideRule = { flag: '--cwd', badCode: 'bad-cwd', outsideCode: 'cwd-outside-project' };
 const PROMPT_FILE_RULE: InsideRule = { flag: '--prompt-file', badCode: 'bad-prompt-file', outsideCode: 'prompt-file-outside-project' };
+const RESULT_FILE_RULE: InsideRule = { flag: '--result-file', badCode: 'bad-result-file', outsideCode: 'result-file-outside-project' };
 
 /* Where a shell or an agent may start: a directory inside the project folder or a worktree of it. */
 export const checkCwd = async (folder: string | null, cwd: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> => {
@@ -63,14 +64,21 @@ export const checkCwd = async (folder: string | null, cwd: string, worktreePaths
     return resolved;
 };
 
-/* The prompt a caller put in a file, under the same folder rule a cwd follows. */
-export const readPromptFile = async (folder: string | null, path: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> => {
-    const { resolved, real } = await checkInsideProject(folder, PROMPT_FILE_RULE, path, worktreePaths);
+const readInsideFile = async (rule: InsideRule, folder: string | null, path: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> => {
+    const { resolved, real } = await checkInsideProject(folder, rule, path, worktreePaths);
     if (!(await stat(real)).isFile()) {
-        throw new VerbRefusal('bad-prompt-file', `${resolved} is not a file; --prompt-file is resolved against the project folder unless it is absolute`);
+        throw new VerbRefusal(rule.badCode, `${resolved} is not a file; ${rule.flag} is resolved against the project folder unless it is absolute`);
     }
     return Bun.file(real).text();
 };
+
+/* The prompt a caller put in a file, under the same folder rule a cwd follows. */
+export const readPromptFile = (folder: string | null, path: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> =>
+    readInsideFile(PROMPT_FILE_RULE, folder, path, worktreePaths);
+
+/* The result of a task a child put in a file, under the same rule. */
+export const readResultFile = (folder: string | null, path: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> =>
+    readInsideFile(RESULT_FILE_RULE, folder, path, worktreePaths);
 
 /*
  * A file a node points at. Unlike a cwd this one may sit outside the project: a person drags a file

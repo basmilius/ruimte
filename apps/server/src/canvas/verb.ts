@@ -1,4 +1,4 @@
-import { isCanvasView, type AgentKind, type DiagramContent, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
+import { isCanvasView, type AgentKind, type DiagramContent, type ProjectCanvasView, type ProjectContent, type Task } from '@ruimte/contracts';
 import { z } from 'zod';
 import type { NoticeDelivery, Notice } from '../context/notices.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
@@ -49,6 +49,16 @@ export interface CanvasHost {
     notify(notice: Omit<Notice, 'createdAt'>): Promise<NoticeDelivery>;
     /* Replaces the diagram of a view, whether or not anyone has its project open, and answers the new rev. */
     writeDiagram(projectId: string, viewId: string, content: DiagramContent): Promise<number>;
+    /* The tasks a chat gives the nodes it opens with `--task`, kept by the daemon outside the project. */
+    tasks: TaskHost;
+}
+
+export interface TaskHost {
+    open(record: { projectId: string; parentId: string; childId: string; title: string; prompt: string }): Promise<Task>;
+    /* Ends the open task of this child with the result it reported; null when it has none open. */
+    done(childId: string, text: string): Promise<Task | null>;
+    /* Every task the node gave or was given, oldest first. */
+    involving(nodeId: string): Task[];
 }
 
 export interface AgentStart {

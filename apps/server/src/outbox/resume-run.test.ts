@@ -102,7 +102,8 @@ const boot = async (spawn?: SpawnChatProcess): Promise<Daemon> => {
         clock,
         handlers: {
             'start-agent': () => Promise.reject(new Error('no start in these tests')),
-            'resume-run': resumeRunHandler(chats)
+            'resume-run': resumeRunHandler(chats),
+            'wake-parent': () => Promise.reject(new Error('no wake in these tests'))
         },
         onParked: resumeRunParked(chats)
     });

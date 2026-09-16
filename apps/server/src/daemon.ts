@@ -22,6 +22,9 @@ import { OutboxStore } from './outbox/outbox.ts';
 import { OutboxWorker } from './outbox/outbox-worker.ts';
 import { startAgentHandler } from './outbox/start-agent.ts';
 import { oweResume, resumeRunHandler, resumeRunParked } from './outbox/resume-run.ts';
+import { TaskStore } from './tasks/task-store.ts';
+import { wireTasks } from './tasks/wiring.ts';
+import { registerTaskHandlers } from './handlers/tasks.ts';
 import type { AgentStart } from './canvas/verb.ts';
 import { connectionOpener, socketChannel, type ClientChannel, type OpenConnection, type SocketChannel } from './connection.ts';
 import { authenticateChannel } from './pulsar/channel-auth.ts';
@@ -142,6 +145,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     // And for the agents a verb made that the daemon still has to start.
     const outbox = new OutboxStore(config.home);
     await outbox.load();
+    // And for the tasks a chat gave, whose results still have to wake it.
+    const tasks = new TaskStore(config.home);
+    await tasks.load();
     /* What a node hears the moment it can: taken here, so whichever channel gets there first is the
        only one that delivers it. */
     const messagesFor = (targetId: string): string[] => notices.take(targetId).map(renderNotice);
@@ -197,15 +203,27 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             projectOf: (id) => projects.index.locate(id)?.projectId ?? null,
             entries: () => outbox.list(),
             enqueue: (...args) => outboxWorker.enqueue(...args)
-        })
+        }),
+        taskRows: (chatId) => tasks.ofParent(chatId)
     });
     const projects = new ProjectStore(config.home);
+    const taskWiring = wireTasks({
+        tasks,
+        chats,
+        placed: (nodeId) => projects.index.locate(nodeId) !== null,
+        titleFor: (nodeId) => projects.index.titleFor(nodeId),
+        madeBy: (nodeId) => lineage.madeBy(nodeId),
+        enqueue: (...args) => outboxWorker.enqueue(...args),
+        alert: (target, nodeId, title, body) => push.alert(target, nodeId, title, body),
+        wake: (chatId) => outboxWorker.wake(chatId)
+    });
     // A node deleted before anyone ran it takes its prompt with it, and a node that is gone frees the count its opener is held to.
     projects.index.onPlaces = (projectId, ids) => {
         void prompts.prune(projectId, ids).catch((e) => console.error('Pruning pending prompts failed:', errorText(e)));
         void lineage.prune(projectId, ids).catch((e) => console.error('Pruning agent lineage failed:', errorText(e)));
         void notices.prune(projectId, ids).catch((e) => console.error('Pruning waiting messages failed:', errorText(e)));
         void outbox.prune(projectId, ids).catch((e) => console.error('Pruning the outbox failed:', errorText(e)));
+        void taskWiring.prune(projectId, ids).catch((e) => console.error('Pruning tasks failed:', errorText(e)));
     };
     const drawings = new DrawingStore(projects);
     projects.attachDrawings(drawings);
@@ -225,11 +243,16 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 killChat: (chatId) => chats.kill(chatId),
                 hasSession: (sessionId) => manager.get(sessionId) !== undefined,
                 createSession: (options) => manager.create(options),
-                killSession: (sessionId) => manager.kill(sessionId)
+                killSession: (sessionId) => manager.kill(sessionId),
+                onGaveUp: taskWiring.onStartGaveUp
             }),
-            'resume-run': resumeRunHandler(chats)
+            'resume-run': resumeRunHandler(chats),
+            'wake-parent': taskWiring.wakeParent
         },
-        onParked: resumeRunParked(chats)
+        onParked: (entry, error) => {
+            resumeRunParked(chats)(entry, error);
+            taskWiring.onParked(entry, error);
+        }
     });
     const folders = new FolderWatcher();
     const statuses = new GitStatusWatcher();
@@ -262,13 +285,16 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         exit: () => void shutdown('a newer build on disk'),
         log: (line) => console.log(line)
     });
-    manager.onProcessChange = (_sessionId, phase) => {
+    manager.onProcessChange = (sessionId, phase) => {
         if (phase === 'before-kill') {
             processes.beforeKill();
             return;
         }
         processes.nudge();
         selfUpdate.nudge();
+        if (manager.get(sessionId)?.exited !== false) {
+            taskWiring.coordinator.terminalEnded(sessionId);
+        }
     };
     manager.isAgentGone = (sessionId) => processes.isAgentGone(sessionId);
 
@@ -295,6 +321,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         agentsDeleteAnyView: () => identity.agentsDeleteAnyView,
         showView: (projectId: string, viewId: string, by: string) => projects.showView(projectId, viewId, by),
         writeDiagram: (projectId: string, viewId: string, content: DiagramContent) => diagrams.write(projectId, viewId, content),
+        tasks: taskWiring.host,
         /* A node that has never been shown has no session, and a canvas going down is not the place
            to fail over one, so an id neither manager knows is already ended as far as the verb goes. */
         endSession: async (kind: 'terminal' | 'chat', nodeId: string) => {
@@ -340,6 +367,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         onError: (error) => console.error('Push delivery failed:', errorText(error))
     });
     manager.observe((event) => push.consume(event));
+    manager.observe((event) => taskWiring.coordinator.sessionEvent(event));
     chats.observe((event) => push.consume(event));
     manager.offlineApprovals = () => push.hasOfflineApprovals();
 
@@ -348,6 +376,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
     registerSessionHandlers(dispatcher, manager);
     registerChatHandlers(dispatcher, chats, providers);
+    registerTaskHandlers(dispatcher, tasks);
     registerProjectHandlers(dispatcher, projects);
     registerDrawingHandlers(dispatcher, drawings);
     registerDiagramHandlers(dispatcher, diagrams);
@@ -463,7 +492,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         statuses,
         usage,
         limits,
-        processes
+        processes,
+        tasks
     });
 
     const endpointInfo = (reachability: ClientAccess['reachability'], authenticated: boolean) => ({
@@ -717,6 +747,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         console.log(`ruimte server stopping for ${reason}, writing snapshots`);
         selfUpdate.stop();
         outboxWorker.stop();
+        taskWiring.coordinator.stop();
         snapshotSchedule.stop();
         usage.stop();
         limits.stop();

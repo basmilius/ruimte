@@ -15,7 +15,8 @@ import type {
     ChatSkill,
     ChatSubagentPayload,
     ChatSubagentResult,
-    ContextSource
+    ContextSource,
+    Task
 } from '@ruimte/contracts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
@@ -85,6 +86,8 @@ interface ChatManagerOptions {
      * the turn ends aborted with a note that says why.
      */
     onInterruptedRun?: (run: InterruptedRun) => Promise<boolean>;
+    // The tasks a chat gave, so a chat loaded from disk shows a row for each even when a crash lost the write of one.
+    taskRows?: (chatId: string) => Task[];
 }
 
 // Above this the record is big enough that rewriting it on every tool call costs more than it saves.
@@ -124,9 +127,13 @@ export class ChatManager {
     private readonly nameChat: ChatManagerOptions['nameChat'] | null;
     private readonly subagents: SubagentReader;
     private readonly onInterruptedRun: ChatManagerOptions['onInterruptedRun'] | null;
+    private readonly taskRows: (chatId: string) => Task[];
+    // Clients following the conversation of a node a task opened, per row of the chat that gave it.
+    private readonly childHolds = new Map<string, { parentId: string; toolUseId: string; childId: string; clients: Set<string> }>();
 
     constructor(options: ChatManagerOptions) {
         this.onInterruptedRun = options.onInterruptedRun ?? null;
+        this.taskRows = options.taskRows ?? (() => []);
         this.providers = options.providers;
         this.claudeTitles = options.claudeTitles ?? null;
         this.nameChat = options.nameChat ?? null;
@@ -273,6 +280,9 @@ export class ChatManager {
         if (stored) {
             session.settleStored(selection, resume);
         }
+        for (const task of this.taskRows(payload.chatId)) {
+            session.upsertTaskRow(task);
+        }
         // Sent before the info goes back, so the client's attach already carries it: a prompt an
         // agent was made with has to read as the first message of the thread, not as a turn out of
         // nowhere. The send is what spawns the process, which is the CLI's own rule for a chat.
@@ -336,6 +346,12 @@ export class ChatManager {
             }
         }
         this.subagents.releaseClient(clientId);
+        for (const [key, hold] of this.childHolds) {
+            hold.clients.delete(clientId);
+            if (hold.clients.size === 0) {
+                this.childHolds.delete(key);
+            }
+        }
     }
 
     /*
@@ -344,6 +360,10 @@ export class ChatManager {
      * something that was found.
      */
     async subagent(clientId: string, payload: ChatSubagentPayload): Promise<ChatSubagentResult> {
+        const childId = this.taskChildOf(payload.chatId, payload.toolUseId);
+        if (childId !== null) {
+            return this.childConversation(clientId, payload, childId);
+        }
         if (payload.watch === false) {
             this.subagents.release(clientId, payload.chatId, payload.toolUseId);
         }
@@ -355,8 +375,81 @@ export class ChatManager {
     }
 
     /* The whole conversation of a subagent, for an agent that reads it as text. */
-    subagentItems(chatId: string, toolUseId: string): Promise<ChatItem[]> {
+    async subagentItems(chatId: string, toolUseId: string): Promise<ChatItem[]> {
+        const childId = this.taskChildOf(chatId, toolUseId);
+        if (childId !== null) {
+            return (await this.childChat(childId)).thread.list();
+        }
         return this.subagents.readAll(chatId, toolUseId);
+    }
+
+    /* Writes the row of a task into the chat that gave it, when that chat is loaded; loading it lays every row down anyway. */
+    syncTaskRow(task: Task): void {
+        this.chats.get(task.parentId)?.upsertTaskRow(task);
+    }
+
+    /* Whether a chat has a thread on disk, for work that must not make an empty chat of an id it only remembers. */
+    async hasStored(chatId: string): Promise<boolean> {
+        return this.chats.has(chatId) || (await this.store?.has(chatId)) === true;
+    }
+
+    /* A line from the daemon in a chat's thread, loading the chat when nobody has; nothing for a chat that is gone. */
+    async addNote(chatId: string, level: 'info' | 'warning' | 'error', text: string): Promise<void> {
+        await this.creating.get(chatId)?.catch(() => undefined);
+        if (!(await this.hasStored(chatId))) {
+            return;
+        }
+        if (!this.chats.has(chatId)) {
+            await this.create({ chatId });
+        }
+        this.chats.get(chatId)?.addNote(level, text);
+    }
+
+    /* The node a row of this chat stands for when a task opened it, or null for a subagent of the CLI's own. */
+    private taskChildOf(chatId: string, toolUseId: string): string | null {
+        const row = this.chats.get(chatId)?.thread.find('subagent', (item) => item.toolUseId === toolUseId);
+        return row?.origin === 'ruimte' && row.childId !== undefined ? row.childId : null;
+    }
+
+    private async childChat(childId: string): Promise<ChatSession> {
+        await this.creating.get(childId)?.catch(() => undefined);
+        if (!this.chats.has(childId)) {
+            if (!(await this.store?.has(childId))) {
+                throw new ChatError('chat-unsupported', 'This task runs in a terminal or has not started; its node shows what it does');
+            }
+            await this.create({ chatId: childId });
+        }
+        return this.require(childId);
+    }
+
+    /*
+     * A row a task opened reads the child's own thread, a page at a time like the chat's history, and
+     * holding it tells the client whenever an item of that thread lands; a delta alone does not.
+     */
+    private async childConversation(clientId: string, payload: ChatSubagentPayload, childId: string): Promise<ChatSubagentResult> {
+        const key = `${payload.chatId}\n${payload.toolUseId}`;
+        if (payload.watch === false) {
+            const hold = this.childHolds.get(key);
+            hold?.clients.delete(clientId);
+            if (hold?.clients.size === 0) {
+                this.childHolds.delete(key);
+            }
+        }
+        const child = await this.childChat(childId);
+        this.coalescers.get(childId)?.flush();
+        const page = child.thread.history(payload.limit ?? 60, payload.cursor);
+        if (payload.watch === true) {
+            const hold = this.childHolds.get(key) ?? { parentId: payload.chatId, toolUseId: payload.toolUseId, childId, clients: new Set<string>() };
+            hold.clients.add(clientId);
+            this.childHolds.set(key, hold);
+        }
+        return {
+            items: page.items,
+            history: page.history,
+            // The closed set a result carries; the child's thread is that CLI's conversation.
+            source: child.info.provider === 'codex' ? 'codex-thread' : 'claude-transcript',
+            live: child.info.activeTurnId !== null
+        };
     }
 
     /*
@@ -458,6 +551,11 @@ export class ChatManager {
         const session = this.require(chatId);
         session.dispose();
         this.subagents.releaseChat(chatId);
+        for (const [key, hold] of this.childHolds) {
+            if (hold.parentId === chatId) {
+                this.childHolds.delete(key);
+            }
+        }
         this.coalescers.get(chatId)?.dispose();
         this.coalescers.delete(chatId);
         this.logs.get(chatId)?.close();
@@ -648,6 +746,15 @@ export class ChatManager {
         const payload = seq === undefined ? { chatId, event } : { chatId, event, seq };
         for (const sink of this.observers) {
             sink({ event: 'chat.event', payload });
+        }
+        if (event.type !== 'delta') {
+            for (const hold of this.childHolds.values()) {
+                if (hold.childId === chatId) {
+                    for (const clientId of hold.clients) {
+                        this.sinks.get(clientId)?.({ event: 'chat.subagentChanged', payload: { chatId: hold.parentId, toolUseId: hold.toolUseId } });
+                    }
+                }
+            }
         }
         const clients = this.attached.get(chatId);
         if (!clients) {

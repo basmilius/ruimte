@@ -6,6 +6,7 @@ import { DEPTH_LIMIT_LINES, depthForOpening } from './depth.ts';
 import { MAX_CANVAS_NODES, canvasFull, newId, nodeLines } from './node-verb.ts';
 import { groupMembers, placeBeside, placeFree, placeInGroup, type Rect } from './placement.ts';
 import { checkCwd, readPromptFile } from './project-paths.ts';
+import { MAX_TASK_PROMPT_LENGTH, TASK_LINES, requireChatParent, taskBrief } from './task-verbs.ts';
 import { unescapeText } from './text-escapes.ts';
 import { MAX_TITLE_LENGTH, TITLE_LINE, VerbRefusal, canvasFor, defineVerb, field, orNote, placeOf, titleField, type VerbCall } from './verb.ts';
 
@@ -26,7 +27,7 @@ const KIND_MESSAGE = `agent needs a CLI: ${AGENT_KINDS.join(', ')}`;
 
 const AGENT_DETAIL: readonly string[] = [
     `argument\t<cli>\trequired\t${AGENT_KINDS.join(', ')}`,
-    'prints\tid\tkind\tview\tcli\tedge\tthe new node, its kind (terminal or chat), the canvas it landed on, the CLI it runs and the id of the edge drawn into it',
+    'prints\tid\tkind\tview\tcli\tedge\ttask\tthe new node, its kind (terminal or chat), the canvas it landed on, the CLI it runs, the id of the edge drawn into it and, with --task, the id of the task',
     `flag\t--chat\tno value\tMakes a chat node instead of a terminal node; only a CLI with a chat backend takes it (${chatKinds().join(', ')})`,
     `flag\t--prompt T\toptional\tWhat the agent starts working on; \\n, \\t and \\\\ are read as escapes, at most ${MAX_PROMPT_LENGTH} characters`,
     'flag\t--prompt-file F\toptional\tThe same prompt out of a file, for one with exact bytes; not together with --prompt',
@@ -35,6 +36,7 @@ const AGENT_DETAIL: readonly string[] = [
     'flag\t--beside N\toptional\tPuts the node directly right of node N, top edges level',
     'flag\t--group G\toptional\tPuts the node inside group node G of that canvas; not together with --beside',
     `flag\t--title T\toptional\tThe title, at most ${MAX_TITLE_LENGTH} characters; without one the node is called after the CLI, and the session may rename it`,
+    `flag\t--task T\toptional\tGives the new agent a task titled T, which the prompt describes and whose result wakes you; needs a prompt of at most ${MAX_TASK_PROMPT_LENGTH} characters, and the title of the node is T unless --title says otherwise`,
     'flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field is dry-run and the last names the edge it would draw, as <from> -> <new node>',
     'kinds\tterminal\tThat CLI running in a shell, which is what the person sees and can type in',
     'kinds\tchat\tThe CLI as a thread in the node, fixed to that CLI, with no model picker on the composer',
@@ -52,6 +54,7 @@ const AGENT_DETAIL: readonly string[] = [
     `quoting\tThe prompt is one shell word: an apostrophe in it ends a single-quoted argument early, so write it as '\\'' or put the prompt in --prompt-file`,
     `limit\tA canvas holds at most ${MAX_CANVAS_NODES} nodes`,
     TITLE_LINE,
+    ...TASK_LINES,
     ...DEPTH_LIMIT_LINES,
     'note\tThe machine starts the node right away, whether or not anyone has its canvas open; a client that shows it later joins what runs'
 ];
@@ -114,7 +117,7 @@ const promptOf = async (flags: { prompt?: string; 'prompt-file'?: string }, call
 
 export const agentVerb = defineVerb({
     name: 'agent',
-    usage: `<${AGENT_KINDS.join('|')}> [--chat] [--prompt T | --prompt-file F] [--cwd P] [--view V] [--beside N] [--group G] [--title T] [--dry-run]`,
+    usage: `<${AGENT_KINDS.join('|')}> [--chat] [--prompt T | --prompt-file F] [--cwd P] [--view V] [--beside N] [--group G] [--title T] [--task T] [--dry-run]`,
     summary: 'Opens an agent node that starts working, with an edge from you into it so it can read what you have',
     detail: AGENT_DETAIL,
     dryRun: true,
@@ -129,7 +132,8 @@ export const agentVerb = defineVerb({
         view: z.string().min(1, '--view needs the id of a canvas').optional(),
         beside: z.string().min(1, '--beside needs the id of a node on that canvas').optional(),
         group: z.string().min(1, '--group needs the id of a group node on that canvas').optional(),
-        title: titleField('--title', '--title needs a title').optional()
+        title: titleField('--title', '--title needs a title').optional(),
+        task: titleField('--task', '--task needs the title of the task').optional()
     }),
     async run({ positionals: [kind], flags, switches, dryRun }, call) {
         const place = placeOf(call);
@@ -159,9 +163,21 @@ export const agentVerb = defineVerb({
 
         // Everything that touches the disk or git runs before the lock, so a slow repository holds up no save.
         const prompt = await promptOf(flags, call, place.folder);
+        if (flags.task !== undefined && prompt === null) {
+            throw new VerbRefusal('task-needs-prompt', '--task gives a task and the prompt is what it asks; add --prompt or --prompt-file');
+        }
+        if (flags.task !== undefined && prompt !== null && prompt.length > MAX_TASK_PROMPT_LENGTH) {
+            throw new VerbRefusal(
+                'prompt-too-long',
+                `The prompt is ${prompt.length} characters and a task takes at most ${MAX_TASK_PROMPT_LENGTH}, since the child is also told how to report back; put the rest in a file and tell the agent to read it`
+            );
+        }
         const cwd = flags.cwd === undefined ? undefined : await checkCwd(place.folder, flags.cwd, (folder) => call.host.worktreePaths(folder));
 
         return call.host.mutate(place.projectId, async (content) => {
+            if (flags.task !== undefined) {
+                requireChatParent(content, call.caller);
+            }
             const canvas = canvasFor(content, place, flags.view);
             if (canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
                 throw canvasFull(canvas, 1);
@@ -183,19 +199,28 @@ export const agentVerb = defineVerb({
             if (dryRun) {
                 // The ends rather than the word "edge": the direction is the thing to check before anything is made.
                 const edge = caller ? `${caller.id} -> ${NEW_NODE}` : '-';
-                return { content: null, result: [['dry-run', chat ? 'chat' : 'terminal', canvas.id, kind, edge].join('\t')] };
+                return {
+                    content: null,
+                    result: [['dry-run', chat ? 'chat' : 'terminal', canvas.id, kind, edge, ...(flags.task === undefined ? [] : ['<new task>'])].join('\t')]
+                };
             }
 
             const id = newId(chat ? 'chat' : 'terminal', content);
-            const node = agentNode({ id, chat, kind, title: flags.title, rect, cwd });
+            const node = agentNode({ id, chat, kind, title: flags.title ?? flags.task, rect, cwd });
             const edge: ProjectEdge | null = caller ? { id: newId('edge', content, [id]), from: caller.id, to: id, label: 'context' } : null;
             const nodes = [...canvas.nodes.map((candidate) => (group && candidate.id === group.id ? grownGroup(candidate, inGroup, id) : candidate)), node];
+            const result = [[id, node.kind, canvas.id, kind, edge?.id ?? '-'].join('\t')];
 
             return {
                 landed: async () => {
                     await call.host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: call.caller, depth, agent: true });
+                    // Before the agent starts, so a child that is done at once finds its task open.
+                    if (flags.task !== undefined && prompt !== null) {
+                        const task = await call.host.tasks.open({ projectId: place.projectId, parentId: call.caller, childId: id, title: flags.task, prompt });
+                        result[0] = `${result[0]}\t${task.id}`;
+                    }
                     if (prompt !== null) {
-                        await call.host.holdPrompt(place.projectId, id, prompt);
+                        await call.host.holdPrompt(place.projectId, id, flags.task === undefined ? prompt : `${prompt}${taskBrief(chat)}`);
                     }
                     await call.host.startAgent({
                         projectId: place.projectId,
@@ -212,7 +237,7 @@ export const agentVerb = defineVerb({
                         view.id === canvas.id ? { ...canvas, nodes, edges: edge ? [...canvas.edges, edge] : canvas.edges } : view
                     )
                 },
-                result: [[id, node.kind, canvas.id, kind, edge?.id ?? '-'].join('\t')]
+                result
             };
         });
     }

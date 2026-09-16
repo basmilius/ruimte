@@ -6,9 +6,11 @@ import type {
     ChatItem,
     ChatQueuedMessage,
     ChatSkill,
+    ChatSubagentItem,
     ContextSource,
     ModelSelection,
-    RuntimeMode
+    RuntimeMode,
+    Task
 } from '@ruimte/contracts';
 import { notResumedNote } from '@ruimte/contracts';
 import { contextChangeNote } from '../context/context-note.ts';
@@ -408,6 +410,99 @@ export class ChatSession {
         ]);
         this.options.persist();
         this.drainQueue();
+    }
+
+    /*
+     * Opens a turn about tasks that settled, with no message of a person in front of it: a note says
+     * what woke the chat and the turn carries the task ids. Checked and opened in one step, so false
+     * means a turn is in the way (or the daemon is going down) and nothing happened.
+     */
+    wake(wake: { text: string; label: string; note: string; taskIds: string[] }): boolean {
+        if (this.frozen || this.thread.info.activeTurnId !== null) {
+            return false;
+        }
+        const preamble = this.contextNote(wake.text);
+        const turnId = newId('turn');
+        const now = Date.now();
+        this.emit([
+            this.thread.upsert({
+                id: turnId,
+                kind: 'turn',
+                createdAt: now,
+                turnId,
+                state: 'running',
+                origin: 'agent',
+                label: wake.label,
+                taskIds: wake.taskIds,
+                endedAt: null,
+                costUsd: 0
+            }),
+            this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'info', text: wake.note }),
+            ...(preamble === null ? [] : [this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'info', text: preamble })]),
+            this.thread.patchInfo({ status: 'running', activeTurnId: turnId })
+        ]);
+        this.options.persist();
+        this.turnReady = this.checkpoint(turnId);
+        this.run((backend) => backend.sendTurn({ text: wake.text, preamble, attachments: [], mentions: [], skills: [] }));
+        return true;
+    }
+
+    /*
+     * The row a task stands as in the thread of the chat that gave it, written from the task alone so
+     * writing it twice changes nothing. A new row joins the turn that is running, which is the turn
+     * that ran the verb; a cancelled task gets a note saying why its row failed.
+     */
+    upsertTaskRow(task: Task): void {
+        const id = `task-${task.id}`;
+        const existing = this.thread.get(id);
+        const row: ChatSubagentItem = {
+            id,
+            kind: 'subagent',
+            createdAt: task.createdAt,
+            turnId: existing?.turnId ?? this.thread.info.activeTurnId,
+            toolUseId: id,
+            description: task.title,
+            subagentType: null,
+            prompt: task.prompt,
+            background: true,
+            status: task.status === 'open' ? 'running' : task.status === 'done' ? 'done' : 'failed',
+            startedAt: task.createdAt,
+            finishedAt: task.settledAt,
+            summary: null,
+            result: task.result?.text ?? null,
+            usage: null,
+            lastTool: null,
+            itemsTruncated: false,
+            origin: 'ruimte',
+            childId: task.childId
+        };
+        const events: ChatEvent[] = [];
+        if (JSON.stringify(existing) !== JSON.stringify(row)) {
+            events.push(this.thread.upsert(row));
+        }
+        const noteId = `${id}-cancelled`;
+        if (task.status === 'cancelled' && this.thread.get(noteId) === undefined) {
+            events.push(
+                this.thread.upsert({
+                    id: noteId,
+                    kind: 'note',
+                    createdAt: task.settledAt ?? task.createdAt,
+                    turnId: null,
+                    level: 'warning',
+                    text: `The task "${task.title}" was cancelled: its node was removed`
+                })
+            );
+        }
+        if (events.length > 0) {
+            this.emit(events);
+            this.options.persistSoon();
+        }
+    }
+
+    /* A line in the thread outside any turn, for something the daemon has to say about work it gave up on. */
+    addNote(level: 'info' | 'warning' | 'error', text: string): void {
+        this.emit([this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: Date.now(), turnId: null, level, text })]);
+        this.options.persist();
     }
 
     /* Ends the process and stops listening to it, as the daemon goes down; the thread stays as it is. */

@@ -194,21 +194,25 @@ const staleToken = (body: string): string => `Not inside a live Ruimte session: 
 
 const unreachable = (e: unknown): string => `Could not reach the daemon: ${e instanceof Error ? e.message : 'unknown error'}`;
 
+// The flags whose value `-` stands for stdin: a message, and the result of a task.
+const STDIN_FLAGS = ['--text', '--result'];
+
 /*
- * `--text -` is the CLI's own step: it puts what is on stdin in the argument, so a heredoc gives a
- * body with newlines and quotes in it. Escaped on the way out, because the daemon reads `\n` in a
- * `--text` it is handed, and these bytes have to arrive as they were typed.
+ * `--text -` (and `--result -`) is the CLI's own step: it puts what is on stdin in the argument, so a
+ * heredoc gives a body with newlines and quotes in it. Escaped on the way out, because the daemon
+ * reads `\n` in such a flag, and these bytes have to arrive as they were typed.
  */
 const withStdinText = async (argv: string[], stdin: () => Promise<string>): Promise<string[]> => {
     const words: string[] = [];
     for (let i = 0; i < argv.length; i++) {
         const word = argv[i]!;
-        const pair = word === '--text' && argv[i + 1] === '-';
-        if (!pair && word !== '--text=-') {
+        const flag = STDIN_FLAGS.find((candidate) => word === candidate || word === `${candidate}=-`);
+        const pair = flag !== undefined && word === flag && argv[i + 1] === '-';
+        if (flag === undefined || (!pair && word !== `${flag}=-`)) {
             words.push(word);
             continue;
         }
-        words.push(`--text=${escapeText(await stdin())}`);
+        words.push(`${flag}=${escapeText(await stdin())}`);
         if (pair) {
             i++;
         }

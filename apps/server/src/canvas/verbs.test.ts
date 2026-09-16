@@ -46,6 +46,8 @@ import { MAX_NOTICE_LENGTH } from '../context/notices.ts';
 import type { Notice, NoticeDelivery } from '../context/notices.ts';
 import { MAX_TITLE_LENGTH, type AgentStart, type CanvasHost } from './verb.ts';
 import { VERBS } from './verbs.ts';
+import { TaskStore } from '../tasks/task-store.ts';
+import { MAX_TASK_PROMPT_LENGTH, taskBrief } from './task-verbs.ts';
 
 const VIEW_SUBS = viewVerb.subcommands ?? [];
 
@@ -68,6 +70,7 @@ let watching: Array<{ projectId: string; viewId: string; by: string }>;
 let notified: Array<Omit<Notice, 'createdAt'>>;
 let delivery: NoticeDelivery;
 let breakWrites: boolean;
+let tasks: TaskStore;
 
 /* A change the store's own check refuses after the verb had its say: `note-1` a second time, on the board. */
 const withRepeatedId = (current: ProjectContent): ProjectContent => ({
@@ -125,6 +128,7 @@ beforeEach(async () => {
     notified = [];
     delivery = { at: 'waiting', detail: 'nothing runs in that node yet; it reads the message when it starts (1 waiting)' };
     lineage = new AgentLineageStore(join(root, 'home'));
+    tasks = new TaskStore(join(root, 'home'));
     await lineage.load();
     store = new ProjectStore(join(root, 'home'));
     diagrams = new DiagramStore(store);
@@ -179,7 +183,15 @@ const host = (): CanvasHost => ({
         notified.push(notice);
         return delivery;
     },
-    writeDiagram: (projectId, viewId, content) => diagrams.write(projectId, viewId, content)
+    writeDiagram: (projectId, viewId, content) => diagrams.write(projectId, viewId, content),
+    tasks: {
+        open: (record) => tasks.open(record, 1),
+        done: async (childId, text) => {
+            const open = tasks.openFor(childId);
+            return open ? tasks.settle(open.id, 'done', { text, source: 'done', at: 2 }, 2) : null;
+        },
+        involving: (nodeId) => tasks.involving(nodeId)
+    }
 });
 
 const post = async (verb: string, argv: string[], token = 'term'): Promise<{ status: number; lines: string[] }> => {
@@ -320,7 +332,7 @@ describe('help', () => {
     test('help agent covers what a first-time caller cannot see from the canvas', async () => {
         const { lines } = await post('help', ['agent']);
         expect(lines).toContain(
-            'prints\tid\tkind\tview\tcli\tedge\tthe new node, its kind (terminal or chat), the canvas it landed on, the CLI it runs and the id of the edge drawn into it'
+            'prints\tid\tkind\tview\tcli\tedge\ttask\tthe new node, its kind (terminal or chat), the canvas it landed on, the CLI it runs, the id of the edge drawn into it and, with --task, the id of the task'
         );
         // Which CLIs take --chat, from the registry rather than from a sentence that can drift.
         expect(lines.some((line) => line.startsWith('flag\t--chat\t') && line.includes('claude, codex'))).toBe(true);
@@ -337,7 +349,7 @@ describe('help', () => {
     test('help team answers what its own output cannot say', async () => {
         const { lines } = await post('help', ['team']);
         expect(lines).toContain(
-            'prints\tid\tkind\ttitle\tview\tcli\tedge\tthe group first, its label in the title column and a dash for the CLI and the edge, then one line per role in the order of --roles; the title is what tells two rows of one CLI apart'
+            'prints\tid\tkind\ttitle\tview\tcli\tedge\ttask\tthe group first, its label in the title column and a dash for the CLI and the edge, then one line per role in the order of --roles, with the id of its task last under --task; the title is what tells two rows of one CLI apart'
         );
         // The way back into a role's work, which agent says and team did not.
         expect(lines.some((line) => line.startsWith('edges\t') && line.includes('ruimte-context link --to'))).toBe(true);
@@ -2183,5 +2195,74 @@ describe('diagram', () => {
         const id = await made('Flow', ['--kind', 'diagram']);
         expect((await write(id, doc(), 'stray')).lines[0]).toStartWith('refused\tnot-in-project\t');
         expect(await diagramOnDisk(id)).toBeNull();
+    });
+});
+
+describe('tasks', () => {
+    // The chat view `chat-1` is a chat, the one kind of caller that can be woken with a result.
+    const give = (argv: string[]) => post('agent', ['claude', '--chat', '--view', 'main', ...argv], 'chat');
+
+    test('agent --task from a chat records an open task, titles the node after it and tells the child how to report back', async () => {
+        const { status, lines } = await give(['--task', 'Lexer', '--prompt', 'fix the tokenizer']);
+        expect(status).toBe(200);
+        const [id, kind, , , , taskId] = lines[0]!.split('\t');
+        expect(kind).toBe('chat');
+        expect(tasks.get(taskId!)).toMatchObject({
+            parentId: 'chat-1',
+            childId: id,
+            title: 'Lexer',
+            prompt: 'fix the tokenizer',
+            status: 'open',
+            wake: 'pending'
+        });
+        expect((await canvasOnDisk()).nodes.find((node) => node.id === id)?.title).toBe('Lexer');
+        // The record keeps the assignment as it was given; only the child hears how to report back.
+        expect(held).toEqual([{ projectId, nodeId: id!, prompt: `fix the tokenizer${taskBrief(true)}` }]);
+    });
+
+    test('a terminal agent cannot give a task, since nothing can wake it with the result', async () => {
+        const { status, lines } = await post('agent', ['claude', '--task', 'Lexer', '--prompt', 'fix it']);
+        expect(status).toBe(422);
+        expect(lines[0]).toStartWith('refused\tnot-a-chat-parent\tOnly a chat can give a task, and you are a terminal');
+        expect(started).toEqual([]);
+        expect((await post('team', ['--label', 'Crew', '--task', '--roles', ROLES_SHAPE])).lines[0]).toStartWith('refused\tnot-a-chat-parent\t');
+    });
+
+    test('a task needs a prompt that leaves room for the line about reporting back', async () => {
+        expect((await give(['--task', 'Lexer'])).lines[0]).toStartWith('refused\ttask-needs-prompt\t');
+        const long = 'x'.repeat(MAX_TASK_PROMPT_LENGTH + 1);
+        expect((await give(['--task', 'Lexer', '--prompt', long])).lines[0]).toStartWith('refused\tprompt-too-long\t');
+        expect((await give(['--task', 'Lexer', '--prompt', 'go', '--dry-run'])).lines[0]).toEndWith('\t<new task>');
+        expect(tasks.involving('chat-1')).toEqual([]);
+    });
+
+    test('team --task gives every role a task of its own', async () => {
+        const roles = JSON.stringify([
+            { title: 'Lexer', prompt: 'fix the tokenizer', provider: 'claude' },
+            { title: 'Docs', prompt: 'write the docs', provider: 'claude', chat: true }
+        ]);
+        const { lines } = await post('team', ['--label', 'Crew', '--task', '--roles', roles, '--view', 'main'], 'chat');
+        const rows = lines.slice(1).map((line) => line.split('\t'));
+        expect(rows.map((row) => tasks.get(row[6]!)?.title)).toEqual(['Lexer', 'Docs']);
+        expect(held.map((entry) => entry.prompt)).toEqual([`fix the tokenizer${taskBrief(false)}`, `write the docs${taskBrief(true)}`]);
+    });
+
+    test('done settles the open task of the caller, and tasks lists it from both sides', async () => {
+        const [childId, , , , , taskId] = (await give(['--task', 'Lexer', '--prompt', 'fix it'])).lines[0]!.split('\t');
+        TOKENS.child = childId!;
+        try {
+            expect((await post('done', ['--result', 'no tasks here'], 'term')).lines[0]).toStartWith('refused\tno-open-task\t');
+            expect((await post('done', [], 'child')).lines[0]).toStartWith('refused\tempty-result\t');
+            expect((await post('done', ['--result', 'Fixed\\nboth bugs'], 'child')).lines).toEqual([`done\t${taskId}\tchat-1`]);
+            expect(tasks.get(taskId!)).toMatchObject({ status: 'done', result: { text: 'Fixed\nboth bugs', source: 'done' } });
+            expect((await post('done', ['--result', 'again'], 'child')).lines[0]).toStartWith('refused\tno-open-task\t');
+            expect((await post('tasks', [], 'chat')).lines).toEqual([`task\t${taskId}\tgave\tdone\t${childId}\tLexer\tpending\tFixed`]);
+            expect((await post('tasks', [], 'child')).lines).toEqual([`task\t${taskId}\tgiven\tdone\tchat-1\tLexer\tpending\tFixed`]);
+            expect((await post('tasks', [], 'term')).lines).toEqual([
+                'note\tYou have given no task and were given none; ruimte-context agent --task gives one'
+            ]);
+        } finally {
+            delete TOKENS.child;
+        }
     });
 });

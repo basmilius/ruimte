@@ -27,6 +27,8 @@ export interface StartAgentDeps {
     }): Promise<unknown>;
     killSession(sessionId: string): Promise<void>;
     log?: (line: string) => void;
+    /* A start that failed and will not be tried again: what was waiting on the agent hears it here. */
+    onGaveUp?: (entry: StartAgentEntry, error: unknown) => void;
 }
 
 /*
@@ -78,6 +80,7 @@ export const startAgentHandler =
                 return;
             }
             log(`Starting the agent of ${nodeId} failed: ${errorText(e)}`);
+            deps.onGaveUp?.(entry, e);
             return;
         }
         // Deleted while it was being started: whoever deleted it found nothing to end yet.

@@ -23,8 +23,14 @@ const ResumeRunSchema = z.object({
     payload: z.object({ turnId: z.string().min(1), attempt: z.number().int().positive() })
 });
 
-/* The later phases add their kinds (wake-parent, end-children) as members of this union. */
-const OutboxWorkSchema = z.discriminatedUnion('kind', [StartAgentSchema, ResumeRunSchema]);
+const WakeParentSchema = z.object({
+    kind: z.literal('wake-parent'),
+    // The target is the chat to wake; the task that settled is only what owed it, since a wake takes every settled task.
+    payload: z.object({ taskId: z.string().min(1) })
+});
+
+/* The next phase adds its kind (end-children) as a member of this union. */
+const OutboxWorkSchema = z.discriminatedUnion('kind', [StartAgentSchema, ResumeRunSchema, WakeParentSchema]);
 
 const OutboxEntrySchema = z.intersection(
     OutboxWorkSchema,
@@ -43,6 +49,7 @@ export type OutboxWork = z.infer<typeof OutboxWorkSchema>;
 export type OutboxEntry = z.infer<typeof OutboxEntrySchema>;
 export type StartAgentEntry = Extract<OutboxEntry, { kind: 'start-agent' }>;
 export type ResumeRunEntry = Extract<OutboxEntry, { kind: 'resume-run' }>;
+export type WakeParentEntry = Extract<OutboxEntry, { kind: 'wake-parent' }>;
 
 const fileName = (id: string): string => `${encodeURIComponent(id)}.json`;
 

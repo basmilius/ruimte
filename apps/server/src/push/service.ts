@@ -227,6 +227,18 @@ export class PushService {
         }
     }
 
+    /* Something a person has to step in on that no status says: a task that failed, a wake the daemon gave up on. */
+    alert(target: PushAlertContent['target'], nodeId: string, title: string, body: string): void {
+        this.enqueue({
+            kind: 'attention',
+            target,
+            nodeId,
+            title: (this.options.titleFor?.(nodeId) || title).slice(0, 160),
+            body: body.slice(0, 500),
+            expiresAt: this.now() + PUSH_MAX_AGE_MS
+        });
+    }
+
     synchronizeActivities(): void {
         const nodes = this.options.activityNodes?.() ?? [...this.nodes].map(([nodeId, node]) => ({ nodeId, ...node }));
         const states = nodes.map((node) => node.status);

@@ -1,0 +1,209 @@
+import { randomBytes } from 'node:crypto';
+import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { TaskSchema, type Task, type TaskResult } from '@ruimte/contracts';
+import { isNotFound, writeAtomic } from '../fs.ts';
+import type { SessionSink } from '../sessions/manager.ts';
+
+const fileName = (id: string): string => `${encodeURIComponent(id)}.json`;
+
+export type TaskListener = (task: Task) => void;
+
+/*
+ * What a chat asked of the nodes it opened with `--task`, one file per task under `$RUIMTE_HOME/tasks`,
+ * beside the lineage and for the same reason: an agent with a shell in the project folder can rewrite
+ * `project.json`, and waking the parent is a promise the daemon keeps. A settled task stays until its
+ * parent leaves the project, so the parent can still list what came of it.
+ */
+export class TaskStore {
+    readonly dir: string;
+    private readonly tasks = new Map<string, Task>();
+    private readonly listeners = new Set<TaskListener>();
+    private readonly sinks = new Map<string, SessionSink>();
+    // One write at a time per task, so an older record never lands after a newer one.
+    private readonly writes = new Map<string, Promise<void>>();
+
+    constructor(home: string) {
+        this.dir = join(home, 'tasks');
+    }
+
+    /* Reads what an earlier run of the daemon wrote down. Call before any verb or observer can ask. */
+    async load(): Promise<void> {
+        let names: string[];
+        try {
+            names = await readdir(this.dir);
+        } catch (e) {
+            if (isNotFound(e)) {
+                return;
+            }
+            throw e;
+        }
+        for (const name of names) {
+            if (!name.endsWith('.json')) {
+                continue;
+            }
+            const raw = await readFile(join(this.dir, name), 'utf8').catch(() => null);
+            if (raw === null) {
+                continue;
+            }
+            let parsed: ReturnType<typeof TaskSchema.safeParse>;
+            try {
+                parsed = TaskSchema.safeParse(JSON.parse(raw));
+            } catch {
+                continue;
+            }
+            if (parsed.success) {
+                this.tasks.set(parsed.data.id, parsed.data);
+            }
+        }
+    }
+
+    /* Told about every task that is written, after it is on disk. */
+    onChange(listener: TaskListener): () => void {
+        this.listeners.add(listener);
+        return () => {
+            this.listeners.delete(listener);
+        };
+    }
+
+    /* Every socket hears every task: the edge and the header of a child are drawn from it. */
+    subscribe(clientId: string, sink: SessionSink): () => void {
+        this.sinks.set(clientId, sink);
+        return () => {
+            if (this.sinks.get(clientId) === sink) {
+                this.sinks.delete(clientId);
+            }
+        };
+    }
+
+    async open(record: { projectId: string; parentId: string; childId: string; title: string; prompt: string }, now: number): Promise<Task> {
+        const task: Task = {
+            ...record,
+            id: `task-${randomBytes(6).toString('hex')}`,
+            status: 'open',
+            result: null,
+            createdAt: now,
+            settledAt: null,
+            wake: 'pending'
+        };
+        await this.write(task);
+        return task;
+    }
+
+    get(id: string): Task | undefined {
+        return this.tasks.get(id);
+    }
+
+    /* The task a node is working on; a node has at most one, the one it was opened with. */
+    openFor(childId: string): Task | undefined {
+        return [...this.tasks.values()].find((task) => task.childId === childId && task.status === 'open');
+    }
+
+    /* Every task this node gave or was given, oldest first. */
+    involving(nodeId: string): Task[] {
+        return this.sorted().filter((task) => task.parentId === nodeId || task.childId === nodeId);
+    }
+
+    ofParent(parentId: string): Task[] {
+        return this.sorted().filter((task) => task.parentId === parentId);
+    }
+
+    ofProject(projectId: string): Task[] {
+        return this.sorted().filter((task) => task.projectId === projectId);
+    }
+
+    /*
+     * Ends an open task with its result; false when it was not open any more, which is how the first of
+     * `done`, the end of a turn and an exit wins. A cancelled task wakes nobody.
+     */
+    async settle(id: string, status: 'done' | 'failed' | 'cancelled', result: TaskResult | null, now: number): Promise<Task | null> {
+        const task = this.tasks.get(id);
+        if (!task || task.status !== 'open') {
+            return null;
+        }
+        const settled: Task = { ...task, status, result, settledAt: now, wake: status === 'cancelled' ? 'none' : task.wake };
+        await this.write(settled);
+        return settled;
+    }
+
+    async markWoken(ids: readonly string[]): Promise<void> {
+        for (const id of ids) {
+            const task = this.tasks.get(id);
+            if (task && task.wake === 'pending') {
+                await this.write({ ...task, wake: 'sent' });
+            }
+        }
+    }
+
+    /* Settled tasks of this parent that it has not been woken about yet, oldest first. */
+    pendingWake(parentId: string): Task[] {
+        return this.ofParent(parentId).filter((task) => task.status !== 'open' && task.wake === 'pending');
+    }
+
+    /* A parent nobody can wake any more: its settled tasks stop waiting for it. */
+    async dropWake(parentId: string): Promise<void> {
+        for (const task of this.ofParent(parentId)) {
+            if (task.wake === 'pending') {
+                await this.write({ ...task, wake: 'none' });
+            }
+        }
+    }
+
+    /*
+     * What this project wrote down for ids it no longer has. A task whose parent is gone has nobody to
+     * report to and goes; an open task whose child is gone is cancelled and stays, so its parent sees why.
+     */
+    async prune(projectId: string, ids: ReadonlySet<string>, now: number): Promise<Task[]> {
+        const cancelled: Task[] = [];
+        for (const task of this.sorted()) {
+            if (task.projectId !== projectId) {
+                continue;
+            }
+            if (!ids.has(task.parentId)) {
+                this.tasks.delete(task.id);
+                await rm(join(this.dir, fileName(task.id)), { force: true });
+                continue;
+            }
+            if (!ids.has(task.childId) && task.status === 'open') {
+                const settled = await this.settle(task.id, 'cancelled', null, now);
+                if (settled) {
+                    cancelled.push(settled);
+                }
+            }
+        }
+        return cancelled;
+    }
+
+    private sorted(): Task[] {
+        // A stable sort: tasks made in the same millisecond keep the order they were made in.
+        return [...this.tasks.values()].sort((a, b) => a.createdAt - b.createdAt);
+    }
+
+    private write(task: Task): Promise<void> {
+        // In memory at once, so the next question in the same tick already sees it settled.
+        this.tasks.set(task.id, task);
+        const next = (this.writes.get(task.id) ?? Promise.resolve()).then(async () => {
+            if (this.tasks.get(task.id) !== task) {
+                return;
+            }
+            await mkdir(this.dir, { recursive: true, mode: 0o700 });
+            await writeAtomic(join(this.dir, fileName(task.id)), JSON.stringify(task));
+            // Pruned while the file was being written: the rename must not bring it back.
+            if (!this.tasks.has(task.id)) {
+                await rm(join(this.dir, fileName(task.id)), { force: true });
+                return;
+            }
+            for (const listener of this.listeners) {
+                listener(task);
+            }
+            for (const sink of this.sinks.values()) {
+                sink({ event: 'task.changed', payload: { task } });
+            }
+        });
+        this.writes.set(
+            task.id,
+            next.catch(() => undefined)
+        );
+        return next;
+    }
+}

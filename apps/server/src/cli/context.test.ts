@@ -50,6 +50,8 @@ const daemon = {
                 return new Response('note-12345678\tnote\tmain\n');
             case 'diagram':
                 return new Response('flow-1\t1\t0\t0\t0\n');
+            case 'done':
+                return new Response('done\ttask-1\tchat-lead\n');
             case 'nodes':
                 return new Response('refused\tview-required\tname one with --view\ncanvas\tmain\tCanvas\n', { status: 422 });
             case 'broken':
@@ -218,6 +220,14 @@ describe('runContext', () => {
         expect(sent[0]).toEqual(['note', '--text=Line one\nLine two\\\\n still one line\n']);
         expect(sent[1]).toEqual(sent[0]);
         expect(unescapeText((sent[0] as string[])[1]!.slice('--text='.length))).toBe(body);
+    });
+
+    test('--result - takes the result of a task from stdin the same way', async () => {
+        const body = 'Found it\nin two places\n';
+        expect(await runContext(['done', '--result', '-'], env, async () => body)).toBe(0);
+        const argv = seen.at(-1)!.argv as string[];
+        expect(argv).toHaveLength(1);
+        expect(unescapeText(argv[0]!.slice('--result='.length))).toBe(body);
     });
 
     test('a --text that is not a dash is passed on untouched, and stdin is never read', async () => {

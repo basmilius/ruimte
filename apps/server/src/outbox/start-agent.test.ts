@@ -118,6 +118,7 @@ const boot = async (): Promise<Daemon> => {
         clock: stillClock,
         handlers: {
             'resume-run': () => Promise.reject(new Error('no resume in these tests')),
+            'wake-parent': () => Promise.reject(new Error('no wake in these tests')),
             'start-agent': startAgentHandler({
                 placed: (nodeId) => store.index.locate(nodeId) !== null,
                 hasChat: (chatId) => chats.get(chatId) !== undefined,
@@ -172,7 +173,8 @@ const boot = async (): Promise<Daemon> => {
         showView: () => false,
         endSession: unused,
         notify: unused,
-        writeDiagram: unused
+        writeDiagram: unused,
+        tasks: { open: unused, done: unused, involving: () => [] }
     };
 
     const daemon: Daemon = {

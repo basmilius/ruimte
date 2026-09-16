@@ -7,6 +7,7 @@ import { DEPTH_LIMIT_LINES, MAX_TEAM_DEPTH, depthForOpening } from './depth.ts';
 import { MAX_CANVAS_NODES, canvasFull, newId } from './node-verb.ts';
 import { placeFree, placeTeam, TEAM_COLUMNS } from './placement.ts';
 import { checkCwd } from './project-paths.ts';
+import { MAX_TASK_PROMPT_LENGTH, TASK_LINES, requireChatParent, taskBrief } from './task-verbs.ts';
 import { MAX_TITLE_LENGTH, TITLE_LINE, VerbRefusal, canvasFor, defineVerb, field, lengthOf, placeOf, titleField } from './verb.ts';
 
 /* The design's number: past eight the group is a wall of terminals and the bill is somebody's day. */
@@ -53,9 +54,10 @@ const TEAM_DETAIL: readonly string[] = [
     'json\tA prompt is a JSON string, so a line break in it is \\n of JSON itself and nothing is escaped twice',
     `quoting\tThe JSON goes in single quotes, so an apostrophe in a prompt ends the quote early: write it as '\\'' or as \\u0027 inside the JSON string`,
     `example\truimte-context team --label "Parser work" --roles '[{"title":"Lexer","prompt":"Fix the tokenizer in src/lex.ts","provider":"claude"},{"title":"Reviewer","prompt":"Read the Lexer node and review its work","provider":"codex","chat":true}]'`,
-    'prints\tid\tkind\ttitle\tview\tcli\tedge\tthe group first, its label in the title column and a dash for the CLI and the edge, then one line per role in the order of --roles; the title is what tells two rows of one CLI apart',
+    'prints\tid\tkind\ttitle\tview\tcli\tedge\ttask\tthe group first, its label in the title column and a dash for the CLI and the edge, then one line per role in the order of --roles, with the id of its task last under --task; the title is what tells two rows of one CLI apart',
     'flag\t--cwd P\toptional\tThe directory every agent starts in; a directory per role is not a thing',
     'flag\t--view V\toptional\tThe canvas to add to, by view id; ruimte-context views lists them',
+    `flag\t--task\tno value\tGives every role a task titled after the role, which its prompt describes and whose results wake you; each prompt at most ${MAX_TASK_PROMPT_LENGTH} characters`,
     "flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field of every line is dry-run and the last names the edge it would draw, as <from> -> <the role's title>",
     'edges\tOne edge per role, from you into that agent, so each of them can read you with ruimte-context read',
     'edges\tOne way only: you do not read them through it, and the roles do not read each other',
@@ -68,6 +70,7 @@ const TEAM_DETAIL: readonly string[] = [
     'prompt\tA terminal role gets its prompt on the line its CLI is started with, a chat role as the first message of its thread; it is delivered once and never written into project.json',
     `limit\tA canvas holds at most ${MAX_CANVAS_NODES} nodes, the group among them`,
     TITLE_LINE,
+    ...TASK_LINES,
     ...DEPTH_LIMIT_LINES,
     `depth\tA role lands at depth ${MAX_TEAM_DEPTH}: it may open a single agent of its own with agent, and a team of its own is refused`,
     'note\tThe machine starts every agent right away, whether or not anyone has its canvas open; a client that shows one later joins what runs'
@@ -107,10 +110,11 @@ const kindOf = (role: Role): 'chat' | 'terminal' => (role.chat === true ? 'chat'
 
 export const teamVerb = defineVerb({
     name: 'team',
-    usage: `--label L --roles '${ROLES_SHAPE}' [--view V] [--cwd P] [--dry-run]`,
+    usage: `--label L --roles '${ROLES_SHAPE}' [--view V] [--cwd P] [--task] [--dry-run]`,
     summary: `Opens up to ${MAX_ROLES} agents at once in a group, each with an edge from you into it`,
     detail: TEAM_DETAIL,
     dryRun: true,
+    switches: ['task'],
     positionals: z.tuple([], { error: 'team takes no arguments, only flags; the agents go in --roles' }),
     flags: z.object({
         label: titleField('--label', '--label needs a name for the group'),
@@ -118,9 +122,17 @@ export const teamVerb = defineVerb({
         cwd: z.string().min(1, '--cwd needs the path of a directory').optional(),
         view: z.string().min(1, '--view needs the id of a canvas').optional()
     }),
-    async run({ flags, dryRun }, call) {
+    async run({ flags, switches, dryRun }, call) {
         const place = placeOf(call);
         const roles = parseRoles(flags.roles);
+        const tasked = switches.has('task');
+        const long = tasked ? roles.findIndex((role) => role.prompt.length > MAX_TASK_PROMPT_LENGTH) : -1;
+        if (long !== -1) {
+            throw new VerbRefusal(
+                'prompt-too-long',
+                `role ${long} (prompt): ${roles[long]!.prompt.length} characters, and a task takes at most ${MAX_TASK_PROMPT_LENGTH}, since the child is also told how to report back`
+            );
+        }
         const depth = depthForOpening(call, 'team', roles.length);
 
         for (const [index, role] of roles.entries()) {
@@ -149,6 +161,9 @@ export const teamVerb = defineVerb({
         const cwd = flags.cwd === undefined ? undefined : await checkCwd(place.folder, flags.cwd, (folder) => call.host.worktreePaths(folder));
 
         return call.host.mutate(place.projectId, async (content) => {
+            if (tasked) {
+                requireChatParent(content, call.caller);
+            }
             const canvas = canvasFor(content, place, flags.view);
             // The group counts too, which is the one node a caller does not name in --roles.
             if (canvas.nodes.length + roles.length + 1 > MAX_CANVAS_NODES) {
@@ -174,7 +189,8 @@ export const teamVerb = defineVerb({
                                 role.provider,
                                 // The ends rather than the word "edge", and the role rather than a placeholder every
                                 // row would share: the direction and the plan are what to read before anything is made.
-                                caller ? `${caller.id} -> ${newNode(field(role.title))}` : '-'
+                                caller ? `${caller.id} -> ${newNode(field(role.title))}` : '-',
+                                ...(tasked ? ['<new task>'] : [])
                             ].join('\t')
                         )
                     ]
@@ -195,7 +211,7 @@ export const teamVerb = defineVerb({
             const nodes: ProjectNode[] = [group];
             const edges: ProjectEdge[] = [];
             const lines = [[groupId, 'group', field(label), canvas.id, '-', '-'].join('\t')];
-            const made: Array<{ id: string; prompt: string; chat: boolean; provider: AgentKind }> = [];
+            const made: Array<{ id: string; title: string; prompt: string; chat: boolean; provider: AgentKind; line: number }> = [];
 
             for (const [index, role] of roles.entries()) {
                 const chat = kindOf(role) === 'chat';
@@ -216,15 +232,19 @@ export const teamVerb = defineVerb({
                     edgeId = mint('edge');
                     edges.push({ id: edgeId, from: caller.id, to: id, label: 'context' });
                 }
-                made.push({ id, prompt: role.prompt, chat, provider: role.provider });
+                made.push({ id, title: role.title, prompt: role.prompt, chat, provider: role.provider, line: lines.length });
                 lines.push([id, chat ? 'chat' : 'terminal', field(role.title), canvas.id, role.provider, edgeId].join('\t'));
             }
 
             return {
                 landed: async () => {
-                    for (const { id, prompt, chat, provider } of made) {
+                    for (const { id, title, prompt, chat, provider, line } of made) {
                         await call.host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: call.caller, depth, agent: true });
-                        await call.host.holdPrompt(place.projectId, id, prompt);
+                        if (tasked) {
+                            const task = await call.host.tasks.open({ projectId: place.projectId, parentId: call.caller, childId: id, title, prompt });
+                            lines[line] = `${lines[line]}\t${task.id}`;
+                        }
+                        await call.host.holdPrompt(place.projectId, id, tasked ? `${prompt}${taskBrief(chat)}` : prompt);
                         await call.host.startAgent({
                             projectId: place.projectId,
                             nodeId: id,
