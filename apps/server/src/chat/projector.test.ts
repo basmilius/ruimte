@@ -188,6 +188,12 @@ describe('ThreadProjector', () => {
         expect(thread.info).toMatchObject({ status: 'idle', activeTurnId: null, usage: { costUsd: 0.02, turns: 1 } });
     });
 
+    test("the CLI's own name for where a turn ended is kept on the turn", () => {
+        const { thread, project } = setup();
+        project({ type: 'turn.done', state: 'done', costUsd: 0, native: { lastUuid: 'u-2' } });
+        expect(thread.get('turn-1')).toMatchObject({ native: { lastUuid: 'u-2' } });
+    });
+
     test('a failing turn leaves a note, and a failure outside a turn leaves the chat in error', () => {
         const { thread, project } = setup();
         project({ type: 'turn.done', state: 'error', costUsd: 0, error: 'The model is overloaded' });

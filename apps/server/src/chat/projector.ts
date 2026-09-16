@@ -285,7 +285,7 @@ export class ThreadProjector {
                 events.push(this.note(event.level, event.text));
                 break;
             case 'turn.done':
-                this.finishTurn(event.state, event.costUsd, event.error, events);
+                this.finishTurn(event.state, event.costUsd, event.error, events, event.native);
                 break;
             case 'failed':
                 events.push(this.note('error', event.message));
@@ -669,12 +669,18 @@ export class ThreadProjector {
         }
     }
 
-    private finishTurn(state: 'done' | 'aborted' | 'error', costUsd: number, error: string | undefined, events: ChatEvent[]): void {
+    private finishTurn(
+        state: 'done' | 'aborted' | 'error',
+        costUsd: number,
+        error: string | undefined,
+        events: ChatEvent[],
+        native: { turnId?: string; lastUuid?: string } | undefined
+    ): void {
         if (error) {
             events.push(this.note('error', error));
         }
         this.settleOpenItems(events);
-        this.closeTurn(state, costUsd, events);
+        this.closeTurn(state, costUsd, events, native);
         const usage = this.thread.info.usage;
         events.push(
             this.thread.patchInfo({
@@ -695,14 +701,22 @@ export class ThreadProjector {
         events.push(this.thread.patchInfo({ running: false, status: busy ? 'error' : 'idle', activeTurnId: null }));
     }
 
-    private closeTurn(state: 'done' | 'aborted' | 'error', costUsd: number, events: ChatEvent[]): void {
+    private closeTurn(state: 'done' | 'aborted' | 'error', costUsd: number, events: ChatEvent[], native?: { turnId?: string; lastUuid?: string }): void {
         const turnId = this.thread.info.activeTurnId;
         const turn = turnId ? this.thread.get(turnId) : undefined;
         if (turn?.kind !== 'turn') {
             return;
         }
         // The CLI reports what the whole chat cost so far; the turn keeps what it added.
-        events.push(this.thread.upsert({ ...turn, state, endedAt: this.now(), costUsd: Math.max(0, costUsd - this.thread.info.usage.costUsd) }));
+        events.push(
+            this.thread.upsert({
+                ...turn,
+                state,
+                endedAt: this.now(),
+                costUsd: Math.max(0, costUsd - this.thread.info.usage.costUsd),
+                ...(native === undefined ? {} : { native })
+            })
+        );
     }
 
     private note(level: 'info' | 'warning' | 'error', text: string): ChatEvent {

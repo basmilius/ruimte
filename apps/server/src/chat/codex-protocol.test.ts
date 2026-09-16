@@ -64,12 +64,12 @@ describe('CodexProtocol', () => {
     test('turn/completed reports how the turn ended', () => {
         const protocol = new CodexProtocol(1);
         expect(protocol.handle({ method: 'turn/completed', params: { ...ids, turn: { id: 'ct1', status: 'interrupted', error: null } } })).toEqual([
-            { type: 'turn.done', state: 'aborted', costUsd: 0 }
+            { type: 'turn.done', state: 'aborted', costUsd: 0, native: { turnId: 'ct1' } }
         ]);
         expect(protocol.turnId).toBeNull();
         expect(
             protocol.handle({ method: 'turn/completed', params: { ...ids, turn: { id: 'ct1', status: 'failed', error: { message: 'overloaded' } } } })
-        ).toEqual([{ type: 'turn.done', state: 'error', costUsd: 0, error: 'overloaded' }]);
+        ).toEqual([{ type: 'turn.done', state: 'error', costUsd: 0, error: 'overloaded', native: { turnId: 'ct1' } }]);
     });
 
     test('a command is a Bash call whose partial output streams, and its approval carries the generation', () => {

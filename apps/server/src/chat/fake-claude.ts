@@ -22,10 +22,12 @@ export const fakeClaude: FakeCli = (io) => {
     const out = io.out;
 
     let messageCounter = 0;
+    // A real message id is unique across processes, which a fork's thread holding a resumed CLI's replies relies on.
+    const nonce = Math.random().toString(36).slice(2, 6);
     const usage = { input_tokens: 10, cache_creation_input_tokens: 100, cache_read_input_tokens: 1000, output_tokens: 5 };
 
     const assistantText = (text: string): void => {
-        const id = `msg_${++messageCounter}`;
+        const id = `msg_${nonce}_${++messageCounter}`;
         out({ type: 'stream_event', event: { type: 'message_start', message: { id, model } }, session_id: sessionId });
         out({
             type: 'stream_event',
@@ -50,8 +52,19 @@ export const fakeClaude: FakeCli = (io) => {
             event: { type: 'content_block_delta', index: 1, delta: { type: 'text_delta', text: text.slice(half) } },
             session_id: sessionId
         });
-        out({ type: 'assistant', message: { id, model, role: 'assistant', content: [{ type: 'thinking', thinking: '' }], usage }, session_id: sessionId });
-        out({ type: 'assistant', message: { id, model, role: 'assistant', content: [{ type: 'text', text }], usage }, session_id: sessionId });
+        // Every frame carries the uuid of its line in the transcript, which is what a fork is cut at.
+        out({
+            type: 'assistant',
+            uuid: `${id}-thinking`,
+            message: { id, model, role: 'assistant', content: [{ type: 'thinking', thinking: '' }], usage },
+            session_id: sessionId
+        });
+        out({
+            type: 'assistant',
+            uuid: `${id}-text`,
+            message: { id, model, role: 'assistant', content: [{ type: 'text', text }], usage },
+            session_id: sessionId
+        });
         out({ type: 'stream_event', event: { type: 'message_stop' }, session_id: sessionId });
     };
 
@@ -73,7 +86,7 @@ export const fakeClaude: FakeCli = (io) => {
         const child = (content: unknown[]): void => {
             out({
                 type: 'assistant',
-                message: { id: `msg_${++messageCounter}`, model, role: 'assistant', content, usage },
+                message: { id: `msg_${nonce}_${++messageCounter}`, model, role: 'assistant', content, usage },
                 parent_tool_use_id: agentToolUseId,
                 subagent_type: 'general-purpose',
                 session_id: sessionId
@@ -121,7 +134,7 @@ export const fakeClaude: FakeCli = (io) => {
         // The first line alone, so a prompt a task brief was added under still waits.
         if (text.split('\n')[0] === 'slow') {
             slow = true;
-            out({ type: 'stream_event', event: { type: 'message_start', message: { id: `msg_${++messageCounter}`, model } }, session_id: sessionId });
+            out({ type: 'stream_event', event: { type: 'message_start', message: { id: `msg_${nonce}_${++messageCounter}`, model } }, session_id: sessionId });
             return;
         }
         if (text === 'compact') {
@@ -162,7 +175,7 @@ export const fakeClaude: FakeCli = (io) => {
             const content = `${rest.join(' ')}\n`;
             // Against the CLI's own folder: in a test the fake shares the test runner's working directory.
             writeFileSync(resolve(io.cwd, path), content);
-            const id = `msg_${++messageCounter}`;
+            const id = `msg_${nonce}_${++messageCounter}`;
             out({
                 type: 'assistant',
                 message: {
@@ -189,7 +202,7 @@ export const fakeClaude: FakeCli = (io) => {
             out({
                 type: 'assistant',
                 message: {
-                    id: `msg_${++messageCounter}`,
+                    id: `msg_${nonce}_${++messageCounter}`,
                     model,
                     role: 'assistant',
                     content: [
@@ -232,7 +245,7 @@ export const fakeClaude: FakeCli = (io) => {
         }
         if (text.startsWith('background:')) {
             const summary = text.slice(11).trim() || 'done';
-            const id = `msg_${++messageCounter}`;
+            const id = `msg_${nonce}_${++messageCounter}`;
             out({
                 type: 'assistant',
                 message: {
@@ -290,7 +303,7 @@ export const fakeClaude: FakeCli = (io) => {
         }
         if (text.startsWith('run:')) {
             const command = text.slice(4).trim();
-            const id = `msg_${++messageCounter}`;
+            const id = `msg_${nonce}_${++messageCounter}`;
             out({
                 type: 'assistant',
                 message: { id, model, role: 'assistant', content: [{ type: 'tool_use', id: 'toolu_run', name: 'Bash', input: { command } }], usage },
@@ -337,7 +350,7 @@ export const fakeClaude: FakeCli = (io) => {
         }
         if (text.startsWith('tool:')) {
             const command = text.slice(5).trim();
-            const id = `msg_${++messageCounter}`;
+            const id = `msg_${nonce}_${++messageCounter}`;
             out({
                 type: 'assistant',
                 message: { id, model, role: 'assistant', content: [{ type: 'tool_use', id: 'toolu_1', name: 'Bash', input: { command } }], usage },

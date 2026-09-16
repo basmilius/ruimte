@@ -470,6 +470,7 @@ export class CodexProtocol {
         const turn = isRecord(params.turn) ? params.turn : {};
         const status = str(turn.status);
         const error = isRecord(turn.error) ? str(turn.error.message) : null;
+        const turnId = str(turn.id) ?? this.codexTurnId;
         this.codexTurnId = null;
         this.pending.clear();
         events.push({
@@ -477,7 +478,8 @@ export class CodexProtocol {
             state: status === 'interrupted' ? 'aborted' : status === 'failed' ? 'error' : 'done',
             // Codex reports no cost; the turn keeps a zero so the fold label can still say how long it took.
             costUsd: 0,
-            ...(status === 'failed' ? { error: error ?? 'The turn failed' } : {})
+            ...(status === 'failed' ? { error: error ?? 'The turn failed' } : {}),
+            ...(turnId === null ? {} : { native: { turnId } })
         });
     }
 

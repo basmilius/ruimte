@@ -308,6 +308,20 @@ describe('ClaudeProtocol', () => {
         ]);
     });
 
+    test('the turn ends on the uuid of its last main-chain assistant frame, which a subagent frame does not move', () => {
+        const protocol = new ClaudeProtocol();
+        protocol.handle({ type: 'assistant', uuid: 'u-1', message: { id: 'm1', content: [{ type: 'text', text: 'first' }] } });
+        protocol.handle({ type: 'assistant', uuid: 'u-2', message: { id: 'm2', content: [{ type: 'text', text: 'last' }] } });
+        protocol.handle({ type: 'assistant', uuid: 'u-sub', parent_tool_use_id: 'toolu_9', message: { id: 'm3', content: [{ type: 'text', text: 'sub' }] } });
+        expect(protocol.handle({ type: 'result', subtype: 'success', is_error: false, total_cost_usd: 0 })).toEqual([
+            { type: 'turn.done', state: 'done', costUsd: 0, native: { lastUuid: 'u-2' } }
+        ]);
+        // A turn without an answer of its own does not inherit the one before it.
+        expect(protocol.handle({ type: 'result', subtype: 'success', is_error: false, total_cost_usd: 0 })).toEqual([
+            { type: 'turn.done', state: 'done', costUsd: 0 }
+        ]);
+    });
+
     test('a compaction boundary reports the size before the fold', () => {
         const protocol = new ClaudeProtocol();
         expect(protocol.handle({ type: 'system', subtype: 'compact_boundary', compact_metadata: { trigger: 'auto', pre_tokens: 150000 } })).toEqual([

@@ -94,7 +94,8 @@ export type BackendEvent =
     | { type: 'compaction'; preTokens: number | null }
     | { type: 'model'; model: string }
     | { type: 'note'; level: 'info' | 'warning' | 'error'; text: string }
-    | { type: 'turn.done'; state: 'done' | 'aborted' | 'error'; costUsd: number; error?: string }
+    // `native` is the CLI's own name for where the turn ended, which a fork of the chat is cut at.
+    | { type: 'turn.done'; state: 'done' | 'aborted' | 'error'; costUsd: number; error?: string; native?: { turnId?: string; lastUuid?: string } }
     // The CLI could not be reached or refused the request; the turn ends and the chat needs a new one.
     | { type: 'failed'; message: string }
     | { type: 'exit'; exitCode: number | null };

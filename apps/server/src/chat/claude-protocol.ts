@@ -68,6 +68,8 @@ export class ClaudeProtocol {
     private readonly frameThinkingCount = new Map<string, number>();
     // What the CLI called its model, which is the key its result frame reports usage under.
     private model: string | null = null;
+    // The uuid of the last main-chain assistant frame of the turn, which is the line of the transcript the turn ends on.
+    private lastUuid: string | null = null;
 
     handle(frame: unknown): BackendEvent[] {
         const events: BackendEvent[] = [];
@@ -283,6 +285,10 @@ export class ClaudeProtocol {
         const messageId = str(message.id) ?? 'message';
         const parentRef = str(frame.parent_tool_use_id);
         const content = Array.isArray(message.content) ? message.content : [];
+        const uuid = str(frame.uuid);
+        if (!parentRef && uuid) {
+            this.lastUuid = uuid;
+        }
         for (const block of content) {
             if (!isRecord(block)) {
                 continue;
@@ -352,11 +358,14 @@ export class ClaudeProtocol {
         if (contextWindow > 0) {
             events.push({ type: 'usage', contextWindow });
         }
+        const lastUuid = this.lastUuid;
+        this.lastUuid = null;
         events.push({
             type: 'turn.done',
             state: failed ? 'error' : 'done',
             costUsd: num(frame.total_cost_usd),
-            ...(failed ? { error: errors[0] ?? `The turn ended with ${str(frame.subtype) ?? 'an error'}` } : {})
+            ...(failed ? { error: errors[0] ?? `The turn ended with ${str(frame.subtype) ?? 'an error'}` } : {}),
+            ...(lastUuid === null ? {} : { native: { lastUuid } })
         });
     }
 
