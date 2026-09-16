@@ -41,7 +41,7 @@ struct PlanSheet: View {
                     list(plan)
                 } else {
                     ContentUnavailableView(
-                        "No plan", lucideIcon: "list-checks", description: Text("This chat has no plan anymore."))
+                        "No plan", lucideIcon: "check-check", description: Text("This chat has no plan anymore."))
                 }
             }
             .modifier(MobilePageSurface())
@@ -261,7 +261,7 @@ private struct PlanHeader: View {
         VStack(alignment: .leading, spacing: 6) {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .top, spacing: 8) {
-                    Image(lucide: "list-checks", size: titleIcon)
+                    Image(lucide: "check-check", size: titleIcon)
                         .foregroundStyle(MobileStyle.muted)
                         .padding(.top, 2)
                     Text(plan.title).font(.body.weight(.medium)).foregroundStyle(MobileStyle.text)
