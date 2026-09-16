@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Orchestratie: het ontwerp</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h4 { font-size: 16px; margin: 20px 0 8px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .ref { fill: var(--panel); stroke: var(--reference); stroke-dasharray: 5 4; }
+.diagram .edge { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .edge.soft { stroke: var(--reference); stroke-dasharray: 5 4; }
+.diagram .arrow { fill: var(--accent); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+.accept { font-size: 15px; color: var(--muted); }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 13px; white-space: pre-wrap; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+.question { padding-top: 20px; border-top: 1px solid var(--line); margin-top: 20px; }
+.question h3 { margin-top: 0; }
+.question .options { padding-left: 0; list-style: none; }
+.question .options li { padding-left: 28px; position: relative; }
+.question .options li::before { content: attr(data-option); position: absolute; left: 0; color: var(--accent); font-weight: 600; }
+.advice { padding: 12px 16px; background: var(--highlight); border-radius: 8px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  .recommendation, .panel, .badge, .advice { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#kort">Naar de samenvatting</a>
+<header>
+  <p class="eyebrow">RUIMTE / ONTWERP / 16 SEPTEMBER 2026</p>
+  <h1>Orchestratie: het ontwerp</h1>
+  <p class="intro">Fase 0 van de orchestratie van Ruimte. Dit ontwerp legt vast wat een run, een poging, een stap, een subagent en een taak zijn, hoe een chat een herstart van de daemon overleeft, welke velden er op de wire bijkomen en wat elke fase bouwt. Het bouwt op wat er staat: het <code>turn</code>-item, <code>ThreadProjector</code>, de lineage onder <code>$RUIMTE_HOME</code>, de verbs en de pagina's van <code>chat.attach</code>. Er komt geen event-sourced kern en geen MCP-server.</p>
+  <p class="status">Ontwerp, tegen <code>8133ce20</code>; nog geen code geschreven</p>
+  <p class="caption">Bronnen: het rapport van 15 september (<code>docs/reports/2026-09-15-orchestrator-v2.html</code>), <code>CLAUDE.md</code>, <code>docs/DECISIONS.md</code>, de code van de daemon, de client en de iOS-app, echte subagent-transcripten van claude 2.1.273 en het JSON-schema dat <code>codex app-server generate-json-schema</code> van codex-cli 0.154.0 uitschrijft. <span class="badge confirmed">geverifieerd</span> staat bij wat vandaag tegen code of bestanden is gelegd, <span class="badge warning">afgeleid</span> bij wat uit namen, documentatie of het rapport volgt en pas in de bouwfase hard wordt.</p>
+  <nav aria-label="Inhoud">
+    <a href="#kort">Kort</a>
+    <a href="#controle">Controle</a>
+    <a href="#model">Het model</a>
+    <a href="#opslag">Opslag</a>
+    <a href="#wire">Wire</a>
+    <a href="#fasen">Fasen</a>
+    <a href="#scheduler">Geen scheduler</a>
+    <a href="#vragen">Productvragen</a>
+    <a href="#scope">Buiten scope</a>
+  </nav>
+</header>
+<main>
+  <section id="kort" class="recommendation">
+    <h2>Kort</h2>
+    <p>Het model is klein. Een <strong>run</strong> is het <code>turn</code>-item dat er al is; het krijgt een optioneel pogingnummer. Een <strong>poging</strong> is één CLI-proces dat aan die run werkt, wat <code>ChatSession.generation</code> al telt. Een <strong>stap</strong> is elk item met dat <code>turnId</code>. Een <strong>subagent</strong> is het <code>subagent</code>-item, met een oorsprong <code>native</code> (de CLI opende hem zelf) of <code>ruimte</code> (een verb opende een node) en een verwijzing waarmee zijn hele gesprek te lezen is. Een <strong>taak</strong> is een record naast de lineage: opdracht, status, resultaat en of de ouder al gewekt is.</p>
+    <p>Opslag: het snapshot per chat blijft de projectie, en er komt een append-only <code>.log</code> naast met een volgnummer per uitgezonden event. <code>chat.attach</code> neemt een <code>since</code> en antwoordt dan alleen wat erna kwam. Werk dat de daemon nog verschuldigd is (een agent starten, een run hervatten, een ouder wekken, kinderen beëindigen) staat als bestand in een <strong>outbox</strong> die bij het opstarten wordt afgewerkt. <code>observe()</code> blijft een synchrone luisteraar die alleen in de outbox mag schrijven.</p>
+    <p>Eén regel bepaalt de wire: <strong>alleen optionele velden, nieuwe requests en nieuwe events</strong>. Geen nieuwe soort item en geen nieuwe waarde in een bestaande enum, want de iOS-app in de winkel valideert het antwoord van <code>chat.attach</code> als geheel en verwerpt dan het hele gesprek. <code>PROTOCOL_VERSION</code> blijft 1 door alle vijf fasen.</p>
+    <p>Wat schuift ten opzichte van het rapport: geen apart verb <code>delegate</code> maar <code>--task</code> op <code>agent</code> en <code>team</code>; een gedelegeerde node verschijnt in de thread van de ouder als een <code>subagent</code>-rij met oorsprong <code>ruimte</code>, zodat het paneel van fase 1 in fase 4 ook het gesprek van een kind opent; en de ouder wordt gewekt met een <code>note</code> plus een label op de turn, niet met een nagemaakt bericht van een persoon.</p>
+  </section>
+
+  <section id="controle">
+    <h2>Wat gecontroleerd is</h2>
+    <p>De verificatie uit de opdracht is als uitgangspunt genomen. Hieronder alleen wat dit ontwerp raakt en wat vandaag opnieuw is nagekeken, plus waar het rapport niet volledig bleek.</p>
+    <ul>
+      <li><span class="badge confirmed">geverifieerd</span> <code>ChatThread</code> (<code>apps/server/src/chat/thread.ts</code>) geeft elk <code>item</code>-event een <code>historyIndex</code>; de cursor is <code>&lt;generation&gt;:&lt;offset&gt;</code> en een pagina is hooguit 100 items of 512 KiB. <code>ChatManager.broadcast</code> geeft elk event eerst aan <code>observers</code> en dan aan de attached sockets; de coalescer zit ervoor. Er is geen volgnummer en het log bestaat niet.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>ChatSession.ensureBackend</code> verhoogt <code>generation</code> per gestart CLI-proces en geeft het door als <code>BackendLaunch.generation</code>; de projector zet het voor elk item-id. Dat is de poging die het model nodig heeft, alleen nog niet zichtbaar op de turn.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>SessionManager.create</code> op een sessie die nog leeft gooit <code>session-exists</code>, en de client vangt precies die code op en attacht (<code>apps/client/src/terminal/session-client.ts:85</code>). <code>ChatManager.create</code> geeft een bestaande chat gewoon terug. Fase 2 kan dus agents starten zonder dat een client die later mount iets hoeft te leren.</li>
+      <li><span class="badge confirmed">geverifieerd</span> De <code>.meta.json</code> van claude 2.1.273 varieert. Over de 40 jongste bestanden op deze machine: <code>agentType</code>, <code>spawnDepth</code>, <code>requestShape</code> en <code>requestNonInteractive</code> altijd, <code>toolUseId</code> en <code>description</code> 39 keer, <code>model</code> 26 keer, <code>parentAgentId</code> 3 keer. Het rapport noemde <code>model</code> als vast veld en <code>parentAgentId</code> niet. Dat laatste is goed nieuws: een kleinkind krijgt een eigen bestand in dezelfde map, met de id van zijn ouder erin.</li>
+      <li><span class="badge confirmed">geverifieerd</span> De regels in <code>agent-&lt;id&gt;.jsonl</code> hebben dezelfde envelop als het hoofdtranscript (<code>type</code>, <code>message</code>, <code>isSidechain: true</code>, <code>agentId</code>, <code>parentUuid</code>). Een <code>assistant</code>-regel heeft <code>message.content</code> met blokken, dezelfde vorm die <code>ClaudeProtocol.handleAssistant</code> al leest.</li>
+      <li><span class="badge confirmed">geverifieerd</span> Uit het gegenereerde schema van codex-cli 0.154.0: <code>ThreadItemsListParams { threadId, cursor?, limit?, sortDirection?: asc|desc, turnId? }</code>, antwoord <code>{ data: ThreadItemEntry[], nextCursor?, backwardsCursor? }</code> met <code>ThreadItemEntry { item, turnId }</code>. <code>ThreadReadParams.includeTurns</code> heet in zijn eigen beschrijving deprecated ten gunste van <code>thread/turns/list</code> en <code>thread/items/list</code>. <code>collabAgentToolCall</code> draagt <code>receiverThreadIds</code>, <code>agentsStates</code>, <code>prompt</code> en <code>model</code>.</li>
+      <li><span class="badge warning">afgeleid</span> Of <code>thread/items/list</code> een thread bedient die het app-server-proces zelf nooit geladen heeft, zegt het schema niet. De tekst bij <code>thread/read</code> ("from rollout history") wijst erop dat het van schijf leest. Dit is het eerste wat fase 1 tegen een echte codex meet.</li>
+      <li><span class="badge confirmed">geverifieerd</span> De iOS-app valideert elke chatvorm in <code>WireSchema.swift</code>. Onbekende velden vallen weg; een onbekende variant in een <code>oneOf</code> gooit. Bij een event staat er <code>try?</code> omheen (<code>MachineClient.swift:333</code>), dus een event met een nieuw item-kind valt stil weg. Bij een request loopt het antwoord door <code>validateResult</code> (<code>MachineClient.swift:322</code>): één onbekend kind in <code>chat.attach</code> of <code>chat.history</code> laat het hele antwoord mislukken. Dat staat niet in het rapport en het is de scherpste grens van dit ontwerp.</li>
+      <li><span class="badge confirmed">geverifieerd</span> De desktop-client laat een onbekend event-type vallen met een <code>console.warn</code> (<code>apps/client/src/transport/link-transport.ts:329</code>). Nieuwe events zijn daar dus veilig. Een nieuw request kent niemand tot hij het aanroept.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>generate-swift.ts</code> schrijft <code>schemas.json</code> voor elke payload, elk result en elk event, en <code>DaemonAPI.swift</code> met de namen. Een optioneel veld verandert <code>schemas.json</code>; een nieuwe naam ook <code>DaemonAPI.swift</code>. <code>bun run check</code> faalt op een verouderd bestand, dus elke wire-wijziging regenereert en commit in dezelfde commit.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>renderTranscript</code> (<code>apps/server/src/context/context-store.ts:33-67</code>) laat het <code>subagent</code>-item zelf weg en zet zijn kinderen (items met <code>parentToolUseId</code>) plat tussen de tekst van de ouder, alsof de ouder ze schreef.</li>
+      <li><span class="badge confirmed">geverifieerd</span> De pushservice (<code>apps/server/src/push/service.ts</code>) kent alerts van de soort <code>turn</code>, <code>attention</code> en <code>approval</code>, een gesloten enum in <code>packages/pulsar/src/push.ts</code> die op iOS een gegenereerde Swift-enum wordt. Een nieuwe soort verwerpt een oude app; een taakresultaat rijdt dus mee als <code>turn</code> met eigen titel en tekst.</li>
+      <li><span class="badge confirmed">geverifieerd</span> Het <code>agent</code>-verb heeft geen <code>--mode</code>; een chat die de daemon aanmaakt start in <code>full-access</code> (<code>ChatManager.create</code>). Het plafond op de modus van fase 5 is dus geen aanscherping maar een nieuw flag met een grens.</li>
+      <li><span class="badge confirmed">geverifieerd</span> Een groep draagt al <code>worktree: { path, branch }</code> in <code>project.json</code> (<code>packages/contracts/src/project.ts:107</code>), en <code>Worktrees</code> (<code>apps/server/src/git/worktrees.ts</code>) maakt ze onder <code>$RUIMTE_HOME/worktrees/&lt;repo&gt;-&lt;hash&gt;/&lt;branch&gt;</code>. De checkpoint-diff van een chat neemt <code>info.cwd</code>, dus een chat in een worktree difft al alleen die worktree.</li>
+    </ul>
+  </section>
+
+  <section id="model">
+    <h2>Het model</h2>
+    <p>Het uitgangspunt is dat de code zo min mogelijk nieuwe woorden krijgt. In de code blijft een run een <code>turn</code>, omdat dat woord op de wire staat en niet weg kan; in tekst voor mensen en in dit ontwerp is een run "een beurt". De begrippen zijn er al of zijn optionele velden op wat er is, behalve de taak, die een eigen record krijgt.</p>
+    <figure class="panel">
+      <div class="table" role="region" aria-label="Diagram van het model, scrollbaar" tabindex="0">
+        <svg class="diagram plot" width="900" viewBox="0 0 900 340" role="img" aria-labelledby="model-title model-desc">
+          <title id="model-title">Het model van de orchestratie</title>
+          <desc id="model-desc">Een chat heeft runs, die turn-items zijn. Een run heeft pogingen en stappen. Een stap van de soort subagent verwijst naar een native gesprek van de CLI of, via een taak, naar een kindnode van Ruimte. Een taak ligt naast de lineage en wekt de ouder wanneer hij afgerond is.</desc>
+          <defs><marker id="m-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker></defs>
+          <rect class="node" x="20" y="40" width="150" height="64" rx="12"/>
+          <text x="95" y="70" text-anchor="middle">Chat</text>
+          <text class="label" x="95" y="90" text-anchor="middle">ChatThread</text>
+          <rect class="node" x="220" y="40" width="170" height="64" rx="12"/>
+          <text x="305" y="70" text-anchor="middle">Run</text>
+          <text class="label" x="305" y="90" text-anchor="middle">turn-item, attempt</text>
+          <rect class="node" x="440" y="10" width="200" height="56" rx="12"/>
+          <text x="540" y="36" text-anchor="middle">Poging</text>
+          <text class="label" x="540" y="55" text-anchor="middle">één CLI-proces, generation</text>
+          <rect class="node" x="440" y="86" width="200" height="56" rx="12"/>
+          <text x="540" y="112" text-anchor="middle">Stap</text>
+          <text class="label" x="540" y="131" text-anchor="middle">elk item met dat turnId</text>
+          <rect class="node" x="690" y="86" width="190" height="56" rx="12"/>
+          <text x="785" y="112" text-anchor="middle">Subagent</text>
+          <text class="label" x="785" y="131" text-anchor="middle">origin native | ruimte</text>
+          <rect class="ref" x="690" y="200" width="190" height="56" rx="12"/>
+          <text x="785" y="226" text-anchor="middle">Native gesprek</text>
+          <text class="label" x="785" y="245" text-anchor="middle">transcript of thread</text>
+          <rect class="node" x="440" y="200" width="200" height="64" rx="12"/>
+          <text x="540" y="228" text-anchor="middle">Taak</text>
+          <text class="label" x="540" y="248" text-anchor="middle">$RUIMTE_HOME/tasks</text>
+          <rect class="node" x="220" y="200" width="170" height="64" rx="12"/>
+          <text x="305" y="228" text-anchor="middle">Kindnode</text>
+          <text class="label" x="305" y="248" text-anchor="middle">chat of terminal, lineage</text>
+          <path class="edge" d="M170 72 H208" marker-end="url(#m-arrow)"/>
+          <path class="edge" d="M390 62 L428 42" marker-end="url(#m-arrow)"/>
+          <path class="edge" d="M390 84 L428 108" marker-end="url(#m-arrow)"/>
+          <path class="edge" d="M640 114 H678" marker-end="url(#m-arrow)"/>
+          <path class="edge soft" d="M785 142 V188" marker-end="url(#m-arrow)"/>
+          <path class="edge" d="M740 142 L640 200" marker-end="url(#m-arrow)"/>
+          <path class="edge" d="M440 232 H402" marker-end="url(#m-arrow)"/>
+          <path class="edge soft" d="M305 200 V104"/>
+          <text class="label" x="330" y="160" text-anchor="start">eigen runs</text>
+          <path class="edge soft" d="M470 264 C 420 320, 300 320, 250 300 L 250 264"/>
+          <text class="label" x="380" y="318" text-anchor="middle">resultaat wekt de ouder</text>
+        </svg>
+      </div>
+      <figcaption>Een chat heeft runs, een run heeft pogingen en stappen. Een subagent-stap verwijst naar het native gesprek van de CLI, of via een taak naar een kindnode die eigen runs heeft. De taak ligt naast de lineage; zijn resultaat is wat de ouder wekt.</figcaption>
+    </figure>
+
+    <h3>Run: het turn-item</h3>
+    <p>Een run is één beurt zoals de persoon hem ziet, en dat is precies wat <code>ChatTurnItem</code> al is: id, <code>state</code>, <code>origin</code>, <code>label</code>, checkpoint en diff. Er komt één optioneel veld bij, <code>attempt</code> (fase 3), en in fase 4 <code>taskIds</code>. De statussen blijven <code>running</code>, <code>done</code>, <code>aborted</code> en <code>error</code>; "wacht op een persoon" staat al op <code>ChatInfo.status</code> als <code>needs-you</code> en hoeft niet op de run.</p>
+    <div class="table" role="region" aria-label="Levenscyclus van een run" tabindex="0">
+      <table class="wide">
+        <caption>Levenscyclus van een run</caption>
+        <thead><tr><th scope="col">Moment</th><th scope="col">Nu</th><th scope="col">Na dit ontwerp</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Opent</th><td><code>ChatSession.openTurn</code> (persoon, <code>origin: user</code>) of <code>ThreadProjector.openAgentTurn</code> (de CLI zelf, <code>origin: agent</code>, met <code>label</code> en <code>taskToolUseId</code>).</td><td>Plus een derde opener in fase 4: de daemon wekt de ouder met de resultaten van taken. Dat is <code>origin: agent</code> met <code>taskIds</code>, zodat een oude client hem als een agent-turn tekent en een nieuwe de resultaten kan aanwijzen.</td></tr>
+          <tr><th scope="row">Loopt</th><td>Eén proces (<code>generation</code>); stappen komen binnen als items met dit <code>turnId</code>.</td><td>Hetzelfde, met <code>attempt</code> op de turn gelijk aan het aantal processen dat eraan werkte (1 als het veld ontbreekt).</td></tr>
+          <tr><th scope="row">Daemon valt weg</th><td><code>settle</code> in <code>ChatManager.create</code> zet de turn op <code>error</code>; approvals en vragen op <code>cancelled</code>; verder gaat pas bij de volgende send.</td><td>Fase 3: de turn blijft <code>running</code>, de outbox krijgt <code>resume-run</code>, en de daemon start één herstelpoging met <code>--resume</code> (Claude) of <code>thread/resume</code> (Codex): <code>attempt + 1</code>, een <code>note</code> in de thread. Lukt die niet, dan <code>aborted</code> met een note die het zegt. Hooguit één herstelpoging per run.</td></tr>
+          <tr><th scope="row">Sluit</th><td><code>turn.done</code>, <code>failed</code>, <code>exit</code>, of <code>settleAgentTurn</code> wanneer de persoon een agent-turn overtypt.</td><td>Ongewijzigd. Fase 4 luistert hier voor een kind met een open taak.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Poging: één proces</h3>
+    <p>Een poging is één CLI-proces dat aan een run werkt. <code>ChatSession.generation</code> telt die al en de projector zet het nummer voor elk item-id, dus een poging krijgt geen eigen record. De redenen waarom een run een tweede poging krijgt zijn er twee: <code>recovery</code> (de daemon viel weg) en, later, <code>restart</code> als een persoon midden in een run van model wisselt. Dat laatste bestaat nu niet (een wissel werkt pas bij de volgende send) en dit ontwerp bouwt het niet. De reden staat in de <code>note</code> die bij de nieuwe poging in de thread komt, niet in een veld: de thread is toch al waar een persoon leest wat er gebeurde.</p>
+
+    <h3>Stap: elk item met dat turnId</h3>
+    <p>Een stap is een <code>assistant</code>, <code>thinking</code>, <code>tool</code>, <code>subagent</code>, <code>approval</code>, <code>question</code>, <code>note</code> of <code>compaction</code> met het <code>turnId</code> van de run. Er komt geen nieuw kind bij. Wat een native subagent binnen zijn rij doet (items met <code>parentToolUseId</code>) blijft in de thread tot de bestaande cap van 200 items en 64 KiB, en alles daarboven is via fase 1 te lezen uit het gesprek van de CLI zelf. De cap gaat dus niet omhoog; de thread is een bestand dat op elke tool call herschreven wordt.</p>
+
+    <h3>Subagent: native of ruimte</h3>
+    <p>Het <code>subagent</code>-item krijgt drie optionele velden.</p>
+    <ul>
+      <li><code>origin</code>: <code>native</code> (de CLI opende hem met zijn eigen Agent-tool of <code>spawnAgent</code>) of <code>ruimte</code> (een verb met <code>--task</code> opende een node). Afwezig betekent <code>native</code>, wat elk item van vóór dit veld was.</li>
+      <li><code>native</code>: <code>{ agentId?, threadId? }</code>. Voor Claude de <code>agentId</code> uit de <code>.meta.json</code> waarvan <code>toolUseId</code> gelijk is aan die van het item, gevonden op de eerste vraag ernaar en dan op het item gezet. Voor Codex de <code>receiverThreadIds[0]</code> van de <code>spawnAgent</code>-call, gezet bij <code>task.started</code>. <span class="badge confirmed">geverifieerd</span> dat beide bronnen bestaan.</li>
+      <li><code>childId</code>: de node die een verb met <code>--task</code> maakte (fase 4). Het paneel van fase 1 opent daarmee het gesprek van een kind precies zoals dat van een native subagent, en <code>read &lt;childId&gt;</code> deed dat voor agents al.</li>
+    </ul>
+    <p>De statussen blijven <code>running</code>, <code>done</code> en <code>failed</code>. Een geannuleerd kind is <code>failed</code> met een note; een nieuwe enumwaarde zou de iOS-app in de winkel breken. Een rij met oorsprong <code>ruimte</code> maakt de daemon zelf in de thread van de ouder wanneer het verb landt, met <code>background: true</code> en <code>description</code> gelijk aan de taaktitel; hij settelt wanneer de taak settelt en <code>result</code> is het resultaat van de taak. Zo ziet een delegatie er in de thread hetzelfde uit of de CLI of Ruimte hem opende, en dat is waar het rapport op wees.</p>
+
+    <h3>Taak: een record naast de lineage</h3>
+    <p>Een taak is wat een ouder aan een kindnode vroeg, met een status en een resultaat. Hij hoort niet in <code>project.json</code>: het is een belofte die de daemon nakomt, en een veld dat een agent in een terminal zou kunnen herschrijven is geen belofte (zie ook <a href="#vragen">productvraag 1</a>). Een taak staat onder <code>$RUIMTE_HOME/tasks/&lt;taskId&gt;.json</code>, één bestand per record, hetzelfde patroon als lineage, prompts en notices, en wordt opgeruimd via dezelfde <code>ProjectIndex.onPlaces</code> als het kind of de ouder van de canvas verdwijnt.</p>
+    <div class="table" role="region" aria-label="Levenscyclus van een taak" tabindex="0">
+      <table class="wide">
+        <caption>Levenscyclus van een taak</caption>
+        <thead><tr><th scope="col">Status</th><th scope="col">Hoe hij daar komt</th><th scope="col">Wat er dan gebeurt</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>open</code></th><td><code>agent --task</code> of <code>team --task</code> vanuit een chat. Vanuit een terminal-agent een weigering <code>not-a-chat-parent</code>: die ouder is niet te wekken.</td><td>De rij met oorsprong <code>ruimte</code> komt in de thread van de ouder; fase 2 start het kind.</td></tr>
+          <tr><th scope="row"><code>done</code></th><td>Het kind roept <code>ruimte-context done --result "..."</code> (of <code>--result-file</code>) aan, of het standaardresultaat treedt in werking (<a href="#vragen">productvraag 3</a>).</td><td><code>result: { text, source: done | turn | exit, at }</code>. De outbox krijgt <code>wake-parent</code>.</td></tr>
+          <tr><th scope="row"><code>failed</code></th><td>Het proces van het kind eindigt zonder resultaat, of zijn beurt eindigt op <code>error</code>.</td><td>Resultaat is de foutregel; de ouder wordt óók gewekt, want een mislukt kind is nieuws.</td></tr>
+          <tr><th scope="row"><code>cancelled</code></th><td>Een persoon verwijdert het kind, of (fase 5) de ouder wordt gestopt of verwijderd.</td><td>Geen wake. De rij in de ouder settelt als <code>failed</code> met een note.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Het wekken zelf: een <code>TaskCoordinator</code> hangt via <code>chats.observe()</code> aan de events, zoals de pushservice. Hij ziet een <code>turn</code> van een kind op <code>done</code> of <code>error</code> gaan, settelt de taak en schrijft één <code>wake-parent</code> in de outbox. De worker die dat afwerkt bundelt alle gesettelde taken van één ouder waarvan <code>wake</code> nog <code>pending</code> is, wacht tot die ouder geen actieve turn heeft (weer via een observer op zijn <code>turn</code>), en stuurt dan één beurt: de tekst voor de CLI noemt per taak de titel, het kind-id, de status en het resultaat (per resultaat begrensd op 8 KiB, met de aanwijzing <code>read &lt;childId&gt;</code> voor de rest). In de thread van de ouder komt geen <code>user</code>-item maar een <code>note</code> ("Woken by 2 finished tasks") en een turn met <code>origin: agent</code>, <code>label</code> en <code>taskIds</code>, zodat wat de persoon ziet klopt met wie er sprak. Een ouder zonder proces wordt met <code>--resume</code> gestart, wat <code>ChatSession.send</code> nu al doet.</p>
+  </section>
+
+  <section id="opslag">
+    <h2>Opslag</h2>
+    <h3>Het log naast het snapshot</h3>
+    <p>Het snapshot <code>$RUIMTE_HOME/chats/&lt;id&gt;.json</code> blijft bestaan en blijft de projectie waar een client op attacht. Ernaast komt <code>&lt;id&gt;.log</code>: één regel per uitgezonden <code>ChatEvent</code>, <code>{ seq, at, event }</code>, geschreven in <code>ChatManager.broadcast</code> ná de coalescer, zodat het log precies is wat een aangesloten client zag. Het volgnummer <code>seq</code> loopt per chat op vanaf 1 en begint nooit opnieuw, ook niet na een clear. Het snapshot krijgt twee velden erbij: <code>seq</code> (het laatste nummer dat erin verwerkt is) en <code>resetSeq</code> (het nummer van de laatste <code>reset</code>).</p>
+    <p>Bij het opstarten leest de daemon het snapshot en daarna het log, en past elke regel met <code>seq &gt; snapshot.seq</code> toe: een <code>item</code> is een upsert, een <code>delta</code> een append, een <code>info</code> een patch, een <code>reset</code> leegt de thread. Een afgebroken laatste regel (een crash midden in een write) wordt overgeslagen. Wat er zo bijkomt is doorgaans een halve turn: de items sinds de laatste tool call, want het snapshot wordt al geschreven bij het openen van een turn, na elke tool call en bij het settelen.</p>
+    <h3>Volgnummer, historyIndex en cursor</h3>
+    <p>Drie getallen met drie taken. <code>historyIndex</code> is de plaats van een item in de volgorde van de thread, stabiel binnen een <code>historyGeneration</code>; iOS gebruikt hem om een item-event buiten de geladen pagina te laten vallen. De <code>cursor</code> van <code>chat.history</code> is <code>&lt;generation&gt;:&lt;offset&gt;</code> en bladert terug door die volgorde. <code>seq</code> is de plaats van een event in de stroom, en is het enige nummer dat een delta en een info-event ook hebben. Ze bijten elkaar niet: een <code>item</code>-event draagt straks <code>historyIndex</code> én reist in een envelop met <code>seq</code>.</p>
+    <p><code>chat.attach { chatId, since }</code> antwoordt met <code>{ info, items: [], events, seq }</code> wanneer <code>since &gt;= resetSeq</code>, <code>since &lt;= seq</code> en het log alle events na <code>since</code> nog heeft; anders precies wat het nu antwoordt (het snapshot, of een pagina bij <code>historyLimit</code>), plus <code>seq</code>. Een client die kort weg was krijgt zo alleen de staart; een client die te lang weg was krijgt het geheel, wat hij nu altijd krijgt.</p>
+    <h3>Compactie en clear</h3>
+    <p>Compactie is: snapshot schrijven met <code>seq = N</code>, daarna het log vervangen door een leeg bestand (schrijven en hernoemen, zoals <code>writeAtomic</code>). Een crash tussen die twee stappen laat een log achter met regels tot N, die bij de volgende start alle door het snapshot worden overgeslagen. Het gebeurt op de plekken waar het snapshot toch al geschreven wordt, alleen wanneer het log groter is dan 1 MB, en altijd bij <code>shutdown</code> en <code>persistAllSync</code>. Die laatste blijft synchroon, om dezelfde reden als nu (<code>bun --watch</code>). Een <code>clear</code> is een <code>reset</code>-event met een gewoon volgnummer; het snapshot wordt leeg geschreven met <code>resetSeq</code> gelijk aan dat nummer, en <code>since</code> van vóór dat nummer valt terug op het geheel. <code>history-expired</code> op de cursor blijft bestaan zoals het is.</p>
+    <h3>De outbox</h3>
+    <p>De outbox is werk dat de daemon nog verschuldigd is en dat een herstart moet overleven: <code>$RUIMTE_HOME/outbox/&lt;id&gt;.json</code>, één bestand per opdracht, <code>{ id, kind, projectId, target, payload, createdAt, attempts, notBefore }</code>, verwijderd wanneer de opdracht klaar is. De soorten per fase: <code>start-agent</code> (2), <code>resume-run</code> (3), <code>wake-parent</code> (4), <code>end-children</code> (5). Een <code>OutboxWorker</code> werkt ze af in volgorde van <code>createdAt</code>, één tegelijk per <code>target</code>, en elke handler is idempotent: <code>start-agent</code> doet niets als de chat al loopt, <code>wake-parent</code> niets als <code>task.wake</code> al <code>sent</code> is. Een mislukking wacht 1, 5 en 30 seconden (via een geïnjecteerde klok, zodat de test hem vooruit zet) en wordt daarna geparkeerd met een <code>note</code> in de thread van de ouder; niets probeert het eindeloos. Bij het opstarten laadt de daemon de outbox na prompts, lineage en notices en begint met afwerken ná <code>projects.warmIndex()</code>, zonder op een client te wachten: dat is het hele punt.</p>
+    <h3>observe() en de outbox</h3>
+    <p>Twee verschillende dingen. <code>observe()</code> is een synchrone luisteraar op de broadcast, geschikt om iets te zien en te noteren, ongeschikt om iets te doen: een handler die vanuit een event een turn naar een andere chat stuurt, loopt in de call stack van die eerste chat en is bij een crash weg. De regel is dus: een observer (de <code>TaskCoordinator</code>, de pushservice) schrijft hooguit een bestand in de outbox of een taakrecord, en alleen de worker voert uit. De worker luistert zelf ook via <code>observe()</code>, maar alleen om te weten dat een ouder klaar is met zijn turn en de wachtende opdracht nu kan.</p>
+  </section>
+
+  <section id="wire">
+    <h2>Wire-wijzigingen per fase</h2>
+    <p class="note">De regel voor alle fasen: alleen optionele velden op bestaande objecten, nieuwe requests en nieuwe events. Geen nieuw lid van <code>ChatItemSchema</code>, geen nieuwe waarde in een bestaande enum op de chatwire (<code>turn.state</code>, <code>turn.origin</code>, <code>subagent.status</code>, <code>PushAlertContent.kind</code>). Reden: <code>validateResult</code> op iOS verwerpt het hele antwoord van <code>chat.attach</code> bij één onbekende variant. Elke wijziging in <code>packages/contracts</code> regenereert <code>schemas.json</code> (en <code>DaemonAPI.swift</code> voor een nieuwe naam) en commit die mee; <code>bun run check</code> bewaakt het. <code>PROTOCOL_VERSION</code> blijft 1.</p>
+
+    <h3>Fase 1: het gesprek van een subagent</h3>
+<pre><code>// packages/contracts/src/chat.ts
+ChatSubagentItemSchema = z.object({
+    ...bestaand,
+    // Where the CLI keeps this subagent's own conversation; set once the daemon found it.
+    native: z.object({ agentId: z.string().optional(), threadId: z.string().optional() }).optional()
+});
+
+export const ChatSubagentPayloadSchema = z.object({
+    chatId: ChatIdSchema,
+    toolUseId: z.string().min(1),
+    cursor: z.string().min(1).max(256).optional(),
+    limit: z.number().int().min(1).max(100).optional()
+});
+export const ChatSubagentResultSchema = z.object({
+    items: z.array(ChatItemSchema),
+    history: ChatHistoryPageSchema,
+    source: z.enum(['claude-transcript', 'codex-thread']),
+    // Whether the subagent is still writing, so a client knows to keep reading.
+    live: z.boolean()
+});
+// request 'chat.subagent'; event 'chat.subagentChanged' { chatId, toolUseId } (zie productvraag 6)</code></pre>
+    <p>iOS: niets verplicht. <code>native</code> valt weg in een oude app; <code>chat.subagent</code> is een naam die alleen in <code>DaemonAPI.swift</code> bijkomt. Een iOS-weergave van het paneel is een keuze (<a href="#vragen">productvraag 5</a>).</p>
+
+    <h3>Fase 2: de daemon start agents zelf</h3>
+    <p>Geen wire-wijziging. <code>chat.create</code> op een chat die de daemon al startte antwoordt de bestaande info; <code>session.create</code> antwoordt <code>session-exists</code> en de client attacht, wat hij nu al doet.</p>
+
+    <h3>Fase 3: run-model, log en volgnummer</h3>
+<pre><code>ChatTurnItemSchema = z.object({
+    ...bestaand,
+    // How many CLI processes worked on this turn; absent is one, which is every turn before this field.
+    attempt: z.number().int().positive().optional()
+});
+
+ChatEventEnvelopeSchema = z.object({
+    chatId: ChatIdSchema,
+    event: ChatEventSchema,
+    // The place of this event in the chat's stream, for `since` on the next attach.
+    seq: z.number().int().positive().optional()
+});
+
+ChatAttachPayloadSchema = ChatTargetPayloadSchema.extend({
+    historyLimit: z.number().int().min(1).max(100).optional(),
+    // The last seq this client saw; honored when the log still holds everything after it.
+    since: z.number().int().nonnegative().optional()
+});
+ChatAttachResultSchema = z.object({
+    info, items, history?, pending?,
+    seq: z.number().int().nonnegative().optional(),
+    // Only when `since` was honored: what happened after it, in order; `items` is then empty.
+    events: z.array(ChatEventSchema).optional()
+});</code></pre>
+    <p>iOS: hoeft niets, want zonder <code>since</code> is het antwoord wat het was. Wint wel iets: <code>since</code> meesturen bij een reconnect binnen dezelfde pagina spaart de pagina van 60 items uit, en <code>attempt</code> kan als badge op de turn-rij. De desktop-client stuurt <code>since</code> vanaf fase 3.</p>
+
+    <h3>Fase 4: taken met resultaat</h3>
+<pre><code>// packages/contracts/src/task.ts (nieuw)
+export const TaskStatusSchema = z.enum(['open', 'done', 'failed', 'cancelled']);
+export const TaskResultSchema = z.object({
+    text: z.string(),
+    // How the result came about: the child called `done`, its turn ended, or its process left.
+    source: z.enum(['done', 'turn', 'exit']),
+    at: z.number()
+});
+export const TaskSchema = z.object({
+    id: z.string().min(1),
+    projectId: z.string().min(1),
+    parentId: z.string().min(1),
+    childId: z.string().min(1),
+    title: z.string(),
+    prompt: z.string(),
+    status: TaskStatusSchema,
+    result: TaskResultSchema.nullable(),
+    createdAt: z.number(),
+    settledAt: z.number().nullable(),
+    // Whether the parent has been woken about this task yet; `none` for a task that never wakes anybody.
+    wake: z.enum(['pending', 'sent', 'none'])
+});
+// request 'task.list' { projectId } -> { tasks: Task[] }
+// event 'task.changed' { task: Task }
+
+ChatSubagentItemSchema: origin: z.enum(['native', 'ruimte']).optional(), childId: z.string().optional()
+ChatTurnItemSchema: taskIds: z.array(z.string()).optional()</code></pre>
+    <p>iOS: een oude app tekent de wekturn als een gewone agent-turn en de <code>ruimte</code>-rij als een subagent; niets breekt. Een nieuwe app kan <code>task.list</code> lezen voor een status op de kaart van een node. Een push voor een afgeronde taak rijdt als <code>turn</code> met titel "Task finished: &lt;titel&gt;" en het resultaat als body (begrensd op 500 tekens, wat de alert al eist), <code>nodeId</code> de ouder; of hij er komt is <a href="#vragen">productvraag 5</a>.</p>
+
+    <h3>Fase 5: worktree, annuleren, plafond</h3>
+<pre><code>// request 'agent.children' { nodeId } -> { nodeIds: string[] }
+// Uit de lineage: elke node met openedBy gelijk aan nodeId, recursief, zodat de bevestiging ze kan tellen.</code></pre>
+    <p>De rest van fase 5 zijn flags en weigeringen op de verbs (<code>--worktree</code>, <code>--mode</code>, <code>mode-above-parent</code>) en geen wire.</p>
+  </section>
+
+  <section id="fasen">
+    <h2>De fasen</h2>
+    <p>Elke fase is los te committen en te testen. De acceptatiecriteria zijn wat een test of een meting laat zien; de risico's zijn wat de bouwer als eerste moet meten.</p>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>Het gesprek van een subagent openen</h3>
+        <h4>Daemon</h4>
+        <ul>
+          <li><code>apps/server/src/chat/subagent-reader.ts</code> (nieuw): één seam <code>readSubagent(chatId, toolUseId, cursor, limit)</code> met twee bronnen erachter.</li>
+          <li><code>apps/server/src/chat/claude-transcript.ts</code> (nieuw): zoekt in <code>&lt;projects&gt;/&lt;slug(cwd)&gt;/&lt;agentSessionId&gt;/subagents/</code> de <code>.meta.json</code> met de <code>toolUseId</code>, leest <code>agent-&lt;id&gt;.jsonl</code> en zet de regels om in <code>ChatItem</code>s door ze als frames door de bestaande <code>ClaudeProtocol</code>-mapping te halen (<code>assistant</code>-regels zijn dezelfde vorm; <code>user</code>-regels met <code>tool_result</code> worden <code>tool.done</code>). <span class="badge warning">afgeleid</span> dat de mapping zonder aanpassing volstaat; de <code>thinking</code>-blokken komen hier wél mee, omdat alleen de live stream ze bij <code>parentRef</code> weglaat. De map van de projecten komt uit wat <code>ClaudeTitleReader</code> al gebruikt (<code>usageRoots</code>). De <code>agentId</code> wordt op het item gezet (<code>native.agentId</code>) zodat de tweede vraag geen map hoeft te lezen. Een <code>Agent</code>-call in het transcript van een kind is een kleinkind met een eigen bestand en <code>parentAgentId</code>; die rij opent in hetzelfde paneel.</li>
+          <li><code>apps/server/src/chat/codex-protocol.ts</code>: <code>spawnedAgent</code> zet <code>native.threadId</code> uit <code>receiverThreadIds[0]</code> op <code>task.started</code> (een nieuw optioneel veld op dat <code>BackendEvent</code>). <code>codex-thread.ts</code> (nieuw) roept <code>thread/items/list { threadId, cursor, limit, sortDirection: 'desc' }</code> aan over de transport van de lopende backend van die chat, en anders over een kortlevend <code>codex app-server</code>-proces (initialize, list, exit) met een cache van vijf seconden per <code>(threadId, cursor)</code>. De <code>ThreadItemEntry.item</code>s gaan door dezelfde item-mapping die <code>handleItem</code> nu voor de live stream doet.</li>
+          <li><code>apps/server/src/handlers/chat.ts</code>: <code>chat.subagent</code>. <code>packages/contracts</code>: de schema's uit <a href="#wire">Wire</a>, plus regeneratie voor iOS.</li>
+          <li><code>apps/server/src/context/context-store.ts</code>: <code>read &lt;chatId&gt; --subagent &lt;toolUseId&gt; [--tail N]</code> via dezelfde reader; <code>renderTranscript</code> tekent een <code>subagent</code>-item als één regel (<code>&gt; Subagent "&lt;description&gt;" (&lt;status&gt;): &lt;eerste regel van result&gt;</code>) en laat items met <code>parentToolUseId</code> weg. <code>help read</code> noemt het flag; de registry in <code>canvas/verbs.ts</code> blijft 17 verbs.</li>
+        </ul>
+        <h4>Client</h4>
+        <ul>
+          <li><code>apps/client/src/state/ui.ts</code>: <code>PanelKind = ProjectPanelKind | 'subagent'</code> en een payload <code>subagentPanel: { endpointId, chatId, toolUseId } | null</code> met <code>openSubagentPanel</code>. De soort komt niet in <code>ProjectPanelKindSchema</code> en wordt niet bewaard; <code>panels-port.ts</code> schrijft dan de vorige soort of een gesloten paneel weg. <code>shell/panels.ts</code> krijgt geen entry, dus <code>PanelControls</code> tekent geen knop; <code>Panel.tsx</code> zoekt label en breedte voor deze soort apart op.</li>
+          <li><code>apps/client/src/shell/panels/SubagentPanel.tsx</code> (nieuw): kop met beschrijving en status, broodkruimel voor een kleinkind, "Load earlier" bovenaan, de items alleen-lezen. Het rendert met <code>deriveTimelineRows</code> en de rijen van <code>Timeline.tsx</code>, maar niet met <code>Timeline</code> zelf: die registreert zich op <code>chatId</code> in <code>timeline-scroll.ts</code> en rekent op een composer. De rij-switch wordt daarvoor uit <code>Timeline.tsx</code> gelicht naar <code>chat/ui/rows/Rows.tsx</code>. De items staan in de staat van het paneel, niet in <code>useChats</code>. Om het paneel heen een <code>WorkspaceProvider</code>-achtige context met het endpoint van de chat, want het paneel staat buiten de node en <code>useEndpointId()</code> zou anders de actieve machine nemen. Een eigen <code>ErrorBoundary</code> met <code>resetKeys={[chatId, toolUseId]}</code>, naast de boundary die <code>Panel.tsx</code> al om elk paneel legt.</li>
+          <li><code>chat/ui/rows/SubagentRow.tsx</code>: een knop "Open conversation" naast de toggle; de toggle blijft in de rij uitvouwen. Alleen getekend als de rij een <code>native</code> heeft of de daemon <code>chat.subagent</code> kent (het antwoord op de eerste poging, geen bridge-check nodig).</li>
+        </ul>
+        <p class="accept">Klaar als: een subagent met meer dan 200 stappen, in Claude en in Codex, volledig te lezen is vanuit de chat, ook na een herstart van de daemon en met een dode CLI; <code>read --subagent</code> hetzelfde gesprek print; <code>renderTranscript</code> voor een ouder met een subagent precies één regel per subagent geeft en geen van zijn kinderen; een kleinkind van Claude opent vanuit het paneel; de tests draaien op een vastgelegd transcriptbestand als fixture en op <code>fake-codex.ts</code> uitgebreid met <code>thread/items/list</code>, zonder echte CLI.</p>
+        <p><strong>Risico's.</strong> Claude kan map, naam of <code>.meta.json</code> wijzigen (gepind op 2.1.273; een ontbrekend bestand is een rij die zegt dat het transcript niet gevonden is, geen fout). Of Codex een niet-geladen thread bedient, meet de bouwer eerst; zo niet, dan is <code>thread/read</code> (deprecated maar aanwezig) of <code>thread/resume</code> in het kortlevende proces de terugval. Een transcript is onbetrouwbare invoer (een subagent las een webpagina) en gaat door dezelfde markdown-pijplijn als de thread. De <code>projects</code>-map van Claude verandert van <code>cwd</code> als de chat een <code>--cwd</code> heeft; de reader neemt <code>info.cwd</code>, niet de projectmap.</p>
+      </div></li>
+
+      <li class="step"><div>
+        <h3>De daemon start agents zelf</h3>
+        <ul>
+          <li><code>apps/server/src/outbox/outbox.ts</code> en <code>outbox-worker.ts</code> (nieuw), met een geïnjecteerde klok en bestandslaag zoals <code>packages/service</code> die heeft, en een <code>start-agent</code>-handler.</li>
+          <li><code>apps/server/src/canvas/agent-verb.ts</code> en <code>team-verb.ts</code>: <code>landed()</code> schrijft na <code>recordMade</code> en <code>holdPrompt</code> een <code>start-agent</code> per node, met soort, provider, <code>cwd</code> en de <code>runtimeMode</code> van de aanroeper als die een chat is. Een <code>--dry-run</code> schrijft niets.</li>
+          <li>De handler: een chat via <code>ChatManager.create({ chatId, provider, cwd, runtimeMode })</code>, wat de prompt neemt en de eerste send doet; een terminal via <code>SessionManager.create</code> met <code>cols: 120, rows: 40</code>, waarna de eerste client die attacht hem bijstelt (de laatste attacher wint, de regel die er al is). <code>apps/server/src/daemon.ts</code>: outbox laden en de worker starten na <code>warmIndex()</code>.</li>
+        </ul>
+        <p class="accept">Klaar als: een agent een team van drie opent terwijl die view in geen enkel venster open staat en alle drie hun eerste beurt afronden; een client die daarna mount attacht aan wat loopt zonder tweede prompt; een daemon die tussen de write en de start herstart, start alsnog precies één keer; de test drijft de worker met een nep-klok en <code>FakePtyAdapter</code>.</p>
+        <p><strong>Risico's.</strong> Agents kosten geld zonder dat iemand kijkt; de bestaande plafonds (diepte, 16 per aanroeper, 8 per team) zijn de grens en fase 5 voegt de modus toe. Een team dat de daemon start terwijl de eerste client net mount, levert een race tussen <code>chat.create</code> van beide kanten; <code>ChatManager.create</code> is daar al tegen bestand, <code>SessionManager.create</code> via <code>session-exists</code>. Een terminal die op 120x40 start en later een kleinere client krijgt, herwrapt zijn scherm; dat doet een reload nu ook.</p>
+      </div></li>
+
+      <li class="step"><div>
+        <h3>Run-model met log, volgnummer en herstel</h3>
+        <ul>
+          <li><code>apps/server/src/chat/chat-log.ts</code> (nieuw): append, replay, compactie, afgebroken regel overslaan. <code>chat-store.ts</code>: <code>seq</code> en <code>resetSeq</code> in het record; <code>read</code> speelt het log af.</li>
+          <li><code>chat-manager.ts</code>: <code>broadcast</code> kent <code>seq</code> toe, schrijft het log en zet <code>seq</code> in de envelop; <code>attach</code> neemt <code>since</code>; <code>persistNow</code> flusht de coalescer vóór het snapshot, zodat <code>snapshot.seq</code> klopt met wat erin zit. <code>settle</code> laat een lopende turn staan wanneer de store een <code>resume-run</code> schrijft.</li>
+          <li><code>chat-session.ts</code>: <code>resume(turnId)</code>: een nieuwe poging op dezelfde turn (<code>attempt + 1</code>), een <code>note</code> "Resumed after the machine restarted", en de tekst "The machine restarted while you were working on the previous message. Continue where you left off." als beurt naar de hervatte CLI; approvals en vragen die open stonden blijven <code>cancelled</code>, want die persoon is weg.</li>
+          <li><code>outbox-worker.ts</code>: de <code>resume-run</code>-handler, hooguit één per run.</li>
+          <li><code>packages/contracts/src/chat.ts</code>: de velden uit <a href="#wire">Wire</a>. <code>apps/client/src/chat/chat-client.ts</code>: <code>since</code> meesturen op een re-attach en <code>events</code> toepassen; <code>state/chats.ts</code> houdt <code>seq</code> per chat bij.</li>
+        </ul>
+        <p class="accept">Klaar als: de daemon stopt terwijl een kind midden in een beurt zit, na de start diezelfde turn <code>attempt: 2</code> draagt en <code>done</code> wordt, en de ouder (fase 4) toch zijn resultaat krijgt; een client die reconnect met <code>since</code> alleen de events erna krijgt en dezelfde thread heeft als een client die vers attacht (een property-achtige test over een reeks events); een log met een afgebroken laatste regel laadt; een clear gevolgd door een <code>since</code> van ervoor levert het geheel; alles met een tijdelijke map en een nep-klok, zonder watcher of wall-clock.</p>
+        <p><strong>Risico's.</strong> Een hervatte CLI ziet zijn transcript tot de breuk en een nieuwe boodschap; een tool call die net liep is voor hem weg, en hij kan een commando opnieuw doen. Daarom één herstelpoging en een duidelijke note, geen lus. Het log groeit met elke delta; de compactie op 1 MB en bij elk snapshot houdt het klein, maar de bouwer meet het op een lange beurt. <code>persistAllSync</code> moet het log óók sluiten vóór de eerste await, anders zijn snapshot en log niet op dezelfde <code>seq</code>.</p>
+      </div></li>
+
+      <li class="step"><div>
+        <h3>Taken met een resultaat die de ouder wekken</h3>
+        <ul>
+          <li><code>apps/server/src/tasks/task-store.ts</code> (nieuw, het patroon van <code>lineage.ts</code>) en <code>task-coordinator.ts</code> (nieuw): een observer op <code>chats.observe()</code> en op de exit van terminal-sessies (<code>SessionManager.onProcessChange</code> is er al) die taken settelt en <code>wake-parent</code> schrijft. <code>outbox-worker.ts</code>: de <code>wake-parent</code>-handler die bundelt, wacht tot de ouder vrij is en <code>ChatSession.send</code> aanroept met <code>{ origin: 'task', taskIds }</code>, wat in <code>openTurn</code> de <code>note</code> en de <code>taskIds</code> op de turn zet in plaats van een <code>user</code>-item.</li>
+          <li><code>canvas/agent-verb.ts</code>, <code>team-verb.ts</code>: <code>--task T</code> (de titel; de prompt is de opdracht) en de weigering <code>not-a-chat-parent</code>. Nieuw in de registry: <code>done</code> (<code>--result T</code> of <code>--result-file F</code>, alleen voor een node met een open taak, anders <code>no-open-task</code>) en <code>tasks</code> (de taken van de aanroeper en de taken aan de aanroeper, tab-gescheiden). Dat maakt 19 verbs; <code>help</code> rendert ze uit de registry.</li>
+          <li><code>projector.ts</code> of <code>chat-session.ts</code>: de <code>ruimte</code>-rij in de thread van de ouder bij het landen en het settelen van een taak, buiten de <code>BackendEvent</code>-stroom om, want die is voor wat de CLI zegt.</li>
+          <li><code>handlers/tasks.ts</code>: <code>task.list</code> en <code>task.changed</code>. <code>projects.index.onPlaces</code>: taken opruimen van nodes die weg zijn, met <code>cancelled</code> voor een kind dat verdwijnt.</li>
+          <li>Client: <code>state/tasks.ts</code> per endpoint; de status op de edge en op de kop van het kind (<a href="#vragen">productvraag 2</a>); <code>SubagentRow</code> opent met <code>childId</code> het gesprek van het kind via <code>chat.attach</code> met <code>historyLimit</code> in hetzelfde paneel. <code>attention.ts</code>: een gewekte ouder die zijn turn afrondt telt als elke andere turn.</li>
+        </ul>
+        <p class="accept">Klaar als: een chat-agent drie kinderen met <code>--task</code> opent, zijn beurt beëindigt en precies één nieuwe beurt krijgt met drie resultaten, zonder zelf te pollen; kinderen die settelen terwijl de ouder nog werkt, wekken hem pas na zijn turn en samen; een herstart tussen het settelen en het wekken verliest de wake niet; een terminal-agent die <code>--task</code> geeft krijgt <code>not-a-chat-parent</code> met de uitleg; een terminalkind dat eindigt zonder <code>done</code> zet de taak op <code>failed</code> met "ended without a result"; alles met <code>fake-claude.ts</code> en een nep-klok.</p>
+        <p><strong>Risico's.</strong> Een ouder die zelf kinderen wekt die weer de ouder wekken: het plafond op de diepte verhindert de kringloop niet, de regel dat een wake alleen naar de ouder van de taak gaat wel. Het standaardresultaat is een productkeuze met gevolgen voor hoeveel er gewekt wordt (<a href="#vragen">productvraag 3</a>). De resultaattekst in de beurt is invoer voor een model: begrensd, met het kind-id erbij zodat de ouder verder kan lezen.</p>
+      </div></li>
+
+      <li class="step"><div>
+        <h3>Worktree per rol, annuleren doorzetten, plafond op de modus</h3>
+        <ul>
+          <li><code>agent-verb.ts</code>, <code>team-verb.ts</code>: <code>--worktree [B]</code> maakt met <code>Worktrees</code> een worktree per rol onder <code>$RUIMTE_HOME/worktrees</code> (branchnaam <code>B</code> of <code>&lt;taaktitel-slug&gt;-&lt;n&gt;</code>), zet de <code>cwd</code> van de node erop en bij <code>team</code> het <code>worktree</code>-veld op de groep. Alleen in een repository; anders <code>not-a-repository</code>. De checkpoint-diff volgt de <code>cwd</code> en is daarmee per worktree; het bekende gat (de diff omvat de hele map) blijft binnen één worktree bestaan en staat op de roadmap.</li>
+          <li>Annuleren: <code>node delete</code> en <code>chat.kill</code> of <code>session.kill</code> op een node met kinderen in de lineage schrijven <code>end-children</code>; de handler beëindigt de sessies en chats van de kinderen (recursief) en zet hun taken op <code>cancelled</code>. In de client telt het bevestigingsdialoog ze via <code>agent.children</code>, met de zin "Also ends 3 agents it opened". De kindnodes blijven op de canvas staan als <code>exited</code>, want een verwijdering is een documentwijziging die een persoon doet.</li>
+          <li>Plafond: <code>--mode M</code> op <code>agent</code> en <code>team</code> (<code>RuntimeModeSchema</code>). Grens is de modus van de aanroeper: voor een chat <code>info.runtimeMode</code>, voor een terminal-agent het strengste wat de daemon van hem weet, dus zonder <code>--mode</code> de standaard van de provider en met <code>--mode</code> alleen wat niet ruimer is dan die standaard. Weigering <code>mode-above-parent</code> in het <code>refused</code>-formaat, met de modus van de aanroeper in de regels eronder, zoals <code>depthLines</code> dat doet.</li>
+        </ul>
+        <p class="accept">Klaar als: twee rollen hetzelfde bestand wijzigen zonder elkaars werk te overschrijven en de turn-diff van elke rol alleen de eigen worktree toont; het verwijderen van een ouder met twee lopende kinderen alle drie de processen beëindigt en de bevestiging het aantal noemt; <code>agent --mode full-access</code> vanuit een supervised chat een weigering met code geeft; de tests draaien op <code>test-repo.ts</code> en <code>FakePtyAdapter</code>.</p>
+        <p><strong>Risico's.</strong> Worktrees opruimen en mergen is roadmappunt 11 en niet dit ontwerp; een team met worktrees laat na afloop mappen achter tot iemand ze uit het groepsmenu verwijdert. De modus van een terminal-agent kent de daemon maar half; de grens is dan streng in plaats van precies.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section id="scheduler">
+    <h2>Een canvas is geen scheduler: de bijstelling</h2>
+    <p>De beslissing blijft staan en wordt scherper gemaakt in plaats van opgerekt. Wat er niet komt: geen klok die iets start (cron, loop, trigger), geen wachtrij van taken die over nodes wordt verdeeld, geen worker die een vrije agent zoekt, geen retry van een mislukte taak, geen blokkerende wachtmodus in een verb, geen afhankelijkheden tussen taken en geen herplaatsing van een taak naar een andere node. Alles wat begint met "elke", "zodra iemand vrij is" of "probeer opnieuw" blijft buiten Ruimte.</p>
+    <p>Wat er wel komt, in één zin voor <code>docs/DECISIONS.md</code>: <em>een afgeronde taak wekt de chat die hem delegeerde, één keer, met het resultaat, zodra die chat geen beurt meer loopt.</em> Dat is een reactie op een gebeurtenis die de ouder zelf in gang zette, net als een hook die een turn eindigt, en geen plan. De grenzen die dat zo houden: alleen een chat is te wekken; alleen de ouder van de taak wordt gewekt; taken die samen settelen wekken samen; een wake die niet lukt wordt drie keer geprobeerd en dan geparkeerd met een note, nooit eindeloos; en de outbox bevat alleen werk dat een verb of een herstart aanmaakte, nooit iets dat een tijd inplant. <code>notify</code> blijft wat het was: een bericht dat wacht tot de ontvanger toch al een beurt begint, en dat niemand wekt.</p>
+  </section>
+
+  <section id="vragen">
+    <h2>Productvragen</h2>
+    <p>Deze keuzes blijken niet uit de code en zijn aan Bas. Bij elke vraag een aanbeveling met de reden; de fasen hierboven gaan uit van die aanbeveling en veranderen weinig bij een andere keuze, behalve waar dat staat.</p>
+
+    <div class="question">
+      <h3>1. Waar staat een taak?</h3>
+      <ul class="options">
+        <li data-option="A">In een eigen store onder <code>$RUIMTE_HOME/tasks</code>, naast de lineage; de client leest hem met <code>task.list</code> en <code>task.changed</code>.</li>
+        <li data-option="B">Als veld op de edge in <code>project.json</code>, zodat elke client hem zonder request ziet en hij meereist met het project.</li>
+        <li data-option="C">Beide: het record bij de daemon, een kopie van alleen de status op de edge.</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling A.</strong> Een taak is een belofte die de daemon nakomt (het wekken), en een veld dat een agent met een shell in de projectmap kan herschrijven is geen belofte; dat is exact het argument waarmee de diepte buiten <code>project.json</code> ging. Een kopie op de edge (C) is een tweede waarheid die de merge van fase 4 moet leren en die bij een conflict de dialoog opent. De zichtbaarheid regelt vraag 2.</p>
+    </div>
+
+    <div class="question">
+      <h3>2. Hoe is een taak zichtbaar?</h3>
+      <ul class="options">
+        <li data-option="A">Op de edge van ouder naar kind: een klein label ("task", "done") en een stippellijn zolang hij open is.</li>
+        <li data-option="B">Op de kop van het kind en zijn zijbalkrij: een merkteken zoals <code>UnseenMark</code>, met de titel van de taak als tooltip.</li>
+        <li data-option="C">Beide.</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling C, in die volgorde gebouwd.</strong> De edge is waar de relatie al getekend staat en de status hoort bij de relatie; de kop van het kind is wat een persoon ziet die op het kind is ingezoomd, en onder <code>READABLE_ZOOM</code> is een edge-label niet leesbaar. De rij in de thread van de ouder (de <code>ruimte</code>-subagent) is er sowieso.</p>
+    </div>
+
+    <div class="question">
+      <h3>3. Wat is het standaardresultaat van een taak?</h3>
+      <ul class="options">
+        <li data-option="A">Alleen een expliciete <code>ruimte-context done</code>; zonder die blijft de taak open tot een persoon of de ouder hem sluit.</li>
+        <li data-option="B">Het laatste antwoord van de eerste beurt van het kind sluit de taak (voor een chatkind); <code>done</code> tijdens die beurt gaat voor. Een terminalkind heeft <code>done</code> nodig en eindigt anders op <code>failed</code> bij exit.</li>
+        <li data-option="C">Het laatste antwoord van elke beurt tot <code>done</code>: de ouder wordt na elke beurt van het kind gewekt.</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling B.</strong> Een kind dat zijn opdracht in één beurt afmaakt is het gewone geval, en een taak die open blijft omdat het model het verb vergat (A) is de status die het rapport "subagent-statussen die op running blijven hangen" noemde. C wekt de ouder te vaak en maakt van een verduidelijkende vraag van het kind een resultaat. Bij B blijft <code>done</code> de manier om vroeger of met een ander resultaat te eindigen, en een kind dat een vraag stelt (<code>question</code> open) sluit de taak niet: dan wordt de ouder gewekt met "asks a question" als resultaat, zodat hij het kind kan <code>notify</code>-en of de persoon het kan beantwoorden.</p>
+    </div>
+
+    <div class="question">
+      <h3>4. Budget per taak?</h3>
+      <ul class="options">
+        <li data-option="A">Geen budget in deze fasen; de plafonds op diepte, aantal en modus zijn de grens.</li>
+        <li data-option="B">Een tokenbudget via de usage-index (<code>--budget N</code>), afgedwongen met <code>chat.cancel</code> wanneer de index eroverheen gaat.</li>
+        <li data-option="C">Een beurtenplafond (<code>--max-turns N</code>): het kind mag N beurten nemen, daarna settelt de taak op <code>failed</code> met "ran out of turns".</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling A nu, C als het nodig blijkt.</strong> De usage-index loopt achter op de transcripten en kent geen kosten per taak (B), dus een tokenbudget zou een schatting zijn die het kind midden in een tool call afbreekt. Een beurtenplafond is precies te tellen met wat de daemon al heeft (<code>usage.turns</code>), maar met keuze 3B eindigt een taak toch al na de eerste beurt en is C pas interessant wanneer een kind zichzelf beurten geeft. Eerst kijken of dat gebeurt.</p>
+    </div>
+
+    <div class="question">
+      <h3>5. iOS en push: in welke fase?</h3>
+      <ul class="options">
+        <li data-option="A">Gelijk op: het subagent-paneel en de taakstatus komen op iOS in dezelfde fase als op de desktop.</li>
+        <li data-option="B">Compatibiliteit in elke fase (regenereren, geen nieuwe kinds), de iOS-weergaven na fase 4 in één ronde, en een push voor een afgeronde taak in fase 4 als <code>turn</code>-alert naar de ouder.</li>
+        <li data-option="C">Als B, maar zonder push voor taken: de ouder wordt gewekt en zijn turn-einde geeft al een melding.</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling C.</strong> Elke fase houdt iOS werkend (dat is niet optioneel), maar de weergaven daar in elke fase meebouwen verdubbelt de UI-kosten van fase 1 en 4 terwijl de wire nog beweegt. Een aparte push voor een afgeronde taak is dubbelop: de ouder wordt gewekt en meldt zelf wanneer hij klaar is met wat hij ermee deed, en dat is het moment waarop een persoon iets kan doen. Een kind dat faalt en een ouder die niet te wekken is (geparkeerde wake) verdienen wel een melding; die rijdt als <code>attention</code>.</p>
+    </div>
+
+    <div class="question">
+      <h3>6. Een groeiend transcript op de achtergrond</h3>
+      <ul class="options">
+        <li data-option="A">Het open paneel groeit mee: de daemon houdt een geteld <code>fs.watch</code> op de <code>subagents</code>-map (Claude) of pollt <code>thread/items/list</code> elke 2 s (Codex) zolang een client het paneel open heeft, en stuurt <code>chat.subagentChanged</code>; het paneel laadt dan de staart bij.</li>
+        <li data-option="B">Een knop "Refresh" in het paneel en een regel "Still working" zolang de rij <code>running</code> is.</li>
+        <li data-option="C">Meegroeien alleen voor Claude (een watcher is goedkoop), een knop voor Codex.</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling A.</strong> Het paneel is voor het volgen van een agent die nu werkt, en een knop maakt daar een pollend mens van. De kosten zijn begrensd: de watcher en de poll bestaan alleen zolang een client de rij vasthoudt (hetzelfde patroon als <code>useMachineHold</code> en <code>state/fs-watch.ts</code>), en het event draagt geen inhoud, alleen "er is meer". Kleinkinderen: ja, elk een eigen bestand (<span class="badge confirmed">geverifieerd</span> via <code>parentAgentId</code>), en de broodkruimel in het paneel gaat erheen en terug.</p>
+    </div>
+
+    <div class="question">
+      <h3>7. Eén paneel of een stapel?</h3>
+      <ul class="options">
+        <li data-option="A">Eén paneel; een klik op een andere rij vervangt de inhoud, en een broodkruimel onthoudt de weg terug naar de ouder van een kleinkind.</li>
+        <li data-option="B">Tabs in het paneel, zoals de preview er tabs voor bestanden heeft.</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling A.</strong> Een gesprek van een subagent is iets dat je even naast de ouder legt, niet iets dat je open laat staan; tabs vragen om bewaren in de lokale staat, en die soort is bewust niet in <code>ProjectPanelKindSchema</code>. Als het toch nodig blijkt, is het tabmodel van de preview er al.</p>
+    </div>
+
+    <div class="question">
+      <h3>8. Mag een terminal-agent een kind met een taak zijn?</h3>
+      <ul class="options">
+        <li data-option="A">Ja, met <code>done</code> als enige manier om een resultaat te geven; exit zonder <code>done</code> is <code>failed</code>.</li>
+        <li data-option="B">Nee: <code>--task</code> eist een chatkind (<code>--chat</code>), zodat het standaardresultaat altijd bestaat.</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling A.</strong> Een terminal-agent heeft een shell en dus <code>ruimte-context</code>, en sommige CLIs bestaan alleen als terminal. De regel "geen <code>done</code>, dan <code>failed</code> bij exit" is eenvoudig uit te leggen in <code>help agent</code>. De ouder moet wel een chat zijn; dat staat vast.</p>
+    </div>
+  </section>
+
+  <section id="scope">
+    <h2>Buiten dit ontwerp</h2>
+    <ul>
+      <li>Fork en merge-back van een gesprek, van provider wisselen met een overdracht, en de native subagents van de CLI als nodes op de canvas: roadmappunt 9, na fase 5. Fase 1 en 4 leveren de weergave die ze nodig hebben.</li>
+      <li>Een blokkerende wachtmodus (<code>agent --wait</code>): bewust niet, om het plafond van de tool-timeout dat het rapport noemde niet te importeren.</li>
+      <li>Een MCP-adapter op de verb-registry: pas als een provider zonder shell-tool erbij komt.</li>
+      <li>Worktrees mergen en opruimen: roadmappunt 11, dat fase 5 wel dringender maakt.</li>
+      <li>De 30-node prestatie en de weergave van een lang subagent-gesprek in een paneel worden gemeten met wat er is; dit ontwerp voegt geen nieuwe rendering toe, alleen een tweede plek voor bestaande rijen.</li>
+    </ul>
+    <h3>Volgende stap</h3>
+    <p>Bas beantwoordt de acht vragen. Daarna gaan de beslissingen die niet uit de code blijken naar <code>docs/DECISIONS.md</code> (het model, de wire-regel, de bijstelling van "not a scheduler", de outbox als grens) en start fase 1 met de meting van <code>thread/items/list</code> op een thread die het proces niet geladen heeft.</p>
+  </section>
+</main>
+<footer><p>Geverifieerd: de chatopslag, <code>ChatThread.history</code>, <code>ChatManager.broadcast</code> en <code>observe</code>, <code>ChatSession.ensureBackend</code>, <code>ThreadProjector</code> voor subagents en taken, <code>SessionManager.create</code> en de <code>session-exists</code>-afhandeling in de client, de lineage-, prompt- en notice-stores, de verb-registry en de flags van <code>agent</code>, <code>renderTranscript</code>, het paneel- en timeline-systeem van de client, <code>WireSchema.swift</code> en <code>MachineClient.swift</code>, <code>generate-swift.ts</code>, de pushservice, 40 echte <code>.meta.json</code>-bestanden en een transcript van claude 2.1.273, en het gegenereerde JSON-schema van codex-cli 0.154.0. Afgeleid: of <code>thread/items/list</code> een niet-geladen thread bedient, of de <code>ClaudeProtocol</code>-mapping transcriptregels zonder aanpassing leest, en de modus die de daemon van een terminal-agent kent. Niet gedaan: code draaien, dit rapport in een browser renderen.</p></footer>
+</body>
+</html>

@@ -165,13 +165,14 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
 <body>
 <a class="skip" href="#kort">Naar de samenvatting</a>
 <header>
-  <p class="eyebrow">RUIMTE / ONDERZOEK / 15 SEPTEMBER 2026</p>
+  <p class="eyebrow">RUIMTE / ONDERZOEK / 15 SEPTEMBER 2026, BIJGEWERKT 16 SEPTEMBER</p>
   <h1>Orchestrator V2 en complexer werken met agents</h1>
   <p class="intro">Orchestrator V2 maakt van een gesprek met een agent een duurzame uitvoeringsgraaf. Een beurt van de gebruiker wordt een run met pogingen en een boom van stappen, subagents worden echte kindgesprekken met een resultaat dat terugkomt, en alles staat in een event log dat een herstart overleeft. Ruimte kan de kern daarvan overnemen zonder herschrijving, in vijf stappen die elk los bruikbaar zijn.</p>
-  <p class="status">Onderzoek, nog geen code geschreven</p>
-  <p class="caption">Bronnen: de ontwerpdocumenten, contracts, migratie en pull requests van het project waarin Orchestrator V2 wordt gebouwd, gelezen op 15 september 2026 zonder de code te draaien. Ruimte bekeken op <code>e34cff7</code>.</p>
+  <p class="status">Onderzoek, bijgewerkt tegen <code>9ce27c14</code>; nog geen code geschreven</p>
+  <p class="caption">Bronnen: de ontwerpdocumenten, contracts, migratie en pull requests van het project waarin Orchestrator V2 wordt gebouwd, gelezen op 15 september 2026 zonder de code te draaien. Ruimte eerst bekeken op <code>e34cff7</code> en op 16 september opnieuw op <code>9ce27c14</code>, met claude 2.1.273 en codex-cli 0.154.0.</p>
   <nav aria-label="Inhoud">
     <a href="#kort">Kort</a>
+    <a href="#sindsdien">Sindsdien</a>
     <a href="#probleem">Het probleem</a>
     <a href="#model">Het model</a>
     <a href="#opslag">Opslag en herstel</a>
@@ -191,6 +192,19 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
     <p>Orchestrator V2 lost één ontwerpfout op: de oude orchestrator gebruikte de beurt van de provider-CLI als grens van alles wat de app bijhield. Subagents, forks, een provider wisselen halverwege en herstel na een crash passen daar slecht in. V2 legt een eigen model over de provider heen. De app bezit de ids, een run is wat de gebruiker als één beurt ziet, en wat de provider doet hangt daar als refs onder.</p>
     <p>Ruimte heeft hetzelfde probleem en nog een paar extra. Een kind-agent start pas als een client de node rendert. Een ouder hoort niet wanneer een kind klaar is. Tussen agents gaat alleen vrije tekst. Een herstart van de daemon breekt elke lopende beurt af. Dat zijn precies de punten waar complexer werken met agents op vastloopt.</p>
     <p><strong>Advies:</strong> neem de primitieven over en niet de omvang. V2 loopt sinds mei, is niet gemerged en telt bijna 290.000 toegevoegde regels over web, mobiel en tien providers. Ruimte heeft twee providers en een canvas dat al laat zien wie wie opende. Begin bij de daemon die agents zonder client start en bij een taak met een resultaat dat de ouder wakker maakt. Het run-model met event log volgt daarna, voor chats en niet voor terminal-agents.</p>
+  </section>
+
+  <section id="sindsdien">
+    <h2>Wat veranderde sinds 15 september</h2>
+    <p>Tussen <code>e34cff7</code> en <code>9ce27c14</code> zitten 126 commits, vooral de iOS-app, pushmeldingen via APNs, inloggen met Apple en release 0.0.17. Vier ervan raken de chat-, agent- of canvascode van de daemon. Elke bewering in dit rapport is opnieuw tegen de code gelegd.</p>
+    <ul>
+      <li><span class="badge confirmed">geverifieerd</span> Het werk aan remote werken is af: de roadmap in <code>docs/DECISIONS.md</code> heeft geen punten over remote meer open. De voorwaarde uit het besluit is daarmee vervuld.</li>
+      <li><span class="badge confirmed">geverifieerd</span> Er is een derde client. De iPhone- en iPad-app leest chats via <code>chat.attach</code>, <code>chat.history</code> en <code>chat.event</code> en tekent <code>turn</code>-items, met Swift-modellen die uit <code>packages/contracts</code> gegenereerd worden. Een wijziging op de chat-wire in fase 3 raakt dus ook <code>ChatModel.swift</code> en <code>ChatTimeline.swift</code>.</li>
+      <li><span class="badge confirmed">geverifieerd</span> Chats worden in pagina's gelezen. <code>chat.attach</code> neemt een optionele <code>historyLimit</code> en geeft de laatste pagina met een cursor terug, <code>chat.history</code> bladert terug, en elk <code>item</code>-event draagt een vaste <code>historyIndex</code>. Een volgnummer per event is dat nog niet: deltas en info-events hebben er geen, en na een reconnect volgt weer een volledige attach. Alleen iOS gebruikt de pagina's; de desktop-client leest nog alles.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>ChatManager.observe()</code> geeft elk uitgezonden event eerst aan observers; de pushservice hangt daaraan. Dat is een plek waar het wekken van een ouder en de outbox uit fase 3 en 4 kunnen aanhaken.</li>
+      <li><span class="badge confirmed">geverifieerd</span> De aannames voor fase 1 kloppen met de geïnstalleerde versies. Claude Code 2.1.273 schrijft <code>subagents/agent-&lt;id&gt;.jsonl</code> met een <code>.meta.json</code> (<code>agentType</code>, <code>description</code>, <code>model</code>, <code>spawnDepth</code>, <code>toolUseId</code>, en meer). In codex-cli 0.154.0 bestaat <code>thread/items/list</code> zonder experimentele vlag, met <code>threadId</code>, <code>cursor</code>, <code>limit</code>, <code>sortDirection</code> en <code>turnId</code>; <code>thread/fork</code> bestaat ook. De ids van kindthreads komen binnen als <code>collabAgentToolCall.receiverThreadIds</code>, maar de daemon bewaart ze nu alleen in de tool-input en niet op <code>task.started</code>.</li>
+      <li><span class="badge confirmed">geverifieerd</span> Er zijn 17 verbs op <code>ruimte-context</code>, <code>diagram</code> meegeteld. Naast de diepteplafonds geldt nog een maximum van 8 rollen per team.</li>
+    </ul>
   </section>
 
   <section id="probleem">
@@ -328,17 +342,17 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
     <div class="table" role="region" aria-label="Vergelijking tussen Orchestrator V2 en Ruimte" tabindex="0">
       <table class="wide">
         <caption>Vergelijking per onderdeel</caption>
-        <thead><tr><th scope="col">Onderdeel</th><th scope="col">Orchestrator V2</th><th scope="col">Ruimte op <code>e34cff7</code></th></tr></thead>
+        <thead><tr><th scope="col">Onderdeel</th><th scope="col">Orchestrator V2</th><th scope="col">Ruimte op <code>9ce27c14</code></th></tr></thead>
         <tbody>
           <tr><th scope="row">Eenheid van werk</th><td>Run met pogingen en een nodeboom</td><td>Een <code>turn</code>-item in de thread van een chat; terminal-agents alleen een hookstatus</td></tr>
-          <tr><th scope="row">Opslag</th><td>Event log met volgnummer, command receipts, projecties</td><td>Eén JSON-snapshot per chat, in zijn geheel herschreven; <code>ChatEvent</code>s worden na het uitzenden weggegooid</td></tr>
-          <tr><th scope="row">Na reconnect</th><td>Snapshot op N, events na N</td><td>Volledige snapshot bij <code>chat.attach</code>, daarna live</td></tr>
+          <tr><th scope="row">Opslag</th><td>Event log met volgnummer, command receipts, projecties</td><td>Eén JSON-snapshot per chat, in zijn geheel herschreven; <code>ChatEvent</code>s gaan na het uitzenden alleen nog langs observers (push) en worden niet bewaard</td></tr>
+          <tr><th scope="row">Na reconnect</th><td>Snapshot op N, events na N</td><td>Snapshot of laatste pagina bij <code>chat.attach</code>, terugbladeren met <code>chat.history</code>, daarna live; <code>historyIndex</code> op items, geen volgnummer op events</td></tr>
           <tr><th scope="row">Herstart daemon</th><td>Outbox en replay ronden gedelegeerd werk af</td><td>Lopende beurten worden gestopt en op <code>error</code> gezet; approvals vervallen; hervatten pas bij het volgende bericht</td></tr>
           <tr><th scope="row">Kind starten</th><td>De server start het kindgesprek</td><td>De daemon schrijft de node en houdt de prompt vast; het kind start pas als een client de node mount</td></tr>
           <tr><th scope="row">Resultaat van een kind</th><td>Getypeerd resultaat en <code>completionWake</code></td><td>Geen; de ouder moet zelf <code>ruimte-context read</code> doen op een transcript of scherm</td></tr>
           <tr><th scope="row">Berichten tussen agents</th><td>Sturen, wachten, onderbreken via MCP</td><td><code>notify</code>: maximaal 500 tekens, pas bij de volgende beurt van de ontvanger, wekt niemand</td></tr>
           <tr><th scope="row">Isolatie</th><td>Worktree per gesprek, geneste checkpoints</td><td>Een team deelt één <code>cwd</code>; verbs maken geen worktree; de turn-diff omvat de hele map</td></tr>
-          <tr><th scope="row">Grenzen</th><td>Plafond op modus, scope per project, getypeerde weigering</td><td>Diepte 2, team diepte 1, 16 agents per aanroeper; geen plafond op modus of budget, geen cascade bij annuleren</td></tr>
+          <tr><th scope="row">Grenzen</th><td>Plafond op modus, scope per project, getypeerde weigering</td><td>Diepte 2, team diepte 1, 16 agents per aanroeper, 8 rollen per team; geen plafond op modus of budget, geen cascade bij annuleren</td></tr>
           <tr><th scope="row">Fork en provider wisselen</th><td>Eerste klasse, via overdrachten</td><td>Niet gebouwd; gesprek aftakken staat als roadmappunt 9</td></tr>
         </tbody>
       </table>
@@ -381,7 +395,7 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
       </div></li>
       <li class="step"><div>
         <h3>Een run die een herstart overleeft</h3>
-        <p>Maak van het <code>turn</code>-item in een chat een run met id, status, pogingen en een oplopend volgnummer op elk <code>ChatEvent</code>, weggeschreven als append-only log naast de snapshot. <code>chat.attach</code> neemt een volgnummer en stuurt alleen wat daarna kwam. De taken uit stap 2 en het wekken van ouders gaan via een outbox die de daemon bij het opstarten afwerkt.</p>
+        <p>Maak van het <code>turn</code>-item in een chat een run met id, status, pogingen en een oplopend volgnummer op elk <code>ChatEvent</code>, weggeschreven als append-only log naast de snapshot. <code>chat.attach</code> neemt een volgnummer en stuurt alleen wat daarna kwam, naast de <code>historyLimit</code> en cursor die er al zijn. Nieuwe velden blijven optioneel, zodat de iOS-app en een oudere client blijven werken zonder <code>PROTOCOL_VERSION</code> op te hogen. De taken uit stap 2 en het wekken van ouders gaan via een outbox die de daemon bij het opstarten afwerkt.</p>
         <p class="accept">Klaar als: de daemon stopt terwijl een kind werkt, na de start het kind met <code>--resume</code> verder gaat onder hetzelfde run-id met een nieuwe poging, en de ouder toch zijn resultaat krijgt.</p>
       </div></li>
       <li class="step"><div>
@@ -423,13 +437,14 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
       <li><strong>Ondergrens of scheduler?</strong> Een ouder wekken is iets anders dan taken plannen, maar het schuift richting de "not a scheduler"-beslissing. Die beslissing moet expliciet worden bijgesteld of begrensd.</li>
       <li><strong>Een groeiend transcript.</strong> Het bestand van een subagent op de achtergrond groeit door na de beurt. Groeit het open paneel mee, en krijgt een kleinkind een eigen bestand?</li>
       <li><strong>Budget.</strong> V2 heeft plafonds op modus maar niet op kosten. Met de usage-index kan Ruimte een tokenbudget per taak afdwingen; is dat gewenst?</li>
+      <li><strong>Welke clients tonen runs en taken?</strong> De iOS-app is nu een volwaardige chatclient. Krijgt die de subagent-weergave en de taakstatus in dezelfde fase als de desktop, of later? En hoort een afgerond kind of een gewekte ouder een pushmelding te geven?</li>
       <li><strong>Hoe groot is het echt?</strong> Dit onderzoek las ontwerpdocumenten, contracts en PR-beschrijvingen, niet de volledige code. Hoe goed <code>completionWake</code> en het herstel van gedelegeerd werk in de praktijk werken, is niet getest.</li>
     </ul>
   </section>
 
   <section id="startprompt">
     <h2>Startprompt voor een schone sessie</h2>
-    <p>Plak dit in een nieuwe sessie in de map van Ruimte zodra het werk aan remote werken af is.</p>
+    <p>Het werk aan remote werken is af (zie <a href="#sindsdien">Sindsdien</a>); dit kan in een nieuwe sessie in de map van Ruimte.</p>
 <pre><code>We beginnen aan de eigen orchestratie van Ruimte. Lees eerst docs/reports/2026-09-15-orchestrator-v2.html volledig, met name de secties "Besluit" en "Open vragen", en daarna CLAUDE.md en de delen van docs/DECISIONS.md over agents, verbs, lineage, chats en worktrees.
 
 Vastgestelde keuzes:
@@ -438,11 +453,13 @@ Vastgestelde keuzes:
 - Alleen een chat mag een ouder zijn die delegeert, geen terminal-agent.
 - Verbs op ruimte-context, geen MCP-server.
 
+Stand op 16 september (9ce27c14): de aannames voor fase 1 zijn geverifieerd tegen claude 2.1.273 en codex-cli 0.154.0, maar controleer ze opnieuw als de versies intussen veranderd zijn. De iOS-app (apps/ios) is een derde chatclient met Swift-modellen die uit packages/contracts gegenereerd worden; houd wire-wijzigingen optioneel en neem de iOS-kant mee in het ontwerp. chat.attach kent al historyLimit, chat.history en historyIndex; bouw het volgnummer daarop voort in plaats van ernaast. ChatManager.observe() is het bestaande aanhaakpunt voor events.
+
 Begin met fase 0: schrijf een ontwerp voor het model (run, poging, stap, subagent met oorsprong native of ruimte, taak met resultaat), de opslag en de wire-wijzigingen, en controleer de aannames uit het rapport eerst tegen de huidige code en de geïnstalleerde versies van claude en codex. Leg het ontwerp aan mij voor en wacht op akkoord voordat er code komt. Beslissingen die niet uit de code blijken gaan daarna naar docs/DECISIONS.md.
 
-Werkwijze: onderzoek en implementatie via sub-agents, commits per fase op main volgens CLAUDE.md, zonder Co-Authored-By. Noem in commits, code en docs geen ander product en niet de naam "Orchestrator V2"; het heet in Ruimte gewoon orchestratie.</code></pre>
+Werkwijze: onderzoek en implementatie via sub-agents (opus; fable voor moeilijke ontwerpvragen), productkeuzes eerst aan mij voorleggen, commits per fase op main volgens CLAUDE.md, zonder Co-Authored-By. Noem in commits, code en docs geen ander product en niet de naam "Orchestrator V2"; het heet in Ruimte gewoon orchestratie.</code></pre>
   </section>
 </main>
-<footer><p>Geverifieerd: doelen, datamodel, commands, tabellen, MCP-tools, plafonds, migratie en de open punten, uit ontwerpdocumenten, contracts, migratie, takenlijst en PR-beschrijvingen. Afgeleid: de rol van reactors en services uit hun namen, hoe dicht de merge naar main is, en het aandeel van de orchestrator in de diff. Ruimte-bevindingen komen uit de code op <code>e34cff7</code> en <code>docs/DECISIONS.md</code>. Niet gedaan: code van de rewrite draaien of volledig lezen, en dit rapport in een browser renderen.</p></footer>
+<footer><p>Geverifieerd: doelen, datamodel, commands, tabellen, MCP-tools, plafonds, migratie en de open punten, uit ontwerpdocumenten, contracts, migratie, takenlijst en PR-beschrijvingen. Afgeleid: de rol van reactors en services uit hun namen, hoe dicht de merge naar main is, en het aandeel van de orchestrator in de diff. Ruimte-bevindingen komen uit de code op <code>e34cff7</code>, op 16 september opnieuw gecontroleerd op <code>9ce27c14</code>, en uit <code>docs/DECISIONS.md</code>; de fase-1-aannames zijn gecontroleerd tegen echte transcripten van claude 2.1.273 en het app-server-schema van codex-cli 0.154.0. Niet gedaan: code van de rewrite draaien of volledig lezen, en dit rapport in een browser renderen.</p></footer>
 </body>
 </html>
