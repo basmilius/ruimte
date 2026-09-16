@@ -114,7 +114,7 @@ export type PaletteMode = 'default' | 'grep' | 'file';
 
 /* What a picked file becomes. A node carries where it lands, in world units, because the menu that
    asked knows the point that was right-clicked and the palette does not. */
-export type FilePick = { kind: 'node'; at: { x: number; y: number } } | { kind: 'view' };
+export type FilePick = { kind: 'node'; at: { x: number; y: number } } | { kind: 'view' } | { kind: 'tab' };
 
 export interface WorktreeMergeRequest {
     /* The project folder whose repository holds the worktrees. */

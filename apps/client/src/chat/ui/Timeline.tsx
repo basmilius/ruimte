@@ -17,6 +17,8 @@ import { endpointKey, useEndpointId } from '@/state/keys';
 import { useUi } from '@/state/ui';
 import { FileLinkContext } from '@/shell/panels/file-links';
 import { AgentIcon } from '@/agents/AgentIcon';
+import { useContextSources } from '@/context/sources';
+import { SECTION_LABEL } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 
@@ -26,6 +28,36 @@ const ESTIMATED_ROW_PX = 56;
 
 /* Extra room under the last row so the floating composer never covers it. */
 const COMPOSER_CLEARANCE_PX = 168;
+
+/*
+ * A thread before its first message: which model answers, what the lines into this node let it read,
+ * and the folder it works in, so a first question can lean on all three.
+ */
+function EmptyThread({ chatId }: { chatId: string }) {
+    const info = useChatRow(chatId, (row) => row?.info ?? null);
+    const sources = useContextSources(chatId);
+    return (
+        <div className="flex min-h-0 grow items-center justify-center overflow-auto">
+            <div className="flex max-w-sm flex-col items-center gap-3 px-6 py-8 text-center">
+                <EmptyState icon={info ? <AgentIcon kind={info.provider} /> : undefined} className="p-0">
+                    {info ? `${info.selection.model} is ready. Ask it anything.` : 'Ask anything.'}
+                </EmptyState>
+                {sources.length > 0 && (
+                    <div className="flex max-w-full flex-col items-center gap-1">
+                        <span className={SECTION_LABEL}>It can read</span>
+                        <span className="max-w-full text-xs text-text-muted">{sources.map((source) => source.title).join(', ')}</span>
+                    </div>
+                )}
+                {info?.cwd && (
+                    <div className="flex max-w-full flex-col items-center gap-1">
+                        <span className={SECTION_LABEL}>It works in</span>
+                        <span className="max-w-full font-mono text-xs break-all text-text-muted">{info.cwd}</span>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
 
 /*
  * A turn runs in two rhythms. The tool lines are a list and read as one when they sit tight
@@ -210,13 +242,7 @@ export function Timeline({ chatId }: { chatId: string }) {
     };
 
     if (empty) {
-        return (
-            <div className="flex min-h-0 grow items-center justify-center">
-                <EmptyState icon={info ? <AgentIcon kind={info.provider} /> : undefined}>
-                    {info ? `${info.selection.model} is ready. Ask it anything.` : 'Ask anything.'}
-                </EmptyState>
-            </div>
-        );
+        return <EmptyThread chatId={chatId} />;
     }
 
     return (

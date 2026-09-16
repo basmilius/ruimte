@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { closeTab, openTab, pinTab, useFiles, type FileTab, type TabState } from './files.ts';
+import { closeTab, openTab, pinTab, RECENT_FILES_LIMIT, rememberClosed, useFiles, type FileTab, type TabState } from './files.ts';
 import { useUi } from './ui.ts';
 
 const tab = (path: string, pinned = false): FileTab => ({ key: path, path, pinned, dirty: false });
@@ -119,5 +119,23 @@ describe('pinTab', () => {
         const next = pinTab(state(['a', 'b'], 'a'), 'a', true);
         expect(next.tabs.map((entry) => entry.pinned)).toEqual([true, false]);
         expect(pinTab(next, 'a', false).tabs[0]!.pinned).toBe(false);
+    });
+});
+
+describe('the files closed a moment ago', () => {
+    const closed = (path: string, view?: FileTab['view']): FileTab => ({ key: path, path, ...(view ? { view } : {}), pinned: false, dirty: false });
+
+    test('newest first, each file once, and only as many as the empty preview offers', () => {
+        let recent: string[] = [];
+        for (const path of ['/a', '/b', '/c', '/a', '/d', '/e', '/f']) {
+            recent = rememberClosed(recent, closed(path));
+        }
+        expect(recent).toEqual(['/f', '/e', '/d', '/a', '/c']);
+        expect(recent).toHaveLength(RECENT_FILES_LIMIT);
+    });
+
+    test('a diff is not a file to go back to', () => {
+        expect(rememberClosed(['/a'], closed('/b', { kind: 'diff', cwd: '/', scope: 'worktree', staged: false }))).toEqual(['/a']);
+        expect(rememberClosed(['/a'], undefined)).toEqual(['/a']);
     });
 });

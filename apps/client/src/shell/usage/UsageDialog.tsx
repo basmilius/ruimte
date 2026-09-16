@@ -7,6 +7,7 @@ import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { useEndpoints } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
 import { useEndpointId } from '@/state/keys';
+import { useProvidersStore } from '@/state/providers';
 import { useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { askedKey, UsageEndpointContext, USAGE_PERIODS, useUsage, useUsageStore, windowFor, type UsageMetric, type UsagePeriod } from '@/state/usage';
@@ -14,6 +15,7 @@ import { machineTransport } from '@/transport';
 import { useEndpointConnection, useMachineHold } from '@/transport/status';
 import type { Transport } from '@/transport/transport';
 import { usageEndpointFor } from '@/shell/usage/picker';
+import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Select } from '@/ui/Select';
@@ -37,6 +39,30 @@ const METRICS: readonly { id: UsageMetric; label: string }[] = [
 const DIALOG_CENTER = 'pointer-events-none absolute inset-0';
 
 const PERIOD_OPTIONS = USAGE_PERIODS.map((period) => ({ id: period.id, label: period.label }));
+
+/*
+ * Which agent CLIs the machine has, under an empty usage page: no usage is what a machine without any
+ * agent looks like too, and the way to fix that is the Agents settings.
+ */
+function MachineAgents({ endpointId }: { endpointId: string }) {
+    const row = useProvidersStore((s) => s.byEndpoint[endpointId]);
+    const installed = useMemo(() => (row?.providers ?? []).filter((provider) => provider.installed), [row]);
+    if (!row?.loaded) {
+        return null;
+    }
+    return (
+        <div className="flex flex-col items-center gap-2">
+            <p className="text-xs text-text-muted">
+                {installed.length === 0
+                    ? 'This machine has no agent CLI installed.'
+                    : `This machine has ${installed.map((provider) => provider.name).join(', ')}.`}
+            </p>
+            <Button size="sm" variant="secondary" onClick={() => useUi.getState().setSettings({ open: true, section: 'agents' })}>
+                Agents settings
+            </Button>
+        </div>
+    );
+}
 
 /*
  * Asks the machine on screen for the period that is up, keeps the answer under the key of the
@@ -240,14 +266,14 @@ function Page({ endpointId }: { endpointId: string }) {
             <div className="flex min-h-0 grow flex-col gap-6 overflow-y-auto px-6 pt-4 pb-6 max-[960px]:px-4">
                 <MachineNote endpointId={endpointId} stale={shown !== null} />
                 {noRoots && (
-                    <EmptyState className={DIALOG_CENTER} icon={<Icon icon={ChartNoAxesColumn} size={24} />}>
-                        No Claude or Codex transcripts found. The daemon reads ~/.claude/projects and ~/.codex/sessions.
+                    <EmptyState className={DIALOG_CENTER} icon={<Icon icon={ChartNoAxesColumn} size={24} />} action={<MachineAgents endpointId={endpointId} />}>
+                        No Claude or Codex transcripts found. The machine reads ~/.claude/projects and ~/.codex/sessions.
                     </EmptyState>
                 )}
                 {/* The skeleton is the wait for an answer; without a socket there is no answer on the way. */}
                 {shown === null && answering && <LoadingBody />}
                 {shown === null && !answering && (
-                    <EmptyState className={DIALOG_CENTER} icon={<Icon icon={ChartNoAxesColumn} size={24} />}>
+                    <EmptyState className={DIALOG_CENTER} icon={<Icon icon={ChartNoAxesColumn} size={24} />} action={<MachineAgents endpointId={endpointId} />}>
                         No usage on this machine yet.
                     </EmptyState>
                 )}

@@ -110,9 +110,18 @@ export interface RevealRequest {
     nonce: number;
 }
 
+/* How many closed files the empty preview offers to open again. */
+export const RECENT_FILES_LIMIT = 5;
+
+/* A file tab that closed goes on top of the files to open again; a diff or a commit is not a file to go back to. */
+export const rememberClosed = (recent: readonly string[], tab: FileTab | undefined): string[] =>
+    tab === undefined || tab.view !== undefined ? [...recent] : [tab.path, ...recent.filter((path) => path !== tab.path)].slice(0, RECENT_FILES_LIMIT);
+
 interface FilesStore extends TabState {
     /* Whose tabs these are; a canvas that is not open has none. */
     projectId: string | null;
+    /* Files of this project closed in this session, newest first. Not saved: the tabs that are open are what the project keeps. */
+    recent: string[];
     /* Counts the files opened by hand. The preview watches it to take the keyboard, so the tab
        that just opened answers to ⌘W. Restoring a project does not count: nothing was asked for. */
     focusRequest: number;
@@ -142,6 +151,7 @@ interface FilesStore extends TabState {
  */
 export const useFiles = create<FilesStore>((set, get) => ({
     projectId: null,
+    recent: [],
     focusRequest: 0,
     tabs: [],
     active: null,
@@ -149,7 +159,7 @@ export const useFiles = create<FilesStore>((set, get) => ({
     reveal: null,
     revealLine: null,
     load(projectId, state) {
-        set({ projectId, tabs: state.tabs, active: state.active, expandedDirs: state.expandedDirs, reveal: null, revealLine: null });
+        set({ projectId, tabs: state.tabs, active: state.active, expandedDirs: state.expandedDirs, reveal: null, revealLine: null, recent: [] });
     },
     /* A tab and the panel that draws it are one thing to the person opening a file: the first open
        brings the preview up and the last close takes it away again. */
@@ -160,7 +170,13 @@ export const useFiles = create<FilesStore>((set, get) => ({
     },
     close(key) {
         const next = closeTab(get(), key);
-        set(next);
+        set({
+            ...next,
+            recent: rememberClosed(
+                get().recent,
+                get().tabs.find((tab) => tab.key === key)
+            )
+        });
         if (next.tabs.length === 0) {
             useUi.getState().setPreviewOpen(false);
         }
