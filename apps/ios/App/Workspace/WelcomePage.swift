@@ -8,6 +8,8 @@ struct WelcomePage: View {
     let pair: () -> Void
     @Environment(\.colorScheme) private var colorScheme
     @ScaledMetric(relativeTo: .body) private var buttonHeight = 54
+    // Large Title is the biggest text style, so one step above it (34 pt) scales along with it instead.
+    @ScaledMetric(relativeTo: .largeTitle) private var taglineSize = 40
     @State private var retrying = false
 
     private var busy: Bool { runtime.loading || runtime.signingIn || runtime.signingOut || retrying }
@@ -58,11 +60,11 @@ struct WelcomePage: View {
                     .frame(width: 144, height: 144)
                     .accessibilityHidden(true)
                 Text("Ruimte")
-                    .font(.title2.weight(.semibold))
+                    .font(.title3.weight(.semibold))
             }
             VStack(spacing: 14) {
                 Text("Space for AI Engineering.")
-                    .font(.largeTitle.weight(.bold))
+                    .font(.system(size: taglineSize, weight: .bold))
                     .accessibilityAddTraits(.isHeader)
                 Text("Pick up your projects and check in on your agents.")
                     .font(.body)
