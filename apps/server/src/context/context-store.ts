@@ -1,4 +1,5 @@
-import type { ChatItem, ContextSource, DiagramDocument, DrawingElement } from '@ruimte/contracts';
+import type { ChatItem, ContextSource, DiagramDocument, DrawingElement, Plan } from '@ruimte/contracts';
+import { renderPlanText } from '@ruimte/plan';
 import { contextChangeNote } from './context-note.ts';
 import { renderDiagram } from './context-diagram.ts';
 import { renderDrawing } from './context-drawing.ts';
@@ -28,6 +29,8 @@ interface ContextReaders {
     terminalText(sessionId: string): Promise<string | null>;
     /* A chat's thread, or null when there is none. */
     chatItems(chatId: string): ChatItem[] | null;
+    /* The plans a chat keeps, oldest first. */
+    chatPlans?(chatId: string): Promise<Plan[]>;
     /* The whole conversation of one subagent of a chat; throws when the CLI kept none for it. */
     subagentItems?(chatId: string, toolUseId: string): Promise<ChatItem[]>;
     /* The target a bearer token speaks for: a terminal session or a chat. */
@@ -155,7 +158,10 @@ export class ContextStore {
                     return null;
                 }
                 const transcript = renderTranscript(items);
-                return tail === null ? transcript : lastLines(transcript, tail);
+                const thread = tail === null ? transcript : lastLines(transcript, tail);
+                // Above the thread, where a tail never cuts it off: how far a child got is what its parent reads for first.
+                const plans = (await this.readers.chatPlans?.(source.id).catch(() => [])) ?? [];
+                return plans.length === 0 ? thread : `${plans.map((plan) => renderPlanText(plan)).join('\n\n')}\n\n${thread}`;
             }
             case 'drawing': {
                 const elements = await this.readers.drawingElements(source.id);

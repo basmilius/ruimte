@@ -29,7 +29,7 @@ import { SkillIndex } from '../skills/skills.ts';
 import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import type { AttachmentStore } from './attachment-store.ts';
 import type { SpawnChatProcess } from './chat-process.ts';
-import { ChatSession, type ChatSendExtras, type ResumeDecision } from './chat-session.ts';
+import { ChatSession, PLAN_RESUME_PREAMBLE, type ChatSendExtras, type ResumeDecision } from './chat-session.ts';
 import { ChatLog, COMPACT_ABOVE_BYTES } from './chat-log.ts';
 import type { ChatTitleInput } from './chat-title.ts';
 import type { ChatRecord, ChatStore } from './chat-store.ts';
@@ -51,6 +51,13 @@ export interface InterruptedRun {
 
 // Why a task a person stopped from the list of the chat that gave it ended, in that chat's note and the child's thread.
 export const STOPPED_TASK_REASON = 'a person stopped it';
+
+/* The plans kept beside a chat's record, which live and die with the chat. */
+export interface ChatPlans {
+    removeChat(chatId: string): Promise<void>;
+    copyChat(fromChatId: string, toChatId: string): Promise<void>;
+    hasOpenSteps(chatId: string): Promise<boolean>;
+}
 
 // One process worked on the turn and one more may take it up after a restart; a loop of resumes could redo a command forever.
 const MAX_ATTEMPTS = 2;
@@ -99,6 +106,7 @@ interface ChatManagerOptions {
     endedAt?: (chatId: string) => number | null;
     // The tasks a chat gave, so a chat loaded from disk shows a row for each even when a crash lost the write of one.
     taskRows?: (chatId: string) => Task[];
+    plans?: ChatPlans;
 }
 
 // Above this the record is big enough that rewriting it on every tool call costs more than it saves.
@@ -140,6 +148,7 @@ export class ChatManager {
     private readonly onInterruptedRun: ChatManagerOptions['onInterruptedRun'] | null;
     private readonly endedAt: (chatId: string) => number | null;
     private readonly taskRows: (chatId: string) => Task[];
+    private readonly plans: ChatPlans | null;
     /* Where Claude Code keeps its projects on this machine; empty when it has none. */
     readonly claudeProjectsDir: string;
     // Clients following the conversation of a node a task opened, per row of the chat that gave it.
@@ -149,6 +158,7 @@ export class ChatManager {
         this.onInterruptedRun = options.onInterruptedRun ?? null;
         this.endedAt = options.endedAt ?? (() => null);
         this.taskRows = options.taskRows ?? (() => []);
+        this.plans = options.plans ?? null;
         this.providers = options.providers;
         this.claudeTitles = options.claudeTitles ?? null;
         this.nameChat = options.nameChat ?? null;
@@ -230,8 +240,13 @@ export class ChatManager {
     /* Takes back a record `writeRecord` wrote, as long as nobody loaded the chat since. */
     async deleteRecord(chatId: string): Promise<void> {
         if (!this.chats.has(chatId) && !this.creating.has(chatId)) {
-            await this.store?.delete(chatId);
+            await Promise.all([this.store?.delete(chatId), this.plans?.removeChat(chatId)]);
         }
+    }
+
+    /* Gives a fork the plans of the chat it was forked from. */
+    async copyPlans(fromChatId: string, toChatId: string): Promise<void> {
+        await this.plans?.copyChat(fromChatId, toChatId);
     }
 
     /* What a chat of this CLI starts with when nobody else says: the model named, else the newest composer pick, in that CLI's catalog. */
@@ -689,7 +704,12 @@ export class ChatManager {
                 this.tokens.delete(token);
             }
         }
-        await Promise.all([this.store?.delete(chatId), this.attachments.removeAll(chatId), this.dropForkCopy(session.thread.snapshot())]);
+        await Promise.all([
+            this.store?.delete(chatId),
+            this.attachments.removeAll(chatId),
+            this.plans?.removeChat(chatId),
+            this.dropForkCopy(session.thread.snapshot())
+        ]);
     }
 
     /*
@@ -706,7 +726,7 @@ export class ChatManager {
         if (stored === null || !unspokenFork(stored.items, stored.info)) {
             return;
         }
-        await Promise.all([this.store.delete(chatId), this.attachments.removeAll(chatId), this.dropForkCopy(stored)]);
+        await Promise.all([this.store.delete(chatId), this.attachments.removeAll(chatId), this.plans?.removeChat(chatId), this.dropForkCopy(stored)]);
     }
 
     /* The transcript copy of a Claude fork nobody resumed; Codex keeps its forked thread where Ruimte cannot remove it. */
@@ -763,7 +783,16 @@ export class ChatManager {
             }
             await this.create({ chatId });
         }
-        await this.chats.get(chatId)?.resume(turnId, attempt);
+        await this.chats.get(chatId)?.resume(turnId, attempt, await this.resumePreamble(chatId));
+    }
+
+    /* A resumed agent that keeps a plan hears where to find it, since the restart may have cut it off in the middle of one. */
+    private async resumePreamble(chatId: string): Promise<string | null> {
+        const open = await (this.plans?.hasOpenSteps(chatId) ?? Promise.resolve(false)).catch((e: unknown) => {
+            console.error(`Reading the plans of chat ${chatId} failed:`, errorText(e));
+            return false;
+        });
+        return open ? PLAN_RESUME_PREAMBLE : null;
     }
 
     /* A resume that never came about: the turn ends as aborted, with the reason in the thread. */

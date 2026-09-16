@@ -67,6 +67,8 @@ export interface ChatForkDeps {
     restoreTree(cwd: string, tree: string): Promise<void>;
     writeRecord(chatId: string, info: ChatInfo, items: ChatItem[], preambles: string[]): Promise<void>;
     deleteRecord(chatId: string): Promise<void>;
+    /* Copies the plans of the original under the fork's id; `deleteRecord` takes them back. */
+    copyPlans(fromChatId: string, toChatId: string): Promise<void>;
     newSessionId(): string;
     now(): number;
 }
@@ -344,6 +346,7 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
     undoers.push(() => deps.deleteRecord(forkId));
     try {
         await deps.writeRecord(forkId, forkInfo, items, [notes.preamble]);
+        await deps.copyPlans(payload.chatId, forkId);
     } catch (error) {
         await undo();
         throw error;
@@ -507,6 +510,7 @@ export const chatForkDeps = (wiring: {
     },
     writeRecord: (chatId, info, items, preambles) => wiring.chats.writeRecord(chatId, info, items, preambles),
     deleteRecord: (chatId) => wiring.chats.deleteRecord(chatId),
+    copyPlans: (fromChatId, toChatId) => wiring.chats.copyPlans(fromChatId, toChatId),
     newSessionId: () => randomUUID(),
     now: () => Date.now()
 });

@@ -11,6 +11,7 @@ import { notifyVerb } from './notify-verb.ts';
 import { renameVerb } from './rename-verb.ts';
 import { nodeVerb } from './node-verb.ts';
 import { openVerb } from './open-verb.ts';
+import { planVerb } from './plan-verb.ts';
 import { doneVerb, tasksVerb } from './task-verbs.ts';
 import { teamVerb } from './team-verb.ts';
 import { VIEW_KINDS, deleteReason, viewVerb } from './view-verb.ts';
@@ -23,7 +24,7 @@ const REFUSAL_LINE =
 
 /* Two things an agent keeps mixing up, so the line is in the list and in the detail of each verb it is about. */
 const SCOPE_LINE =
-    'scope\tlist and read are what a person linked into this session; nodes, edges, views, node, agent, team, done, tasks, link, notify, view, open, group, arrange, rename, diagram and worktree are the project itself\ta node you add is readable through read only once a line runs from it into you';
+    'scope\tlist and read are what a person linked into this session; nodes, edges, views, node, agent, team, done, tasks, link, notify, view, open, group, arrange, rename, diagram and worktree are the project itself, and plan is the chat of the caller\ta node you add is readable through read only once a line runs from it into you';
 
 /* Said once under the list, since the flag is on some verbs and refused by name on the rest. */
 const dryRunLine = (): string => `dry run\t--${DRY_RUN_FLAG}\t${dryRunVerbNames().join(', ')}\tsame checks, nothing made; every other verb refuses the flag`;
@@ -93,7 +94,7 @@ const readVerb: ContextVerb = {
         'prints\tThe source itself, as text, not as tab-separated lines',
         'kind\ttext\tThe text the person wrote: a note, a text on the canvas or a browser address\t--tail counts its lines',
         `kind\tterminal\tThe screen of that session, its last ${MAX_SCREEN_LINES} lines, read the moment you ask\t--tail counts screen lines and cannot reach past those ${MAX_SCREEN_LINES}`,
-        'kind\tchat\tThe whole thread as markdown: who said what, what every tool ran, and one line per subagent with the id --subagent takes\t--tail counts lines of that markdown, so it ends on the latest turn',
+        'kind\tchat\tThe plans of that chat as text, then the whole thread as markdown: who said what, what every tool ran, and one line per subagent with the id --subagent takes\t--tail counts lines of the thread and leaves the plans out',
         'kind\tdrawing\tThe text of the drawing in reading order, and the picture itself as SVG under it\t--tail counts lines of the reading order and leaves the SVG out',
         'kind\tdiagram\tIts title, every node layer by layer (sub in brackets), every edge with its label, what each group wraps, and the SVG under it\t--tail counts lines of that list and leaves the SVG out',
         'kind\tfile\tIts path and a line telling you to read it yourself, since your own tools see a fresher copy\t--tail does nothing here',
@@ -213,7 +214,8 @@ export const VERBS: readonly VerbEntry[] = [
     arrangeVerb,
     renameVerb,
     diagramVerb,
-    worktreeVerb
+    worktreeVerb,
+    planVerb
 ];
 
 export const verbNamed = (name: string): VerbEntry | undefined => VERBS.find((verb) => verb.name === name);

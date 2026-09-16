@@ -13,6 +13,7 @@ import {
 } from '@ruimte/contracts';
 import { z } from 'zod';
 import type { NoticeDelivery, Notice } from '../context/notices.ts';
+import type { PlanStore } from '../plans/plan-store.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
 import { parseArgv } from './argv.ts';
@@ -75,6 +76,8 @@ export interface CanvasHost {
     writeDiagram(projectId: string, viewId: string, content: DiagramContent): Promise<number>;
     /* The tasks a chat gives the nodes it opens with `--task`, kept by the daemon outside the project. */
     tasks: TaskHost;
+    /* The plans of the caller's own chat, kept beside its record. */
+    plans: Pick<PlanStore, 'read' | 'create' | 'apply' | 'delete'>;
     /* Reading and merging the worktrees of the project's repository; a host without git has none. */
     worktrees?: WorktreeHost;
 }

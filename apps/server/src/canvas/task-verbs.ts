@@ -32,7 +32,7 @@ export const TASK_LINES: readonly string[] = [
 ];
 
 /* What kind of node or view the caller is in its project, or null when neither names it. */
-const callerKind = (content: ProjectContent, caller: string): string | null => {
+export const callerKind = (content: ProjectContent, caller: string): string | null => {
     for (const view of content.views) {
         if (view.id === caller) {
             return view.kind;

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatItem, ContextSource, DiagramDocument, DrawingElement } from '@ruimte/contracts';
+import type { ChatItem, ContextSource, DiagramDocument, DrawingElement, Plan } from '@ruimte/contracts';
 import { ContextStore, MAX_SCREEN_LINES, renderTranscript } from './context-store.ts';
 
 const items: ChatItem[] = [
@@ -132,6 +132,32 @@ describe('ContextStore', () => {
         expect(await (await get('/context/note?tail=1', 'tok')).text()).toBe('two');
         expect((await get('/context/note?tail=0', 'tok')).status).toBe(400);
         expect((await get('/context/note?tail=two', 'tok')).status).toBe(400);
+    });
+
+    test('a linked chat reads its plans above the thread, and a tail never cuts them off', async () => {
+        const plan: Plan = {
+            id: 'plan-1',
+            rev: 2,
+            createdAt: '2026-09-16T13:40:00Z',
+            meta: { title: 'Ship it', kind: 'steps', checks: 'anyone' },
+            items: [{ type: 'step', id: 'build', title: 'Build', state: 'done', by: 'agent', at: '2026-09-16T13:41:00Z' }]
+        };
+        const withPlans = new ContextStore({
+            sources: () => [{ id: 'chat', kind: 'chat', title: 'Child' }],
+            terminalText: async () => null,
+            chatItems: (id) => (id === 'chat' ? items : null),
+            chatPlans: async (id) => (id === 'chat' ? [plan] : []),
+            drawingElements: async () => null,
+            diagramDocument: async () => null,
+            targetForToken: () => null
+        });
+        const whole = await withPlans.read('agent', 'chat');
+        expect(whole).toStartWith('Plan "Ship it" (plan-1, steps, rev 2): 1 of 1 done');
+        expect(whole).toContain('[x] 1 Build [build]');
+        expect(whole).toEndWith(renderTranscript(items));
+        const tailed = await withPlans.read('agent', 'chat', 1);
+        expect(tailed).toStartWith('Plan "Ship it"');
+        expect(tailed).toEndWith('\n\nDone.');
     });
 
     test('a file answers with its path and never with its bytes', async () => {

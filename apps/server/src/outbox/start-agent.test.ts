@@ -184,7 +184,8 @@ const boot = async (): Promise<Daemon> => {
         endSession: unused,
         notify: unused,
         writeDiagram: unused,
-        tasks: { open: unused, done: unused, involving: () => [] }
+        tasks: { open: unused, done: unused, involving: () => [] },
+        plans: { read: unused, create: unused, apply: unused, delete: unused }
     };
 
     const daemon: Daemon = {

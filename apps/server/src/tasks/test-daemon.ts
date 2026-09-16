@@ -19,11 +19,13 @@ import { WorktreeMerge } from '../git/worktree-merge.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import { registerChatHandlers } from '../handlers/chat.ts';
 import { registerSessionHandlers } from '../handlers/session.ts';
+import { registerPlanHandlers } from '../handlers/plan.ts';
 import { registerTaskHandlers } from '../handlers/tasks.ts';
 import { wireEndChildren, type EndChildrenWiring } from '../outbox/end-children.ts';
 import type { ManualClock } from '../outbox/manual-clock.ts';
 import { OutboxStore } from '../outbox/outbox.ts';
 import { OutboxWorker } from '../outbox/outbox-worker.ts';
+import { PlanStore } from '../plans/plan-store.ts';
 import { oweResume, resumeRunHandler, resumeRunParked } from '../outbox/resume-run.ts';
 import { nodeMode, startAgentHandler, startAgentWork } from '../outbox/start-agent.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
@@ -43,6 +45,7 @@ export interface TestDaemon {
     worker: OutboxWorker;
     sessions: SessionManager;
     chats: ChatManager;
+    plans: PlanStore;
     adapter: FakePtyAdapter;
     claude: InProcessCli;
     codex: InProcessCli;
@@ -85,6 +88,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
     const sessions = new SessionManager({ adapter, env: { HOME: home, PATH: process.env.PATH }, firstPrompt: (id) => prompts.take(id) });
     const attachments = new AttachmentStore(home);
     const box: { worker: OutboxWorker | null } = { worker: null };
+    const plans = new PlanStore(home, { now: () => clock.now() });
     const chats = new ChatManager({
         providers,
         store: new ChatStore(home, attachments),
@@ -99,7 +103,8 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
             enqueue: (id, target, work) => box.worker!.enqueue(id, target, work)
         }),
         taskRows: (chatId) => tasks.ofParent(chatId),
-        endedAt: (chatId) => lineage.endedAt(chatId)
+        endedAt: (chatId) => lineage.endedAt(chatId),
+        plans
     });
     let waiters: Array<{ check: () => boolean; resolve: () => void }> = [];
     const recheck = (): void => {
@@ -250,7 +255,8 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         },
         notify: () => Promise.reject(new Error('not used here')),
         writeDiagram: () => Promise.reject(new Error('not used here')),
-        tasks: wiring.host
+        tasks: wiring.host,
+        plans
     };
 
     const dispatcher = new Dispatcher();
@@ -269,6 +275,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         summarize: (chatId) => summaries.summarize(chatId)
     });
     registerTaskHandlers(dispatcher, tasks, endChildren.children);
+    registerPlanHandlers(dispatcher, plans);
 
     return {
         tasks,
@@ -277,6 +284,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         worker,
         sessions,
         chats,
+        plans,
         adapter,
         claude,
         codex,

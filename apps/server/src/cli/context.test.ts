@@ -250,6 +250,17 @@ describe('runContext', () => {
         expect(seen[1]!.argv).toEqual(['flow-1', '--document', '{}']);
     });
 
+    test('plan new sends stdin as --document, or as --markdown for --markdown -, byte for byte', async () => {
+        const document = '{"items":[{"type":"step","title":"a\\\\nb"}]}\n';
+        await runContext(['plan', 'new', '--title', 'T'], env, async () => document);
+        expect(seen[0]!.argv).toEqual(['new', '--title', 'T', `--document=${document}`]);
+        const markdown = '- [ ] one \\n two\n';
+        await runContext(['plan', 'new', '--markdown', '-', '--kind', 'test'], env, async () => markdown);
+        expect(seen[1]!.argv).toEqual(['new', `--markdown=${markdown}`, '--kind', 'test']);
+        await runContext(['plan', 'note', 'a', '--text', '-'], env, async () => 'x\\y');
+        expect(seen[2]!.argv).toEqual(['note', 'a', '--text=x\\\\y']);
+    });
+
     test('a refusal exits 3 and goes to stderr', async () => {
         expect(await runContext(['nodes'], env)).toBe(3);
         expect(stderr).toBe('refused\tview-required\tname one with --view\ncanvas\tmain\tCanvas\n');

@@ -97,7 +97,12 @@ export const runContext = async (
         return 0;
     }
 
-    const argv = command === 'diagram' ? await withStdinDocument(args.slice(1), stdin) : await withStdinText(args.slice(1), stdin);
+    const argv =
+        command === 'diagram'
+            ? await withStdinDocument(args.slice(1), stdin)
+            : command === 'plan' && args[1] === 'new'
+              ? ['new', ...(await withStdinPlan(args.slice(2), stdin))]
+              : await withStdinText(args.slice(1), stdin);
     return runVerb(url.replace(/\/context\/?$/, '/canvas'), command, argv, headers);
 };
 
@@ -108,6 +113,23 @@ export const runContext = async (
  */
 const withStdinDocument = async (argv: string[], stdin: () => Promise<string>): Promise<string[]> => {
     if (argv.some((word) => word === '--document' || word.startsWith('--document='))) {
+        return argv;
+    }
+    return [...argv, `--document=${await stdin()}`];
+};
+
+/*
+ * `plan new` takes its plan on stdin like `diagram`: JSON as `--document`, or a Markdown list as
+ * `--markdown -`. Both arrive untouched, since the daemon parses them and reads no escapes.
+ */
+const withStdinPlan = async (argv: string[], stdin: () => Promise<string>): Promise<string[]> => {
+    for (let i = 0; i < argv.length; i++) {
+        const pair = argv[i] === '--markdown' && argv[i + 1] === '-';
+        if (pair || argv[i] === '--markdown=-') {
+            return [...argv.slice(0, i), `--markdown=${await stdin()}`, ...argv.slice(i + (pair ? 2 : 1))];
+        }
+    }
+    if (argv.some((word) => word.startsWith('--markdown') || word.startsWith('--document'))) {
         return argv;
     }
     return [...argv, `--document=${await stdin()}`];

@@ -69,6 +69,9 @@ export interface ChatSendExtras {
 // What a resumed CLI is told: its transcript ends where the process did, and a tool call that was out is lost to it.
 export const RESUME_PROMPT = 'The machine restarted while you were working on the previous message. Continue where you left off.';
 
+// Said in front of a resume when the chat keeps a plan with steps left.
+export const PLAN_RESUME_PREAMBLE = 'You keep a plan in this chat: ruimte-context plan read shows where you were.';
+
 const newId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error));
@@ -384,7 +387,7 @@ export class ChatSession {
      * ended or already has that attempt, so the outbox may run it twice. A CLI that will not start
      * throws and leaves the turn waiting for the next try.
      */
-    async resume(turnId: string, attempt: number): Promise<void> {
+    async resume(turnId: string, attempt: number, preamble: string | null = null): Promise<void> {
         if (!this.awaitsResume(turnId, attempt)) {
             return;
         }
@@ -409,7 +412,7 @@ export class ChatSession {
         this.options.persist();
         // The turn keeps the checkpoint it started with, so its card still shows everything it changed.
         this.turnReady = Promise.resolve();
-        backend.sendTurn({ text: RESUME_PROMPT, preamble: null, attachments: [], mentions: [], skills: [] });
+        backend.sendTurn({ text: RESUME_PROMPT, preamble, attachments: [], mentions: [], skills: [] });
     }
 
     /* Ends a running turn nobody is working on, with the reason in the thread when there is one; the queue goes out after it. */

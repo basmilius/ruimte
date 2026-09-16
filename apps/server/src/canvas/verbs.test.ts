@@ -215,8 +215,11 @@ const host = (): CanvasHost => ({
             return open ? tasks.settle(open.id, 'done', { text, source: 'done', at: 2 }, 2) : null;
         },
         involving: (nodeId) => tasks.involving(nodeId)
-    }
+    },
+    plans: { read: async () => [], create: unusedPlans, apply: unusedPlans, delete: unusedPlans }
 });
+
+const unusedPlans = (): Promise<never> => Promise.reject(new Error('no plans in these tests'));
 
 const post = async (verb: string, argv: string[], token = 'term'): Promise<{ status: number; lines: string[] }> => {
     const path = `${CANVAS_PATH}/${verb}`;

@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { ChatInfoSchema, ChatItemSchema, type ChatInfo, type ChatItem } from '@ruimte/contracts';
 import { z } from 'zod';
 import { isNotFound, writeAtomic } from '../fs.ts';
+import { isPlanFileName } from '../plans/plan-store.ts';
 import { migrateInlineAttachments, type AttachmentStore } from './attachment-store.ts';
 import { parseLog, type ChatLogLine } from './chat-log.ts';
 import { ChatThread } from './thread.ts';
@@ -71,7 +72,8 @@ export class ChatStore {
             throw e;
         }
         const ids = names
-            .filter((name) => name.endsWith('.json') || name.endsWith('.log'))
+            // A chat's plans sit beside its record under a name that also ends in .json.
+            .filter((name) => (name.endsWith('.json') && !isPlanFileName(name)) || name.endsWith('.log'))
             .map((name) => decodeURIComponent(name.replace(/\.(json|log)$/, '')));
         return [...new Set(ids)];
     }

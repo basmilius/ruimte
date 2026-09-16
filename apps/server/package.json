@@ -20,6 +20,7 @@
     "@ruimte/contracts": "workspace:*",
     "@ruimte/diagram": "workspace:*",
     "@ruimte/drawing": "workspace:*",
+    "@ruimte/plan": "workspace:*",
     "@ruimte/pulsar": "workspace:*",
     "@ruimte/service": "workspace:*",
     "@xterm/addon-serialize": "^0.14.0",

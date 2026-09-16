@@ -51,9 +51,15 @@ const EDGE_FIELDS: Record<keyof typeof DiagramEdgeSchema.shape, string> = {
 };
 
 /* What a field takes, read off its schema, so a shape or a tone added in contracts shows up here without an edit. */
-const typeOf = (schema: z.ZodType): string => {
+export const typeOf = (schema: z.ZodType): string => {
     if (schema instanceof z.ZodOptional) {
         return typeOf(schema.unwrap() as z.ZodType);
+    }
+    if (schema instanceof z.ZodLiteral) {
+        return schema.values.size === 1 ? JSON.stringify([...schema.values][0]) : 'value';
+    }
+    if (schema instanceof z.ZodObject) {
+        return 'object';
     }
     if (schema instanceof z.ZodEnum) {
         return schema.options.join('|');
@@ -73,7 +79,7 @@ const typeOf = (schema: z.ZodType): string => {
     return 'value';
 };
 
-const fieldLines = (prefix: string, shape: Record<string, z.ZodType>, about: Record<string, string>): string[] =>
+export const fieldLines = (prefix: string, shape: Record<string, z.ZodType>, about: Record<string, string>): string[] =>
     Object.entries(shape).map(
         ([key, schema]) => `field\t${prefix}${key}\t${schema instanceof z.ZodOptional ? 'optional' : 'required'}\t${typeOf(schema)}\t${about[key]}`
     );

@@ -26,6 +26,8 @@ import { oweResume, resumeRunHandler, resumeRunParked } from './outbox/resume-ru
 import { TaskStore } from './tasks/task-store.ts';
 import { wireTasks } from './tasks/wiring.ts';
 import { registerTaskHandlers } from './handlers/tasks.ts';
+import { registerPlanHandlers } from './handlers/plan.ts';
+import { PlanStore } from './plans/plan-store.ts';
 import type { AgentStart } from './canvas/verb.ts';
 import { connectionOpener, socketChannel, type ClientChannel, type OpenConnection, type SocketChannel } from './connection.ts';
 import { authenticateChannel } from './pulsar/channel-auth.ts';
@@ -187,6 +189,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }),
         terminalText: (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null),
         chatItems: (chatId) => chats.get(chatId)?.thread.list() ?? null,
+        chatPlans: (chatId) => plans.read(chatId),
         subagentItems: (chatId, toolUseId) => chats.subagentItems(chatId, toolUseId),
         drawingElements: (viewId) => drawings.elementsOf(viewId),
         diagramDocument: async (targetId, viewId) => {
@@ -197,6 +200,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     });
     const attachments = new AttachmentStore(config.home);
     const checkpoints = new Checkpoints(config.home);
+    const plans = new PlanStore(config.home);
     const chats: ChatManager = new ChatManager({
         providers,
         store: new ChatStore(config.home, attachments),
@@ -219,7 +223,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             enqueue: (...args) => outboxWorker.enqueue(...args)
         }),
         taskRows: (chatId) => tasks.ofParent(chatId),
-        endedAt: (chatId) => lineage.endedAt(chatId)
+        endedAt: (chatId) => lineage.endedAt(chatId),
+        plans
     });
     const projects = new ProjectStore(config.home);
     const taskWiring = wireTasks({
@@ -365,6 +370,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         showView: (projectId: string, viewId: string, by: string) => projects.showView(projectId, viewId, by),
         writeDiagram: (projectId: string, viewId: string, content: DiagramContent) => diagrams.write(projectId, viewId, content),
         tasks: taskWiring.host,
+        plans,
         /* A node that has never been shown has no session, and a canvas going down is not the place
            to fail over one, so an id neither manager knows is already ended as far as the verb goes. */
         endSession: async (kind: 'terminal' | 'chat', nodeId: string) => {
@@ -426,6 +432,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         summarize: (chatId) => summaries.summarize(chatId)
     });
     registerTaskHandlers(dispatcher, tasks, endChildren.children);
+    registerPlanHandlers(dispatcher, plans);
     registerProjectHandlers(dispatcher, projects);
     registerDrawingHandlers(dispatcher, drawings);
     registerDiagramHandlers(dispatcher, diagrams);
@@ -543,7 +550,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         limits,
         processes,
         tasks,
-        worktrees
+        worktrees,
+        plans
     });
 
     const endpointInfo = (reachability: ClientAccess['reachability'], authenticated: boolean) => ({

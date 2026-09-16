@@ -365,6 +365,7 @@ describe('forkChat', () => {
                 asked.written.push({ info: written, items, preambles });
             },
             deleteRecord: async () => undefined,
+            copyPlans: async () => undefined,
             newSessionId: () => 'session-2',
             now: () => 5
         };
