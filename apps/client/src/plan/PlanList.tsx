@@ -14,6 +14,7 @@ import {
     CircleX,
     Copy,
     ListChecks,
+    CirclePause,
     LoaderCircle,
     Lock,
     LockOpen,
@@ -223,15 +224,15 @@ interface StepContext {
     setEditingNote(id: string | null): void;
 }
 
-/* The ring of the step an agent is on: turning while its chat works, standing still once it stopped. */
+/* The ring of the step an agent is on while its chat works; a pause once it stopped, so a still ring never reads as work. */
 function ActiveRing({ working, agent, size }: { working: boolean; agent: string; size: number }) {
     if (working) {
         return <Icon icon={LoaderCircle} size={size} className="shrink-0 animate-spin text-accent" />;
     }
     return (
         <Tooltip label={`${agent} stopped here`}>
-            <span className="inline-flex shrink-0 text-accent">
-                <Icon icon={LoaderCircle} size={size} />
+            <span className="inline-flex shrink-0 text-text-muted">
+                <Icon icon={CirclePause} size={size} />
             </span>
         </Tooltip>
     );
@@ -287,13 +288,14 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
     const parent = row.progress !== null;
     const locked = effectiveChecks(plan, step) === 'agent';
     const finished = row.state === 'done' || row.state === 'skipped';
+    const stopped = row.state === 'active' && !parent && !context.working;
     const editing = context.editingNote === step.id;
 
     return (
         <ContextMenu.Root>
             <ContextMenu.Trigger
                 render={<div />}
-                className={clsx('flex min-w-0 items-start gap-1 py-1 pr-3', row.state === 'active' && !parent && 'bg-accent-soft')}
+                className={clsx('flex min-w-0 items-start gap-1 py-1 pr-3', row.state === 'active' && !parent && context.working && 'bg-accent-soft')}
                 style={{ paddingLeft: ROW_PADDING_PX + row.depth * INDENT_PX }}
             >
                 <span className="flex h-5 w-4 shrink-0 items-center justify-center">
@@ -304,6 +306,7 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
                 </span>
                 <div className="min-w-0 grow">
                     <div className={clsx('text-sm select-text', finished ? 'text-text-muted' : 'text-text')}>{step.title}</div>
+                    {stopped && <div className="text-xs text-text-muted">{context.agent} stopped here</div>}
                     {step.description && (
                         <div className="text-text-muted select-text">
                             <Markdown text={step.description} fileLinks={false} />
@@ -416,7 +419,11 @@ function StepMark({ row, context, locked }: { row: Extract<PlanRow, { type: 'ste
     }
     const label = stateLabel(plan.meta.kind, state);
     const stopped = state === 'active' && !context.working;
-    const glyph = <Icon icon={STATE_ICON[state]} size={16} className={clsx(STATE_TONE[state], state === 'active' && context.working && 'animate-spin')} />;
+    const glyph = stopped ? (
+        <Icon icon={CirclePause} size={16} className="text-text-muted" />
+    ) : (
+        <Icon icon={STATE_ICON[state]} size={16} className={clsx(STATE_TONE[state], state === 'active' && 'animate-spin')} />
+    );
     if (locked) {
         const mark = (
             <span className="inline-flex" role="img" aria-label={label}>
