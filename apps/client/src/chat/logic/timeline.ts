@@ -32,7 +32,7 @@ export type TimelineRow =
     | { kind: 'subagent'; id: string; item: ChatSubagentItem; children: ChatItem[]; expanded: boolean }
     | { kind: 'approval'; id: string; item: ChatApprovalItem }
     | { kind: 'question'; id: string; item: ChatQuestionItem }
-    | { kind: 'note'; id: string; level: 'info' | 'warning' | 'error'; text: string }
+    | { kind: 'note'; id: string; level: 'info' | 'warning' | 'error'; text: string; from?: string }
     | { kind: 'compaction'; id: string; preTokens: number | null }
     | { kind: 'changed-files'; id: string; turnId: string; tools: ChatToolItem[]; diff: ChatCheckpointDiff | null; checkpoint: boolean }
     | { kind: 'turn-fold'; id: string; turn: ChatTurnItem; label: string; hiddenCount: number; expanded: boolean }
@@ -213,7 +213,7 @@ const rowsForItems = (items: ChatItem[], options: TimelineOptions, children: Map
                 }
                 break;
             case 'note':
-                rows.push({ kind: 'note', id: item.id, level: item.level, text: item.text });
+                rows.push({ kind: 'note', id: item.id, level: item.level, text: item.text, ...(item.from === undefined ? {} : { from: item.from }) });
                 break;
             case 'compaction':
                 rows.push({ kind: 'compaction', id: item.id, preTokens: item.preTokens });

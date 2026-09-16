@@ -16,6 +16,7 @@ import { useRevealedText } from '@/chat/ui/reveal';
 import { formatDuration } from '@/chat/logic/timeline';
 import { toolSummary } from '@/chat/logic/tools';
 import { ROW_GUTTER } from '@/chat/ui/icons';
+import { useChatPlace } from '@/chat/ui/use-chat-place';
 import { Icon } from '@/ui/Icon';
 
 // A long prompt folds so the answer stays in view; the reader can open it.
@@ -232,7 +233,15 @@ const NOTE_ICON = {
     error: <Icon icon={CircleAlert} size={12} />
 };
 
-export function NoteRow({ level, text }: { level: 'info' | 'warning' | 'error'; text: string }) {
+/*
+ * A line from the machine in the thread. A note of more than one line (a summary a fork sent back)
+ * shows its first line and folds the rest open as markdown; one that came from a fork leads to it.
+ */
+export function NoteRow({ level, text, from }: { level: 'info' | 'warning' | 'error'; text: string; from?: string }) {
+    const [open, setOpen] = useState(false);
+    const breakAt = text.indexOf('\n');
+    const head = breakAt === -1 ? text : text.slice(0, breakAt);
+    const rest = breakAt === -1 ? '' : text.slice(breakAt + 1).trim();
     return (
         <div
             className={clsx(
@@ -241,8 +250,36 @@ export function NoteRow({ level, text }: { level: 'info' | 'warning' | 'error'; 
             )}
         >
             <span className={ROW_GUTTER}>{NOTE_ICON[level]}</span>
-            <span className="select-text">{text}</span>
+            <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-2">
+                    <span className="select-text">{head}</span>
+                    {rest !== '' && (
+                        <button className="text-text-muted hover:text-text" onClick={() => setOpen(!open)}>
+                            {open ? 'Hide' : 'Show'}
+                        </button>
+                    )}
+                    {from !== undefined && <OpenChatButton chatId={from} />}
+                </div>
+                {open && rest !== '' && (
+                    <div className="mt-1 text-text-muted select-text">
+                        <MessageMarkdown text={rest} />
+                    </div>
+                )}
+            </div>
         </div>
+    );
+}
+
+/* "Open fork" on a note a fork sent, while that fork is still in the project. */
+function OpenChatButton({ chatId }: { chatId: string }) {
+    const place = useChatPlace(chatId);
+    if (place.title === null) {
+        return null;
+    }
+    return (
+        <button className="text-text-muted hover:text-text" onClick={place.go}>
+            Open fork
+        </button>
     );
 }
 

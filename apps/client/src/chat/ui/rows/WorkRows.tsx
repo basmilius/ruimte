@@ -1,8 +1,12 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { ChevronRight, FileDiff, X } from 'lucide-react';
-import type { ChatCheckpointDiff, ChatCheckpointFile, ChatFileChange, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
+import { ChevronRight, FileDiff, GitFork, X } from 'lucide-react';
+import type { ChatCheckpointDiff, ChatCheckpointFile, ChatFileChange, ChatInfo, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
 import { chatClient } from '@/chat';
+import { forksAfter } from '@/chat/logic/fork';
+import { useChats, type ChatsById } from '@/state/chats';
+import { splitKey, useEndpointId } from '@/state/keys';
+import { Tooltip } from '@/ui/Tooltip';
 import { fileChanges, formatElapsed, liveOutput, readImagePath, toolStartedAt, toolSummary, unifiedChanges, type FileChange } from '@/chat/logic/tools';
 import { ReadImage } from '@/chat/ui/ImageView';
 import { ROW_GUTTER, toolIcon } from '@/chat/ui/icons';
@@ -168,9 +172,33 @@ export function WorkGroupRow({ tools, summary, expanded, onToggle }: { tools: Ch
     );
 }
 
-export function TurnFoldRow({ turn, label, expanded, onToggle }: { turn: ChatTurnItem; label: string; expanded: boolean; onToggle(): void }) {
+/* The chats this client holds of one machine, which is where the forks it knows of are. */
+function* forkInfosOn(byKey: ChatsById, endpointId: string): Generator<ChatInfo> {
+    for (const [key, state] of Object.entries(byKey)) {
+        if (state.info.forkOf !== undefined && splitKey(key).endpointId === endpointId) {
+            yield state.info;
+        }
+    }
+}
+
+export function TurnFoldRow({
+    chatId,
+    turn,
+    label,
+    expanded,
+    onToggle
+}: {
+    chatId: string;
+    turn: ChatTurnItem;
+    label: string;
+    expanded: boolean;
+    onToggle(): void;
+}) {
+    const endpointId = useEndpointId();
+    // A count, so the selector answers a number and never a new object.
+    const forks = useChats((s) => forksAfter(forkInfosOn(s.byKey, endpointId), chatId, turn.id));
     return (
-        <div className="pb-1.5">
+        <div className="flex items-center gap-2 pb-1.5">
             <button
                 className={clsx(
                     'mb-0.5 flex h-7 items-center gap-2 rounded-md border border-border px-2 text-xs text-text-muted hover:bg-surface-hover',
@@ -183,6 +211,13 @@ export function TurnFoldRow({ turn, label, expanded, onToggle }: { turn: ChatTur
                 </span>
                 {label}
             </button>
+            {forks > 0 && (
+                <Tooltip label={forks === 1 ? 'A fork goes on after this turn' : `${forks} forks go on after this turn`}>
+                    <span className="mb-0.5 flex items-center gap-1 text-xs text-text-faint">
+                        <Icon icon={GitFork} size={12} /> {forks === 1 ? 'Forked' : `Forked ${forks}x`}
+                    </span>
+                </Tooltip>
+            )}
         </div>
     );
 }

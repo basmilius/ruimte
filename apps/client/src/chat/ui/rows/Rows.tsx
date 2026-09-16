@@ -57,7 +57,7 @@ export function Row({ row, chatId, toggleGroup, toggleTurn, toggleSubagent, open
                 />
             );
         case 'turn-fold':
-            return <TurnFoldRow turn={row.turn} label={row.label} expanded={row.expanded} onToggle={() => toggleTurn(row.turn.id)} />;
+            return <TurnFoldRow chatId={chatId} turn={row.turn} label={row.label} expanded={row.expanded} onToggle={() => toggleTurn(row.turn.id)} />;
         case 'changed-files':
             return <ChangedFilesRow chatId={chatId} turnId={row.turnId} tools={row.tools} diff={row.diff} checkpoint={row.checkpoint} />;
         case 'approval':
@@ -65,7 +65,7 @@ export function Row({ row, chatId, toggleGroup, toggleTurn, toggleSubagent, open
         case 'question':
             return <QuestionHistoryRow item={row.item} />;
         case 'note':
-            return <NoteRow level={row.level} text={row.text} />;
+            return <NoteRow level={row.level} text={row.text} from={row.from} />;
         case 'compaction':
             return <CompactionRow preTokens={row.preTokens} />;
         case 'working':

@@ -1,6 +1,18 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatInfo, ChatItem, ProjectView } from '@ruimte/contracts';
-import { branchRefusal, forkOriginIn, forkPayload, forkPointLabel, forkPointOf, forkRefusal, forkShapes, lastSettledTurn, turnIdOfRow } from './fork';
+import {
+    branchRefusal,
+    forksAfter,
+    summaryRefusal,
+    forkOriginIn,
+    forkPayload,
+    forkPointLabel,
+    forkPointOf,
+    forkRefusal,
+    forkShapes,
+    lastSettledTurn,
+    turnIdOfRow
+} from './fork';
 import { deriveTimelineRows } from './timeline';
 
 const info = (patch: Partial<ChatInfo> = {}): ChatInfo => ({
@@ -101,6 +113,24 @@ describe('the shape of a fork', () => {
                 selection: { model: 'gpt-5.5', options: {} }
             }
         );
+    });
+
+    test('a summary waits for the fork to end its turn and needs its original', () => {
+        expect(summaryRefusal({ busy: false, originalPresent: true })).toBeNull();
+        expect(summaryRefusal({ busy: true, originalPresent: true })).toBe('Wait for the turn to end');
+        expect(summaryRefusal({ busy: true, originalPresent: false })).toBe('The original is no longer in this project');
+    });
+
+    test('the forks after a turn are counted from the chats this client knows', () => {
+        const at = { chatId: 'chat-1', turnId: 't1', at: 0 };
+        const infos = [
+            info({ chatId: 'fork-1', forkOf: at }),
+            info({ chatId: 'fork-2', forkOf: at }),
+            info({ chatId: 'fork-3', forkOf: { ...at, turnId: 't2' } }),
+            info()
+        ];
+        expect(forksAfter(infos, 'chat-1', 't1')).toBe(2);
+        expect(forksAfter(infos, 'chat-1', 't3')).toBe(0);
     });
 
     test('a branch has to be named and free', () => {

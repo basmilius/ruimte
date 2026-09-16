@@ -49,6 +49,28 @@ export const forkRefusal = (info: ChatInfo | null, turn: ChatItem | undefined): 
     return null;
 };
 
+/* Why a fork cannot write a summary for its original right now, or null when it can. */
+export const summaryRefusal = (state: { busy: boolean; originalPresent: boolean }): string | null => {
+    if (!state.originalPresent) {
+        return 'The original is no longer in this project';
+    }
+    if (state.busy) {
+        return 'Wait for the turn to end';
+    }
+    return null;
+};
+
+/* How many forks this client knows of that went on after this turn of this chat. */
+export const forksAfter = (infos: Iterable<ChatInfo>, chatId: string, turnId: string): number => {
+    let count = 0;
+    for (const info of infos) {
+        if (info.forkOf?.chatId === chatId && info.forkOf.turnId === turnId) {
+            count += 1;
+        }
+    }
+    return count;
+};
+
 /* The last turn that ended, which is where a fork from the node's menu goes on after. */
 export const lastSettledTurn = (items: Record<string, ChatItem>, order: readonly string[]): string | null =>
     turnsOf(items, order).findLast((turn) => turn.state !== 'running')?.id ?? null;
