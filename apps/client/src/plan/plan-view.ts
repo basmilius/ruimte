@@ -1,5 +1,5 @@
 import type { AgentKind, Plan, PlanItem, PlanSection, PlanStep, PlanStepState, PlanText } from '@ruimte/contracts';
-import { allSteps, isParentStep, planProgress, stepState, type PlanProgress } from '@ruimte/plan';
+import { allItems, allSteps, isParentStep, planProgress, stepState, type PlanProgress } from '@ruimte/plan';
 
 /* Which steps the panel lists; local to this client, never part of the plan. */
 export type PlanFilter = 'all' | 'open' | 'failed';
@@ -94,6 +94,12 @@ export const planRows = (plan: Pick<Plan, 'items'>, options: PlanViewOptions): P
     plan.items.forEach(entry);
     return rows;
 };
+
+/* Every section and parent step, what "Collapse all" folds. */
+export const foldableIds = (plan: Pick<Plan, 'items'>): string[] =>
+    allItems(plan.items)
+        .filter((item) => item.type === 'section' || (item.type === 'step' && isParentStep(item)))
+        .map((item) => item.id);
 
 /* "Plan 6/11": steps with an outcome over all steps, the counter `plan read` uses too. */
 export const planCounter = (plan: Pick<Plan, 'items'>): string => {

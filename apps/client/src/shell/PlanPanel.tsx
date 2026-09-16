@@ -1,22 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, ChevronDown, Copy, LockOpen, MoreHorizontal, Send, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, LockOpen, MoreHorizontal, Send, X } from 'lucide-react';
 import type { Plan } from '@ruimte/contracts';
 import { allSteps, effectiveChecks } from '@ruimte/plan';
 import { forkOriginIn } from '@/chat/logic/fork';
 import { hasOverlayControls } from '@/desktop/bridge';
-import { copyPlanMarkdown, focusChat, planClient, sendResultsToChat } from '@/plan/plan-actions';
+import { collapseAll, copyPlanMarkdown, expandAll, focusChat, planClient, planViewKey, sendResultsToChat, usePlanViewPrefs } from '@/plan/plan-actions';
 import { closePlanPanel, pickPlan, PLAN_DEFAULT_WIDTH, PLAN_MIN_WIDTH } from '@/plan/plan-panel-watch';
 import { PlanList } from '@/plan/PlanList';
-import { resultsText } from '@/plan/plan-view';
+import { resultsText, type PlanFilter } from '@/plan/plan-view';
 import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useDocument } from '@/state/document';
 import { useEndpointId } from '@/state/keys';
 import { useChatPlans } from '@/state/plans';
 import { useUi } from '@/state/ui';
-import { BTN_GROUP, MENU_SEPARATOR } from '@/ui/classes';
+import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
@@ -25,6 +25,12 @@ import { Tooltip } from '@/ui/Tooltip';
 const MIN_GRID_WIDTH = 360;
 // The same number as `.panel-shell` in `styles.css`.
 const TRANSITION_MS = 200;
+
+const FILTERS: { id: PlanFilter; label: string }[] = [
+    { id: 'all', label: 'All steps' },
+    { id: 'open', label: 'Open steps' },
+    { id: 'failed', label: 'Failed steps' }
+];
 
 const hasLockedStep = (plan: Plan): boolean => allSteps(plan.items).some((step) => effectiveChecks(plan, step) === 'agent');
 
@@ -117,6 +123,9 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
     const title = useDocument((s) => forkOriginIn(s.views, chatId)?.title ?? null);
     const index = plans.findIndex((entry) => entry.id === plan.id);
     const results = resultsText(plan);
+    const filter = usePlanViewPrefs((s) => s.filter);
+    const collapseDone = usePlanViewPrefs((s) => s.collapseDone);
+    const planKey = planViewKey(endpointId, chatId, plan.id);
 
     return (
         <header className={clsx('app-drag flex h-12 shrink-0 items-center gap-1 border-b border-border pr-2 pl-3', inset && 'toolbar-overlay-inset')}>
@@ -161,6 +170,39 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
                     <Menu.Portal>
                         <Menu.Positioner className="z-(--z-popup)" side="bottom" sideOffset={6} align="end">
                             <Menu.Popup className="menu-popup min-w-56">
+                                <div className={MENU_LABEL}>Show</div>
+                                <Menu.RadioGroup value={filter} onValueChange={(value: PlanFilter) => usePlanViewPrefs.getState().setFilter(value)}>
+                                    {FILTERS.map((entry) => (
+                                        <Menu.RadioItem key={entry.id} value={entry.id} className="menu-item">
+                                            <span className="grid h-4 w-4 place-items-center">
+                                                <Menu.RadioItemIndicator>
+                                                    <Icon icon={Check} size={14} />
+                                                </Menu.RadioItemIndicator>
+                                            </span>
+                                            {entry.label}
+                                        </Menu.RadioItem>
+                                    ))}
+                                </Menu.RadioGroup>
+                                <Menu.Separator className={MENU_SEPARATOR} />
+                                <Menu.CheckboxItem
+                                    className="menu-item"
+                                    checked={collapseDone}
+                                    onCheckedChange={(checked) => usePlanViewPrefs.getState().setCollapseDone(checked)}
+                                >
+                                    <span className="grid h-4 w-4 place-items-center">
+                                        <Menu.CheckboxItemIndicator>
+                                            <Icon icon={Check} size={14} />
+                                        </Menu.CheckboxItemIndicator>
+                                    </span>
+                                    Collapse done
+                                </Menu.CheckboxItem>
+                                <Menu.Item className="menu-item" onClick={() => expandAll(planKey)}>
+                                    <Icon icon={ChevronsUpDown} size={14} /> Expand all
+                                </Menu.Item>
+                                <Menu.Item className="menu-item" onClick={() => collapseAll(planKey, plan)}>
+                                    <Icon icon={ChevronsDownUp} size={14} /> Collapse all
+                                </Menu.Item>
+                                <Menu.Separator className={MENU_SEPARATOR} />
                                 <Menu.Item className="menu-item" onClick={() => copyPlanMarkdown(plan)}>
                                     <Icon icon={Copy} size={14} /> Copy as Markdown
                                 </Menu.Item>

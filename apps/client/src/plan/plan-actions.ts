@@ -3,10 +3,11 @@ import { isCanvasView, type Plan } from '@ruimte/contracts';
 import { planToMarkdown } from '@ruimte/plan';
 import { offerDraft } from '@/chat/drafts';
 import { PlanClient } from '@/plan/plan-client';
-import { resultsText, type PlanFilter } from '@/plan/plan-view';
+import { foldableIds, resultsText, type PlanFilter } from '@/plan/plan-view';
 import { revealNode, showView } from '@/project/views';
 import { liveCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { endpointKey } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { machineFor } from '@/transport/connections';
 import { copyText } from '@/ui/clipboard';
@@ -21,6 +22,7 @@ interface PlanViewPrefs {
     setFilter(filter: PlanFilter): void;
     setCollapseDone(on: boolean): void;
     toggleCollapsed(planKey: string, itemId: string): void;
+    setCollapsed(planKey: string, itemIds: readonly string[]): void;
 }
 
 const NO_IDS: readonly string[] = [];
@@ -40,8 +42,21 @@ export const usePlanViewPrefs = create<PlanViewPrefs>((set, get) => ({
         const current = get().collapsed[planKey] ?? NO_IDS;
         const next = current.includes(itemId) ? current.filter((id) => id !== itemId) : [...current, itemId];
         set({ collapsed: { ...get().collapsed, [planKey]: next } });
+    },
+    setCollapsed(planKey, itemIds) {
+        set({ collapsed: { ...get().collapsed, [planKey]: itemIds } });
     }
 }));
+
+export const planViewKey = (endpointId: string, chatId: string, planId: string): string => `${endpointKey(endpointId, chatId)}:${planId}`;
+
+export const collapseAll = (planKey: string, plan: Pick<Plan, 'items'>): void => usePlanViewPrefs.getState().setCollapsed(planKey, foldableIds(plan));
+
+/* Collapse done would keep finished groups folded, and "all" has to mean all. */
+export const expandAll = (planKey: string): void => {
+    usePlanViewPrefs.getState().setCollapsed(planKey, NO_IDS);
+    usePlanViewPrefs.getState().setCollapseDone(false);
+};
 
 export const collapsedOf = (collapsed: PlanViewPrefs['collapsed'], planKey: string): readonly string[] => collapsed[planKey] ?? NO_IDS;
 

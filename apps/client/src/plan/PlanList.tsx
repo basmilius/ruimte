@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
@@ -6,7 +6,6 @@ import {
     Check,
     ChevronDown,
     ChevronRight,
-    ChevronsDownUp,
     Circle,
     CircleAlert,
     CircleCheck,
@@ -26,7 +25,7 @@ import {
 import { PLAN_LIMITS, type Plan, type PlanStepState } from '@ruimte/contracts';
 import { effectiveChecks, planProgress, progressText } from '@ruimte/plan';
 import { Markdown } from '@/chat/ui/Markdown';
-import { collapsedOf, planClient, usePlanViewPrefs } from '@/plan/plan-actions';
+import { collapsedOf, planClient, planViewKey, usePlanViewPrefs } from '@/plan/plan-actions';
 import {
     activeStep,
     agentName,
@@ -37,13 +36,11 @@ import {
     stepSetBy,
     TEST_OUTCOMES,
     toggledState,
-    type PlanFilter,
     type PlanRow
 } from '@/plan/plan-view';
 import { chatWorking } from '@/state/agent-work';
 import { useChatRow } from '@/state/chats';
 import { useDocument } from '@/state/document';
-import { endpointKey } from '@/state/keys';
 import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
@@ -71,15 +68,12 @@ const STATE_TONE: Record<PlanStepState, string> = {
     info: 'text-accent'
 };
 
-const FILTERS: { id: PlanFilter; label: string }[] = [
-    { id: 'all', label: 'All' },
-    { id: 'open', label: 'Open' },
-    { id: 'failed', label: 'Failed' }
-];
-
 // Each level of sub-steps moves over by the width of the fold arrow and the mark together.
 const INDENT_PX = 20;
-const ROW_PADDING_PX = 12;
+// With the row's `mx-1` it adds up to the 12px the header's text starts at.
+const ROW_PADDING_PX = 8;
+// A group's row folds on a click anywhere, rounded and lit like a sidebar item.
+const TOGGLE_ROW = 'cursor-default rounded-md outline-none hover:bg-surface-hover focus-visible:ring-1 focus-visible:ring-accent';
 
 const TIME = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
 const DAY_AND_TIME = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -122,7 +116,7 @@ interface PlanListProps {
 export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
     const filter = usePlanViewPrefs((s) => s.filter);
     const collapseDone = usePlanViewPrefs((s) => s.collapseDone);
-    const planKey = `${endpointKey(endpointId, chatId)}:${plan.id}`;
+    const planKey = planViewKey(endpointId, chatId, plan.id);
     const collapsedIds = usePlanViewPrefs((s) => collapsedOf(s.collapsed, planKey));
     const working = useChatRow(chatId, (row) => chatWorking(row));
     const liveProvider = useChatRow(chatId, (row) => row?.info.provider ?? null);
@@ -174,36 +168,6 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
                     <span className="bg-text-faint" style={{ flexGrow: progress.skipped + progress.blocked }} />
                     <span style={{ flexGrow: progress.open + progress.active }} />
                 </div>
-                <div className="mt-1 flex items-center gap-2">
-                    <div className="inline-flex items-center gap-px rounded-lg bg-surface-sunken p-0.5" role="radiogroup" aria-label="Show steps">
-                        {FILTERS.map((entry) => (
-                            <button
-                                key={entry.id}
-                                type="button"
-                                role="radio"
-                                aria-checked={filter === entry.id}
-                                className={clsx(
-                                    'rounded-md px-2 text-xs',
-                                    filter === entry.id ? 'bg-surface text-text shadow-node' : 'text-text-muted hover:text-text'
-                                )}
-                                onClick={() => usePlanViewPrefs.getState().setFilter(entry.id)}
-                            >
-                                {entry.label}
-                            </button>
-                        ))}
-                    </div>
-                    <Tooltip label="Collapse done" name>
-                        <button
-                            type="button"
-                            className="icon-btn ml-auto h-7 w-7"
-                            aria-pressed={collapseDone}
-                            data-active={collapseDone || undefined}
-                            onClick={() => usePlanViewPrefs.getState().setCollapseDone(!collapseDone)}
-                        >
-                            <Icon icon={ChevronsDownUp} size={14} />
-                        </button>
-                    </Tooltip>
-                </div>
             </div>
             <div className="min-h-0 grow overflow-y-auto py-1">
                 {rows.length === 0 && (
@@ -245,33 +209,50 @@ function ActiveRing({ working, agent, size }: { working: boolean; agent: string;
     );
 }
 
-function Caret({ collapsed, onToggle, label }: { collapsed: boolean; onToggle: () => void; label: string }) {
+function Caret({ collapsed }: { collapsed: boolean }) {
     return (
-        <button
-            type="button"
-            aria-label={label}
-            aria-expanded={!collapsed}
-            className="grid h-5 w-4 shrink-0 place-items-center text-text-faint hover:text-text"
-            onClick={onToggle}
-        >
+        <span className="grid h-5 w-4 shrink-0 place-items-center text-text-faint" aria-hidden>
             <Icon icon={collapsed ? ChevronRight : ChevronDown} size={14} />
-        </button>
+        </span>
     );
 }
+
+/*
+ * What makes the row of a section or parent step fold like a button. A click on a control inside
+ * it (a note, a link, a tooltip's trigger) or one that ends a text selection is left alone.
+ */
+const toggleRowProps = (collapsed: boolean, onToggle: () => void) => ({
+    role: 'button',
+    tabIndex: 0,
+    'aria-expanded': !collapsed,
+    onClick: (event: ReactMouseEvent<HTMLElement>): void => {
+        const control = event.target instanceof Element ? event.target.closest('a, button, input, textarea, [role="button"]') : null;
+        if ((control !== null && control !== event.currentTarget) || window.getSelection()?.isCollapsed === false) {
+            return;
+        }
+        onToggle();
+    },
+    onKeyDown: (event: ReactKeyboardEvent<HTMLElement>): void => {
+        if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault();
+            onToggle();
+        }
+    }
+});
 
 function PlanRowView({ row, context }: { row: PlanRow; context: StepContext }) {
     if (row.type === 'section') {
         return (
-            <div className="px-3 pt-3 pb-1">
-                <div className="flex min-w-0 items-center gap-1">
-                    <Caret collapsed={row.collapsed} onToggle={() => context.toggle(row.item.id)} label={row.collapsed ? 'Expand' : 'Collapse'} />
+            <div className="px-2 pt-3 pb-1">
+                <div className={clsx('flex min-w-0 items-center gap-1 px-1', TOGGLE_ROW)} {...toggleRowProps(row.collapsed, () => context.toggle(row.item.id))}>
+                    <Caret collapsed={row.collapsed} />
                     <span className="min-w-0 grow truncate text-sm font-medium text-text select-text">{row.item.title}</span>
                     <span className="shrink-0 text-xs text-text-muted tabular-nums">
                         {row.progress.finished}/{row.progress.total}
                     </span>
                 </div>
                 {row.item.description && !row.collapsed && (
-                    <div className="pl-5 text-text-muted select-text">
+                    <div className="pr-1 pl-6 text-text-muted select-text">
                         <Markdown text={row.item.description} fileLinks={false} />
                     </div>
                 )}
@@ -303,13 +284,17 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
         <ContextMenu.Root>
             <ContextMenu.Trigger
                 render={<div />}
-                className={clsx('flex min-w-0 items-start gap-1 py-1 pr-3', row.state === 'active' && !parent && context.working && 'bg-accent-soft')}
+                className={clsx(
+                    'mx-1 flex min-w-0 items-start gap-1 rounded-md py-1 pr-2',
+                    parent && TOGGLE_ROW,
+                    row.state === 'active' && !parent && context.working && 'bg-accent-soft'
+                )}
                 style={{ paddingLeft: ROW_PADDING_PX + row.depth * INDENT_PX }}
+                {...(parent ? toggleRowProps(row.collapsed, () => context.toggle(step.id)) : {})}
             >
-                <span className="flex h-5 w-4 shrink-0 items-center justify-center">
-                    {parent && <Caret collapsed={row.collapsed} onToggle={() => context.toggle(step.id)} label={row.collapsed ? 'Expand' : 'Collapse'} />}
-                </span>
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+                {/* The glyphs sit 1px lower than the line box centers them, where the eye puts the middle of the title's first line. */}
+                <span className="mt-px flex h-5 w-4 shrink-0 items-center justify-center">{parent && <Caret collapsed={row.collapsed} />}</span>
+                <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center">
                     <StepMark row={row} context={context} locked={locked} setBy={setBy.tooltip} />
                 </span>
                 <div className="min-w-0 grow">
@@ -405,7 +390,7 @@ function StepAside({
     const { agent } = context;
     if (row.progress !== null) {
         return (
-            <span className="flex h-5 shrink-0 items-center gap-1 text-xs text-text-muted tabular-nums">
+            <span className="mt-px flex h-5 shrink-0 items-center gap-1 text-xs text-text-muted tabular-nums">
                 {row.activeBelow && <ActiveRing working={context.working} agent={agent} size={12} />}
                 {row.progress.finished}/{row.progress.total}
             </span>
@@ -415,7 +400,7 @@ function StepAside({
         return null;
     }
     return (
-        <span className="flex h-5 shrink-0 items-center gap-1 text-xs whitespace-nowrap text-text-faint">
+        <span className="mt-px flex h-5 shrink-0 items-center gap-1 text-xs whitespace-nowrap text-text-faint">
             {setBy.text && <span>{setBy.text}</span>}
             {locked && (
                 <Tooltip label={[`Only ${agent} checks this step`, setBy.tooltip].filter(Boolean).join('. ')}>

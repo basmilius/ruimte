@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { Plan } from '@ruimte/contracts';
-import { hasFailedStep, planCounter, planRows, resultsText, stepSetBy, toggledState, type PlanViewOptions } from '@/plan/plan-view';
+import { foldableIds, hasFailedStep, planCounter, planRows, resultsText, stepSetBy, toggledState, type PlanViewOptions } from '@/plan/plan-view';
 
 const plan: Plan = {
     id: 'plan-1',
@@ -80,6 +80,10 @@ describe('the rows of a plan', () => {
 });
 
 describe('what the plan says in a line', () => {
+    test('collapse all folds every section and parent step, never a leaf', () => {
+        expect(foldableIds(plan)).toEqual(['split', 'full-grid', 'closing']);
+    });
+
     test('the counter counts steps with an outcome', () => {
         expect(planCounter(plan)).toBe('5/7');
         expect(hasFailedStep(plan)).toBe(true);
