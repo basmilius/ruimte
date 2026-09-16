@@ -254,3 +254,14 @@ describe('thinking rows', () => {
         expect(turnLabel({ id: 't2', kind: 'turn', createdAt: 1000, turnId: 't2', state: 'done', endedAt: 9000, costUsd: 0 })).toBe('Worked for 8s');
     });
 });
+
+test("a subagent's handback call reads as its report, and one without a message stays a tool call", () => {
+    const items: ChatItem[] = [
+        tool('b1', 'Bash', { command: 'git diff' }, 'done', 'x'),
+        tool('h1', 'SubagentHandback', { message: '## Review\n\nAll good.' }, 'done', 'x'),
+        tool('h2', 'SubagentHandback', {}, 'done', 'x')
+    ].map((item) => ({ ...item, turnId: null }));
+    const rows = deriveTimelineRows(items, options);
+    expect(rows.map((row) => row.kind)).toEqual(['work', 'report', 'work']);
+    expect(rows[1]).toEqual({ kind: 'report', id: 'h1', text: '## Review\n\nAll good.' });
+});

@@ -11,6 +11,7 @@ import type {
     ChatUserItem
 } from '@ruimte/contracts';
 import { abortedByMachine } from '@ruimte/contracts';
+import { handbackReportOf } from './handback';
 import { hasFileChanges, isFileChange } from './tools';
 
 /*
@@ -22,6 +23,8 @@ export type TimelineRow =
     | { kind: 'user'; id: string; item: ChatUserItem }
     | { kind: 'turn-start'; id: string; turn: ChatTurnItem; label: string }
     | { kind: 'assistant'; id: string; item: ChatAssistantItem }
+    // A subagent's `SubagentHandback` call, drawn as the report it carries rather than as a tool call.
+    | { kind: 'report'; id: string; text: string }
     | { kind: 'thinking'; id: string; item: ChatThinkingItem }
     | { kind: 'work'; id: string; tool: ChatToolItem }
     | { kind: 'work-group'; id: string; tools: ChatToolItem[]; summary: string; expanded: boolean }
@@ -166,8 +169,14 @@ const rowsForItems = (items: ChatItem[], options: TimelineOptions, children: Map
         if (parentOf(item) !== null) {
             continue;
         }
-        if (item.kind === 'tool') {
+        const report = handbackReportOf(item);
+        if (item.kind === 'tool' && report === null) {
             tools.push(item);
+            continue;
+        }
+        if (report !== null) {
+            flushTools(tools, rows, options);
+            rows.push({ kind: 'report', id: item.id, text: report });
             continue;
         }
         flushTools(tools, rows, options);

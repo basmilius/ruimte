@@ -33,6 +33,8 @@ export const messageTextOf = (row: TimelineRow): string | null => {
             return row.item.text || null;
         case 'assistant':
             return stripMarkdown(row.item.text) || null;
+        case 'report':
+            return stripMarkdown(row.text) || null;
         case 'thinking':
             return row.item.text || null;
         case 'work':
@@ -52,4 +54,5 @@ export const messageTextOf = (row: TimelineRow): string | null => {
 };
 
 /* The markdown an answer was written in; every other row has none to copy. */
-export const markdownOf = (row: TimelineRow): string | null => (row.kind === 'assistant' ? row.item.text || null : null);
+export const markdownOf = (row: TimelineRow): string | null =>
+    row.kind === 'assistant' ? row.item.text || null : row.kind === 'report' ? row.text || null : null;

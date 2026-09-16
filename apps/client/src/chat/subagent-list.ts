@@ -1,5 +1,6 @@
 import { CircleCheck, CircleSlash, CircleX, LoaderCircle, type LucideIcon } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem, Task } from '@ruimte/contracts';
+import { isHandbackNotice, lastHandbackReport } from '@/chat/logic/handback';
 import { stripMarkdown } from '@/chat/logic/timeline-copy';
 import { toolSummary } from '@/chat/logic/tools';
 import { canOpenSubagent } from '@/chat/subagent-view';
@@ -106,7 +107,11 @@ const threadHasLatest = (item: ChatSubagentItem, work: readonly ChatItem[]): boo
  * in another node's thread), a Codex agent, and a Claude agent past what the thread keeps.
  */
 export const needsTail = (item: ChatSubagentItem, work: readonly ChatItem[], machineRefused: boolean): boolean =>
-    item.status === 'running' && !threadHasLatest(item, work) && canOpenSubagent(item, machineRefused);
+    (item.status === 'running' || reportIsNotice(item, work)) && !threadHasLatest(item, work) && canOpenSubagent(item, machineRefused);
+
+/* A settled agent whose only word is the notice that its report went elsewhere, with no handed-back report to show. */
+const reportIsNotice = (item: ChatSubagentItem, work: readonly ChatItem[]): boolean =>
+    lastHandbackReport(work) === null && isHandbackNotice(item.result ?? item.summary);
 
 export const previewFor = (item: ChatSubagentItem, work: readonly ChatItem[], tail: readonly ChatItem[] | null): SubagentPreview | null => {
     const fromThread = threadHasLatest(item, work) ? latestPreview(work) : null;
@@ -120,12 +125,20 @@ export const previewFor = (item: ChatSubagentItem, work: readonly ChatItem[], ta
         }
         return item.summary ? { kind: 'text', text: oneLine(item.summary) } : null;
     }
+    // A report handed back with `SubagentHandback` is the real one; the result then only says where it went.
+    const handedBack = lastHandbackReport(work) ?? (tail === null ? null : lastHandbackReport(tail));
+    if (handedBack !== null) {
+        return { kind: 'text', text: prose(handedBack) };
+    }
     // Whatever it wrote last before it settled is the report the row keeps.
-    const report = prose(item.result ?? '');
+    const notice = isHandbackNotice(item.result ?? item.summary);
+    const report = notice ? '' : prose(item.result ?? '');
     if (report !== '') {
         return { kind: 'text', text: report };
     }
-    return fromThread ?? (item.summary ? { kind: 'text', text: oneLine(item.summary) } : null);
+    // Only a notice sends the entry to the conversation's newest end for its last real step.
+    const latest = fromThread ?? (notice && tail !== null ? latestPreview(tail) : null);
+    return latest ?? (item.summary && !isHandbackNotice(item.summary) ? { kind: 'text', text: oneLine(item.summary) } : null);
 };
 
 /*

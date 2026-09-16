@@ -19,7 +19,7 @@ import { Icon } from '@/ui/Icon';
 const FOLLOW_THRESHOLD_PX = 40;
 
 // The same rhythm the thread has: a block of prose next to a run of tool lines gets air between them.
-const BLOCK_KINDS = new Set<TimelineRow['kind']>(['assistant', 'thinking', 'compaction']);
+const BLOCK_KINDS = new Set<TimelineRow['kind']>(['assistant', 'report', 'thinking', 'compaction']);
 
 const NO_TURNS = new Set<string>();
 

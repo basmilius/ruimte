@@ -108,6 +108,19 @@ function MessageHeading({ children }: { children: ReactNode }) {
     return <h3 className="sr-only select-none">{children}</h3>;
 }
 
+/* The report a subagent handed back, drawn as a reply under a label of its own. */
+export function ReportRow({ text }: { text: string }) {
+    return (
+        <div className="-mx-1 px-1 pb-2">
+            <MessageHeading>Report</MessageHeading>
+            <div aria-hidden className="mb-1 text-xs font-medium text-text-faint select-none">
+                Report
+            </div>
+            <ReplyMarkdown text={text} streaming={false} />
+        </div>
+    );
+}
+
 /* The heading of a reply, named after the agent the chat runs. */
 function ReplyHeading({ chatId }: { chatId: string }) {
     const kind = useChatRow(chatId, (row) => row?.info.provider);

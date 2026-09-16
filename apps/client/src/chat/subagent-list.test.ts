@@ -170,6 +170,31 @@ describe('subagent list', () => {
         expect(previewFor(subagent('a', { status: 'failed', summary: 'Stopped' }), [], tail)).toEqual({ kind: 'text', text: 'Stopped' });
         expect(previewFor(subagent('a', { status: 'done' }), [], tail)).toBeNull();
     });
+
+    test("a report handed back with SubagentHandback is shown instead of Claude Code's notice that it went elsewhere", () => {
+        const notice =
+            'This agent\'s report was delivered to you as a message from "a6bd7450917db5fe0" (its SubagentHandback call). Read it there; it is not repeated here.';
+        const handback = tool('2', 'SubagentHandback', { message: '## Review\n\nBoth fixes **hold**.' }, 'toolu_a');
+        const after = reply('3', 'The report is above.', 'toolu_a');
+        const settled = subagent('a', {
+            status: 'done',
+            result: notice,
+            summary: 'This agent\'s report was delivered to you as a message from "a6bd7450917db5fe0"..'
+        });
+        expect(previewFor(settled, [tool('1', 'Read', { file_path: '/a.ts' }, 'toolu_a'), handback, after], null)).toEqual({
+            kind: 'text',
+            text: 'Review Both fixes hold.'
+        });
+        // Read from the conversation when the thread kept too little of it.
+        expect(needsTail(settled, [], false)).toBe(true);
+        expect(previewFor(settled, [], [handback, after])).toEqual({ kind: 'text', text: 'Review Both fixes hold.' });
+        // Without a handback the notice is skipped for the last real step, and says nothing on its own.
+        expect(previewFor(settled, [after], null)).toEqual({ kind: 'text', text: 'The report is above.' });
+        expect(previewFor(settled, [], [tool('9', 'Bash', { command: 'ls' })])).toEqual({ kind: 'tool', name: 'Bash', detail: 'ls' });
+        expect(previewFor(settled, [], null)).toBeNull();
+        // An ordinary report still needs nothing more.
+        expect(needsTail(subagent('a', { status: 'done', result: 'Done.' }), [], false)).toBe(false);
+    });
 });
 
 describe('stopping an active entry', () => {

@@ -2375,6 +2375,12 @@ code will not say on its own.
   kept: a look into a subagent is a moment, not a place. The side panel it started as went, because
   it put the conversation beside a chat other than the one it belonged to. It grows while it is open (a counted `fs.watch` for Claude,
   a poll for Codex) for as long as a client holds it, and the event says only that there is more.
+- A Claude subagent that hands its report back with `SubagentHandback` (the report is the call's
+  `input.message`) leaves only a fixed notice as its result ("This agent's report was delivered to
+  you as a message from ..."). The list previews the handed-back report instead, or the last real
+  step when there is none, and never the notice (`chat/logic/handback.ts`, matched on its opening
+  with the quoted id only); the conversation draws that call as a report under a "Report" label,
+  and as an ordinary tool row when the message is missing or empty. All of it is client side.
 - An active entry of that list, and the bar while its conversation is shown, carries a Stop
   (`chat.stopSubagent`, `chat/subagent-list.ts` decides what it offers). A task stops its node the
   way a stop of its parent would (`EndChildrenWiring.stopNode`): the open task is cancelled first so

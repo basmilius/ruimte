@@ -1,6 +1,16 @@
 import type { ChatSubagentItem } from '@ruimte/contracts';
 import type { TimelineRow } from '@/chat/logic/timeline';
-import { AgentTurnRow, ApprovalHistoryRow, AssistantRow, CompactionRow, NoteRow, QuestionHistoryRow, ThinkingRow, UserRow } from '@/chat/ui/rows/MessageRows';
+import {
+    AgentTurnRow,
+    ApprovalHistoryRow,
+    AssistantRow,
+    CompactionRow,
+    NoteRow,
+    QuestionHistoryRow,
+    ReportRow,
+    ThinkingRow,
+    UserRow
+} from '@/chat/ui/rows/MessageRows';
 import { SubagentRow } from '@/chat/ui/rows/SubagentRow';
 import { ChangedFilesRow, TurnFoldRow, WorkGroupRow, WorkLiveRow, WorkRow, WorkingRow } from '@/chat/ui/rows/WorkRows';
 
@@ -26,6 +36,8 @@ export function Row({ row, chatId, toggleGroup, toggleTurn, toggleSubagent, open
         }
         case 'assistant':
             return <AssistantRow chatId={chatId} item={row.item} />;
+        case 'report':
+            return <ReportRow text={row.text} />;
         case 'thinking':
             return <ThinkingRow chatId={chatId} item={row.item} />;
         case 'work':

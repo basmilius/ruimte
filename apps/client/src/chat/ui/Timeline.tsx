@@ -27,7 +27,7 @@ const COMPOSER_CLEARANCE_PX = 168;
  * against each other; prose and cards are blocks and need room around them. Where the two meet,
  * the block gap marks the seam, so an answer never looks glued to the call above it.
  */
-const BLOCK_KINDS = new Set<TimelineRow['kind']>(['assistant', 'thinking', 'changed-files', 'compaction']);
+const BLOCK_KINDS = new Set<TimelineRow['kind']>(['assistant', 'report', 'thinking', 'changed-files', 'compaction']);
 
 const isBlock = (row: TimelineRow): boolean => BLOCK_KINDS.has(row.kind);
 
