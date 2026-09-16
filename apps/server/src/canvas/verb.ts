@@ -86,9 +86,9 @@ export interface WorktreeHost {
     diff(path: string, base: string | undefined): Promise<GitDiffResult>;
     /*
      * Merges a worktree under the limits an agent is held to: its loose work committed first, only
-     * into a clean checkout, a conflict taken back and refused, and no agent in a turn stopped.
+     * into a clean checkout, a conflict taken back and refused, no agent stopped and nothing removed.
      */
-    merge(payload: Omit<WorktreeMergePayload, 'actionId' | 'stopAgent' | 'commitFirst' | 'into'>): Promise<WorktreeMergeResult>;
+    merge(payload: Omit<WorktreeMergePayload, 'actionId' | 'stopAgent' | 'commitFirst' | 'into' | 'remove'>): Promise<WorktreeMergeResult>;
 }
 
 export interface TaskHost {

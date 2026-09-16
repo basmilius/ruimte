@@ -56,7 +56,8 @@ larger ones becomes a GitHub issue when it starts.
     phases: the register and safe removal, a tab of everything a worktree holds against the branch it
     came from, merging from the git panel, a node's menu and a group's menu (squash by default, loose
     work committed first, a conflict left for the panel with Abort), the `worktree` verb (`list`,
-    `diff`, and `merge` for an agent's own children only), shared paths linked into new worktrees, and
+    `diff`, and `merge` for an agent's own children only, which leaves the worktree and branch for a
+    person to remove), shared paths linked into new worktrees, and
     removing a clean worktree from the delete question of its node. Still open from the design: the
     iOS app shows none of it, and a merge into a branch checked out nowhere is refused rather than
     offered as a ref-only merge.

@@ -13,7 +13,6 @@ export const worktreeHost = (worktrees: Worktrees, merge: WorktreeMerge): Worktr
     merge: (payload) =>
         merge.merge({ ...payload, actionId: `verb-merge-${++merges}`, commitFirst: true }, () => undefined, {
             cleanTarget: true,
-            abortOnConflict: true,
-            stopIdle: true
+            abortOnConflict: true
         })
 });

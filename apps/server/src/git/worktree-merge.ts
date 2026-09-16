@@ -47,8 +47,6 @@ export interface MergeLimits {
     cleanTarget?: boolean;
     /* Takes a conflicting merge back and refuses, instead of leaving it for a person. */
     abortOnConflict?: boolean;
-    /* Before removing, stops an agent that is open in the worktree but not in a turn. */
-    stopIdle?: boolean;
 }
 
 const exists = (path: string): Promise<boolean> =>
@@ -299,11 +297,6 @@ export class WorktreeMerge {
 
         let removal: Pick<WorktreeMergeResult, 'removed' | 'branchDeleted' | 'kept'> = {};
         if (payload.remove === true) {
-            if (limits.stopIdle === true) {
-                for (const agent of this.agents.in(entry.path, record?.nodeId).filter((candidate) => candidate.live && !candidate.working)) {
-                    await this.agents.stop(agent.nodeId);
-                }
-            }
             const still = this.agents.in(entry.path, record?.nodeId).filter((agent) => agent.live);
             if (still.length > 0) {
                 removal = { removed: false, kept: `${plural(still.length, 'agent still runs', 'agents still run')} in it.` };

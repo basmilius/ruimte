@@ -158,27 +158,26 @@ const diffSub = defineSubVerb('worktree', {
 
 const mergeSub = defineSubVerb('worktree', {
     name: 'merge',
-    usage: '<branch> [--squash | --rebase] [--message M] [--keep]',
-    summary: 'Merges the worktree of an agent you opened into the branch it was made from, and removes it once merged',
+    usage: '<branch> [--squash | --rebase] [--message M]',
+    summary: 'Merges the worktree of an agent you opened into the branch it was made from; the worktree and its branch stay',
     detail: [
         'argument\t<branch>\trequired\tThe branch of the worktree, from ruimte-context worktree list',
         'flag\t--squash\tno value\tOne commit on the target with the message; without a strategy flag the merge writes a merge commit',
         'flag\t--rebase\tno value\tThe commits put on top of the target and the target fast-forwarded',
         'flag\t--message M\toptional\tThe message of the commit made of uncommitted files, and of a squash; without it the title of the node',
-        'flag\t--keep\tno value\tLeaves the worktree and its branch after the merge',
-        'prints\tmerged\tbranch\tinto\tstrategy\tthen summary and a line saying whether the worktree was removed or kept and why',
+        'prints\tmerged\tbranch\tinto\tstrategy\tthen summary, then kept with who removes the worktree',
         'rule\tOnly a worktree made for an agent you opened, or one opened by an agent you opened',
         'rule\tOnly into a checkout without uncommitted changes to tracked files: the merge lands in a folder a person works in',
         'rule\tA conflict is taken back at once and refused with the files; resolving it is for a person, or for the agent again in its worktree',
-        'rule\tAn agent still in a turn in the worktree is refused, never stopped; one that finished is stopped when the worktree goes',
+        'rule\tAn agent still in a turn in the worktree is refused; no agent is ever stopped by a merge',
         'rule\tUncommitted and new files in the worktree are committed first, so the merge never takes half of the work',
-        'never\tRemoving a worktree with work in it, which only a person does'
+        'never\tRemoving the worktree or its branch, merged or not: both stay until a person removes them'
     ],
     positionals: z.tuple([z.string().min(1, 'worktree merge needs the branch of a worktree')], {
         error: (issue) => (issue.code === 'too_big' ? 'worktree merge takes one branch and nothing else' : 'worktree merge needs the branch of a worktree')
     }),
     flags: z.object({ message: z.string().trim().min(1, '--message needs the text of the message').optional() }),
-    switches: ['squash', 'rebase', 'keep'],
+    switches: ['squash', 'rebase'],
     async run({ positionals: [branch], flags, switches }, call) {
         if (switches.has('squash') && switches.has('rebase')) {
             throw new VerbRefusal('two-strategies', 'worktree merge takes --squash or --rebase, not both');
@@ -200,13 +199,12 @@ const mergeSub = defineSubVerb('worktree', {
                 repo: folder,
                 path: worktree.path,
                 strategy,
-                subject: flags.message ?? `${title}: work of the agent`,
-                ...(switches.has('keep') ? {} : { remove: true })
+                subject: flags.message ?? `${title}: work of the agent`
             });
             return [
                 `merged\t${field(branch)}\t${field(result.into ?? '-')}\t${strategy}`,
                 `summary\t${field(result.summary)}`,
-                result.removed === true ? 'removed\tthe worktree and its branch' : `kept\t${field(result.kept ?? 'asked with --keep')}`
+                'kept\tthe worktree and its branch stay until a person removes them'
             ];
         } catch (e) {
             if (e instanceof GitError) {
@@ -222,7 +220,7 @@ export const worktreeVerb = defineVerbGroup({
     summary: 'Reads the worktrees of the repository and what each changed, and merges the ones of agents you opened',
     detail: [
         'worktrees\tagent --worktree and team --worktree give each agent a worktree of its own; these are the words to see and bring back their work',
-        'never\tNothing removes a worktree that holds work on its own; a person removes those from the git panel'
+        'never\tNothing removes a worktree on its own, also not after a merge; a person removes it from the git panel or when deleting its node'
     ],
     subs: [listSub, diffSub, mergeSub]
 });

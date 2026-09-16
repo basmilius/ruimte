@@ -107,16 +107,18 @@ test('a lead lists the worktrees of its team with their nodes and counts, and re
     expect(diff).toEqual(['+from the lexer']);
 });
 
-test('a lead merges the worktree of its child into main, and the worktree goes once merged', async () => {
-    await team('lexer.txt from the lexer', 'parser.txt from the parser');
+test('a lead merges the worktree of its child into main, and the worktree, its branch and the child stay', async () => {
+    const { lexer } = await team('lexer.txt from the lexer', 'parser.txt from the parser');
 
     const lines = await runVerb(daemon, 'chat-lead', 'worktree', ['merge', 'lexer', '--squash']);
 
     expect(lines[0]).toBe('merged\tlexer\tmain\tsquash');
-    expect(lines[2]).toBe('removed\tthe worktree and its branch');
+    expect(lines[2]).toBe('kept\tthe worktree and its branch stay until a person removes them');
     expect(await readFile(join(folder, 'lexer.txt'), 'utf8')).toBe('from the lexer\n');
     expect((await gitIn(folder, ['log', '-1', '--format=%s'])).trim()).toBe('Lexer: work of the agent');
-    expect((await runVerb(daemon, 'chat-lead', 'worktree', ['list'])).map((line) => line.split('\t')[0])).toEqual(['parser']);
+    expect((await runVerb(daemon, 'chat-lead', 'worktree', ['list'])).map((line) => line.split('\t')[0])).toEqual(['lexer', 'parser']);
+    expect((await gitIn(folder, ['branch', '--list', 'lexer'])).trim()).not.toBe('');
+    expect(daemon.chats.get(lexer)?.info.running).toBe(true);
 });
 
 test('a node that is not an opener of the worktree gets not-yours, and nothing is merged', async () => {
@@ -137,7 +139,7 @@ test('a conflict is taken back and refused, leaving the target clean', async () 
     expect(refused[0]).toStartWith('refused\tmerge-conflict\tMerging parser into main conflicts in 1 file: shared.txt.');
     expect((await gitIn(folder, ['status', '--porcelain', '--untracked-files=no'])).trim()).toBe('');
     expect(await readFile(join(folder, 'shared.txt'), 'utf8')).toBe('from the lexer\n');
-    expect((await runVerb(daemon, 'chat-lead', 'worktree', ['list'])).map((line) => line.split('\t')[0])).toEqual(['parser']);
+    expect((await runVerb(daemon, 'chat-lead', 'worktree', ['list'])).map((line) => line.split('\t')[0])).toEqual(['lexer', 'parser']);
 });
 
 test('a target checkout with uncommitted files of its own is refused', async () => {
