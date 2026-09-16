@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { GitFork } from 'lucide-react';
-import { CHAT_FORK_TITLE_MAX } from '@ruimte/contracts';
-import { forkOriginIn, forkPayload, forkPointLabel, forkPointOf, forkRefusal, forkShapes, type ForkShape } from '@/chat/logic/fork';
+import { CHAT_FORK_TITLE_MAX, type ChatForkInfoResult } from '@ruimte/contracts';
+import { branchRefusal, forkOriginIn, forkPayload, forkPointLabel, forkPointOf, forkRefusal, forkShapes, type ForkShape } from '@/chat/logic/fork';
+import { Toggle } from '@/shell/settings/controls';
 import { showViewWhenItLands } from '@/project/views';
 import { canvasOfNode, revealWhenItLands } from '@/state/canvas';
 import { useChatRow } from '@/state/chats';
@@ -65,10 +66,33 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
     const [shape, setShape] = useState<ForkShape>(shapes[0]!);
     const [busy, setBusy] = useState(false);
     const [failure, setFailure] = useState<string | null>(null);
+    // Null while the machine is asked; a machine that cannot say offers no worktree.
+    const [folder, setFolder] = useState<ChatForkInfoResult | null>(null);
+    const [inWorktree, setInWorktree] = useState(true);
+    const [branch, setBranch] = useState<string | null>(null);
+    const [filesAfterTurn, setFilesAfterTurn] = useState(true);
+
+    useEffect(() => {
+        let current = true;
+        transport
+            .request('chat.forkInfo', { chatId, turnId })
+            .catch(() => ({ repository: false, branches: [], branch: null, filesAfterTurn: false }))
+            .then((answer) => {
+                if (current) {
+                    setFolder(answer);
+                }
+            });
+        return () => {
+            current = false;
+        };
+    }, [transport, chatId, turnId]);
 
     const point = items && order ? forkPointOf(items, order, turnId) : null;
     const refusal = forkRefusal(info, items?.[turnId]);
-    const ready = refusal === null && point !== null && title.trim() !== '';
+    const worktree = folder?.repository === true && inWorktree;
+    const branchName = branch ?? folder?.branch ?? '';
+    const branchProblem = worktree ? branchRefusal(branchName, folder.branches) : null;
+    const ready = refusal === null && point !== null && title.trim() !== '' && folder !== null && branchProblem === null;
 
     const submit = async (): Promise<void> => {
         if (!ready || busy) {
@@ -77,7 +101,16 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
         setBusy(true);
         setFailure(null);
         try {
-            const result = await transport.request('chat.fork', forkPayload({ chatId, turnId, title: title.trim(), shape }));
+            const result = await transport.request(
+                'chat.fork',
+                forkPayload({
+                    chatId,
+                    turnId,
+                    title: title.trim(),
+                    shape,
+                    worktree: worktree ? { branch: branchName.trim(), filesAfterTurn: filesAfterTurn && folder.filesAfterTurn } : null
+                })
+            );
             if (shape === 'view') {
                 showViewWhenItLands(result.viewId);
             } else {
@@ -99,9 +132,6 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
                     ? `A new chat view goes on from there with the same CLI, right after ${origin === 'view' ? 'the original' : 'its canvas'} in the sidebar. Nothing is sent until you write the first message.`
                     : 'A new chat node goes on from there with the same CLI, beside the original and with a line from it. Nothing is sent until you write the first message.'}
             </p>
-            {point !== null && !point.last && (
-                <p className="mt-2 text-sm text-text-muted">The files stay as they are now; the agent is told the folder is newer than this turn.</p>
-            )}
             <label className="mt-3 block text-xs text-text-muted" htmlFor="fork-title">
                 Title
             </label>
@@ -132,6 +162,18 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
                     />
                 </div>
             )}
+            <ForkFolder
+                folder={folder}
+                last={point?.last ?? true}
+                inWorktree={inWorktree}
+                onInWorktree={setInWorktree}
+                branch={branchName}
+                onBranch={setBranch}
+                branchProblem={branchProblem}
+                filesAfterTurn={filesAfterTurn}
+                onFilesAfterTurn={setFilesAfterTurn}
+                onSubmit={() => void submit()}
+            />
             {refusal !== null && <p className="mt-2 text-sm text-text-muted">{refusal}.</p>}
             {failure && <p className="mt-2 text-sm text-status-error">{failure}</p>}
             <div className="mt-4 flex items-center justify-end gap-2">
@@ -140,6 +182,84 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
                     {busy ? 'Forking...' : 'Fork'}
                 </Button>
             </div>
+        </>
+    );
+}
+
+interface ForkFolderProps {
+    folder: ChatForkInfoResult | null;
+    last: boolean;
+    inWorktree: boolean;
+    onInWorktree(inWorktree: boolean): void;
+    branch: string;
+    onBranch(branch: string): void;
+    branchProblem: string | null;
+    filesAfterTurn: boolean;
+    onFilesAfterTurn(filesAfterTurn: boolean): void;
+    onSubmit(): void;
+}
+
+/*
+ * Where the fork works: a worktree of its own (the default in a repository) whose files can start
+ * from where the turn left them, or the original's folder, where nothing is put back.
+ */
+function ForkFolder({ folder, last, inWorktree, onInWorktree, branch, onBranch, branchProblem, filesAfterTurn, onFilesAfterTurn, onSubmit }: ForkFolderProps) {
+    if (folder === null) {
+        return <p className="mt-3 text-sm text-text-muted">Looking at the folder...</p>;
+    }
+    const sharedNote = last ? null : 'The files stay as they are now; the agent is told the folder is newer than this turn.';
+    if (!folder.repository) {
+        return (
+            <p className="mt-3 text-sm text-text-muted">
+                This folder is not in a git repository; the fork works in the same folder.{sharedNote === null ? '' : ` ${sharedNote}`}
+            </p>
+        );
+    }
+    return (
+        <>
+            <div className="mt-3 flex items-center justify-between gap-3">
+                <span className="text-sm text-text">Work in a git worktree</span>
+                <Toggle label="Work in a git worktree" checked={inWorktree} onChange={onInWorktree} />
+            </div>
+            {inWorktree ? (
+                <>
+                    <label className="mt-2 block text-xs text-text-muted" htmlFor="fork-branch">
+                        Branch
+                    </label>
+                    <input
+                        id="fork-branch"
+                        className="field mt-1 font-mono text-code"
+                        value={branch}
+                        spellCheck={false}
+                        onChange={(e) => onBranch(e.target.value)}
+                        onKeyDown={(e) => {
+                            e.stopPropagation();
+                            if (e.key === 'Enter') {
+                                onSubmit();
+                            }
+                        }}
+                    />
+                    {branchProblem !== null && <p className="mt-1 text-xs text-status-error">{branchProblem}</p>}
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                        <span className="text-sm text-text">{last ? 'Take the uncommitted files along' : 'Undo the work after this turn'}</span>
+                        <Toggle
+                            label={last ? 'Take the uncommitted files along' : 'Undo the work after this turn'}
+                            checked={filesAfterTurn && folder.filesAfterTurn}
+                            disabled={!folder.filesAfterTurn}
+                            onChange={onFilesAfterTurn}
+                        />
+                    </div>
+                    <p className="mt-1 text-xs text-text-muted">
+                        {!folder.filesAfterTurn
+                            ? 'The files of this turn are no longer in the repository, so the worktree starts from HEAD.'
+                            : filesAfterTurn
+                              ? 'The worktree starts from the files as they were after this turn; the original keeps its own.'
+                              : 'The worktree starts from HEAD, without uncommitted work.'}
+                    </p>
+                </>
+            ) : (
+                sharedNote !== null && <p className="mt-2 text-sm text-text-muted">{sharedNote}</p>
+            )}
         </>
     );
 }

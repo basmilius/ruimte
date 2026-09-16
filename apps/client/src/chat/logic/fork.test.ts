@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatInfo, ChatItem, ProjectView } from '@ruimte/contracts';
-import { forkOriginIn, forkPayload, forkPointLabel, forkPointOf, forkRefusal, forkShapes, lastSettledTurn, turnIdOfRow } from './fork';
+import { branchRefusal, forkOriginIn, forkPayload, forkPointLabel, forkPointOf, forkRefusal, forkShapes, lastSettledTurn, turnIdOfRow } from './fork';
 import { deriveTimelineRows } from './timeline';
 
 const info = (patch: Partial<ChatInfo> = {}): ChatInfo => ({
@@ -76,6 +76,22 @@ describe('the shape of a fork', () => {
         const base = { chatId: 'chat-1', turnId: 't1', title: 'Lexer (fork)' };
         expect(forkPayload({ ...base, shape: 'node' })).toEqual(base);
         expect(forkPayload({ ...base, shape: 'view' })).toEqual({ ...base, asView: true });
+        expect(forkPayload({ ...base, shape: 'node', worktree: { branch: 'lexer-fork', filesAfterTurn: true } })).toEqual({
+            ...base,
+            worktree: { branch: 'lexer-fork' },
+            filesAfterTurn: true
+        });
+        expect(forkPayload({ ...base, shape: 'node', worktree: { branch: 'lexer-fork', filesAfterTurn: false } })).toEqual({
+            ...base,
+            worktree: { branch: 'lexer-fork' }
+        });
+        expect(forkPayload({ ...base, shape: 'node', worktree: null })).toEqual(base);
+    });
+
+    test('a branch has to be named and free', () => {
+        expect(branchRefusal(' ', ['main'])).toBe('Name the branch');
+        expect(branchRefusal('main ', ['main'])).toBe('A branch with this name exists already');
+        expect(branchRefusal('lexer-fork', ['main'])).toBeNull();
     });
 
     test('the original is found as a chat view or a chat node on any canvas, and nowhere once it is gone', () => {

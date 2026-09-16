@@ -102,12 +102,37 @@ export type ForkShape = 'node' | 'view';
 /* What the dialog offers, first the default: a view forks into a view, and a node into a node or, when asked, a view. */
 export const forkShapes = (origin: ForkShape): ForkShape[] => (origin === 'view' ? ['view'] : ['node', 'view']);
 
-export const forkPayload = (input: { chatId: string; turnId: string; title: string; shape: ForkShape }): ChatForkPayload => ({
+/* A worktree the fork works in, on this branch, with or without the files as they were after the turn. */
+export interface ForkWorktreeChoice {
+    branch: string;
+    filesAfterTurn: boolean;
+}
+
+export const forkPayload = (input: {
+    chatId: string;
+    turnId: string;
+    title: string;
+    shape: ForkShape;
+    worktree?: ForkWorktreeChoice | null;
+}): ChatForkPayload => ({
     chatId: input.chatId,
     turnId: input.turnId,
     title: input.title,
-    ...(input.shape === 'view' ? { asView: true } : {})
+    ...(input.shape === 'view' ? { asView: true } : {}),
+    ...(input.worktree ? { worktree: { branch: input.worktree.branch }, ...(input.worktree.filesAfterTurn ? { filesAfterTurn: true } : {}) } : {})
 });
+
+/* Why a branch cannot be the fork's, or null when it can. */
+export const branchRefusal = (branch: string, taken: readonly string[]): string | null => {
+    const name = branch.trim();
+    if (name === '') {
+        return 'Name the branch';
+    }
+    if (taken.includes(name)) {
+        return 'A branch with this name exists already';
+    }
+    return null;
+};
 
 /* Where a chat stands in the project: a node on a canvas or a view of its own, under the name it goes by. */
 export interface ForkOrigin {
