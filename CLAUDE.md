@@ -47,6 +47,7 @@ One WebSocket (or the same frames over a WebRTC DataChannel), JSON frames valida
 - Tasks (`apps/server/src/tasks`) settle on the child's result and wake the parent through the outbox, triggered by chat observers, never a clock. The tasks of one `team --task` call (`batchId`) wake it once, when all of them settled.
 - A child agent never gets a wider permission mode than its parent (`apps/server/src/canvas/mode.ts`); the ceiling rides on every `start-agent` entry. A `--worktree` agent gets its own worktree under `$RUIMTE_HOME/worktrees`, never removed automatically.
 - Stopping or deleting a node ends its descendants through an `end-children` entry (`apps/server/src/outbox/end-children.ts`); their threads and screens stay.
+- A fork (`chat.fork`, `apps/server/src/chat/fork.ts`) copies the CLI's conversation at the click: a Claude transcript cut at the turn's `native.lastUuid` (format checked against Claude Code 2.1.273, refused otherwise) or Codex `thread/fork` with `native.turnId`. Its record is written before its node, its agent's note waits in the record's `preambles` (never on the wire), and its lineage entry has `relation: 'fork'`, so ending, capping or orphaning the original never touches it.
 - Attention is counted once in `apps/client/src/state/attention.ts`, and `state/agent-work.ts` defines "working". Everything that shows a number reads those. The shell never counts.
 
 ## Product rules
