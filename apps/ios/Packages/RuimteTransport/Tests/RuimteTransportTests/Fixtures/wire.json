@@ -189,7 +189,8 @@
     "auth.registerKey",
     "direct.signal",
     "chat.kill",
-    "chat.list"
+    "chat.list",
+    "task.list"
   ],
   "eventTypes": [
     "push.attention",
@@ -214,7 +215,8 @@
     "usage.changed",
     "usage.limitsChanged",
     "processes.sample",
-    "processes.alerts"
+    "processes.alerts",
+    "task.changed"
   ],
   "crypto": [
     {

@@ -150,6 +150,7 @@ import {
     SessionTargetPayloadSchema,
     SessionWritePayloadSchema
 } from './session.ts';
+import { TaskChangedEventSchema, TaskListPayloadSchema, TaskListResultSchema } from './task.ts';
 import { UsageChangedEventSchema, UsageLimitsSnapshotSchema, UsageSummaryPayloadSchema, UsageSummaryResultSchema } from './usage.ts';
 
 export * from './agent.ts';
@@ -178,6 +179,7 @@ export * from './session.ts';
 export * from './render.ts';
 export * from './push.ts';
 export * from './stored-path.ts';
+export * from './task.ts';
 export * from './usage.ts';
 
 const EmptySchema = z.object({});
@@ -282,7 +284,8 @@ export const REQUEST_SCHEMAS = {
     'auth.registerKey': { payload: AuthRegisterKeyPayloadSchema, result: AuthRegisterKeyResultSchema },
     'direct.signal': { payload: DirectSignalPayloadSchema, result: EmptySchema },
     'chat.kill': { payload: ChatTargetPayloadSchema, result: EmptySchema },
-    'chat.list': { payload: EmptySchema, result: ChatListResultSchema }
+    'chat.list': { payload: EmptySchema, result: ChatListResultSchema },
+    'task.list': { payload: TaskListPayloadSchema, result: TaskListResultSchema }
 } as const satisfies Record<string, { payload: z.ZodType; result: z.ZodType }>;
 
 export type RequestType = keyof typeof REQUEST_SCHEMAS;
@@ -317,7 +320,8 @@ export const EVENT_SCHEMAS = {
     'usage.changed': UsageChangedEventSchema,
     'usage.limitsChanged': UsageLimitsSnapshotSchema,
     'processes.sample': ProcessesSampleEventSchema,
-    'processes.alerts': ProcessesAlertsSchema
+    'processes.alerts': ProcessesAlertsSchema,
+    'task.changed': TaskChangedEventSchema
 } as const satisfies Record<string, z.ZodType>;
 
 export type EventType = keyof typeof EVENT_SCHEMAS;

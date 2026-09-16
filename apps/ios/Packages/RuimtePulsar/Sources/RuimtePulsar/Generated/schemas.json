@@ -6286,6 +6286,16 @@
                       "type": "string"
                     }
                   }
+                },
+                "origin": {
+                  "type": "string",
+                  "enum": [
+                    "native",
+                    "ruimte"
+                  ]
+                },
+                "childId": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -6601,6 +6611,12 @@
                   "type": "integer",
                   "exclusiveMinimum": 0,
                   "maximum": 9007199254740991
+                },
+                "taskIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 }
               },
               "required": [
@@ -7385,6 +7401,16 @@
                       "type": "string"
                     }
                   }
+                },
+                "origin": {
+                  "type": "string",
+                  "enum": [
+                    "native",
+                    "ruimte"
+                  ]
+                },
+                "childId": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -7700,6 +7726,12 @@
                   "type": "integer",
                   "exclusiveMinimum": 0,
                   "maximum": 9007199254740991
+                },
+                "taskIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 }
               },
               "required": [
@@ -8224,6 +8256,16 @@
                       "type": "string"
                     }
                   }
+                },
+                "origin": {
+                  "type": "string",
+                  "enum": [
+                    "native",
+                    "ruimte"
+                  ]
+                },
+                "childId": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -8539,6 +8581,12 @@
                   "type": "integer",
                   "exclusiveMinimum": 0,
                   "maximum": 9007199254740991
+                },
+                "taskIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 }
               },
               "required": [
@@ -9057,6 +9105,16 @@
                               "type": "string"
                             }
                           }
+                        },
+                        "origin": {
+                          "type": "string",
+                          "enum": [
+                            "native",
+                            "ruimte"
+                          ]
+                        },
+                        "childId": {
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -9372,6 +9430,12 @@
                           "type": "integer",
                           "exclusiveMinimum": 0,
                           "maximum": 9007199254740991
+                        },
+                        "taskIds": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
                         }
                       },
                       "required": [
@@ -10380,6 +10444,16 @@
                                 "type": "string"
                               }
                             }
+                          },
+                          "origin": {
+                            "type": "string",
+                            "enum": [
+                              "native",
+                              "ruimte"
+                            ]
+                          },
+                          "childId": {
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -10695,6 +10769,12 @@
                             "type": "integer",
                             "exclusiveMinimum": 0,
                             "maximum": 9007199254740991
+                          },
+                          "taskIds": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
                           }
                         },
                         "required": [
@@ -11966,6 +12046,16 @@
                       "type": "string"
                     }
                   }
+                },
+                "origin": {
+                  "type": "string",
+                  "enum": [
+                    "native",
+                    "ruimte"
+                  ]
+                },
+                "childId": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -12281,6 +12371,12 @@
                   "type": "integer",
                   "exclusiveMinimum": 0,
                   "maximum": 9007199254740991
+                },
+                "taskIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 }
               },
               "required": [
@@ -24602,6 +24698,128 @@
       "chats"
     ]
   },
+  "request.task.list.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId"
+    ]
+  },
+  "request.task.list.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "tasks": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "projectId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "parentId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "childId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "title": {
+              "type": "string"
+            },
+            "prompt": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "open",
+                "done",
+                "failed",
+                "cancelled"
+              ]
+            },
+            "result": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "done",
+                        "turn",
+                        "exit"
+                      ]
+                    },
+                    "at": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "text",
+                    "source",
+                    "at"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "createdAt": {
+              "type": "number"
+            },
+            "settledAt": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "wake": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "sent",
+                "none"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "projectId",
+            "parentId",
+            "childId",
+            "title",
+            "prompt",
+            "status",
+            "result",
+            "createdAt",
+            "settledAt",
+            "wake"
+          ]
+        }
+      }
+    },
+    "required": [
+      "tasks"
+    ]
+  },
   "event.push.attention": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -25264,6 +25482,16 @@
                             "type": "string"
                           }
                         }
+                      },
+                      "origin": {
+                        "type": "string",
+                        "enum": [
+                          "native",
+                          "ruimte"
+                        ]
+                      },
+                      "childId": {
+                        "type": "string"
                       }
                     },
                     "required": [
@@ -25579,6 +25807,12 @@
                         "type": "integer",
                         "exclusiveMinimum": 0,
                         "maximum": 9007199254740991
+                      },
+                      "taskIds": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
                       }
                     },
                     "required": [
@@ -26587,6 +26821,16 @@
                               "type": "string"
                             }
                           }
+                        },
+                        "origin": {
+                          "type": "string",
+                          "enum": [
+                            "native",
+                            "ruimte"
+                          ]
+                        },
+                        "childId": {
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -26902,6 +27146,12 @@
                           "type": "integer",
                           "exclusiveMinimum": 0,
                           "maximum": 9007199254740991
+                        },
+                        "taskIds": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
                         }
                       },
                       "required": [
@@ -31214,6 +31464,112 @@
     },
     "required": [
       "alerts"
+    ]
+  },
+  "event.task.changed": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "task": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "projectId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "parentId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "childId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "done",
+              "failed",
+              "cancelled"
+            ]
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string",
+                    "enum": [
+                      "done",
+                      "turn",
+                      "exit"
+                    ]
+                  },
+                  "at": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "text",
+                  "source",
+                  "at"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "number"
+          },
+          "settledAt": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "wake": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "sent",
+              "none"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "parentId",
+          "childId",
+          "title",
+          "prompt",
+          "status",
+          "result",
+          "createdAt",
+          "settledAt",
+          "wake"
+        ]
+      }
+    },
+    "required": [
+      "task"
     ]
   }
 }

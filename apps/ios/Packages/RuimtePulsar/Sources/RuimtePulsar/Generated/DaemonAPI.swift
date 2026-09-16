@@ -98,6 +98,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `directSignal` = "direct.signal"
     case `chatKill` = "chat.kill"
     case `chatList` = "chat.list"
+    case `taskList` = "task.list"
 
     public func validatePayload(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("request.\(rawValue).payload", value) }
     public func validateResult(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("request.\(rawValue).result", value) }
@@ -127,6 +128,7 @@ public enum WireEvent: String, CaseIterable, Sendable {
     case `usageLimitsChanged` = "usage.limitsChanged"
     case `processesSample` = "processes.sample"
     case `processesAlerts` = "processes.alerts"
+    case `taskChanged` = "task.changed"
 
     public func validatePayload(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("event.\(rawValue)", value) }
 }

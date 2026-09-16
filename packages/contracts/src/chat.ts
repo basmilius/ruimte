@@ -211,7 +211,11 @@ export const ChatSubagentItemSchema = z.object({
     // Set when it did more than the thread keeps; what is there is the beginning of its work.
     itemsTruncated: z.boolean(),
     // Where the CLI keeps this subagent's own conversation; set once the daemon found it.
-    native: z.object({ agentId: z.string().optional(), threadId: z.string().optional() }).optional()
+    native: z.object({ agentId: z.string().optional(), threadId: z.string().optional() }).optional(),
+    // Who opened it: the CLI with its own tool, or a verb with `--task` that made a node; absent is `native`.
+    origin: z.enum(['native', 'ruimte']).optional(),
+    // The node a `--task` opened, whose own conversation this row stands for.
+    childId: z.string().optional()
 });
 
 export const ChatApprovalDecisionSchema = z.enum(['pending', 'allow', 'allow-always', 'deny', 'cancelled']);
@@ -287,7 +291,9 @@ export const ChatTurnItemSchema = z.object({
     // What the working tree holds against that checkpoint, taken when the turn settled.
     checkpointDiff: ChatCheckpointDiffSchema.optional(),
     // How many CLI processes worked on this turn; absent is one, which is every turn before this field.
-    attempt: z.number().int().positive().optional()
+    attempt: z.number().int().positive().optional(),
+    // The tasks whose results woke the chat for this turn; only a turn the daemon opened carries them.
+    taskIds: z.array(z.string()).optional()
 });
 
 /* What a turn a restart could not take up again ends with, so a client can tell it from a turn a person stopped. */
