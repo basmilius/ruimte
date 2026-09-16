@@ -2455,6 +2455,9 @@ code will not say on its own.
   retried after 1, 5 and 30 seconds and then ends the turn `aborted` with a note; stopping a turn
   that waits for its resume ends it the same way without a note. No message of a person is made up:
   the prompt that says the machine restarted goes to the CLI only, and the thread gets a note.
+- A chat that is a view of its own is resumed like a chat on a canvas. `ProjectIndex.locate` already
+  placed a session view under its own id with no canvas, so nothing in the rule had to change; a
+  test holds it there, because "a chat no canvas holds" was how the rule read at first.
 
 ### Skipped on purpose
 

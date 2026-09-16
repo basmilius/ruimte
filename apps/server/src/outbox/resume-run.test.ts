@@ -32,7 +32,9 @@ const content = (): ProjectContent => ({
             texts: [],
             edges: [],
             layouts: []
-        }
+        },
+        // A chat that is a view of its own rather than a node: the index places it the same way.
+        { kind: 'chat', id: 'chat-view', name: 'Chat', node: { provider: 'claude' } }
     ]
 });
 
@@ -139,12 +141,12 @@ const boot = async (spawn?: SpawnChatProcess): Promise<Daemon> => {
 };
 
 /* The first daemon: the child is in the middle of a turn when it goes down. */
-const interruptChild = async (provider: 'claude' | 'codex' = 'claude'): Promise<{ turnId: string; agentSessionId: string }> => {
+const interruptChild = async (provider: 'claude' | 'codex' = 'claude', chatId = 'chat-child'): Promise<{ turnId: string; agentSessionId: string }> => {
     const daemon = await boot();
     daemon.worker.start();
-    await daemon.chats.create({ chatId: 'chat-child', cwd: folder, provider });
-    await daemon.chats.send('chat-child', 'slow');
-    const session = daemon.chats.get('chat-child')!;
+    await daemon.chats.create({ chatId, cwd: folder, provider });
+    await daemon.chats.send(chatId, 'slow');
+    const session = daemon.chats.get(chatId)!;
     await daemon.until(() => session.info.agentSessionId !== null);
     const turnId = session.info.activeTurnId!;
     const agentSessionId = session.info.agentSessionId!;
@@ -153,7 +155,7 @@ const interruptChild = async (provider: 'claude' | 'codex' = 'claude'): Promise<
     return { turnId, agentSessionId };
 };
 
-const turnOf = (daemon: Daemon, turnId: string): ChatItem | undefined => daemon.chats.get('chat-child')?.thread.get(turnId);
+const turnOf = (daemon: Daemon, turnId: string, chatId = 'chat-child'): ChatItem | undefined => daemon.chats.get(chatId)?.thread.get(turnId);
 
 describe('resume-run', () => {
     test('a child the daemon stopped in the middle of a turn goes on with --resume under the same turn, as its second attempt', async () => {
@@ -197,6 +199,22 @@ describe('resume-run', () => {
         expect(daemon.codex.started).toHaveLength(1);
     });
 
+    test('a chat that is a view of its own goes on after a restart like a chat on a canvas', async () => {
+        const { turnId, agentSessionId } = await interruptChild('claude', 'chat-view');
+
+        const daemon = await boot();
+        daemon.worker.start();
+        await daemon.chats.recoverInterrupted();
+        await daemon.until(() => (turnOf(daemon, turnId, 'chat-view') as { state?: string } | undefined)?.state === 'done');
+        await daemon.worker.settled();
+
+        expect(turnOf(daemon, turnId, 'chat-view')).toMatchObject({ state: 'done', attempt: 2 });
+        expect(daemon.chats.get('chat-view')?.info).toMatchObject({ status: 'idle', activeTurnId: null, agentSessionId });
+        const argv = daemon.claude.started[0]!.argv;
+        expect(argv[argv.indexOf('--resume') + 1]).toBe(agentSessionId);
+        expect(daemon.outbox.list()).toEqual([]);
+    });
+
     test('a resume whose CLI will not start is tried after 1, 5 and 30 seconds and then ends the turn with the reason', async () => {
         const { turnId } = await interruptChild();
 
@@ -227,7 +245,7 @@ describe('resume-run', () => {
         expect(daemon.outbox.list()).toEqual([]);
     });
 
-    test('a turn that was resumed once, or that no canvas holds, is not resumed again', async () => {
+    test('a turn that was resumed once, or that no project holds, is not resumed again', async () => {
         const store = new ChatStore(home);
         const stored = (chatId: string, attempt: number | undefined): { info: ChatInfo; items: ChatItem[] } => {
             const turn: ChatItem = {

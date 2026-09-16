@@ -8,7 +8,7 @@ export interface ResumeRunDeps {
 }
 
 export interface OweResumeDeps {
-    // The project that places the chat; null for a chat no canvas holds, which nothing would resume for.
+    // The project that places the chat, as a node on a canvas or as a view of its own; null for a chat no project holds, which nothing would resume for.
     projectOf(chatId: string): string | null;
     entries(): OutboxEntry[];
     enqueue(projectId: string, target: string, work: OutboxWork): Promise<void>;
