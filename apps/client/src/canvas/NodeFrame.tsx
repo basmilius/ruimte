@@ -42,7 +42,8 @@ import { Tooltip } from '@/ui/Tooltip';
 import { useHeldWhileVisible, useNodeInViewport, useReadableZoom } from '@/canvas/culling';
 import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
 import { ChatBody } from '@/nodes/ChatBody';
-import { SubagentBreadcrumb, SubagentMenu } from '@/chat/ui/SubagentControls';
+import { SubagentBreadcrumb, SubagentButton, SubagentTitleCrumb } from '@/chat/ui/SubagentControls';
+import { useSubagentTrail } from '@/chat/subagent-view';
 import { BrowserBody } from '@/nodes/BrowserBody';
 import { NoteNode } from '@/canvas/nodes/NoteNode';
 import { DiagramNode, DiagramPlate } from '@/canvas/nodes/DiagramNode';
@@ -115,10 +116,11 @@ export function StatusDot({ status, className, plain = false }: { status: AgentS
     return <Tooltip label={STATUS_LABEL[status]}>{dot}</Tooltip>;
 }
 
-function Title({ id, title, editing, onDone }: { id: string; title: string; editing: boolean; onDone: () => void }) {
+function Title({ id, title, editing, muted, onDone }: { id: string; title: string; editing: boolean; muted: boolean; onDone: () => void }) {
     const canvasStore = useCanvasStore();
     if (!editing) {
-        return <span className="truncate text-sm font-medium text-text">{title}</span>;
+        // A crumb on the way back from a sub-agent gives the emphasis to the step on screen.
+        return <span className={clsx('truncate text-sm font-medium', muted ? 'text-text-muted hover:text-text' : 'text-text')}>{title}</span>;
     }
     return (
         <input
@@ -180,6 +182,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const live = useHeldWhileVisible(inViewport);
     const readable = useReadableZoom();
     const [renaming, setRenaming] = useState(false);
+    const subagentTrail = useSubagentTrail(id).trail;
     /* Where a file node's controls go: its own header, so the body draws no second bar under it.
        Every other node hands its body an empty slot, which keeps the canvas out of the window's. */
     const [fileControls, setFileControls] = useState<HTMLElement | null>(null);
@@ -196,6 +199,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     }
 
     const accent = accentColor(node.accent);
+    const inSubagents = node.kind === 'chat' && subagentTrail.length > 0;
     const isGroup = node.kind === 'group';
     const isNote = node.kind === 'note';
     // A newer Ruimte's node: it moves, resizes and goes away like any other, and nothing else about it is this version's to change.
@@ -273,10 +277,16 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                             ICONS[node.kind]
                         )}
                     </span>
-                    <span className="flex min-w-0 grow items-center" onDoubleClick={() => setRenaming(!isUnknown)}>
-                        <Title id={id} title={node.title} editing={renaming} onDone={() => setRenaming(false)} />
+                    <span className={clsx('flex min-w-0 items-center', !inSubagents && 'grow')} onDoubleClick={() => setRenaming(!isUnknown)}>
+                        {node.kind === 'chat' && !renaming ? (
+                            <SubagentTitleCrumb chatId={id}>
+                                <Title id={id} title={node.title} editing={false} muted={inSubagents} onDone={() => setRenaming(false)} />
+                            </SubagentTitleCrumb>
+                        ) : (
+                            <Title id={id} title={node.title} editing={renaming} muted={false} onDone={() => setRenaming(false)} />
+                        )}
                     </span>
-                    {node.kind === 'chat' && !renaming && <SubagentBreadcrumb chatId={id} className="shrink" />}
+                    {node.kind === 'chat' && !renaming && <SubagentBreadcrumb chatId={id} className="grow" />}
                     {collapsed && <Pill className="tabular-nums">{node.memberIds?.length ?? 0} inside</Pill>}
                     {isGroup && node.worktree && (
                         <Tooltip label={node.worktree.path}>
@@ -302,7 +312,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     {!renaming && <ProcessAlertMark alerts={processAlerts} />}
                     {node.kind === 'file' && <span ref={setFileControls} className={`${BTN_GROUP} shrink-0`} />}
                     <div className={`${BTN_GROUP} shrink-0`}>
-                        {node.kind === 'chat' && <SubagentMenu chatId={id} />}
+                        {node.kind === 'chat' && <SubagentButton chatId={id} />}
                         <Tooltip label="Zoom to node" name>
                             <button className="icon-btn h-7 w-7" onClick={() => canvasStore.getState().goToNode(id)}>
                                 <Icon icon={Maximize2} size={16} />

@@ -1,7 +1,7 @@
 import { isCanvasView, type ProjectView, type ProjectViewKind } from '@ruimte/contracts';
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
-import { useHasSubagentControls } from '@/chat/subagent-view';
-import { SubagentBreadcrumb, SubagentMenu } from '@/chat/ui/SubagentControls';
+import { useHasSubagentControls, useSubagentTrail } from '@/chat/subagent-view';
+import { SubagentBreadcrumb, SubagentButton } from '@/chat/ui/SubagentControls';
 import { BrowserToolbar } from '@/nodes/BrowserBody';
 import { useNodeHost, type NodeHost } from '@/nodes/node-host';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
@@ -30,6 +30,9 @@ export const useHasViewToolbar = (view: ProjectView | null): boolean => {
     return view.kind === 'browser' || view.kind === 'file' || view.kind === 'diagram' || modeOf(host) !== undefined;
 };
 
+/* Whether a chat view shows its sub-agents in its place, where its title turns into the first crumb and needs no separator after it. */
+export const useShowsSubagents = (view: ProjectView | null): boolean => useSubagentTrail(view?.kind === 'chat' ? view.id : '').trail.length > 0;
+
 /* The view the window's toolbar speaks for: the one in the focused cell. */
 export const useToolbarView = (): ProjectView | null => useDocument((s) => activeViewOf(s));
 
@@ -42,7 +45,16 @@ export const useToolbarView = (): ProjectView | null => useDocument((s) => activ
  * Which bar that is depends on the grid: with one cell the window's toolbar speaks for the view, and
  * with the views side by side every cell carries its own (`shell/CellToolbar.tsx`).
  */
-export function ViewToolbar({ view, focused }: { view: ProjectView | null; focused: boolean }) {
+export function ViewToolbar({
+    view,
+    focused,
+    chatTitle
+}: {
+    view: ProjectView | null;
+    focused: boolean;
+    /* For a bar that does not draw the view's name itself, so the breadcrumb of a chat opens with it. */
+    chatTitle?: string;
+}) {
     const host = useNodeHost(view && !isCanvasView(view) ? view.id : '');
     const { mount } = useFileToolbarSlot();
     const hasSubagents = useHasSubagentControls(view?.kind === 'chat' ? view.id : '');
@@ -69,9 +81,9 @@ export function ViewToolbar({ view, focused }: { view: ProjectView | null; focus
         }
         return (
             <div className="flex min-w-0 grow items-center gap-1.5">
-                <SubagentBreadcrumb chatId={view.id} className="grow" />
+                <SubagentBreadcrumb chatId={view.id} title={chatTitle} className="grow" />
                 <div className={`${BTN_GROUP} ml-auto shrink-0`}>
-                    <SubagentMenu chatId={view.id} />
+                    <SubagentButton chatId={view.id} />
                 </div>
             </div>
         );

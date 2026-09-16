@@ -6,6 +6,7 @@ import { defaultProvider, readChatPreferences, selectionFor } from '@/chat/prefe
 import { showsComposer, useSubagentTrail } from '@/chat/subagent-view';
 import { deriveNodeTitle } from '@/chat/title';
 import { Composer } from '@/chat/ui/Composer';
+import { SubagentList } from '@/chat/ui/SubagentList';
 import { SubagentTimeline } from '@/chat/ui/SubagentTimeline';
 import { Timeline } from '@/chat/ui/Timeline';
 import { useChatRow } from '@/state/chats';
@@ -27,7 +28,7 @@ export function ChatBody({ id, focused }: { id: string; focused: boolean }) {
     const [failure, setFailure] = useState<string | null>(null);
     const [generation, setGeneration] = useState(0);
     const { trail } = useSubagentTrail(id);
-    const subagent = trail.at(-1);
+    const shown = trail.at(-1);
 
     useEffect(() => {
         let cancelled = false;
@@ -88,14 +89,20 @@ export function ChatBody({ id, focused }: { id: string; focused: boolean }) {
             <Suspense fallback={<div className="grow" />}>
                 <DiffPool>
                     {/* Hidden rather than unmounted, so coming back finds the thread where it was left. */}
-                    <div className={clsx('flex min-h-0 grow flex-col', subagent && 'invisible')} aria-hidden={subagent ? true : undefined}>
+                    <div className={clsx('flex min-h-0 grow flex-col', shown && 'invisible')} aria-hidden={shown ? true : undefined}>
                         <Timeline chatId={id} />
                     </div>
-                    {subagent && (
+                    {shown && (
                         <div className="absolute inset-0 flex flex-col bg-surface">
-                            <ErrorBoundary label="This conversation failed to render" resetKeys={[subagent.toolUseId]}>
-                                <SubagentTimeline key={subagent.toolUseId} chatId={id} toolUseId={subagent.toolUseId} />
-                            </ErrorBoundary>
+                            {shown.kind === 'list' ? (
+                                <ErrorBoundary key="list" label="The sub-agents failed to render" resetKeys={['list']}>
+                                    <SubagentList chatId={id} />
+                                </ErrorBoundary>
+                            ) : (
+                                <ErrorBoundary key={shown.toolUseId} label="This conversation failed to render" resetKeys={[shown.toolUseId]}>
+                                    <SubagentTimeline chatId={id} toolUseId={shown.toolUseId} />
+                                </ErrorBoundary>
+                            )}
                         </div>
                     )}
                 </DiffPool>

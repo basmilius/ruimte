@@ -5,7 +5,8 @@ import { MoreHorizontal, X } from 'lucide-react';
 import { viewIconOf, type ProjectView } from '@ruimte/contracts';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
-import { useHasViewToolbar, ViewToolbar } from '@/shell/ViewToolbar';
+import { SubagentTitleCrumb } from '@/chat/ui/SubagentControls';
+import { useHasViewToolbar, useShowsSubagents, ViewToolbar } from '@/shell/ViewToolbar';
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useDocument } from '@/state/document';
 import type { CellAt } from '@/shell/split';
@@ -80,6 +81,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
     const bodyFocused = useDocument((s) => s.bodyFocused);
     const hasViewToolbar = useHasViewToolbar(view);
     const folded = useFolded(bar, actions, hasViewToolbar);
+    const inSubagents = useShowsSubagents(view);
 
     const controls = <ViewToolbar view={view} focused={focused && bodyFocused} />;
     return (
@@ -114,11 +116,13 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                         provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
                         path={view.kind === 'file' ? view.path : null}
                     />
-                    <span className="min-w-0 truncate font-medium">{view.name}</span>
+                    <SubagentTitleCrumb chatId={view.id} className="text-text-muted hover:text-text">
+                        <span className="min-w-0 truncate font-medium">{view.name}</span>
+                    </SubagentTitleCrumb>
                 </span>
                 {hasViewToolbar && !folded && (
                     <>
-                        <Separator />
+                        {!inSubagents && <Separator />}
                         {/* At least as wide as the controls at their smallest, so a bar too narrow
                             for them overflows, and that is how it knows to fold. */}
                         <span ref={actions} className="flex min-w-min grow items-center">

@@ -7,7 +7,7 @@ import { PanelControls } from '@/shell/PanelControls';
 import { ProjectActionsMenu } from '@/shell/ProjectActionsMenu';
 import { ProjectMenu } from '@/shell/ProjectMenu';
 import { ViewMenu } from '@/shell/ViewMenu';
-import { useHasViewToolbar, useToolbarView, ViewToolbar } from '@/shell/ViewToolbar';
+import { useHasViewToolbar, useShowsSubagents, useToolbarView, ViewToolbar } from '@/shell/ViewToolbar';
 import { STRIP_PADDING_PX } from '@/shell/Sidebar';
 import { SidebarToggle } from '@/shell/SidebarToggle';
 import { useDiagram } from '@/state/diagram';
@@ -44,6 +44,7 @@ export function Toolbar() {
     const split = useDocument((s) => (s.layout === null ? false : cellCount(s.layout) > 1));
     const view = useToolbarView();
     const hasViewToolbar = useHasViewToolbar(split ? null : view);
+    const inSubagents = useShowsSubagents(split ? null : view);
     const inset = useTrafficLightInset();
 
     return (
@@ -75,8 +76,9 @@ export function Toolbar() {
             </div>
             {/* A view of its own has no node header, so what that header carried sits here, fenced
                 off from the breadcrumb on one side and the panels on the other. */}
-            {hasViewToolbar && <Separator />}
-            {!split && <ViewToolbar view={view} focused={bodyFocused} />}
+            {/* A chat showing its sub-agents opens its breadcrumb with its own name, which needs no fence. */}
+            {hasViewToolbar && !inSubagents && <Separator />}
+            {!split && <ViewToolbar view={view} focused={bodyFocused} chatTitle={sidebarOpen ? (view?.name ?? undefined) : undefined} />}
             {hasViewToolbar && <Separator />}
             <ConnectionDot />
             <div className={BTN_GROUP}>
