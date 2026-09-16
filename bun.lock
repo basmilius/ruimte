@@ -179,6 +179,18 @@
         "typescript": "~6.0.2",
       },
     },
+    "packages/plan": {
+      "name": "@ruimte/plan",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/contracts": "workspace:*",
+        "zod": "^4.5.4",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.4.0",
+        "typescript": "~6.0.2",
+      },
+    },
     "packages/pulsar": {
       "name": "@ruimte/pulsar",
       "version": "0.0.0",
@@ -536,6 +548,8 @@
     "@ruimte/drawing": ["@ruimte/drawing@workspace:packages/drawing"],
 
     "@ruimte/npm": ["@ruimte/npm@workspace:packages/npm"],
+
+    "@ruimte/plan": ["@ruimte/plan@workspace:packages/plan"],
 
     "@ruimte/pulsar": ["@ruimte/pulsar@workspace:packages/pulsar"],
 
