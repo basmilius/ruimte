@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Een gesprek aftakken, terugbrengen en van CLI wisselen</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h4 { font-size: 16px; margin: 20px 0 8px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .ref { fill: var(--panel); stroke: var(--reference); stroke-dasharray: 5 4; }
+.diagram .edge { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .edge.soft { stroke: var(--reference); stroke-dasharray: 5 4; }
+.diagram .arrow { fill: var(--accent); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+.accept { font-size: 15px; color: var(--muted); }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 13px; white-space: pre-wrap; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+.question { padding-top: 20px; border-top: 1px solid var(--line); margin-top: 20px; }
+.question h3 { margin-top: 0; }
+.question .options { padding-left: 0; list-style: none; }
+.question .options li { padding-left: 28px; position: relative; }
+.question .options li::before { content: attr(data-option); position: absolute; left: 0; color: var(--accent); font-weight: 600; }
+.advice { padding: 12px 16px; background: var(--highlight); border-radius: 8px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  .recommendation, .panel, .badge, .advice { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#kort">Naar de samenvatting</a>
+<header>
+  <p class="eyebrow">RUIMTE / ONTWERP / 16 SEPTEMBER 2026</p>
+  <h1>Een gesprek aftakken, terugbrengen en van CLI wisselen</h1>
+  <p class="intro">Roadmap-item 9 in <code>docs/NEXT.md</code> ("branch a conversation into a new node"). Dit ontwerp legt vast hoe een persoon een chat vanaf een beurt aftakt in een nieuwe node, hoe de aftakking in een worktree of in de gedeelde map werkt, hoe wat de aftakking leerde als samenvatting terugkomt in het oorspronkelijke gesprek, en hoe een wissel van CLI dezelfde aftakking is met een overdracht erin. Het bouwt op wat er staat: het <code>turn</code>-item met zijn checkpoint, de chatopslag met log en volgnummer, de lineage, de outbox, de verbs en het worktree-ontwerp van vandaag.</p>
+  <p class="status">Ontwerp, tegen <code>c628e954</code>; nog geen code geschreven</p>
+  <p class="caption">Bronnen: <code>CLAUDE.md</code>, <code>docs/NEXT.md</code>, het worktree-ontwerp (<code>docs/reports/2026-09-16-worktree-merge-design.html</code>, goedgekeurd), het orchestratie-ontwerp (<code>docs/reports/2026-09-16-orchestration-design.html</code>), de code van de daemon (<code>src/chat</code>, <code>src/canvas</code>, <code>src/tasks</code>, <code>src/outbox</code>, <code>src/git/checkpoints.ts</code>, <code>src/context</code>), de client (<code>chat/ui</code>, <code>chat/logic/scrubber.ts</code>, <code>canvas/NodeMenu.tsx</code>, <code>state/canvas.ts</code>) en de iOS-app, plus echte proefsessies met claude 2.1.273 en codex-cli 0.154.0 (alle proefsessies zijn daarna verwijderd). <span class="badge confirmed">geverifieerd</span> staat bij wat vandaag tegen code of tegen een draaiende CLI is gelegd, <span class="badge warning">afgeleid</span> bij wat uit schema's, namen of gedrag van git volgt en pas in de bouwfase hard wordt.</p>
+  <nav aria-label="Inhoud">
+    <a href="#kort">Kort</a>
+    <a href="#controle">Controle</a>
+    <a href="#persoon">Wat een persoon doet</a>
+    <a href="#model">Het model</a>
+    <a href="#daemon">De daemon</a>
+    <a href="#bestanden">Bestanden</a>
+    <a href="#terug">Terugbrengen</a>
+    <a href="#wissel">Van CLI wisselen</a>
+    <a href="#wire">Wire</a>
+    <a href="#fasen">Fasen</a>
+    <a href="#risico">Risico's</a>
+    <a href="#vragen">Productvragen</a>
+    <a href="#scope">Buiten scope</a>
+  </nav>
+</header>
+<main>
+  <section id="kort" class="recommendation">
+    <h2>Kort</h2>
+    <p>Een <strong>aftakking</strong> (fork) is een nieuwe chat-node naast de oorspronkelijke, met een edge van de oorspronkelijke ernaartoe, die dezelfde CLI voortzet vanaf een gekozen beurt met alleen de geschiedenis tot en met die beurt. "Fork from here" staat op elke beurt in de thread (het contextmenu van de rijen van een beurt, straks de kaart van de scrubber) en in het menu van de node en de view (dan vanaf de laatste beurt). Eén dialoog vraagt de CLI en het model, of het in een worktree gebeurt (standaard aan) en, bij een oudere beurt, of de bestanden terug moeten naar hoe ze na die beurt waren.</p>
+    <p>Beide CLIs kunnen dit, elk op zijn eigen manier, en allebei zijn vandaag tegen een draaiende CLI nagemeten. Codex heeft <code>thread/fork</code> met <code>lastTurnId</code>, precies wat nodig is. Claude Code heeft <code>--resume --fork-session</code>, maar dat neemt altijd het hele gesprek; aftakken bij een oudere beurt is daar een ingekorte kopie van het transcript onder een nieuw sessie-id, wat de CLI zelf ook doet bij <code>--fork-session</code> en wat werkt. De daemon schrijft daarvoor per beurt de eigen id van de CLI op (de turn-id van Codex, de uuid van het laatste antwoord bij Claude), als optioneel veld op het <code>turn</code>-item.</p>
+    <p>Terugbrengen zijn twee losse handelingen. De <strong>samenvatting</strong>: de aftakking krijgt een beurt waarin haar CLI opschrijft wat ze leerde, en de daemon bezorgt dat als context in de oorspronkelijke chat met een zichtbare note, via de outbox, zoals een taak zijn ouder wekt. De <strong>code</strong>: de worktree van de aftakking samenvoegen is de merge uit het worktree-ontwerp, met dezelfde dialoog en dezelfde grenzen. Van <strong>CLI wisselen</strong> is een aftakking naar een node met de andere CLI: de nieuwe CLI heeft het gesprek niet, dus zijn eerste prompt krijgt een korte kop plus het laatste stuk van het gesprek als tekst ervoor, en de edge maakt de rest leesbaar met <code>ruimte-context read</code>.</p>
+    <p>De wire houdt zich aan de regel van het orchestratie-ontwerp: alleen optionele velden, twee nieuwe requests, geen nieuw item-kind en geen nieuwe enumwaarde. Een agent krijgt nog geen verb om te forken.</p>
+  </section>
+
+  <section id="controle">
+    <h2>Wat gecontroleerd is</h2>
+    <h3>De CLIs</h3>
+    <ul>
+      <li><span class="badge confirmed">geverifieerd</span> <strong>claude 2.1.273</strong>, in print-modus: <code>claude -p --resume &lt;id&gt; --fork-session</code> geeft een nieuw <code>session_id</code> en heeft het hele gesprek (proef: twee beurten "ALPHA" en "BRAVO", de fork antwoordde "ALPHA BRAVO"). De CLI schrijft daarvoor een kopie van het transcript onder het nieuwe id (41 regels tegen 39 in het origineel, elke regel met het nieuwe <code>sessionId</code>). Er is geen flag om bij een eerdere boodschap af te takken: de hulp kent <code>--resume</code>, <code>--continue</code>, <code>--fork-session</code> en <code>--session-id</code>, niets met een boodschap, een uuid of een beurt erin.</li>
+      <li><span class="badge confirmed">geverifieerd</span> De terugval werkt: een kopie van het transcript <code>~/.claude/projects/&lt;slug&gt;/&lt;id&gt;.jsonl</code>, afgekapt vóór de <code>user</code>-regel van de tweede beurt, met <code>sessionId</code> herschreven naar een nieuwe uuid en weggeschreven als <code>&lt;nieuwe uuid&gt;.jsonl</code> in dezelfde map, hervat met <code>claude -p --resume &lt;nieuwe uuid&gt;</code> en antwoordt op "welke woorden vroeg ik tot nu toe" alleen "ALPHA". De CLI las dus alleen wat vóór de knip stond.</li>
+      <li><span class="badge confirmed">geverifieerd</span> De <code>assistant</code>-frames van stream-json dragen een <code>uuid</code>, en die is gelijk aan de <code>uuid</code> van de regel in het transcript (proef: <code>5bf2b3e3...</code> in het frame en in het bestand). De daemon kan per beurt dus exact opschrijven waar hij eindigt, zonder het bestand te lezen. Het <code>result</code>-frame heeft een eigen uuid die niet als boodschapregel in het bestand staat.</li>
+      <li><span class="badge confirmed">geverifieerd</span> Het transcript wisselt boodschapregels (<code>user</code>, <code>assistant</code>, <code>system</code>, elk met <code>uuid</code> en <code>parentUuid</code>) af met regels zonder uuid (<code>attachment</code>, <code>last-prompt</code>, <code>ai-title</code>, <code>atis-latch</code>, <code>queue-operation</code>, <code>mode</code>, <code>file-history-snapshot</code>). Een <code>user</code>-regel met tekst (geen <code>tool_result</code>) is het begin van een beurt; <code>claude-transcript.ts</code> heeft daar al <code>spokenText</code> voor.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <strong>codex-cli 0.154.0</strong>: <code>thread/fork { threadId, lastTurnId?, excludeTurns?, cwd?, model?, approvalPolicy?, sandbox?, ... }</code> uit het gegenereerde schema, met bij <code>lastTurnId</code> "turns after last_turn_id are omitted from the fork; the referenced turn cannot be in progress". Live tegen een app-server: fork met <code>lastTurnId</code> van beurt 1 antwoordde "ALPHA", fork zonder <code>lastTurnId</code> "ALPHA BRAVO". Het antwoord draagt <code>thread.forkedFromId</code>. Beurt-id's zijn UUIDv7 en komen binnen op <code>turn/started</code>, waar <code>CodexProtocol</code> ze al bewaart als <code>codexTurnId</code> voor <code>turn/interrupt</code>.</li>
+      <li><span class="badge warning">afgeleid</span> <code>thread/turns/list</code> op de fork gaf de gekopieerde beurt met status <code>failed</code>, terwijl hij in het origineel <code>completed</code> was. Vermoedelijk neemt de kopie de status niet over. Onschuldig voor het forken; de lezer van een Codex-thread (<code>codex-thread.ts</code>) mag die status in een fork niet vertrouwen.</li>
+      <li><span class="badge confirmed">geverifieerd</span> Codex heeft ook <code>thread/rollback</code> (deprecated, "will be removed soon") en <code>thread/revert { threadId, beforeTurnId }</code>, dat de bewaarde geschiedenis van de thread zelf vervangt en bestanden niet aanraakt. Beide veranderen het origineel; dit ontwerp gebruikt ze niet.</li>
+    </ul>
+    <h3>De code</h3>
+    <ul>
+      <li><span class="badge confirmed">geverifieerd</span> <code>ChatTurnItemSchema</code> (<code>packages/contracts/src/chat.ts:277</code>) draagt <code>checkpoint</code> (de tree bij de start van de beurt) en <code>checkpointDiff</code> (genomen bij het settelen), plus <code>attempt</code> en <code>taskIds</code>. Er staat geen eigen id van de CLI op. <code>Checkpoints.diff</code> (<code>src/git/checkpoints.ts</code>) neemt intern een tweede tree van de werkmap van dat moment en gooit hem weg; de tree van het einde van een beurt kost dus niets extra.</li>
+      <li><span class="badge confirmed">geverifieerd</span> Een checkpoint is een <code>write-tree</code> door een eigen indexbestand, van de hele repository, onbekende bestanden inbegrepen, genegeerde niet. Nergens in <code>src/git</code> wordt een tree teruggezet; er is geen "restore".</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>ChatManager.create</code> leest eerst het record op schijf en neemt dan diens <code>info</code> en <code>items</code>; een record dat de daemon vóór het mounten schrijft, is dus wat de client bij <code>chat.create</code> terugkrijgt, zoals <code>start-agent</code> dat al gebruikt. De CLI start pas bij de eerste <code>send</code>, met <code>--resume info.agentSessionId</code> (Claude) of <code>thread/resume</code> (Codex).</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>ChatSession.contextNote</code> zet vóór een echte prompt een preamble: de wijziging in de links sinds de vorige beurt en de berichten uit <code>NoticeStore</code> (<code>messages()</code>, hooguit 500 tekens per bericht, zes uur houdbaar). Beide backends plaatsen de preamble vóór de tekst. Dat is het kanaal waar een fork-note, een overdracht en een samenvatting langs kunnen, alleen zonder die twee grenzen.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>ChatSession.wake</code> opent een beurt zonder <code>user</code>-item, met <code>origin: 'agent'</code>, een label, een note en <code>taskIds</code>, en weigert zolang er een beurt loopt; <code>wakeParentHandler</code> antwoordt dan <code>wait</code> en de outbox-worker probeert het opnieuw bij het einde van de beurt. <code>wakePrompt</code> begrenst een resultaat op 8 KiB.</li>
+      <li><span class="badge confirmed">geverifieerd</span> De lineage (<code>src/agents/lineage.ts</code>) kent <code>openedBy</code>, <code>depth</code>, <code>agent</code> en <code>endedAt</code>; <code>descendants()</code> is wat <code>end-children</code> beëindigt wanneer een node stopt of weggaat. Een fork die als kind in de lineage zou staan, gaat dus mee dood met het origineel.</li>
+      <li><span class="badge confirmed">geverifieerd</span> Het <code>agent</code>-verb maakt een node met <code>agentNode</code>, zet hem met <code>placeBeside</code> naast de aanroeper, tekent de edge en schrijft alles met <code>ProjectStore.mutate</code>; <code>landed()</code> schrijft daarna de lineage en houdt de prompt vast. Het maakt met <code>--worktree</code> eerst de worktree (<code>makeWorktrees</code>) en zet de <code>cwd</code> van de node erop. Dat pad doet alles wat een fork nodig heeft, behalve de chat-kopie.</li>
+      <li><span class="badge confirmed">geverifieerd</span> In de client kan een chat na zijn eerste beurt niet meer van CLI wisselen: <code>Composer.tsx:153</code> beperkt de picker tot de eigen provider zodra <code>agentSessionId</code> gezet is of er een beurt was ("the CLI holds the thread"). Een wissel is vandaag dus onmogelijk, en de fork wordt de enige weg.</li>
+      <li><span class="badge confirmed">geverifieerd</span> De scrubber staat vandaag gestaged en niet gecommit: <code>apps/client/src/chat/logic/scrubber.ts</code> (pure functies, een <code>ScrubberTick { id, rowIndex, kind: 'person' | 'wake', text, createdAt }</code> per <code>user</code>-rij en per wekbeurt) en <code>apps/client/src/chat/ui/Scrubber.tsx</code>, dat één <code>PreviewCard</code> langs de strip laat lopen. De kaart tekent zijn knoppen uit <code>CARD_ACTIONS</code>, een record van <code>CardActionId</code> naar <code>{ label, icon, offers(tick), run(tick) }</code> met vandaag alleen <code>copy-message</code>, en het commentaar erboven zegt letterlijk dat "Fork from here" die union en dat record binnenkomt zodra een chat kan forken. De tick draagt nog geen <code>turnId</code>; een <code>user</code>-rij kent hem via <code>row.item.turnId</code>, dus <code>ticksOf</code> geeft hem mee. Dat is de seam.</li>
+      <li><span class="badge confirmed">geverifieerd</span> Het contextmenu van de thread is één <code>ContextMenu</code> om de scroller (<code>Timeline.tsx:147</code>) dat via <code>readTimelineTarget</code> de rij onder de muis kent (<code>user</code>, <code>turn-fold</code>, <code>changed-files</code>, de laatste <code>assistant</code>, elk met een <code>turnId</code>); <code>TimelineMenuPopup</code> krijgt nog geen <code>chatId</code>. Geen rij heeft een eigen menu of knoppen.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>CanvasState.addNode</code> maakt de id zelf (<code>nextId</code>) en kent geen optie om er een mee te geven; <code>NodeMenu.openInChat</code> is het bestaande "naast de node met een edge"-patroon aan de clientkant. De iOS-app laat onbekende velden vallen en verwerpt een onbekend item-kind of een onbekende enumwaarde in <code>chat.attach</code> als geheel (<code>WireSchema.swift</code>, <code>MachineClient.swift:322</code>).</li>
+    </ul>
+  </section>
+
+  <section id="persoon">
+    <h2>Wat een persoon doet</h2>
+    <p>Eén handeling, "Fork from here", op vier plekken, en één dialoog erachter. De plekken verschillen alleen in welke beurt ze aanwijzen.</p>
+    <div class="table" role="region" aria-label="Waar Fork from here staat" tabindex="0">
+      <table class="wide">
+        <caption>Waar "Fork from here" staat</caption>
+        <thead><tr><th scope="col">Plek</th><th scope="col">Welke beurt</th><th scope="col">Hoe</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">De beurt in de thread</th><td>De beurt van de rij onder de muis: de boodschap van de persoon, de vouw "Worked for 12s", de kaart met gewijzigde bestanden of het laatste antwoord.</td><td>Een regel in <code>TimelineMenuPopup</code>, onder "Copy message" en boven "Select all", alleen wanneer <code>target.row</code> een <code>turnId</code> heeft en die beurt niet loopt. De popup krijgt daarvoor <code>chatId</code> en een <code>onFork(turnId)</code> mee.</td></tr>
+          <tr><th scope="row">De kaart van de scrubber</th><td>De beurt van de tick: <code>turnId</code> komt op <code>ScrubberTick</code> (uit <code>row.item.turnId</code> voor een <code>person</code>-tick, <code>row.turn.id</code> voor een <code>wake</code>-tick).</td><td>Een entry <code>fork</code> in <code>CARD_ACTIONS</code> van <code>Scrubber.tsx</code>: <code>offers</code> is "de beurt is gesetteld", <code>run</code> is <code>openForkDialog(chatId, tick.turnId)</code>; de component krijgt daarvoor <code>chatId</code> en een <code>turnState</code> per tick mee, of <code>offers</code> leest de rij. Dezelfde dialoog als overal.</td></tr>
+          <tr><th scope="row">Het menu van de node</th><td>De laatste gesettelde beurt.</td><td>"Fork conversation..." in <code>NodeMenu.tsx</code> onder het blok van de chat, naast "Open in chat" dat er al staat; uit terwijl een beurt loopt.</td></tr>
+          <tr><th scope="row">De toolbar van een view</th><td>De laatste gesettelde beurt.</td><td>Dezelfde regel in het overflow-menu van een chat die een view van zichzelf is (<code>ViewToolbar.tsx</code>); de nieuwe node landt dan op het canvas dat de dialoog vraagt, want een view op zichzelf staat op geen canvas.</td></tr>
+          <tr><th scope="row">iOS, later</th><td>De boodschap onder de vinger.</td><td><code>ChatMessageMenu</code> (Copy message, Copy as Markdown) is de plek; de dialoog is dezelfde vragen in een sheet. Niet in deze fasen (zie de productvragen).</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>De dialoog</h3>
+    <p>Eén dialoog, "Fork this conversation", in <code>shell/ForkDialog.tsx</code> op dezelfde leest als <code>WorktreeDialog.tsx</code>. Van boven naar beneden:</p>
+    <ul>
+      <li><strong>Waar vanaf.</strong> "After turn 3 of 7: 'Make the lexer handle unicode...'" met de eerste regel van de boodschap van die beurt. Bij de laatste beurt: "After the last turn". Niet te wijzigen in de dialoog; de plek waar de persoon klikte is het antwoord.</li>
+      <li><strong>CLI en model.</strong> De <code>ModelPicker</code> die de composer al heeft, met alle geïnstalleerde chat-CLIs. De eigen CLI staat voorgeselecteerd met het model van het origineel; een andere CLI neemt de onthouden selectie van die CLI (<code>selectionFor</code>). Onder de picker één zin zodra een andere CLI gekozen is: "The new agent gets the last part of the conversation as text and can read the rest through the line from the original." Dat is de hele uitleg van de wissel.</li>
+      <li><strong>Worktree.</strong> Een vinkje "Work in a git worktree", standaard aan, alleen getekend wanneer de map van het origineel in een repository ligt (de daemon zegt dat in <code>chat.forkInfo</code>, zie de wire). Met een tekstveld voor de branch, ingevuld met <code>branchSlug(titel van het origineel)</code> en de <code>freeBranch</code>-regel. Zonder repository staat er "This folder is not in a git repository; the fork works in the same folder."</li>
+      <li><strong>De bestanden.</strong> Alleen bij een oudere beurt. Met worktree: "Start from the files as they were after this turn", standaard aan; uit betekent dat de worktree van HEAD start zoals elke worktree. Zonder worktree, in de gedeelde map: geen vinkje maar een zin: "The files stay as they are now; the agent is told the folder is newer than this turn." Wat "het werk ongedaan maken" in de gedeelde map moet betekenen is productvraag 2; de dialoog van fase 1 biedt het daar niet aan.</li>
+      <li><strong>Titel.</strong> Ingevuld met "&lt;titel van het origineel&gt; (fork)", te wijzigen; een titel die de persoon aanpast krijgt <code>titleSource: 'user'</code>.</li>
+      <li><strong>De knop.</strong> "Fork". Terwijl de daemon werkt (een worktree maken, een CLI kort starten voor Codex) staat de knop uit met een spinner; een weigering staat in de dialoog met de reden van de daemon.</li>
+    </ul>
+    <p>Na de knop landt de nieuwe node rechts van het origineel met een edge van het origineel ernaartoe (via <code>project.changed</code>, want de daemon schrijft hem), en de client die de dialoog had selecteert hem en brengt de camera erheen, zoals na <code>addNode</code>. De thread van de fork toont de gekopieerde geschiedenis tot en met de gekozen beurt, met daaronder een note: "Forked from &lt;titel&gt; after turn 3. The files start from the state after that turn, in worktree lexer-fork." De composer is leeg; niets wordt automatisch gestuurd.</p>
+
+    <h3>Wat de nodes laten zien</h3>
+    <ul>
+      <li>De fork draagt in zijn kop een pill met het <code>GitFork</code>-icoon en "Fork of &lt;titel&gt;" (tooltip: de beurt en het moment), naast de branch-pill die het worktree-ontwerp aan een node in een worktree geeft. Klikken brengt de camera naar het origineel.</li>
+      <li>Het origineel krijgt op de kaart van de beurt waar vanaf is afgetakt een klein merkteken "forked" met het aantal, zodra de client een fork van die beurt kent (fase 4: afgeleid uit <code>forkOf</code> van elke chat die deze client via <code>chat.list</code> ziet, dus alleen forks die de daemon geladen heeft).</li>
+      <li>Het menu van de fork-node krijgt "Summarize for &lt;origineel&gt;" en, in een worktree, "Merge worktree into &lt;branch&gt;..." uit het worktree-ontwerp, plus "Show original".</li>
+    </ul>
+  </section>
+
+  <section id="model">
+    <h2>Het model</h2>
+    <p>Een fork is drie dingen: een chat-record dat begint als kopie, een node op het canvas en een regel in de lineage. Geen nieuw begrip in de code, en het woord "fork" komt alleen voor in de velden die hieronder staan.</p>
+    <h3>Het chat-record</h3>
+    <p><code>ChatInfo</code> krijgt één optioneel veld, <code>forkOf: { chatId, turnId, at }</code>: het origineel, de beurt waarna is afgetakt en het moment. Het is de waarheid over de herkomst en leeft in <code>$RUIMTE_HOME/chats/&lt;forkId&gt;.json</code>, niet in <code>project.json</code>, om dezelfde reden als de lineage: een agent met een shell kan het projectbestand herschrijven en zod stript wat een client niet kent. De <code>items</code> van de fork zijn de items van het origineel tot en met de gekozen beurt, met <strong>dezelfde id's</strong>, zodat <code>forkOf.turnId</code> in beide threads naar hetzelfde item wijst en de client een beurt in beide kan aanwijzen. <code>agentSessionId</code> is het nieuwe sessie- of thread-id van de CLI; <code>usage</code> begint op nul met de <code>turns</code> van het origineel tot die beurt, zodat "started" in de composer klopt en de CLI vast staat.</p>
+    <p>Het record krijgt daarnaast een veld dat niet op de wire komt: <code>preambles: string[]</code>, teksten die eenmalig vóór de eerstvolgende echte prompt gaan, in <code>ChatSession.contextNote</code> naast de berichten van <code>NoticeStore</code>. Daar staan de fork-note voor de agent, bij een wissel de overdracht, en bij het origineel later de samenvatting. Een preamble is niet aan de 500 tekens en de zes uur van een notice gebonden; een samenvatting van een uur geleden is nog steeds waar.</p>
+    <h3>De node</h3>
+    <p>Een gewone chat-node: <code>kind: 'chat'</code>, <code>provider</code>, <code>providerFixed: true</code>, <code>cwd</code> (de worktree of de map van het origineel), <code>title</code>. Geen <code>resume</code> op de node: het record heeft <code>agentSessionId</code> al, en een node met <code>resume</code> zou bij <code>chat.create</code> een tweede bron van waarheid zijn. Geen nieuw veld in <code>ProjectNodeSchema</code>: wat de client over de herkomst tekent komt uit <code>ChatInfo.forkOf</code>. De edge is de bestaande context-edge van origineel naar fork, zodat de fork <code>ruimte-context read &lt;origineel&gt;</code> kan doen; dat is wat een wissel van CLI nodig heeft en wat een fork van dezelfde CLI niet stoort.</p>
+    <h3>De lineage</h3>
+    <p>De fork komt in de lineage met <code>openedBy</code> gelijk aan het origineel en één nieuw optioneel veld, <code>relation: 'fork'</code> (afwezig is de bestaande betekenis: geopend door een verb). <code>depth</code> is de diepte van het origineel, niet plus één: een fork is een evenknie, geen kind. Drie plekken lezen het veld: <code>descendants()</code> slaat een fork over, zodat het stoppen of verwijderen van het origineel de fork niet beëindigt; de teller per aanroeper (16 agents per verb-aanroeper) telt hem niet mee, want een persoon opende hem; en <code>orphans()</code> en <code>prune()</code> blijven hem wel opruimen wanneer de node van het canvas gaat. Waarom de lineage en niet alleen <code>forkOf</code>: de daemon moet zonder alle chats te laden weten welke forks een chat heeft (voor het merkteken en voor het opruimen), en de lineage is het bestand dat daar al voor bestaat.</p>
+    <h3>De beurt en zijn eigen id</h3>
+    <p><code>ChatTurnItem</code> krijgt twee optionele velden. <code>native: { turnId?, lastUuid? }</code>: voor Codex de turn-id uit <code>turn/started</code>, voor Claude de <code>uuid</code> van het laatste <code>assistant</code>-frame van de hoofdketen in die beurt (geen <code>parent_tool_use_id</code>), gezet door de projector op <code>turn.done</code>, dat die waarde van het protocol meekrijgt. En <code>checkpointAfter</code>: de tree van de werkmap toen de beurt settelde, wat <code>Checkpoints.diff</code> al berekent. Een beurt van vóór deze velden heeft ze niet; de daemon valt dan terug op de volgorde (Codex: de n-de beurt uit <code>thread/turns/list</code> oplopend; Claude: de n-de <code>user</code>-regel met tekst) en zegt dat in de fork-note. <span class="badge warning">afgeleid</span> dat de volgorde van de beurten van Ruimte en van de CLI gelijk oploopt; elke <code>sendTurn</code> is één prompt, de hervattingsprompt en <code>/compact</code> inbegrepen, en het compact van Codex is geen beurt. Fase 1 meet dat op een echte thread met een compactie erin.</p>
+  </section>
+
+  <section id="daemon">
+    <h2>De daemon</h2>
+    <p>Eén request, <code>chat.fork</code>, dat alles doet wat het <code>agent</code>-verb doet minus de prompt, plus de kopie van het gesprek. In <code>apps/server/src/chat/fork.ts</code>, aangeroepen uit <code>handlers/chat.ts</code>, met de stappen in deze volgorde en een ongedaanmaking per stap wanneer een latere weigert:</p>
+    <ol>
+      <li><strong>Controleren.</strong> De chat is geladen of op schijf; de beurt bestaat, is gesetteld en heeft <code>native</code> of een plaats in de volgorde; de chat loopt geen beurt (<code>activeTurnId === null</code>), want een transcript dat groeit terwijl het gekopieerd wordt is geen kopie. Weigeringen: <code>chat-not-found</code>, <code>turn-not-found</code>, <code>turn-running</code>, <code>chat-busy</code>, <code>provider-not-installed</code>.</li>
+      <li><strong>De worktree</strong>, als gevraagd: <code>Worktrees.add</code> op een vrije branch, met de registerregel uit het worktree-ontwerp (<code>from</code>, <code>nodeId</code> gelijk aan de nieuwe node, <code>madeBy: 'fork'</code>). Daarna, als gevraagd, de bestanden naar de tree van het einde van de beurt (zie Bestanden). Mislukt een latere stap, dan gaat de worktree weer weg.</li>
+      <li><strong>De CLI-kant</strong>, per provider (hieronder). Levert het nieuwe <code>agentSessionId</code>.</li>
+      <li><strong>Het record.</strong> <code>ChatStore.write</code> voor de nieuwe id: <code>info</code> met <code>forkOf</code>, de nieuwe <code>cwd</code>, de gekozen <code>selection</code> en <code>runtimeMode</code> (het origineel of, bij een wissel, de composer-voorkeur, nooit ruimer dan het origineel via <code>narrowerMode</code>), <code>items</code> tot en met de beurt, en <code>preambles</code> met de fork-note. Het log begint leeg. Eerst het record en dan pas de node, zodat een client die de node ziet en meteen <code>chat.create</code> doet het record al vindt.</li>
+      <li><strong>De node en de edge.</strong> <code>ProjectStore.mutate</code> zoals <code>agent-verb.ts</code>: <code>agentNode</code> met <code>placeBeside</code> naast het origineel op het canvas waar het staat (of het canvas uit de payload voor een chat die een view is), de edge van origineel naar fork, <code>rev + 1</code>, <code>project.changed</code> naar elke socket. De lineage-regel via <code>recordMade</code> met <code>relation: 'fork'</code>.</li>
+      <li><strong>Het antwoord</strong>: <code>{ info, nodeId, edgeId, worktree? }</code>. Geen proces gestart, geen prompt verstuurd. De eerste boodschap van de persoon start de CLI met <code>--resume</code> of <code>thread/resume</code> op het nieuwe id, met de preamble ervoor.</li>
+    </ol>
+    <p>De fork-note voor de agent, de eerste regel van <code>preambles</code>, zegt in drie zinnen wat hij moet weten en niets meer: "Ruimte: this conversation was forked from node &lt;id&gt; ('&lt;titel&gt;') after its turn 3 of 7; what follows that turn there did not happen here." Dan één van: "You work in a git worktree at &lt;pad&gt; on branch &lt;b&gt;, with the files as they were after that turn." / "... on branch &lt;b&gt;, from the current HEAD." / "You work in the same folder as the original; its files are newer than that turn, so check before you assume." En bij een oudere beurt zonder <code>native</code>: "The cut was made by counting turns; if the last message you remember does not match, say so."</p>
+
+    <h3>Claude Code: een ingekorte kopie</h3>
+    <p>In <code>src/chat/claude-fork.ts</code>, naast <code>claude-transcript.ts</code> dat de map al kent (<code>claudeProjectSlug</code>, de projectenmap uit <code>usageRoots</code>). Zuivere functie <code>cutTranscript(lines, lastUuid, newSessionId)</code> plus een dunne laag die leest en schrijft:</p>
+    <ol>
+      <li>Vind <code>&lt;projects&gt;/&lt;slug(cwd van het origineel)&gt;/&lt;agentSessionId&gt;.jsonl</code>; ontbreekt hij daar, zoek op sessie-id door de mappen zoals <code>findSubagentsDir</code> doet. Niet gevonden: weigering <code>transcript-missing</code> met het pad.</li>
+      <li>Neem elke regel tot en met de regel met <code>uuid === lastUuid</code>, plus de regels daarna tot de eerstvolgende <code>user</code>-regel van de hoofdketen met gesproken tekst (dat zijn <code>attachment</code>-, <code>system</code>- en <code>last-prompt</code>-regels van dezelfde beurt). Bij de laatste beurt: alles. Zonder <code>lastUuid</code>: tel de <code>user</code>-regels met tekst en knip vóór de (n+1)-de.</li>
+      <li>Herschrijf <code>sessionId</code> in elke regel naar een nieuwe uuid en schrijf <code>&lt;projects&gt;/&lt;slug(cwd van de fork)&gt;/&lt;nieuwe uuid&gt;.jsonl</code> met <code>writeAtomic</code>. In de map van de <em>nieuwe</em> cwd, want een fork in een worktree heeft een andere slug. <span class="badge warning">afgeleid</span> dat <code>--resume</code> het bestand daar vindt; de proef deed dezelfde cwd. Fase 1 meet eerst een fork naar een worktree.</li>
+      <li>De <code>cwd</code>- en <code>gitBranch</code>-velden op de regels blijven wat ze waren; de CLI leest zijn cwd uit het proces, niet uit het transcript. <span class="badge warning">afgeleid</span>; de proef bewijst het alleen voor dezelfde map.</li>
+    </ol>
+    <p>Waarom niet <code>--fork-session</code> voor de laatste beurt: dat werkt pas wanneer het proces start, en dat is bij de eerste boodschap van de persoon, misschien een uur later, wanneer het origineel al verder is. Een fork is een kopie op het moment van de klik, in beide CLIs. De kopie is precies wat de CLI zelf schrijft (de proef met <code>--fork-session</code> liet een kopie met nieuw <code>sessionId</code> zien), alleen korter.</p>
+    <p>De submap <code>&lt;sessionId&gt;/subagents/</code> hoort bij het oude id en wordt niet gekopieerd. Een subagent-rij van vóór de knip opent in de fork dus via het origineel: <code>subagent-reader.ts</code> volgt <code>forkOf.chatId</code> wanneer de eigen map niets heeft, één stap per fork, tot een chat zonder <code>forkOf</code>. Een fork van een fork werkt zo ook.</p>
+
+    <h3>Codex: <code>thread/fork</code></h3>
+    <p>De daemon heeft geen proces voor de fork en het origineel heeft er misschien wel een. De regel: een kortlevend app-server-proces, zoals <code>codex-thread.ts</code> dat voor <code>thread/items/list</code> al kent (initialize, één request, exit), met <code>thread/fork { threadId: origineel, lastTurnId: native.turnId, excludeTurns: true, cwd: de nieuwe cwd, model, ...codexThreadOptions(runtimeMode) }</code>. Het antwoord geeft <code>thread.id</code>, het nieuwe <code>agentSessionId</code>. Bij de laatste beurt zonder <code>lastTurnId</code>. <span class="badge confirmed">geverifieerd</span> dat een fork van schijf werkt; <span class="badge warning">afgeleid</span> dat het ook werkt terwijl een ander proces (de backend van het origineel) dezelfde thread open heeft, wat de reden is voor de eis dat het origineel geen beurt loopt: de rollout-file is dan af. Fase 1 meet het met een levende backend erbij. Een <code>thread/fork</code> dat faalt is weigering <code>fork-failed</code> met de fout van Codex.</p>
+    <p><code>fake-codex.ts</code> krijgt <code>thread/fork</code> erbij: hij kopieert zijn eigen thread tot en met <code>lastTurnId</code> onder een nieuw id en zet <code>forkedFromId</code>, zodat de test controleert dat de daemon de juiste id meegeeft en de juiste terugkrijgt. <code>fake-claude.ts</code> hoeft niets te leren: de Claude-kant is een bestand, en de test legt een vastgelegd transcript in een tijdelijke projectenmap en leest de kopie terug.</p>
+  </section>
+
+  <section id="bestanden">
+    <h2>Bestanden: checkpoints en worktrees</h2>
+    <p>Een beurt heeft een tree bij zijn start (<code>checkpoint</code>) en, na dit ontwerp, een tree bij zijn einde (<code>checkpointAfter</code>). "Fork from here" is "verder na deze beurt", dus de bestanden die erbij horen zijn die van het einde: <code>checkpointAfter</code> van die beurt, anders <code>checkpoint</code> van de beurt erna (de start van de volgende is het einde van deze, tenzij de persoon ertussen iets veranderde), anders de werkmap van nu met de zin daarover in de fork-note.</p>
+    <div class="table" role="region" aria-label="Wat er met de bestanden gebeurt" tabindex="0">
+      <table class="wide">
+        <caption>Wat er met de bestanden gebeurt</caption>
+        <thead><tr><th scope="col">Situatie</th><th scope="col">Worktree (standaard)</th><th scope="col">Gedeelde map</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Vanaf de laatste beurt</th><td><code>git worktree add -b &lt;branch&gt;</code> van HEAD, zoals elke worktree. Wat in de projectmap niet gecommit is komt niet mee (gedrag van git, staat ook in het worktree-ontwerp). Het vinkje "start from the files after this turn" is hier zinvol als de map ongecommit werk van die beurt heeft: aan zet de worktree op <code>checkpointAfter</code> van de laatste beurt, dus met dat werk erin.</td><td>Niets. Beide agents werken in dezelfde map; de fork-note zegt dat.</td></tr>
+          <tr><th scope="row">Vanaf een oudere beurt</th><td>Na <code>worktree add</code>, met het vinkje aan: in de worktree <code>git read-tree -u --reset &lt;tree&gt;</code> gevolgd door <code>git reset -q</code>, zodat de werkmap de tree is en de index weer HEAD, met de verschillen ongestaged zoals de agent ze destijds achterliet. <span class="badge warning">afgeleid</span>, gedrag van git; fase 2 test het op <code>test-repo.ts</code>. Genegeerde bestanden (<code>node_modules</code>) zaten niet in de tree en blijven wat de worktree heeft; de gedeelde paden uit het worktree-ontwerp gelden ook hier.</td><td>De bestanden blijven zoals ze nu zijn; de fork-note zegt dat de map nieuwer is dan de beurt. Terugzetten in de gedeelde map raakt het origineel en het eigen werk van de persoon, en is productvraag 2.</td></tr>
+          <tr><th scope="row">De tree is weg</th><td colspan="2">Een tree van <code>write-tree</code> is onbereikbaar en <code>git gc</code> ruimt onbereikbare objecten na twee weken op (<code>gc.pruneExpire</code>); een checkpoint van een maand oud kan dus weg zijn. De daemon controleert met <code>git cat-file -e &lt;tree&gt;</code> en weigert met <code>checkpoint-missing</code>; de dialoog zet dan het vinkje uit met "The files of this turn are no longer in the repository" en de fork gaat door van HEAD.</td></tr>
+          <tr><th scope="row">Buiten een repository</th><td colspan="2">Geen worktree en geen tree; de fork werkt in dezelfde map en de note zegt het. Het vinkje wordt niet getekend.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>De "undo the work"-vraag van Bas leest dit ontwerp dus als: de bestanden van de fork terug naar hoe ze na de gekozen beurt waren. Met een worktree is dat gratis en veilig, want het raakt alleen de nieuwe map. Zonder worktree is het <code>read-tree -u --reset</code> in de projectmap: het origineel ziet zijn latere werk verdwijnen, de persoon zijn eigen wijzigingen ook. Wil Bas dat toch, dan is de veilige vorm: alleen aangeboden wanneer geen andere node (chat of terminal) met die map als cwd in een beurt is, standaard uit, met een bevestiging die de tellers van de turn-diffs sinds die beurt noemt ("12 files changed by 3 turns after this one"), en vóór het terugzetten een tree van de map van nu op een note in <em>beide</em> threads ("Files put back to the state after turn 3; the state before that is kept as tree <code>abc123</code>") met een knop "Put back" die dezelfde stap in omgekeerde richting doet. Dat is een algemene "restore files to this turn"-handeling op de beurtkaart, los van forken, en hoort bij fase 5 of bij een eigen item.</p>
+    <p>De turn-diff van de fork werkt vanzelf per worktree (<code>Checkpoints</code> per toplevel). Het samenvoegen en opruimen van de worktree van een fork is één op één het worktree-ontwerp: dezelfde rij in het git-paneel, hetzelfde node-menu, dezelfde merge-dialoog. Alleen de registerregel noemt <code>madeBy: 'fork'</code> zodat de rij "fork of &lt;titel&gt;" kan zeggen.</p>
+  </section>
+
+  <section id="terug">
+    <h2>Terugbrengen: de samenvatting</h2>
+    <p>Twee losse handelingen, allebei in het menu van de fork-node: "Summarize for &lt;origineel&gt;" en "Merge worktree into &lt;branch&gt;...". De tweede is het worktree-ontwerp. De eerste is nieuw en heeft drie stappen: schrijven, bezorgen, lezen.</p>
+    <h3>Schrijven</h3>
+    <p>De CLI van de fork schrijft de samenvatting zelf, in een beurt van de fork, want alleen zij weet wat ze leerde. <code>chat.summarize { chatId }</code> opent via <code>ChatSession.wake</code> een beurt met <code>origin: 'agent'</code>, label "Summary for &lt;titel van het origineel&gt;", een note "Writing a summary for &lt;titel&gt;" en een prompt: "Ruimte: write a summary of what this conversation found out and decided since it was forked from node &lt;id&gt; after turn 3, for the agent that continues there. At most 300 words. Say what changed in the files and where, what worked, what did not, and what is left; leave out what the original already knows. Do not run tools." Het laatste antwoord van die beurt is de samenvatting, begrensd op 8 KiB zoals <code>RESULT_PREVIEW_BYTES</code>. Terwijl de fork een beurt loopt is de knop uit. De persoon ziet de beurt gewoon in de thread van de fork en kan hem afbreken.</p>
+    <h3>Bezorgen</h3>
+    <p>Een <code>SummaryCoordinator</code> naast <code>TaskCoordinator</code>, aan <code>chats.observe()</code>: ziet die beurt op <code>done</code> gaan (herkend aan een <code>summaryFor</code> op de turn, een optioneel veld, zie de wire), neemt de tekst van het laatste <code>assistant</code>-item van die beurt en schrijft één <code>deliver-summary</code> in de outbox (target: het origineel; payload: de fork-id, de turn-id, de tekst). Nooit iets doen vanuit de observer, alleen opschrijven; dat is de regel van het orchestratie-ontwerp. De handler is idempotent op de turn-id van de samenvatting: een origineel dat de note al draagt krijgt hem niet nog eens.</p>
+    <p>Wat bezorgen betekent is productvraag 3. De aanbeveling, en wat de fasen bouwen: de handler zet de tekst in <code>preambles</code> van het origineel en een note in zijn thread, meteen, zonder beurt. De note is wat de persoon ziet: "Summary from fork &lt;titel&gt; (node &lt;id&gt;)" met de tekst eronder, level <code>info</code>, en een optioneel veld <code>from: &lt;forkId&gt;</code> waarmee de client "Open fork" aanbiedt. De preamble is wat de CLI hoort, vóór de eerstvolgende boodschap van de persoon: "Ruimte: a fork of this conversation, node &lt;id&gt; ('&lt;titel&gt;'), forked after your turn 3, reports what it found: ... (The whole fork is readable with ruimte-context read &lt;id&gt;.)" Loopt het origineel een beurt, dan wacht niets: de note staat er, en de preamble gaat mee met de volgende prompt. Een origineel dat niemand geladen heeft wordt van schijf gelezen, het record bijgewerkt en weer weggeschreven, zoals <code>parkedNote</code> dat via <code>note()</code> doet.</p>
+    <p>De edge terug: bezorgen tekent, als hij er niet is, een edge van fork naar origineel, zodat <code>read &lt;forkId&gt;</code> in het origineel werkt. Twee edges tussen dezelfde nodes zijn op het canvas één lijn met twee koppen; dat bestaat al. Het is ook de lijn die een persoon leest als "die twee horen bij elkaar".</p>
+    <h3>Lezen</h3>
+    <p>De client tekent de note zoals elke note, met de tekst als markdown eronder (een note-rij met meer dan één regel is nieuw voor de desktop en tekent nu één regel; <code>NoteRow</code> krijgt een uitvouw voor tekst met meer regels). Op iOS is een note een <code>Label</code> met de tekst; lang maar niet stuk. Het origineel krijgt geen aandacht-markering (een note is geen beurt-einde); dat een samenvatting is aangekomen zie je aan de node zodra je kijkt, en de fork-node die zijn samenvattingsbeurt afrondde draagt het gewone "finished"-vinkje.</p>
+  </section>
+
+  <section id="wissel">
+    <h2>Van CLI wisselen: de overdracht</h2>
+    <p>Een wissel is <code>chat.fork</code> met een andere <code>provider</code>. Het verschil zit in stap 3 (er is geen CLI-kopie, het record krijgt <code>agentSessionId: null</code>) en in <code>preambles</code>: in plaats van de fork-note staat er een overdracht. De items worden wél gekopieerd, zodat de persoon in de fork-node hetzelfde gesprek boven de streep ziet en de thread-lezer van <code>read</code> het hele gesprek kan geven.</p>
+    <p>De overdracht is een zuivere functie <code>handoffText(items, meta, budget)</code> in <code>src/chat/handoff.ts</code>, getest zonder CLI. Vorm:</p>
+    <pre><code>Ruimte: you take over a conversation that ran with Claude Code in node chat-a1b2 ("Lexer")
+on this machine, forked after its turn 3 of 7 on 16 Sep 2026 14:02. Folder: /Users/bas/dev/lexer
+(a git worktree on branch lexer-fork, with the files as they were after that turn).
+The full conversation up to that turn is readable with: ruimte-context read chat-a1b2
+(add --tail 200 for the last part). What follows is its last part, as text.
+
+---
+## User
+Make the lexer handle unicode identifiers.
+## Assistant
+I looked at src/lexer.ts ...
+&gt; Tool Edit (done): {"file_path":"src/lexer.ts",...}
+## User
+Now the tests.
+## Assistant
+Three tests fail because ...
+---
+Continue from here. The person's next message follows.</code></pre>
+    <p>Het stuk tussen de strepen is <code>renderTranscript</code> over de laatste beurten, van achteren naar voren toegevoegd tot het budget vol is (12 KiB, een productinstelling in de code, geen setting), altijd met hele beurten en altijd minstens de laatste. Een subagent is daar al één regel, een tool één regel met 300 tekens invoer en 2000 uitvoer. De kop zegt welke CLI het was, omdat een model dat weet hoe het de tool-regels van de ander moet lezen. De modus van de fork is de composer-voorkeur voor de nieuwe CLI, begrensd door de modus van het origineel (<code>narrowerMode</code>, de regel van fase 5 van de orchestratie), want een wissel is geen manier om ruimer te mogen. Het model is de onthouden selectie voor die CLI; het effort-niveau reist niet mee, want de catalogi verschillen.</p>
+    <p>De nieuwe CLI heeft geen sessie tot de eerste boodschap, dus <code>agentSessionId</code> is null en de composer laat, zoals nu, alleen modellen van die CLI kiezen omdat <code>providerFixed</code> op de node staat. In de thread staat onder de gekopieerde items een note: "Continued with Codex from here; the agent got the last 4 turns as text and can read the rest through the line from &lt;titel&gt;."</p>
+  </section>
+
+  <section id="wire">
+    <h2>Wire-wijzigingen</h2>
+    <p>De regel: alleen optionele velden op bestaande objecten, nieuwe requests, geen nieuw item-kind, geen nieuwe waarde in een bestaande enum, geen nieuw event. Elke wijziging in <code>packages/contracts</code> regenereert <code>schemas.json</code> en <code>DaemonAPI.swift</code> in dezelfde commit; <code>PROTOCOL_VERSION</code> blijft 1.</p>
+<pre><code>// packages/contracts/src/chat.ts
+ChatInfoSchema = z.object({
+    ...bestaand,
+    // The chat this one was forked from and the turn it continues after; absent on a chat nobody forked.
+    forkOf: z.object({ chatId: ChatIdSchema, turnId: z.string().min(1), at: z.number() }).optional()
+});
+
+ChatTurnItemSchema = z.object({
+    ...bestaand,
+    // The CLI's own name for this turn, which is what a fork at this turn is asked with.
+    native: z.object({ turnId: z.string().optional(), lastUuid: z.string().optional() }).optional(),
+    // The git tree of the chat's folder when the turn settled; what a fork after this turn starts its files from.
+    checkpointAfter: z.string().optional(),
+    // Set on the turn a fork writes its summary in: the chat it is for. The coordinator delivers its last answer there.
+    summaryFor: ChatIdSchema.optional()
+});
+
+ChatNoteItemSchema = z.object({
+    ...bestaand,
+    // The chat a delivered summary came from, so a client can offer to open it.
+    from: ChatIdSchema.optional()
+});
+
+// request 'chat.forkInfo' { chatId } -> { repository: boolean; branches: string[]; turns: { turnId, hasNative, hasTree }[] }
+//   Wat de dialoog moet weten voor hij vraagt: of de map in een repository ligt (voor het vinkje), welke
+//   branchnamen bezet zijn, en per gesettelde beurt of er exact geknipt kan worden en of de tree er nog is.
+
+// request 'chat.fork'
+ChatForkPayloadSchema = z.object({
+    chatId: ChatIdSchema,
+    turnId: z.string().min(1),
+    provider: AgentKindSchema.optional(),          // afwezig: dezelfde CLI
+    selection: ModelSelectionSchema.optional(),
+    title: z.string().max(MAX_TITLE_LENGTH).optional(),
+    worktree: z.object({ branch: z.string().min(1).optional() }).optional(),   // afwezig: gedeelde map
+    filesAfterTurn: z.boolean().optional(),       // alleen met worktree
+    viewId: z.string().optional()                  // voor een chat die een view van zichzelf is
+});
+ChatForkResultSchema = z.object({ info: ChatInfoSchema, nodeId: z.string(), edgeId: z.string().nullable(), worktree: WorktreeSchema.optional() });
+// weigeringen (strings in error.code): chat-not-found, turn-not-found, turn-running, chat-busy,
+//   provider-not-installed, transcript-missing, checkpoint-missing, not-a-repository, fork-failed
+
+// request 'chat.summarize' { chatId } -> { turnId }
+//   weigeringen: not-a-fork, chat-busy, original-gone</code></pre>
+    <p>iOS: <code>forkOf</code>, <code>native</code>, <code>checkpointAfter</code>, <code>summaryFor</code> en <code>from</code> vallen in een oude app weg; de nieuwe requests staan alleen in <code>DaemonAPI.swift</code>. Een oude app tekent de fork als een gewone chat met de gekopieerde geschiedenis en de note als een note. De outbox-soort <code>deliver-summary</code> en het recordveld <code>preambles</code> staan niet op de wire. De lineage-schema's zijn bestanden onder <code>$RUIMTE_HOME</code>, geen wire.</p>
+  </section>
+
+  <section id="fasen">
+    <h2>De fasen</h2>
+    <p>Vier fasen die elk los landen, plus een vijfde met wat kan wachten. Geen fase voegt een enumwaarde toe; elke fase die de wire raakt regenereert de Swift-modellen. Geen test wacht op een klok: de outbox draait op <code>ManualClock</code>, de CLIs zijn <code>fake-claude.ts</code> en <code>fake-codex.ts</code>, git is <code>test-repo.ts</code>.</p>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>De eigen id van een beurt, en de fork van dezelfde CLI</h3>
+        <ul>
+          <li><code>claude-protocol.ts</code>: onthoudt de <code>uuid</code> van het laatste <code>assistant</code>-frame zonder <code>parent_tool_use_id</code> en zet hem als <code>native.lastUuid</code> op <code>turn.done</code>; <code>codex-protocol.ts</code> zet <code>codexTurnId</code> als <code>native.turnId</code>. <code>backend.ts</code>: <code>turn.done</code> krijgt <code>native?</code>. <code>projector.ts</code>: schrijft het op het turn-item.</li>
+          <li><code>chat/fork.ts</code> (nieuw): de stappen uit De daemon. <code>chat/claude-fork.ts</code> (nieuw): <code>cutTranscript</code> en het lezen en schrijven. <code>codex-thread.ts</code>: <code>fork(threadId, lastTurnId, params)</code> over het kortlevende proces. <code>chat-store.ts</code>: <code>preambles</code> in het record; <code>chat-session.ts</code>: <code>contextNote</code> neemt ze op en leegt ze, met een <code>persist</code>.</li>
+          <li><code>lineage.ts</code>: <code>relation</code>, de drie lezers. <code>handlers/chat.ts</code>: <code>chat.forkInfo</code> en <code>chat.fork</code>, zonder worktree-velden nog. <code>subagent-reader.ts</code>: de stap naar <code>forkOf.chatId</code>.</li>
+          <li>Client: <code>shell/ForkDialog.tsx</code> zonder het worktree-blok; "Fork from here" in <code>TimelineMenuPopup</code> (met <code>chatId</code> en <code>onFork</code>), in <code>NodeMenu.tsx</code> en in de view-toolbar; de fork-pill in <code>NodeFrame.tsx</code>; de node selecteren als de eigen <code>chat.fork</code> antwoordt. <code>fake-codex.ts</code>: <code>thread/fork</code>.</li>
+        </ul>
+        <p class="accept">Klaar als: een Claude-chat van vier beurten met "Fork from here" op beurt 2 een node oplevert waarvan het record de items tot en met beurt 2 met dezelfde id's draagt, <code>forkOf</code> beurt 2 noemt en het transcriptbestand van de fork precies de regels tot de <code>user</code>-regel van beurt 3 heeft met overal het nieuwe <code>sessionId</code> (test op een vastgelegd transcript in een tijdelijke map); een Codex-chat hetzelfde met <code>thread/fork</code> op de fake, die <code>lastTurnId</code> gelijk aan <code>native.turnId</code> van beurt 2 ontvangt; een beurt zonder <code>native</code> door tellen geknipt wordt en de note het zegt; forken tijdens een beurt <code>turn-running</code> geeft; het origineel stoppen of verwijderen de fork laat leven (<code>descendants</code> slaat hem over); de eerste boodschap in de fork de fork-note als preamble draagt en daarna niet meer; een subagent-rij van vóór de knip in de fork opent. Handmatig, één keer, tegen de echte CLIs: een fork naar een worktree-map vindt zijn transcript, en een Codex-fork terwijl de backend van het origineel leeft.</p>
+        <p><strong>Risico's.</strong> Het transcriptformaat van Claude is niet gedocumenteerd en gepind op 2.1.273; de kopie is wat de CLI zelf doet, wat het minst breekbare is dat er is. Een <code>--resume</code> in een andere projectmap dan waar de sessie ontstond is afgeleid. De volgorde-terugval voor oude beurten kan ernaast zitten bij een thread met een compactie; de note vraagt de agent het te zeggen.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Worktree en bestanden</h3>
+        <ul>
+          <li><code>chat-session.ts</code>: <code>settleCheckpoint</code> schrijft <code>checkpointAfter</code> (<code>Checkpoints.diff</code> geeft de tree terug die hij toch al neemt). <code>git/checkpoints.ts</code>: <code>exists(top, tree)</code> en <code>restore(cwd, tree)</code> (<code>read-tree -u --reset</code> plus <code>reset -q</code>, onder hetzelfde slot per index).</li>
+          <li><code>chat/fork.ts</code>: de worktree via <code>Worktrees.add</code> met de registerregel (<code>madeBy: 'fork'</code>) uit het worktree-ontwerp, de tree-keuze (<code>checkpointAfter</code>, anders volgende <code>checkpoint</code>, anders nu), de weigering <code>checkpoint-missing</code>, het ongedaan maken bij een latere fout. <code>chat.forkInfo</code> met <code>repository</code>, <code>branches</code> en <code>hasTree</code>.</li>
+          <li>Client: het worktree-blok en het vinkje van de bestanden in de dialoog; de branch-pill komt uit het worktree-ontwerp.</li>
+        </ul>
+        <p class="accept">Klaar als, op <code>test-repo.ts</code>: een fork vanaf beurt 1 van een chat die in beurt 2 een bestand schreef een worktree oplevert zonder dat bestand en met de tree van na beurt 1 als werkmap, de index op HEAD en het verschil ongestaged; met het vinkje uit start hij van HEAD; een tree die met <code>git prune --expire=now</code> weg is <code>checkpoint-missing</code> geeft en de map onaangeroerd laat; een fork buiten een repository geen worktree maakt en de note het zegt; een mislukte record-write de worktree weer weghaalt; de turn-diff van de fork alleen zijn worktree toont (<code>worktree-roles.test.ts</code> als voorbeeld).</p>
+        <p><strong>Risico's.</strong> <code>read-tree -u --reset</code> op een tree met bestanden die in HEAD niet bestaan is afgeleid gedrag; de test maakt het hard. Een checkpoint dekt de hele repository, ook buiten de map van de chat; een fork van een chat in een submap zet dus de hele worktree terug, wat juist is (de worktree is nieuw) maar in de gedeelde map niet zou zijn (productvraag 2).</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Van CLI wisselen</h3>
+        <ul>
+          <li><code>chat/handoff.ts</code> (nieuw): <code>handoffText</code> met het budget en de hele-beurten-regel, over <code>renderTranscript</code>. <code>chat/fork.ts</code>: de wissel (geen CLI-kopie, <code>agentSessionId: null</code>, de overdracht in <code>preambles</code>, de modus via <code>narrowerMode</code>, de note "Continued with ...").</li>
+          <li>Client: de CLI-picker in de dialoog met de zin eronder; <code>providerFixed</code> op de node.</li>
+        </ul>
+        <p class="accept">Klaar als: een Claude-chat van zes beurten naar Codex geforkt een record oplevert met alle zes beurten als items, <code>agentSessionId: null</code>, en een preamble die de kop en de laatste hele beurten binnen 12 KiB draagt, altijd minstens de laatste; de eerste <code>send</code> in de fork bij de fake de preamble vóór de tekst zet, met de <code>chatPrompt</code> van Codex ervóór; een origineel in <code>supervised</code> een fork in <code>supervised</code> geeft ook als de voorkeur <code>full-access</code> zegt; de tekst geen dashes en geen namen van andere producten bevat (een test op de renderer).</p>
+        <p><strong>Risico's.</strong> Twaalf kilobyte tekst is voor de nieuwe CLI het duurste deel van zijn eerste prompt; het budget is een constante die de bouwer meet tegen een echte overdracht. Een model dat de tool-regels van de ander verkeerd leest ("ik heb dat bestand al aangepast") is de reden dat de kop de CLI noemt en de zin "check before you assume" erin staat.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>De samenvatting terug</h3>
+        <ul>
+          <li><code>chat-session.ts</code>: <code>summarize(forChatId)</code> op <code>wake</code>, met <code>summaryFor</code> op de turn. <code>chat/summary-coordinator.ts</code> (nieuw): de observer die <code>deliver-summary</code> schrijft. <code>outbox/deliver-summary.ts</code> (nieuw): de handler (note, preamble, de edge terug via <code>ProjectStore.mutate</code>, idempotent op de turn-id; een origineel dat weg is parkeert met een note in de fork). <code>outbox.ts</code>: de soort.</li>
+          <li><code>handlers/chat.ts</code>: <code>chat.summarize</code>. Client: "Summarize for ..." en "Show original" in <code>NodeMenu.tsx</code>; <code>NoteRow</code> met uitvouw voor meerregelige tekst en "Open fork" bij <code>from</code>; het merkteken "forked" op de beurtkaart van het origineel.</li>
+        </ul>
+        <p class="accept">Klaar als: <code>chat.summarize</code> op een fork een beurt opent met <code>summaryFor</code> en de prompt, de fake-CLI antwoordt en het origineel daarna precies één note met die tekst en <code>from</code> draagt en één preamble die met zijn volgende prompt meegaat; een origineel dat op dat moment een beurt loopt de note meteen krijgt en de preamble bij de prompt erna; een daemon-herstart tussen het settelen en het bezorgen niets verliest en niets dubbel bezorgt (de outbox op <code>ManualClock</code>); een edge van fork naar origineel getekend wordt en een tweede samenvatting geen tweede edge; <code>chat.summarize</code> op een chat zonder <code>forkOf</code> <code>not-a-fork</code> geeft; een samenvatting boven 8 KiB afgekapt wordt met de <code>read</code>-aanwijzing.</p>
+        <p><strong>Risico's.</strong> De samenvatting is invoer voor een model en komt van een model; de preamble noemt de bron en de grens, meer kan de daemon niet doen. Twee forks die tegelijk samenvatten geven twee notes en twee preambles; dat is juist, en <code>contextNote</code> zet ze in volgorde.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Later, los te beslissen</h3>
+        <ul>
+          <li>De knop op de kaart van de scrubber hoort bij fase 1 zodra de scrubber gecommit is; de entry in <code>CARD_ACTIONS</code> is de hele wijziging daar.</li>
+          <li>iOS: "Fork from here" in <code>ChatMessageMenu</code> en de dialoog als sheet, in de ronde waarin de orchestratie-weergaven op iOS komen; tot dan blijft alles werken (productvraag 5).</li>
+          <li>"Restore files to this turn" op de beurtkaart als eigen handeling met de tree van ervoor op een note, wat ook de gedeelde-map-variant van "undo the work" is (productvraag 2).</li>
+          <li>Een verb <code>fork</code> voor agents, met dezelfde grenzen als <code>agent</code> (diepte, aantal, modus): bewust nog niet.</li>
+        </ul>
+      </div></li>
+    </ol>
+  </section>
+
+  <section id="risico">
+    <h2>Randgevallen en risico's</h2>
+    <div class="table" role="region" aria-label="Randgevallen" tabindex="0">
+      <table class="wide">
+        <caption>Randgevallen</caption>
+        <thead><tr><th scope="col">Geval</th><th scope="col">Wat de daemon doet</th><th scope="col">Wat de persoon ziet</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Het origineel loopt een beurt</th><td>Weigering <code>turn-running</code> of <code>chat-busy</code>; geen kopie van een groeiend bestand.</td><td>De menuregel is uit met "Wait for the turn to end"; wie hem toch raakt ziet de reden in de dialoog.</td></tr>
+          <tr><th scope="row">De beurt is <code>aborted</code> of <code>error</code></th><td>Toegestaan; de knip ligt na het laatste antwoord dat er wel kwam. Zonder enig antwoord in de beurt: de knip vóór die beurt, en de note zegt dat de beurt niet is meegenomen.</td><td>Een fork zonder die halve beurt.</td></tr>
+          <tr><th scope="row">Forken vanaf een wekbeurt of een beurt van de CLI zelf</th><td>Hetzelfde als elke beurt: het is een prompt die de CLI kreeg.</td><td>"After turn 5 (woken by 2 tasks)".</td></tr>
+          <tr><th scope="row">Een chat met open taken of kinderen</th><td>De fork krijgt geen taken en geen kinderen; de lineage van de kinderen wijst naar het origineel. De subagent-rijen met <code>origin: 'ruimte'</code> worden meegekopieerd zoals ze zijn en settelen in de fork niet meer.</td><td>De rijen staan er als geschiedenis.</td></tr>
+          <tr><th scope="row">Een fork van een fork</th><td>Gewoon; <code>forkOf</code> wijst naar de fork, de transcript- en subagent-lezer volgen de keten.</td><td>Een pill "Fork of &lt;fork&gt;".</td></tr>
+          <tr><th scope="row">Het origineel wordt verwijderd</th><td>De fork leeft door; <code>chat.summarize</code> weigert dan met <code>original-gone</code>, en een samenvatting die al onderweg was parkeert met een note in de fork.</td><td>De pill zegt "Original removed".</td></tr>
+          <tr><th scope="row">De fork wordt verwijderd</th><td>Zoals elke chat-node: <code>chat.kill</code>, het record weg, de lineage-regel weg. De worktree blijft, regel van het worktree-ontwerp, met zijn vinkje in de delete-dialoog.</td><td>De rij "zonder node" in het git-paneel.</td></tr>
+          <tr><th scope="row">Claude: het transcript ontbreekt</th><td>Weigering <code>transcript-missing</code>; niets gemaakt. (Een chat die met <code>resume</code> vanuit een terminal begon en waarvan de sessie elders leeft, wordt op id gezocht zoals <code>findSubagentsDir</code> doet.)</td><td>De reden met het gezochte pad.</td></tr>
+          <tr><th scope="row">Claude: een compactie vóór de knip</th><td>De kopie houdt alles tot de knip, de compactieregel inbegrepen; de CLI leest zijn eigen samenvatting zoals bij een gewone <code>--resume</code>.</td><td>De <code>compaction</code>-rij staat ook in de fork.</td></tr>
+          <tr><th scope="row">Codex: de thread is weg uit de store</th><td><code>thread/fork</code> faalt; weigering <code>fork-failed</code> met de fout. Bij een wissel naar Codex speelt dit niet.</td><td>De reden.</td></tr>
+          <tr><th scope="row">Twee clients forken dezelfde beurt tegelijk</th><td>Twee forks, twee nodes; het is geen conflict, elke fork heeft een eigen id.</td><td>Twee nodes naast elkaar.</td></tr>
+          <tr><th scope="row">Daemon-herstart midden in <code>chat.fork</code></th><td>Geen outbox-entry: forken is een handeling met een dialoog, geen belofte. Wat er half staat (een worktree, een transcriptkopie) is bij de volgende start een verweesde worktree in het paneel of een bestand dat niemand leest.</td><td>Een toast dat de fork niet lukte; opnieuw drukken.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Wat het ontwerp bewust niet doet: geen <code>thread/revert</code> of <code>thread/rollback</code> op het origineel, niets dat het origineel verandert behalve de note en de preamble van een samenvatting; geen automatische samenvatting bij het verwijderen of samenvoegen van een fork (de knop is de handeling); geen fork terwijl een beurt loopt.</p>
+  </section>
+
+  <section id="vragen">
+    <h2>Productvragen</h2>
+    <p>Zes vragen die niet uit de code volgen. Elke vraag heeft twee of drie opties en een aanbeveling; de fasen gaan uit van de aanbeveling.</p>
+
+    <div class="question">
+      <h3>1. Wat betekent "Fork from here" precies: vóór of na de beurt?</h3>
+      <ul class="options">
+        <li data-option="A">Na de beurt: het antwoord van die beurt zit in de fork, de bestanden zijn die van het einde van de beurt. Een fork van de laatste beurt is dan het hele gesprek.</li>
+        <li data-option="B">Vóór de beurt: de boodschap van de persoon staat als laatste, zonder antwoord, zodat hij anders beantwoord kan worden.</li>
+        <li data-option="C">Beide, als twee regels in het menu ("Fork after this turn", "Retry this turn in a fork").</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling A.</strong> "Hier" op een beurt is voor een persoon de plek waar het gesprek stond na die uitwisseling, en het is de enige vorm die met de twee CLIs klopt: Codex kent alleen "tot en met beurt N", en een Claude-transcript geknipt vóór een antwoord laat een prompt zonder antwoord achter die de CLI bij <code>--resume</code> opnieuw zou beantwoorden. B is "opnieuw proberen" en dat is een andere handeling: de boodschap kopiëren naar de composer van de fork (de tekst staat er, één regel "Retry" op de <code>user</code>-rij kan dat later doen zonder dat het model verandert). C nu al bouwen maakt het menu twee keer zo lang voor een geval dat een kopie van een boodschap oplost.</p>
+    </div>
+
+    <div class="question">
+      <h3>2. "Undo the work" zonder worktree: wat mag het in de gedeelde map?</h3>
+      <ul class="options">
+        <li data-option="A">Niet aanbieden; de zin "the files stay as they are now" en de note voor de agent. Terugzetten is met een worktree.</li>
+        <li data-option="B">Aanbieden met de bewakingen uit Bestanden: standaard uit, alleen als geen andere node in die map in een beurt is, met de tellers in de bevestiging, en de tree van ervoor op een note in beide threads met "Put back".</li>
+        <li data-option="C">Aanbieden als aparte handeling "Restore files to this turn" op de beurtkaart, los van forken, met dezelfde bewakingen; de fork-dialoog verwijst ernaar.</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling A in fase 1 en 2, C daarna.</strong> In de gedeelde map is het origineel er ook nog, en zijn latere werk laten verdwijnen omdat iemand een fork wilde, is het soort stille verlies dat het worktree-ontwerp overal uitsluit. De worktree is de standaard, dus het gewone geval heeft de terugzet al. C is de eerlijke vorm van B: een persoon die bestanden wil terugzetten wil dat ook zonder fork, en op de beurtkaart is de tree er al; het hoort bij het item van de editor en de diff-node in <code>docs/NEXT.md</code>, niet in de fork-dialoog. Bas' vraag moet daar wel beantwoord worden: als "undo the work" bedoeld is als "de latere beurten van het origineel terugdraaien in zijn eigen map", dan is dat C.</p>
+    </div>
+
+    <div class="question">
+      <h3>3. Hoe komt de samenvatting aan in het origineel?</h3>
+      <ul class="options">
+        <li data-option="A">Als preamble vóór de eerstvolgende boodschap van de persoon, met een zichtbare note op het moment van aankomst. De CLI van het origineel doet niets tot de persoon iets zegt.</li>
+        <li data-option="B">Als wekbeurt, zoals een taak: het origineel krijgt meteen een beurt met de samenvatting als prompt zodra het geen beurt loopt, en antwoordt erop.</li>
+        <li data-option="C">Als A, met een knop op de note "Let the agent act on this now" die alsnog een wekbeurt opent.</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling A.</strong> Een taak wekt zijn ouder omdat de ouder erom vroeg en erop wacht; een samenvatting is nieuws dat de persoon terugbracht, en de eerstvolgende boodschap zegt wat ermee moet. B laat het origineel op eigen houtje aan de slag gaan met werk dat misschien al gemerged is, kost een beurt en maakt van "context" een opdracht. C is A met één knop erbij en de wake-code is er al; als na gebruik blijkt dat de persoon telkens "verwerk dit" typt, is C twee dagen. Dit is de lezing van "arrives automatically as context in the original's next turn, with a visible note".</p>
+    </div>
+
+    <div class="question">
+      <h3>4. Wie schrijft de samenvatting?</h3>
+      <ul class="options">
+        <li data-option="A">De CLI van de fork, in een beurt van de fork met een vaste prompt; het laatste antwoord is de samenvatting.</li>
+        <li data-option="B">Een eenmalige CLI-aanroep over de gerenderde thread van de fork sinds de knip, zoals de titels van Codex-chats (<code>nameThread</code>), buiten de fork om.</li>
+        <li data-option="C">De persoon: een tekstveld met een voorstel uit A erin, te wijzigen vóór het verzenden.</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling A.</strong> De fork weet wat ze leerde en wat ze verwierp; een eenmalige aanroep over een gerenderde thread (B) ziet tool-uitvoer van 2000 tekens en geen redenering, en is voor een lange fork zelf weer een context-probleem. A kost een beurt in de fork, die de persoon ziet en kan afbreken. C is A met een stap ertussen en kan als later blijkt dat samenvattingen te lang of te vaag zijn; de prompt is dan de eerste knop om aan te draaien.</p>
+    </div>
+
+    <div class="question">
+      <h3>5. iOS: wanneer?</h3>
+      <ul class="options">
+        <li data-option="A">Compatibel in elke fase (regenereren, geen nieuwe kinds), de weergaven (menuregel, sheet, pill) in de iOS-ronde na de orchestratie.</li>
+        <li data-option="B">Gelijk op met de desktop, per fase.</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling A</strong>, dezelfde keuze als bij de orchestratie. De iOS-app tekent een fork vandaag al als chat met geschiedenis en een note; wat ontbreekt is de knop, en de dialoog heeft de CLI-picker en het worktree-blok die op iOS nog geen vorm hebben.</p>
+    </div>
+
+    <div class="question">
+      <h3>6. Tekent de samenvatting de edge terug?</h3>
+      <ul class="options">
+        <li data-option="A">Ja: bezorgen tekent een edge van fork naar origineel als die er niet is, zodat het origineel de fork kan lezen; de twee edges zijn één lijn met twee koppen.</li>
+        <li data-option="B">Nee: de preamble zegt hoe de agent de lijn zelf trekt (<code>ruimte-context link</code>) en een persoon tekent hem met de hand.</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling A.</strong> De samenvatting eindigt met "de rest is te lezen met <code>read &lt;forkId&gt;</code>", en dat is een leugen zolang de lijn er niet is. Een edge is een documentwijziging, maar een kleine en zichtbare, en de merge in het worktree-ontwerp raakt de repository, wat groter is. B laat de eerste vraag van het origineel mislukken met "no line runs from that node into you".</p>
+    </div>
+  </section>
+
+  <section id="scope">
+    <h2>Buiten scope</h2>
+    <ul>
+      <li>Een verb waarmee een agent zelf forkt: later, met de grenzen van <code>agent</code>.</li>
+      <li>"Retry this turn" (de boodschap opnieuw, anders beantwoord): een kopie naar de composer, geen fork-vorm (productvraag 1).</li>
+      <li>Bestanden terugzetten in de gedeelde map: productvraag 2, als eigen handeling op de beurtkaart.</li>
+      <li>Het samenvoegen en opruimen van de worktree van een fork: het worktree-ontwerp, ongewijzigd.</li>
+      <li>Forks van terminal-agents: een terminal heeft geen thread die Ruimte kent; "Open in chat" met <code>resume</code> bestaat en is daar de weg.</li>
+      <li>Een overdracht die meer is dan tekst (de tool-uitvoer van het origineel als bestanden): de edge en <code>read</code> zijn de rest.</li>
+    </ul>
+    <h3>Volgende stap</h3>
+    <p>Bas beantwoordt de zes vragen. Daarna start fase 1 met de twee metingen tegen de echte CLIs die de bouwer als eerste doet: een Claude-fork naar een worktree-map, en een Codex-fork terwijl de backend van het origineel leeft.</p>
+  </section>
+</main>
+<footer><p>Geverifieerd: <code>claude --help</code> en <code>codex app-server generate-json-schema</code> van de geïnstalleerde versies; proefsessies met claude 2.1.273 (sessie, <code>--resume</code>, <code>--resume --fork-session</code>, een ingekorte transcriptkopie, de uuid's van stream-json tegen het transcript) en met codex-cli 0.154.0 (<code>thread/start</code>, <code>turn/start</code>, <code>thread/fork</code> met en zonder <code>lastTurnId</code>, <code>thread/turns/list</code>), alle daarna verwijderd; <code>ChatSession</code> (send, dispatch, openTurn, checkpoint, contextNote, ensureBackend, wake), <code>ChatManager.create</code> en <code>kill</code>, de backends en protocollen, <code>Checkpoints</code>, <code>Worktrees.add</code>, de lineage, <code>wake-parent.ts</code>, <code>notices.ts</code>, <code>renderTranscript</code>, <code>agent-verb.ts</code>, <code>chat.ts</code> in contracts, de handlers, de client (timeline, menu, scrubber, canvas-store, composer, node-menu) en de iOS-validatie. Afgeleid: <code>--resume</code> vanuit een andere projectmap, <code>thread/fork</code> naast een levende backend, de gelijke volgorde van beurten voor oude threads, en <code>read-tree -u --reset</code>. Niet gedaan: code geschreven, dit rapport in een browser gerenderd.</p></footer>
+</body>
+</html>
