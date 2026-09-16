@@ -13,12 +13,14 @@ import {
     CircleMinus,
     CircleX,
     Copy,
+    Info,
     ListChecks,
     CirclePause,
     LoaderCircle,
     Lock,
     LockOpen,
     StickyNote,
+    TriangleAlert,
     type LucideIcon
 } from 'lucide-react';
 import { PLAN_LIMITS, type Plan, type PlanStepState } from '@ruimte/contracts';
@@ -53,7 +55,9 @@ const STATE_ICON: Record<PlanStepState, LucideIcon> = {
     done: CircleCheck,
     failed: CircleX,
     skipped: CircleMinus,
-    blocked: CircleAlert
+    blocked: CircleAlert,
+    warning: TriangleAlert,
+    info: Info
 };
 
 const STATE_TONE: Record<PlanStepState, string> = {
@@ -62,7 +66,9 @@ const STATE_TONE: Record<PlanStepState, string> = {
     done: 'text-positive',
     failed: 'text-status-error',
     skipped: 'text-text-faint',
-    blocked: 'text-status-needs-you'
+    blocked: 'text-status-needs-you',
+    warning: 'text-status-needs-you',
+    info: 'text-accent'
 };
 
 const FILTERS: { id: PlanFilter; label: string }[] = [

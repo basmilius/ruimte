@@ -186,7 +186,7 @@ const newSub = defineSubVerb('plan', {
     summary: 'Makes a plan for this chat from a JSON document on stdin or a Markdown task list; prints the plan, every item id and how to check one off',
     detail: [
         "stdin\tThe plan as JSON, piped in or as a heredoc: ruimte-context plan new <<'EOF' ... EOF",
-        'flag\t--markdown -\toptional\tA GFM task list on stdin instead of JSON: # title, ## section, - [ ] step, indented for a sub-step, > **Title** description for a text block, [x] [!] [-] [?] [~] for a state',
+        'flag\t--markdown -\toptional\tA GFM task list on stdin instead of JSON: # title, ## section, - [ ] step, indented for a sub-step, > **Title** description for a text block, [x] [!] [-] [?] [~] [w] [i] for a state',
         'flag\t--document JSON\toptional\tThe JSON as one argument instead of on stdin; the CLI puts stdin here when you give neither',
         'flag\t--title T\toptional\tThe title, over the one in the document',
         `flag\t--kind K\toptional\t${PlanKindSchema.options.join(' or ')}, over the one in the document`,
@@ -289,11 +289,11 @@ const readSub = defineSubVerb('plan', {
 
 const setSub = defineSubVerb('plan', {
     name: 'set',
-    usage: '<stepId>... --state open|active|done|failed|skipped|blocked [--note T] [--next ID] [--plan P]',
+    usage: '<stepId>... --state open|active|done|failed|skipped|blocked|warning|info [--note T] [--next ID] [--plan P]',
     summary: 'Sets the state of one or more steps in one rev; with --next the step you move on to becomes active in the same rev',
     detail: [
         'argument\t<stepId>...\trequired\tOne or more steps without sub-steps, by id',
-        `flag\t--state S\trequired\t${PlanStepStateSchema.options.join(', ')}; active is the step you work on now, and more than one may be`,
+        `flag\t--state S\trequired\t${PlanStepStateSchema.options.join(', ')}; active is the step you work on now, and more than one may be; warning ran with a concern and info ran with something worth reading, both with a --note that says what`,
         'flag\t--note T\toptional\tA note on each of the steps; an empty one clears it; \\n reads as a newline',
         'flag\t--next ID\toptional\tThe step that becomes active in the same rev: plan set build --state done --next tests',
         PLAN_FLAG,

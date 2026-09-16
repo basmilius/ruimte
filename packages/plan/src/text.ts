@@ -7,10 +7,12 @@ export const PLAN_STATE_MARKERS: Record<PlanStepState, string> = {
     done: '[x]',
     failed: '[!]',
     skipped: '[-]',
-    blocked: '[?]'
+    blocked: '[?]',
+    warning: '[w]',
+    info: '[i]'
 };
 
-export const PLAN_LEGEND = '[ ] open, [~] active, [x] done, [!] failed, [-] skipped, [?] blocked';
+export const PLAN_LEGEND = '[ ] open, [~] active, [x] done, [!] failed, [-] skipped, [?] blocked, [w] warning, [i] info';
 
 export interface PlanTextOptions {
     /* The chat's other plans, named on the second line. */
@@ -34,17 +36,23 @@ const counter = (progress: PlanProgress): string => `${progress.finished}/${prog
 export const progressText = (plan: Pick<Plan, 'meta' | 'items'>): string => {
     const progress = planProgress(plan.items);
     const extra = (count: number, label: string): string[] => (count > 0 ? [`${count} ${label}`] : []);
+    const warnings = progress.warning === 1 ? 'warning' : 'warnings';
     if (plan.meta.kind === 'test') {
         return [
             `${progress.finished} of ${progress.total} run`,
             `${progress.done} passed`,
+            ...extra(progress.warning, warnings),
+            ...extra(progress.info, 'info'),
             ...extra(progress.failed, 'failed'),
             ...extra(progress.skipped, 'skipped'),
             ...extra(progress.blocked, 'blocked')
         ].join(', ');
     }
+    // In a steps plan a warning or info is still done; the extras say which of the done steps to read.
     return [
-        `${progress.done} of ${progress.total} done`,
+        `${progress.done + progress.warning + progress.info} of ${progress.total} done`,
+        ...extra(progress.warning, `with ${progress.warning === 1 ? 'a warning' : 'warnings'}`),
+        ...extra(progress.info, 'with info'),
         ...extra(progress.failed, 'failed'),
         ...extra(progress.skipped, 'skipped'),
         ...extra(progress.blocked, 'blocked')

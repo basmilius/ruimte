@@ -109,9 +109,18 @@ export const activeStep = (plan: Pick<Plan, 'items'>): PlanStep | null => leaves
 /* What a state reads as in a plan of this kind: a test is passed, not done. */
 export const stateLabel = (kind: Plan['meta']['kind'], state: PlanStepState): string => {
     if (kind === 'test') {
-        return { open: 'Not run', active: 'Running', done: 'Passed', failed: 'Failed', skipped: 'Skipped', blocked: 'Blocked' }[state];
+        return {
+            open: 'Not run',
+            active: 'Running',
+            done: 'Passed',
+            failed: 'Failed',
+            skipped: 'Skipped',
+            blocked: 'Blocked',
+            warning: 'Warning',
+            info: 'Info'
+        }[state];
     }
-    return { open: 'Open', active: 'Active', done: 'Done', failed: 'Failed', skipped: 'Skipped', blocked: 'Blocked' }[state];
+    return { open: 'Open', active: 'Active', done: 'Done', failed: 'Failed', skipped: 'Skipped', blocked: 'Blocked', warning: 'Warning', info: 'Info' }[state];
 };
 
 /* The states a person picks from; active is the agent's word for where it works. */

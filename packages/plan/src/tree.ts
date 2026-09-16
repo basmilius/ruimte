@@ -75,17 +75,21 @@ export const isParentStep = (step: PlanStep): boolean => (step.steps?.length ?? 
 /* Unlocked wins over everything: a person lifted the lock and no one puts it back. */
 export const effectiveChecks = (plan: Pick<Plan, 'meta'>, step: PlanStep): PlanChecks => (step.unlocked ? 'anyone' : (step.checks ?? plan.meta.checks));
 
+export const isFinishedOutcome = (state: PlanStepState): boolean => state === 'done' || state === 'skipped' || state === 'warning' || state === 'info';
+
+/* A warning bubbles up so a parent does not look clean; info is only worth reading on the step itself. */
 export const deriveState = (states: readonly PlanStepState[]): PlanStepState => {
-    if (states.every((state) => state === 'done' || state === 'skipped')) {
-        return 'done';
-    }
     if (states.includes('failed')) {
         return 'failed';
     }
     if (states.includes('blocked')) {
         return 'blocked';
     }
-    if (states.includes('active') || states.includes('done')) {
+    if (states.every(isFinishedOutcome)) {
+        return states.includes('warning') ? 'warning' : 'done';
+    }
+    // A skipped step did not run, so next to open steps alone it moves nothing forward.
+    if (states.some((state) => state === 'active' || state === 'done' || state === 'warning' || state === 'info')) {
         return 'active';
     }
     return 'open';
@@ -103,12 +107,14 @@ export interface PlanProgress {
     failed: number;
     skipped: number;
     blocked: number;
-    /* Steps with an outcome: done, failed or skipped. */
+    warning: number;
+    info: number;
+    /* Steps with an outcome: done, failed, skipped, warning or info. */
     finished: number;
 }
 
 export const planProgress = (items: readonly PlanItem[]): PlanProgress => {
-    const progress: PlanProgress = { total: 0, open: 0, active: 0, done: 0, failed: 0, skipped: 0, blocked: 0, finished: 0 };
+    const progress: PlanProgress = { total: 0, open: 0, active: 0, done: 0, failed: 0, skipped: 0, blocked: 0, warning: 0, info: 0, finished: 0 };
     for (const step of allSteps(items)) {
         if (isParentStep(step)) {
             continue;
@@ -116,7 +122,7 @@ export const planProgress = (items: readonly PlanItem[]): PlanProgress => {
         const state = step.state ?? 'open';
         progress.total++;
         progress[state]++;
-        if (state === 'done' || state === 'failed' || state === 'skipped') {
+        if (state === 'failed' || isFinishedOutcome(state)) {
             progress.finished++;
         }
     }

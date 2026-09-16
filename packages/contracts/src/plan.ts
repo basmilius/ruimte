@@ -28,7 +28,7 @@ export const PlanIdSchema = PlanItemIdSchema;
 export type PlanId = z.infer<typeof PlanIdSchema>;
 
 // Final: the iPhone app validates a plan whole, so anything new becomes an optional field instead.
-export const PlanStepStateSchema = z.enum(['open', 'active', 'done', 'failed', 'skipped', 'blocked']);
+export const PlanStepStateSchema = z.enum(['open', 'active', 'done', 'failed', 'skipped', 'blocked', 'warning', 'info']);
 export type PlanStepState = z.infer<typeof PlanStepStateSchema>;
 
 export const PlanChecksSchema = z.enum(['anyone', 'agent', 'person']);

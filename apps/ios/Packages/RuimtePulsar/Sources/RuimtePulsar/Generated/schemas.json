@@ -26313,7 +26313,9 @@
               "done",
               "failed",
               "skipped",
-              "blocked"
+              "blocked",
+              "warning",
+              "info"
             ]
           },
           "by": {
@@ -26392,7 +26394,9 @@
                     "done",
                     "failed",
                     "skipped",
-                    "blocked"
+                    "blocked",
+                    "warning",
+                    "info"
                   ]
                 },
                 "note": {
@@ -26696,7 +26700,9 @@
               "done",
               "failed",
               "skipped",
-              "blocked"
+              "blocked",
+              "warning",
+              "info"
             ]
           },
           "by": {
@@ -33809,7 +33815,9 @@
               "done",
               "failed",
               "skipped",
-              "blocked"
+              "blocked",
+              "warning",
+              "info"
             ]
           },
           "by": {

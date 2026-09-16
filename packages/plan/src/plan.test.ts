@@ -10,6 +10,7 @@ import {
     parsePlanMarkdown,
     planProgress,
     planToMarkdown,
+    progressText,
     renderPlanText,
     stepState,
     validatePlan,
@@ -133,6 +134,15 @@ describe('who may set a step', () => {
         const plan = planOf([step('a', { state: 'done', by: 'agent', at: NOW })]);
         const result = applied(apply(plan, [{ op: 'set', ids: ['a'], state: 'failed', note: 'Broken' }], 'person')).plan;
         expect(stepIn(result, 'a')).toMatchObject({ state: 'failed', by: 'person', note: 'Broken' });
+    });
+
+    test('warning and info follow the rules of every state', () => {
+        const plan = planOf([step('a', { state: 'done', by: 'agent', at: NOW }), step('b', { checks: 'agent' })]);
+        const result = applied(apply(plan, [{ op: 'set', ids: ['a'], state: 'warning', note: 'Slow' }], 'person')).plan;
+        expect(stepIn(result, 'a')).toMatchObject({ state: 'warning', by: 'person', note: 'Slow' });
+        expect(codeOf(apply(result, [{ op: 'set', ids: ['a'], state: 'info' }], 'agent'))).toBe('set-by-person');
+        expect(codeOf(apply(result, [{ op: 'set', ids: ['b'], state: 'info' }], 'person'))).toBe('step-locked');
+        expect(stepIn(applied(apply(result, [{ op: 'set', ids: ['b'], state: 'info' }], 'agent')).plan, 'b')).toMatchObject({ state: 'info', by: 'agent' });
     });
 
     test('a person only checks off, notes and unlocks', () => {
@@ -336,7 +346,22 @@ describe('derived state', () => {
         ['failed', 'blocked', 'failed'],
         ['skipped', 'skipped', 'done'],
         ['skipped', 'blocked', 'blocked'],
-        ['blocked', 'blocked', 'blocked']
+        ['blocked', 'blocked', 'blocked'],
+        ['open', 'warning', 'active'],
+        ['open', 'info', 'active'],
+        ['active', 'warning', 'active'],
+        ['active', 'info', 'active'],
+        ['done', 'warning', 'warning'],
+        ['done', 'info', 'done'],
+        ['failed', 'warning', 'failed'],
+        ['failed', 'info', 'failed'],
+        ['skipped', 'warning', 'warning'],
+        ['skipped', 'info', 'done'],
+        ['blocked', 'warning', 'blocked'],
+        ['blocked', 'info', 'blocked'],
+        ['warning', 'warning', 'warning'],
+        ['warning', 'info', 'warning'],
+        ['info', 'info', 'done']
     ];
 
     for (const [first, second, expected] of PAIRS) {
@@ -347,15 +372,30 @@ describe('derived state', () => {
     }
 
     test('one child passes its state up', () => {
-        for (const state of ['open', 'active', 'done', 'failed', 'blocked'] as const) {
+        for (const state of ['open', 'active', 'done', 'failed', 'blocked', 'warning'] as const) {
             expect(deriveState([state])).toBe(state);
         }
         expect(deriveState(['skipped'])).toBe('done');
+        expect(deriveState(['info'])).toBe('done');
     });
 
     test('failed goes before blocked in any mix', () => {
         expect(deriveState(['done', 'skipped', 'blocked', 'failed', 'active', 'open'])).toBe('failed');
         expect(deriveState(['done', 'skipped', 'open'])).toBe('active');
+        expect(deriveState(['warning', 'info', 'blocked'])).toBe('blocked');
+    });
+
+    test('a warning bubbles up through every level, info stops at its own step', () => {
+        const warned = step('a', {
+            steps: [step('b', { steps: [step('c', { state: 'done' }), step('d', { state: 'warning' })] }), step('e', { state: 'info' })]
+        });
+        expect(stepState(warned)).toBe('warning');
+        const informed = step('a', {
+            steps: [step('b', { steps: [step('c', { state: 'info' }), step('d', { state: 'skipped' })] }), step('e', { state: 'done' })]
+        });
+        expect(stepState(informed)).toBe('done');
+        const unfinished = step('a', { steps: [step('b', { steps: [step('c', { state: 'warning' }), step('d')] }), step('e', { state: 'info' })] });
+        expect(stepState(unfinished)).toBe('active');
     });
 
     test('a parent of parents derives from what its children derive', () => {
@@ -373,7 +413,28 @@ describe('derived state', () => {
             step('a', { steps: [step('b', { state: 'done' }), step('c', { state: 'failed' })] }),
             step('d', { state: 'active' })
         ]);
-        expect(progress).toEqual({ total: 3, open: 0, active: 1, done: 1, failed: 1, skipped: 0, blocked: 0, finished: 2 });
+        expect(progress).toEqual({ total: 3, open: 0, active: 1, done: 1, failed: 1, skipped: 0, blocked: 0, warning: 0, info: 0, finished: 2 });
+    });
+
+    test('progress counts warning and info as finished', () => {
+        const progress = planProgress([step('a', { state: 'warning' }), step('b', { state: 'info' }), step('c', { state: 'done' }), step('d')]);
+        expect(progress).toEqual({ total: 4, open: 1, active: 0, done: 1, failed: 0, skipped: 0, blocked: 0, warning: 1, info: 1, finished: 3 });
+    });
+
+    test('the progress text names warnings and info only when there are any', () => {
+        const items = [
+            step('a', { state: 'done' }),
+            step('b', { state: 'warning' }),
+            step('c', { state: 'warning' }),
+            step('d', { state: 'info' }),
+            step('e', { state: 'failed' }),
+            step('f')
+        ];
+        expect(progressText(planOf(items, { kind: 'test' }))).toBe('5 of 6 run, 1 passed, 2 warnings, 1 info, 1 failed');
+        expect(progressText(planOf(items))).toBe('4 of 6 done, 2 with warnings, 1 with info, 1 failed');
+        expect(progressText(planOf([step('a', { state: 'warning' }), step('b', { state: 'done' })], { kind: 'test' }))).toBe('2 of 2 run, 1 passed, 1 warning');
+        expect(progressText(planOf([step('a', { state: 'warning' }), step('b', { state: 'done' })]))).toBe('2 of 2 done, 1 with a warning');
+        expect(progressText(planOf([step('a', { state: 'done' })], { kind: 'test' }))).toBe('1 of 1 run, 1 passed');
     });
 });
 
@@ -578,6 +639,23 @@ describe('markdown', () => {
     test('refuses a line that belongs to nothing and an unknown marker', () => {
         expect(codeOf(parsePlanMarkdown('# T\n\n- [ ] A\n\nStray prose'))).toBe('plan-invalid');
         expect(codeOf(parsePlanMarkdown('- [o] A'))).toBe('plan-invalid');
+    });
+
+    test('reads and writes the warning and info markers', () => {
+        const parsed = parsePlanMarkdown('- [w] Loads\n    > Slow on a cold start.\n- [W] Saves\n- [i] Syncs\n- [I] Exports');
+        expect(parsed).toEqual({
+            ok: true,
+            draft: {
+                items: [
+                    { type: 'step', title: 'Loads', state: 'warning', note: 'Slow on a cold start.' },
+                    { type: 'step', title: 'Saves', state: 'warning' },
+                    { type: 'step', title: 'Syncs', state: 'info' },
+                    { type: 'step', title: 'Exports', state: 'info' }
+                ]
+            }
+        });
+        const plan = planOf([step('a', { title: 'Loads', state: 'warning', note: 'Slow on a cold start.' }), step('b', { title: 'Syncs', state: 'info' })]);
+        expect(planToMarkdown(plan)).toBe('# Plan\n\n- [w] Loads\n    > Slow on a cold start.\n- [i] Syncs\n');
     });
 
     test('goes out and back in to the same plan, except for ids', () => {

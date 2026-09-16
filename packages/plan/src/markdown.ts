@@ -12,7 +12,11 @@ const MARKER_STATES: Record<string, PlanStepState | undefined> = {
     '~': 'active',
     '!': 'failed',
     '-': 'skipped',
-    '?': 'blocked'
+    '?': 'blocked',
+    w: 'warning',
+    W: 'warning',
+    i: 'info',
+    I: 'info'
 };
 
 /*

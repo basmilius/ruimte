@@ -216,7 +216,7 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
   <section id="kort" class="recommendation">
     <h2>Kort</h2>
     <p>Twee scenario's bepalen de feature. Een agent bouwde iets en de persoon vraagt om een testplan dat hij kan afvinken. Of een agent werkt aan een feature en houdt zijn voortgang bij in dezelfde lijst. In beide gevallen schrijft de agent het plan. Een persoon maakt nooit zelf een plan en bewerkt de structuur niet; hij vinkt af, schrijft een notitie en ontgrendelt.</p>
-    <p>Een plan is een boom van stappen met categorieën en tekstblokken (titel en beschrijving). Stappen hebben sub-stappen tot vijf niveaus diep. Een <code>steps</code>-plan kent afvinken, een <code>test</code>-plan passed, failed, skipped en blocked. De agent markeert de stap waar hij nu aan werkt als <code>active</code>, en het panel toont daar een draaiende ring. Per stap staat wie hem mag zetten: iedereen, alleen de agent (hard slot, een persoon kan ontgrendelen) of alleen een persoon. Een agent zet nooit een status terug die een persoon zette.</p>
+    <p>Een plan is een boom van stappen met categorieën en tekstblokken (titel en beschrijving). Stappen hebben sub-stappen tot vijf niveaus diep. Een <code>steps</code>-plan kent afvinken, een <code>test</code>-plan passed, failed, skipped en blocked. Beide kennen <code>warning</code> (liep, met een bedenking) en <code>info</code> (liep, met iets dat het lezen waard is). De agent markeert de stap waar hij nu aan werkt als <code>active</code>, en het panel toont daar een draaiende ring. Per stap staat wie hem mag zetten: iedereen, alleen de agent (hard slot, een persoon kan ontgrendelen) of alleen een persoon. Een agent zet nooit een status terug die een persoon zette.</p>
     <p>Het panel staat, net als de file preview, niet in de toolbar. Het opent zodra de agent een plan maakt terwijl zijn chat in beeld staat, sluit als die chat uit beeld gaat en komt terug als hij weer in beeld komt. De pil "Plan 6/11" in de kop van de chat opent het ook.</p>
     <p>Het plan staat naast het chat-record in <code>$RUIMTE_HOME/chats</code>. Het gaat mee met een fork, verdwijnt met de chat en is na een herstart gewoon weer leesbaar. De hervattingsprompt noemt het, zodat een agent die na een herstart doorwerkt zijn plan weer oppakt.</p>
   </section>
@@ -393,7 +393,7 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
           <tr><th scope="row"><code>id</code> van een item</th><td>Uniek binnen het plan en stabiel. De agent mag het kiezen (een slug leest makkelijk in zijn eigen output), anders munt de daemon een kort id.</td><td>1 tot 64 tekens, <code>[a-z0-9-]</code></td></tr>
           <tr><th scope="row"><code>title</code></th><td>Eén regel.</td><td>200 tekens</td></tr>
           <tr><th scope="row"><code>description</code></th><td>Kort Markdown zonder koppen, getoond met <code>Markdown</code> uit <code>chat/ui/Markdown.tsx</code>.</td><td>1000 tekens</td></tr>
-          <tr><th scope="row"><code>state</code></th><td><code>open | active | done | failed | skipped | blocked</code>, alleen op een stap zonder sub-stappen. <code>active</code> is de stap die de agent nu uitvoert, zie <a href="#bezig">nu bezig</a>.</td><td>definitief, zie <a href="#risicos">risico's</a></td></tr>
+          <tr><th scope="row"><code>state</code></th><td><code>open | active | done | failed | skipped | blocked | warning | info</code>, alleen op een stap zonder sub-stappen. <code>active</code> is de stap die de agent nu uitvoert, zie <a href="#bezig">nu bezig</a>. <code>warning</code> en <code>info</code> zijn uitkomsten: de stap liep, en ze tellen als afgerond, net als done.</td><td>definitief, zie <a href="#risicos">risico's</a></td></tr>
           <tr><th scope="row"><code>checks</code></th><td>Wie de status mag zetten. Zonder waarde geldt <code>meta.checks</code>.</td><td><code>anyone | agent | person</code></td></tr>
           <tr><th scope="row"><code>by</code>, <code>at</code></th><td>Wie de status het laatst zette: <code>person</code> of <code>agent</code>. De daemon vult het in, nooit de agent.</td><td></td></tr>
           <tr><th scope="row"><code>note</code></th><td>Waarom mislukt, welke commit, wat de persoon zag. Persoon en agent schrijven allebei.</td><td>500 tekens</td></tr>
@@ -403,7 +403,7 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
         </tbody>
       </table>
     </div>
-    <p>De afgeleide status van een ouder: alle kinderen done of skipped geeft done. Eén failed geeft failed, anders één blocked blocked. Is iets active of done, dan is de ouder active, en anders open. Krijgt een stap met een status zijn eerste sub-stap, dan valt die status weg, en de verb-output zegt dat. Voortgang telt alleen bladstappen.</p>
+    <p>De afgeleide status van een ouder, in deze volgorde. Eén failed geeft failed, anders één blocked blocked. Zijn alle kinderen afgerond (done, skipped, warning of info), dan is de ouder warning als er een kind warning is, en anders done; info bubbelt niet op. Is iets active, done, warning of info, dan is de ouder active, en anders open. Krijgt een stap met een status zijn eerste sub-stap, dan valt die status weg, en de verb-output zegt dat. Voortgang telt alleen bladstappen.</p>
   </section>
 
   <section id="bezig">
@@ -446,7 +446,7 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
     <p>Eén verb-groep <code>plan</code> in <code>apps/server/src/canvas/plan-verb.ts</code>, gebouwd met <code>defineVerbGroup</code> zoals <code>view</code>. Het plan hoort altijd bij de chat van de aanroeper. Zonder <code>--plan</code> werkt een verb op het nieuwste plan van die chat. Een terminal krijgt <code>refused plan-needs-chat</code>; de controle staat al in <code>task-verbs.ts</code> (<code>callerKind</code>).</p>
 <pre><code>plan new [--title T] [--kind steps|test] [--checks anyone|agent|person] [--dry-run] (&lt; plan.json | --markdown -)
 plan read [--plan P] [--all]
-plan set &lt;stepId&gt;... --state open|active|done|failed|skipped|blocked [--note T] [--next ID] [--plan P]
+plan set &lt;stepId&gt;... --state open|active|done|failed|skipped|blocked|warning|info [--note T] [--next ID] [--plan P]
 plan note &lt;stepId&gt; --text T [--plan P]
 plan add --type step|text|section --title T [--description D] [--under ID] [--after ID]
          [--checks ...] [--id ID] [--plan P]
@@ -473,7 +473,7 @@ Status: Fixing focus after a refused drop. Now: fix-focus. Also in this chat: pl
     [!] 2.2 Focus stays where it was [focus] set by a person: "Focus jumped to the first column."
   [~] 3 Fix focus after a refused drop [fix-focus] agent-only
   [ ] 4 Resizing keeps whole pixels [pixels]</code></pre>
-    <p>Legenda in de help: <code>[ ]</code> open, <code>[~]</code> active, <code>[x]</code> done, <code>[!]</code> failed, <code>[-]</code> skipped, <code>[?]</code> blocked.</p>
+    <p>Legenda in de help: <code>[ ]</code> open, <code>[~]</code> active, <code>[x]</code> done, <code>[!]</code> failed, <code>[-]</code> skipped, <code>[?]</code> blocked, <code>[w]</code> warning, <code>[i]</code> info.</p>
   </section>
 
   <section id="herstart">
@@ -559,7 +559,7 @@ Status: Fixing focus after a refused drop. Now: fix-focus. Also in this chat: pl
       <table class="wide">
         <thead><tr><th scope="col">Geval</th><th scope="col">Wat er gebeurt</th></tr></thead>
         <tbody>
-          <tr><th scope="row">Nieuwe status later nodig</th><td>iOS valideert payloads als geheel. De zes statussen zijn definitief; iets nieuws wordt een optioneel veld.</td></tr>
+          <tr><th scope="row">Nieuwe status later nodig</th><td>iOS valideert payloads als geheel. <code>warning</code> en <code>info</code> kwamen erbij voordat plans in een release zaten; de acht statussen zijn nu definitief, iets nieuws wordt een optioneel veld.</td></tr>
           <tr><th scope="row">Operaties zonder <code>baseRev</code></th><td>Afwijking van de rev-regel voor projectbestanden. Verdedigbaar: elke operatie noemt een id en weigert als dat id weg is, en het bestand heeft maar één schrijver, de daemon. Na fase 2 in CLAUDE.md.</td></tr>
           <tr><th scope="row">Panel knippert bij pannen</th><td>Opgevangen door zichtbaarheid zonder het panel te meten en 250 ms te wachten voor het sluiten.</td></tr>
           <tr><th scope="row">Veel chats met plannen op één canvas</th><td>Het anker volgt alleen <code>plan new</code> en de pil, nooit een update. Het panel springt dus niet heen en weer.</td></tr>
@@ -593,7 +593,7 @@ Werk in de fasen uit het rapport, in volgorde, met de "Klaar als"-voorwaarden al
 4. Extra's: Copy as Markdown, Send results to chat, filter.
 5. iOS.
 
-Regels die hier extra tellen: de wire krijgt alleen optionele velden, nieuwe requests en nieuwe events, en niets van plans gaat door ChatItemSchema of chat.attach; de zes statussen zijn definitief; niets aan een plan wekt een agent of plant werk in. Voeg na fase 2 aan CLAUDE.md toe dat plans bij een chat horen en als operaties op ids zonder baseRev geschreven worden, en waarom.
+Regels die hier extra tellen: de wire krijgt alleen optionele velden, nieuwe requests en nieuwe events, en niets van plans gaat door ChatItemSchema of chat.attach; de acht statussen zijn definitief; niets aan een plan wekt een agent of plant werk in. Voeg na fase 2 aan CLAUDE.md toe dat plans bij een chat horen en als operaties op ids zonder baseRev geschreven worden, en waarom.
 
 Werkwijze: implementatie via sub-agents (opus; fable voor onderzoek en lastige ontwerpvragen), productkeuzes eerst aan Bas voorleggen, bun run format en bun run check voor elke commit, conventional commits per fase direct op main, zonder Co-Authored-By. Tests volgens CLAUDE.md: geen wall-clock, echte shell of watcher in de standaardrun. Bas test zelf in de Electron dev app; start geen dev server. Noem in commits, code en docs geen ander product.</code></pre>
   </section>
