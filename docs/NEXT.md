@@ -49,14 +49,16 @@ larger ones becomes a GitHub issue when it starts.
    Keyboard pane (which lists them read-only today), then overrides with press-to-record, conflict
    labels and reset. A "restore defaults" action, a canvas font size for chat and text elements,
    and settings search that the palette reads.
-10. **Per-project settings** in `.ruimte/settings.json` (the terminal agent mode first), worktree
-    merge and removal from the group menu (more pressing now that `agent` and `team --worktree` leave a
-    worktree per role behind), shared paths (`node_modules`, `.env`) linked into a new
-    worktree, clone a repository as a project. Worktrees phase 1 is done: the register, counting the
-    work, removal that refuses work without force, the Worktrees section in the git panel and the
-    branch pill and menu block on a node. Next: a diff against the branch a worktree came from, then
-    merging (squash by default, uncommitted work committed first), the `worktree` verb, and shared
-    paths with the checkbox in the delete dialog.
+10. **Per-project settings** in `.ruimte/settings.json`: the file, `project.settings` and its first
+    field (`worktrees.share`) are there; the terminal agent mode is next, then clone a repository as a
+    project. Worktrees (`docs/reports/2026-09-16-worktree-merge-design.html`) are done in all five
+    phases: the register and safe removal, a tab of everything a worktree holds against the branch it
+    came from, merging from the git panel, a node's menu and a group's menu (squash by default, loose
+    work committed first, a conflict left for the panel with Abort), the `worktree` verb (`list`,
+    `diff`, and `merge` for an agent's own children only), shared paths linked into new worktrees, and
+    removing a clean worktree from the delete question of its node. Still open from the design: the
+    iOS app shows none of it, and a merge into a branch checked out nowhere is refused rather than
+    offered as a ref-only merge.
 11. **The editor and the diff node**, the half of this the file node does not cover. Saving is the
     whole of it: there is no `fs.write` on the wire, and adding one is a decision about what a
     client may change on a machine, with a conflict question under it (an agent rewrote the file
