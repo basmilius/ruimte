@@ -292,6 +292,15 @@ export const fakeCodex: FakeCli = (io) => {
                 handleTurnStart(params);
                 return;
             case 'turn/steer': {
+                // The real app-server refuses a steer that does not name the turn it is meant for.
+                if (params.expectedTurnId !== turnId) {
+                    out({ id, error: { code: -32602, message: 'Invalid request: missing field `expectedTurnId`' } });
+                    // The real turn would go on polling; ending it here makes a test fail on its
+                    // assertion rather than on a timeout.
+                    pendingSteer = false;
+                    turnCompleted('failed');
+                    return;
+                }
                 out({ id, result: { turnId } });
                 if (pendingSteer) {
                     pendingSteer = false;

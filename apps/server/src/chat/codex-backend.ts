@@ -187,9 +187,14 @@ export class CodexBackend implements ChatBackend {
         }
         if (answer.kind === 'respond') {
             this.transport.respond(answer.rpcId, answer.result);
-        } else {
-            this.request('turn/steer', { threadId: this.threadId, input: textInput(answer.text) });
+            return true;
         }
+        const turnId = this.protocol.turnId;
+        if (!turnId) {
+            // Codex refuses a steer without the turn it is meant for, and there is none left to join.
+            return false;
+        }
+        this.request('turn/steer', { threadId: this.threadId, expectedTurnId: turnId, input: textInput(answer.text) });
         return true;
     }
 
