@@ -21,9 +21,19 @@ struct PlanSheet: View {
     @State private var noteRequest: PlanNoteRequest?
     @State private var noteText = ""
     @State private var failure: String?
+    @State private var activity = PlanActivityHold()
+    /// Which of several active steps the next tap on the toolbar item shows.
+    @State private var activityCursor = 0
+    @State private var scrollRequest: PlanScrollRequest?
+    @State private var highlightedID: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var plans: [PlanDocument] { store.plans(for: chatID) }
     private var plan: PlanDocument? { plans.first { $0.id == selectedID } ?? plans.first }
+    private var working: Bool { model.info["activeTurnId"]?.stringValue != nil }
+    private var activeSteps: [PlanActivityHold.Step] {
+        plan?.activeSteps.map { PlanActivityHold.Step(id: $0.id, title: $0.title) } ?? []
+    }
     private var agentName: String {
         model.providers.first { $0["kind"] == model.info["provider"] }?.text("name") ?? "The agent"
     }
@@ -51,6 +61,9 @@ struct PlanSheet: View {
             .modifier(PlanPicker(plans: plans, selection: Binding(get: { plan?.id ?? "" }, set: { selectedID = $0 })))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                if let shown = activity.shown {
+                    ToolbarItem(placement: .topBarTrailing) { activityButton(shown) }
+                }
                 if let plan {
                     ToolbarItem(placement: .topBarTrailing) { viewMenu(plan) }
                 }
@@ -85,11 +98,14 @@ struct PlanSheet: View {
         .onChange(of: store.unseen.contains(chatID)) { _, unseen in
             if unseen { store.markSeen(chatID) }
         }
+        .onChange(of: PlanActivityHold.Shown(steps: activeSteps, working: working), initial: true) { _, input in
+            activity.update(active: input.steps, working: input.working)
+        }
     }
 
     private func list(_ plan: PlanDocument) -> some View {
         let context = PlanRowContext(
-            plan: plan, working: model.info["activeTurnId"]?.stringValue != nil, agentName: agentName, busy: busy,
+            plan: plan, working: working, agentName: agentName, busy: busy, highlightedID: highlightedID,
             toggle: { id in
                 if collapsed.contains(id) { collapsed.remove(id) } else { collapsed.insert(id) }
             },
@@ -103,32 +119,68 @@ struct PlanSheet: View {
             note: { ask($0, state: nil) },
             unlock: { apply(plan, step: $0, [PlanOps.unlock([$0.id])]) })
         let rows = plan.rows(filter: filter, collapseDone: collapseDone, collapsed: collapsed)
-        return List {
-            PlanHeader(plan: plan, working: context.working, agentName: agentName).planRowChrome()
-            if rows.isEmpty {
-                Text(emptyText)
-                    .font(.footnote)
-                    .foregroundStyle(MobileStyle.muted)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 24)
-                    .planRowChrome()
-            }
-            ForEach(rows) { row in
-                switch row {
-                case .section(let group, let isCollapsed):
-                    PlanSectionRow(group: group, collapsed: isCollapsed) { context.toggle(group.id) }
+        return ScrollViewReader { reader in
+            List {
+                PlanHeader(plan: plan).planRowChrome()
+                if rows.isEmpty {
+                    Text(emptyText)
+                        .font(.footnote)
+                        .foregroundStyle(MobileStyle.muted)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 24)
                         .planRowChrome()
-                case .text(let text):
-                    PlanTextRow(text: text).planRowChrome()
-                case .step(let step, let depth, let isCollapsed):
-                    PlanStepRow(step: step, depth: depth, collapsed: isCollapsed, context: context)
                 }
+                ForEach(rows) { row in
+                    switch row {
+                    case .section(let group, let isCollapsed):
+                        PlanSectionRow(group: group, collapsed: isCollapsed) { context.toggle(group.id) }
+                            .planRowChrome()
+                    case .text(let text):
+                        PlanTextRow(text: text).planRowChrome()
+                    case .step(let step, let depth, let isCollapsed):
+                        PlanStepRow(step: step, depth: depth, collapsed: isCollapsed, context: context)
+                    }
+                }
+                Color.clear.frame(height: 12).planRowChrome()
             }
-            Color.clear.frame(height: 12).planRowChrome()
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .environment(\.defaultMinListRowHeight, 0)
+            .onChange(of: scrollRequest) { _, request in
+                guard let request else { return }
+                withAnimation(reduceMotion ? nil : .default) { reader.scrollTo(request.id, anchor: .center) }
+            }
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .environment(\.defaultMinListRowHeight, 0)
+    }
+
+    /// The ring or pause of the step the agent is on, kept out of the header so the header never moves with progress.
+    private func activityButton(_ shown: PlanActivityHold.Shown) -> some View {
+        let next = shown.steps[activityCursor % shown.steps.count]
+        return Button {
+            reveal(next.id)
+            activityCursor = (activityCursor + 1) % shown.steps.count
+        } label: {
+            PlanActiveMark(working: shown.working, size: 20)
+        }
+        .accessibilityLabel(shown.working ? "Working on \(next.title)" : "\(agentName) stopped at \(next.title)")
+        .accessibilityHint("Shows the step in the list")
+    }
+
+    private func reveal(_ id: String) {
+        guard let plan, let reveal = plan.reveal(id, filter: filter, collapseDone: collapseDone, collapsed: collapsed)
+        else { return }
+        filter = reveal.filter
+        collapseDone = reveal.collapseDone
+        collapsed = reveal.collapsed
+        // The request lands after the unfolded rows are in the list, so the reader finds the row.
+        let serial = (scrollRequest?.serial ?? 0) + 1
+        Task { @MainActor in
+            scrollRequest = PlanScrollRequest(id: id, serial: serial)
+            highlightedID = id
+            try? await Task.sleep(for: .seconds(1.2))
+            guard scrollRequest?.serial == serial else { return }
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.4)) { highlightedID = nil }
+        }
     }
 
     /// The view choices the desktop keeps in its overflow menu: which steps show and how much is folded.
@@ -191,6 +243,12 @@ struct PlanSheet: View {
     }
 }
 
+/// A serial, so a second tap on the same step scrolls again.
+private struct PlanScrollRequest: Equatable {
+    let id: String
+    let serial: Int
+}
+
 private struct PlanNoteRequest: Identifiable {
     let step: PlanStep
     /// A failed, warning or info step asks for its note before the state is sent, so both land in one rev.
@@ -243,6 +301,7 @@ private struct PlanRowContext {
     let working: Bool
     let agentName: String
     let busy: Set<String>
+    let highlightedID: String?
     let toggle: (String) -> Void
     let set: (PlanStep, PlanStepState) -> Void
     let note: (PlanStep) -> Void
@@ -251,10 +310,7 @@ private struct PlanRowContext {
 
 private struct PlanHeader: View {
     let plan: PlanDocument
-    let working: Bool
-    let agentName: String
     @ScaledMetric(relativeTo: .body) private var titleIcon: CGFloat = 16
-    @ScaledMetric(relativeTo: .caption) private var smallIcon: CGFloat = 13
 
     var body: some View {
         let progress = plan.progress
@@ -275,16 +331,6 @@ private struct PlanHeader: View {
                     .monospacedDigit()
                 if let status = plan.status {
                     Text(status).font(.footnote).foregroundStyle(MobileStyle.text)
-                }
-                if let active = plan.activeSteps.first {
-                    HStack(spacing: 6) {
-                        PlanActiveMark(working: working, size: smallIcon)
-                        Text(active.title).lineLimit(1)
-                    }
-                    .font(.footnote)
-                    .foregroundStyle(MobileStyle.muted)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(working ? "Now: \(active.title)" : "\(agentName) stopped at \(active.title)")
                 }
             }
             .accessibilityElement(children: .combine)
@@ -456,7 +502,7 @@ private struct PlanStepRow: View {
         .modifier(PlanStepAccessibilityActions(step: step, context: context, collapsed: collapsed, maySet: maySet))
         .listRowInsets(EdgeInsets())
         .listRowSeparator(.hidden)
-        .listRowBackground(working ? MobileStyle.accent.opacity(0.1) : Color.clear)
+        .listRowBackground(rowBackground)
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             if plan.kind == .test && maySet {
                 Button("Passed", lucideIcon: "circle-check") { context.set(step, .done) }.tint(MobileStyle.positive)
@@ -472,6 +518,11 @@ private struct PlanStepRow: View {
             }
         }
         .contextMenu { menu }
+    }
+
+    private var rowBackground: Color {
+        if context.highlightedID == step.id { return MobileStyle.accent.opacity(0.2) }
+        return working ? MobileStyle.accent.opacity(0.1) : Color.clear
     }
 
     @ViewBuilder private var mark: some View {

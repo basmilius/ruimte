@@ -58,7 +58,9 @@ A chat whose agent keeps a plan shows its progress beside Sub-agents as the desk
 on a raised capsule, a red dot for a failed step and an accent dot for a plan made since the chat was last opened; the
 phone never opens a plan on its own. While the agent works on a step the check turns into a spinning ring. The sheet
 is drawn after the desktop plan panel: the chat as its title, a header with the plan's title, kind, counters, status
-line, the step in progress and a progress bar. The overflow menu holds the filter (All, Open or Issues: failed,
+line and a progress bar, which never move with the agent's progress. While a step is active the toolbar holds its
+spinning ring (or the pause once the agent stopped), kept for 1.5 seconds after the step ends so it does not flicker
+between steps; a tap scrolls to that step, unfolding or clearing whatever hides it, and cycles through several. The overflow menu holds the filter (All, Open or Issues: failed,
 blocked or warning), Collapse done, Expand all and Collapse all, kept on the phone, and Copy as Markdown. Sections,
 text blocks and steps follow as custom rows with the same Lucide circles, one column per row: a step under a section
 lines up with the section's caret and a child sits under its parent's title. A parent shows "2/3" instead of a circle,

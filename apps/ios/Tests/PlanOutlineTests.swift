@@ -302,3 +302,121 @@ final class PlanOutlineTests: XCTestCase {
         return {}
     }
 }
+
+@MainActor
+final class PlanActivityHoldTests: XCTestCase {
+    /// Runs nothing on its own; a test fires what is due.
+    @MainActor private final class ManualScheduler {
+        var pending: [(id: Int, delay: Duration, action: @MainActor () -> Void)] = []
+        private var next = 0
+
+        var schedule: PlanActivityHold.Schedule {
+            { [unowned self] delay, action in
+                next += 1
+                let id = next
+                pending.append((id, delay, action))
+                return { [unowned self] in pending.removeAll { $0.id == id } }
+            }
+        }
+
+        func fire() {
+            let due = pending
+            pending = []
+            for entry in due { entry.action() }
+        }
+    }
+
+    private let first = PlanActivityHold.Step(id: "a", title: "First")
+    private let second = PlanActivityHold.Step(id: "b", title: "Second")
+
+    func testAnActiveStepShowsAtOnce() {
+        let scheduler = ManualScheduler()
+        let hold = PlanActivityHold(schedule: scheduler.schedule)
+        hold.update(active: [first], working: true)
+        XCTAssertEqual(hold.shown, .init(steps: [first], working: true))
+        XCTAssertTrue(scheduler.pending.isEmpty)
+    }
+
+    func testNoActiveStepKeepsTheLastForTheHold() {
+        let scheduler = ManualScheduler()
+        let hold = PlanActivityHold(schedule: scheduler.schedule)
+        hold.update(active: [first], working: true)
+        hold.update(active: [], working: true)
+        XCTAssertEqual(hold.shown, .init(steps: [first], working: true))
+        XCTAssertEqual(scheduler.pending.map(\.delay), [PlanActivityHold.hold])
+        scheduler.fire()
+        XCTAssertNil(hold.shown)
+    }
+
+    func testANewActiveStepDuringTheHoldReplacesTheLast() {
+        let scheduler = ManualScheduler()
+        let hold = PlanActivityHold(schedule: scheduler.schedule)
+        hold.update(active: [first], working: true)
+        hold.update(active: [], working: true)
+        hold.update(active: [second], working: true)
+        XCTAssertEqual(hold.shown, .init(steps: [second], working: true))
+        XCTAssertTrue(scheduler.pending.isEmpty)
+    }
+
+    func testRepeatedEmptyUpdatesDoNotExtendTheHold() {
+        let scheduler = ManualScheduler()
+        let hold = PlanActivityHold(schedule: scheduler.schedule)
+        hold.update(active: [first], working: true)
+        hold.update(active: [], working: true)
+        hold.update(active: [], working: true)
+        XCTAssertEqual(scheduler.pending.count, 1)
+    }
+
+    func testPausingWaitsForTheHoldAndWorkingAgainCancelsIt() {
+        let scheduler = ManualScheduler()
+        let hold = PlanActivityHold(schedule: scheduler.schedule)
+        hold.update(active: [first], working: true)
+        hold.update(active: [first], working: false)
+        XCTAssertEqual(hold.shown?.working, true)
+        hold.update(active: [first], working: true)
+        XCTAssertTrue(scheduler.pending.isEmpty)
+        hold.update(active: [first], working: false)
+        scheduler.fire()
+        XCTAssertEqual(hold.shown, .init(steps: [first], working: false))
+    }
+
+    func testAStepThatAppearsWhileStoppedShowsPausedAtOnce() {
+        let scheduler = ManualScheduler()
+        let hold = PlanActivityHold(schedule: scheduler.schedule)
+        hold.update(active: [first, second], working: false)
+        XCTAssertEqual(hold.shown, .init(steps: [first, second], working: false))
+        hold.update(active: [first, second], working: true)
+        XCTAssertEqual(hold.shown?.working, true)
+    }
+
+    func testRevealUnfoldsAncestorsAndDropsOnlyWhatStillHides() throws {
+        let value: JSONValue = .object([
+            "id": .string("plan"), "rev": .number(1), "createdAt": .string("2026-09-16T10:00:00Z"),
+            "meta": .object(["title": .string("Plan"), "kind": .string("steps"), "checks": .string("anyone")]),
+            "items": .array([
+                .object([
+                    "type": .string("section"), "id": .string("s"), "title": .string("Section"),
+                    "items": .array([
+                        .object([
+                            "type": .string("step"), "id": .string("p"), "title": .string("Parent"),
+                            "steps": .array([
+                                .object([
+                                    "type": .string("step"), "id": .string("c"), "title": .string("Child"),
+                                    "state": .string("done"),
+                                ])
+                            ]),
+                        ])
+                    ]),
+                ])
+            ]),
+        ])
+        let document = try XCTUnwrap(PlanDocument(value))
+        XCTAssertEqual(
+            document.reveal("c", filter: .all, collapseDone: false, collapsed: ["s", "p", "other"]),
+            PlanReveal(filter: .all, collapseDone: false, collapsed: ["other"]))
+        XCTAssertEqual(
+            document.reveal("c", filter: .open, collapseDone: true, collapsed: []),
+            PlanReveal(filter: .all, collapseDone: false, collapsed: []))
+        XCTAssertNil(document.reveal("missing", filter: .all, collapseDone: false, collapsed: []))
+    }
+}

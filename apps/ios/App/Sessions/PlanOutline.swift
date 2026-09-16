@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import RuimtePulsar
 
 /// The six states of a step are final on the wire, so a switch over them needs no default.
@@ -329,6 +330,31 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
         return rows
     }
 
+    /// The view choices that bring a step into the list: its sections and parents unfolded, and the filter or Collapse
+    /// done given up only when they still hide it. Nil when the plan has no such step.
+    func reveal(_ id: String, filter: PlanFilter, collapseDone: Bool, collapsed: Set<String>) -> PlanReveal? {
+        func ancestors(_ step: PlanStep) -> [String]? {
+            if step.id == id { return [] }
+            for child in step.steps {
+                if let path = ancestors(child) { return [step.id] + path }
+            }
+            return nil
+        }
+        guard
+            let path = groups.lazy.compactMap({ group in
+                group.steps.lazy.compactMap(ancestors).first.map { group.title == nil ? $0 : [group.id] + $0 }
+            }).first
+        else { return nil }
+        var result = PlanReveal(filter: filter, collapseDone: collapseDone, collapsed: collapsed.subtracting(path))
+        func shows() -> Bool {
+            rows(filter: result.filter, collapseDone: result.collapseDone, collapsed: result.collapsed)
+                .contains { $0.id == id }
+        }
+        if !shows() { result.filter = .all }
+        if !shows() { result.collapseDone = false }
+        return result
+    }
+
     /// The plan as a GFM task list, as `planToMarkdown` in `@ruimte/plan` writes it: ids, who set a state and the
     /// locks stay out.
     var markdown: String {
@@ -401,6 +427,89 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
                     ? $0.offset > $1.offset : $0.element.createdAt > $1.element.createdAt
             }
             .map(\.element)
+    }
+}
+
+struct PlanReveal: Equatable, Sendable {
+    var filter: PlanFilter
+    var collapseDone: Bool
+    var collapsed: Set<String>
+}
+
+/// What the sheet's toolbar shows of the agent's progress. Between one step set done and the next set active, or
+/// while the working state flickers, the plan has no active step for a moment; without a hold the item would vanish
+/// and come back. A new active step shows at once, and only going quiet or pausing waits for the hold.
+@MainActor @Observable
+final class PlanActivityHold {
+    struct Step: Equatable, Sendable {
+        let id: String
+        let title: String
+    }
+
+    struct Shown: Equatable, Sendable {
+        var steps: [Step]
+        var working: Bool
+    }
+
+    typealias Cancel = @MainActor () -> Void
+    typealias Schedule = @MainActor (Duration, @escaping @MainActor () -> Void) -> Cancel
+
+    static let hold: Duration = .milliseconds(1500)
+
+    static let sleeping: Schedule = { delay, action in
+        let task = Task { @MainActor in
+            try? await Task.sleep(for: delay)
+            guard !Task.isCancelled else { return }
+            action()
+        }
+        return { task.cancel() }
+    }
+
+    private(set) var shown: Shown?
+    @ObservationIgnored private let schedule: Schedule
+    @ObservationIgnored private var cancelHide: Cancel?
+    @ObservationIgnored private var cancelPause: Cancel?
+
+    init(schedule: @escaping Schedule = PlanActivityHold.sleeping) {
+        self.schedule = schedule
+    }
+
+    func update(active: [Step], working: Bool) {
+        if active.isEmpty {
+            if shown != nil && cancelHide == nil {
+                cancelHide = schedule(Self.hold) { [weak self] in
+                    guard let self else { return }
+                    cancelHide = nil
+                    stopPause()
+                    shown = nil
+                }
+            }
+        } else {
+            cancelHide?()
+            cancelHide = nil
+            if shown == nil {
+                stopPause()
+                shown = Shown(steps: active, working: working)
+                return
+            }
+            shown?.steps = active
+        }
+        guard let current = shown else { return }
+        if working {
+            stopPause()
+            shown?.working = true
+        } else if current.working && cancelPause == nil {
+            cancelPause = schedule(Self.hold) { [weak self] in
+                guard let self else { return }
+                cancelPause = nil
+                shown?.working = false
+            }
+        }
+    }
+
+    private func stopPause() {
+        cancelPause?()
+        cancelPause = nil
     }
 }
 
