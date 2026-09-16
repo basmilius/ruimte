@@ -75,6 +75,8 @@ export const ChatInfoSchema = z.object({
     usage: ChatUsageSchema,
     // The name the CLI gave the session, when it gives one; a node that nobody named takes it.
     suggestedTitle: SuggestedTitleSchema.optional(),
+    // The chat this one was forked from and the turn it continues after; absent on a chat nobody forked.
+    forkOf: z.object({ chatId: ChatIdSchema, turnId: z.string().min(1), at: z.number() }).optional(),
     createdAt: z.number()
 });
 export type ChatInfo = z.infer<typeof ChatInfoSchema>;
@@ -293,7 +295,9 @@ export const ChatTurnItemSchema = z.object({
     // How many CLI processes worked on this turn; absent is one, which is every turn before this field.
     attempt: z.number().int().positive().optional(),
     // The tasks whose results woke the chat for this turn; only a turn the daemon opened carries them.
-    taskIds: z.array(z.string()).optional()
+    taskIds: z.array(z.string()).optional(),
+    // The CLI's own name for where this turn ended, which is what a fork after this turn is cut at.
+    native: z.object({ turnId: z.string().optional(), lastUuid: z.string().optional() }).optional()
 });
 
 /* What a turn a restart could not take up again ends with, so a client can tell it from a turn a person stopped. */
@@ -533,6 +537,26 @@ export type ChatTurnDiffPayload = z.infer<typeof ChatTurnDiffPayloadSchema>;
 // Null when the turn has no checkpoint to diff against: no repository, or git could not be read.
 export const ChatTurnDiffResultSchema = z.object({ diff: ChatCheckpointDiffSchema.nullable() });
 export type ChatTurnDiffResult = z.infer<typeof ChatTurnDiffResultSchema>;
+
+// A title of a node the fork makes; the same cap the canvas verbs hold a title to.
+export const CHAT_FORK_TITLE_MAX = 120;
+
+/*
+ * A new chat node beside the original that goes on after `turnId`, with the history up to and
+ * including that turn. `viewId` names the canvas for a chat that is a view of its own, which stands
+ * on none.
+ */
+export const ChatForkPayloadSchema = z.object({
+    chatId: ChatIdSchema,
+    turnId: z.string().min(1),
+    title: z.string().trim().min(1).max(CHAT_FORK_TITLE_MAX).optional(),
+    viewId: z.string().min(1).optional()
+});
+export type ChatForkPayload = z.infer<typeof ChatForkPayloadSchema>;
+
+// `edgeId` is null when the original stands on no canvas, so no line could be drawn from it.
+export const ChatForkResultSchema = z.object({ info: ChatInfoSchema, nodeId: z.string(), viewId: z.string(), edgeId: z.string().nullable() });
+export type ChatForkResult = z.infer<typeof ChatForkResultSchema>;
 
 export const ChatListResultSchema = z.object({
     chats: z.array(ChatInfoSchema)

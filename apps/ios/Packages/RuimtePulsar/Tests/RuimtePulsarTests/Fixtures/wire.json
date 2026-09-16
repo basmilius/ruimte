@@ -125,6 +125,7 @@
     "chat.compact",
     "chat.clear",
     "chat.turnDiff",
+    "chat.fork",
     "chat.subagent",
     "chat.stopSubagent",
     "skills.list",
