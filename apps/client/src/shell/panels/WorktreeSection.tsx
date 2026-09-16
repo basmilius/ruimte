@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
 import { Eye, FolderX, GitBranch, LocateFixed, MoreHorizontal, Trash } from 'lucide-react';
 import type { CanvasNodeKind, Worktree } from '@ruimte/contracts';
@@ -7,6 +8,7 @@ import { nodeWorking } from '@/state/agent-work';
 import { useChats } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
+import { worktreeLists } from '@/state/worktrees';
 import { MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
@@ -20,6 +22,8 @@ export interface WorktreeNode {
 }
 
 interface WorktreeSectionProps {
+    /* The project folder the list is held for. */
+    folder: string;
     worktrees: readonly Worktree[];
     /* Every node of the project, on every canvas, so a row can name the node working in it. */
     nodes: readonly WorktreeNode[];
@@ -36,17 +40,34 @@ interface WorktreeSectionProps {
  * holds. It is the one place a worktree whose node is gone still shows up, which is what an agent
  * team leaves behind once its canvas is cleaned up.
  */
-export function WorktreeSection({ worktrees, nodes, current, busy, onView, onRemove, onReveal }: WorktreeSectionProps) {
+export function WorktreeSection({ folder, worktrees, nodes, current, busy, onView, onRemove, onReveal }: WorktreeSectionProps) {
     const endpointId = useEndpointId();
     const sessions = useSessions((s) => s.byKey);
     const chats = useChats((s) => s.byKey);
+    const sectionRef = useRef<HTMLElement>(null);
+    const shown = worktrees.length > 0;
+
+    useEffect(() => {
+        const section = sectionRef.current;
+        if (!shown || section === null) {
+            return;
+        }
+        // Sliding or scrolling back into view is when the counts on screen may have gone stale.
+        const observer = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) {
+                worktreeLists.refreshCounts(endpointId, folder);
+            }
+        });
+        observer.observe(section);
+        return () => observer.disconnect();
+    }, [shown, endpointId, folder]);
 
     if (worktrees.length === 0) {
         return null;
     }
 
     return (
-        <section className="flex max-h-48 shrink-0 flex-col border-t border-border">
+        <section ref={sectionRef} className="flex max-h-48 shrink-0 flex-col border-t border-border">
             <div className="flex h-8 shrink-0 items-center gap-2 px-3">
                 <span className={SECTION_LABEL}>Worktrees</span>
                 <span className="text-xs text-text-faint tabular-nums">{worktrees.length}</span>

@@ -338,7 +338,15 @@ export function GitPanel() {
     const branches = refs.filter((ref) => ref.kind === 'local');
 
     return (
-        <div className="flex min-h-0 min-w-0 grow flex-col">
+        <div
+            className="flex min-h-0 min-w-0 grow flex-col"
+            onFocus={(event) => {
+                // Focus moving between controls inside the panel is not the panel gaining it.
+                if (folder !== null && !event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                    worktreeLists.refreshCounts(endpointId, folder);
+                }
+            }}
+        >
             {/* The chips and the buttons of the panel live in the panel's own header, next to its
                 name; the row under it holds what acts on the list. */}
             <PanelHeaderSlot>
@@ -449,6 +457,7 @@ export function GitPanel() {
                 )}
                 {folder !== null && (
                     <WorktreeSection
+                        folder={folder}
                         worktrees={worktrees}
                         nodes={projectNodes}
                         current={cwd}

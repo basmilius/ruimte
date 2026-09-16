@@ -22,10 +22,15 @@ export const useWorktreeRows = create<WorktreesStore>((set, get) => ({
 
 const NONE: readonly Worktree[] = [];
 
+// Counting walks every worktree with `git status`, so focus that comes and goes asks at most once in this window.
+export const COUNTS_QUIET_MS = 5000;
+
 interface Held {
     count: number;
     // Readers that want the work counted; the list asks with `inspect` while any of them is mounted.
     inspecting: number;
+    // When the work was last asked for, on the injected clock.
+    inspectedAt: number | null;
     reload(): void;
     stop(): void;
 }
@@ -39,6 +44,12 @@ interface Held {
 export class WorktreeLists {
     private readonly held = new Map<string, Held>();
 
+    private readonly now: () => number;
+
+    constructor(now: () => number = Date.now) {
+        this.now = now;
+    }
+
     hold(transport: Transport, endpointId: string, folder: string, inspect: boolean): () => void {
         const key = endpointKey(endpointId, folder);
         let held = this.held.get(key);
@@ -47,8 +58,12 @@ export class WorktreeLists {
             const entry: Held = {
                 count: 0,
                 inspecting: 0,
+                inspectedAt: null,
                 reload: () => {
                     const asked = ++generation;
+                    if (entry.inspecting > 0) {
+                        entry.inspectedAt = this.now();
+                    }
                     transport
                         .request('git.worktree-list', { repo: folder, ...(entry.inspecting > 0 ? { inspect: true } : {}) })
                         .then((answer) => {
@@ -106,6 +121,21 @@ export class WorktreeLists {
 
     reload(endpointId: string, folder: string): void {
         this.held.get(endpointKey(endpointId, folder))?.reload();
+    }
+
+    /*
+     * Counts the work again for a reader that just came back into view, unless it was counted a moment
+     * ago: an event or the Refresh button counts too, and nothing changes a worktree between two clicks.
+     */
+    refreshCounts(endpointId: string, folder: string): void {
+        const held = this.held.get(endpointKey(endpointId, folder));
+        if (held === undefined || held.inspecting === 0) {
+            return;
+        }
+        if (held.inspectedAt !== null && this.now() - held.inspectedAt < COUNTS_QUIET_MS) {
+            return;
+        }
+        held.reload();
     }
 }
 
