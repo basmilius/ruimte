@@ -4,9 +4,7 @@ import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 
-/* The one control that shows and hides the session list. The sidebar strip renders it while the
-   list is open and the toolbar takes it over when the list is gone, both at the same x, so it
-   reads as a button that stays put instead of two buttons that trade places. */
+/* The toolbar keeps this control available when the sidebar is closed. */
 export function SidebarToggle() {
     const open = useUi((s) => s.sidebarOpen);
     return (

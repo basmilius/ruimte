@@ -20,19 +20,11 @@ export function BrandSymbol({ size = 24, className }: BrandSymbolProps) {
 }
 
 interface BrandProps {
-    size?: number;
     className?: string;
 }
 
-/* Symbol plus wordmark. The word is Geist at 600, the only place in the client that leaves the
-   interface font. */
-export function Brand({ size = 24, className }: BrandProps) {
-    return (
-        <span className={clsx('inline-flex items-center gap-2', className)}>
-            <BrandSymbol size={size} />
-            <span className="font-brand text-sm font-semibold text-text">Ruimte</span>
-        </span>
-    );
+export function Brand({ className }: BrandProps) {
+    return <span className={clsx('inline-flex h-6 items-center font-brand text-xs font-semibold tracking-[0.2em] text-text-faint', className)}>RUIMTE</span>;
 }
 
 /* The start screen's welcome: the icon, the wordmark at the largest size the theme has, and the tagline under it. */

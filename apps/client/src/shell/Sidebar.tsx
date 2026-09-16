@@ -610,13 +610,12 @@ export function Sidebar() {
             style={{ width: open ? SIDEBAR_WIDTH_PX : 0 }}
         >
             <div className="flex h-full flex-col border-r border-border bg-surface" style={{ width: SIDEBAR_WIDTH_PX }}>
-                <div className="app-drag relative flex h-12 shrink-0 items-center pr-3" style={{ paddingLeft: inset ?? STRIP_PADDING_PX }}>
+                <div
+                    className="app-drag relative flex h-12 shrink-0 items-center justify-between pr-2"
+                    style={{ paddingLeft: inset === undefined ? STRIP_PADDING_PX : inset + 8 }}
+                >
+                    <Brand className="pointer-events-none" />
                     <SidebarToggle />
-                    {/* The brand centers in what the traffic lights leave of the strip, so the toggle
-                        beside it cannot pull it off center. */}
-                    <span className="pointer-events-none absolute inset-y-0 right-0 grid place-items-center" style={{ left: inset ?? STRIP_PADDING_PX }}>
-                        <Brand />
-                    </span>
                 </div>
 
                 <div ref={listRef} className="mt-2 min-h-0 grow overflow-auto px-2">
