@@ -13,6 +13,7 @@ final class SharedMachineSession {
     private(set) var problem: String?
     private(set) var relayed: Bool?
     private var lease: MachineLease?
+    @ObservationIgnored private var preferenceSubscriptions: [() -> Void] = []
     private var references = 0
     private var invalidated = false
     private struct ChatEntry {
@@ -97,6 +98,27 @@ final class SharedMachineSession {
         }
         attention.start()
         icons.start()
+        startPreferences()
+    }
+
+    private func startPreferences() {
+        guard preferenceSubscriptions.isEmpty else { return }
+        let preferences = ChatPreferences.shared
+        preferenceSubscriptions = [
+            rpc.observeConnection { [weak self] connected in
+                guard let self, connected else { return }
+                preferences.send(to: rpc)
+            },
+            preferences.observe { [weak self] in
+                guard let self, rpc.isConnected else { return }
+                preferences.send(to: rpc)
+            },
+        ]
+    }
+
+    private func stopPreferences() {
+        preferenceSubscriptions.forEach { $0() }
+        preferenceSubscriptions.removeAll()
     }
 
     func release() {
@@ -105,6 +127,7 @@ final class SharedMachineSession {
         clearChats()
         attention.stop()
         icons.stop()
+        stopPreferences()
         lease?.release()
         lease = nil
         connected = false
@@ -171,6 +194,7 @@ final class SharedMachineSession {
         clearChats()
         attention.stop()
         icons.stop()
+        stopPreferences()
         projectSubscriptions.invalidate()
         lease?.release()
         lease = nil

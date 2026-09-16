@@ -357,11 +357,7 @@ struct ChatScreen: View {
             Section("Model") {
                 ForEach(Array(model.models.enumerated()), id: \.offset) { _, option in
                     Button(option["name"]?.stringValue ?? "Model") {
-                        Task {
-                            await model.perform(
-                                "chat.configure",
-                                ["selection": .object(["model": option["slug"] ?? .null, "options": .object([:])])])
-                        }
+                        configureSelection(.object(["model": option["slug"] ?? .null, "options": .object([:])]))
                     }
                 }
             }
@@ -385,7 +381,11 @@ struct ChatScreen: View {
             Section("Permissions") {
                 ForEach(["supervised", "auto-accept-edits", "auto", "full-access"], id: \.self) { mode in
                     Button(mode.replacingOccurrences(of: "-", with: " ").capitalized) {
-                        Task { await model.perform("chat.configure", ["runtimeMode": .string(mode)]) }
+                        Task {
+                            if await model.perform("chat.configure", ["runtimeMode": .string(mode)]) {
+                                ChatPreferences.shared.rememberRuntimeMode(mode)
+                            }
+                        }
                     }
                 }
             }
@@ -403,7 +403,16 @@ struct ChatScreen: View {
         var options = selection["options"]?.objectValue ?? [:]
         options[key] = value
         selection["options"] = .object(options)
-        Task { await model.perform("chat.configure", ["selection": .object(selection)]) }
+        configureSelection(.object(selection))
+    }
+
+    private func configureSelection(_ selection: JSONValue) {
+        let provider = model.info.text("provider")
+        Task {
+            if await model.perform("chat.configure", ["selection": selection]) {
+                ChatPreferences.shared.rememberSelection(selection, provider: provider)
+            }
+        }
     }
 
     private func send() {
