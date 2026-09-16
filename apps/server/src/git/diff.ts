@@ -65,9 +65,11 @@ const kindsByPath = (output: string): Map<string, ChatCheckpointFile['kind']> =>
  * the caps that keep a chat file small. Both the turn's checkpoint diff and the git panel read
  * their file lists through this, so a diff is capped and shaped the same way wherever it shows up.
  */
-export const diffTrees = async (top: string, from: string, to: string): Promise<ChatCheckpointDiff | null> => {
-    const numstat = await git(['diff', '--numstat', '-z', '--no-renames', from, to], top);
-    const status = await git(['diff', '--name-status', '-z', '--no-renames', from, to], top);
+export const diffTrees = async (top: string, from: string, to: string, prefix = ''): Promise<ChatCheckpointDiff | null> => {
+    // A folder inside the repository narrows the lists to what lies under it; the patches follow the list.
+    const under = prefix === '' ? [] : ['--', `:(literal)${prefix}`];
+    const numstat = await git(['diff', '--numstat', '-z', '--no-renames', from, to, ...under], top);
+    const status = await git(['diff', '--name-status', '-z', '--no-renames', from, to, ...under], top);
     if (numstat === null || status === null) {
         return null;
     }

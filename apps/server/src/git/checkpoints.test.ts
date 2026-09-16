@@ -108,6 +108,20 @@ describe('Checkpoints', () => {
         await rm(many, { recursive: true, force: true });
     });
 
+    test('a chat in a subfolder answers only for what changed under it', async () => {
+        const inner = join(repo, 'inner');
+        await mkdir(inner, { recursive: true });
+        const tree = await checkpoints.take(inner);
+        await writeFile(join(inner, 'mine.txt'), 'mine\n');
+        // The person's own edit beside it, which the card of that chat must not claim.
+        await writeFile(join(repo, 'kept.txt'), 'one\ntwo\nthree\nfour\n');
+        const diff = await checkpoints.diff(inner, tree!);
+        expect(diff?.files.map((file) => file.path)).toEqual(['inner/mine.txt']);
+        expect((await checkpoints.diff(repo, tree!))?.files.map((file) => file.path).sort()).toEqual(['inner/mine.txt', 'kept.txt']);
+        await rm(inner, { recursive: true, force: true });
+        await git(['checkout', '--', 'kept.txt'], repo);
+    });
+
     test('a diff of two checkpoints of the same tree is empty', async () => {
         const tree = await checkpoints.take(repo);
         const diff = await checkpoints.diff(repo, tree!);

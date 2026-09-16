@@ -58,10 +58,15 @@ export class Checkpoints implements CheckpointService {
         });
     }
 
-    /* What changed since that tree: one unified diff per file, with the counts the card shows. */
+    /*
+     * What changed since that tree under the chat's own folder: one unified diff per file, with the
+     * counts the card shows. The tree holds the whole repository, but a chat in a subfolder (or in a
+     * worktree of its own, which is its own repository root) only answers for what lies under it.
+     */
     async diff(cwd: string, tree: string): Promise<ChatCheckpointDiff | null> {
         const top = await this.toplevel(cwd);
-        if (top === null) {
+        const prefix = await git(['rev-parse', '--show-prefix'], cwd);
+        if (top === null || prefix === null) {
             return null;
         }
         // The working tree as a tree of its own, so files the agent created are in the comparison
@@ -70,7 +75,7 @@ export class Checkpoints implements CheckpointService {
         if (now === null) {
             return null;
         }
-        return await diffTrees(top, tree, now);
+        return await diffTrees(top, tree, now, prefix.trim());
     }
 
     private async toplevel(cwd: string): Promise<string | null> {
