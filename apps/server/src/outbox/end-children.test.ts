@@ -5,7 +5,10 @@ import { join } from 'node:path';
 import type { ChatItem, ChatTurnItem, ProjectContent } from '@ruimte/contracts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
-import { ENDED_REASON, endChildrenHandler, oweEndChildren, type EndChildrenDeps } from './end-children.ts';
+import { AgentLineageStore } from '../agents/lineage.ts';
+import { TaskStore } from '../tasks/task-store.ts';
+import { ENDED_REASON, endChildrenHandler, oweEndChildren, wireEndChildren, type EndChildrenDeps } from './end-children.ts';
+import { OutboxStore } from './outbox.ts';
 import { ManualClock } from './manual-clock.ts';
 import type { EndChildrenEntry, OutboxEntry } from './outbox.ts';
 
@@ -312,4 +315,26 @@ describe('the handler on its own', () => {
         expect(await oweEndChildren(deps)('lead')).toBe(0);
         expect(calls).toEqual([]);
     });
+});
+
+test('what the index says while it warms at start is owed only once the outbox can take work', async () => {
+    const lineage = new AgentLineageStore(home);
+    await lineage.put({ projectId: 'project', nodeId: 'child', openedBy: 'gone-lead', depth: 1, agent: true });
+    const owed: string[] = [];
+    const wiring = wireEndChildren({
+        lineage,
+        outbox: new OutboxStore(home),
+        tasks: new TaskStore(home),
+        chats: { get: () => undefined, stop: async () => undefined },
+        sessions: { get: () => undefined, end: async () => undefined },
+        enqueue: async (_projectId, target) => {
+            owed.push(target);
+        }
+    });
+    // The lead was deleted while the daemon was down: the warm index no longer places it.
+    wiring.places('project', new Set(['child']));
+    expect(owed).toEqual([]);
+    wiring.start();
+    await Promise.resolve();
+    expect(owed).toEqual(['gone-lead']);
 });

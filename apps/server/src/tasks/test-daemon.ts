@@ -130,6 +130,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         now: () => clock.now(),
         log: () => undefined
     });
+    endChildren.start();
     const worker = new OutboxWorker({
         store: outbox,
         clock,

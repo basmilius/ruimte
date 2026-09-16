@@ -88,6 +88,8 @@ export interface EndChildrenWiring {
     children(nodeId: string): string[];
     /* For `ProjectIndex.onPlaces`: a node that left the document takes its agents with it, however it left. */
     places(projectId: string, ids: ReadonlySet<string>): void;
+    /* From here on `places` owes at once; what the index said before (warming it at start) is looked at now. */
+    start(): void;
 }
 
 export const wireEndChildren = ({
@@ -124,13 +126,27 @@ export const wireEndChildren = ({
         return chat ? chat.running || chat.info.activeTurnId !== null : sessions.get(nodeId)?.exited === false;
     };
     const owe = oweEndChildren(deps);
+    // The index is warmed before the outbox can take work, so what it says until then waits here.
+    let early: Map<string, ReadonlySet<string>> | null = new Map();
+    const places = (projectId: string, ids: ReadonlySet<string>): void => {
+        if (early !== null) {
+            early.set(projectId, ids);
+            return;
+        }
+        for (const openedBy of new Set(lineage.orphans(projectId, ids).map((orphan) => orphan.openedBy))) {
+            void owe(openedBy).catch((e: unknown) => log(`Owing the end of the agents ${openedBy} opened failed: ${errorText(e)}`));
+        }
+    };
     return {
         owe,
         handler: endChildrenHandler(deps),
         children: (nodeId) => lineage.descendants(nodeId).filter(live),
-        places: (projectId, ids) => {
-            for (const openedBy of new Set(lineage.orphans(projectId, ids).map((orphan) => orphan.openedBy))) {
-                void owe(openedBy).catch((e: unknown) => log(`Owing the end of the agents ${openedBy} opened failed: ${errorText(e)}`));
+        places,
+        start: () => {
+            const waiting = early ?? new Map<string, ReadonlySet<string>>();
+            early = null;
+            for (const [projectId, ids] of waiting) {
+                places(projectId, ids);
             }
         }
     };
