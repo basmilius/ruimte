@@ -41,10 +41,11 @@ larger ones becomes a GitHub issue when it starts.
    `ruimte-context`), subagent rows that stay anchored, citations from selected assistant text,
    review comments from a diff into the prompt, approval choices with the provider's warning text,
    branch a conversation into a new node. Branching follows `docs/reports/2026-09-16-fork-design.html`,
-   where it is item 9: phase 1 is done ("Fork from here" on a turn, the strip's card, the node menu
-   and a chat view's row, into the same folder with the same CLI). Next: a worktree per fork reset to
-   the tree after the turn (`checkpointAfter`, `chat.forkInfo`), another CLI with a handoff, and a
-   summary back into the original.
+   where it is item 9: phases 1 to 4 are done ("Fork from here" on a turn, the strip's card, the node
+   menu and a chat view's row; a worktree per fork with the work after the turn undone; another CLI
+   with a handoff of the last whole turns; a summary written by the fork and delivered to the original
+   as a note and a preamble). Left for later: "Restore files to this turn" as its own action on a turn
+   (the shared-folder undo), forking on iOS, and a verb for agents to fork.
 9. **Settings and keyboard**: one binding table with `when` contexts, read by the handlers and the
    Keyboard pane (which lists them read-only today), then overrides with press-to-record, conflict
    labels and reset. A "restore defaults" action, a canvas font size for chat and text elements,
