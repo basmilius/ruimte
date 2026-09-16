@@ -71,7 +71,6 @@ struct WorkspacePage: View {
             }
         }
         .navigationDestination(item: $openedViewID) { id in viewDestination(id) }
-        .environment(\.mobileMachineSession, workspace.session)
         .task { workspace.start() }
         .mobileSheet(isPresented: Binding(get: { iconView != nil }, set: { if !$0 { iconView = nil } })) {
             if let item = iconView { ViewIconPicker(workspace: workspace, item: item) }
@@ -558,7 +557,6 @@ struct NotePage: View {
 }
 
 extension EnvironmentValues {
-    @Entry var mobileMachineSession: SharedMachineSession?
     @Entry var inProjectSidebar = false
     @Entry var openMobileWorkspace: (MobileWorkspace) -> Void = { _ in }
 }

@@ -7,7 +7,6 @@ import UniformTypeIdentifiers
 struct ChatScreen: View {
     @AppStorage("ruimte.chat.streaming") private var streamingMode: ChatStreamingMode = .words
     @State private var model: ChatModel
-    @Environment(\.mobileMachineSession) private var machineSession
     @State private var visible = false
     @State private var holdingChat = false
     @State private var showingFiles = false
@@ -38,15 +37,19 @@ struct ChatScreen: View {
     let isPrepared: Bool
     /// The project the chat stands in, which is what a fork's way back and a summary's way to the fork need.
     let workspace: MobileWorkspace?
+    /// Passed in rather than read from the environment: a pushed navigation destination does not inherit the
+    /// environment of the view that declared it, so a chat opened from a project lost its plans and sub-agents.
+    let machineSession: SharedMachineSession?
 
     init(
         client: any MachineRequesting, chatID: String, title: String, isPrepared: Bool = true,
-        workspace: MobileWorkspace? = nil
+        workspace: MobileWorkspace? = nil, session: SharedMachineSession? = nil
     ) {
         _model = State(initialValue: ChatModel(client: client, chatID: chatID))
         self.title = title
         self.isPrepared = isPrepared
         self.workspace = workspace
+        machineSession = session ?? workspace?.session
     }
 
     var body: some View {

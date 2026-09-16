@@ -14,7 +14,7 @@ struct NotificationSessionPage: View {
                 if target == "machine" {
                     MachineActivityPage(session: session)
                 } else if target == "chat" {
-                    ChatScreen(client: session.rpc, chatID: destination.nodeID, title: "Chat")
+                    ChatScreen(client: session.rpc, chatID: destination.nodeID, title: "Chat", session: session)
                 } else if target == "terminal" {
                     TerminalScreen(client: session.rpc, sessionID: destination.nodeID, title: "Terminal")
                 } else if let problem {
@@ -39,7 +39,6 @@ struct NotificationSessionPage: View {
             }
         }
         .modifier(MobilePageSurface())
-        .environment(\.mobileMachineSession, session)
         .task {
             guard lease == nil else { return }
             guard let machine = runtime.machines.first(where: { $0.id == destination.machineID }) else {
@@ -114,7 +113,7 @@ private struct MachineActivityPage: View {
             NavigationLink {
                 ChatScreen(
                     client: session.rpc, chatID: chat.text("chatId", fallback: chat.stableID),
-                    title: chat.text("suggestedTitle", fallback: "Chat"))
+                    title: chat.text("suggestedTitle", fallback: "Chat"), session: session)
             } label: {
                 Text(chat.text("suggestedTitle", fallback: "Chat"))
             }

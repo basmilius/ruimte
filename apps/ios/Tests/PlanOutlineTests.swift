@@ -146,6 +146,33 @@ final class PlanOutlineTests: XCTestCase {
         XCTAssertTrue(store.plans(for: "chat").isEmpty)
     }
 
+    @MainActor func testStoreListsPlansOnConnect() async throws {
+        let machine = PlanMachine()
+        machine.listed = [.object(["chatId": .string("chat"), "plan": plan("p", rev: 6, items: [step("a")])])]
+        let store = PlanStore(client: machine)
+        store.start()
+        defer { store.stop() }
+        for _ in 0..<20 where store.plans(for: "chat").isEmpty { await Task.yield() }
+        XCTAssertEqual(store.plans(for: "chat").map(\.rev), [6])
+    }
+
+    /// A chat is pushed as a navigation destination, which does not inherit the environment of the view that
+    /// declared it, so the session has to reach the screen through its initializer.
+    @MainActor func testChatScreenKeepsTheMachineSessionOfItsProjectOrCaller() {
+        let runtime = AppRuntime(connections: MachineConnections(monitorPaths: false))
+        defer { runtime.connections.shutdown() }
+        let session = SharedMachineSession(
+            machine: Machine(
+                id: "machine", name: "Machine", icon: nil, publicKey: String(repeating: "A", count: 43),
+                brokerUrl: "wss://broker.test", lastSeenAt: nil),
+            runtime: runtime)
+        let workspace = MobileWorkspace(session: session, projectID: "project")
+        let opened = ChatScreen(client: session.rpc, chatID: "chat", title: "Chat", session: session)
+        let inProject = ChatScreen(client: session.rpc, chatID: "chat", title: "Chat", workspace: workspace)
+        XCTAssertTrue(opened.machineSession === session)
+        XCTAssertTrue(inProject.machineSession === session)
+    }
+
     @MainActor func testStoreSendsOperationsAndTakesTheAnsweredPlan() async throws {
         let machine = PlanMachine()
         machine.answer = .object(["plan": plan("p", rev: 5, items: [step("a", state: "done", by: "person")])])
@@ -161,12 +188,13 @@ final class PlanOutlineTests: XCTestCase {
     var handlers: [String: @MainActor @Sendable (JSONValue) -> Void] = [:]
     var sent: [(String, JSONValue)] = []
     var answer: JSONValue = .object(["plans": .array([])])
+    var listed: [JSONValue] = []
 
     func emit(_ event: String, _ payload: JSONValue) { handlers[event]?(payload) }
 
     func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
         sent.append((type, payload))
-        return type == "plan.list" ? .object(["plans": .array([])]) : answer
+        return type == "plan.list" ? .object(["plans": .array(listed)]) : answer
     }
 
     func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void {

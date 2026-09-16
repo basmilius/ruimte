@@ -58,6 +58,5 @@ struct WorkspaceDetail: View {
             }
         }
         .modifier(MobilePageSurface())
-        .environment(\.mobileMachineSession, workspace.session)
     }
 }
