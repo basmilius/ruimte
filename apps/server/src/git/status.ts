@@ -168,6 +168,20 @@ export const mergeBaseOf = async (cwd: string): Promise<string | null> => {
     return base === null ? null : (await git(['merge-base', base, 'HEAD'], cwd))?.trim() || null;
 };
 
+/*
+ * The merge base the base scope starts from when a ref is named, such as the branch a worktree was
+ * made from; a ref that no longer resolves falls back to the repository's base branch.
+ */
+export const mergeBaseWith = async (cwd: string, ref: string | undefined): Promise<string | null> => {
+    if (ref !== undefined) {
+        const named = (await git(['merge-base', ref, 'HEAD'], cwd))?.trim();
+        if (named) {
+            return named;
+        }
+    }
+    return await mergeBaseOf(cwd);
+};
+
 /* Only for the tests, which make a repository per case and would otherwise read the one before it. */
 export const forgetBase = (): void => {
     baseCache.clear();

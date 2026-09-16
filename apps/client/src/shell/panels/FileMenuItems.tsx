@@ -3,7 +3,7 @@ import { Copy, FileText, ListX, Minus, Pin, PinOff, Plus, RefreshCw, SquareX, X 
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { relativeTo } from '@/shell/panels/files-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
-import { useFiles } from '@/state/files';
+import { isCheckoutDiff, useFiles } from '@/state/files';
 import { useSettings } from '@/state/settings';
 import { useTransport } from '@/transport/context';
 import { MENU_SEPARATOR } from '@/ui/classes';
@@ -31,8 +31,8 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
 
     const { path, view } = tab;
     const commit = view?.commit;
-    /* A whole commit is about no file in particular, so the items that act on one say nothing here. */
-    const aboutFile = commit === undefined;
+    /* A whole commit or checkout is about no file in particular, so the items that act on one say nothing here. */
+    const aboutFile = commit === undefined && !isCheckoutDiff(path, view);
     // Staging asks the index a question, which only the diff against the working tree answers.
     const stageable = aboutFile && view !== undefined && view.scope === 'worktree';
 
@@ -70,7 +70,7 @@ export function FileMenuItems({ tabKey, onRefresh }: { tabKey: string; onRefresh
                     <Menu.Separator className={MENU_SEPARATOR} />
                 </>
             )}
-            {!aboutFile && (
+            {commit !== undefined && (
                 <>
                     <Menu.Item className="menu-item" onClick={() => copyText(commit)}>
                         <Icon icon={Copy} size={14} /> Copy commit hash

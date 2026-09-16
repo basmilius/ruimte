@@ -28,13 +28,16 @@ import { EMPTY_DRAFT, writeDraft } from '@/chat/drafts';
 import { ForkMenuItem } from '@/chat/ui/ForkMenuItem';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
+import { worktreeDiffTab } from '@/shell/panels/worktree-rows';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useChatRow } from '@/state/chats';
+import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { useProviders } from '@/state/providers';
 import { fileManagerName, useServer } from '@/state/server';
 import { useSessionRow } from '@/state/sessions';
+import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { useWorktreeOf } from '@/state/worktrees';
 import { useTransport } from '@/transport/context';
@@ -151,6 +154,8 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                                     // Selecting the node is what points the git panel at the worktree it works in.
                                     canvasStore.getState().select([id]);
                                     useUi.getState().setPanel({ open: true, kind: 'git' });
+                                    const tab = worktreeDiffTab(nodeWorktree);
+                                    useFiles.getState().open(tab.path, useSettings.getState().filesTabLimit, tab.view);
                                 }}
                             >
                                 <Icon icon={GitBranch} size={14} /> View worktree

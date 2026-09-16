@@ -1,3 +1,6 @@
+import { copyFile, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { isAbsolute, join } from 'node:path';
 import type { ChatCheckpointDiff, ChatCheckpointFile, GitDiffFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
 import { readCommit } from './log.ts';
 import { git, runGit, toplevel, GitError } from './run.ts';
@@ -216,4 +219,51 @@ export const diffCommit = async (cwd: string, commit: string): Promise<GitDiffRe
         truncated: diff?.truncated ?? false,
         ...(meta ? { commit: meta } : {})
     };
+};
+
+/*
+ * Everything a checkout holds over where it left `from`: its commits, its uncommitted changes and
+ * its untracked files, as one answer with a file list like a commit's. The working tree becomes a
+ * tree through a throwaway index, started from a copy of the checkout's own so git only hashes what
+ * changed; the person's index is never written.
+ */
+export const diffCheckout = async (cwd: string, from: string | null): Promise<GitDiffResult> => {
+    const top = await toplevel(cwd);
+    const scratch = await mkdtemp(join(tmpdir(), 'ruimte-diff-'));
+    try {
+        const index = join(scratch, 'index');
+        const own = (await git(['rev-parse', '--git-path', 'index'], top))?.trim();
+        if (own) {
+            await copyFile(isAbsolute(own) ? own : join(top, own), index).catch(() => undefined);
+        }
+        const env = { GIT_INDEX_FILE: index };
+        if ((await git(['add', '-A'], top, env)) === null) {
+            throw new GitError('git-failed', `Could not read the working tree of ${top}.`);
+        }
+        const tree = (await git(['write-tree'], top, env))?.trim();
+        if (!tree) {
+            throw new GitError('git-failed', `Could not read the working tree of ${top}.`);
+        }
+        const start = from ?? (await git(['rev-parse', '--verify', '--quiet', 'HEAD'], top))?.trim() ?? EMPTY_TREE;
+        const diff = await diffTrees(top, start || EMPTY_TREE, tree);
+        const files: GitDiffFile[] = (diff?.files ?? []).map((file) => ({
+            path: file.path,
+            diff: file.diff,
+            added: file.added,
+            deleted: file.deleted,
+            binary: file.omitted === 'binary',
+            ...(file.omitted ? { omitted: file.omitted } : {})
+        }));
+        return {
+            path: '',
+            diff: '',
+            added: files.reduce((total, file) => total + file.added, 0),
+            deleted: files.reduce((total, file) => total + file.deleted, 0),
+            binary: false,
+            files,
+            truncated: diff?.truncated ?? false
+        };
+    } finally {
+        await rm(scratch, { recursive: true, force: true });
+    }
 };

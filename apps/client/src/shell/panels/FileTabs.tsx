@@ -5,7 +5,7 @@ import { PATHS_DRAG_TYPE } from '@/canvas/drop';
 import { MENTION_DRAG_TYPE } from '@/chat/mentions';
 import { FileMenuItems } from '@/shell/panels/FileMenuItems';
 import { basenameOf } from '@/shell/panels/files-tree';
-import { useFiles } from '@/state/files';
+import { isCheckoutDiff, useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
 import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
@@ -62,12 +62,21 @@ export function FileTabs() {
                 // the file in it; the file's own name is a hover away. A whole commit is named after
                 // the commit, since no file in it is the one it is about.
                 const commit = tab.view?.commit;
+                const checkout = isCheckoutDiff(tab.path, tab.view);
                 const count = counts[tab.key];
-                const label = commit !== undefined ? commit.slice(0, 7) : tab.view ? 'Changes' : basenameOf(tab.path);
+                const label = commit !== undefined ? commit.slice(0, 7) : checkout ? basenameOf(tab.path) : tab.view ? 'Changes' : basenameOf(tab.path);
+                const hint =
+                    commit !== undefined
+                        ? `The commit ${commit.slice(0, 7)}`
+                        : checkout
+                          ? `Everything ${basenameOf(tab.path)} changed since ${tab.view?.base ?? 'the base branch'}`
+                          : tab.view
+                            ? basenameOf(tab.path)
+                            : tab.path;
                 return (
                     <ContextMenu.Root key={tab.key}>
                         <ContextMenu.Trigger render={<span />} className={TAB} data-active={tab.key === active} data-view={tab.view ? 'diff' : undefined}>
-                            <Tooltip label={commit !== undefined ? `The commit ${commit.slice(0, 7)}` : tab.view ? basenameOf(tab.path) : tab.path}>
+                            <Tooltip label={hint}>
                                 <button
                                     className={TAB_OPEN}
                                     aria-current={tab.key === active}

@@ -15454,6 +15454,10 @@
                         "commit": {
                           "type": "string",
                           "minLength": 1
+                        },
+                        "base": {
+                          "type": "string",
+                          "minLength": 1
                         }
                       },
                       "required": [
@@ -17348,6 +17352,10 @@
                           "type": "boolean"
                         },
                         "commit": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "base": {
                           "type": "string",
                           "minLength": 1
                         }
@@ -21618,6 +21626,11 @@
               },
               "operation": {
                 "type": "string"
+              },
+              "behind": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
               }
             },
             "required": [
@@ -21721,6 +21734,11 @@
                 },
                 "operation": {
                   "type": "string"
+                },
+                "behind": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -21974,6 +21992,10 @@
       },
       "ignoreWhitespace": {
         "type": "boolean"
+      },
+      "base": {
+        "type": "string",
+        "minLength": 1
       }
     },
     "required": [

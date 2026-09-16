@@ -3,7 +3,7 @@ import { Menu } from '@base-ui-components/react/menu';
 import { Eye, FolderX, GitBranch, LocateFixed, MoreHorizontal, Trash } from 'lucide-react';
 import type { CanvasNodeKind, Worktree } from '@ruimte/contracts';
 import { StatusDot } from '@/canvas/NodeFrame';
-import { nodesInWorktree, workCounts } from '@/shell/panels/worktree-rows';
+import { nodesInWorktree, originLabel, workCounts } from '@/shell/panels/worktree-rows';
 import { nodeWorking } from '@/state/agent-work';
 import { useChats } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
@@ -98,7 +98,7 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                             {agentWorking && <StatusDot status="running" />}
                             <span className="min-w-0 shrink-[2] truncate text-xs text-text-faint">
                                 {worktree.missing ? 'folder missing' : names === '' ? 'no node' : names}
-                                {worktree.from?.branch !== undefined && `, from ${worktree.from.branch}`}
+                                {originLabel(worktree) !== null && `, ${originLabel(worktree)}`}
                             </span>
                             <span className="grow" />
                             {counts.map((label) => (

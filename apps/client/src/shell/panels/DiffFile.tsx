@@ -1,12 +1,12 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
-import { Columns2, FileDiff, FileWarning, GitBranch, GitCompare, LoaderCircle, Rows2, Space, WrapText } from 'lucide-react';
-import type { GitDiffFile, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
+import { Columns2, FileDiff, FileWarning, GitBranch, GitCompare, LoaderCircle, RefreshCw, Rows2, Space, WrapText } from 'lucide-react';
+import type { GitDiffFile, GitDiffPayload, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import { relativeTime } from '@/shell/panels/commit-log';
 import { FileActionsContext } from '@/shell/panels/file-actions';
 import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { relativeTo } from '@/shell/panels/files-tree';
-import { useFiles, type FileTabView } from '@/state/files';
+import { isCheckoutDiff, useFiles, type FileTabView } from '@/state/files';
 import { useGit } from '@/state/git';
 import { useSettings } from '@/state/settings';
 import { useTransport } from '@/transport/context';
@@ -30,6 +30,9 @@ export function DiffFile({ tabKey, path, name, view }: { tabKey: string; path: s
     if (view.commit !== undefined) {
         return <CommitDiff tabKey={tabKey} cwd={view.cwd} commit={view.commit} />;
     }
+    if (isCheckoutDiff(path, view)) {
+        return <CommitDiff tabKey={tabKey} cwd={view.cwd} base={view.base ?? null} />;
+    }
     return <FileDiffView tabKey={tabKey} path={path} name={name} view={view} />;
 }
 
@@ -42,7 +45,7 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
     const relative = useMemo(() => relativeTo(view.cwd, path), [view.cwd, path]);
     /* Which diff was asked for, so an answer to the question before this one is not drawn and a
        switch of scope reads as loading without an effect that has to empty the state first. */
-    const asked = `${view.cwd}\u0000${relative}\u0000${view.scope}\u0000${String(view.staged)}\u0000${String(whitespace)}\u0000${nonce}`;
+    const asked = `${view.cwd}\u0000${relative}\u0000${view.scope}\u0000${String(view.staged)}\u0000${String(whitespace)}\u0000${view.base ?? ''}\u0000${nonce}`;
     const [held, setHeld] = useState<{ asked: string; state: DiffState } | null>(null);
     const transport = useTransport();
     const state: DiffState = held !== null && held.asked === asked ? held.state : { status: 'loading' };
@@ -50,7 +53,14 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
     useEffect(() => {
         let alive = true;
         transport
-            .request('git.diff', { cwd: view.cwd, path: relative, scope: view.scope, staged: view.staged, ignoreWhitespace: !whitespace })
+            .request('git.diff', {
+                cwd: view.cwd,
+                path: relative,
+                scope: view.scope,
+                staged: view.staged,
+                ignoreWhitespace: !whitespace,
+                ...(view.base === undefined ? {} : { base: view.base })
+            })
             .then((diff) => {
                 if (alive) {
                     setHeld({ asked, state: { status: 'ready', diff } });
@@ -65,7 +75,7 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
         return () => {
             alive = false;
         };
-    }, [transport, asked, relative, tabKey, view.cwd, view.scope, view.staged, whitespace]);
+    }, [transport, asked, relative, tabKey, view.cwd, view.scope, view.staged, view.base, whitespace]);
 
     const refresh = useCallback(() => setNonce((count) => count + 1), []);
     const actions = useMemo(() => ({ path, name, on: 'tab' as const, tabKey, refresh }), [tabKey, path, name, refresh]);
@@ -170,23 +180,28 @@ type CommitState = { status: 'loading' } | { status: 'error'; message: string } 
 /*
  * A whole commit in one tab: what it says and who wrote it, the files it touched as a list at the
  * top, and every patch under that. One request answers all of it, so a commit opens as fast as a
- * single file does and the caps that keep a diff readable are the same ones.
+ * single file does and the caps that keep a diff readable are the same ones. Without a commit the
+ * tab is a whole checkout against `base`, which is how a worktree shows what it holds.
  */
-function CommitDiff({ tabKey, cwd, commit }: { tabKey: string; cwd: string; commit: string }) {
+function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string; commit?: string; base?: string | null }) {
     const layout = useSettings((s) => s.diffLayout);
     const [wrap, setWrap] = useState(true);
     const [now] = useState(() => Math.floor(Date.now() / 1000));
+    const [nonce, setNonce] = useState(0);
     /* Which commit was asked for, so a tab that just changed reads as loading without an effect
        that has to empty the state first. */
-    const asked = `${cwd}\u0000${commit}`;
+    const asked = `${cwd}\u0000${commit ?? ''}\u0000${base ?? ''}\u0000${nonce}`;
+
     const [held, setHeld] = useState<{ asked: string; state: CommitState } | null>(null);
     const transport = useTransport();
     const state: CommitState = held !== null && held.asked === asked ? held.state : { status: 'loading' };
 
     useEffect(() => {
         let alive = true;
+        const ask: GitDiffPayload =
+            commit === undefined ? { cwd, scope: 'base', ...(base === null || base === undefined ? {} : { base }) } : { cwd, scope: 'commit', commit };
         transport
-            .request('git.diff', { cwd, scope: 'commit', commit })
+            .request('git.diff', ask)
             .then((diff) => {
                 if (alive) {
                     setHeld({ asked, state: { status: 'ready', diff } });
@@ -201,7 +216,7 @@ function CommitDiff({ tabKey, cwd, commit }: { tabKey: string; cwd: string; comm
         return () => {
             alive = false;
         };
-    }, [transport, asked, commit, cwd, tabKey]);
+    }, [transport, asked, commit, base, cwd, tabKey]);
 
     const meta = state.status === 'ready' ? state.diff.commit : undefined;
     const files: readonly GitDiffFile[] = state.status === 'ready' ? (state.diff.files ?? []) : [];
@@ -209,8 +224,16 @@ function CommitDiff({ tabKey, cwd, commit }: { tabKey: string; cwd: string; comm
     return (
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <div className={FILE_TOOLBAR}>
-                <span className="truncate font-mono text-xs text-text-muted">{meta?.shortHash ?? commit.slice(0, 7)}</span>
+                <span className="truncate font-mono text-xs text-text-muted">
+                    {commit === undefined ? `Since ${base ?? 'the base branch'}` : (meta?.shortHash ?? commit.slice(0, 7))}
+                </span>
                 <span className="grow" />
+                {commit === undefined && (
+                    <>
+                        <FileToolbarToggle icon={RefreshCw} label="Read again" active={false} onClick={() => setNonce((count) => count + 1)} />
+                        <Separator />
+                    </>
+                )}
                 <span className={BTN_GROUP}>
                     <FileToolbarToggle
                         icon={Rows2}
@@ -230,7 +253,9 @@ function CommitDiff({ tabKey, cwd, commit }: { tabKey: string; cwd: string; comm
             </div>
             {state.status === 'loading' && (
                 <div className="file-diff grid min-h-0 grow place-items-center">
-                    <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>Reading the commit.</EmptyState>
+                    <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>
+                        {commit === undefined ? 'Reading the changes.' : 'Reading the commit.'}
+                    </EmptyState>
                 </div>
             )}
             {state.status === 'error' && (
@@ -241,10 +266,20 @@ function CommitDiff({ tabKey, cwd, commit }: { tabKey: string; cwd: string; comm
             {state.status === 'ready' && (
                 <div className="file-diff min-h-0 grow overflow-auto">
                     <div className="border-b border-border px-3 py-2">
-                        <p className="text-xs font-medium text-text">{meta?.subject ?? commit}</p>
-                        <p className="mt-1 text-xs text-text-faint">
-                            {meta === undefined ? commit : `${meta.author} · ${relativeTime(meta.at, now)} · ${meta.shortHash}`}
-                        </p>
+                        {commit === undefined ? (
+                            <p className="text-xs text-text-faint">
+                                {files.length === 0
+                                    ? `Nothing changed since ${base ?? 'the base branch'}.`
+                                    : `Commits, uncommitted changes and new files since ${base ?? 'the base branch'}.`}
+                            </p>
+                        ) : (
+                            <>
+                                <p className="text-xs font-medium text-text">{meta?.subject ?? commit}</p>
+                                <p className="mt-1 text-xs text-text-faint">
+                                    {meta === undefined ? commit : `${meta.author} · ${relativeTime(meta.at, now)} · ${meta.shortHash}`}
+                                </p>
+                            </>
+                        )}
                         <ul className="mt-2 flex flex-col gap-0.5">
                             {files.map((file) => (
                                 <li key={file.path} className="flex items-center gap-2 text-xs">

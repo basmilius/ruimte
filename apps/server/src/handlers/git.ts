@@ -1,14 +1,14 @@
 import { RequestError, sendEvent, type Dispatcher } from '../dispatcher.ts';
 import { GitActions } from '../git/actions.ts';
 import { readCapabilities } from '../git/capabilities.ts';
-import { diffCommit, diffFile } from '../git/diff.ts';
+import { diffCheckout, diffCommit, diffFile } from '../git/diff.ts';
 import { readLog } from '../git/log.ts';
 import { suggestMessage } from '../git/message.ts';
 import { listRefs } from '../git/refs.ts';
 import { GitError } from '../git/run.ts';
 import { discardPaths, stagePaths, unstagePaths } from '../git/stage.ts';
 import type { GitStatusWatcher } from '../git/status-watcher.ts';
-import { mergeBaseOf } from '../git/status.ts';
+import { mergeBaseWith } from '../git/status.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 
@@ -63,6 +63,9 @@ export const registerGitHandlers = (dispatcher: Dispatcher, worktrees: Worktrees
             if (payload.scope === 'commit' && payload.path === undefined) {
                 return await diffCommit(payload.cwd, payload.commit ?? 'HEAD');
             }
+            if (payload.scope === 'base' && payload.path === undefined) {
+                return await diffCheckout(payload.cwd, await mergeBaseWith(payload.cwd, payload.base));
+            }
             if (payload.path === undefined) {
                 throw new RequestError('bad-request', 'A diff of this scope needs a path.');
             }
@@ -72,7 +75,7 @@ export const registerGitHandlers = (dispatcher: Dispatcher, worktrees: Worktrees
                 ignoreWhitespace: payload.ignoreWhitespace ?? false,
                 ...(payload.commit ? { commit: payload.commit } : {})
             };
-            return await diffFile(payload.cwd, payload.path, options, await mergeBaseOf(payload.cwd));
+            return await diffFile(payload.cwd, payload.path, options, await mergeBaseWith(payload.cwd, payload.base));
         })
     );
 

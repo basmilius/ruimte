@@ -347,13 +347,19 @@ export class Worktrees {
             const counted = await git(['rev-list', '--count', ...tips, '--not', ...not], main);
             ahead = counted === null ? 0 : Number.parseInt(counted.trim(), 10) || 0;
         }
+        let behind = 0;
+        if (tips.length > 0 && target !== null) {
+            const counted = await git(['rev-list', '--count', target, '--not', ...tips], main);
+            behind = counted === null ? 0 : Number.parseInt(counted.trim(), 10) || 0;
+        }
+        const moved = behind > 0 ? { behind } : {};
         if (missing || entry === null) {
-            return { work: { changed: 0, untracked: 0, ahead }, target };
+            return { work: { changed: 0, untracked: 0, ahead, ...moved }, target };
         }
         const status = await run(['status', '--porcelain=v2', '-z', '-uall', '--ignore-submodules=all'], entry.path);
         const { changed, untracked } = countStatus(status);
         const operation = await this.operationIn(entry.path);
-        return { work: { changed, untracked, ahead, ...(operation === null ? {} : { operation }) }, target };
+        return { work: { changed, untracked, ahead, ...(operation === null ? {} : { operation }), ...moved }, target };
     }
 
     private async operationIn(path: string): Promise<string | null> {

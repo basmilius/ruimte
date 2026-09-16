@@ -10,7 +10,9 @@ export const WorktreeWorkSchema = z.object({
     // Commits on the worktree that the branch it was made from lacks.
     ahead: z.number().int().nonnegative(),
     // A rebase, merge, cherry-pick or revert that stopped halfway, by git's own word for it; that is work too.
-    operation: z.string().optional()
+    operation: z.string().optional(),
+    // Commits the branch it was made from gained since the worktree left it; not work, only how far behind it is.
+    behind: z.number().int().nonnegative().optional()
 });
 export type WorktreeWork = z.infer<typeof WorktreeWorkSchema>;
 
@@ -156,7 +158,11 @@ export const GitDiffPayloadSchema = z.object({
     // Worktree scope only: the index against HEAD instead of the working tree against the index.
     staged: z.boolean().optional(),
     // Leaves changes that are whitespace alone out of the diff, counts included.
-    ignoreWhitespace: z.boolean().optional()
+    ignoreWhitespace: z.boolean().optional(),
+    // Base scope only: the ref the diff starts from, through its merge base with HEAD, instead of the
+    // repository's base branch; a worktree passes the branch it was made from. Without a path the
+    // base scope answers every file of the checkout in `files`, untracked ones included.
+    base: z.string().min(1).optional()
 });
 export type GitDiffPayload = z.infer<typeof GitDiffPayloadSchema>;
 

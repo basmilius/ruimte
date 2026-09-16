@@ -23,6 +23,10 @@ export interface TabState {
     active: string | null;
 }
 
+/* A base diff of the checkout itself rather than of a file in it: everything a worktree holds over where it came from. */
+export const isCheckoutDiff = (path: string, view: FileTabView | undefined): boolean =>
+    view !== undefined && view.commit === undefined && view.scope === 'base' && path === view.cwd;
+
 /*
  * A file and its diff are two tabs of one path, so the view is part of what names them apart. A
  * commit is named after the commit and not after the path, because two commits of one repository
@@ -31,6 +35,9 @@ export interface TabState {
 export const tabKey = (path: string, view?: FileTabView): string => {
     if (view?.commit !== undefined) {
         return `commit:${view.commit}`;
+    }
+    if (isCheckoutDiff(path, view)) {
+        return `checkout:${path}`;
     }
     return view ? `diff:${path}` : path;
 };

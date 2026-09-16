@@ -9,7 +9,8 @@ import {
     type GitFile,
     type GitRef,
     type GitStash,
-    type GitStatus
+    type GitStatus,
+    type Worktree
 } from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
 import { BranchMenu } from '@/shell/panels/BranchMenu';
@@ -24,6 +25,7 @@ import { activeDiffPath, allDirs } from '@/shell/panels/git-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
 import { useGitActions } from '@/shell/panels/use-git-actions';
 import { WorktreeSection, type WorktreeNode } from '@/shell/panels/WorktreeSection';
+import { worktreeBase, worktreeDiffTab } from '@/shell/panels/worktree-rows';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { revealNode } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
@@ -254,7 +256,16 @@ export function GitPanel() {
 
     const openDiff = (file: GitFile): void => {
         if (status?.root) {
-            useFiles.getState().open(`${status.root}/${file.path}`, tabLimit, { kind: 'diff', cwd: status.root, scope, staged: file.state === 'staged' });
+            // A worktree's own changes are measured against the branch it was made from, not the repository's base.
+            const worktree = worktrees.find((entry) => entry.path === status.root);
+            const base = worktree === undefined ? undefined : worktreeBase(worktree);
+            useFiles.getState().open(`${status.root}/${file.path}`, tabLimit, {
+                kind: 'diff',
+                cwd: status.root,
+                scope,
+                staged: file.state === 'staged',
+                ...(base === undefined ? {} : { base })
+            });
         }
     };
 
@@ -279,12 +290,14 @@ export function GitPanel() {
         }
     };
 
-    /* Viewing a worktree points the panel at it, the way picking it from the chip does. */
-    const viewWorktree = (path: string): void => {
-        const next = targets.find((candidate) => candidate.cwd === path);
+    /* Viewing a worktree points the panel at it, the way picking it from the chip does, and opens everything it holds in a tab. */
+    const viewWorktree = (worktree: Worktree): void => {
+        const next = targets.find((candidate) => candidate.cwd === worktree.path);
         if (next) {
             setPicked({ target: next, from: derived.cwd });
         }
+        const tab = worktreeDiffTab(worktree);
+        useFiles.getState().open(tab.path, tabLimit, tab.view);
     };
 
     /* A switch that would lose the working tree asks first; a clean tree switches straight away. */
@@ -462,7 +475,7 @@ export function GitPanel() {
                         nodes={projectNodes}
                         current={cwd}
                         busy={busy}
-                        onView={(worktree) => viewWorktree(worktree.path)}
+                        onView={viewWorktree}
                         onRemove={(worktree) => useUi.getState().setWorktreeRemoval({ folder, path: worktree.path })}
                         onReveal={revealNode}
                     />

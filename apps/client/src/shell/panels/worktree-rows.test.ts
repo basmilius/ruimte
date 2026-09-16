@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import type { Worktree } from '@ruimte/contracts';
-import { nodesInWorktree, removedToast, removeQuestion, workCounts, worktreeOfPath, workSentence } from './worktree-rows.ts';
+import { ProjectFileTabSchema } from '@ruimte/contracts';
+import { tabKey } from '@/state/files';
+import { nodesInWorktree, originLabel, removedToast, removeQuestion, workCounts, worktreeDiffTab, worktreeOfPath, workSentence } from './worktree-rows.ts';
 
 const lexer: Worktree = { path: '/home/worktrees/repo-1/lexer', branch: 'lexer', from: { branch: 'main', commit: 'abc' }, nodeId: 'chat-lexer' };
 
@@ -80,5 +82,29 @@ describe('rows', () => {
             { id: 'chat-other', kind: 'chat', title: 'Other', cwd: '/repo' }
         ];
         expect(nodesInWorktree(nodes, lexer).map((node) => node.id)).toEqual(['chat-lexer', 'terminal-2']);
+    });
+});
+
+describe('viewing a worktree against where it came from', () => {
+    test('the tab is the whole checkout against the branch it was made from, and a reload keeps that base', () => {
+        const tab = worktreeDiffTab(lexer);
+        expect(tab).toEqual({ path: lexer.path, view: { kind: 'diff', cwd: lexer.path, scope: 'base', staged: false, base: 'main' } });
+        expect(tabKey(tab.path, tab.view)).toBe(`checkout:${lexer.path}`);
+        // What the local file stores is what the tab reads back after a reload.
+        const stored = ProjectFileTabSchema.parse(JSON.parse(JSON.stringify({ path: tab.path, pinned: false, view: tab.view })));
+        expect(stored.view?.base).toBe('main');
+        expect(tabKey(stored.path, stored.view)).toBe(tabKey(tab.path, tab.view));
+    });
+
+    test('a detached origin measures from its commit, and a hand-made worktree from the base branch', () => {
+        expect(worktreeDiffTab({ ...lexer, from: { commit: 'abc' } }).view.base).toBe('abc');
+        expect(worktreeDiffTab({ path: '/x', branch: 'x' }).view.base).toBeUndefined();
+    });
+
+    test('the row says how far the branch it came from moved on', () => {
+        expect(originLabel(lexer)).toBe('from main');
+        expect(originLabel({ ...lexer, work: { changed: 0, untracked: 0, ahead: 0, behind: 4 } })).toBe('from main, 4 commits behind');
+        expect(originLabel({ ...lexer, work: { changed: 0, untracked: 0, ahead: 0, behind: 1 } })).toBe('from main, 1 commit behind');
+        expect(originLabel({ path: '/x', branch: 'x' })).toBeNull();
     });
 });

@@ -151,7 +151,7 @@ describe('Worktrees', () => {
         await git(['merge', '--quiet', '--no-edit', '--no-ff', 'lexer']);
 
         const [listed] = await worktrees.list(repo, { inspect: true });
-        expect(listed?.work).toEqual({ changed: 0, untracked: 0, ahead: 0 });
+        expect(listed?.work).toEqual({ changed: 0, untracked: 0, ahead: 0, behind: 1 });
         expect(await worktrees.remove(repo, worktree.path)).toMatchObject({ branchDeleted: true });
         expect(await branchList()).toEqual(['main']);
     });

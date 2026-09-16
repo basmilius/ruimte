@@ -1,4 +1,4 @@
-import type { Worktree, WorktreeRemoveResult, WorktreeWork } from '@ruimte/contracts';
+import type { ProjectFileTabView, Worktree, WorktreeRemoveResult, WorktreeWork } from '@ruimte/contracts';
 import { isUnderFolder } from '@/state/fs-watch';
 
 const count = (value: number, one: string, many: string): string => `${value} ${value === 1 ? one : many}`;
@@ -106,3 +106,22 @@ export const nodesInWorktree = <T extends NodeLike>(nodes: readonly T[], worktre
             node.id === worktree.nodeId ||
             ((node.kind === 'terminal' || node.kind === 'chat') && !worktree.missing && worktreeOfPath([worktree], node.cwd) !== null)
     );
+
+/* What a worktree's diffs measure from: the branch it was made from, or the commit when that was a detached HEAD. */
+export const worktreeBase = (worktree: Worktree): string | undefined => worktree.from?.branch ?? worktree.from?.commit;
+
+/* The tab that shows everything a worktree holds over where it was made from, committed or not. */
+export const worktreeDiffTab = (worktree: Worktree): { path: string; view: ProjectFileTabView } => {
+    const base = worktreeBase(worktree);
+    return { path: worktree.path, view: { kind: 'diff', cwd: worktree.path, scope: 'base', staged: false, ...(base === undefined ? {} : { base }) } };
+};
+
+/* "from main, 4 commits behind": where a worktree came from, and how far that branch moved on since. */
+export const originLabel = (worktree: Worktree): string | null => {
+    const branch = worktree.from?.branch;
+    if (branch === undefined) {
+        return null;
+    }
+    const behind = worktree.work?.behind ?? 0;
+    return behind > 0 ? `from ${branch}, ${count(behind, 'commit', 'commits')} behind` : `from ${branch}`;
+};

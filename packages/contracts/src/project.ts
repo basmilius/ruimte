@@ -496,7 +496,11 @@ export const ProjectFileTabViewSchema = z.object({
     scope: GitDiffScopeSchema,
     staged: z.boolean(),
     // The commit the `commit` scope reads; the tab is that whole commit, not one file of it.
-    commit: z.string().min(1).optional()
+    commit: z.string().min(1).optional(),
+    // What the `base` scope measures from instead of the repository's base branch, so a reloaded tab
+    // of a worktree compares with the branch it was made from again. A base tab whose path is `cwd`
+    // itself is every file of that checkout.
+    base: z.string().min(1).optional()
 });
 export type ProjectFileTabView = z.infer<typeof ProjectFileTabViewSchema>;
 
