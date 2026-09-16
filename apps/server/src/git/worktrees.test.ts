@@ -225,11 +225,12 @@ describe('Worktrees', () => {
         ]);
     });
 
-    test('two removals of the same worktree run one after the other, and the second finds it gone', async () => {
+    test('two removals of the same worktree run one after the other, and whichever comes second finds it gone', async () => {
         const { worktree } = await worktrees.add(repo, 'lexer');
         const results = await Promise.allSettled([worktrees.remove(repo, worktree.path), worktrees.remove(repo, worktree.path)]);
-        expect(results[0]).toMatchObject({ status: 'fulfilled' });
-        expect(results[1]).toMatchObject({ status: 'rejected', reason: { code: 'worktree-not-found' } });
+        // Each call reads the repository before it queues, so which of the two queues first is not fixed; that one removes it.
+        expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+        expect(results.find((result) => result.status === 'rejected')).toMatchObject({ reason: { code: 'worktree-not-found' } });
     });
 });
 
