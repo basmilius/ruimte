@@ -25,6 +25,7 @@ import { askOpenAsView, canOpenAsView } from '@/project/views';
 import { NODE_ACCENTS } from '@/canvas/accents';
 import { DEFAULT_NOTE_COLOR, NOTE_COLORS } from '@/canvas/note-colors';
 import { EMPTY_DRAFT, writeDraft } from '@/chat/drafts';
+import { ForkMenuItem } from '@/chat/ui/ForkMenuItem';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
@@ -174,6 +175,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                             <Icon icon={Terminal} size={14} /> Open in terminal
                         </ContextMenu.Item>
                     )}
+                    {node.kind === 'chat' && <ForkMenuItem chatId={id} />}
                     {canOpenAsView(node.kind) && (
                         <ContextMenu.Item className="menu-item" onClick={() => askOpenAsView(id)}>
                             <Icon icon={Frame} size={14} /> Open as view

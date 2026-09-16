@@ -16,6 +16,8 @@ export interface ScrubberTick {
     kind: TickKind;
     text: string;
     createdAt: number;
+    /* The turn the message opened, which is the turn a fork from the card goes on after. */
+    turnId: string | null;
 }
 
 /* With fewer messages than this the thread is short enough to scroll through, and the strip is noise. */
@@ -45,11 +47,11 @@ export const ticksOf = (rows: readonly TimelineRow[]): ScrubberTick[] =>
         if (row.kind === 'user') {
             // A message of only attachments still has a place in the thread; its names stand in for the text.
             const text = row.item.text !== '' ? row.item.text : (row.item.attachments ?? []).map((attachment) => attachment.name).join(', ');
-            return [{ id: row.id, rowIndex, kind: 'person', text, createdAt: row.item.createdAt }];
+            return [{ id: row.id, rowIndex, kind: 'person', text, createdAt: row.item.createdAt, turnId: row.item.turnId }];
         }
         // The other turns nobody asked for (a sub-agent that finished, the CLI going on) are no place to return to.
         if (row.kind === 'turn-start' && (row.turn.taskIds?.length ?? 0) > 0) {
-            return [{ id: row.id, rowIndex, kind: 'wake', text: row.label, createdAt: row.turn.createdAt }];
+            return [{ id: row.id, rowIndex, kind: 'wake', text: row.label, createdAt: row.turn.createdAt, turnId: row.turn.id }];
         }
         return [];
     });

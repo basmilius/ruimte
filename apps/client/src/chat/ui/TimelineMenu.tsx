@@ -1,12 +1,15 @@
 import type { RefObject } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Braces, Copy, Eye, FileText, MessageSquare, Scan } from 'lucide-react';
+import { Braces, Copy, Eye, FileText, GitFork, MessageSquare, Scan } from 'lucide-react';
+import { forkRefusal, turnIdOfRow } from '@/chat/logic/fork';
 import { markdownOf, messageTextOf } from '@/chat/logic/timeline-copy';
 import type { TimelineTarget } from '@/chat/logic/timeline-target';
 import { openFileLink, useFileLinkCwd } from '@/shell/panels/file-links';
+import { useChatRow } from '@/state/chats';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
-import { MENU_SEPARATOR } from '@/ui/classes';
+import { useUi } from '@/state/ui';
+import { MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
 import { selectAllWithin } from '@/ui/selection';
@@ -18,8 +21,19 @@ import { Kbd } from '@/ui/Kbd';
  * is text a person may want out of it, and a whole message, a code block or the markdown an answer
  * was written in are each a different amount of that.
  */
-export function TimelineMenuPopup({ target, scroller }: { target: TimelineTarget; scroller: RefObject<HTMLDivElement | null> }) {
+export function TimelineMenuPopup({
+    target,
+    scroller,
+    chatId = null
+}: {
+    target: TimelineTarget;
+    scroller: RefObject<HTMLDivElement | null>;
+    /* The chat whose own thread this is; a thread in its place (a sub-agent's) has nothing to fork. */
+    chatId?: string | null;
+}) {
     const message = target.row === null ? null : messageTextOf(target.row);
+    const turnId = chatId === null || target.row === null ? null : turnIdOfRow(target.row);
+    const forkBlocked = useChatRow(chatId ?? '', (row) => (turnId === null ? null : forkRefusal(row?.info ?? null, row?.structure[turnId])));
     const markdown = target.row === null ? null : markdownOf(target.row);
     // A thread outside a chat (a sub-agent's transcript) has no cwd of its own; the project answers there.
     const cwd = useFileLinkCwd();
@@ -50,6 +64,16 @@ export function TimelineMenuPopup({ target, scroller }: { target: TimelineTarget
                     {markdown !== null && (
                         <ContextMenu.Item className="menu-item" onClick={() => copyText(markdown)}>
                             <Icon icon={FileText} size={14} /> Copy as markdown
+                        </ContextMenu.Item>
+                    )}
+                    {chatId !== null && turnId !== null && (
+                        <ContextMenu.Item
+                            className="menu-item"
+                            disabled={forkBlocked !== null}
+                            onClick={() => useUi.getState().setForkDialog({ chatId, turnId })}
+                        >
+                            <Icon icon={GitFork} size={14} /> Fork from here
+                            {forkBlocked !== null && <span className={MENU_HINT}>{forkBlocked}</span>}
                         </ContextMenu.Item>
                     )}
                     <ContextMenu.Separator className={MENU_SEPARATOR} />

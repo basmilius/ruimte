@@ -43,6 +43,7 @@ import { Tooltip } from '@/ui/Tooltip';
 import { useHeldWhileVisible, useNodeInViewport, useReadableZoom } from '@/canvas/culling';
 import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
 import { ChatBody } from '@/nodes/ChatBody';
+import { ForkPill } from '@/chat/ui/ForkPill';
 import { SubagentBreadcrumb, SubagentButton, SubagentTitleCrumb } from '@/chat/ui/SubagentControls';
 import { useSubagentTrail } from '@/chat/subagent-view';
 import { BrowserBody } from '@/nodes/BrowserBody';
@@ -290,6 +291,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     </span>
                     {node.kind === 'chat' && !renaming && <SubagentBreadcrumb chatId={id} className="grow" />}
                     {collapsed && <Pill className="tabular-nums">{node.memberIds?.length ?? 0} inside</Pill>}
+                    {node.kind === 'chat' && !renaming && <ForkPill chatId={id} />}
                     {nodeWorktree && !renaming && (
                         <Tooltip label={nodeWorktree.path}>
                             <Pill mono icon={<Icon icon={GitBranch} size={12} />}>

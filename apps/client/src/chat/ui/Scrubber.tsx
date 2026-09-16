@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { PreviewCard } from '@base-ui-components/react/preview-card';
 import clsx from 'clsx';
-import { Copy, type LucideIcon } from 'lucide-react';
+import { Copy, GitFork, type LucideIcon } from 'lucide-react';
 import { layoutTicks, messageAt, slotInView, slotOf, tickWidth, TICK_HEIGHT_PX, type ScrubberTick } from '@/chat/logic/scrubber';
 import { MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
@@ -17,18 +17,21 @@ const timeOf = (createdAt: number): string => {
     return date.toDateString() === new Date().toDateString() ? CLOCK.format(date) : DAY_CLOCK.format(date);
 };
 
-/*
- * What the card offers for a message. "Fork from here" joins this union and `CARD_ACTIONS` once a
- * chat can fork; until then it is not drawn at all, not even disabled.
- */
-type CardActionId = 'copy-message';
+/* What the card may do to the chat the strip belongs to; absent, the card only offers what needs no chat. */
+export interface CardChat {
+    canFork(turnId: string): boolean;
+    fork(turnId: string): void;
+}
+
+/* What the card offers for a message. An action a tick cannot take is not drawn at all, not even disabled. */
+type CardActionId = 'copy-message' | 'fork';
 
 interface CardAction {
     label: string;
     icon: LucideIcon;
     /* Whether a tick of this kind offers the action. */
-    offers(tick: ScrubberTick): boolean;
-    run(tick: ScrubberTick): void;
+    offers(tick: ScrubberTick, chat: CardChat | null): boolean;
+    run(tick: ScrubberTick, chat: CardChat | null): void;
 }
 
 const CARD_ACTIONS: Record<CardActionId, CardAction> = {
@@ -38,6 +41,16 @@ const CARD_ACTIONS: Record<CardActionId, CardAction> = {
         // A wake carries the machine's label, not anything a person wrote.
         offers: (tick) => tick.kind === 'person' && tick.text !== '',
         run: (tick) => copyText(tick.text)
+    },
+    fork: {
+        label: 'Fork from here',
+        icon: GitFork,
+        offers: (tick, chat) => chat !== null && tick.turnId !== null && chat.canFork(tick.turnId),
+        run: (tick, chat) => {
+            if (chat !== null && tick.turnId !== null) {
+                chat.fork(tick.turnId);
+            }
+        }
     }
 };
 
@@ -47,6 +60,7 @@ interface ScrubberProps {
     firstInView: number | null;
     lastInView: number | null;
     onPick(index: number): void;
+    chat?: CardChat | null;
 }
 
 /*
@@ -54,7 +68,7 @@ interface ScrubberProps {
  * the ones on screen bright and the rest dimmed, growing only under the pointer. A single hover card follows the pointer along the strip, anchored at the tick
  * it points at, so a thousand ticks are a thousand spans and not a thousand popups.
  */
-export const Scrubber = memo(function Scrubber({ ticks, firstInView, lastInView, onPick }: ScrubberProps) {
+export const Scrubber = memo(function Scrubber({ ticks, firstInView, lastInView, onPick, chat = null }: ScrubberProps) {
     // State rather than a ref: the card's anchor is built during render and has to change when the strip does.
     const [strip, setStrip] = useState<HTMLDivElement | null>(null);
     const [height, setHeight] = useState(0);
@@ -95,7 +109,7 @@ export const Scrubber = memo(function Scrubber({ ticks, firstInView, lastInView,
 
     const pointAt = (e: ReactMouseEvent<HTMLDivElement>): number | null => messageAt(layout, e.clientY - e.currentTarget.getBoundingClientRect().top);
 
-    const actions = hoveredTick === null ? [] : Object.values(CARD_ACTIONS).filter((action) => action.offers(hoveredTick));
+    const actions = hoveredTick === null ? [] : Object.values(CARD_ACTIONS).filter((action) => action.offers(hoveredTick, chat));
 
     return (
         <PreviewCard.Root>
@@ -164,7 +178,7 @@ export const Scrubber = memo(function Scrubber({ ticks, firstInView, lastInView,
                                                 key={action.label}
                                                 type="button"
                                                 className="menu-item w-full hover:bg-surface-hover"
-                                                onClick={() => action.run(hoveredTick)}
+                                                onClick={() => action.run(hoveredTick, chat)}
                                             >
                                                 <Icon icon={action.icon} size={14} /> {action.label}
                                             </button>

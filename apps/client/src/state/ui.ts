@@ -144,11 +144,14 @@ interface UiStore {
     worktreeDialogFor: string | null;
     /* The worktree a person is removing, by the project folder whose repository holds it, while its question is up. */
     worktreeRemoval: { folder: string; path: string } | null;
+    /* The chat and the turn a fork goes on after, while its dialog is up. */
+    forkDialog: { chatId: string; turnId: string } | null;
     /* What a view is being asked about, from the sidebar, the breadcrumb or the palette alike. */
     viewDialog: ViewDialog;
     setUsageOpen(open: boolean): void;
     setWorktreeDialogFor(groupId: string | null): void;
     setWorktreeRemoval(removal: { folder: string; path: string } | null): void;
+    setForkDialog(fork: { chatId: string; turnId: string } | null): void;
     setViewDialog(dialog: ViewDialog): void;
     setSidebarOpen(open: boolean): void;
     toggleSidebar(): void;
@@ -198,6 +201,7 @@ export const useUi = create<UiStore>((set, get) => ({
     layoutDialogOpen: false,
     worktreeDialogFor: null,
     worktreeRemoval: null,
+    forkDialog: null,
     viewDialog: null,
     setUsageOpen(open) {
         set({ usageOpen: open });
@@ -207,6 +211,9 @@ export const useUi = create<UiStore>((set, get) => ({
     },
     setWorktreeRemoval(removal) {
         set({ worktreeRemoval: removal });
+    },
+    setForkDialog(fork) {
+        set({ forkDialog: fork });
     },
     setViewDialog(dialog) {
         set({ viewDialog: dialog });

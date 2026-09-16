@@ -25,6 +25,7 @@ import {
 import clsx from 'clsx';
 import { isCanvasView, isSessionView, type AgentKind, type CanvasNodeKind, viewIconOf } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
+import { ForkMenuItem } from '@/chat/ui/ForkMenuItem';
 import { useDrafts } from '@/chat/drafts';
 import { isUnseen, useAttention } from '@/state/attention';
 import { useProcessWarnings } from '@/state/processes';
@@ -463,6 +464,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                                 <Icon icon={Frame} size={14} /> Put on canvas
                             </ContextMenu.Item>
                         )}
+                        {view.kind === 'chat' && <ForkMenuItem chatId={view.id} />}
                         {(view.kind === 'drawing' || view.kind === 'diagram' || view.kind === 'file') && (
                             <ContextMenu.Item className="menu-item" onClick={() => showViewOnCanvas(view.id)}>
                                 <Icon icon={Frame} size={14} /> Show on the canvas

@@ -865,6 +865,28 @@ export const canvasOfNode = (nodeId: string): StoreApi<CanvasState> | null =>
  */
 export const liveCanvas = (viewId: string): CanvasState | null => canvases().peek(viewId)?.getState() ?? null;
 
+/*
+ * Selects a node and brings the camera to it once it is on its canvas, for a node the machine writes
+ * (a fork) and that arrives with the next `project.changed`. Nothing happens for a canvas not on screen.
+ */
+export const revealWhenItLands = (viewId: string, nodeId: string): void => {
+    const store = canvases().peek(viewId);
+    if (!store) {
+        return;
+    }
+    if (store.getState().nodes[nodeId] !== undefined) {
+        store.getState().goToNode(nodeId);
+        return;
+    }
+    const off = store.subscribe((state) => {
+        if (state.nodes[nodeId] !== undefined) {
+            // Before the move, which is a change this listener would otherwise hear again.
+            off();
+            state.goToNode(nodeId);
+        }
+    });
+};
+
 /* Every canvas on screen, which is what a watcher about the whole project walks over. */
 export const liveCanvases = (): [string, CanvasState][] =>
     canvases()

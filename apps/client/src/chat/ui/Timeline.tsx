@@ -8,11 +8,13 @@ import { crumbOf, openFromMain, useSubagentTrail } from '@/chat/subagent-view';
 import { registerMessageStepper, registerTimeline, setTimelineAtEnd } from '@/chat/timeline-scroll';
 import { SCRUBBER_MIN_TICKS, STRIP_INSET_PX, STRIP_WIDTH_PX, messagesInView, stepMessage, threadPaddingLeft, ticksOf } from '@/chat/logic/scrubber';
 import { EMPTY_TARGET, readTimelineTarget, withCurrentText, type TimelineTarget } from '@/chat/logic/timeline-target';
-import { Scrubber } from '@/chat/ui/Scrubber';
+import { forkRefusal } from '@/chat/logic/fork';
+import { Scrubber, type CardChat } from '@/chat/ui/Scrubber';
 import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
 import { Row } from '@/chat/ui/rows/Rows';
 import { useChatRow, useChats } from '@/state/chats';
 import { endpointKey, useEndpointId } from '@/state/keys';
+import { useUi } from '@/state/ui';
 import { FileLinkContext } from '@/shell/panels/file-links';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { EmptyState } from '@/ui/EmptyState';
@@ -150,6 +152,17 @@ export function Timeline({ chatId }: { chatId: string }) {
     const jumpRef = useRef(jumpTo);
     jumpRef.current = jumpTo;
     const pick = useCallback((index: number) => jumpRef.current(index), []);
+    // Read when the card asks rather than on every render, so the strip's memo holds while the thread streams.
+    const cardChat = useMemo<CardChat>(
+        () => ({
+            canFork: (turnId) => {
+                const row = useChats.getState().byKey[endpointKey(endpointId, chatId)];
+                return forkRefusal(row?.info ?? null, row?.structure[turnId]) === null;
+            },
+            fork: (turnId) => useUi.getState().setForkDialog({ chatId, turnId })
+        }),
+        [endpointId, chatId]
+    );
 
     const stepRef = useRef<(direction: -1 | 1) => boolean>(() => false);
     stepRef.current = (direction) => {
@@ -261,12 +274,12 @@ export function Timeline({ chatId }: { chatId: string }) {
                             })}
                         </div>
                     </ContextMenu.Trigger>
-                    <TimelineMenuPopup target={target} scroller={scrollRef} />
+                    <TimelineMenuPopup target={target} scroller={scrollRef} chatId={onMainAgent ? chatId : null} />
                 </ContextMenu.Root>
                 {showsScrubber && (
                     <div className="absolute top-4" style={{ left: STRIP_INSET_PX, width: STRIP_WIDTH_PX, bottom: COMPOSER_CLEARANCE_PX }}>
                         <ErrorBoundary label="The message strip failed to render" resetKeys={[ticks.length]}>
-                            <Scrubber ticks={ticks} firstInView={inView?.first ?? null} lastInView={inView?.last ?? null} onPick={pick} />
+                            <Scrubber ticks={ticks} firstInView={inView?.first ?? null} lastInView={inView?.last ?? null} onPick={pick} chat={cardChat} />
                         </ErrorBoundary>
                     </div>
                 )}
