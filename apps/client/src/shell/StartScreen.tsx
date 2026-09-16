@@ -131,12 +131,12 @@ function SignInCard({ description }: { description: string }) {
     );
 }
 
-/* The keys that work from here, and which Ruimte this is. */
+/* The keys that work from here, and which Ruimte this is. It stays at the bottom, and what scrolls under it fades out. */
 function Footer() {
     const currentVersion = useUpdates((s) => s.currentVersion);
     const version = isDesktop() && currentVersion ? currentVersion : null;
     return (
-        <footer className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-text-faint">
+        <footer className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 bg-linear-to-t from-bg from-40% to-transparent px-8 pt-10 pb-4 text-xs text-text-faint *:pointer-events-auto">
             <span className="flex items-center gap-1.5">
                 <Kbd shortcut={APP_SHORTCUTS.palette} className={TOOLTIP_KBD} /> Command palette
             </span>
@@ -201,7 +201,7 @@ function StartContent() {
     );
 
     return (
-        <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col gap-12 px-8 pt-10 pb-8">
+        <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col gap-12 px-8 pt-10 pb-24">
             <BrandIntro />
 
             {firstStart ? (
@@ -274,6 +274,7 @@ function StartContent() {
                                 {offerSignIn && <SignInCard description="Reach the machines on your account." />}
                             </div>
                         </Section>
+                        {boot === null && machineList}
                     </div>
                     <div className="flex min-w-0 flex-col gap-8">
                         {(failure !== null || listed.length > 0) && (
@@ -286,12 +287,9 @@ function StartContent() {
                                 </div>
                             </Section>
                         )}
-                        {boot === null && machineList}
                     </div>
                 </div>
             )}
-
-            <Footer />
 
             <ProjectNameDialog
                 open={dialog === 'new'}
@@ -326,10 +324,13 @@ export function StartScreen() {
     return (
         <div className="flex h-full w-full flex-col bg-bg">
             <div className="app-drag h-12 shrink-0" style={{ paddingLeft: inset ?? STRIP_PADDING_PX }} />
-            <div className="min-h-0 grow overflow-auto">
-                <ErrorBoundary label="The start screen failed to render">
-                    <StartContent />
-                </ErrorBoundary>
+            <div className="relative min-h-0 grow">
+                <div className="h-full overflow-auto">
+                    <ErrorBoundary label="The start screen failed to render">
+                        <StartContent />
+                    </ErrorBoundary>
+                </div>
+                <Footer />
             </div>
         </div>
     );
