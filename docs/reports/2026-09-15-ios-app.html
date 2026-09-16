@@ -207,6 +207,7 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
 <section id="uitvoering" class="recommendation">
   <h2>De eerste drie vervolgpunten zijn opgepakt</h2>
   <p>Implementatie <code>86dbcfc5</code> voegt paginering aan contracten, daemon en iOS toe, registreert push-to-start voor de laatst bekeken iPhone-chat en herstelt gaten in registratie en achtergrondacties. De ondertekende build is op Bas' iPhone geïnstalleerd en gestart. De daemon is niet herstart en de Worker is niet gedeployd.</p>
+  <p><strong>Aanvulling: overlappende chatberichten.</strong> De chatcel geeft wijzigingen in de gerenderde hoogte nu expliciet door aan UIKit en meet tekst op de beschikbare celbreedte. Dit dekt ook de latere woordanimatie en Markdown-opmaak. De ondertekende build is op de iPhone geïnstalleerd; bevestiging in een livegesprek blijft nodig. Zie de <a href="2026-09-15-ios-composer-review.md">review</a> voor de technische onderbouwing en validatie.</p>
   <div class="stats">
     <div><strong>382 kB</strong><span>Eerste pagina van een synthetische chat van 18,3 MB</span></div>
     <div><strong>176</strong><span>Geslaagde gerichte Bun-tests</span></div>

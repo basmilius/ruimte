@@ -528,6 +528,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
 @MainActor
 final class ChatHostingCell: UICollectionViewListCell {
     private let hosting = UIHostingController(rootView: AnyView(EmptyView()))
+    private var resizePending = false
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -554,8 +555,42 @@ final class ChatHostingCell: UICollectionViewListCell {
             parent.addChild(hosting)
             hosting.didMove(toParent: parent)
         }
-        hosting.rootView = AnyView(content())
+        hosting.rootView = AnyView(
+            content()
+                .fixedSize(horizontal: false, vertical: true)
+                .onGeometryChange(for: CGSize.self) {
+                    $0.size
+                } action: { [weak self] size in
+                    self?.contentSizeChanged(size)
+                }
+        )
         hosting.view.invalidateIntrinsicContentSize()
+    }
+
+    override func preferredLayoutAttributesFitting(_ layoutAttributes: UICollectionViewLayoutAttributes)
+        -> UICollectionViewLayoutAttributes
+    {
+        let attributes = layoutAttributes.copy() as! UICollectionViewLayoutAttributes
+        let size = hosting.sizeThatFits(in: CGSize(width: attributes.size.width, height: .greatestFiniteMagnitude))
+        attributes.size.height = ceil(size.height)
+        return attributes
+    }
+
+    private func contentSizeChanged(_ size: CGSize) {
+        // Intrinsic sizing uses an unspecified width, so wrapping can grow without changing that ideal height.
+        guard abs(size.width - contentView.bounds.width) < 1,
+            abs(ceil(size.height) - bounds.height) >= 1, !resizePending
+        else { return }
+        resizePending = true
+        // SwiftUI can report several sizes while parsing Markdown. Invalidate outside its current layout pass.
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.resizePending = false
+            UIView.performWithoutAnimation {
+                self.contentView.invalidateIntrinsicContentSize()
+                self.invalidateIntrinsicContentSize()
+            }
+        }
     }
 }
 

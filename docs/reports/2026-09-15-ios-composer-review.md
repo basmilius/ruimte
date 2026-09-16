@@ -752,3 +752,31 @@ The source comparison with desktop/web is in the report's new parity section. Th
 candidates are Git history and branch/worktree operations, project-wide content search,
 terminal-agent resume, saved provider defaults and a central action palette. Processes,
 canvas node repositioning and iPad Live Activities remain outside the agreed scope.
+
+
+## Streaming message height follow-up, September 16
+
+Bas still sees streaming messages overlap. The previous hosting fix relied on intrinsic
+content size invalidation. Apple documents that this uses an
+[unspecified size proposal](https://developer.apple.com/documentation/swiftui/uihostingcontrollersizingoptions/intrinsiccontentsize).
+That ideal height is insufficient to track every additional line at the actual phone
+width. The existing resizing fixture changes an explicit frame height; it does not
+establish that wrapping text and asynchronous Markdown parsing resize correctly.
+
+`ChatHostingCell` now observes the rendered content size, including its padding, and
+invalidates the cell and its content view when the rendered height differs from the
+assigned height. Notifications are coalesced outside the current SwiftUI layout pass.
+Measurements from other width proposals are ignored. The cell's preferred layout
+attributes measure SwiftUI at the width supplied by the collection layout and round
+height upward. This preserves the hosted view and its disclosure/reveal state.
+The collection retains its existing reading-anchor and follow-latest behavior.
+
+The invalidation uses Apple's public
+[self-sizing API](https://developer.apple.com/documentation/uikit/uicollectionview/selfsizinginvalidation-swift.enum/enabledincludingconstraints).
+No private hosting internals, clipping workaround or per-token snapshot reload was added.
+
+The signed iPhone build passes and is installed on Bas's iPhone. `bun run format`,
+`bun run check` and `git diff --check` pass; existing warnings remain. Per the standing
+agreement, no simulator or UI tests were run. Live streaming, Markdown transitions, growing code blocks and reading position
+still need physical acceptance; compilation is not proof that the reported overlap is
+gone. Build log: `/tmp/ruimte-ios-streaming-build.log`.
