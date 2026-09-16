@@ -21,6 +21,7 @@ import { PendingPromptStore } from './agents/pending-prompts.ts';
 import { OutboxStore } from './outbox/outbox.ts';
 import { OutboxWorker } from './outbox/outbox-worker.ts';
 import { startAgentHandler } from './outbox/start-agent.ts';
+import { oweResume, resumeRunHandler, resumeRunParked } from './outbox/resume-run.ts';
 import type { AgentStart } from './canvas/verb.ts';
 import { connectionOpener, socketChannel, type ClientChannel, type OpenConnection, type SocketChannel } from './connection.ts';
 import { authenticateChannel } from './pulsar/channel-auth.ts';
@@ -191,7 +192,12 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         onLimits: (update) => limits.applyLive(update),
         claudeTitles,
         // One one-shot call per Codex chat, on whichever CLI here answers a single prompt.
-        nameChat: (provider, input) => suggestChatTitle(providers, provider, input)
+        nameChat: (provider, input) => suggestChatTitle(providers, provider, input),
+        onInterruptedRun: oweResume({
+            projectOf: (id) => projects.index.locate(id)?.projectId ?? null,
+            entries: () => outbox.list(),
+            enqueue: (...args) => outboxWorker.enqueue(...args)
+        })
     });
     const projects = new ProjectStore(config.home);
     // A node deleted before anyone ran it takes its prompt with it, and a node that is gone frees the count its opener is held to.
@@ -219,8 +225,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 hasSession: (sessionId) => manager.get(sessionId) !== undefined,
                 createSession: (options) => manager.create(options),
                 killSession: (sessionId) => manager.kill(sessionId)
-            })
-        }
+            }),
+            'resume-run': resumeRunHandler(chats)
+        },
+        onParked: resumeRunParked(chats)
     });
     const folders = new FolderWatcher();
     const statuses = new GitStatusWatcher();
@@ -677,6 +685,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     manager.hookUrl = `http://127.0.0.1:${server.port}${HOOKS_PATH}`;
     manager.contextUrl = `http://127.0.0.1:${server.port}${CONTEXT_PATH}`;
     outboxWorker.start();
+    // Beside the daemon answering: a turn a restart interrupted is taken up again without waiting for a client.
+    void chats.recoverInterrupted().catch((e) => console.error('Resuming interrupted turns failed:', errorText(e)));
 
     /* The built client from one directory; anything that is not a file falls back to the app shell. */
     const serveClient = async (dir: string, pathname: string): Promise<Response> => {

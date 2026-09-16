@@ -131,4 +131,32 @@ describe('the stream of a chat', () => {
         expect(behind.events).toBeUndefined();
         expect(behind.items.map((item) => item.kind)).toEqual(['turn', 'user', 'thinking', 'assistant']);
     });
+
+    test('a turn a CLI was in the middle of stays running through a stop the CLI dies in, when a resume is owed', async () => {
+        const first = boot();
+        await first.manager.create({ chatId: 'chat', cwd: home });
+        first.manager.attach('chat', 'watcher');
+        await first.manager.send('chat', 'slow');
+        await first.recorder.until(() => first.recorder.info?.agentSessionId !== null && first.recorder.info?.agentSessionId !== undefined);
+        const turnId = first.recorder.info!.activeTurnId!;
+        first.manager.persistAllSync();
+        await first.manager.shutdown();
+        // The CLI is gone, and its exit said nothing to the thread.
+        await claude.started[0]!.exited;
+        expect(first.manager.get('chat')?.info.activeTurnId).toBe(turnId);
+
+        const owed: unknown[] = [];
+        const second = boot({ onInterruptedRun: async (run) => owed.push(run) > 0 });
+        const info = await second.manager.create({ chatId: 'chat' });
+        expect(owed).toEqual([{ chatId: 'chat', turnId, attempt: 2 }]);
+        expect(info).toMatchObject({ status: 'running', activeTurnId: turnId, running: false });
+        expect(second.manager.get('chat')?.thread.get(turnId)).toMatchObject({ state: 'running' });
+
+        // Without anyone to owe it to, the turn ends the way it always did.
+        await second.manager.shutdown();
+        const third = boot();
+        await third.manager.create({ chatId: 'chat' });
+        expect(third.manager.get('chat')?.thread.get(turnId)).toMatchObject({ state: 'error' });
+        expect(third.manager.get('chat')?.info).toMatchObject({ status: 'idle', activeTurnId: null });
+    });
 });

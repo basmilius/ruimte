@@ -58,6 +58,9 @@ export interface ChatSendExtras {
     attachments?: ChatAttachment[];
 }
 
+// What a resumed CLI is told: its transcript ends where the process did, and a tool call that was out is lost to it.
+export const RESUME_PROMPT = 'The machine restarted while you were working on the previous message. Continue where you left off.';
+
 const newId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error));
@@ -242,7 +245,13 @@ export class ChatSession {
     }
 
     cancel(): void {
-        if (!this.backend || this.thread.info.activeTurnId === null) {
+        const turnId = this.thread.info.activeTurnId;
+        // A turn still waiting to be resumed has no process to interrupt; stopping it is ending it here.
+        if (!this.backend && turnId !== null) {
+            this.abandon(turnId, null);
+            return;
+        }
+        if (!this.backend || turnId === null) {
             return;
         }
         // Through the same queue as the turn, so a stop can never overtake the message it stops.
@@ -339,6 +348,56 @@ export class ChatSession {
             events.push(this.thread.patchInfo(patch));
         }
         this.emit(events);
+    }
+
+    /*
+     * Takes up a turn the daemon went down in: a new process on the CLI's own session, the same turn
+     * with the next attempt, and a prompt that says what happened. Nothing happens when the turn has
+     * ended or already has that attempt, so the outbox may run it twice. A CLI that will not start
+     * throws and leaves the turn waiting for the next try.
+     */
+    async resume(turnId: string, attempt: number): Promise<void> {
+        if (!this.awaitsResume(turnId, attempt)) {
+            return;
+        }
+        let backend: ChatBackend;
+        try {
+            backend = await this.ensureBackend();
+        } catch (e) {
+            if (this.backend === null) {
+                this.emit([this.thread.patchInfo({ running: false })]);
+            }
+            throw e;
+        }
+        const turn = this.thread.get(turnId);
+        if (!this.awaitsResume(turnId, attempt) || this.backend !== backend || turn?.kind !== 'turn') {
+            return;
+        }
+        const now = Date.now();
+        this.emit([
+            this.thread.upsert({ ...turn, attempt }),
+            this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'info', text: 'Resumed after the machine restarted' })
+        ]);
+        this.options.persist();
+        // The turn keeps the checkpoint it started with, so its card still shows everything it changed.
+        this.turnReady = Promise.resolve();
+        backend.sendTurn({ text: RESUME_PROMPT, preamble: null, attachments: [], mentions: [], skills: [] });
+    }
+
+    /* Ends a running turn nobody is working on, with the reason in the thread when there is one; the queue goes out after it. */
+    abandon(turnId: string, reason: string | null): void {
+        const turn = this.thread.get(turnId);
+        if (turn?.kind !== 'turn' || turn.state !== 'running' || this.thread.info.activeTurnId !== turnId || this.running) {
+            return;
+        }
+        const now = Date.now();
+        this.emit([
+            this.thread.upsert({ ...turn, state: 'aborted', endedAt: now }),
+            ...(reason === null ? [] : [this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'warning', text: reason })]),
+            this.thread.patchInfo({ status: 'idle', activeTurnId: null })
+        ]);
+        this.options.persist();
+        this.drainQueue();
     }
 
     /* Ends the process and stops listening to it, as the daemon goes down; the thread stays as it is. */
@@ -576,6 +635,11 @@ export class ChatSession {
                 throw error;
             });
         return this.starting;
+    }
+
+    private awaitsResume(turnId: string, attempt: number): boolean {
+        const turn = this.thread.get(turnId);
+        return !this.frozen && turn?.kind === 'turn' && turn.state === 'running' && this.thread.info.activeTurnId === turnId && (turn.attempt ?? 1) < attempt;
     }
 
     private receive(generation: number, event: BackendEvent): void {

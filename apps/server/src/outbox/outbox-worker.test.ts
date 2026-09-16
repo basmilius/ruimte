@@ -3,39 +3,14 @@ import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { OutboxStore, type OutboxEntry, type OutboxWork } from './outbox.ts';
-import { OutboxWorker, RETRY_DELAYS_MS, type OutboxClock } from './outbox-worker.ts';
-
-/* A clock a test moves by hand: a timer fires only inside `advance`, never on its own. */
-class ManualClock implements OutboxClock {
-    private time = 1_000_000;
-    private timers: Array<{ at: number; run: () => void; id: number }> = [];
-    private nextId = 1;
-
-    now(): number {
-        return this.time;
-    }
-
-    setTimeout(run: () => void, ms: number): unknown {
-        const id = this.nextId++;
-        this.timers.push({ at: this.time + ms, run, id });
-        return id;
-    }
-
-    clearTimeout(handle: unknown): void {
-        this.timers = this.timers.filter((timer) => timer.id !== handle);
-    }
-
-    advance(ms: number): void {
-        this.time += ms;
-        const due = this.timers.filter((timer) => timer.at <= this.time);
-        this.timers = this.timers.filter((timer) => timer.at > this.time);
-        for (const timer of due) {
-            timer.run();
-        }
-    }
-}
+import { ManualClock } from './manual-clock.ts';
+import { OutboxWorker, RETRY_DELAYS_MS } from './outbox-worker.ts';
 
 const work = (node: 'chat' | 'terminal' = 'chat'): OutboxWork => ({ kind: 'start-agent', payload: { node, provider: 'claude', cwd: null } });
+
+const unused = (): never => {
+    throw new Error('no resume in these tests');
+};
 
 let home: string;
 let store: OutboxStore;
@@ -60,6 +35,7 @@ test('an entry is on disk until its work is done, and then it is gone', async ()
         store,
         clock,
         handlers: {
+            'resume-run': unused,
             'start-agent': (entry) => {
                 seen.push(entry.target);
                 return new Promise((resolve) => {
@@ -90,6 +66,7 @@ test('what an earlier run owed is started once after a restart, and not again af
             store: reloaded,
             clock,
             handlers: {
+                'resume-run': unused,
                 'start-agent': async (entry) => {
                     runs.push(entry.target);
                 }
@@ -117,6 +94,7 @@ test('entries for one target run one after the other, oldest first, while other 
         store,
         clock,
         handlers: {
+            'resume-run': unused,
             'start-agent': (entry) => {
                 const key = `${entry.target}:${entry.payload.node}`;
                 order.push(key);
@@ -153,6 +131,7 @@ test('a failure waits 1, 5 and 30 seconds on the clock and is then given up on',
         store,
         clock,
         handlers: {
+            'resume-run': unused,
             'start-agent': async () => {
                 attempts += 1;
                 throw new Error('no');
@@ -183,6 +162,7 @@ test('a retry that was waiting survives a restart with its attempts', async () =
         store,
         clock,
         handlers: {
+            'resume-run': unused,
             'start-agent': async () => {
                 throw new Error('no');
             }

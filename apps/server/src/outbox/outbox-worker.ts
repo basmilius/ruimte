@@ -24,7 +24,7 @@ export interface OutboxWorkerOptions {
     store: OutboxStore;
     handlers: OutboxHandlers;
     clock?: OutboxClock;
-    /* An entry that failed every attempt and is given up on; the work it stood for is not done. */
+    /* An entry that failed every attempt and is given up on (and logged); the work it stood for is not done. */
     onParked?: (entry: OutboxEntry, error: unknown) => void;
 }
 
@@ -47,7 +47,7 @@ export class OutboxWorker {
         this.store = options.store;
         this.handlers = options.handlers;
         this.clock = options.clock ?? systemClock;
-        this.onParked = options.onParked ?? ((entry, error) => console.error(`Gave up on ${entry.kind} for ${entry.target}:`, errorText(error)));
+        this.onParked = options.onParked ?? (() => undefined);
     }
 
     start(): void {
@@ -119,6 +119,7 @@ export class OutboxWorker {
         const delay = RETRY_DELAYS_MS[entry.attempts];
         if (delay === undefined) {
             await this.store.remove(entry.id);
+            console.error(`Gave up on ${entry.kind} for ${entry.target}:`, errorText(error));
             this.onParked(entry, error);
             return;
         }

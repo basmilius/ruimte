@@ -17,8 +17,14 @@ const StartAgentSchema = z.object({
     })
 });
 
-/* The later phases add their kinds (resume-run, wake-parent, end-children) as members of this union. */
-const OutboxWorkSchema = z.discriminatedUnion('kind', [StartAgentSchema]);
+const ResumeRunSchema = z.object({
+    kind: z.literal('resume-run'),
+    // The target is the chat; the turn it was running and the attempt that takes it up again.
+    payload: z.object({ turnId: z.string().min(1), attempt: z.number().int().positive() })
+});
+
+/* The later phases add their kinds (wake-parent, end-children) as members of this union. */
+const OutboxWorkSchema = z.discriminatedUnion('kind', [StartAgentSchema, ResumeRunSchema]);
 
 const OutboxEntrySchema = z.intersection(
     OutboxWorkSchema,
@@ -36,6 +42,7 @@ const OutboxEntrySchema = z.intersection(
 export type OutboxWork = z.infer<typeof OutboxWorkSchema>;
 export type OutboxEntry = z.infer<typeof OutboxEntrySchema>;
 export type StartAgentEntry = Extract<OutboxEntry, { kind: 'start-agent' }>;
+export type ResumeRunEntry = Extract<OutboxEntry, { kind: 'resume-run' }>;
 
 const fileName = (id: string): string => `${encodeURIComponent(id)}.json`;
 

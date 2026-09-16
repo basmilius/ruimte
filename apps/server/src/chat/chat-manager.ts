@@ -34,6 +34,16 @@ import { SubagentReader, type SubagentReaderOptions } from './subagent-reader.ts
 import { errorText } from '../error-text.ts';
 import { usageRoots } from '../usage/roots.ts';
 
+/* A turn that was running when the daemon went down, and the attempt that would take it up again. */
+export interface InterruptedRun {
+    chatId: string;
+    turnId: string;
+    attempt: number;
+}
+
+// One process worked on the turn and one more may take it up after a restart; a loop of resumes could redo a command forever.
+const MAX_ATTEMPTS = 2;
+
 interface ChatManagerOptions {
     providers: ProviderRegistry;
     store?: ChatStore;
@@ -68,6 +78,11 @@ interface ChatManagerOptions {
     nameChat?: (provider: AgentKind, input: ChatTitleInput) => Promise<string | null>;
     // Where a subagent's whole conversation is read and how its growth is noticed; a test hands in fakes.
     subagents?: Partial<Pick<SubagentReaderOptions, 'claudeProjectsDir' | 'seams' | 'now' | 'listOnce'>>;
+    /*
+     * Asked when a chat is loaded with a turn that could be resumed: true once the resume is owed
+     * (written to the outbox), and the turn stays running. Without it, or on false, the turn ends as it always did.
+     */
+    onInterruptedRun?: (run: InterruptedRun) => Promise<boolean>;
 }
 
 // Above this the record is big enough that rewriting it on every tool call costs more than it saves.
@@ -106,8 +121,10 @@ export class ChatManager {
     private readonly claudeTitles: ChatManagerOptions['claudeTitles'] | null;
     private readonly nameChat: ChatManagerOptions['nameChat'] | null;
     private readonly subagents: SubagentReader;
+    private readonly onInterruptedRun: ChatManagerOptions['onInterruptedRun'] | null;
 
     constructor(options: ChatManagerOptions) {
+        this.onInterruptedRun = options.onInterruptedRun ?? null;
         this.providers = options.providers;
         this.claudeTitles = options.claudeTitles ?? null;
         this.nameChat = options.nameChat ?? null;
@@ -224,6 +241,7 @@ export class ChatManager {
                   usage: { contextTokens: 0, contextWindow: catalog.contextWindowFor(selection), costUsd: 0, turns: 0 },
                   createdAt: Date.now()
               };
+        const resumeTurnId = stored ? await this.owedResume(payload.chatId, stored) : null;
         const token = randomBytes(24).toString('base64url');
         this.tokens.set(token, payload.chatId);
         const claudeTitles = this.claudeTitles;
@@ -249,7 +267,7 @@ export class ChatManager {
         });
         this.chats.set(session.id, session);
         if (stored) {
-            session.settleStored(selection, null);
+            session.settleStored(selection, resumeTurnId);
         }
         // Sent before the info goes back, so the client's attach already carries it: a prompt an
         // agent was made with has to read as the first message of the thread, not as a turn out of
@@ -474,6 +492,47 @@ export class ChatManager {
         return this.chats.get(chatId);
     }
 
+    /*
+     * Takes up a turn the daemon went down in, under the same turn with the next attempt. Loads the
+     * chat when nobody has yet, which asks `onInterruptedRun` again and finds the resume already owed.
+     * Throws when the CLI will not start, so the outbox tries again.
+     */
+    async resumeRun(chatId: string, turnId: string, attempt: number): Promise<void> {
+        await this.creating.get(chatId)?.catch(() => undefined);
+        if (!this.chats.has(chatId)) {
+            if (!(await this.store?.has(chatId))) {
+                return;
+            }
+            await this.create({ chatId });
+        }
+        await this.chats.get(chatId)?.resume(turnId, attempt);
+    }
+
+    /* A resume that never came about: the turn ends as aborted, with the reason in the thread. */
+    abandonRun(chatId: string, turnId: string, reason: string): void {
+        this.chats.get(chatId)?.abandon(turnId, reason);
+    }
+
+    /*
+     * Loads every stored chat whose turn was running when the daemon went down, so the rule in `create`
+     * decides whether it is resumed without waiting for a client to open it. One file at a time: it
+     * runs beside the daemon answering, not in front of it.
+     */
+    async recoverInterrupted(): Promise<void> {
+        if (!this.store) {
+            return;
+        }
+        for (const chatId of await this.store.list()) {
+            if (this.chats.has(chatId) || this.creating.has(chatId)) {
+                continue;
+            }
+            const record = await this.store.read(chatId).catch(() => null);
+            if (record !== null && interruptedTurn(record) !== null) {
+                await this.create({ chatId }).catch((e: unknown) => console.error(`Loading chat ${chatId} after a restart failed:`, errorText(e)));
+            }
+        }
+    }
+
     /* Ends every CLI and writes every thread; used when the daemon goes down. */
     async shutdown(): Promise<void> {
         for (const session of this.chats.values()) {
@@ -612,6 +671,20 @@ export class ChatManager {
         return new ChatLog(path, { seq: left, resetSeq: left === 0 ? 0 : left + 1, lines: [] });
     }
 
+    /* The running turn of a stored chat, when it may be resumed and the resume is now owed; null otherwise. */
+    private async owedResume(chatId: string, stored: ChatRecord): Promise<string | null> {
+        const turn = interruptedTurn(stored);
+        if (turn === null || !this.onInterruptedRun || stored.info.agentSessionId === null || (turn.attempt ?? 1) >= MAX_ATTEMPTS) {
+            return null;
+        }
+        try {
+            return (await this.onInterruptedRun({ chatId, turnId: turn.id, attempt: (turn.attempt ?? 1) + 1 })) ? turn.id : null;
+        } catch (e) {
+            console.error(`Owing a resume for chat ${chatId} failed:`, errorText(e));
+            return null;
+        }
+    }
+
     private require(chatId: string): ChatSession {
         const session = this.chats.get(chatId);
         if (!session) {
@@ -620,3 +693,9 @@ export class ChatManager {
         return session;
     }
 }
+
+const interruptedTurn = (record: { info: ChatInfo; items: ChatItem[] }): Extract<ChatItem, { kind: 'turn' }> | null => {
+    const turnId = record.info.activeTurnId;
+    const turn = turnId === null ? undefined : record.items.find((item) => item.id === turnId);
+    return turn?.kind === 'turn' && turn.state === 'running' ? turn : null;
+};
