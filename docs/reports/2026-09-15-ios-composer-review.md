@@ -827,3 +827,39 @@ with invalid payloads and returned `unknown-request` for `push.subscribe` and
 readiness check on an isolated local port. No existing daemon, broker, TURN process or
 user session was restarted. Runtime update and physical iPhone acceptance remain open.
 See [APNs operations](../../apps/pulsar-worker/APNS.md) for version IDs and next steps.
+
+
+## Production activation and release 0.0.17, September 16
+
+Bas explicitly approved releasing everything, including Pulsar. The staged Worker was
+activated at 100%, then 49 commits and tag `v0.0.17` were pushed atomically. The tag
+points to `6e02758d36fc5e9c2710b1b70b9a8e48880fbe51`. The subsequent Address book and
+Station workflows both succeeded. The verified Worker deployment was
+`d4dfa111-8bde-492a-be30-69c2149e2c70`; subsequent documentation pushes can create
+another version with the same application code. Both APNs pairs and existing provider
+and statement-signing secrets were retained.
+
+The [0.0.17 release](https://github.com/basmilius/ruimte/releases/tag/v0.0.17) was
+published only after both CI runs and every release job succeeded. Local validation
+passed `bun run build`, `bun run check`, formatting and 2,941 tests, with 69 skipped.
+The macOS release log confirms Developer ID signing and successful Apple notarization.
+All 13 expected assets are uploaded. Each update feed names 0.0.17 and references
+uploaded files with matching sizes and valid SHA-512 fields. This is a manifest check,
+not a fresh download and checksum computation of every large artifact.
+
+The [npm workflow](https://github.com/basmilius/ruimte/actions/runs/35067430232)
+succeeded and reported publishing `ruimte` plus all three platform packages as
+0.0.17 with the `latest` tag. Registry propagation was checked separately.
+
+The live Pulsar health check retained the same public statement key and both login
+providers. Unauthenticated device registration returns 401 and malformed push delivery
+returns 400. No broker, TURN or existing daemon process was restarted. The installed
+0.0.16 daemon still needs the 0.0.17 update before iPhone push subscriptions and history
+pagination work. Bas was asked to enable notifications on the iPhone. Real alert
+delivery, notification actions and Live Activity start/update/end remain acceptance
+checks; backend deployment and passing fixtures do not establish those outcomes.
+
+Logs: `/tmp/ruimte-0.0.17-build.log`, `/tmp/ruimte-0.0.17-tests.log`,
+`/tmp/ruimte-0.0.17-release-ci.log`, `/tmp/ruimte-0.0.17-macos-ci.log`,
+`/tmp/ruimte-0.0.17-npm-ci.log` and `/tmp/ruimte-0.0.17-npm-publish.log`.
+iOS TestFlight/App Store distribution remains deferred.

@@ -46,17 +46,19 @@ Remote migrations `0006_push.sql` and `0008_activity_target.sql` both succeeded.
 A D1 Time Travel bookmark was captured before migration in
 `/tmp/ruimte-apns-d1-before.json`. Both migrations are additive.
 
-Automatic approval review blocked activating the new version for 100% of traffic,
-requiring explicit permission for the production rollout. The active Worker remains
-`30be96f9-baf9-4112-a02b-03c4f2c70882`. After that approval, the exact activation is:
-
-```sh
-bunx wrangler versions deploy 4644bc8d-2565-44df-a27b-d4449b4a68ec@100 --yes
-```
-
-Run it from `apps/pulsar-worker`. The prior version is available for rollback; the
-additive tables can remain in place. See
+Bas explicitly approved the full release, including Pulsar. Version
+`4644bc8d-2565-44df-a27b-d4449b4a68ec` was activated, then the successful GitHub
+Address book workflow deployed the same code as version
+`d4dfa111-8bde-492a-be30-69c2149e2c70`. This is the deployment verified during the
+release; later `main` pushes may produce new version IDs. Both APNs pairs and the existing login/signing
+secrets were verified present after that deployment. The prior pre-push-support version
+is `30be96f9-baf9-4112-a02b-03c4f2c70882`. Additive migrations can remain if rolling
+back the Worker. See
 [Cloudflare's version documentation](https://developers.cloudflare.com/workers/versions-and-deployments/).
+
+Remote smoke checks passed: `/health` reports both providers healthy, unauthenticated
+`POST /v1/push/devices` returns 401, and an invalid `POST /v1/push` returns 400.
+These checks establish route availability and input rejection, not Apple delivery.
 
 The existing daemon on port 4210 returns `unknown-request` for both `push.subscribe`
 and `chat.history`. It has not been restarted. A fresh daemon compiled from committed
@@ -72,7 +74,7 @@ keys, not the real APNs keys. Logs are in `/tmp/ruimte-apns-full-tests.log`.
 
 Pulsar health remained healthy after migration with both Apple and GitHub providers
 enabled and the same public statement key. Real APNs delivery and Live Activity
-behavior remain unverified. Once activation and the daemon update are complete, enable
+behavior remain unverified. Once the daemon update is complete, enable
 Notifications on the iPhone, follow a dedicated test chat, then check foreground
 suppression, background turn completion, attention, approval actions and Live Activity
 start/update/end. Production delivery additionally needs a production-signed app/device
