@@ -10,6 +10,7 @@ import type {
     ModelSelection,
     RuntimeMode
 } from '@ruimte/contracts';
+import { notResumedNote } from '@ruimte/contracts';
 import { contextChangeNote } from '../context/context-note.ts';
 import type { CheckpointService } from '../git/checkpoints.ts';
 import type { ChatProvider } from '../providers/provider.ts';
@@ -794,8 +795,8 @@ export interface ResumeDecision {
     reason: string | null;
 }
 
-/* The one sentence a turn that a restart did not take up again ends with, whatever the reason. */
-export const notResumedNote = (reason: string): string => `This turn could not be resumed after the machine restarted: ${reason}`;
+/* The one sentence a turn that a restart did not take up again ends with, whatever the reason; the client reads it too. */
+export { notResumedNote };
 
 // Whatever was open when the daemon went down: nobody is going to answer it now.
 const settleStoredItem = (item: ChatItem, resumeTurnId: string | null): ChatItem => {

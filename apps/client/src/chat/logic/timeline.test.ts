@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatItem, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
+import { notResumedNote } from '@ruimte/contracts';
 import { agentTurnLabel, deriveTimelineRows, summarizeGroup, turnLabel } from './timeline';
 
 const tool = (id: string, name: string, input: unknown, state: ChatToolItem['state'] = 'done', turnId = 't1'): ChatToolItem => ({
@@ -196,6 +197,15 @@ describe('labels', () => {
         expect(turnLabel({ id: 't', kind: 'turn', createdAt: 0, turnId: 't', state: 'aborted', endedAt: 8000, costUsd: 0 })).toBe('You stopped after 8s');
         expect(turnLabel({ id: 't', kind: 'turn', createdAt: 0, turnId: 't', state: 'done', endedAt: 72_000, costUsd: 0 })).toBe('Worked for 1m 12s');
         expect(turnLabel({ id: 't', kind: 'turn', createdAt: 0, turnId: 't', state: 'error', endedAt: 500, costUsd: 0 })).toBe('Failed after 1s');
+    });
+
+    test('an aborted turn the machine ended after a restart is not one the person stopped', () => {
+        const turn = { id: 't', kind: 'turn' as const, createdAt: 0, turnId: 't', state: 'aborted' as const, endedAt: 8000, costUsd: 0 };
+        const note = (text: string, level: 'info' | 'warning' = 'warning'): ChatItem => ({ id: 'n', kind: 'note', createdAt: 1, turnId: 't', level, text });
+        expect(turnLabel(turn, [turn, note(notResumedNote('the agent had not started a session to resume yet'))])).toBe('Stopped after 8s');
+        // Any other warning in a turn a person stopped (a CLI that retried, say) leaves it theirs.
+        expect(turnLabel(turn, [turn, note('Codex could not resume its thread. Started a new one.')])).toBe('You stopped after 8s');
+        expect(turnLabel(turn, [turn, { ...note(notResumedNote('x')), turnId: 'other' }])).toBe('You stopped after 8s');
     });
 
     test('agentTurnLabel', () => {

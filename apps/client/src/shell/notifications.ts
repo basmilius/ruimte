@@ -42,7 +42,9 @@ const turnBody = (nodeId: string): string => {
     if (turn === null) {
         return 'Finished';
     }
-    return turn.origin === 'agent' ? agentTurnLabel(turn) : turnLabel(turn);
+    const chat = useChats.getState().byKey[endpointKey(currentEndpointId(), nodeId)];
+    const items = chat ? chat.order.flatMap((id) => (chat.items[id]?.turnId === turn.id ? [chat.items[id]!] : [])) : [];
+    return turn.origin === 'agent' ? agentTurnLabel(turn) : turnLabel(turn, items);
 };
 
 /*

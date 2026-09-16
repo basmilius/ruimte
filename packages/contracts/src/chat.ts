@@ -290,6 +290,19 @@ export const ChatTurnItemSchema = z.object({
     attempt: z.number().int().positive().optional()
 });
 
+/* What a turn a restart could not take up again ends with, so a client can tell it from a turn a person stopped. */
+const NOT_RESUMED_PREFIX = 'This turn could not be resumed after the machine restarted: ';
+
+export const notResumedNote = (reason: string): string => `${NOT_RESUMED_PREFIX}${reason}`;
+
+/* Whether the machine ended this aborted turn rather than a person: the daemon leaves its warning note in the turn. */
+export const abortedByMachine = (
+    turn: { id: string; state: string },
+    items: readonly { kind: string; turnId: string | null; level?: string; text?: string }[]
+): boolean =>
+    turn.state === 'aborted' &&
+    items.some((item) => item.kind === 'note' && item.turnId === turn.id && item.level === 'warning' && item.text?.startsWith(NOT_RESUMED_PREFIX) === true);
+
 export const ChatNoteItemSchema = z.object({
     ...base,
     kind: z.literal('note'),

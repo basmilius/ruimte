@@ -10,6 +10,7 @@ import type {
     ChatTurnItem,
     ChatUserItem
 } from '@ruimte/contracts';
+import { abortedByMachine } from '@ruimte/contracts';
 import { hasFileChanges, isFileChange } from './tools';
 
 /*
@@ -92,11 +93,12 @@ export const formatDuration = (ms: number): string => {
  */
 export const agentTurnLabel = (turn: ChatTurnItem): string => (turn.label ? `Sub-agent finished: ${turn.label}` : 'Continued on its own');
 
-export const turnLabel = (turn: ChatTurnItem): string => {
+/* The items of the turn tell a turn a person stopped from one the machine ended after a restart. */
+export const turnLabel = (turn: ChatTurnItem, items: readonly ChatItem[] = []): string => {
     const duration = formatDuration((turn.endedAt ?? turn.createdAt) - turn.createdAt);
     switch (turn.state) {
         case 'aborted':
-            return `You stopped after ${duration}`;
+            return abortedByMachine(turn, items) ? `Stopped after ${duration}` : `You stopped after ${duration}`;
         case 'error':
             return `Failed after ${duration}`;
         default:
@@ -288,7 +290,7 @@ export const deriveTimelineRows = (items: ChatItem[], options: TimelineOptions):
         const folded = finalAssistant ? work.slice(0, work.indexOf(finalAssistant)) : work;
         const expanded = options.expandedTurns.has(turnId);
         if (folded.length > 0) {
-            rows.push({ kind: 'turn-fold', id: `fold-${turnId}`, turn, label: turnLabel(turn), hiddenCount: folded.length, expanded });
+            rows.push({ kind: 'turn-fold', id: `fold-${turnId}`, turn, label: turnLabel(turn, chunk.items), hiddenCount: folded.length, expanded });
             if (expanded) {
                 rows.push(...folded);
             }
