@@ -646,7 +646,7 @@ export function Sidebar() {
             style={{ width: open ? SIDEBAR_WIDTH_PX : 0 }}
         >
             <div className="flex h-full flex-col border-r border-border bg-surface" style={{ width: SIDEBAR_WIDTH_PX }}>
-                <div className="app-drag relative flex h-12 items-center pr-3" style={{ paddingLeft: inset ?? STRIP_PADDING_PX }}>
+                <div className="app-drag relative flex h-12 shrink-0 items-center pr-3" style={{ paddingLeft: inset ?? STRIP_PADDING_PX }}>
                     <SidebarToggle />
                     {/* The brand centers in what the traffic lights leave of the strip, so the toggle
                         beside it cannot pull it off center. */}
@@ -771,7 +771,7 @@ export function Sidebar() {
                     )}
                 </div>
 
-                <div className="flex items-center gap-1 border-t border-border p-2">
+                <div className="flex shrink-0 items-center gap-1 border-t border-border p-2">
                     {/* A view goes in a project file, so with none open the menu would offer nothing. */}
                     <Menu.Root>
                         <Menu.Trigger
