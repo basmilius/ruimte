@@ -2425,6 +2425,36 @@ code will not say on its own.
 - Nothing about approvals changed: a terminal agent with nobody attached has no client that wants
   a request held, so its CLI's own prompt asks (or an offline device through a push), and a client
   that mounts the node later sees the prompt on the screen.
+- Phase 3 (a run that survives a restart) numbers the stream rather than the thread. The log is
+  appended synchronously in `ChatManager.broadcast`, after the coalescer and before any sink hears
+  the event, so no client ever holds a seq the log lacks and the order on disk is the order sent:
+  one small write per coalesced event is cheaper than a log whose order depends on which
+  asynchronous write finished first. The lines since the last fold stay in memory as well, so an
+  attach with `since` is answered in the tick the client is put on the list, like every attach.
+- A fold happens only after the awaited snapshot write in the per-chat chain, and it rewrites the
+  log with the lines that came after the snapshot's seq (events broadcast while the write was out)
+  rather than emptying it; a fold for an older seq does nothing. `persistAllSync` writes the
+  snapshots but never folds: an older asynchronous write still in flight may land after it, and the
+  log is what covers for that snapshot until `shutdown` folds after a write of its own.
+- A daemon that goes down freezes its chats first: a CLI that dies in the same moment (Ctrl+C
+  reaches the whole process group) would otherwise settle the running turn to `error` in the log
+  after the snapshot, and the resume would find nothing to resume. What loading settles
+  (approvals and questions cancelled, a tool that was running failed, the info) is emitted as
+  events with seqs of their own, so a client that comes back with a seq from before hears it too.
+- A chat whose first snapshot never landed is rebuilt from its log when the log starts at seq 1 and
+  holds an info; otherwise it starts over after the last seq the log handed out, with a reset
+  marked just past it, so a client still holding one of those seqs is answered with the whole
+  thread and never with events on top of a thread that is gone.
+- The resume is decided where a chat is loaded, not in the scan at start: a record whose active
+  turn is running, with a CLI session to resume and no attempt past the first, asks the daemon to
+  owe a `resume-run`, and the turn stays running only once that entry is written. The scan
+  (`recoverInterrupted`, after the socket listens) only loads those chats, so a client that opens
+  one first goes through the same rule and the handler finds the resume already owed. One resume
+  per turn: a resumed CLI sees its transcript up to the break and may run a command again, so a
+  second restart ends the turn as `error` instead of looping. A resume whose CLI will not start is
+  retried after 1, 5 and 30 seconds and then ends the turn `aborted` with a note; stopping a turn
+  that waits for its resume ends it the same way without a note. No message of a person is made up:
+  the prompt that says the machine restarted goes to the CLI only, and the thread gets a note.
 
 ### Skipped on purpose
 
