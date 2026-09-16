@@ -20,16 +20,17 @@ public struct PushAPI: Sendable {
     }
     public func activity(
         handle: String, machineID: String, collapseID: String, token: String?, release: Bool = false,
+        startedAt: Int64? = nil,
         accessToken: String
     )
         async throws
     {
-        let payload = try WireSchema.validate(
-            "PushActivityRegistrationSchema",
-            .object([
-                "machineId": .string(machineID), "collapseId": .string(collapseID),
-                "token": token.map(JSONValue.string) ?? .null, "release": .bool(release),
-            ]))
+        var fields: [String: JSONValue] = [
+            "machineId": .string(machineID), "collapseId": .string(collapseID),
+            "token": token.map(JSONValue.string) ?? .null, "release": .bool(release),
+        ]
+        if let startedAt { fields["startedAt"] = .number(Double(startedAt)) }
+        let payload = try WireSchema.validate("PushActivityRegistrationSchema", .object(fields))
         _ = try await call(
             "PUT", path: "/v1/push/devices/\(handle)/activities", body: payload, accessToken: accessToken)
     }

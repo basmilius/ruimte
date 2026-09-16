@@ -7,6 +7,7 @@ import UIKit
 @preconcurrency import UserNotifications
 
 @MainActor final class NotificationAppDelegate: NSObject, UIApplicationDelegate {
+    static let runtime = AppRuntime()
     static var latestToken: Data?
     private static let delivery = NotificationDeliveryBridge()
     private static weak var coordinator: NotificationCoordinator?
@@ -17,7 +18,49 @@ import UIKit
         didFinishLaunchingWithOptions options: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = Self.delivery
+        let background = NotificationBackgroundLease(name: "Restore notification delivery")
+        Task { @MainActor in
+            defer { background.end() }
+            // Push-to-start wakes the application without creating a SwiftUI screen.
+            await Self.runtime.start()
+            await Self.runtime.notifications.restore()
+        }
         return true
+    }
+
+    func application(
+        _ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        let data = userInfo["ruimte"].flatMap { try? JSONSerialization.data(withJSONObject: $0) }
+        Task { @MainActor in
+            guard let data else {
+                completionHandler(.noData)
+                return
+            }
+            do {
+                let envelope = try JSONValue.decode(data)
+                guard envelope["pushType"] == .string("background") else {
+                    completionHandler(.noData)
+                    return
+                }
+                let store = try SharedPushStore()
+                guard let context = try store.context() else { throw PushCryptoError.wrongDevice }
+                let content = try store.key().decryptRead(
+                    envelope, handle: context.handle, machinePublicKeys: context.machinePublicKeys)
+                guard let machineID = envelope["machineId"]?.stringValue,
+                    let id = envelope["id"]?.stringValue, let expires = envelope["expiresAt"]?.numberValue
+                else {
+                    throw PushCryptoError.invalid
+                }
+                let receipt = try PushReplayLedger.nodeKey(machineID: machineID, nodeID: id)
+                try store.claim(id: receipt, expiresAt: expires, now: Date().timeIntervalSince1970 * 1000)
+                try await NotificationReadSync.apply(
+                    machineID: machineID, nodeID: content.nodeId, through: Double(content.through))
+                await Self.coordinator?.updateBadge()
+                completionHandler(.newData)
+            } catch { completionHandler(.failed) }
+        }
     }
 
     static func receive(_ data: Data, action: String) async {
@@ -51,7 +94,18 @@ private final class NotificationDeliveryBridge: NSObject, UNUserNotificationCent
         _ center: UNUserNotificationCenter, willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping @Sendable (UNNotificationPresentationOptions) -> Void
     ) {
-        Task { @MainActor in completionHandler([.banner, .sound]) }
+        let info = notification.request.content.userInfo
+        let nodeKey = info["ruimte.seenKey"] as? String
+        let issuedAt = (info["ruimte.issuedAt"] as? NSNumber)?.doubleValue
+        Task { @MainActor in
+            if let nodeKey, let issuedAt, let through = try? SharedPushStore().readThrough(node: nodeKey),
+                through >= issuedAt
+            {
+                completionHandler([])
+            } else {
+                completionHandler([.banner, .sound])
+            }
+        }
     }
 
     func userNotificationCenter(
@@ -137,6 +191,7 @@ struct NotificationDestination: Identifiable, Hashable {
             })
         do { try await removeRetiredDevices() } catch { problem = error.localizedDescription }
         guard enabled else { return }
+        startActivityObservers()
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else {
             return
@@ -247,6 +302,7 @@ struct NotificationDestination: Identifiable, Hashable {
             payload: .object([
                 "handle": .string(context.handle), "publicKey": .string(key.publicKey),
                 "follow": .array(known.map(JSONValue.string)), "followAll": .bool(true), "approvals": .bool(approvals),
+                "readSync": .bool(true),
                 "activities": .bool(activities && supportsActivities),
                 "activityScope": .string("machine"),
             ]))
@@ -309,6 +365,8 @@ struct NotificationDestination: Identifiable, Hashable {
         }
         await synchronize()
     }
+    func startBackgroundActivityDelivery() { startActivityObservers() }
+
     private func startActivityObservers() {
         guard enabled, activities, supportsActivities else { return }
         for activity in Activity<RuimteActivityAttributes>.activities { observe(activity) }
@@ -359,74 +417,112 @@ struct NotificationDestination: Identifiable, Hashable {
     }
 
     private func retire(
-        _ activity: Activity<RuimteActivityAttributes>, release: Bool = true, cancelStateObserver: Bool = true
+        _ activity: Activity<RuimteActivityAttributes>, release: Bool = true, cancelStateObserver: Bool = true,
+        dismiss: Bool = true
     ) async {
         activityTasks.removeValue(forKey: activity.id)?.cancel()
         let stateObserver = activityStateTasks.removeValue(forKey: activity.id)
         // The state observer must finish its token revocation before it exits.
         if cancelStateObserver { stateObserver?.cancel() }
-        await Self.endActivity(id: activity.id)
+        if dismiss { await Self.endActivity(id: activity.id) }
         if let context = try? SharedPushStore().context(), let access = try? await runtime?.vault?.accessToken() {
             try? await api.activity(
                 handle: context.handle, machineID: activity.attributes.machineId,
-                collapseID: activity.attributes.collapseId, token: nil, release: release, accessToken: access)
+                collapseID: activity.attributes.collapseId, token: nil, release: release,
+                startedAt: activity.content.state.startedAt, accessToken: access)
         }
     }
 
     private func observe(_ activity: Activity<RuimteActivityAttributes>) {
-        guard activityTasks[activity.id] == nil, enabled, activities, supportsActivities else { return }
-        guard runtime?.machines.contains(where: { $0.id == activity.attributes.machineId }) == true,
+        guard activityTasks[activity.id] == nil, enabled, activities, supportsActivities,
+            activity.activityState == .active || activity.activityState == .stale
+        else { return }
+        guard knowsMachine(activity.attributes.machineId),
             activity.attributes.collapseId
                 == Self.collapseID(machineID: activity.attributes.machineId, nodeID: Self.machineActivityNode),
             !Activity<RuimteActivityAttributes>.activities.contains(where: {
                 $0.id != activity.id && activityTasks[$0.id] != nil && $0.attributes == activity.attributes
+                    && ($0.activityState == .active || $0.activityState == .stale)
+                    && $0.content.state.startedAt >= activity.content.state.startedAt
             })
         else {
             let id = activity.id
             Task { await Self.endActivity(id: id) }
             return
         }
+        for older in Activity<RuimteActivityAttributes>.activities
+        where
+            older.id != activity.id && older.attributes == activity.attributes
+            && older.content.state.startedAt < activity.content.state.startedAt
+        {
+            Task { await self.retire(older) }
+        }
         activityStateTasks[activity.id] = Task { [weak self] in
             for await state in activity.activityStateUpdates {
                 guard let self, !Task.isCancelled else { break }
                 if state == .ended || state == .dismissed {
-                    await self.retire(activity, release: state == .ended, cancelStateObserver: false)
+                    await self.retire(activity, release: state == .ended, cancelStateObserver: false, dismiss: false)
                     break
                 }
             }
         }
         activityTasks[activity.id] = Task { [weak self] in
-            if let token = activity.pushToken {
-                await self?.uploadActivityToken(
-                    token, machineID: activity.attributes.machineId, collapseID: activity.attributes.collapseId)
+            var uploaded: Data?
+            if let token = activity.pushToken, await self?.uploadActivityToken(token, activity: activity) == true {
+                uploaded = token
             }
             for await token in activity.pushTokenUpdates {
                 guard let self, !Task.isCancelled else { break }
-                await self.uploadActivityToken(
-                    token, machineID: activity.attributes.machineId, collapseID: activity.attributes.collapseId)
+                if token != uploaded, await self.uploadActivityToken(token, activity: activity) {
+                    uploaded = token
+                }
             }
         }
     }
 
-    private func uploadActivityToken(_ token: Data, machineID: String, collapseID: String) async {
-        do {
-            guard let context = try SharedPushStore().context(), let access = try await runtime?.vault?.accessToken(),
-                !Task.isCancelled, enabled, activities, supportsActivities,
-                runtime?.machines.contains(where: { $0.id == machineID }) == true,
-                Self.collapseID(machineID: machineID, nodeID: Self.machineActivityNode) == collapseID
-            else { return }
-            try await api.activity(
-                handle: context.handle, machineID: machineID, collapseID: collapseID, token: Self.hex(token),
-                accessToken: access)
-        } catch is CancellationError {} catch { problem = error.localizedDescription }
+    private func knowsMachine(_ id: String) -> Bool {
+        runtime?.machines.contains(where: { $0.id == id }) == true
+            || (try? SharedPushStore().context()?.machinePublicKeys[id]) != nil
+    }
+
+    private func uploadActivityToken(_ token: Data, activity: Activity<RuimteActivityAttributes>) async -> Bool {
+        let machineID = activity.attributes.machineId
+        let collapseID = activity.attributes.collapseId
+        let background = NotificationBackgroundLease(name: "Register activity updates")
+        defer { background.end() }
+        for attempt in 0..<3 {
+            do {
+                guard let context = try SharedPushStore().context(),
+                    let access = try await runtime?.vault?.accessToken(),
+                    !Task.isCancelled, enabled, activities, supportsActivities, knowsMachine(machineID),
+                    activity.activityState == .active || activity.activityState == .stale,
+                    Self.collapseID(machineID: machineID, nodeID: Self.machineActivityNode) == collapseID
+                else { return false }
+                try await api.activity(
+                    handle: context.handle, machineID: machineID, collapseID: collapseID, token: Self.hex(token),
+                    startedAt: activity.content.state.startedAt, accessToken: access)
+                return true
+            } catch is CancellationError { return false } catch {
+                if attempt == 2 {
+                    problem = error.localizedDescription
+                    return false
+                }
+                do { try await Task.sleep(for: .seconds(attempt == 0 ? 1 : 3)) } catch { return false }
+            }
+        }
+        return false
     }
     func syncBadge(liveKeys: Set<String>) async {
         liveAttentionKeys = liveKeys
         await updateBadge()
     }
-    private func updateBadge() async {
+    fileprivate func updateBadge() async {
         let offline = (try? SharedPushStore().attentionKeys()) ?? []
         try? await UNUserNotificationCenter.current().setBadgeCount(offline.union(liveAttentionKeys).count)
+    }
+    func applyRead(machineID: String, nodeID: String, through: Double) async {
+        try? await NotificationReadSync.apply(machineID: machineID, nodeID: nodeID, through: through)
+        await updateBadge()
     }
     func markSeen(machineID: String, nodeID: String) async {
         guard let key = try? PushReplayLedger.nodeKey(machineID: machineID, nodeID: nodeID) else { return }
@@ -568,5 +664,42 @@ struct NotificationDestination: Identifiable, Hashable {
     private static func collapseID(machineID: String, nodeID: String) -> String {
         let bytes = try! JSONValue.array([.string(machineID), .string(nodeID)]).encoded()
         return Base64URL.encode(Data(SHA256.hash(data: bytes)))
+    }
+}
+
+@MainActor private enum NotificationReadSync {
+    static func apply(machineID: String, nodeID: String, through: Double) async throws {
+        let key = try PushReplayLedger.nodeKey(machineID: machineID, nodeID: nodeID)
+        let store = try SharedPushStore()
+        try store.markRead(node: key, through: through)
+        let center = UNUserNotificationCenter.current()
+        let delivered = await center.deliveredNotifications()
+        let identifiers = delivered.filter { notification in
+            let info = notification.request.content.userInfo
+            guard info["ruimte.seenKey"] as? String == key else { return false }
+            let issuedAt =
+                (info["ruimte.issuedAt"] as? NSNumber)?.doubleValue
+                ?? ((info["ruimte"] as? [String: Any])?["issuedAt"] as? NSNumber)?.doubleValue
+            return issuedAt.map { $0 <= through } ?? false
+        }.map { $0.request.identifier }
+        center.removeDeliveredNotifications(withIdentifiers: identifiers)
+        try await center.setBadgeCount(store.attentionKeys().count)
+    }
+}
+
+@MainActor private final class NotificationBackgroundLease {
+    private var identifier: UIBackgroundTaskIdentifier = .invalid
+
+    init(name: String) {
+        identifier = UIApplication.shared.beginBackgroundTask(withName: name) { [weak self] in
+            Task { @MainActor in self?.end() }
+        }
+    }
+
+    func end() {
+        guard identifier != .invalid else { return }
+        let current = identifier
+        identifier = .invalid
+        UIApplication.shared.endBackgroundTask(current)
     }
 }

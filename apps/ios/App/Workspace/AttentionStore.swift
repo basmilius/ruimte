@@ -9,6 +9,9 @@ final class AttentionStore {
     private(set) var statuses: [String: String] = [:]
     private(set) var unseen = Set<String>()
     private(set) var approvalCounts: [String: Int] = [:]
+    private var pushEntries: [String: JSONValue] = [:]
+    private var pendingReads = Set<String>()
+    var onRead: ((String, Double) async -> Void)?
     private var focused: [String: Int] = [:]
     private var subscriptions: [() -> Void] = []
     private var refreshTask: Task<Void, Never>?
@@ -19,6 +22,7 @@ final class AttentionStore {
 
     func start() {
         guard subscriptions.isEmpty else { return }
+        subscriptions.append(client.subscribe("push.attention") { [weak self] entry in self?.receivePush(entry) })
         subscriptions.append(
             client.subscribe("session.status") { [weak self] event in
                 self?.update(
@@ -42,6 +46,7 @@ final class AttentionStore {
                 guard let self else { return }
                 refreshTask?.cancel()
                 guard connected else { return }
+                pushEntries.removeAll()
                 refreshTask = Task { [weak self] in
                     while !Task.isCancelled {
                         await self?.refresh()
@@ -62,6 +67,7 @@ final class AttentionStore {
     func focus(_ id: String) {
         focused[id, default: 0] += 1
         unseen.remove(id)
+        markSeen(id)
     }
     func blur(_ id: String) { focused[id] = max(0, focused[id, default: 0] - 1) }
     func needsYou(_ id: String) -> Bool { statuses[id] == "needs-you" || approvalCounts[id, default: 0] > 0 }
@@ -73,7 +79,46 @@ final class AttentionStore {
         if previous == "running", status != "running", focused[id, default: 0] == 0 { unseen.insert(id) }
     }
 
+    func markSeen(_ id: String) {
+        guard UIApplication.shared.applicationState == .active,
+            let entry = pushEntries[id], let issuedAt = entry["issuedAt"]?.numberValue,
+            issuedAt > (entry["readThrough"]?.numberValue ?? 0)
+        else { return }
+        let key = "\(id):\(issuedAt)"
+        guard pendingReads.insert(key).inserted else { return }
+        Task { [weak self] in
+            guard let self else { return }
+            defer { pendingReads.remove(key) }
+            do {
+                _ = try await client.request(
+                    "push.read", payload: .object(["nodeId": .string(id), "issuedAt": .number(issuedAt)]))
+                receivePush(
+                    .object(["nodeId": .string(id), "issuedAt": .number(issuedAt), "readThrough": .number(issuedAt)]))
+            } catch {}
+        }
+    }
+
+    private func receivePush(_ entry: JSONValue) {
+        let id = entry.text("nodeId")
+        guard !id.isEmpty else { return }
+        let previous = pushEntries[id]
+        let issued = max(entry["issuedAt"]?.numberValue ?? 0, previous?["issuedAt"]?.numberValue ?? 0)
+        let read = max(entry["readThrough"]?.numberValue ?? 0, previous?["readThrough"]?.numberValue ?? 0)
+        pushEntries[id] = .object(["nodeId": .string(id), "issuedAt": .number(issued), "readThrough": .number(read)])
+        if read > 0 {
+            if read >= issued { unseen.remove(id) }
+            if read > (previous?["readThrough"]?.numberValue ?? 0) {
+                Task { await onRead?(id, read) }
+            }
+        }
+        if focused[id, default: 0] > 0 { markSeen(id) }
+    }
+
     private func refresh() async {
+        if let snapshot = try? await client.request("push.attention", payload: .object([:])) {
+            guard !Task.isCancelled else { return }
+            for entry in snapshot.list("entries") { receivePush(entry) }
+        }
         do {
             let sessions = try await client.request("session.list", payload: .object([:]))
             guard !Task.isCancelled else { return }

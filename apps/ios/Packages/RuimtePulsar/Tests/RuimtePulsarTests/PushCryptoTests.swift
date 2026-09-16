@@ -4,6 +4,43 @@ import Testing
 @testable import RuimtePulsar
 
 struct PushCryptoTests {
+    @Test func readWatermarksPreserveNewerNotificationsAndIgnoreLateClaims() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let ledger = PushReplayLedger(directory: folder)
+        try ledger.claim(id: "new", expiresAt: 1000, now: 300, unseenNode: "node", issuedAt: 200)
+        #expect(try ledger.markRead(node: "node", through: 100) == 1)
+        #expect(try ledger.markRead(node: "node", through: 200) == 0)
+        #expect(try ledger.claim(id: "late", expiresAt: 1000, now: 400, unseenNode: "node", issuedAt: 100) == 0)
+        #expect(
+            try ledger.claim(id: "other", expiresAt: 1000, now: 400, unseenNode: "other-machine", issuedAt: 100) == 1)
+        #expect(try ledger.claim(id: "next", expiresAt: 1000, now: 500, unseenNode: "node", issuedAt: 400) == 2)
+    }
+
+    @Test func decryptsReadReceiptAndRejectsAlertTypeSubstitution() throws {
+        let fixture = try JSONValue.decode(
+            Data(contentsOf: #require(Bundle.module.url(forResource: "wire", withExtension: "json"))))
+        let sample = try #require(fixture["pushReadEncryption"])
+        let key = try PushDecryptionKey(rawRepresentation: Base64URL.decode(sample["privateKey"]!.stringValue!)!)
+        let push = try #require(sample["push"])
+        let handle = try #require(push["handle"]?.stringValue)
+        let keys = ["machine-1": sample["machinePublicKey"]!.stringValue!]
+        let content = try key.decryptRead(push, handle: handle, machinePublicKeys: keys, now: 2000)
+        #expect(content.nodeId == "node-1")
+        #expect(content.through == 999)
+        #expect(throws: (any Error).self) { try key.decrypt(push, handle: handle, machinePublicKeys: keys, now: 2000) }
+        #expect(throws: (any Error).self) {
+            try key.decryptRead(push, handle: handle, machinePublicKeys: keys, now: 121001)
+        }
+        #expect(throws: (any Error).self) {
+            try key.decryptRead(push, handle: "other", machinePublicKeys: keys, now: 2000)
+        }
+        #expect(throws: (any Error).self) {
+            try key.decryptRead(push, handle: handle, machinePublicKeys: [:], now: 2000)
+        }
+    }
+
     @Test func machineSummaryCountsAreIncludedInSignedBytes() throws {
         let push = try JSONValue.decode(
             Data(

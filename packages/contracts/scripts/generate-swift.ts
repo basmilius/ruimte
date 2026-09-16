@@ -453,11 +453,20 @@ const unsignedPush = {
 };
 const signedPush = { ...unsignedPush, signature: sign(null, Buffer.from(push.pushMessage(unsignedPush)), privateKey).toString('base64url') };
 const pushEncryption = { privateKey: pushPrivateBytes.toString('base64url'), machinePublicKey: publicKey, push: signedPush, content: pushContent, now: 2000 };
+const readContent = { nodeId: 'node-1', through: 999, expiresAt: 121000 };
+const readNonce = Buffer.alloc(12, 4);
+const readCipher = createCipheriv('aes-256-gcm', pushSymmetric, readNonce, { authTagLength: 16 });
+readCipher.setAAD(Buffer.from(push.pushRoutingMessage(pushRouting)));
+const readCiphertext = Buffer.concat([readCipher.update(Buffer.from(JSON.stringify(readContent))), readCipher.final(), readCipher.getAuthTag()]);
+const unsignedRead = { ...unsignedPush, pushType: 'background' as const, nonce: readNonce.toString('base64url'), ciphertext: readCiphertext.toString('base64url') };
+const pushReadEncryption = { ...pushEncryption, content: readContent,
+    push: { ...unsignedRead, signature: sign(null, Buffer.from(push.pushMessage(unsignedRead)), privateKey).toString('base64url') } };
 outputs.set(
     'Tests/RuimtePulsarTests/Fixtures/wire.json',
     JSON.stringify(
         {
             pushEncryption,
+            pushReadEncryption,
             requestTypes: Object.keys(REQUEST_SCHEMAS),
             eventTypes: Object.keys(EVENT_SCHEMAS),
             crypto,

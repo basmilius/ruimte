@@ -9,6 +9,7 @@ import { chatSinkFor } from '@/state/chats';
 import { browserStorage, readLastProject } from '@/project/last-project';
 import { activeEndpoint, endpointById, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
+import { watchPushAttention } from '@/state/push-attention';
 import { providerSinkFor } from '@/state/providers';
 import { sessionSinkFor } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
@@ -97,6 +98,7 @@ const projectSink = (stores: WorkspaceStores, endpointId: () => string): Project
 
 const buildMachine = (endpoint: Endpoint): Machine => {
     const transport = machineTransport(endpoint.id);
+    const stopPushAttention = watchPushAttention(endpoint.id, transport);
     const sessions = new SessionClient(transport, sessionSinkFor(endpoint.id));
     // Every machine hears the same answer, since the switch is about this client and not about one of them.
     sessions.setApprovals(useSettings.getState().agentsApprovals);
@@ -107,6 +109,7 @@ const buildMachine = (endpoint: Endpoint): Machine => {
         sessions,
         chats,
         dispose(): void {
+            stopPushAttention();
             sessions.dispose();
             chats.dispose();
         }

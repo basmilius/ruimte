@@ -1,4 +1,4 @@
-import type { ServerFrame } from '@ruimte/contracts';
+import type { PushAttentionEntry, ServerFrame } from '@ruimte/contracts';
 import type { ServerWebSocket } from 'bun';
 import { OutputGate } from './backpressure.ts';
 import { sendEvent, type ClientAccess, type ClientConnection, type Dispatcher } from './dispatcher.ts';
@@ -36,7 +36,10 @@ interface ScreenSource {
 // Structural, so a test can hand in fakes; `daemon.ts` hands in the real managers and stores.
 export interface ConnectionServices {
     dispatcher: Pick<Dispatcher, 'handle'>;
-    presence?: { connected(sessionId: string | null): () => void };
+    presence?: {
+        connected(sessionId: string | null): () => void;
+        observeAttention?(listener: (entry: PushAttentionEntry) => void): () => void;
+    };
     sessions: Attachable & { get(sessionId: string): ScreenSource | undefined };
     chats: Attachable;
     identity: Subscribable;
@@ -84,6 +87,7 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
         const sink: SessionSink = ({ event, payload }) => sendEvent(client, event, payload);
         const unsubscribes = [
             services.presence?.connected(access.sessionId) ?? (() => undefined),
+            services.presence?.observeAttention?.((entry) => sendEvent(client, 'push.attention', entry)) ?? (() => undefined),
             services.sessions.subscribe(clientId, sink),
             services.chats.subscribe(clientId, sink),
             services.identity.subscribe(clientId, sink),

@@ -29,9 +29,12 @@ final class NotificationService: UNNotificationServiceExtension {
             let machineID = envelope["machineId"]?.stringValue ?? ""
             let nodeKey = try PushReplayLedger.nodeKey(machineID: machineID, nodeID: alert.nodeId)
             let receiptKey = try PushReplayLedger.nodeKey(machineID: machineID, nodeID: id)
-            let unseen = try store.claim(id: receiptKey, expiresAt: expires, now: now, unseenNode: nodeKey)
+            let unseen = try store.claim(
+                id: receiptKey, expiresAt: expires, now: now, unseenNode: nodeKey,
+                issuedAt: envelope["issuedAt"]?.numberValue)
             content.badge = NSNumber(value: unseen)
             content.userInfo["ruimte.seenKey"] = nodeKey
+            content.userInfo["ruimte.issuedAt"] = envelope["issuedAt"]?.numberValue
             if alert.kind == .approval { content.interruptionLevel = .timeSensitive }
             content.title = alert.title
             content.body = alert.body

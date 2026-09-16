@@ -61,14 +61,20 @@ public struct SharedPushStore: Sendable {
         let status = SecItemDelete(keyQuery as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else { throw KeychainError(status: status) }
     }
-    @discardableResult public func claim(id: String, expiresAt: Double, now: Double, unseenNode: String? = nil) throws
+    @discardableResult public func claim(
+        id: String, expiresAt: Double, now: Double, unseenNode: String? = nil, issuedAt: Double? = nil
+    ) throws
         -> Int
     {
-        try ledger().claim(id: id, expiresAt: expiresAt, now: now, unseenNode: unseenNode)
+        try ledger().claim(id: id, expiresAt: expiresAt, now: now, unseenNode: unseenNode, issuedAt: issuedAt)
     }
     @discardableResult public func clearAttention(node: String? = nil) throws -> Int {
         try ledger().clearAttention(node: node)
     }
+    @discardableResult public func markRead(node: String, through: Double) throws -> Int {
+        try ledger().markRead(node: node, through: through)
+    }
+    public func readThrough(node: String) throws -> Double { try ledger().readThrough(node: node) }
     public func attentionKeys() throws -> Set<String> { try ledger().attentionKeys() }
     private func ledger() throws -> PushReplayLedger {
         guard let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: Self.group) else {
@@ -84,7 +90,9 @@ public struct PushReplayLedger: Sendable {
     public static func nodeKey(machineID: String, nodeID: String) throws -> String {
         String(decoding: try JSONValue.array([.string(machineID), .string(nodeID)]).encoded(), as: UTF8.self)
     }
-    @discardableResult public func claim(id: String, expiresAt: Double, now: Double, unseenNode: String? = nil) throws
+    @discardableResult public func claim(
+        id: String, expiresAt: Double, now: Double, unseenNode: String? = nil, issuedAt: Double? = nil
+    ) throws
         -> Int
     {
         try locked {
@@ -92,7 +100,11 @@ public struct PushReplayLedger: Sendable {
             guard receipts[id] == nil else { throw PushCryptoError.replay }
             receipts[id] = expiresAt
             var nodes = try read("push-attention").filter { $0.value > now - 30 * 24 * 60 * 60 * 1000 }
-            if let unseenNode { nodes[unseenNode] = now }
+            let timestamp = issuedAt ?? now
+            let readThrough = try read("push-read")
+            if let unseenNode, timestamp > (readThrough[unseenNode] ?? 0) {
+                nodes[unseenNode] = max(nodes[unseenNode] ?? 0, timestamp)
+            }
             try write(receipts, name: "push-receipts")
             try write(nodes, name: "push-attention")
             return nodes.count
@@ -106,6 +118,18 @@ public struct PushReplayLedger: Sendable {
             return nodes.count
         }
     }
+    @discardableResult public func markRead(node: String, through: Double) throws -> Int {
+        try locked {
+            var reads = try read("push-read")
+            reads[node] = max(reads[node] ?? 0, through)
+            var nodes = try read("push-attention")
+            if let timestamp = nodes[node], timestamp <= through { nodes.removeValue(forKey: node) }
+            try write(reads, name: "push-read")
+            try write(nodes, name: "push-attention")
+            return nodes.count
+        }
+    }
+    public func readThrough(node: String) throws -> Double { try locked { try read("push-read")[node] ?? 0 } }
     public func attentionKeys() throws -> Set<String> { try locked { Set(try read("push-attention").keys) } }
     private func read(_ name: String) throws -> [String: Double] {
         let url = directory.appendingPathComponent(name + ".json")

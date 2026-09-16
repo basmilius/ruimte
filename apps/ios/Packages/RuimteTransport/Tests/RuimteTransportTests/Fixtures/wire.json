@@ -33,10 +33,35 @@
     },
     "now": 2000
   },
+  "pushReadEncryption": {
+    "privateKey": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc",
+    "machinePublicKey": "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+    "push": {
+      "machineId": "machine-1",
+      "handle": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII",
+      "issuedAt": 1000,
+      "expiresAt": 121000,
+      "collapseId": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+      "pushType": "background",
+      "ephemeralKey": "V9tLNZ8jrl4Ubk4lEgVnBHIlBjSMFQwUdT0Mkz0E1CE",
+      "nonce": "BAQEBAQEBAQEBAQE",
+      "ciphertext": "pGRwAmvU5KclS7JvUkEZXc0juZ4HMVU7h1xqDRJBGk1yGV_AnqeNZmaq02WJxWtwTI-SYtGInKsxB5tkgdykdi4kc_w",
+      "signature": "tDX4G15GqGMoUK5OD5IUouHZ1bLBJDIsQQ44UmdWt0JJjE8BP35ZHMrmH1R7hrLcm6P73nXs04pJJEqR73OqCw"
+    },
+    "content": {
+      "nodeId": "node-1",
+      "through": 999,
+      "expiresAt": 121000
+    },
+    "now": 2000
+  },
   "requestTypes": [
     "server.hello",
     "server.ping",
     "session.create",
+    "push.attention",
+    "push.read",
     "push.subscribe",
     "push.unsubscribe",
     "session.attach",
@@ -130,6 +155,7 @@
     "chat.list"
   ],
   "eventTypes": [
+    "push.attention",
     "session.output",
     "session.resync",
     "session.exit",

@@ -2197,13 +2197,15 @@ public struct PushActivityRegistration: Codable, Sendable, Equatable {
     public let `machineId`: String
     public let `collapseId`: String
     public let `token`: String?
+    public let `startedAt`: Int64?
     public let `reserve`: Bool?
     public let `release`: Bool?
 
-    public init(`machineId`: String, `collapseId`: String, `token`: String?, `reserve`: Bool? = nil, `release`: Bool? = nil) {
+    public init(`machineId`: String, `collapseId`: String, `token`: String?, `startedAt`: Int64? = nil, `reserve`: Bool? = nil, `release`: Bool? = nil) {
         self.`machineId` = `machineId`
         self.`collapseId` = `collapseId`
         self.`token` = `token`
+        self.`startedAt` = `startedAt`
         self.`reserve` = `reserve`
         self.`release` = `release`
     }
@@ -2214,6 +2216,7 @@ public struct PushActivityRegistration: Codable, Sendable, Equatable {
         `machineId` = try container.decode(String.self, forKey: .`machineId`)
         `collapseId` = try container.decode(String.self, forKey: .`collapseId`)
         `token` = try container.decode(String?.self, forKey: .`token`)
+        `startedAt` = try container.decodeIfPresent(Int64.self, forKey: .`startedAt`)
         `reserve` = try container.decodeIfPresent(Bool.self, forKey: .`reserve`)
         `release` = try container.decodeIfPresent(Bool.self, forKey: .`release`)
     }
@@ -2223,6 +2226,7 @@ public struct PushActivityRegistration: Codable, Sendable, Equatable {
         try container.encode(`machineId`, forKey: .`machineId`)
         try container.encode(`collapseId`, forKey: .`collapseId`)
         try container.encode(`token`, forKey: .`token`)
+        try container.encodeIfPresent(`startedAt`, forKey: .`startedAt`)
         try container.encodeIfPresent(`reserve`, forKey: .`reserve`)
         try container.encodeIfPresent(`release`, forKey: .`release`)
     }
@@ -2231,6 +2235,7 @@ public struct PushActivityRegistration: Codable, Sendable, Equatable {
         case `machineId` = "machineId"
         case `collapseId` = "collapseId"
         case `token` = "token"
+        case `startedAt` = "startedAt"
         case `reserve` = "reserve"
         case `release` = "release"
     }
@@ -2345,13 +2350,15 @@ public enum PushAlertContentChoicesItemKind: String, Codable, Sendable, Equatabl
 
 public enum PushEnvelope: Codable, Sendable, Equatable {
     case `alert`(PushEnvelopeVariant0)
-    case `liveactivity`(PushEnvelopeVariant1)
+    case `background`(PushEnvelopeVariant1)
+    case `liveactivity`(PushEnvelopeVariant2)
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: Tag.self)
         switch try container.decode(String.self, forKey: .value) {
         case "alert": self = .`alert`(try PushEnvelopeVariant0(from: decoder))
-        case "liveactivity": self = .`liveactivity`(try PushEnvelopeVariant1(from: decoder))
+        case "background": self = .`background`(try PushEnvelopeVariant1(from: decoder))
+        case "liveactivity": self = .`liveactivity`(try PushEnvelopeVariant2(from: decoder))
         default: throw WireValidationError.invalid("Unknown PushEnvelope tag")
         }
     }
@@ -2359,6 +2366,7 @@ public enum PushEnvelope: Codable, Sendable, Equatable {
     public func encode(to encoder: Encoder) throws {
         switch self {
         case .`alert`(let value): try value.encode(to: encoder)
+        case .`background`(let value): try value.encode(to: encoder)
         case .`liveactivity`(let value): try value.encode(to: encoder)
         }
     }
@@ -2446,6 +2454,78 @@ public struct PushEnvelopeVariant1: Codable, Sendable, Equatable {
     public let `expiresAt`: Int64
     public let `collapseId`: String
     public let `pushType`: String
+    public let `ephemeralKey`: String
+    public let `nonce`: String
+    public let `ciphertext`: String
+    public let `signature`: String
+
+    public init(`machineId`: String, `handle`: String, `id`: String, `issuedAt`: Int64, `expiresAt`: Int64, `collapseId`: String, `pushType`: String = "background", `ephemeralKey`: String, `nonce`: String, `ciphertext`: String, `signature`: String) {
+        self.`machineId` = `machineId`
+        self.`handle` = `handle`
+        self.`id` = `id`
+        self.`issuedAt` = `issuedAt`
+        self.`expiresAt` = `expiresAt`
+        self.`collapseId` = `collapseId`
+        self.`pushType` = `pushType`
+        self.`ephemeralKey` = `ephemeralKey`
+        self.`nonce` = `nonce`
+        self.`ciphertext` = `ciphertext`
+        self.`signature` = `signature`
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `machineId` = try container.decode(String.self, forKey: .`machineId`)
+        `handle` = try container.decode(String.self, forKey: .`handle`)
+        `id` = try container.decode(String.self, forKey: .`id`)
+        `issuedAt` = try container.decode(Int64.self, forKey: .`issuedAt`)
+        `expiresAt` = try container.decode(Int64.self, forKey: .`expiresAt`)
+        `collapseId` = try container.decode(String.self, forKey: .`collapseId`)
+        `pushType` = try container.decode(String.self, forKey: .`pushType`)
+        `ephemeralKey` = try container.decode(String.self, forKey: .`ephemeralKey`)
+        `nonce` = try container.decode(String.self, forKey: .`nonce`)
+        `ciphertext` = try container.decode(String.self, forKey: .`ciphertext`)
+        `signature` = try container.decode(String.self, forKey: .`signature`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`machineId`, forKey: .`machineId`)
+        try container.encode(`handle`, forKey: .`handle`)
+        try container.encode(`id`, forKey: .`id`)
+        try container.encode(`issuedAt`, forKey: .`issuedAt`)
+        try container.encode(`expiresAt`, forKey: .`expiresAt`)
+        try container.encode(`collapseId`, forKey: .`collapseId`)
+        try container.encode(`pushType`, forKey: .`pushType`)
+        try container.encode(`ephemeralKey`, forKey: .`ephemeralKey`)
+        try container.encode(`nonce`, forKey: .`nonce`)
+        try container.encode(`ciphertext`, forKey: .`ciphertext`)
+        try container.encode(`signature`, forKey: .`signature`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `machineId` = "machineId"
+        case `handle` = "handle"
+        case `id` = "id"
+        case `issuedAt` = "issuedAt"
+        case `expiresAt` = "expiresAt"
+        case `collapseId` = "collapseId"
+        case `pushType` = "pushType"
+        case `ephemeralKey` = "ephemeralKey"
+        case `nonce` = "nonce"
+        case `ciphertext` = "ciphertext"
+        case `signature` = "signature"
+    }
+}
+
+public struct PushEnvelopeVariant2: Codable, Sendable, Equatable {
+    public let `machineId`: String
+    public let `handle`: String
+    public let `id`: String
+    public let `issuedAt`: Int64
+    public let `expiresAt`: Int64
+    public let `collapseId`: String
+    public let `pushType`: String
     public let `activity`: PushActivityContent
     public let `signature`: String
 
@@ -2501,6 +2581,39 @@ public struct PushEnvelopeVariant1: Codable, Sendable, Equatable {
 }
 
 public typealias PushHandle = String
+
+public struct PushReadContent: Codable, Sendable, Equatable {
+    public let `nodeId`: String
+    public let `through`: Int64
+    public let `expiresAt`: Int64
+
+    public init(`nodeId`: String, `through`: Int64, `expiresAt`: Int64) {
+        self.`nodeId` = `nodeId`
+        self.`through` = `through`
+        self.`expiresAt` = `expiresAt`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("PushReadContentSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `nodeId` = try container.decode(String.self, forKey: .`nodeId`)
+        `through` = try container.decode(Int64.self, forKey: .`through`)
+        `expiresAt` = try container.decode(Int64.self, forKey: .`expiresAt`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`nodeId`, forKey: .`nodeId`)
+        try container.encode(`through`, forKey: .`through`)
+        try container.encode(`expiresAt`, forKey: .`expiresAt`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `nodeId` = "nodeId"
+        case `through` = "through"
+        case `expiresAt` = "expiresAt"
+    }
+}
 
 public struct PushRegisterDevicePayload: Codable, Sendable, Equatable {
     public let `token`: String

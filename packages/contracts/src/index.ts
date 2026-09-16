@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { PushSubscribePayloadSchema, PushUnsubscribePayloadSchema } from './push.ts';
+import {
+    PushSubscribePayloadSchema,
+    PushUnsubscribePayloadSchema,
+    PushAttentionResultSchema,
+    PushReadPayloadSchema,
+    PushAttentionEntrySchema
+} from './push.ts';
 import { RenderSceneResultSchema } from './render.ts';
 import { BytesReadPayloadSchema, BytesReadResultSchema } from './bytes.ts';
 import {
@@ -178,6 +184,8 @@ export const REQUEST_SCHEMAS = {
     'server.hello': { payload: ServerHelloPayloadSchema, result: ServerHelloResultSchema },
     'server.ping': { payload: ServerPingPayloadSchema, result: ServerPingResultSchema },
     'session.create': { payload: SessionCreatePayloadSchema, result: SessionInfoSchema },
+    'push.attention': { payload: EmptySchema, result: PushAttentionResultSchema },
+    'push.read': { payload: PushReadPayloadSchema, result: EmptySchema },
     'push.subscribe': { payload: PushSubscribePayloadSchema, result: EmptySchema },
     'push.unsubscribe': { payload: PushUnsubscribePayloadSchema, result: EmptySchema },
     'session.attach': { payload: SessionAttachPayloadSchema, result: SessionAttachResultSchema },
@@ -281,6 +289,7 @@ export type RequestMap = {
 };
 
 export const EVENT_SCHEMAS = {
+    'push.attention': PushAttentionEntrySchema,
     'session.output': SessionOutputEventSchema,
     'session.resync': SessionResyncEventSchema,
     'session.exit': SessionExitEventSchema,

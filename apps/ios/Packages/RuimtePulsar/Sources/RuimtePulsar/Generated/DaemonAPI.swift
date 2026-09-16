@@ -3,6 +3,8 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `serverHello` = "server.hello"
     case `serverPing` = "server.ping"
     case `sessionCreate` = "session.create"
+    case `pushAttention` = "push.attention"
+    case `pushRead` = "push.read"
     case `pushSubscribe` = "push.subscribe"
     case `pushUnsubscribe` = "push.unsubscribe"
     case `sessionAttach` = "session.attach"
@@ -100,6 +102,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
 }
 
 public enum WireEvent: String, CaseIterable, Sendable {
+    case `pushAttention` = "push.attention"
     case `sessionOutput` = "session.output"
     case `sessionResync` = "session.resync"
     case `sessionExit` = "session.exit"

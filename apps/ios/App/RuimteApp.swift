@@ -3,7 +3,7 @@ import SwiftUI
 @main
 struct RuimteApp: App {
     @UIApplicationDelegateAdaptor(NotificationAppDelegate.self) private var appDelegate
-    @State private var runtime = AppRuntime()
+    @State private var runtime = NotificationAppDelegate.runtime
 
     var body: some Scene {
         WindowGroup {

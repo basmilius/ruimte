@@ -1,7 +1,13 @@
+import type { PushService } from '../push/service.ts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import { RequestError, type Dispatcher } from '../dispatcher.ts';
 
-export const registerPushHandlers = (dispatcher: Dispatcher, auth: AuthStore, changed: () => void = () => undefined): void => {
+export const registerPushHandlers = (dispatcher: Dispatcher, auth: AuthStore, changed: () => void = () => undefined, push?: PushService): void => {
+    dispatcher.register('push.attention', () => ({ entries: push?.attention.snapshot() ?? [] }));
+    dispatcher.register('push.read', ({ nodeId, issuedAt }) => {
+        push?.read(nodeId, issuedAt);
+        return {};
+    });
     dispatcher.register('push.subscribe', async (payload, client) => {
         const sessionId = client.access?.sessionId;
         if (!sessionId || !(await auth.setPush(sessionId, payload))) {

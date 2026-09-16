@@ -113,6 +113,7 @@ final class AppRuntime {
             guard operation == sessionRevision else { return }
             account = restored?.account
             initialized = true
+            notifications.startBackgroundActivityDelivery()
             async let availableProviders = client.providers()
             if account != nil { await refreshMachines() }
             do {

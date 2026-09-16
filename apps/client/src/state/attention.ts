@@ -7,6 +7,7 @@ import { projectNodes } from '@/project/views';
 import { notifyTurnDone } from '@/shell/notifications';
 import { viewIdsIn } from '@/shell/split';
 import { nodeWorking } from '@/state/agent-work';
+import { seePushNotifications, clearPushNotification } from '@/state/push-attention';
 import { liveCanvas, subscribeCanvases } from '@/state/canvas';
 import { useChats, type ChatsById } from '@/state/chats';
 import { useDocument } from '@/state/document';
@@ -170,6 +171,7 @@ export const useUnseen = (nodeId: string): boolean => {
  * the node does this on its own, so nothing has to call this to keep the marks honest.
  */
 export const clearUnseen = (nodeId: string): void => {
+    clearPushNotification(currentEndpointId(), nodeId);
     const key = endpointKey(currentEndpointId(), nodeId);
     useAttention.getState().setUnseen(new Set(Object.keys(useAttention.getState().unseen).filter((entry) => entry !== key)));
 };
@@ -222,14 +224,13 @@ export const startAttentionWatch = (): (() => void) => {
         const chats = useChats.getState().byKey;
         const groups = groupAttention(nodes, sessions, chats, endpointId, useAttention.getState().unseen);
         const focused = windowFocused();
+        const visible = seenNodes(focused, nodesInSight());
+        seePushNotifications(endpointId, visible);
         const result: AttentionPass = {
             working: new Set(groups.working.map(keyOf)),
             previous,
             needsYou: new Set(groups.needsYou.map(keyOf)),
-            seen: seenNodes(
-                focused,
-                nodesInSight().map((ids) => ids.map(keyOf))
-            ),
+            seen: new Set([...visible].map(keyOf)),
             unseen: new Set(Object.keys(useAttention.getState().unseen)),
             known: new Set(nodes.map((node) => keyOf(node.id)))
         };

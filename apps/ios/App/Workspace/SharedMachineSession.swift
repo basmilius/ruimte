@@ -91,6 +91,10 @@ final class SharedMachineSession {
                             access: access, events: authenticatedEvents)
                     })
             }, events: events)
+        attention.onRead = { [weak self] nodeID, through in
+            guard let self else { return }
+            await self.runtime?.notifications.applyRead(machineID: self.machine.id, nodeID: nodeID, through: through)
+        }
         attention.start()
         icons.start()
     }
@@ -178,6 +182,7 @@ final class SharedMachineSession {
     }
 
     func markSeen(_ nodeID: String) async {
+        attention.markSeen(nodeID)
         await runtime?.notifications.markSeen(machineID: machine.id, nodeID: nodeID)
     }
 

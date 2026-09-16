@@ -27,8 +27,37 @@ public struct PushDecryptionKey: Sendable {
         _ input: JSONValue, handle: String, machinePublicKeys: [String: String],
         now: Double = Date().timeIntervalSince1970 * 1000, allowExpiredRouting: Bool = false
     ) throws -> PushAlertContent {
+        let bytes = try decryptBytes(
+            input, type: "alert", handle: handle, machinePublicKeys: machinePublicKeys,
+            now: now, allowExpiredRouting: allowExpiredRouting)
+        let content = try JSONDecoder().decode(PushAlertContent.self, from: bytes)
+        guard allowExpiredRouting || Double(content.expiresAt) > now,
+            Double(content.expiresAt) <= (input["expiresAt"]?.numberValue ?? 0)
+        else { throw PushCryptoError.expired }
+        return content
+    }
+
+    public func decryptRead(
+        _ input: JSONValue, handle: String, machinePublicKeys: [String: String],
+        now: Double = Date().timeIntervalSince1970 * 1000
+    ) throws -> PushReadContent {
+        let bytes = try decryptBytes(
+            input, type: "background", handle: handle, machinePublicKeys: machinePublicKeys,
+            now: now, allowExpiredRouting: false)
+        let content = try JSONDecoder().decode(PushReadContent.self, from: bytes)
+        guard Double(content.expiresAt) > now,
+            Double(content.expiresAt) <= (input["expiresAt"]?.numberValue ?? 0),
+            Double(content.through) <= (input["issuedAt"]?.numberValue ?? 0)
+        else { throw PushCryptoError.invalid }
+        return content
+    }
+
+    private func decryptBytes(
+        _ input: JSONValue, type: String, handle: String, machinePublicKeys: [String: String],
+        now: Double, allowExpiredRouting: Bool
+    ) throws -> Data {
         let push = try WireSchema.validate("PushEnvelopeSchema", input)
-        guard push["pushType"] == .string("alert"), let machineID = push["machineId"]?.stringValue,
+        guard push["pushType"] == .string(type), let machineID = push["machineId"]?.stringValue,
             let receivedHandle = push["handle"]?.stringValue
         else { throw PushCryptoError.invalid }
         guard receivedHandle == handle else { throw PushCryptoError.wrongDevice }
@@ -54,11 +83,7 @@ public struct PushDecryptionKey: Sendable {
         let box = try AES.GCM.SealedBox(
             nonce: .init(data: nonce), ciphertext: encrypted.dropLast(16), tag: encrypted.suffix(16))
         let bytes = try AES.GCM.open(box, using: symmetric, authenticating: Data(try PushSigning.routing(push).utf8))
-        let content = try JSONDecoder().decode(PushAlertContent.self, from: bytes)
-        guard allowExpiredRouting || Double(content.expiresAt) > now, Double(content.expiresAt) <= expiresAt else {
-            throw PushCryptoError.expired
-        }
-        return content
+        return bytes
     }
 }
 
@@ -81,7 +106,7 @@ public enum PushSigning {
         var fields = try fields(push)
         guard let type = push["pushType"]?.stringValue else { throw PushCryptoError.invalid }
         fields.append(.string(type))
-        if type == "alert" {
+        if type == "alert" || type == "background" {
             for key in ["ephemeralKey", "nonce", "ciphertext"] {
                 guard let value = push[key]?.stringValue else { throw PushCryptoError.invalid }
                 fields.append(.string(value))

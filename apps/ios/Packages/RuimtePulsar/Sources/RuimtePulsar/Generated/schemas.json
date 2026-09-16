@@ -3734,6 +3734,11 @@
           }
         ]
       },
+      "startedAt": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
       "reserve": {
         "type": "boolean"
       },
@@ -3930,6 +3935,73 @@
           },
           "pushType": {
             "type": "string",
+            "const": "background"
+          },
+          "ephemeralKey": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "nonce": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16}$"
+          },
+          "ciphertext": {
+            "type": "string",
+            "minLength": 22,
+            "maxLength": 3200,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "signature": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{86}$"
+          }
+        },
+        "required": [
+          "machineId",
+          "handle",
+          "id",
+          "issuedAt",
+          "expiresAt",
+          "collapseId",
+          "pushType",
+          "ephemeralKey",
+          "nonce",
+          "ciphertext",
+          "signature"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "machineId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "handle": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "issuedAt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "expiresAt": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "collapseId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "pushType": {
+            "type": "string",
             "const": "liveactivity"
           },
           "activity": {
@@ -3993,6 +4065,32 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "string",
     "pattern": "^[A-Za-z0-9_-]{43}$"
+  },
+  "PushReadContentSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "nodeId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "through": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "expiresAt": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      }
+    },
+    "required": [
+      "nodeId",
+      "through",
+      "expiresAt"
+    ]
   },
   "PushRegisterDevicePayloadSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -4760,6 +4858,74 @@
       "exited"
     ]
   },
+  "request.push.attention.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.push.attention.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "entries": {
+        "maxItems": 1000,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "nodeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "issuedAt": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "readThrough": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "nodeId",
+            "issuedAt",
+            "readThrough"
+          ]
+        }
+      }
+    },
+    "required": [
+      "entries"
+    ]
+  },
+  "request.push.read.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "nodeId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "issuedAt": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      }
+    },
+    "required": [
+      "nodeId",
+      "issuedAt"
+    ]
+  },
+  "request.push.read.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.push.subscribe.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -4782,6 +4948,9 @@
         }
       },
       "approvals": {
+        "type": "boolean"
+      },
+      "readSync": {
         "type": "boolean"
       },
       "followAll": {
@@ -21133,6 +21302,32 @@
     },
     "required": [
       "chats"
+    ]
+  },
+  "event.push.attention": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "nodeId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "issuedAt": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "readThrough": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      }
+    },
+    "required": [
+      "nodeId",
+      "issuedAt",
+      "readThrough"
     ]
   },
   "event.session.output": {

@@ -453,9 +453,189 @@ test('the latest count is retained while an automatic activity waits for its upd
         );
     }
     expect(delivered.length).toBe(1);
-    const update = request({ machineId: 'machine', collapseId, token: 'ef'.repeat(32) }, 'PUT');
+    const update = request({ machineId: 'machine', collapseId, token: 'ef'.repeat(32), startedAt: NOW }, 'PUT');
     expect((await changePushDevice(update, env, handle, 'update', seams.send)).status).toBe(204);
     expect(delivered.length).toBe(2);
     expect(delivered.at(-1)).toMatchObject({ activity: { runningCount: 3 } });
     expect(sqlite.query('SELECT pending_push FROM push_activity_start').get()).toEqual({ pending_push: null });
+});
+
+test('read synchronization uses a silent, low-priority device push and a separate collapse key', async () => {
+    const push = signed({ pushType: 'background' });
+    expect((await sendPush(request(push), env, seams)).status).toBe(204);
+    expect(delivered).toEqual([push]);
+    const key = generateKeyPairSync('ec', { namedCurve: 'prime256v1' }).privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+    const send = (async (_url: string | URL | Request, init?: RequestInit) => {
+        const headers = new Headers(init?.headers);
+        expect(headers.get('apns-push-type')).toBe('background');
+        expect(headers.get('apns-priority')).toBe('5');
+        expect(headers.get('apns-topic')).toBe('app.ruimte.mobile');
+        expect(headers.get('apns-collapse-id')).toBe(`read-${push.collapseId}`);
+        expect(JSON.parse(String(init?.body)).aps).toEqual({ 'content-available': 1 });
+        return new Response(null, { status: 200 });
+    }) as typeof fetch;
+    expect(
+        (await deliverApns({ ...env, APNS_SANDBOX_KEY: key }, { token: 'ab'.repeat(32), environment: 'sandbox', startsActivity: false }, push, NOW, send)).ok
+    ).toBe(true);
+});
+
+test('an unconfirmed legacy activity start cannot block a new run or flush its old end', async () => {
+    const collapseId = createHash('sha256').update(pushCollapseIdMessage('machine', MACHINE_ACTIVITY_NODE)).digest('base64url');
+    sqlite.query("UPDATE push_device SET activity_scope = 'machines', start_token = ?").run('cd'.repeat(32));
+    const oldEnd = signed({ pushType: 'liveactivity', collapseId, activity: { title: 'Computer', phase: 'done', startedAt: NOW - 60_000 } });
+    sqlite
+        .query('INSERT INTO push_activity_start (handle, machine_id, collapse_id, expires_at, pending_push) VALUES (?, ?, ?, ?, ?)')
+        .run(handle, 'machine', collapseId, NOW + 8 * 60 * 60_000, JSON.stringify(oldEnd));
+    const next = signed({ pushType: 'liveactivity', collapseId, activity: { title: 'Computer', phase: 'running', startedAt: NOW } });
+    expect((await sendPush(request(next), env, seams)).status).toBe(204);
+    expect(delivered.map((push) => push.id)).toEqual([next.id]);
+    expect(sqlite.query('SELECT expires_at, pending_push FROM push_activity_start').get()).toEqual({ expires_at: NOW + 120_000, pending_push: null });
+    expect(
+        (await changePushDevice(request({ machineId: 'machine', collapseId, token: 'ef'.repeat(32) }, 'PUT'), env, handle, 'update', seams.send)).status
+    ).toBe(204);
+    expect(delivered.map((push) => push.id)).toEqual([next.id]);
+});
+
+test('an undelivered start can retry after its APNs delivery window', async () => {
+    const collapseId = createHash('sha256').update(pushCollapseIdMessage('machine', MACHINE_ACTIVITY_NODE)).digest('base64url');
+    sqlite.query("UPDATE push_device SET activity_scope = 'machines', start_token = ?").run('cd'.repeat(32));
+    const activity = { title: 'Computer', phase: 'running' as const, startedAt: NOW };
+    await sendPush(request(signed({ pushType: 'liveactivity', collapseId, activity })), env, seams);
+    await sendPush(request(signed({ pushType: 'liveactivity', collapseId, activity })), env, seams);
+    expect(delivered.length).toBe(1);
+    const later = NOW + 121_000;
+    const retry = signed({ pushType: 'liveactivity', collapseId, activity, issuedAt: later, expiresAt: later + 120_000 });
+    expect((await sendPush(request(retry), env, { ...seams, now: () => later })).status).toBe(204);
+    expect(delivered.length).toBe(2);
+});
+
+test('a verified pending activity can end after its original delivery window', async () => {
+    const key = generateKeyPairSync('ec', { namedCurve: 'prime256v1' }).privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+    const later = NOW + 600_000;
+    const push = signed({ pushType: 'liveactivity', activity: { title: 'Computer', phase: 'done', startedAt: NOW - 1000 } });
+    const send = (async (_url: string | URL | Request, init?: RequestInit) => {
+        expect(Number(new Headers(init?.headers).get('apns-expiration'))).toBe((later + 120_000) / 1000);
+        const payload = JSON.parse(String(init?.body));
+        expect(payload.aps.timestamp).toBe(NOW / 1000);
+        expect(payload.aps.event).toBe('end');
+        expect(payload.aps['content-state'].startedAt).toBe(NOW - 1000);
+        return new Response(null, { status: 200 });
+    }) as typeof fetch;
+    expect(
+        (await deliverApns({ ...env, APNS_SANDBOX_KEY: key }, { token: 'ab'.repeat(32), environment: 'sandbox', startsActivity: false }, push, later, send)).ok
+    ).toBe(true);
+});
+
+test('an expired activity token starts a replacement instead of blocking every later run', async () => {
+    const collapseId = createHash('sha256').update(pushCollapseIdMessage('machine', MACHINE_ACTIVITY_NODE)).digest('base64url');
+    sqlite.query("UPDATE push_device SET activity_scope = 'machines', start_token = ?").run('cd'.repeat(32));
+    sqlite
+        .query('INSERT INTO push_activity (handle, machine_id, collapse_id, token, updated_at) VALUES (?, ?, ?, ?, ?)')
+        .run(handle, 'machine', collapseId, 'ef'.repeat(32), NOW - 600000);
+    sqlite.query('UPDATE push_activity SET started_at = ?').run(NOW);
+    const starts: boolean[] = [];
+    const send: PushDeliverySeams['send'] = async (_env, target) => {
+        starts.push(target.startsActivity);
+        return target.startsActivity ? { ok: true, status: 200 } : { ok: false, status: 400, reason: 'BadDeviceToken' };
+    };
+    const push = signed({
+        pushType: 'liveactivity',
+        collapseId,
+        activity: { title: 'Computer', phase: 'needs-you', startedAt: NOW, runningCount: 1, attentionCount: 1 }
+    });
+    expect((await sendPush(request(push), env, { now: () => NOW, send })).status).toBe(204);
+    expect(starts).toEqual([false, true]);
+    expect(sqlite.query('SELECT * FROM push_activity').all()).toEqual([]);
+    expect(sqlite.query('SELECT expires_at FROM push_activity_start').get()).toEqual({ expires_at: NOW + 120000 });
+});
+
+test('a provider failure retains the activity token and never starts a duplicate', async () => {
+    const collapseId = 'c'.repeat(43);
+    sqlite
+        .query('INSERT INTO push_activity (handle, machine_id, collapse_id, token, updated_at) VALUES (?, ?, ?, ?, ?)')
+        .run(handle, 'machine', collapseId, 'ef'.repeat(32), NOW);
+    const starts: boolean[] = [];
+    const send: PushDeliverySeams['send'] = async (_env, target) => {
+        starts.push(target.startsActivity);
+        return { ok: false, status: 403, reason: 'ExpiredProviderToken' };
+    };
+    const push = signed({ pushType: 'liveactivity', collapseId, activity: { title: 'Computer', phase: 'running', startedAt: NOW } });
+    expect((await sendPush(request(push), env, { now: () => NOW, send })).status).toBe(500);
+    expect(starts).toEqual([false]);
+    expect(sqlite.query('SELECT COUNT(*) AS count FROM push_activity').get()).toEqual({ count: 1 });
+});
+
+test('APNs rejection reasons reach the token recovery decision', async () => {
+    const key = generateKeyPairSync('ec', { namedCurve: 'prime256v1' }).privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+    const send = (async () => Response.json({ reason: 'BadDeviceToken' }, { status: 400 })) as unknown as typeof fetch;
+    const result = await deliverApns(
+        { ...env, APNS_SANDBOX_KEY: key },
+        { token: 'ab'.repeat(32), environment: 'sandbox', startsActivity: false },
+        signed(),
+        NOW,
+        send
+    );
+    expect(result).toEqual({ ok: false, status: 400, reason: 'BadDeviceToken' });
+});
+
+test('a new machine work round replaces a token even when APNs would accept the old token', async () => {
+    const collapseId = createHash('sha256').update(pushCollapseIdMessage('machine', MACHINE_ACTIVITY_NODE)).digest('base64url');
+    sqlite.query("UPDATE push_device SET activity_scope = 'machines', start_token = ?").run('cd'.repeat(32));
+    const round = (startedAt: number, phase: 'running' | 'done' = 'running') =>
+        signed({
+            pushType: 'liveactivity',
+            collapseId,
+            activity: { title: 'Computer', phase, startedAt }
+        });
+    const register = (startedAt: number, token: string | null, release = false) =>
+        changePushDevice(request({ machineId: 'machine', collapseId, startedAt, token, release }, 'PUT'), env, handle, 'update', seams.send);
+    await sendPush(request(round(NOW - 1000)), env, seams);
+    await register(NOW - 1000, 'ef'.repeat(32));
+    const starts: boolean[] = [];
+    const send: PushDeliverySeams['send'] = async (_env, target) => {
+        starts.push(target.startsActivity);
+        return { ok: true, status: 200 };
+    };
+    await sendPush(request(round(NOW)), env, { ...seams, send });
+    expect(starts).toEqual([true]);
+    await register(NOW, 'ab'.repeat(32));
+    await register(NOW - 1000, 'ef'.repeat(32));
+    await register(NOW - 1000, null, true);
+    await changePushDevice(request({ machineId: 'machine', collapseId, token: null, release: true }, 'PUT'), env, handle, 'update');
+    expect(sqlite.query('SELECT token, started_at FROM push_activity').get()).toEqual({ token: 'ab'.repeat(32), started_at: NOW });
+    expect(sqlite.query('SELECT started_at FROM push_activity_start').get()).toEqual({ started_at: NOW });
+    await sendPush(request(round(NOW - 1000, 'done')), env, { ...seams, send });
+    expect(starts).toEqual([true]);
+    await sendPush(request(round(NOW)), env, { ...seams, send });
+    expect(starts).toEqual([true, false]);
+    await register(NOW, null, true);
+    expect(sqlite.query('SELECT * FROM push_activity').all()).toEqual([]);
+    expect(sqlite.query('SELECT * FROM push_activity_start').all()).toEqual([]);
+    await register(NOW, 'ab'.repeat(32));
+    expect(sqlite.query('SELECT * FROM push_activity').all()).toEqual([]);
+});
+
+test('an old round cannot queue its end or register while the new round waits for a token', async () => {
+    const collapseId = createHash('sha256').update(pushCollapseIdMessage('machine', MACHINE_ACTIVITY_NODE)).digest('base64url');
+    sqlite.query("UPDATE push_device SET activity_scope = 'machines', start_token = ?").run('cd'.repeat(32));
+    const round = (startedAt: number, phase: 'running' | 'done') =>
+        signed({ pushType: 'liveactivity', collapseId, activity: { title: 'Computer', phase, startedAt } });
+    await sendPush(request(round(NOW - 1000, 'running')), env, seams);
+    await sendPush(request(round(NOW - 1000, 'done')), env, seams);
+    await sendPush(request(round(NOW, 'running')), env, seams);
+    await sendPush(request(round(NOW - 1000, 'done')), env, seams);
+    await sendPush(request(round(NOW - 1000, 'running')), env, seams);
+    expect(delivered).toHaveLength(2);
+    expect(sqlite.query('SELECT pending_push, started_at FROM push_activity_start').get()).toEqual({ pending_push: null, started_at: NOW });
+    await changePushDevice(
+        request({ machineId: 'machine', collapseId, token: 'ef'.repeat(32), startedAt: NOW - 1000 }, 'PUT'),
+        env,
+        handle,
+        'update',
+        seams.send
+    );
+    expect(sqlite.query('SELECT * FROM push_activity').all()).toEqual([]);
+    await changePushDevice(request({ machineId: 'machine', collapseId, token: 'ab'.repeat(32), startedAt: NOW }, 'PUT'), env, handle, 'update', seams.send);
+    expect(delivered).toHaveLength(2);
+    expect(sqlite.query('SELECT started_at FROM push_activity').get()).toEqual({ started_at: NOW });
 });

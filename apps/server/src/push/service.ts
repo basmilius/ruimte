@@ -10,13 +10,15 @@ import {
     type PushEnvelope,
     type PushRouting
 } from '@ruimte/pulsar';
-import type { AgentStatus, PushSubscribePayload } from '@ruimte/contracts';
+import type { AgentStatus, PushSubscribePayload, PushAttentionEntry } from '@ruimte/contracts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
+import { PushAttention } from './attention.ts';
 import { encryptPush } from './encrypt.ts';
 
 interface PushServiceOptions {
     auth: AuthStore;
+    attentionPath?: string;
     identity: { id: string; sign(message: string): string };
     now?: () => number;
     machineName?: () => string;
@@ -44,6 +46,9 @@ const sendToAddressBook = async (push: PushEnvelope): Promise<number> => {
 };
 
 export class PushService {
+    readonly attention: PushAttention;
+    private readonly listeners = new Set<(entry: PushAttentionEntry) => void>();
+    private alertQueue = Promise.resolve();
     private readonly options: PushServiceOptions;
     private readonly connectedSessions = new Map<string, number>();
     private readonly nodes = new Map<string, NodeState>();
@@ -58,6 +63,40 @@ export class PushService {
     constructor(options: PushServiceOptions) {
         this.options = options;
         this.now = options.now ?? Date.now;
+        this.attention = new PushAttention(options.attentionPath, this.now);
+    }
+
+    observeAttention(listener: (entry: PushAttentionEntry) => void): () => void {
+        this.listeners.add(listener);
+        return () => {
+            this.listeners.delete(listener);
+        };
+    }
+
+    read(nodeId: string, issuedAt: number): void {
+        const entry = this.attention.read(nodeId, issuedAt);
+        if (!entry) {
+            return;
+        }
+        for (const listener of this.listeners) {
+            listener(entry);
+        }
+        // Keep a read behind any alert already in flight to APNs.
+        this.alertQueue = this.alertQueue
+            .then(async () => {
+                for (const { sessionId, subscription } of await this.options.auth.pushSubscriptions()) {
+                    if (!subscription.readSync || this.connectedSessions.has(sessionId)) {
+                        continue;
+                    }
+                    const routing = { ...this.routing(subscription, nodeId, this.now() + PUSH_MAX_AGE_MS), issuedAt: Math.max(this.now(), entry.readThrough) };
+                    const push = encryptPush(routing, subscription.publicKey, { nodeId, through: entry.readThrough, expiresAt: routing.expiresAt }, (message) =>
+                        this.options.identity.sign(message)
+                    );
+                    await this.sendCurrent(sessionId, subscription, push);
+                }
+            })
+            .catch((error: unknown) => this.options.onError?.(error));
+        this.track(this.alertQueue);
     }
 
     connected(sessionId: string | null): () => void {
@@ -165,6 +204,12 @@ export class PushService {
         if (status === previous?.status) {
             return;
         }
+        if (status === 'running' || status === 'exited') {
+            const entry = this.attention.snapshot().find((entry) => entry.nodeId === nodeId);
+            if (entry) {
+                this.read(nodeId, entry.issuedAt);
+            }
+        }
         if (status === 'needs-you' || (status === 'idle' && previous && previous.status !== 'idle')) {
             this.enqueue({
                 kind: status === 'idle' ? 'turn' : 'attention',
@@ -227,7 +272,12 @@ export class PushService {
     }
 
     private enqueue(content: PushAlertContent): void {
-        this.track(this.deliverAlert(content));
+        const entry = this.attention.notify(content.nodeId);
+        for (const listener of this.listeners) {
+            listener(entry);
+        }
+        this.alertQueue = this.alertQueue.then(() => this.deliverAlert(content, entry.issuedAt)).catch((error: unknown) => this.options.onError?.(error));
+        this.track(this.alertQueue);
     }
 
     private track(work: Promise<void>): void {
@@ -248,15 +298,16 @@ export class PushService {
         };
     }
 
-    private async deliverAlert(content: PushAlertContent): Promise<void> {
+    private async deliverAlert(content: PushAlertContent, issuedAt: number): Promise<void> {
         for (const { sessionId, subscription } of await this.options.auth.pushSubscriptions()) {
             if (
+                this.attention.isRead(content.nodeId, issuedAt) ||
                 this.connectedSessions.has(sessionId) ||
                 (content.kind === 'approval' ? !subscription.approvals : !subscription.followAll && !subscription.follow.includes(content.nodeId))
             ) {
                 continue;
             }
-            const routing = this.routing(subscription, content.nodeId, content.expiresAt);
+            const routing = { ...this.routing(subscription, content.nodeId, content.expiresAt), issuedAt };
             if (routing.expiresAt <= this.now()) {
                 continue;
             }

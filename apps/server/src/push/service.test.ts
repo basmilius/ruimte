@@ -29,7 +29,7 @@ let pushes: PushEnvelope[];
 let service: PushService;
 
 const decrypt = (push: PushEnvelope): unknown => {
-    if (push.pushType !== 'alert') {
+    if (push.pushType === 'liveactivity') {
         throw new Error('Expected alert');
     }
     const shared = diffieHellman({
@@ -347,4 +347,29 @@ describe('automatic machine activities', () => {
         expect(pushes.length).toBe(2);
         disconnect();
     });
+});
+
+test('a read sends a signed encrypted background push only once, after the alert', async () => {
+    await auth.setPush(sessionId, { ...subscription, readSync: true });
+    status('running');
+    status('idle');
+    await service.settled();
+    const issuedAt = service.attention.snapshot()[0]!.issuedAt;
+    service.read('node', issuedAt);
+    service.read('node', issuedAt);
+    await service.settled();
+    expect(pushes.map((push) => push.pushType)).toEqual(['alert', 'background']);
+    const clear = pushes[1]!;
+    expect(verifySignature(machine.publicKey, pushMessage(clear), clear.signature)).toBe(true);
+    expect(decrypt(clear)).toEqual({ nodeId: 'node', through: issuedAt, expiresAt: NOW + 120000 });
+    expect(JSON.stringify(clear)).not.toContain('node');
+});
+
+test('a result seen before delivery does not leave an obsolete alert', async () => {
+    await auth.setPush(sessionId, { ...subscription, readSync: true });
+    status('running');
+    status('idle');
+    service.read('node', service.attention.snapshot()[0]!.issuedAt);
+    await service.settled();
+    expect(pushes.map((push) => push.pushType)).toEqual(['background']);
 });

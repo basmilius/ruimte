@@ -11,7 +11,7 @@ import {
     MACHINE_ACTIVITY_NODE,
     type PushEnvelope
 } from '@ruimte/pulsar';
-import { apnsConfigured, deliverApns, type ApnsResult } from './apns.ts';
+import { apnsConfigured, invalidApnsToken, deliverApns, type ApnsResult } from './apns.ts';
 import { verifyEd25519 } from './crypto.ts';
 import { randomToken } from './encoding.ts';
 import type { Env } from './env.ts';
@@ -129,31 +129,42 @@ export const changePushDevice = async (
         if (body.value.reserve) {
             const now = Date.now();
             const claim = await env.DB.prepare(
-                `INSERT INTO push_activity_start (handle, machine_id, collapse_id, expires_at) VALUES (?1, ?2, ?3, ?4)
-                ON CONFLICT(handle, machine_id, collapse_id) DO UPDATE SET expires_at = excluded.expires_at WHERE push_activity_start.expires_at <= ?5`
+                `INSERT INTO push_activity_start (handle, machine_id, collapse_id, expires_at, started_at) VALUES (?1, ?2, ?3, ?4, ?6)
+                ON CONFLICT(handle, machine_id, collapse_id) DO UPDATE SET expires_at = excluded.expires_at, pending_push = NULL, started_at = excluded.started_at
+                WHERE push_activity_start.expires_at <= ?5 OR push_activity_start.expires_at > excluded.expires_at + 300000`
             )
-                .bind(handle, body.value.machineId, body.value.collapseId, now + 8 * 60 * 60_000, now)
+                .bind(handle, body.value.machineId, body.value.collapseId, now + PUSH_MAX_AGE_MS, now, body.value.startedAt ?? null)
                 .run();
             return json({ reserved: claim.meta.changes > 0 });
         }
         if (body.value.token === null) {
-            await env.DB.prepare('DELETE FROM push_activity WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3')
-                .bind(handle, body.value.collapseId, body.value.machineId)
+            await env.DB.prepare('DELETE FROM push_activity WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3 AND started_at IS ?4')
+                .bind(handle, body.value.collapseId, body.value.machineId, body.value.startedAt ?? null)
                 .run();
             if (body.value.release) {
-                await env.DB.prepare('DELETE FROM push_activity_start WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3')
-                    .bind(handle, body.value.collapseId, body.value.machineId)
+                await env.DB.prepare('DELETE FROM push_activity_start WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3 AND started_at IS ?4')
+                    .bind(handle, body.value.collapseId, body.value.machineId, body.value.startedAt ?? null)
                     .run();
             }
         } else {
-            await env.DB.prepare(
-                `INSERT INTO push_activity (handle, collapse_id, token, updated_at, machine_id) VALUES (?1, ?2, ?3, ?4, ?5)
-                ON CONFLICT(handle, machine_id, collapse_id) DO UPDATE SET token = excluded.token, updated_at = excluded.updated_at`
+            // A delayed callback from an ended activity must not replace the current round's token.
+            const registered = await env.DB.prepare(
+                `INSERT INTO push_activity (handle, collapse_id, token, updated_at, machine_id, started_at)
+                SELECT ?1, ?2, ?3, ?4, ?5, ?6 WHERE
+                    (?6 IS NULL AND NOT EXISTS (SELECT 1 FROM push_activity_start WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?5 AND started_at IS NOT NULL))
+                    OR EXISTS (SELECT 1 FROM push_activity_start WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?5 AND started_at = ?6)
+                ON CONFLICT(handle, machine_id, collapse_id) DO UPDATE SET token = excluded.token, updated_at = excluded.updated_at, started_at = excluded.started_at
+                WHERE push_activity.started_at IS NULL OR excluded.started_at >= push_activity.started_at`
             )
-                .bind(handle, body.value.collapseId, body.value.token.toLowerCase(), Date.now(), body.value.machineId)
+                .bind(handle, body.value.collapseId, body.value.token.toLowerCase(), Date.now(), body.value.machineId, body.value.startedAt ?? null)
                 .run();
-            const pending = await env.DB.prepare('SELECT pending_push FROM push_activity_start WHERE handle = ?1 AND machine_id = ?2 AND collapse_id = ?3')
-                .bind(handle, body.value.machineId, body.value.collapseId)
+            if (registered.meta.changes === 0) {
+                return noContent();
+            }
+            const pending = await env.DB.prepare(
+                'SELECT pending_push FROM push_activity_start WHERE handle = ?1 AND machine_id = ?2 AND collapse_id = ?3 AND started_at IS ?4'
+            )
+                .bind(handle, body.value.machineId, body.value.collapseId, body.value.startedAt ?? null)
                 .first<{ pending_push: string | null }>();
             if (pending?.pending_push) {
                 const parsed = PushEnvelopeSchema.safeParse(JSON.parse(pending.pending_push));
@@ -205,6 +216,20 @@ export interface PushDeliverySeams {
     send(env: Env, target: DeliveryTarget, push: PushEnvelope, now: number): Promise<ApnsResult>;
 }
 const SYSTEM_PUSH: PushDeliverySeams = { now: Date.now, send: deliverApns };
+
+const claimActivityStart = async (env: Env, push: Extract<PushEnvelope, { pushType: 'liveactivity' }>, now: number, automatic: boolean): Promise<boolean> => {
+    // Unconfirmed starts expire with the APNs message. Reclaim legacy eight-hour leases too.
+    const claim = await env.DB.prepare(
+        `INSERT INTO push_activity_start (handle, collapse_id, expires_at, machine_id, started_at) VALUES (?1, ?2, ?3, ?5, ?6)
+        ON CONFLICT(handle, machine_id, collapse_id) DO UPDATE SET expires_at = excluded.expires_at, pending_push = NULL, started_at = excluded.started_at
+        WHERE (push_activity_start.started_at IS NULL AND excluded.started_at IS NOT NULL) OR push_activity_start.started_at < excluded.started_at
+            OR (push_activity_start.started_at IS excluded.started_at AND
+                (push_activity_start.expires_at <= ?4 OR push_activity_start.expires_at > excluded.expires_at + 300000))`
+    )
+        .bind(push.handle, push.collapseId, now + PUSH_MAX_AGE_MS, now, push.machineId, automatic ? push.activity.startedAt : null)
+        .run();
+    return claim.meta.changes > 0;
+};
 
 export const sendPush = async (request: Request, env: Env, seams: PushDeliverySeams = SYSTEM_PUSH): Promise<Response> => {
     const now = seams.now();
@@ -268,9 +293,18 @@ export const sendPush = async (request: Request, env: Env, seams: PushDeliverySe
         if (!(await selectsActivity(device, push.machineId, push.collapseId))) {
             return failure('not-found', 'This conversation is not selected for Live Activities');
         }
-        const activity = await env.DB.prepare('SELECT token FROM push_activity WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3')
+        let activity = await env.DB.prepare('SELECT token, started_at FROM push_activity WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3')
             .bind(push.handle, push.collapseId, push.machineId)
-            .first<{ token: string }>();
+            .first<{ token: string; started_at: number | null }>();
+        if (activity && (activity.started_at !== null || device.activity_scope === 'machines') && activity.started_at !== push.activity.startedAt) {
+            if (activity.started_at !== null && activity.started_at > push.activity.startedAt) {
+                return noContent();
+            }
+            await env.DB.prepare('DELETE FROM push_activity WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3 AND token = ?4 AND started_at IS ?5')
+                .bind(push.handle, push.collapseId, push.machineId, activity.token, activity.started_at)
+                .run();
+            activity = null;
+        }
         token = activity?.token ?? device.start_token ?? '';
         startsActivity = !activity;
         endsUnregisteredActivity = startsActivity && push.activity.phase === 'done';
@@ -285,22 +319,20 @@ export const sendPush = async (request: Request, env: Env, seams: PushDeliverySe
     if (receipt.meta.changes === 0) {
         return failure('bad-request', 'This notification was already submitted');
     }
-    if (endsUnregisteredActivity) {
-        await env.DB.prepare('UPDATE push_activity_start SET pending_push = ?4 WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3')
-            .bind(push.handle, push.collapseId, push.machineId, JSON.stringify(push))
+    if (endsUnregisteredActivity && push.pushType === 'liveactivity') {
+        await env.DB.prepare(
+            'UPDATE push_activity_start SET pending_push = ?4 WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3 AND (started_at IS NULL OR started_at = ?5)'
+        )
+            .bind(push.handle, push.collapseId, push.machineId, JSON.stringify(push), push.activity.startedAt)
             .run();
         return noContent();
     }
-    if (startsActivity) {
-        const claim = await env.DB.prepare(
-            `INSERT INTO push_activity_start (handle, collapse_id, expires_at, machine_id) VALUES (?1, ?2, ?3, ?5)
-            ON CONFLICT(handle, machine_id, collapse_id) DO UPDATE SET expires_at = excluded.expires_at WHERE push_activity_start.expires_at <= ?4`
-        )
-            .bind(push.handle, push.collapseId, now + 8 * 60 * 60_000, now, push.machineId)
-            .run();
-        if (claim.meta.changes === 0) {
-            await env.DB.prepare('UPDATE push_activity_start SET pending_push = ?4 WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3')
-                .bind(push.handle, push.collapseId, push.machineId, JSON.stringify(push))
+    if (startsActivity && push.pushType === 'liveactivity') {
+        if (!(await claimActivityStart(env, push, now, device.activity_scope === 'machines'))) {
+            await env.DB.prepare(
+                'UPDATE push_activity_start SET pending_push = ?4 WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3 AND (started_at IS NULL OR started_at = ?5)'
+            )
+                .bind(push.handle, push.collapseId, push.machineId, JSON.stringify(push), push.activity.startedAt)
                 .run();
             return noContent();
         }
@@ -311,21 +343,49 @@ export const sendPush = async (request: Request, env: Env, seams: PushDeliverySe
     } catch {
         result = { ok: false, status: 502 };
     }
-    if (startsActivity && !result.ok) {
-        await env.DB.prepare('DELETE FROM push_activity_start WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3')
-            .bind(push.handle, push.collapseId, push.machineId)
+    if (!startsActivity && push.pushType === 'liveactivity' && invalidApnsToken(result)) {
+        const removed = await env.DB.prepare('DELETE FROM push_activity WHERE handle = ?1 AND machine_id = ?2 AND collapse_id = ?3 AND token = ?4')
+            .bind(push.handle, push.machineId, push.collapseId, token)
+            .run();
+        if (removed.meta.changes > 0) {
+            await env.DB.prepare(
+                'DELETE FROM push_activity_start WHERE handle = ?1 AND machine_id = ?2 AND collapse_id = ?3 AND (started_at IS NULL OR started_at = ?4)'
+            )
+                .bind(push.handle, push.machineId, push.collapseId, push.activity.startedAt)
+                .run();
+            if (push.activity.phase === 'done') {
+                return noContent();
+            }
+            if (device.start_token && (await claimActivityStart(env, push, now, device.activity_scope === 'machines'))) {
+                token = device.start_token;
+                startsActivity = true;
+                try {
+                    result = await seams.send(env, { token, environment: device.environment, startsActivity }, push, now);
+                } catch {
+                    result = { ok: false, status: 502 };
+                }
+            }
+        }
+    }
+    if (startsActivity && !result.ok && push.pushType === 'liveactivity') {
+        await env.DB.prepare(
+            'DELETE FROM push_activity_start WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3 AND (started_at IS NULL OR started_at = ?4)'
+        )
+            .bind(push.handle, push.collapseId, push.machineId, push.activity.startedAt)
             .run();
     }
     if (result.ok && push.pushType === 'liveactivity' && push.activity.phase === 'done') {
         await env.DB.prepare('DELETE FROM push_activity WHERE handle = ?1 AND collapse_id = ?2 AND token = ?3 AND machine_id = ?4')
             .bind(push.handle, push.collapseId, token, push.machineId)
             .run();
-        await env.DB.prepare('DELETE FROM push_activity_start WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3')
-            .bind(push.handle, push.collapseId, push.machineId)
+        await env.DB.prepare(
+            'DELETE FROM push_activity_start WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3 AND (started_at IS NULL OR started_at = ?4)'
+        )
+            .bind(push.handle, push.collapseId, push.machineId, push.activity.startedAt)
             .run();
     }
-    if (result.status === 410) {
-        if (push.pushType === 'alert') {
+    if (invalidApnsToken(result)) {
+        if (push.pushType !== 'liveactivity') {
             await env.DB.prepare('DELETE FROM push_device WHERE handle = ?1 AND token = ?2').bind(push.handle, token).run();
         } else if (startsActivity) {
             await env.DB.prepare('UPDATE push_device SET start_token = NULL WHERE handle = ?1 AND start_token = ?2').bind(push.handle, token).run();

@@ -11,6 +11,7 @@ export const PushActivityRegistrationSchema = z.object({
     machineId: MachineIdSchema,
     collapseId: key,
     token: token.nullable(),
+    startedAt: z.number().int().nonnegative().optional(),
     reserve: z.boolean().optional(),
     release: z.boolean().optional()
 });
@@ -36,6 +37,13 @@ export const PushAlertContentSchema = z.object({
     expiresAt: z.number().int().nonnegative()
 });
 export type PushAlertContent = z.infer<typeof PushAlertContentSchema>;
+
+export const PushReadContentSchema = z.object({
+    nodeId: z.string().min(1).max(256),
+    through: z.number().int().nonnegative(),
+    expiresAt: z.number().int().nonnegative()
+});
+export type PushReadContent = z.infer<typeof PushReadContentSchema>;
 
 export const PushActivityContentSchema = z.object({
     title: z.string().max(160),
@@ -70,6 +78,18 @@ export const PushEnvelopeSchema = z.discriminatedUnion('pushType', [
         signature: z.string().regex(/^[A-Za-z0-9_-]{86}$/)
     }),
     PushRoutingSchema.extend({
+        pushType: z.literal('background'),
+        ephemeralKey: key,
+        nonce: z.string().regex(/^[A-Za-z0-9_-]{16}$/),
+        // Ciphertext followed by the 16-byte AES-GCM tag; the nonce travels separately.
+        ciphertext: z
+            .string()
+            .regex(/^[A-Za-z0-9_-]+$/)
+            .min(22)
+            .max(3200),
+        signature: z.string().regex(/^[A-Za-z0-9_-]{86}$/)
+    }),
+    PushRoutingSchema.extend({
         pushType: z.literal('liveactivity'),
         activity: PushActivityContentSchema,
         signature: z.string().regex(/^[A-Za-z0-9_-]{86}$/)
@@ -87,7 +107,9 @@ export const pushRoutingMessage = (push: PushRouting): string =>
     `pulsar-push-routing-v1\n${JSON.stringify([push.machineId, push.handle, push.id, push.issuedAt, push.expiresAt, push.collapseId])}`;
 export const pushMessage = (push: PushEnvelope): string => {
     const body: (string | number | null)[] =
-        push.pushType === 'alert' ? [push.ephemeralKey, push.nonce, push.ciphertext] : [push.activity.title, push.activity.phase, push.activity.startedAt];
+        push.pushType !== 'liveactivity'
+            ? [push.ephemeralKey, push.nonce, push.ciphertext]
+            : [push.activity.title, push.activity.phase, push.activity.startedAt];
     if (push.pushType === 'liveactivity' && (push.activity.runningCount !== undefined || push.activity.attentionCount !== undefined)) {
         body.push(push.activity.runningCount ?? null, push.activity.attentionCount ?? null);
     }

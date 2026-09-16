@@ -110,3 +110,92 @@ registered an ActivityKit update token with Pulsar. No new Ruimte crash report a
 on the iPhone after the run. Bas confirmed: "Live Activity en openen werken allebei." The two temporary test
 terminals were removed after that confirmation. The end state and more detailed count
 transitions were not separately reported. Production-signed delivery remains untested.
+
+## Read synchronization and activity design, September 16
+
+Worker version `051bd343-c2fe-4c57-8a32-4ae81b711c85` is deployed at 100%. It accepts
+signed, encrypted `background` envelopes and forwards them as silent APNs pushes with
+priority 5. Read pushes have a separate collapse key from visible alerts, so they cannot
+replace a pending notification for a newer turn. No database migration or secret change
+was needed.
+
+The daemon persists per-node notification timestamps and read watermarks in
+`push-attention.json`. Desktop and web clients acknowledge the result actually visible
+in a focused window through `push.read`; a new turn also acknowledges the previous
+result. Only clients advertising `readSync` receive the background push. Connected
+clients receive `push.attention` events, and iOS reconciles a snapshot when connecting.
+A late acknowledgment cannot remove a newer notification. Signed payloads continue to
+hide node IDs and read timestamps from Pulsar and APNs.
+
+Apple schedules background pushes opportunistically; immediate removal is not guaranteed,
+particularly after force-quitting the app or disabling Background App Refresh. Opening
+Ruimte and connecting to the machine reconciles missed reads. A service extension cannot
+reliably suppress an alert that arrives after its read receipt while the app is suspended;
+the persisted watermark keeps its badge from becoming unread again, and foreground
+reconciliation removes the delivered alert. See [Apple's background push guidance](https://developer.apple.com/documentation/usernotifications/pushing-background-updates-to-your-app).
+
+The Live Activity now has a dark surface, machine identity, separate working/attention
+counts, orange attention states and a bounded timer. The Dynamic Island uses the same
+hierarchy, with a compact count and an explicit stale state. It still represents one machine.
+
+Validation: 186 Bun tests passed with one optional statement-key test skipped; 26 client
+attention tests and 43 Swift package tests passed. Formatting, type checks and the signed
+physical-iPhone build passed. The app was installed on the existing test iPhone. Current
+physical read-removal and visual acceptance are recorded separately below. Production
+0.0.17 clients/daemons require an update for read synchronization; existing alert delivery
+remains compatible. No production daemon, broker or TURN process was restarted.
+
+Bas confirmed two grouped notifications on the physical iPhone. A `push.read` request
+for only the first result then removed one notification; Bas confirmed that exactly one
+remained. The second result and both temporary terminals were subsequently cleaned up.
+The Mac visibility rule is covered by the client test; this device check exercised the
+same daemon request directly rather than clicking a canvas node.
+
+The accompanying activity did not appear. A read-only D1 check found an eight-hour start
+claim from the preceding test, no update token and a pending end. New runs were being
+absorbed by that old claim. Version `3a217be9-9bdb-4a25-91f6-0e27194af22b` now expires
+unconfirmed starts after the APNs delivery window, reclaims legacy long leases, and clears
+obsolete pending state on a fresh start. All 24 push-routing tests passed, including
+regressions for a lost start and an old end arriving during the next run. A three-minute
+physical activity test follows; its visual result remains to be confirmed.
+
+The activity appeared after the lease fix, but its initial count stayed at one. No update
+token had reached Pulsar. Bas supplied a screenshot and rejected the large two-column
+layout. The widget has been reduced to a status sentence, smaller machine caption and an
+attention capsule only when needed. Zero-value metrics and the large brand heading are gone.
+
+The app now starts its shared runtime from the application delegate, including launches
+without a SwiftUI screen. Activity observers start immediately after local credential
+restoration, before optional account/provider network refreshes. Known pinned machines
+remain valid during restoration, token uploads hold background runtime and retry transient
+failures. Worker version `941a67fd-6933-4e9c-a9d1-09f31babf941` is deployed at 100%; it gives
+already-verified pending activity updates a fresh APNs delivery window while retaining
+the original event timestamp, so late token registration can still end an old activity
+without making older events override newer ones. The updated signed app is installed.
+
+The final targeted backend run passed 189 tests, with one optional statement-key test
+skipped. The latest native build passed. Physical count transitions and the compact layout
+still need confirmation after this last installation.
+
+Subsequent device reports still showed no activity. The recorded update token belonged
+to an earlier round: an APNs success and an empty pending queue did not establish that
+the current activity was visible. Invalid-token recovery alone was insufficient because
+APNs could still accept that old token.
+
+Migration `0011_activity_generations.sql` adds the work round's `startedAt` to both start
+claims and update-token records. Worker `07fbe1c1-f0d7-4110-aa20-e19ea2676f29` is deployed
+with existing variables preserved. A new machine round starts a new activity rather than
+reusing the previous round's token. Token registration requires the matching claim, and
+late registration, retirement or end messages from an older round cannot replace or remove
+the current one. Legacy conversation subscriptions retain their previous protocol.
+
+The matching iPhone build is installed. Its observers prefer the newest round, register
+that round with the token and retain ended activities on the Lock Screen for the requested
+dismissal interval. Validation passed: 194 backend tests, one optional test skipped, 43
+Swift tests, repository formatting/type checks and the signed physical-device build.
+
+A new ten-minute development test started at `1789550079768`. D1 confirmed the same value
+for the start claim and update-token generation, with registration at `1789550081979` and
+no queued update. This confirms a fresh registration rather than reuse of the old token.
+Bas confirmed that this fresh round is visible on the iPhone. Count transitions and
+acceptance of the compact design are being checked separately.

@@ -281,6 +281,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
 
     const push = new PushService({
         auth,
+        attentionPath: join(config.home, 'push-attention.json'),
         identity,
         titleFor: (nodeId) => projects.index.titleFor(nodeId),
         machineName: () => identity.label,
@@ -295,7 +296,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     manager.offlineApprovals = () => push.hasOfflineApprovals();
 
     const dispatcher = new Dispatcher();
-    registerPushHandlers(dispatcher, auth, () => push.synchronizeActivities());
+    registerPushHandlers(dispatcher, auth, () => push.synchronizeActivities(), push);
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
     registerSessionHandlers(dispatcher, manager);
     registerChatHandlers(dispatcher, chats, providers);

@@ -175,11 +175,11 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
 <header>
   <p class="eyebrow">Ruimte / Status en overdracht / 16 september 2026</p>
   <h1>Een eigen app voor iPhone en iPad, zonder machine aan boord</h1>
-  <p class="intro">Chatpaginering, Live Activity push-to-start en herstel van de notificatieketen zijn gebouwd. De nieuwe build staat op de iPhone en is gestart. De draaiende machine gebruikt nog de oude code; pushbezorging wacht op APNs-credentials en een Worker-update.</p>
-  <p class="status">Vervolg gebouwd · apparaatacceptatie en APNs-configuratie open</p>
-  <p class="caption">Bijgewerkt op 16 september 2026 na lokale implementatie <code>86dbcfc5</code>. Geen push, daemonherstart of distributiewerk. De oorspronkelijke analyse hieronder blijft historische context.</p>
+  <p class="intro">0.0.17 draait op productie. APNs, het openen van notificaties en automatische Live Activities per machine zijn op de iPhone bevestigd. Leesbevestigingen tussen Mac/web en iPhone zijn toegevoegd: de toesteltest verwijderde precies één van twee meldingen. Het nieuwe Live Activity-ontwerp wordt apart beoordeeld.</p>
+  <p class="status">Notificatie-opruiming bevestigd · nieuw Activity-ontwerp in toesteltest</p>
+  <p class="caption">Bijgewerkt op 16 september 2026. Development draait geïsoleerd; de productie-daemon is tijdens deze wijzigingen niet herstart. iOS-distributie blijft uitgesteld. Oudere metingen hieronder zijn historische context.</p>
   <nav aria-label="Inhoud">
-    <a href="#uitvoering">Huidige status</a>
+    <a href="#notificatie-sync">Huidige status</a>
     <a href="#restwerk">Resterend werk</a>
     <a href="#pariteit">Verschillen met desktop/web</a>
     <a href="#prompt">Overdracht</a>
@@ -203,6 +203,14 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
   </nav>
 </header>
 <main>
+
+<section id="notificatie-sync" class="recommendation">
+  <h2>Leesbevestigingen en Live Activity-ontwerp</h2>
+  <p>De desktop- en webclient bevestigen een resultaat wanneer het leesbaar in een actief venster staat. De machine bewaart welke melding is gelezen, stuurt een versleutelde stille push naar de iPhone en synchroniseert dezelfde status bij het verbinden. Een oudere bevestiging verwijdert geen nieuwere melding voor dezelfde agent. Ook een volgende werkbeurt ruimt de melding van de vorige op.</p>
+  <p><strong>Toesteltest:</strong> Bas zag twee meldingen als groep. Na het afhandelen van alleen het eerste resultaat bevestigde hij dat er nog één melding over was. Beide testterminals zijn daarna opgeruimd. iOS kan stille pushes vertragen; gemiste leesbevestigingen worden verwerkt zodra de app weer met de machine verbindt.</p>
+  <p>Het eerste ontwerp met grote aantallen is op basis van Bas' screenshot vervangen door een compacte statusregel, een kleinere machinenaam en alleen een oranje label wanneer een agent aandacht vraagt. Bij de eerste herhaling bleek een oude startreservering een nieuwe Activity te blokkeren. Pulsar laat onbevestigde starts nu na de APNs-bezorgtermijn verlopen en wist achtergebleven updates bij een nieuwe start. De Live Activity verscheen na deze fix, maar de telling bleef achter. De app start activity-tokenverwerking nu bij applicatiestart, ook zonder zichtbaar scherm, en houdt achtergrondtijd vast tijdens registratie. Bij verdere tests bleek het geregistreerde token nog bij een vorige werkronde te horen. Pulsar en iOS koppelen registraties en afmeldingen nu aan de starttijd van de werkronde, zodat een oude activity de nieuwe niet kan blokkeren of verwijderen. Migratie 0011 en de bijbehorende Worker zijn actief; de nieuwe app is geïnstalleerd. De nieuwe toesteltest registreerde aantoonbaar een vers token voor dezelfde werkronde. Bas bevestigde daarna dat de Activity zichtbaar is. Tellerwijzigingen en beoordeling van het compactere ontwerp worden apart gecontroleerd.</p>
+  <p>De iPhone-app en Pulsar zijn bijgewerkt. Voor deze functies op de productie-Mac is een volgende desktop/daemonrelease nodig; <code>bun dev</code> gebruikt de nieuwe code al. Zie <a href="../../apps/pulsar-worker/APNS.md">APNs-beheer en testresultaten</a>.</p>
+</section>
 
 <section id="uitvoering" class="recommendation">
   <h2>De eerste drie vervolgpunten zijn opgepakt</h2>
@@ -232,12 +240,12 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
   <h2>Wat nog nodig is</h2>
   <div class="table" role="region" aria-label="Resterende ingebruikname en acceptatie" tabindex="0"><table>
     <thead><tr><th scope="col">Onderdeel</th><th scope="col">Volgende stap</th></tr></thead><tbody>
-      <tr><th scope="row">Daemon</th><td>Later, wanneer actieve sessies dat toelaten, de nieuwe daemoncode starten. Tot die tijd blijft chatopening compatibel maar ongepagineerd. Er is in deze sessie geen herstart uitgevoerd.</td></tr>
+      <tr><th scope="row">Daemon</th><td>Productie draait 0.0.17. Automatische machine-activiteiten en leesbevestigingen zitten in development en vereisen nog een volgende desktop/daemonrelease. De productie-daemon is niet herstart.</td></tr>
       <tr><th scope="row">Pulsar en APNs</th><td>Beide sleutels staan lokaal en als actieve Worker-secrets op productie. De aparte <code>APNS_SANDBOX_KEY</code>/<code>APNS_SANDBOX_KEY_ID</code> en <code>APNS_PRODUCTION_KEY</code>/<code>APNS_PRODUCTION_KEY_ID</code> zijn als Worker-secrets opgeslagen. De gedeelde Worker kiest de sleutel op apparaatomgeving; zie <a href="../../apps/pulsar-worker/APNS.md">APNs-beheer</a>. Migraties 0006 en 0008 zijn geslaagd. De Worker is op productie geactiveerd en de automatische deployment is geslaagd. App- en extensiecapabilities en de Apple-keyrechten moeten extern worden gecontroleerd.</td></tr>
       <tr><th scope="row">iPhone-acceptatie</th><td>Grote chat openen, meerdere oudere pagina's laden en blijven lezen tijdens streaming; een vraag buiten de eerste pagina beantwoorden; clear/reset en reconnect. Daarna echte alerts, lokale start tegenover pushstart, tokenvernieuwing, chatwissel, opt-out en beide approvalacties controleren. Wi-Fi/5G en langdurig achtergrondgebruik blijven aparte apparaatproeven.</td></tr>
       <tr><th scope="row">Distributie</th><td>Uitgesteld op verzoek. Geen Xcode Cloud-, archief-, TestFlight- of publicatiestappen uitgevoerd.</td></tr>
     </tbody></table></div>
-  <p class="note">De codewijzigingen staan op main en tag v0.0.17. Pulsar en de webclient zijn gedeployd. De bestaande daemon draait nog 0.0.16; echte iPhone-pushbezorging is nog niet vastgesteld.</p>
+  <p class="note">0.0.17 is uitgebracht. De daaropvolgende iOS- en pushverbeteringen zijn lokaal gebouwd en op iPhone/Pulsar getest. De web- en desktopcode voor leesbevestigingen is nog niet als nieuwe release gepubliceerd.</p>
 </section>
 
 <section id="pariteit">
