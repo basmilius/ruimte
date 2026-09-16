@@ -2,7 +2,21 @@ import { useEffect, useState } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { GitFork } from 'lucide-react';
 import { CHAT_FORK_TITLE_MAX, type ChatForkInfoResult } from '@ruimte/contracts';
-import { branchRefusal, forkOriginIn, forkPayload, forkPointLabel, forkPointOf, forkRefusal, forkShapes, type ForkShape } from '@/chat/logic/fork';
+import {
+    branchRefusal,
+    FORKABLE_PROVIDERS,
+    forkOriginIn,
+    forkPayload,
+    forkPointLabel,
+    forkPointOf,
+    forkRefusal,
+    forkShapes,
+    type ForkCliChoice,
+    type ForkShape
+} from '@/chat/logic/fork';
+import { readChatPreferences, selectionFor } from '@/chat/preferences';
+import { ModelPicker } from '@/chat/ui/Pickers';
+import { useProviders } from '@/state/providers';
 import { Toggle } from '@/shell/settings/controls';
 import { showViewWhenItLands } from '@/project/views';
 import { canvasOfNode, revealWhenItLands } from '@/state/canvas';
@@ -71,6 +85,9 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
     const [inWorktree, setInWorktree] = useState(true);
     const [branch, setBranch] = useState<string | null>(null);
     const [filesAfterTurn, setFilesAfterTurn] = useState(true);
+    const [cli, setCli] = useState<ForkCliChoice | null>(null);
+    const [pickerOpen, setPickerOpen] = useState(false);
+    const providers = useProviders((s) => s.providers);
 
     useEffect(() => {
         let current = true;
@@ -92,6 +109,14 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
     const worktree = folder?.repository === true && inWorktree;
     const branchName = branch ?? folder?.branch ?? '';
     const branchProblem = worktree ? branchRefusal(branchName, folder.branches) : null;
+    const originalCli: ForkCliChoice | null = info === null ? null : { provider: info.provider, selection: info.selection };
+    const chosenCli = cli ?? originalCli;
+    const pickable = providers.filter((entry) => FORKABLE_PROVIDERS.has(entry.kind) && entry.installed && entry.capabilities.chat);
+    const switching = chosenCli !== null && originalCli !== null && chosenCli.provider !== originalCli.provider;
+    const chooseCli = (provider: ForkCliChoice['provider'], model: string): void => {
+        const remembered = provider === info?.provider ? info.selection : selectionFor(readChatPreferences(), provider);
+        setCli({ provider, selection: remembered?.model === model ? remembered : { model, options: {} } });
+    };
     const ready = refusal === null && point !== null && title.trim() !== '' && folder !== null && branchProblem === null;
 
     const submit = async (): Promise<void> => {
@@ -108,7 +133,8 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
                     turnId,
                     title: title.trim(),
                     shape,
-                    worktree: worktree ? { branch: branchName.trim(), filesAfterTurn: filesAfterTurn && folder.filesAfterTurn } : null
+                    worktree: worktree ? { branch: branchName.trim(), filesAfterTurn: filesAfterTurn && folder.filesAfterTurn } : null,
+                    ...(originalCli && chosenCli ? { cli: { original: originalCli, chosen: chosenCli } } : {})
                 })
             );
             if (shape === 'view') {
@@ -129,9 +155,29 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
             <p className="mt-1 text-sm text-text-muted">{point ? forkPointLabel(point) : 'This turn is no longer in the conversation.'}</p>
             <p className="mt-2 text-sm text-text-muted">
                 {shape === 'view'
-                    ? `A new chat view goes on from there with the same CLI, right after ${origin === 'view' ? 'the original' : 'its canvas'} in the sidebar. Nothing is sent until you write the first message.`
-                    : 'A new chat node goes on from there with the same CLI, beside the original and with a line from it. Nothing is sent until you write the first message.'}
+                    ? `A new chat view goes on from there, right after ${origin === 'view' ? 'the original' : 'its canvas'} in the sidebar. Nothing is sent until you write the first message.`
+                    : 'A new chat node goes on from there, beside the original and with a line from it. Nothing is sent until you write the first message.'}
             </p>
+            {chosenCli !== null && pickable.length > 0 && (
+                <>
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                        <span className="text-xs text-text-muted">Continue with</span>
+                        <ModelPicker
+                            providers={pickable}
+                            provider={chosenCli.provider}
+                            selection={chosenCli.selection}
+                            open={pickerOpen}
+                            onOpenChange={setPickerOpen}
+                            onChange={chooseCli}
+                        />
+                    </div>
+                    {switching && (
+                        <p className="mt-1 text-xs text-text-muted">
+                            The new agent gets the last part of the conversation as text and can read the rest of the original itself.
+                        </p>
+                    )}
+                </>
+            )}
             <label className="mt-3 block text-xs text-text-muted" htmlFor="fork-title">
                 Title
             </label>

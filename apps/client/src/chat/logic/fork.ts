@@ -1,8 +1,17 @@
-import { isCanvasView, type ChatForkPayload, type ChatInfo, type ChatItem, type ChatTurnItem, type ProjectView } from '@ruimte/contracts';
+import {
+    isCanvasView,
+    type AgentKind,
+    type ChatForkPayload,
+    type ChatInfo,
+    type ChatItem,
+    type ChatTurnItem,
+    type ModelSelection,
+    type ProjectView
+} from '@ruimte/contracts';
 import type { TimelineRow } from '@/chat/logic/timeline';
 
-/* The providers whose chat a machine can fork: the ones with a conversation the CLI keeps and can be cut. */
-const FORKABLE_PROVIDERS: ReadonlySet<string> = new Set(['claude', 'codex']);
+/* The providers whose chat a machine can fork, and go on with in a fork: the ones with a conversation the CLI keeps. */
+export const FORKABLE_PROVIDERS: ReadonlySet<string> = new Set(['claude', 'codex']);
 
 /* Where a fork goes on after, as the dialog words it. */
 export interface ForkPoint {
@@ -108,17 +117,28 @@ export interface ForkWorktreeChoice {
     filesAfterTurn: boolean;
 }
 
+/* The CLI and model a fork goes on with; only what differs from the original is sent. */
+export interface ForkCliChoice {
+    provider: AgentKind;
+    selection: ModelSelection;
+}
+
 export const forkPayload = (input: {
     chatId: string;
     turnId: string;
     title: string;
     shape: ForkShape;
     worktree?: ForkWorktreeChoice | null;
+    cli?: { original: ForkCliChoice; chosen: ForkCliChoice };
 }): ChatForkPayload => ({
     chatId: input.chatId,
     turnId: input.turnId,
     title: input.title,
     ...(input.shape === 'view' ? { asView: true } : {}),
+    ...(input.cli && input.cli.chosen.provider !== input.cli.original.provider ? { provider: input.cli.chosen.provider } : {}),
+    ...(input.cli && (input.cli.chosen.provider !== input.cli.original.provider || input.cli.chosen.selection.model !== input.cli.original.selection.model)
+        ? { selection: input.cli.chosen.selection }
+        : {}),
     ...(input.worktree ? { worktree: { branch: input.worktree.branch }, ...(input.worktree.filesAfterTurn ? { filesAfterTurn: true } : {}) } : {})
 });
 

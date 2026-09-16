@@ -86,6 +86,21 @@ describe('the shape of a fork', () => {
             worktree: { branch: 'lexer-fork' }
         });
         expect(forkPayload({ ...base, shape: 'node', worktree: null })).toEqual(base);
+        const original = { provider: 'claude' as const, selection: { model: 'opus', options: { effort: 'high' } } };
+        expect(forkPayload({ ...base, shape: 'node', cli: { original, chosen: original } })).toEqual(base);
+        expect(forkPayload({ ...base, shape: 'node', cli: { original, chosen: { provider: 'claude', selection: { model: 'sonnet', options: {} } } } })).toEqual(
+            {
+                ...base,
+                selection: { model: 'sonnet', options: {} }
+            }
+        );
+        expect(forkPayload({ ...base, shape: 'node', cli: { original, chosen: { provider: 'codex', selection: { model: 'gpt-5.5', options: {} } } } })).toEqual(
+            {
+                ...base,
+                provider: 'codex',
+                selection: { model: 'gpt-5.5', options: {} }
+            }
+        );
     });
 
     test('a branch has to be named and free', () => {
