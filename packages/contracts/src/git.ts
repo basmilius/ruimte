@@ -1,16 +1,45 @@
 import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
 
+// What a worktree holds that its target branch does not: removing it without force refuses while any count is above zero.
+export const WorktreeWorkSchema = z.object({
+    // Tracked files changed or staged against the worktree's own HEAD.
+    changed: z.number().int().nonnegative(),
+    // Untracked files, one per file; ignored files are not work.
+    untracked: z.number().int().nonnegative(),
+    // Commits on the worktree that the branch it was made from lacks.
+    ahead: z.number().int().nonnegative(),
+    // A rebase, merge, cherry-pick or revert that stopped halfway, by git's own word for it; that is work too.
+    operation: z.string().optional()
+});
+export type WorktreeWork = z.infer<typeof WorktreeWorkSchema>;
+
 export const WorktreeSchema = z.object({
     path: z.string(),
-    branch: z.string()
+    branch: z.string(),
+    // Everything below comes from the daemon's register and from inspecting the checkout, so a worktree
+    // made by hand or by an older daemon has none of it.
+    // Where the worktree was made from; `branch` is absent when HEAD was detached then.
+    from: z.object({ branch: z.string().optional(), commit: z.string() }).optional(),
+    projectId: z.string().optional(),
+    // The node it was made for.
+    nodeId: z.string().optional(),
+    madeAt: z.number().optional(),
+    // The folder is gone while git or the register still knows the worktree; only commits can be counted then.
+    missing: z.boolean().optional(),
+    // Locked with `git worktree lock`; removing it takes force.
+    locked: z.boolean().optional(),
+    // Only with `inspect` on the list.
+    work: WorktreeWorkSchema.optional()
 });
 export type Worktree = z.infer<typeof WorktreeSchema>;
 
 // A worktree for a branch of the repository; made under the app data dir when it does not exist yet.
 export const WorktreeAddPayloadSchema = z.object({
     repo: z.string().min(1),
-    branch: z.string().min(1)
+    branch: z.string().min(1),
+    // The project the person made it in, kept in the register.
+    projectId: z.string().optional()
 });
 export type WorktreeAddPayload = z.infer<typeof WorktreeAddPayloadSchema>;
 
@@ -22,7 +51,9 @@ export const WorktreeAddResultSchema = z.object({
 export type WorktreeAddResult = z.infer<typeof WorktreeAddResultSchema>;
 
 export const WorktreeListPayloadSchema = z.object({
-    repo: z.string().min(1)
+    repo: z.string().min(1),
+    // Counts the work in every worktree, which costs a few git calls each.
+    inspect: z.boolean().optional()
 });
 export type WorktreeListPayload = z.infer<typeof WorktreeListPayloadSchema>;
 
@@ -33,9 +64,26 @@ export type WorktreeListResult = z.infer<typeof WorktreeListResultSchema>;
 
 export const WorktreeRemovePayloadSchema = z.object({
     repo: z.string().min(1),
-    path: z.string().min(1)
+    path: z.string().min(1),
+    // Removes a worktree that holds work, and deletes its branch with commits the target lacks.
+    force: z.boolean().optional(),
+    // True keeps the branch; false deletes a branch the register does not know as well.
+    keepBranch: z.boolean().optional()
 });
 export type WorktreeRemovePayload = z.infer<typeof WorktreeRemovePayloadSchema>;
+
+export const WorktreeRemoveResultSchema = z.object({
+    branchDeleted: z.boolean().optional(),
+    // Where the deleted branch pointed, so `git branch <name> <commit>` brings it back until git collects it.
+    branchCommit: z.string().optional()
+});
+export type WorktreeRemoveResult = z.infer<typeof WorktreeRemoveResultSchema>;
+
+// The worktrees of this repository changed; a client that lists them asks again.
+export const GitWorktreesEventSchema = z.object({
+    repo: z.string()
+});
+export type GitWorktreesEvent = z.infer<typeof GitWorktreesEventSchema>;
 
 // Which group a changed file sits in. A file that is both staged and changed since is in two.
 export const GitFileStateSchema = z.enum(['staged', 'unstaged', 'untracked', 'conflicted']);

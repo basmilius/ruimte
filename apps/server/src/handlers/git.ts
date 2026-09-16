@@ -25,15 +25,23 @@ const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
 export const registerGitHandlers = (dispatcher: Dispatcher, worktrees: Worktrees, statuses: GitStatusWatcher, providers: ProviderRegistry): void => {
     const actions = new GitActions();
 
-    dispatcher.register('git.worktree-add', (payload) => translate(() => worktrees.add(payload.repo, payload.branch)));
+    dispatcher.register('git.worktree-add', (payload) =>
+        translate(() =>
+            worktrees.add(payload.repo, payload.branch, { madeBy: 'client', ...(payload.projectId === undefined ? {} : { projectId: payload.projectId }) })
+        )
+    );
 
-    dispatcher.register('git.worktree-list', (payload) => translate(async () => ({ worktrees: await worktrees.list(payload.repo) })));
+    dispatcher.register('git.worktree-list', (payload) =>
+        translate(async () => ({ worktrees: await worktrees.list(payload.repo, { inspect: payload.inspect === true }) }))
+    );
 
     dispatcher.register('git.worktree-remove', (payload) =>
-        translate(async () => {
-            await worktrees.remove(payload.repo, payload.path);
-            return {};
-        })
+        translate(() =>
+            worktrees.remove(payload.repo, payload.path, {
+                ...(payload.force === undefined ? {} : { force: payload.force }),
+                ...(payload.keepBranch === undefined ? {} : { keepBranch: payload.keepBranch })
+            })
+        )
     );
 
     dispatcher.register('git.status', (payload) => translate(() => statuses.status(payload.cwd)));

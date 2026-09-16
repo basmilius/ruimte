@@ -184,6 +184,7 @@ const host = (): CanvasHost => ({
     removeWorktree: async (_folder, path) => {
         removedWorktrees.push(path);
     },
+    claimWorktree: async () => undefined,
     modeOf: (nodeId) => modes[nodeId] ?? 'full-access',
     terminalModePreference: () => terminalPreference,
     installedAgents: async () => installed,

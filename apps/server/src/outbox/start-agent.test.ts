@@ -173,6 +173,7 @@ const boot = async (): Promise<Daemon> => {
         branchesOf: async () => null,
         addWorktree: () => Promise.reject(new Error('not used here')),
         removeWorktree: async () => undefined,
+        claimWorktree: async () => undefined,
         depthOf: (nodeId) => lineage.depthOf(nodeId),
         openedCount: (callerId) => lineage.openedCount(callerId),
         recordMade: (record) => lineage.put(record),

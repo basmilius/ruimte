@@ -10,6 +10,9 @@ export interface CheckpointService {
     diff(cwd: string, tree: string): Promise<ChatCheckpointDiff | null>;
 }
 
+/* The name of the index file a checkout's turns are written through; removing a worktree removes it too. */
+export const checkpointIndexFile = (top: string): string => `${basename(top)}-${createHash('sha1').update(top).digest('hex').slice(0, 8)}.index`;
+
 // One index per repository, and one turn at a time in it: two chats in the same folder would
 // otherwise fight over the lock file git writes next to it.
 const queues = new Map<string, Promise<unknown>>();
@@ -89,6 +92,6 @@ export class Checkpoints implements CheckpointService {
         } catch {
             return null;
         }
-        return join(this.root, `${basename(top)}-${createHash('sha1').update(top).digest('hex').slice(0, 8)}.index`);
+        return join(this.root, checkpointIndexFile(top));
     }
 }

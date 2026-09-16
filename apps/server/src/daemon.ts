@@ -325,7 +325,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         modeOf: nodeMode(modes),
         terminalModePreference: () => chats.composerPreferences.terminalMode(),
         branchesOf: (folder: string) => worktrees.branches(folder).catch(() => null),
-        addWorktree: (folder: string, branch: string) => worktrees.add(folder, branch),
+        addWorktree: (folder: string, branch: string, projectId: string) => worktrees.add(folder, branch, { madeBy: 'verb', projectId }),
+        claimWorktree: (folder: string, path: string, nodeId: string) => worktrees.claim(folder, path, nodeId),
         removeWorktree: (folder: string, path: string) => worktrees.remove(folder, path),
         depthOf: (nodeId: string) => lineage.depthOf(nodeId),
         openedCount: (callerId: string) => lineage.openedCount(callerId),
@@ -507,7 +508,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         usage,
         limits,
         processes,
-        tasks
+        tasks,
+        worktrees
     });
 
     const endpointInfo = (reachability: ClientAccess['reachability'], authenticated: boolean) => ({

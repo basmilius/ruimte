@@ -92,3 +92,21 @@ test('two roles that change the same file each work in a worktree of their own, 
     expect(parserDiff?.files[0]?.diff).toContain('+from the parser');
     expect(parserDiff?.files[0]?.diff).not.toContain('lexer');
 });
+
+test('a worktree an agent verb makes is written down with the branch and commit the project was on, the project and the node', async () => {
+    await gitIn(folder, ['checkout', '--quiet', '-b', 'feature']);
+    await gitIn(folder, ['commit', '--quiet', '--allow-empty', '--message', 'on feature']);
+    const featureHead = (await gitIn(folder, ['rev-parse', 'HEAD'])).trim();
+    const projectId = store.index.locate('chat-lead')!.projectId;
+
+    const lines = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--chat', '--worktree', '--title', 'Lexer']);
+    const nodeId = lines[0]!.split('\t')[0]!;
+
+    const worktrees = new Worktrees(join(root, 'home'));
+    const listed = await worktrees.list(folder);
+    expect(listed).toHaveLength(1);
+    expect(listed[0]).toMatchObject({ branch: 'lexer', from: { branch: 'feature', commit: featureHead }, projectId, nodeId });
+    // A second daemon over the same home reads what the first wrote.
+    const register = await worktrees.registerOf(folder).read();
+    expect(register.get(listed[0]!.path)).toMatchObject({ madeBy: 'verb', branchMade: true });
+});

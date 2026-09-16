@@ -217,7 +217,7 @@ export const agentVerb = defineVerb({
             const branches = await branchesForWorktrees(call, place.folder);
             const branch = flags.branch ?? freeBranch(branchSlug(flags.task ?? flags.title ?? kind), branches);
             if (!dryRun) {
-                const made = await makeWorktrees(call, place.folder!, [branch]);
+                const made = await makeWorktrees(call, { folder: place.folder!, projectId: place.projectId }, [branch]);
                 cwd = made.worktrees[0]!.path;
                 undoWorktrees = made.undo;
             }
@@ -264,6 +264,9 @@ export const agentVerb = defineVerb({
                 return {
                     landed: async () => {
                         await call.host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: call.caller, depth, agent: true });
+                        if (inWorktree && cwd !== undefined) {
+                            await call.host.claimWorktree(place.folder!, cwd, id);
+                        }
                         // Before the agent starts, so a child that is done at once finds its task open.
                         if (flags.task !== undefined && prompt !== null) {
                             const task = await call.host.tasks.open({

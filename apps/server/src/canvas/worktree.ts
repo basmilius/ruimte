@@ -44,7 +44,12 @@ export const branchesForWorktrees = async (call: VerbCall, folder: string | null
  * The worktrees of one call, made before the project is written so the nodes can start in them.
  * `undo` takes back the ones made here when the write is refused; one that already existed stays.
  */
-export const makeWorktrees = async (call: VerbCall, folder: string, branches: readonly string[]): Promise<{ worktrees: Worktree[]; undo(): Promise<void> }> => {
+export const makeWorktrees = async (
+    call: VerbCall,
+    place: { folder: string; projectId: string },
+    branches: readonly string[]
+): Promise<{ worktrees: Worktree[]; undo(): Promise<void> }> => {
+    const folder = place.folder;
     const made: Worktree[] = [];
     const worktrees: Worktree[] = [];
     const undo = async (): Promise<void> => {
@@ -54,7 +59,7 @@ export const makeWorktrees = async (call: VerbCall, folder: string, branches: re
     };
     for (const branch of branches) {
         try {
-            const { worktree, created } = await call.host.addWorktree(folder, branch);
+            const { worktree, created } = await call.host.addWorktree(folder, branch, place.projectId);
             worktrees.push(worktree);
             if (created) {
                 made.push(worktree);

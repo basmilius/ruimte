@@ -214,6 +214,7 @@
     "fs.changed",
     "git.status",
     "git.progress",
+    "git.worktrees",
     "usage.changed",
     "usage.limitsChanged",
     "processes.sample",

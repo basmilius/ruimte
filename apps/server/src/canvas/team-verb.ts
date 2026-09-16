@@ -183,7 +183,7 @@ export const teamVerb = defineVerb({
                 return branch;
             });
             if (!dryRun) {
-                const made = await makeWorktrees(call, place.folder!, branches);
+                const made = await makeWorktrees(call, { folder: place.folder!, projectId: place.projectId }, branches);
                 made.worktrees.forEach((worktree, index) => {
                     roleCwds[index] = worktree.path;
                 });
@@ -274,8 +274,12 @@ export const teamVerb = defineVerb({
                     landed: async () => {
                         const batchId = tasked ? `batch-${randomBytes(6).toString('hex')}` : undefined;
                         // Every task before any agent starts, so a role that is done at once never finds its team complete without the others.
-                        for (const { id, title, prompt, line } of made) {
+                        for (const { id, title, prompt, line, index } of made) {
                             await call.host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: call.caller, depth, agent: true });
+                            const roleCwd = roleCwds[index];
+                            if (inWorktrees && roleCwd !== undefined) {
+                                await call.host.claimWorktree(place.folder!, roleCwd, id);
+                            }
                             if (batchId !== undefined) {
                                 const task = await call.host.tasks.open({
                                     projectId: place.projectId,

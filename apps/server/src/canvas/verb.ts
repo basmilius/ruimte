@@ -37,9 +37,11 @@ export interface CanvasHost {
     /* The local branches of the repository the folder is in; null when it is in none. */
     branchesOf(folder: string): Promise<string[] | null>;
     /* The worktree of a branch under the machine's worktrees folder, made from HEAD when the branch is new. */
-    addWorktree(folder: string, branch: string): Promise<{ worktree: Worktree; created: boolean }>;
+    addWorktree(folder: string, branch: string, projectId: string): Promise<{ worktree: Worktree; created: boolean }>;
+    /* Writes the node a worktree was made for into the register, once the node exists. */
+    claimWorktree(folder: string, path: string, nodeId: string): Promise<void>;
     /* Takes back a worktree this call made, when the write it was made for is refused. */
-    removeWorktree(folder: string, path: string): Promise<void>;
+    removeWorktree(folder: string, path: string): Promise<unknown>;
     /* The widest mode an agent this node opens may run in: its own, as far as the daemon knows it. */
     modeOf(nodeId: string): RuntimeMode;
     /* The mode a person picked for terminal agents, from the clients connected now; undefined with none. */
