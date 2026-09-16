@@ -2377,6 +2377,26 @@ code will not say on its own.
 - An observer on `ChatManager.observe()` only notes things: it may write a task record or a file in
   the outbox, never act. A handler that sent a turn to another chat from inside an event would run
   in the call stack of the first chat and be gone in a crash; only the outbox worker executes.
+- Phase 1 (a subagent's conversation) was measured before it was built. `codex app-server` 0.154.0
+  answers `thread/items/list` for a thread the process never loaded, from disk, with its own cursor
+  and a newest-first order; a spawned agent's thread holds only its own items, not the parent's
+  history it forked from. So a Codex child is read through the chat's running app-server when there
+  is one and through a process started for the one question otherwise (kept five seconds per page),
+  and nothing has to be resumed first.
+- Holding a conversation is `watch` on `chat.subagent` itself (true holds, false lets go) rather than a
+  request of its own or a lease. Reading and holding in one round trip leaves no gap in which a line
+  could land unseen, a lease would need a clock on both sides, and a client that vanishes is let go by
+  `detachAll` either way. The daemon watches Claude's `subagents` folder once however many of its
+  transcripts are held, and polls the running Codex every 2 s only while something is held.
+- A Claude transcript is projected once and read on from where the last read stopped, with the
+  cursors of an ordinary `ChatThread` history, so a rewritten transcript expires them the way a
+  cleared chat does. Every Codex item is projected on its own: two reasoning items merged into one
+  thinking row would carry an id that depends on where a page began, and the panel merges by id.
+- The panel lays the newest page over what it holds by id, and a page that shares nothing with it
+  replaces it, since more happened than a page holds. Items read back have no turn, so the timeline
+  draws them flat with the same rows as the thread (`chat/ui/rows/Rows.tsx`).
+- `renderTranscript` gives a subagent one line with its tool use id in it, because that id is what
+  `read <id> --subagent` takes and an agent has nowhere else to find it.
 
 ### Skipped on purpose
 
