@@ -144,10 +144,54 @@ final class PlanOutlineTests: XCTestCase {
             document.rows(filter: .all, collapseDone: true, collapsed: ["d"]).map(\.id),
             ["intro", "a", "done", "mixed", "d"])
         XCTAssertEqual(
-            document.rows(filter: .failed, collapseDone: false, collapsed: []).map(\.id), ["mixed", "d", "d1"])
+            document.rows(filter: .issues, collapseDone: false, collapsed: []).map(\.id), ["mixed", "d", "d1"])
         XCTAssertEqual(
             document.rows(filter: .open, collapseDone: false, collapsed: []).map(\.id), ["mixed", "d", "d2"])
         XCTAssertEqual(document.word(for: .open), "Not run")
+    }
+
+    func testCopyAsMarkdownWritesThePlanAsATaskList() throws {
+        var failed = step("b", state: "failed")
+        if case .object(var fields) = failed {
+            fields["note"] = .string("Broke")
+            failed = .object(fields)
+        }
+        let document = try document(
+            plan(items: [
+                step("a", state: "done"),
+                .object([
+                    "type": .string("section"), "id": .string("s"), "title": .string("Section"),
+                    "items": .array([
+                        .object([
+                            "type": .string("text"), "id": .string("t"), "title": .string("Before"),
+                            "description": .string("Read this"),
+                        ]),
+                        step("p", steps: [failed, step("c", state: "warning")]),
+                    ]),
+                ]),
+                step("d"),
+            ]))
+        XCTAssertEqual(
+            document.markdown,
+            """
+            # Plan plan
+
+            - [x] Step a
+
+            ## Section
+
+            > **Before** Read this
+
+            - [!] Step p
+                - [!] Step b
+                    > Broke
+                - [w] Step c
+
+            ---
+
+            - [ ] Step d
+
+            """)
     }
 
     func testCopyWritesAStepAsMarkdown() throws {

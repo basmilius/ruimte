@@ -8,9 +8,23 @@ enum PlanStepState: String, CaseIterable, Sendable {
 
 extension PlanStepState {
     /// The states a person picks from; active is the agent's word for where it works.
-    static let personStates: [PlanStepState] = [.open, .done, .failed, .skipped, .blocked]
+    static let personStates: [PlanStepState] = [.open, .done, .warning, .info, .failed, .skipped, .blocked]
     /// The outcomes the mark of a test step offers.
     static let testOutcomes: [PlanStepState] = [.done, .warning, .info, .failed, .skipped, .blocked]
+
+    /// The markers of `plan read` and Copy as Markdown.
+    var marker: String {
+        switch self {
+        case .open: "[ ]"
+        case .active: "[~]"
+        case .done: "[x]"
+        case .failed: "[!]"
+        case .skipped: "[-]"
+        case .blocked: "[?]"
+        case .warning: "[w]"
+        case .info: "[i]"
+        }
+    }
 
     /// Outcomes that close a step without a failure, as `isFinishedOutcome` in `@ruimte/plan`.
     var isFinished: Bool { self == .done || self == .skipped || self == .warning || self == .info }
@@ -21,13 +35,13 @@ extension PlanStepState {
 
 /// Which steps the sheet lists; local to this phone, never part of the plan.
 enum PlanFilter: String, CaseIterable, Sendable {
-    case all, open, failed
+    case all, open, issues
 
     var label: String {
         switch self {
-        case .all: "All steps"
-        case .open: "Open steps"
-        case .failed: "Failed steps"
+        case .all: "All"
+        case .open: "Open"
+        case .issues: "Issues"
         }
     }
 
@@ -35,7 +49,7 @@ enum PlanFilter: String, CaseIterable, Sendable {
         switch self {
         case .all: true
         case .open: leaves.contains { [.open, .active, .blocked].contains($0.state) }
-        case .failed: leaves.contains { $0.state == .failed }
+        case .issues: leaves.contains { [.failed, .blocked, .warning].contains($0.state) }
         }
     }
 }
@@ -277,11 +291,6 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
         }
     }
 
-    /// What a long press offers: a test step also takes a warning or info.
-    var stateChoices: [PlanStepState] {
-        kind == .test ? PlanStepState.personStates + [.warning, .info] : PlanStepState.personStates
-    }
-
     /// Every section and parent step, what Collapse all folds.
     var foldableIDs: Set<String> {
         func parents(_ step: PlanStep) -> [String] { step.isParent ? [step.id] + step.steps.flatMap(parents) : [] }
@@ -318,6 +327,60 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
             }
         }
         return rows
+    }
+
+    /// The plan as a GFM task list, as `planToMarkdown` in `@ruimte/plan` writes it: ids, who set a state and the
+    /// locks stay out.
+    var markdown: String {
+        var blocks = ["# \(title)"]
+        if let summary { blocks.append(summary) }
+        func stepLines(_ step: PlanStep, depth: Int) -> [String] {
+            let indent = String(repeating: "    ", count: depth)
+            let inner = indent + "    "
+            var lines = ["\(indent)- \(step.state.marker) \(step.title)"]
+            if let description = step.description, !description.isEmpty {
+                lines += description.components(separatedBy: "\n").map { inner + $0 }
+            }
+            if let note = step.note, !note.isEmpty {
+                lines += note.components(separatedBy: "\n").map { "\(inner)> \($0)" }
+            }
+            return lines + step.steps.flatMap { stepLines($0, depth: depth + 1) }
+        }
+        // Consecutive steps form one list; a text block stands as its own block.
+        func entryBlocks(_ entries: [PlanEntry]) -> [String] {
+            var result: [String] = []
+            var list: [String] = []
+            for entry in entries {
+                switch entry {
+                case .step(let step):
+                    list += stepLines(step, depth: 0)
+                case .text(let text):
+                    if !list.isEmpty { result.append(list.joined(separator: "\n")) }
+                    list = []
+                    var lines = (text.description ?? "").components(separatedBy: "\n")
+                    let first = lines.removeFirst()
+                    result.append(
+                        (["> **\(text.title)**" + (first.isEmpty ? "" : " \(first)")] + lines.map { "> \($0)" })
+                            .joined(separator: "\n"))
+                }
+            }
+            if !list.isEmpty { result.append(list.joined(separator: "\n")) }
+            return result
+        }
+        var inSection = false
+        for group in groups {
+            if let sectionTitle = group.title {
+                blocks.append("## \(sectionTitle)")
+                if let description = group.description, !description.isEmpty { blocks.append(description) }
+                inSection = true
+            } else if inSection {
+                // Only a rule brings the items after a section back to the top of the plan.
+                blocks.append("---")
+                inSection = false
+            }
+            blocks += entryBlocks(group.entries)
+        }
+        return blocks.joined(separator: "\n\n") + "\n"
     }
 
     /// One step as a line of Markdown, as Copy in the desktop client writes it.

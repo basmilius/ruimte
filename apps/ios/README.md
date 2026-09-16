@@ -43,7 +43,7 @@ links from automatic follow-up turns. Changed files use checkpoint diffs when av
 then provider patches or replacement fragments. Tool output initially shows 4,000
 characters; large diffs initially show 400 lines, with explicit expansion controls.
 
-A chat with sub-agents shows a Sub-agents button. It opens a list with Active and Done
+A chat with sub-agents offers Sub-agents in the conversation menu. It opens a list with Active and Done
 sections, most recently updated first, each entry with its state, the latest tool call or
 reply (or the report a sub-agent handed back) and its running time or end time. An entry, or a
 subagent row in the timeline, opens that conversation read-only on its own page; Back returns
@@ -58,17 +58,17 @@ A chat whose agent keeps a plan shows its progress beside Sub-agents as the desk
 on a raised capsule, a red dot for a failed step and an accent dot for a plan made since the chat was last opened; the
 phone never opens a plan on its own. While the agent works on a step the check turns into a spinning ring. The sheet
 is drawn after the desktop plan panel: the chat as its title, a header with the plan's title, kind, counters, status
-line, the step in progress and a progress bar. The overflow menu holds the filter (all, open or failed steps),
-Collapse done, Expand all and Collapse all, kept on the phone. Sections, text blocks and steps follow as custom rows
-with the same Lucide circles, one column per row: a step under a section lines up with the section's caret and a child
-sits under its parent's title. A parent shows "2/3" instead of a circle, and a tap anywhere on a section or parent
-folds it. Warning (amber) and info are outcomes like passed. The step the agent works on spins with an accent
-background while its turn runs; once the agent stopped it shows a pause and "<Agent> stopped here". A step a person
-set shows "you" and the time; who else set a step and a lock's reason sit in its long-press menu and its VoiceOver
-value. In a steps plan the circle toggles open and done; in a test plan the circle opens the outcomes and a swipe
-gives Passed, Info, Failed, Warning or Skipped; Failed, Warning and Info ask for a note. Long-press a step for every
-state, Add note, Unlock and Copy. A chat with several plans switches in the title menu, newest first. Changes go
-through `plan.apply`, and a refusal from the machine is shown.
+line, the step in progress and a progress bar. The overflow menu holds the filter (All, Open or Issues: failed,
+blocked or warning), Collapse done, Expand all and Collapse all, kept on the phone, and Copy as Markdown. Sections,
+text blocks and steps follow as custom rows with the same Lucide circles, one column per row: a step under a section
+lines up with the section's caret and a child sits under its parent's title. A parent shows "2/3" instead of a circle,
+and a tap anywhere on a section or parent folds it. Warning (amber) and info are outcomes like passed. The step the
+agent works on spins with an accent background while its turn runs; once the agent stopped it shows a pause and
+"<Agent> stopped here". A step a person set shows "you" and the time; who else set a step and a lock's reason sit in
+its long-press menu and its VoiceOver value. In a steps plan the circle toggles open and done; in a test plan the
+circle opens the outcomes and a swipe gives Passed, Info, Failed, Warning or Skipped; Failed, Warning and Info ask for
+a note. Long-press a step for every state, Add note, Unlock and Copy. A chat with several plans switches in the title
+menu, newest first. Changes go through `plan.apply`, and a refusal from the machine is shown.
 One `plan.list` per connection fills the pills, and `plan.changed` and `plan.removed` keep them current.
 
 Long-press a message you sent, an answer or a turn's duration label for Fork from here. A sheet
@@ -81,7 +81,7 @@ Summarize for <original> and Show original. In the original, the summary note sh
 folds the rest open and offers Open fork, and a turn that was forked says so beside its duration.
 A machine without these requests says it needs an update and nothing else changes.
 
-With three or more messages, a Messages button lists what you sent and the turns tasks woke: a
+With three or more messages, Messages in the conversation menu lists what you sent and the turns tasks woke: a
 popover on iPad, a sheet on iPhone. It opens scrolled to what is on screen, marks those messages,
 searches, jumps on a tap and offers Copy and Fork from here on a long press or a swipe.
 

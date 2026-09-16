@@ -147,15 +147,16 @@ struct PlanSheet: View {
                 }
                 Button("Collapse all", lucideIcon: "chevrons-down-up") { collapsed = plan.foldableIDs }
             }
+            Button("Copy as Markdown", lucideIcon: "copy") { UIPasteboard.general.string = plan.markdown }
         } label: {
-            Image(lucide: "ellipsis")
+            Image(lucide: "circle-ellipsis")
         }
-        .accessibilityLabel("Plan view options")
+        .accessibilityLabel("Plan actions")
     }
 
     private var emptyText: String {
         switch filter {
-        case .failed: "Nothing failed."
+        case .issues: "No issues."
         case .open: "Nothing is open."
         case .all: "This plan has no steps yet."
         }
@@ -544,7 +545,7 @@ private struct PlanStepRow: View {
     @ViewBuilder private var statusPicker: some View {
         if maySet {
             Picker("Status", selection: stateBinding) {
-                ForEach(plan.stateChoices, id: \.self) { state in
+                ForEach(PlanStepState.personStates, id: \.self) { state in
                     Label(plan.word(for: state), lucideIcon: PlanMark.icon(state)).tag(state)
                 }
             }
@@ -601,7 +602,7 @@ private struct PlanStepAccessibilityActions: ViewModifier {
                     Button(collapsed ? "Expand" : "Collapse") { context.toggle(step.id) }
                 }
                 if maySet {
-                    let choices = plan.kind == .steps ? [step.toggled] : plan.stateChoices
+                    let choices = plan.kind == .steps ? [step.toggled] : PlanStepState.personStates
                     ForEach(choices.filter { $0 != step.state }, id: \.self) { state in
                         Button("Mark as \(plan.word(for: state).lowercased())") { context.set(step, state) }
                     }
