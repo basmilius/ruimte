@@ -2375,6 +2375,15 @@ code will not say on its own.
   kept: a look into a subagent is a moment, not a place. The side panel it started as went, because
   it put the conversation beside a chat other than the one it belonged to. It grows while it is open (a counted `fs.watch` for Claude,
   a poll for Codex) for as long as a client holds it, and the event says only that there is more.
+- An active entry of that list, and the bar while its conversation is shown, carries a Stop
+  (`chat.stopSubagent`, `chat/subagent-list.ts` decides what it offers). A task stops its node the
+  way a stop of its parent would (`EndChildrenWiring.stopNode`): the open task is cancelled first so
+  nobody is woken, the lineage marks it ended, its CLI or shell ends with its thread kept, and the
+  agents it opened are owed an end of their own; the client asks every time, with the count from
+  `agent.children`. Neither CLI stops one of its own subagents apart from the process, so such a row
+  is only marked: `failed` (no new status value, which an older iPhone app would refuse) with a note
+  that says it may keep working until the chat's process ends. It is not offered while the chat's
+  turn runs, since that turn may still wait on the subagent and stopping it is the composer's Stop.
 - A canvas is still not a scheduler, and the rule is made sharper rather than stretched. Nothing
   starts on a clock (no cron, loop or trigger), there is no queue of tasks handed out over nodes, no
   worker looking for an idle agent, no retry of a failed task, no blocking wait in a verb, no

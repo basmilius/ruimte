@@ -126,6 +126,7 @@
     "chat.clear",
     "chat.turnDiff",
     "chat.subagent",
+    "chat.stopSubagent",
     "skills.list",
     "provider.list",
     "project.list",

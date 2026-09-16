@@ -105,3 +105,23 @@ export const previewFor = (item: ChatSubagentItem, work: readonly ChatItem[], ta
     }
     return fromThread ?? (item.summary ? { kind: 'text', text: oneLine(item.summary) } : null);
 };
+
+/*
+ * What the Stop of an active entry does: a task stops the node working on it, and a subagent of the
+ * CLI's own is only marked stopped, since no CLI stops one on its own. While the chat's turn runs that
+ * turn may still wait on it, so stopping the turn (the composer's Stop) is the only offer then.
+ */
+export type SubagentStop = 'task' | 'mark';
+
+export const stopOf = (item: ChatSubagentItem, turnRunning: boolean): SubagentStop | null => {
+    if (item.status !== 'running') {
+        return null;
+    }
+    if (item.origin === 'ruimte') {
+        return item.childId === undefined ? null : 'task';
+    }
+    return turnRunning ? null : 'mark';
+};
+
+export const stopLabel = (stop: SubagentStop): string =>
+    stop === 'task' ? 'Stop this task' : "Mark as stopped. The CLI cannot stop one sub-agent, so it may keep working until the chat's process ends.";

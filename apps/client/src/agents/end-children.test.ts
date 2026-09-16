@@ -1,5 +1,5 @@
 import { beforeEach, expect, test } from 'bun:test';
-import { agentsEndedWith, askBeforeEndingAgents, endsAgentsWarning, useEndingAgents } from '@/agents/end-children';
+import { agentsEndedWith, askBeforeEndingAgents, askBeforeStoppingTask, endsAgentsWarning, stopsTaskWarning, useEndingAgents } from '@/agents/end-children';
 
 const machine = (children: Record<string, string[]>, failing = false) => ({
     request: async (_type: string, payload: { nodeId: string }) => {
@@ -37,4 +37,21 @@ test('a delete that ends nothing runs at once, and one that does waits for the a
 test('the warning counts', () => {
     expect(endsAgentsWarning(1)).toBe('Also ends the agent it opened. Its node stays on the canvas with what it did so far.');
     expect(endsAgentsWarning(3)).toBe('Also ends the 3 agents it opened. Their nodes stay on the canvas with what they did so far.');
+});
+
+test('stopping a task always asks, and counts the agents its node opened', async () => {
+    const runs: string[] = [];
+    await askBeforeStoppingTask(machine({}) as never, 'child', 'Review', () => runs.push('child'));
+    expect(runs).toEqual([]);
+    expect(useEndingAgents.getState().pending).toMatchObject({ what: 'Review', agents: 0, action: 'stop' });
+    await askBeforeStoppingTask(machine({ child: ['grandchild'] }) as never, 'child', 'Review', () => runs.push('child'));
+    expect(useEndingAgents.getState().pending).toMatchObject({ agents: 1, action: 'stop' });
+    useEndingAgents.getState().pending?.run();
+    expect(runs).toEqual(['child']);
+    expect(stopsTaskWarning(0)).toBe(
+        'Ends the agent working on this task and cancels the task without waking the chat that gave it. Its node stays on the canvas.'
+    );
+    expect(stopsTaskWarning(2)).toBe(
+        'Ends the agent working on this task and cancels the task without waking the chat that gave it. Its node stays on the canvas. Also ends the 2 agents it opened. Their nodes stay on the canvas with what they did so far.'
+    );
 });

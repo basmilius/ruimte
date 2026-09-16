@@ -6,6 +6,7 @@ import type { ChatItem, ChatTurnItem, ProjectContent } from '@ruimte/contracts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
 import { AgentLineageStore } from '../agents/lineage.ts';
+import { STOPPED_TASK_REASON } from '../chat/chat-manager.ts';
 import { TaskStore } from '../tasks/task-store.ts';
 import { ENDED_REASON, endChildrenHandler, oweEndChildren, wireEndChildren, type EndChildrenDeps } from './end-children.ts';
 import { OutboxStore } from './outbox.ts';
@@ -232,6 +233,36 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
         daemon.worker.start();
         await daemon.worker.settled();
         expect(daemon.chats.get(line!.split('\t')[0]!)?.info.runtimeMode).toBe('supervised');
+    });
+});
+
+describe('stopping one task from the list of the chat that gave it', () => {
+    test('ends the child as a stop of its node would, cancels its task without waking the lead, and leaves the sibling running', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadWorking(daemon);
+        const { chat, terminal } = await twoRunningChildren(daemon);
+        const task = daemon.tasks.ofParent('chat-lead').find((candidate) => candidate.childId === chat)!;
+
+        expect(await daemon.request('chat.stopSubagent', { chatId: 'chat-lead', toolUseId: `task-${task.id}` })).toMatchObject({ ok: true });
+        await daemon.worker.settled();
+
+        const child = daemon.chats.get(chat)!;
+        expect([child.running, child.info.activeTurnId]).toEqual([false, null]);
+        expect(notesOf(daemon, chat)).toContain(STOPPED_TASK_REASON);
+        expect(daemon.lineage.endedAt(chat)).not.toBeNull();
+        expect(daemon.tasks.ofParent('chat-lead').map((candidate) => [candidate.childId, candidate.status, candidate.wake])).toEqual([
+            [chat, 'cancelled', 'none'],
+            [terminal, 'open', 'pending']
+        ]);
+        expect(daemon.chats.get('chat-lead')?.thread.get(`task-${task.id}`)).toMatchObject({ status: 'failed' });
+        expect(daemon.sessions.get(terminal)?.exited).toBe(false);
+
+        // The lead ends its turn and is woken about nothing: the stopped task never wakes anyone.
+        daemon.chats.cancel('chat-lead');
+        await daemon.until(() => daemon.chats.get('chat-lead')?.info.activeTurnId === null);
+        await daemon.worker.settled();
+        expect(turnsOf(daemon, 'chat-lead').filter((turn) => turn.taskIds !== undefined)).toEqual([]);
     });
 });
 

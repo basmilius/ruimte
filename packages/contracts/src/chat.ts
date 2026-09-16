@@ -433,6 +433,12 @@ export const ChatSubagentPayloadSchema = ChatTargetPayloadSchema.extend({
 });
 export type ChatSubagentPayload = z.infer<typeof ChatSubagentPayloadSchema>;
 
+export const ChatStopSubagentPayloadSchema = ChatTargetPayloadSchema.extend({
+    // A running row of the chat's own thread: a task's node is stopped, a subagent of the CLI's own only marked.
+    toolUseId: z.string().min(1).max(256)
+});
+export type ChatStopSubagentPayload = z.infer<typeof ChatStopSubagentPayloadSchema>;
+
 // `start` is the place in the conversation for a source that numbers it; a Codex thread pages by its own cursor only.
 export const ChatSubagentPageSchema = z.object({
     start: z.number().int().nonnegative().optional(),

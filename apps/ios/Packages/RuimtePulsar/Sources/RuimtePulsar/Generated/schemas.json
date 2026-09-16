@@ -12525,6 +12525,30 @@
       "live"
     ]
   },
+  "request.chat.stopSubagent.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "toolUseId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "required": [
+      "chatId",
+      "toolUseId"
+    ]
+  },
+  "request.chat.stopSubagent.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.skills.list.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

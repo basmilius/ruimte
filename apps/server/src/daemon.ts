@@ -385,7 +385,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerPushHandlers(dispatcher, auth, () => push.synchronizeActivities(), push);
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
     registerSessionHandlers(dispatcher, manager, endChildren.owe);
-    registerChatHandlers(dispatcher, chats, providers, endChildren.owe);
+    registerChatHandlers(dispatcher, chats, providers, endChildren.owe, endChildren.stopNode);
     registerTaskHandlers(dispatcher, tasks, endChildren.children);
     registerProjectHandlers(dispatcher, projects);
     registerDrawingHandlers(dispatcher, drawings);

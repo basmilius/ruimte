@@ -14,7 +14,13 @@ const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
             throw e;
         });
 
-export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManager, providers: ProviderRegistry, beforeKill?: BeforeKill): void => {
+export const registerChatHandlers = (
+    dispatcher: Dispatcher,
+    manager: ChatManager,
+    providers: ProviderRegistry,
+    beforeKill?: BeforeKill,
+    stopNode?: (nodeId: string, reason: string) => Promise<void>
+): void => {
     dispatcher.register('provider.list', async () => ({ providers: await providers.list() }));
 
     dispatcher.register('chat.create', (payload) => translate(() => manager.create(payload)));
@@ -32,6 +38,13 @@ export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManage
     dispatcher.register('chat.history', (payload) => translate(() => manager.history(payload.chatId, payload.cursor, payload.limit)));
 
     dispatcher.register('chat.subagent', (payload, client) => translate(() => manager.subagent(client.id, payload)));
+
+    dispatcher.register('chat.stopSubagent', (payload) =>
+        translate(async () => {
+            await manager.stopSubagent(payload.chatId, payload.toolUseId, stopNode);
+            return {};
+        })
+    );
 
     dispatcher.register('chat.detach', (payload, client) =>
         translate(() => {

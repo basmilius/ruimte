@@ -1,6 +1,17 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatItem, ChatSubagentItem, ChatToolItem, Task } from '@ruimte/contracts';
-import { latestPreview, needsTail, previewFor, previewOfItem, sectionSubagents, statusWordOf, subagentTitle, taskIdOf, threadWorkBy } from './subagent-list';
+import {
+    latestPreview,
+    needsTail,
+    previewFor,
+    previewOfItem,
+    sectionSubagents,
+    statusWordOf,
+    stopOf,
+    subagentTitle,
+    taskIdOf,
+    threadWorkBy
+} from './subagent-list';
 
 const subagent = (id: string, patch: Partial<ChatSubagentItem> = {}): ChatSubagentItem => ({
     id,
@@ -156,5 +167,23 @@ describe('subagent list', () => {
         expect(previewFor(subagent('a', { status: 'failed' }), work, tail)).toEqual({ kind: 'text', text: 'Partial' });
         expect(previewFor(subagent('a', { status: 'failed', summary: 'Stopped' }), [], tail)).toEqual({ kind: 'text', text: 'Stopped' });
         expect(previewFor(subagent('a', { status: 'done' }), [], tail)).toBeNull();
+    });
+});
+
+describe('stopping an active entry', () => {
+    test('a task stops its node, turn or not, and a subagent of the CLI is only marked once no turn runs', () => {
+        const task = subagent('t', { origin: 'ruimte', childId: 'node-1', background: true });
+        expect(stopOf(task, true)).toBe('task');
+        expect(stopOf(task, false)).toBe('task');
+        const native = subagent('n', { background: true });
+        expect(stopOf(native, false)).toBe('mark');
+        // The turn may still be waiting on it; the composer's Stop is the way then.
+        expect(stopOf(native, true)).toBeNull();
+    });
+
+    test('nothing is offered for a row that settled, or a task that names no node', () => {
+        expect(stopOf(subagent('d', { status: 'done' }), false)).toBeNull();
+        expect(stopOf(subagent('f', { status: 'failed', origin: 'ruimte', childId: 'node-1' }), false)).toBeNull();
+        expect(stopOf(subagent('o', { origin: 'ruimte' }), false)).toBeNull();
     });
 });

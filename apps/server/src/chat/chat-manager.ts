@@ -43,6 +43,9 @@ export interface InterruptedRun {
     attempt: number;
 }
 
+// Why a task a person stopped from the list of the chat that gave it ended, in that chat's note and the child's thread.
+export const STOPPED_TASK_REASON = 'a person stopped it';
+
 // One process worked on the turn and one more may take it up after a restart; a loop of resumes could redo a command forever.
 const MAX_ATTEMPTS = 2;
 
@@ -379,6 +382,31 @@ export class ChatManager {
             this.subagents.hold(clientId, payload.chatId, payload.toolUseId);
         }
         return result;
+    }
+
+    /*
+     * Stops one running sub-agent of a chat. A task's row stands for a node, which `stopNode` stops as
+     * a node is stopped. A subagent of the CLI's own cannot be stopped apart from its CLI, so its row is
+     * only marked, and only while no turn runs: stopping that turn is the composer's Stop.
+     */
+    async stopSubagent(chatId: string, toolUseId: string, stopNode?: (nodeId: string, reason: string) => Promise<void>): Promise<void> {
+        await this.creating.get(chatId)?.catch(() => undefined);
+        const session = this.require(chatId);
+        const row = session.thread.find('subagent', (item) => item.toolUseId === toolUseId);
+        if (!row) {
+            throw new ChatError('subagent-not-found', 'This chat has no such sub-agent');
+        }
+        if (row.status !== 'running') {
+            return;
+        }
+        if (row.origin === 'ruimte') {
+            if (row.childId === undefined || !stopNode) {
+                throw new ChatError('chat-unsupported', 'This task cannot be stopped from here; stop its node instead');
+            }
+            await stopNode(row.childId, STOPPED_TASK_REASON);
+            return;
+        }
+        session.markSubagentStopped(toolUseId);
     }
 
     /* The whole conversation of a subagent, for an agent that reads it as text. */

@@ -84,6 +84,12 @@ export interface EndChildrenWiring {
     /* For every kill of a node: owes ending the agents it opened, and answers how many that is. */
     owe(nodeId: string): Promise<number>;
     handler(entry: EndChildrenEntry): Promise<void>;
+    /*
+     * Stops one node the way a stop of its parent would, for a person who stops a task from the list of
+     * the chat that gave it: its open task is cancelled first, so nobody is woken, then its CLI or shell
+     * ends with its thread and screen kept, and the agents it opened are owed an end of their own.
+     */
+    stopNode(nodeId: string, reason: string): Promise<void>;
     /* What `agent.children` answers: the agents stopping this node would end that still run. */
     children(nodeId: string): string[];
     /* For `ProjectIndex.onPlaces`: a node that left the document takes its agents with it, however it left. */
@@ -137,8 +143,22 @@ export const wireEndChildren = ({
             void owe(openedBy).catch((e: unknown) => log(`Owing the end of the agents ${openedBy} opened failed: ${errorText(e)}`));
         }
     };
+    const stopNode = async (nodeId: string, reason: string): Promise<void> => {
+        await owe(nodeId);
+        await deps.markEnded([nodeId]);
+        for (const owed of outbox.list()) {
+            if (REVIVING.has(owed.kind) && owed.target === nodeId) {
+                await outbox.remove(owed.id);
+            }
+        }
+        await tasks.cancelOpen(new Set([nodeId]), reason, now());
+        await tasks.dropWake(nodeId);
+        await chats.stop(nodeId, reason);
+        await sessions.end(nodeId);
+    };
     return {
         owe,
+        stopNode,
         handler: endChildrenHandler(deps),
         children: (nodeId) => lineage.descendants(nodeId).filter(live),
         places,

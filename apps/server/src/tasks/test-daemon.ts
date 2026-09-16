@@ -207,7 +207,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
 
     const dispatcher = new Dispatcher();
     registerSessionHandlers(dispatcher, sessions, endChildren.owe);
-    registerChatHandlers(dispatcher, chats, providers, endChildren.owe);
+    registerChatHandlers(dispatcher, chats, providers, endChildren.owe, endChildren.stopNode);
     registerTaskHandlers(dispatcher, tasks, endChildren.children);
 
     return {

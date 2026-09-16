@@ -600,6 +600,35 @@ export class ChatSession {
         await this.settleFromTranscripts(rows);
     }
 
+    /*
+     * Marks a subagent of the CLI's own as stopped: `failed` with a note that says what it means, since
+     * no CLI stops one subagent on its own. Refused while a turn runs, which may still be waiting on it.
+     */
+    markSubagentStopped(toolUseId: string): void {
+        if (this.thread.info.activeTurnId !== null) {
+            throw new ChatError('chat-busy', 'A turn is running; stop the turn instead');
+        }
+        const row = this.thread.find('subagent', (item) => item.toolUseId === toolUseId);
+        if (row?.status !== 'running') {
+            return;
+        }
+        this.orphans.delete(toolUseId);
+        const now = Date.now();
+        const name = row.description || row.subagentType || 'Sub-agent';
+        this.emit([
+            this.thread.upsert({ ...row, status: 'failed', finishedAt: now }),
+            this.thread.upsert({
+                id: newId('note'),
+                kind: 'note',
+                createdAt: now,
+                turnId: null,
+                level: 'info',
+                text: `"${name}" was marked as stopped. ${this.options.provider.name} cannot stop one sub-agent on its own, so it may keep working until the chat's process ends.`
+            })
+        ]);
+        this.options.persist();
+    }
+
     /* Asks the transcript again for a row a load left running, when somebody looks at it. */
     async recheckOrphan(toolUseId: string): Promise<void> {
         const row = this.thread.find('subagent', (item) => item.toolUseId === toolUseId);

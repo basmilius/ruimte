@@ -17,6 +17,7 @@ import {
 import { useSubagentSupport } from '@/chat/subagent-support';
 import { crumbOf, openFromList, useOpenableSubagents, useSubagentTrail } from '@/chat/subagent-view';
 import { ROW_GUTTER } from '@/chat/ui/icons';
+import { SubagentStopButton } from '@/chat/ui/SubagentStopButton';
 import { useChatRow } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useTasks } from '@/state/tasks';
@@ -92,26 +93,30 @@ function Entry({ chatId, item, work }: { chatId: string; item: ChatSubagentItem;
     const tail = useTail(chatId, item.toolUseId, needsTail(item, work, refused));
     const preview = previewFor(item, work, tail);
     const word = statusWordOf(item, task);
+    // The stop is a button of its own beside the entry, since a button cannot hold another.
     return (
-        <button
-            type="button"
-            className="-mx-1 flex w-[calc(100%+8px)] flex-col gap-0.5 rounded-md px-1 py-1.5 text-left text-xs hover:bg-surface-hover focus-visible:ring-1 focus-visible:ring-accent focus-visible:outline-none"
-            onClick={() => show(openFromList(crumbOf(item)))}
-        >
-            <span className="flex min-w-0 items-center gap-2">
-                {/* A node another agent opened with `--task` reads as the task it is, as its row in the thread does. */}
-                <span className={clsx(ROW_GUTTER, 'text-text-muted')}>
-                    <Icon icon={item.origin === 'ruimte' ? ListChecks : Bot} size={12} />
+        <div className="-mx-1 flex w-[calc(100%+8px)] items-start gap-1 rounded-md hover:bg-surface-hover">
+            <button
+                type="button"
+                className="flex min-w-0 flex-1 flex-col gap-0.5 rounded-md px-1 py-1.5 text-left text-xs focus-visible:ring-1 focus-visible:ring-accent focus-visible:outline-none"
+                onClick={() => show(openFromList(crumbOf(item)))}
+            >
+                <span className="flex min-w-0 items-center gap-2">
+                    {/* A node another agent opened with `--task` reads as the task it is, as its row in the thread does. */}
+                    <span className={clsx(ROW_GUTTER, 'text-text-muted')}>
+                        <Icon icon={item.origin === 'ruimte' ? ListChecks : Bot} size={12} />
+                    </span>
+                    <span className="min-w-0 truncate font-medium text-text">{subagentTitle(item)}</span>
+                    <span className={clsx('ml-auto shrink-0 pl-3', STATUS_CLASS[word])}>{word}</span>
                 </span>
-                <span className="min-w-0 truncate font-medium text-text">{subagentTitle(item)}</span>
-                <span className={clsx('ml-auto shrink-0 pl-3', STATUS_CLASS[word])}>{word}</span>
-            </span>
-            {preview !== null && (
-                <span className="ml-6 min-w-0">
-                    <Preview preview={preview} />
-                </span>
-            )}
-        </button>
+                {preview !== null && (
+                    <span className="ml-6 min-w-0">
+                        <Preview preview={preview} />
+                    </span>
+                )}
+            </button>
+            <SubagentStopButton chatId={chatId} item={item} className="mt-0.5 mr-0.5" />
+        </div>
     );
 }
 

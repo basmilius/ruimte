@@ -840,3 +840,45 @@ describe('a background subagent whose CLI is gone', () => {
         });
     });
 });
+
+describe("stopping a subagent of the CLI's own", () => {
+    test('is refused while the turn that may wait on it runs, and marks the row stopped with a note once none runs', async () => {
+        await manager.create({ chatId: 'chat-stop', cwd: home });
+        manager.attach('chat-stop', 'c1');
+        const session = manager.get('chat-stop')!;
+        session.thread.upsert({
+            id: '1:toolu_bg',
+            kind: 'subagent',
+            createdAt: 1,
+            turnId: null,
+            toolUseId: 'toolu_bg',
+            description: 'Review the branch',
+            subagentType: 'general-purpose',
+            prompt: null,
+            background: true,
+            status: 'running',
+            startedAt: 1,
+            finishedAt: null,
+            summary: null,
+            result: null,
+            usage: null,
+            lastTool: null,
+            itemsTruncated: false
+        });
+
+        void manager.send('chat-stop', 'slow');
+        await recorder.until(() => recorder.info?.activeTurnId !== null);
+        await expect(manager.stopSubagent('chat-stop', 'toolu_bg')).rejects.toMatchObject({ code: 'chat-busy' });
+        manager.cancel('chat-stop');
+        await recorder.until(() => recorder.info?.activeTurnId === null);
+
+        await manager.stopSubagent('chat-stop', 'toolu_bg');
+        expect(recorder.items.get('1:toolu_bg')).toMatchObject({ status: 'failed', finishedAt: expect.any(Number) });
+        expect(recorder.ofKind('note').map((note) => note.text)).toContain(
+            '"Review the branch" was marked as stopped. Claude Code cannot stop one sub-agent on its own, so it may keep working until the chat\'s process ends.'
+        );
+        // A second stop, or a row that is not there, changes nothing or says so.
+        await manager.stopSubagent('chat-stop', 'toolu_bg');
+        await expect(manager.stopSubagent('chat-stop', 'toolu_none')).rejects.toMatchObject({ code: 'subagent-not-found' });
+    });
+});

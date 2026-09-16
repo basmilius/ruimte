@@ -2,6 +2,7 @@ import { Fragment, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { Bot, ChevronRight, X } from 'lucide-react';
 import { breadcrumbOf, isOnList, MAIN_AGENT, toggleList, trailTo, useOpenableSubagents, useSubagentTrail } from '@/chat/subagent-view';
+import { SubagentStopButton } from '@/chat/ui/SubagentStopButton';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -30,10 +31,15 @@ export function SubagentTitleCrumb({ chatId, className, children }: { chatId: st
  */
 export function SubagentBreadcrumb({ chatId, title, className }: { chatId: string; title?: string; className?: string }) {
     const { trail, show } = useSubagentTrail(chatId);
+    const subagents = useOpenableSubagents(chatId);
     if (trail.length === 0) {
         return null;
     }
     const steps = breadcrumbOf(trail);
+    const last = trail.at(-1);
+    // Only a row of the chat's own thread can be stopped; a grandchild belongs to the sub-agent that opened it.
+    const ownRow = last?.kind === 'agent' && (trail.length === 1 || trail.at(-2)?.kind === 'list');
+    const shown = ownRow ? subagents.find((item) => last.kind === 'agent' && item.toolUseId === last.toolUseId) : undefined;
     return (
         <nav aria-label="Sub-agents" className={clsx('flex min-w-0 items-center gap-1 text-xs', className)}>
             {title !== undefined && (
@@ -60,6 +66,7 @@ export function SubagentBreadcrumb({ chatId, title, className }: { chatId: strin
                     )}
                 </Fragment>
             ))}
+            {shown !== undefined && <SubagentStopButton chatId={chatId} item={shown} className="h-7 w-7" />}
             <Tooltip label="Back to the main agent" name>
                 <button type="button" className="icon-btn h-7 w-7 shrink-0" onClick={() => show(MAIN_AGENT)}>
                     <Icon icon={X} size={14} />
