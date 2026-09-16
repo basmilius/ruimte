@@ -103,6 +103,7 @@ export class SessionManager {
     private readonly agents: AgentStore | null;
     private readonly env: Record<string, string | undefined>;
     private readonly sessions = new Map<string, Session>();
+    private readonly creating = new Map<string, Promise<SessionInfo>>();
     private readonly sinks = new Map<string, SessionSink>();
     // The clients that said they never offer a permission request to a person, keyed like the sinks.
     private readonly withoutApprovals = new Set<string>();
@@ -198,7 +199,23 @@ export class SessionManager {
         return [...this.sinks.keys()].some((clientId) => !this.withoutApprovals.has(clientId));
     }
 
-    async create(options: CreateSessionOptions): Promise<SessionInfo> {
+    /*
+     * One create per id at a time, and every caller shares its outcome. The daemon starts an agent
+     * node the moment a verb writes it while a client with that view open mounts it just as fast,
+     * and two creates that both pass the check below would spawn two shells, one of them holding
+     * the prompt and lost from the map.
+     */
+    create(options: CreateSessionOptions): Promise<SessionInfo> {
+        const inFlight = this.creating.get(options.sessionId);
+        if (inFlight) {
+            return inFlight;
+        }
+        const created = this.createNow(options).finally(() => this.creating.delete(options.sessionId));
+        this.creating.set(options.sessionId, created);
+        return created;
+    }
+
+    private async createNow(options: CreateSessionOptions): Promise<SessionInfo> {
         const existing = this.sessions.get(options.sessionId);
         if (existing && !existing.exited) {
             throw new SessionError('session-exists', `Session ${options.sessionId} already exists`);
@@ -418,6 +435,8 @@ export class SessionManager {
     }
 
     async kill(sessionId: string): Promise<void> {
+        // A node deleted while its session is still being made ends that session rather than missing it.
+        await this.creating.get(sessionId)?.catch(() => undefined);
         const session = this.require(sessionId);
         await this.snapshots?.delete(sessionId);
         await this.agents?.delete(sessionId);

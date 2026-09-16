@@ -618,6 +618,35 @@ describe('the first prompt of an agent node', () => {
         expect(claude.started).toHaveLength(1);
     });
 
+    test('two creates at once, the machine starting the node and a client mounting it, send it once to one chat', async () => {
+        const held = withPrompt('only once');
+        await retire(manager);
+        manager = held.taken();
+        manager.subscribe('c1', recorder.sink());
+
+        const [started, mounted] = await Promise.all([manager.create({ chatId: 'chat-r', cwd: home }), manager.create({ chatId: 'chat-r', cwd: home })]);
+        expect(mounted).toBe(started);
+        // The mount waited for the whole create, so what it attaches to already carries the prompt.
+        expect(
+            manager
+                .attach('chat-r', 'c1')
+                .items.filter((item) => item.kind === 'user')
+                .map((item) => item.kind === 'user' && item.text)
+        ).toEqual(['only once']);
+        await recorder.until(settledIn('chat-r'));
+        expect(claude.started).toHaveLength(1);
+    });
+
+    test('a kill that arrives while the chat is being made ends the chat that was made', async () => {
+        await retire(manager);
+        manager = withPrompt('go').taken();
+        const creating = manager.create({ chatId: 'chat-s', cwd: home });
+        const killed = manager.kill('chat-s');
+        await creating;
+        await killed;
+        expect(manager.get('chat-s')).toBeUndefined();
+    });
+
     test('without a prompt, create still spawns nothing', async () => {
         await retire(manager);
         manager = withPrompt(null).taken();

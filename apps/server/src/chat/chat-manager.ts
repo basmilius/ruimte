@@ -83,6 +83,7 @@ export class ChatManager {
     private readonly commands: Partial<Record<AgentKind, string[]>>;
     private readonly spawn: SpawnChatProcess | null;
     private readonly chats = new Map<string, ChatSession>();
+    private readonly creating = new Map<string, Promise<ChatInfo>>();
     private readonly sinks = new Map<string, SessionSink>();
     private readonly attached = new Map<string, Set<string>>();
     private readonly coalescers = new Map<string, DeltaCoalescer>();
@@ -181,11 +182,22 @@ export class ChatManager {
     }
 
     /* Registers a chat; nothing is spawned until the first message. An existing chat answers its current info. */
-    async create(payload: ChatCreatePayload): Promise<ChatInfo> {
+    create(payload: ChatCreatePayload): Promise<ChatInfo> {
+        // A create in flight has the chat in the map before its first prompt is sent, so a second caller waits for all of it.
+        const inFlight = this.creating.get(payload.chatId);
+        if (inFlight) {
+            return inFlight;
+        }
         const existing = this.chats.get(payload.chatId);
         if (existing) {
-            return existing.info;
+            return Promise.resolve(existing.info);
         }
+        const created = this.createNow(payload).finally(() => this.creating.delete(payload.chatId));
+        this.creating.set(payload.chatId, created);
+        return created;
+    }
+
+    private async createNow(payload: ChatCreatePayload): Promise<ChatInfo> {
         const stored = await this.store?.read(payload.chatId);
         // A thread on disk keeps its provider; the selection it stored only makes sense in that catalog.
         const kind = stored?.info.provider ?? payload.provider ?? 'claude';
@@ -404,6 +416,7 @@ export class ChatManager {
     }
 
     async kill(chatId: string): Promise<void> {
+        await this.creating.get(chatId)?.catch(() => undefined);
         const session = this.require(chatId);
         session.dispose();
         this.subagents.releaseChat(chatId);
