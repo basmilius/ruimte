@@ -5,6 +5,112 @@ import XCTest
 @testable import Ruimte
 
 final class ChatScrollTests: XCTestCase {
+    func testExpansionRevealsOnlyWhatIsOutsideTheReadableViewport() {
+        let geometry = ChatViewportGeometry(contentHeight: 2000, height: 600, topInset: 80, bottomInset: 120)
+        func offset(_ top: CGFloat, _ height: CGFloat) -> CGFloat {
+            geometry.revealing(CGRect(x: 0, y: top, width: 320, height: height), from: 400)
+        }
+        XCTAssertEqual(offset(500, 200), 400)
+        XCTAssertEqual(offset(800, 200), 528)
+        XCTAssertEqual(offset(800, 900), 712)
+        XCTAssertEqual(offset(350, 100), 262)
+        XCTAssertEqual(offset(0, 900), -80)
+    }
+
+    @MainActor func testExpansionWaitsForMeasurementAndKeepsTheClickedHeaderVisible() {
+        let fixture = ChatLayoutFixture()
+        let list = fixture.list
+        list.beginUserScroll()
+        list.contentOffset.y = 400
+        list.finishUserScroll()
+        list.changeDisclosure(id: "message-6", expanding: true, headerOffset: 12, animated: false)
+        fixture.relayout()
+        XCTAssertEqual(list.contentOffset.y, 400, accuracy: 1)
+        fixture.layout.heights[6] = 220
+        fixture.relayout()
+        XCTAssertEqual(list.contentOffset.y, 528, accuracy: 1)
+        XCTAssertFalse(list.viewport.followsLatest)
+
+        list.changeDisclosure(id: "message-6", expanding: true, headerOffset: 100, animated: false)
+        fixture.layout.heights[6] = 600
+        fixture.relayout()
+        XCTAssertEqual(
+            list.contentOffset.y, 692, accuracy: 1, "Reveal the nested header, not the start of its outer row")
+        fixture.layout.heights[11] = 400
+        fixture.relayout()
+        XCTAssertEqual(
+            list.contentOffset.y, 692, accuracy: 1, "Later streaming must leave the expanded content in place")
+    }
+
+    @MainActor func testTurnExpansionRevealsInsertedRowsAndDraggingCancelsPendingReveal() {
+        let fixture = ChatLayoutFixture()
+        let list = fixture.list
+        list.beginUserScroll()
+        list.contentOffset.y = 400
+        list.finishUserScroll()
+        list.changeDisclosure(
+            id: "message-6", followingID: "message-7", expanding: true, headerOffset: 0, animated: false)
+        fixture.ids.insert("expanded-work", at: 7)
+        fixture.layout.heights.insert(400, at: 7)
+        list.reloadData()
+        fixture.relayout()
+        XCTAssertEqual(list.contentOffset.y, 592, accuracy: 1)
+
+        list.changeDisclosure(id: "message-6", expanding: true, headerOffset: 0, animated: false)
+        list.beginUserScroll()
+        list.contentOffset.y = 300
+        fixture.layout.heights[6] = 600
+        fixture.relayout()
+        XCTAssertEqual(list.contentOffset.y, 300, accuracy: 1)
+    }
+
+    @MainActor func testScrollToLatestTakesOverInteractionAndIgnoresItsLateCompletion() {
+        let fixture = ChatLayoutFixture()
+        let list = fixture.list
+        list.beginUserScroll()
+        list.contentOffset.y = 200
+        list.scrollToLatest(animated: false)
+        XCTAssertFalse(list.viewport.isInteracting)
+        XCTAssertTrue(list.viewport.followsLatest)
+        XCTAssertEqual(list.contentOffset.y, 900, accuracy: 1)
+        fixture.layout.heights[11] = 300
+        list.finishUserScroll()
+        fixture.relayout()
+        XCTAssertTrue(list.viewport.followsLatest)
+        XCTAssertEqual(list.contentOffset.y, 1100, accuracy: 1)
+    }
+
+    @MainActor func testLastTurnExpansionRevealsWorkAppendedAfterItsHeader() {
+        let fixture = ChatLayoutFixture()
+        let list = fixture.list
+        list.changeDisclosure(id: "message-11", throughEnd: true, expanding: true, headerOffset: 0, animated: false)
+        fixture.ids.append("expanded-work")
+        fixture.layout.heights.append(500)
+        list.reloadData()
+        fixture.relayout()
+        XCTAssertEqual(list.contentOffset.y, 1092, accuracy: 1)
+        XCTAssertFalse(list.viewport.followsLatest)
+    }
+
+    @MainActor func testScrollToLatestCancelsAnActiveNativeScrollAnimation() async {
+        let fixture = ChatHostingFixture()
+        defer { fixture.close() }
+        fixture.state.height = 1200
+        await fixture.renderFrames()
+        let list = fixture.list
+        list.beginUserScroll()
+        list.setContentOffset(.zero, animated: false)
+        list.finishUserScroll()
+        list.setContentOffset(CGPoint(x: 0, y: 400), animated: true)
+        await fixture.renderFrames()
+        XCTAssertTrue(list.isScrollAnimating)
+        list.scrollToLatest(animated: false)
+        XCTAssertFalse(list.isScrollAnimating)
+        await fixture.renderFrames()
+        XCTAssertEqual(list.contentOffset.y, list.geometry.bottom, accuracy: 1)
+        XCTAssertTrue(list.viewport.followsLatest)
+    }
+
     @MainActor func testHostedRowsResizeWithoutReconfigurationWhenContentGrowsAndCollapses() async throws {
         let fixture = ChatHostingFixture()
         defer { fixture.close() }
@@ -251,6 +357,10 @@ private final class ChatLayoutFixture: NSObject, UICollectionViewDataSource {
         list.itemTop = { [weak self] id in
             guard let self, let index = self.ids.firstIndex(of: id) else { return nil }
             return self.layout.layoutAttributesForItem(at: IndexPath(item: index, section: 0))?.frame.minY
+        }
+        list.itemFrame = { [weak self] id in
+            guard let self, let index = self.ids.firstIndex(of: id) else { return nil }
+            return self.layout.layoutAttributesForItem(at: IndexPath(item: index, section: 0))?.frame
         }
         list.reloadData()
         relayout()

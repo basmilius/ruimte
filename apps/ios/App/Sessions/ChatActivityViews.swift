@@ -78,13 +78,11 @@ struct ChatThinkingRow: View {
     let item: JSONValue
     @AppStorage("ruimte.chat.streaming") private var streamingMode: ChatStreamingMode = .words
     @State private var expanded = false
-    @Environment(\.chatWillExpand) private var willExpand
     private var streaming: Bool { item["streaming"]?.boolValue == true }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Button {
-                willExpand()
+            ChatExpansionButton(expanding: !expanded) {
                 expanded.toggle()
             } label: {
                 HStack(spacing: 8) {
@@ -115,14 +113,12 @@ struct ChatThinkingRow: View {
 struct ChatToolRow: View {
     let item: JSONValue
     @State private var expanded = false
-    @Environment(\.chatWillExpand) private var willExpand
     private var running: Bool { item.text("state") == "running" }
     private var failed: Bool { item.text("state") == "error" }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Button {
-                willExpand()
+            ChatExpansionButton(expanding: !expanded) {
                 expanded.toggle()
             } label: {
                 VStack(alignment: .leading, spacing: 4) {
@@ -187,14 +183,14 @@ private struct ChatToolOutput: View {
     let text: String
     var language = ""
     @State private var expanded = false
-    @Environment(\.chatWillExpand) private var willExpand
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             CodeMessage(text: expanded ? text : String(text.prefix(4000)), language: language)
             if !expanded && text.count > 4000 {
-                Button("Show all output") {
-                    willExpand()
+                ChatExpansionButton(expanding: true) {
                     expanded = true
+                } label: {
+                    Text("Show all output")
                 }.font(.caption).frame(minHeight: 44)
             }
         }

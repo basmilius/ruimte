@@ -8,7 +8,6 @@ struct ChatUserMessage: View {
     let client: any MachineRequesting
     let chatID: String
     @State private var expanded = false
-    @Environment(\.chatWillExpand) private var willExpand
     private var long: Bool { item.text("text").count > 600 || item.text("text").split(separator: "\n").count > 8 }
 
     var body: some View {
@@ -35,8 +34,7 @@ struct ChatUserMessage: View {
                             }
                         }
                     if long {
-                        Button {
-                            willExpand()
+                        ChatExpansionButton(expanding: !expanded) {
                             expanded.toggle()
                         } label: {
                             Label(

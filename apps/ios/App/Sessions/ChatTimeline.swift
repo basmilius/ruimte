@@ -36,6 +36,17 @@ struct ChatViewportGeometry: Equatable {
     var bottom: CGFloat { max(-topInset, contentHeight - height + bottomInset) }
     func clamped(_ offset: CGFloat) -> CGFloat { min(bottom, max(-topInset, offset)) }
     func isNearBottom(_ offset: CGFloat) -> Bool { bottom - offset <= 80 }
+
+    func revealing(_ frame: CGRect, from offset: CGFloat) -> CGFloat {
+        let available = max(0, height - topInset - bottomInset - 16)
+        let top = offset + topInset + 8
+        let bottom = offset + height - bottomInset - 8
+        if frame.height > available || frame.minY < top {
+            return clamped(frame.minY - topInset - 8)
+        }
+        if frame.maxY > bottom { return clamped(frame.maxY - height + bottomInset + 8) }
+        return clamped(offset)
+    }
 }
 
 struct ChatViewportState {
@@ -55,6 +66,7 @@ struct ChatViewportState {
     }
 
     mutating func readHere() {
+        isInteracting = false
         interactionRevision += 1
         followsLatest = false
     }
@@ -79,6 +91,15 @@ struct ChatReadingAnchor {
     func offset(itemTop: CGFloat, inset: CGFloat) -> CGFloat { itemTop - distanceFromTop - inset }
 }
 
+struct ChatExpansionAnchor {
+    let id: String
+    let followingID: String?
+    let throughEnd: Bool
+    let headerOffset: CGFloat
+    let initialHeight: CGFloat
+    let animated: Bool
+}
+
 @MainActor
 final class ChatTimelineCollection: UICollectionView {
     override init(frame: CGRect, collectionViewLayout layout: UICollectionViewLayout) {
@@ -92,10 +113,12 @@ final class ChatTimelineCollection: UICollectionView {
     private(set) var viewport = ChatViewportState()
     var captureReadingAnchor: (() -> ChatReadingAnchor?)?
     var itemTop: ((String) -> CGFloat?)?
+    var itemFrame: ((String) -> CGRect?)?
+    private var expansion: ChatExpansionAnchor?
     var viewportChanged: (() -> Void)?
     private var readingAnchor: ChatReadingAnchor?
     private var adjustingOffset = false
-    private var scrollingToLatest = false
+    private var scrollingToTarget = false
     private var measuredGeometry: ChatViewportGeometry?
     private var contentChangePending = true
 
@@ -112,47 +135,92 @@ final class ChatTimelineCollection: UICollectionView {
     }
 
     func beginUserScroll() {
-        scrollingToLatest = false
+        expansion = nil
+        scrollingToTarget = false
         viewport.beginInteraction()
         readingAnchor = nil
     }
 
     func finishUserScroll() {
+        guard viewport.isInteracting else { return }
         viewport.finishInteraction(geometry: geometry, offset: contentOffset.y)
         readingAnchor = viewport.followsLatest ? nil : captureReadingAnchor?()
         setNeedsLayout()
     }
 
-    func expandAtCurrentPosition() {
-        contentChangePending = true
-        scrollingToLatest = false
+    func changeDisclosure(
+        id: String, followingID: String? = nil, throughEnd: Bool = false, expanding: Bool, headerOffset: CGFloat,
+        animated: Bool
+    ) {
+        cancelProgrammaticScroll()
         viewport.readHere()
+        contentChangePending = true
         readingAnchor = captureReadingAnchor?()
+        expansion = nil
+        guard expanding, let frame = itemFrame?(id) else { return }
+        let end = followingID.flatMap { itemTop?($0) } ?? (throughEnd ? contentSize.height : frame.maxY)
+        expansion = ChatExpansionAnchor(
+            id: id, followingID: followingID, throughEnd: throughEnd, headerOffset: headerOffset,
+            initialHeight: end - frame.minY,
+            animated: animated)
+    }
+
+    private func cancelProgrammaticScroll() {
+        scrollingToTarget = false
+        stopScrollingAndZooming()
     }
 
     func scrollToLatest(animated: Bool) {
-        viewport.followLatest()
+        cancelProgrammaticScroll()
+        expansion = nil
         readingAnchor = nil
-        scrollingToLatest = animated && abs(contentOffset.y - geometry.bottom) >= 1
-        setContentOffset(CGPoint(x: contentOffset.x, y: geometry.bottom), animated: scrollingToLatest)
+        // Suppress anchor restoration while pending self-sizing catches up to the explicit scroll command.
+        scrollingToTarget = true
+        layoutIfNeeded()
+        viewport.followLatest()
+        scroll(to: geometry.bottom, animated: animated)
+    }
+
+    private func scroll(to offset: CGFloat, animated: Bool) {
+        scrollingToTarget = animated && abs(contentOffset.y - offset) >= 1
+        setContentOffset(CGPoint(x: contentOffset.x, y: offset), animated: scrollingToTarget)
+        if !scrollingToTarget && !viewport.followsLatest { readingAnchor = captureReadingAnchor?() }
         setNeedsLayout()
     }
 
-    func finishScrollingToLatest() {
-        scrollingToLatest = false
+    func finishProgrammaticScroll() {
+        guard scrollingToTarget else { return }
+        scrollingToTarget = false
+        if !viewport.followsLatest { readingAnchor = captureReadingAnchor?() }
         contentChangePending = true
         setNeedsLayout()
     }
 
+    private func revealExpansion() -> Bool {
+        guard let expansion else { return false }
+        guard let frame = itemFrame?(expansion.id) else {
+            self.expansion = nil
+            return false
+        }
+        let end =
+            expansion.followingID.flatMap { itemTop?($0) } ?? (expansion.throughEnd ? contentSize.height : frame.maxY)
+        guard end - frame.minY > expansion.initialHeight + 1 else { return false }
+        self.expansion = nil
+        let top = frame.minY + expansion.headerOffset
+        let target = CGRect(x: frame.minX, y: top, width: frame.width, height: max(0, end - top))
+        scroll(to: geometry.revealing(target, from: contentOffset.y), animated: expansion.animated)
+        return true
+    }
+
     func targetOffset(_ proposed: CGPoint) -> CGPoint {
-        guard !userIsScrolling, !scrollingToLatest, !viewport.followsLatest,
+        guard !userIsScrolling, !scrollingToTarget, !viewport.followsLatest,
             let anchor = readingAnchor, let top = itemTop?(anchor.id)
         else { return proposed }
         return CGPoint(x: proposed.x, y: geometry.clamped(anchor.offset(itemTop: top, inset: adjustedContentInset.top)))
     }
 
     override func layoutSubviews() {
-        if userIsScrolling || scrollingToLatest {
+        if userIsScrolling || scrollingToTarget {
             super.layoutSubviews()
         } else {
             UIView.performWithoutAnimation { super.layoutSubviews() }
@@ -162,8 +230,9 @@ final class ChatTimelineCollection: UICollectionView {
         let needsRestoration = contentChangePending || measuredGeometry != currentGeometry
         measuredGeometry = currentGeometry
         contentChangePending = false
+        if !adjustingOffset, !userIsScrolling, !scrollingToTarget, revealExpansion() { return }
         guard needsRestoration else { return }
-        guard !adjustingOffset, !userIsScrolling, !scrollingToLatest, bounds.height > 0 else { return }
+        guard !adjustingOffset, !userIsScrolling, !scrollingToTarget, bounds.height > 0 else { return }
         let anchorOffset = readingAnchor.flatMap { anchor in
             itemTop?(anchor.id).map { anchor.offset(itemTop: $0, inset: adjustedContentInset.top) }
         }
@@ -229,6 +298,10 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         tap.delegate = self
         collection.addGestureRecognizer(tap)
         collection.captureReadingAnchor = { [weak self] in self?.visibleAnchor() }
+        collection.itemFrame = { [weak self] id in
+            guard let self, let index = self.source.indexPath(for: id) else { return nil }
+            return self.collection.layoutAttributesForItem(at: index)?.frame
+        }
         collection.itemTop = { [weak self] id in
             guard let self, let index = self.source.indexPath(for: id) else { return nil }
             return self.collection.layoutAttributesForItem(at: index)?.frame.minY
@@ -247,7 +320,21 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
             cell.host(in: self) {
                 ChatEntryView(entry: item, presentation: self.presentation, client: self.client, chatID: self.chatID)
                     .id(id)
-                    .environment(\.chatWillExpand, { [weak self] in self?.collection.expandAtCurrentPosition() })
+                    .environment(
+                        \.chatWillExpand,
+                        { [weak self] expanding, headerOffset in
+                            guard let self else { return }
+                            let ids = self.source.snapshot().itemIdentifiers
+                            let next = ids.firstIndex(of: id).flatMap { index in
+                                ids.indices.contains(index + 1) ? ids[index + 1] : nil
+                            }
+                            self.collection.changeDisclosure(
+                                id: id, followingID: item.kind == .turnFold ? next : nil,
+                                throughEnd: item.kind == .turnFold && next == nil,
+                                expanding: expanding, headerOffset: headerOffset,
+                                animated: !UIAccessibility.isReduceMotionEnabled)
+                        }
+                    )
                     .disclosureGroupStyle(ChatDisclosureStyle())
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                     .fixedSize(horizontal: false, vertical: true)
@@ -258,6 +345,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
                         transaction.disablesAnimations = true
                     }
                     .padding(.horizontal, 20).padding(.vertical, 10)
+                    .coordinateSpace(name: "chat.row")
             }
             cell.backgroundConfiguration = .clear()
         }
@@ -402,7 +490,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
 
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) { collection.beginUserScroll() }
     func scrollViewDidScroll(_ scrollView: UIScrollView) { reportMessagesBelow() }
-    func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) { collection.finishScrollingToLatest() }
+    func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) { collection.finishProgrammaticScroll() }
     func collectionView(
         _ collectionView: UICollectionView, targetContentOffsetForProposedContentOffset proposedContentOffset: CGPoint
     ) -> CGPoint {
@@ -460,16 +548,36 @@ final class ChatHostingCell: UICollectionViewListCell {
 }
 
 extension EnvironmentValues {
-    @Entry var chatWillExpand: () -> Void = {}
+    @Entry var chatWillExpand: (Bool, CGFloat) -> Void = { _, _ in }
+}
+
+struct ChatExpansionButton<Label: View>: View {
+    let expanding: Bool
+    let action: () -> Void
+    @ViewBuilder var label: () -> Label
+    @Environment(\.chatWillExpand) private var willExpand
+    @State private var headerOffset: CGFloat = 0
+
+    var body: some View {
+        Button {
+            willExpand(expanding, headerOffset)
+            action()
+        } label: {
+            label()
+                .onGeometryChange(for: CGFloat.self) {
+                    $0.frame(in: .named("chat.row")).minY
+                } action: {
+                    headerOffset = $0
+                }
+        }
+    }
 }
 
 private struct ChatDisclosureStyle: DisclosureGroupStyle {
-    @Environment(\.chatWillExpand) private var willExpand
 
     func makeBody(configuration: Configuration) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Button {
-                willExpand()
+            ChatExpansionButton(expanding: !configuration.isExpanded) {
                 configuration.isExpanded.toggle()
             } label: {
                 HStack(spacing: 8) {
@@ -493,7 +601,6 @@ struct ChatEntryView: View {
     let presentation: ChatPresentation
     let client: any MachineRequesting
     let chatID: String
-    @Environment(\.chatWillExpand) private var willExpand
     @State private var expanded = false
 
     var body: some View {
@@ -502,8 +609,9 @@ struct ChatEntryView: View {
             case .activity: ChatWorkingRow(presentation: presentation)
             case .turnFold:
                 if let turn = entry.items.first {
-                    Button {
-                        willExpand()
+                    ChatExpansionButton(
+                        expanding: !presentation.expandedTurns.contains(turn.value.text("turnId", fallback: turn.id))
+                    ) {
                         presentation.toggleTurn(turn.value.text("turnId", fallback: turn.id))
                     } label: {
                         Label(
@@ -526,7 +634,6 @@ struct ChatEntryView: View {
             case .turnStart:
                 if let turn = entry.items.first {
                     Button {
-                        willExpand()
                         presentation.openSubagent(toolUseID: turn.value.text("taskToolUseId"))
                     } label: {
                         Label(

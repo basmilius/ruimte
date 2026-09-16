@@ -74,7 +74,6 @@ enum ChatFileChanges {
 struct ChatDiffView: View {
     let diff: String
     @State private var showAll = false
-    @Environment(\.chatWillExpand) private var willExpand
     private var lines: [String] { diff.components(separatedBy: "\n") }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -96,9 +95,10 @@ struct ChatDiffView: View {
                 }.fixedSize(horizontal: true, vertical: false)
             }
             if lines.count > 400 && !showAll {
-                Button("Show all \(lines.count) lines") {
-                    willExpand()
+                ChatExpansionButton(expanding: true) {
                     showAll = true
+                } label: {
+                    Text("Show all \(lines.count) lines")
                 }.font(.caption).frame(minHeight: 44).padding(
                     .horizontal, 12)
             }

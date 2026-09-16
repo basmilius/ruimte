@@ -32,6 +32,14 @@ De regressietest controleert opeenvolgend 80, 240, 60 en 180 punten, de positie 
 
 De gecorrigeerde build is op de fysieke iPhone geïnstalleerd en gestart. `bun run format`, `bun run check` en de gerichte Swift-formatcontrole zijn geslaagd.
 
+## Scrollpositie bij uitklappen en naar het einde gaan
+
+Uitklappen houdt rekening met de leesruimte tussen de bovenbalk en de composer. Past de geopende inhoud al in beeld, dan blijft de positie staan. Een korte uitklapper die onder de composer zou vallen schuift net genoeg omhoog. Bij langere inhoud schuift de aangeklikte kop naar boven, ook als die binnen een grotere toolgroep staat. Opengevouwen beurten nemen de ingevoegde werkrijen mee. De meting wacht op de nieuwe rijhoogtes; een nieuwe sleepbeweging of de knop naar het einde annuleert de wachtende verplaatsing. Reduce Motion schakelt de scrollanimatie uit.
+
+De knop naar het einde roept eerst de publieke UIKit-methode [`stopScrollingAndZooming()`](https://developer.apple.com/documentation/uikit/uiscrollview/stopscrollingandzooming()) aan. Daarna neemt de expliciete scrollopdracht de besturing over en volgt de chat weer nieuwe inhoud. Een laat eindesignaal van de afgebroken beweging mag deze keuze niet terugdraaien.
+
+De Swift-build en repositorycontroles zijn geslaagd. De gerichte iPhone-tests zijn voorbereid voor korte en lange uitklappers, geneste koppen, ingevoegde werkrijen, onderbreken door slepen en het annuleren van een native scrollanimatie. Uitvoering en installatie wachten nog op het ontgrendelen van de iPhone. De echte momentumgesture en de visuele timing zijn nog niet handmatig beoordeeld.
+
 ## Oorspronkelijk onderzoek en voorstel
 
 Onderstaande bevindingen beschrijven de situatie vóór goedkeuring. De actuele uitvoering staat hierboven.

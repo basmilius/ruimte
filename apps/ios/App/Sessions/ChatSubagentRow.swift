@@ -8,7 +8,6 @@ struct ChatSubagentRow: View {
     let presentation: ChatPresentation
     let client: any MachineRequesting
     let chatID: String
-    @Environment(\.chatWillExpand) private var willExpand
     @State private var showingResult = false
     private var item: JSONValue { agent.value }
     private var running: Bool { item.text("status") == "running" }
@@ -16,8 +15,7 @@ struct ChatSubagentRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Button {
-                willExpand()
+            ChatExpansionButton(expanding: !expanded) {
                 presentation.toggleSubagent(agent.id)
             } label: {
                 VStack(alignment: .leading, spacing: 4) {
