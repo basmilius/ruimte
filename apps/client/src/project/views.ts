@@ -94,24 +94,17 @@ const freeName = (views: readonly ProjectView[], base: string): string => {
     return `${base} ${counter}`;
 };
 
-/* A view belongs to a project file, so with no project open there is nothing to add it to and
-   nothing that would ever save it. Every menu, shortcut and palette row making a view comes past here. */
-export const canAddView = (): boolean => useProject.getState().current !== null;
-
-export const newCanvasView = (): string | null =>
-    canAddView() ? useDocument.getState().addCanvasView(freeName(useDocument.getState().views, MAIN_VIEW_NAME)) : null;
+export const newCanvasView = (): string | null => useDocument.getState().addCanvasView(freeName(useDocument.getState().views, MAIN_VIEW_NAME));
 
 /* A shell of its own, with no agent in it: the plain Terminal beside the agent submenus. */
 export const newTerminalView = (): string | null =>
-    canAddView() ? useDocument.getState().addStandaloneView({ kind: 'terminal', name: freeName(useDocument.getState().views, 'Terminal'), node: {} }) : null;
+    useDocument.getState().addStandaloneView({ kind: 'terminal', name: freeName(useDocument.getState().views, 'Terminal'), node: {} });
 
-export const newSeparatorView = (): string | null => (canAddView() ? useDocument.getState().addSeparatorView() : null);
+export const newSeparatorView = (): string | null => useDocument.getState().addSeparatorView();
 
-export const newDrawingView = (): string | null =>
-    canAddView() ? useDocument.getState().addDrawingView(freeName(useDocument.getState().views, 'Drawing')) : null;
+export const newDrawingView = (): string | null => useDocument.getState().addDrawingView(freeName(useDocument.getState().views, 'Drawing'));
 
-export const newDiagramView = (): string | null =>
-    canAddView() ? useDocument.getState().addDiagramView(freeName(useDocument.getState().views, 'Diagram')) : null;
+export const newDiagramView = (): string | null => useDocument.getState().addDiagramView(freeName(useDocument.getState().views, 'Diagram'));
 
 /*
  * Puts a mirror of a drawing or a diagram view on the canvas that was open last. The view itself
@@ -170,7 +163,7 @@ export const showFileOnCanvas = (path: string, at?: Point): string | null => {
 };
 
 /* A file as a view of its own, a column beside the canvas rather than a frame on it. */
-export const newFileView = (path: string): string | null => (canAddView() ? useDocument.getState().addFileView(basenameOf(path), storedFilePath(path)) : null);
+export const newFileView = (path: string): string | null => useDocument.getState().addFileView(basenameOf(path), storedFilePath(path));
 
 /* "Show on the canvas" for every view that offers it: a drawing or a diagram is mirrored, a file is read again. */
 export const showViewOnCanvas = (viewId: string): string | null => {

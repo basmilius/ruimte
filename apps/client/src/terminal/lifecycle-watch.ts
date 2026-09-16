@@ -1,12 +1,9 @@
 import { isSessionView, type CanvasNodeKind } from '@ruimte/contracts';
 import { projectNodes } from '@/project/views';
 import { liveCanvases, subscribeCanvases } from '@/state/canvas';
-import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { useEndpoints } from '@/state/endpoints';
 import { currentEndpointId, endpointKey, splitKey } from '@/state/keys';
-import { useProject } from '@/state/project';
-import { useSessions } from '@/state/sessions';
 
 /* What ending a node means, injected so the watching itself never touches the transport. */
 export type NodeEnder = (endpointId: string, id: string, kind: CanvasNodeKind) => void;
@@ -73,18 +70,9 @@ export const watchNodes = (end: NodeEnder): (() => void) => {
             previous = new Map();
         }
     });
-    // Rows keyed by node id say nothing about another project's nodes, and a stale one would show as a status.
-    const offProject = useProject.subscribe((state, before) => {
-        if (state.current?.projectId !== before.current?.projectId) {
-            const endpointId = currentEndpointId();
-            useSessions.getState().clear(endpointId);
-            useChats.getState().clear(endpointId);
-        }
-    });
     return () => {
         offCanvas();
         offDocument();
         offEndpoint();
-        offProject();
     };
 };

@@ -35,7 +35,7 @@ const useMachineEntry = (endpointId: string): MachineEntry => {
 
 /* What is being opened, in the words a person picked it by. */
 const titleOf = (target: SwitchTarget, machine: string): string =>
-    target.summary?.name ?? (target.folder !== null ? basenameOf(target.folder) || target.folder : machine);
+    target.summary?.name ?? target.name ?? (target.folder !== null ? basenameOf(target.folder) || target.folder : machine);
 
 const lineOf = (state: Exclude<SwitchState, { kind: 'idle' }>, title: string, machine: string): string => {
     switch (state.kind) {
@@ -57,8 +57,8 @@ function SwitchCard({ state }: { state: Exclude<SwitchState, { kind: 'idle' }> }
     const connection = useEndpointConnection(entry.endpoint?.id ?? target.endpointId);
     const machine = nameOf(entry);
     const title = titleOf(target, machine);
-    // Only a machine picked on its own has nothing but its name to show, and saying it twice says nothing.
-    const aboutMachine = target.summary === null && target.folder === null;
+    // A project the cached list does not have has nothing but its machine's name to show, and saying it twice says nothing.
+    const aboutMachine = target.summary === null && target.folder === null && target.name === null;
     const failed = state.kind === 'failed';
 
     return (
@@ -113,7 +113,7 @@ function SwitchCard({ state }: { state: Exclude<SwitchState, { kind: 'idle' }> }
 }
 
 /*
- * Stands over the main column while the client moves to another project, so a machine that takes
+ * Stands over the main column while the window moves to another project, and over the whole start screen when it moves from there, so a machine that takes
  * seconds to answer reads as waiting rather than frozen. Nothing for the first moments of a switch
  * (`REVEAL_DELAY_MS`), and a failure stays until a person picks what to do about it.
  */

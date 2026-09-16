@@ -97,30 +97,42 @@ export interface ProjectMenuRows {
     recent: ProjectMenuRow[];
 }
 
-/*
- * The union as the menu draws it. Machines used to be the outer order, so where a row landed was
- * decided by which daemon it came from. With one flat list that order is gone and `lastOpenedAt`
- * takes over, newest first: it is the one thing every row carries that a person can predict, so the
- * project you were in last sits at the top whichever machine it lives on. Recent sorts on `closedAt`
- * for the same reason, which puts the project you just closed first in line to come back.
- *
- * A row of a machine this client no longer knows is left out; without an endpoint there is nothing
- * to open it on.
- */
-export const menuProjects = (rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRows => {
+/* The rows of the union this client can still open, each with its machine's name. A row of a machine this client no longer knows has nothing to open it on. */
+const knownRows = (rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRow[] => {
     const known = new Map(endpoints.map((endpoint) => [endpoint.id, endpoint]));
-    const listed = rows.flatMap((row) => {
+    return rows.flatMap((row) => {
         const endpoint = known.get(row.endpointId);
         if (!endpoint) {
             return [];
         }
         return [{ endpointId: row.endpointId, machineLabel: endpoint.label, connected: connected.includes(row.endpointId), summary: row.summary }];
     });
+};
+
+/*
+ * The union as the menu draws it. Machines used to be the outer order, so where a row landed was
+ * decided by which daemon it came from. With one flat list that order is gone and `lastOpenedAt`
+ * takes over, newest first: it is the one thing every row carries that a person can predict, so the
+ * project you were in last sits at the top whichever machine it lives on. Recent sorts on `closedAt`
+ * for the same reason, which puts the project you just closed first in line to come back.
+ */
+export const menuProjects = (rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRows => {
+    const listed = knownRows(rows, endpoints, connected);
     return {
         open: listed.filter((row) => !isRecentProject(row.summary)).sort((a, b) => b.summary.lastOpenedAt - a.summary.lastOpenedAt),
         recent: listed.filter((row) => isRecentProject(row.summary)).sort((a, b) => (b.summary.closedAt ?? 0) - (a.summary.closedAt ?? 0))
     };
 };
+
+/* When a project was last touched: opened, or closed after that. */
+const touchedAt = (summary: ProjectSummary): number => Math.max(summary.lastOpenedAt, summary.closedAt ?? 0);
+
+/*
+ * The start screen's one list: open and closed projects together, newest touch first, so the project
+ * that was just closed sits on top and a wrong click is one click back.
+ */
+export const recentProjects = (rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRow[] =>
+    knownRows(rows, endpoints, connected).sort((a, b) => touchedAt(b.summary) - touchedAt(a.summary));
 
 /* What the list reads of the pool, so a test can hand it one of its own. */
 export interface OpenListSource {

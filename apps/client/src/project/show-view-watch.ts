@@ -2,16 +2,13 @@ import { isOpenableView, type ProjectShowViewEvent } from '@ruimte/contracts';
 import { callerName, showViewNotice } from '@/project/show-view';
 import { useSettings } from '@/state/settings';
 import { pool } from '@/transport';
-import { listWorkspaces, type Workspace } from '@/transport/connections';
+import { useDocument } from '@/state/document';
+import { useProject } from '@/state/project';
+import { windowWorkspace } from '@/state/window';
 
-/*
- * One workspace's answer to the event. Every workspace with this project acts on its own focused
- * cell, so two of them side by side each move the cell the person was last in, and a workspace on
- * another project ignores the whole thing.
- */
-const showInWorkspace = (workspace: Workspace, payload: ProjectShowViewEvent): void => {
-    const documents = workspace.stores.document;
-    const state = documents.getState();
+/* The answer of the open project, on the cell the person was last in. */
+const showInWorkspace = (payload: ProjectShowViewEvent): void => {
+    const state = useDocument.getState();
     const view = state.views.find((candidate) => candidate.id === payload.viewId);
     if (!view || !isOpenableView(view)) {
         return;
@@ -25,29 +22,27 @@ const showInWorkspace = (workspace: Workspace, payload: ProjectShowViewEvent): v
     });
     /* The grid moves first, so the way back is recorded against the grid as it stands after the move
        and a second `open` undoes the second one rather than the first. */
-    const shown = notice.action === 'back' ? documents.getState().showView(payload.viewId) : null;
-    /* One banner per workspace: an agent that shows three views in a row leaves the last of them on
+    const shown = notice.action === 'back' ? useDocument.getState().showView(payload.viewId) : null;
+    /* One banner: an agent that shows three views in a row leaves the last of them on
        screen, not a stack nobody asked for. Nothing to go back to when the grid was empty, which is a
        project whose views all went, so that one only reports. */
-    documents.getState().showNotice({
+    useDocument.getState().showNotice({
         message: notice.message,
         action: notice.action === 'go' ? { kind: 'go', viewId: payload.viewId } : shown === null ? null : { kind: 'back', shown }
     });
 };
 
 const onShowView = (endpointId: string, payload: ProjectShowViewEvent): void => {
-    for (const workspace of listWorkspaces()) {
-        // The same project may be open on two machines at once, so the machine has to match as well.
-        if (workspace.connection.endpointId === endpointId && workspace.stores.project.getState().current?.projectId === payload.projectId) {
-            showInWorkspace(workspace, payload);
-        }
+    // The same project id may be open on another machine, so the machine has to match as well.
+    if (windowWorkspace()?.connection.endpointId === endpointId && useProject.getState().current?.projectId === payload.projectId) {
+        showInWorkspace(payload);
     }
 };
 
 /*
  * `ruimte-context open` on any machine this client is holding a socket to. The daemon only sends it
- * to the clients that have that project open, and this side still checks which workspace it is
- * about: one window may hold several, and the event is about one of them.
+ * to the clients that have that project open, and this side still checks it is about the project
+ * on screen: the socket may outlive a switch to another project.
  */
 export const startShowViewWatch = (): (() => void) => {
     const watching = new Map<string, () => void>();

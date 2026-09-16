@@ -76,7 +76,6 @@ export function GitPanel() {
     const nodes = useCanvas((s) => s.nodes);
     const selection = useCanvas((s) => s.selection);
     const folder = useProject((s) => s.current?.folder ?? null);
-    const hasProject = useProject((s) => s.current !== null);
     const scope = useGit((s) => s.scope);
     const tree = useSettings((s) => s.gitTree);
     const collapsedDirs = useGit((s) => s.collapsedDirs);
@@ -333,7 +332,7 @@ export function GitPanel() {
     if (cwd === null) {
         return (
             <div className="grid grow place-items-center">
-                <EmptyState icon={<Icon icon={Folder} size={20} />}>{hasProject ? 'This canvas has no folder.' : 'No project is open.'}</EmptyState>
+                <EmptyState icon={<Icon icon={Folder} size={20} />}>This canvas has no folder.</EmptyState>
             </div>
         );
     }

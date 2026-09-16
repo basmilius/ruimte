@@ -50,7 +50,7 @@ const controlledRun = () => {
     return { run, log, connect: (failure?: string) => connected(failure), open: (failure?: string) => opened(failure) };
 };
 
-const target: SwitchTarget = { endpointId: 'studio', summary: null, folder: null };
+const target: SwitchTarget = { endpointId: 'studio', summary: null, folder: null, name: null };
 
 /* Lets the awaits between steps run. */
 const flush = async (): Promise<void> => {
@@ -185,7 +185,7 @@ describe('switching to a project', () => {
         const projectSwitch = new ProjectSwitch(clock);
         const first = controlledRun();
         const second = controlledRun();
-        const other: SwitchTarget = { endpointId: 'attic', summary: null, folder: null };
+        const other: SwitchTarget = { endpointId: 'attic', summary: null, folder: null, name: null };
         const firstOutcome = projectSwitch.start(target, () => first.run);
         clock.advance(REVEAL_DELAY_MS);
         const secondOutcome = projectSwitch.start(other, () => second.run);

@@ -79,7 +79,7 @@ describe('openFileLink', () => {
     const LIMIT = 5;
 
     beforeEach(() => {
-        // No project id, so the tabs stay out of the storage the test environment does not have.
+        // Without a project id, the tabs stay out of the storage the test environment does not have.
         useFiles.setState({ projectId: null, tabs: [], active: null, focusRequest: 0, reveal: null, revealLine: null });
         useUi.setState({ preview: { open: false } });
     });

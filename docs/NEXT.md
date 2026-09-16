@@ -85,8 +85,7 @@ larger ones becomes a GitHub issue when it starts.
     droplet goes; TURN for phones behind carrier-grade NAT, measured on real networks; a window of
     accepted protocol versions (`docs/reports/2026-09-15-protocol-versions.html`, not decided);
     the desktop app overwriting a service `ruimte service install` set up; an expired login on
-    station showing an error on the welcome screen; a cold start still flashing "No project is
-    open"; the daemon installing hooks before its port check.
+    station showing an error on the start screen; the daemon installing hooks before its port check.
 17. **Devices** (`docs/reports/2026-09-13-devices.html`, nothing built): the iOS Simulator, and
     Android right after, as a panel, a view and a node. Decided: no UDID in `project.json` (the
     shared file names platform, device type and runtime, the binding lives per machine in the local

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import {
@@ -36,11 +36,8 @@ import { focusedCanvas, useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
-import { useProject } from '@/state/project';
-import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
-import { WorkspaceStoresContext } from '@/state/workspace-stores';
-import { focusWorkspace, workspaceById } from '@/transport/connections';
+import { useEndpointId } from '@/state/keys';
 import {
     buildSidebar,
     isSessionKind,
@@ -48,10 +45,10 @@ import {
     rowOrder,
     type SidebarNode,
     type SidebarNodeRow,
-    type SidebarViewRow,
-    type SidebarWorkspace
+    type SidebarProject,
+    type SidebarViewRow
 } from '@/shell/sidebar-rows';
-import { useSidebarSources } from '@/shell/sidebar-source';
+import { useSidebarSource } from '@/shell/sidebar-source';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { UnseenMark } from '@/attention/UnseenMark';
 import { TaskMark } from '@/tasks/TaskMark';
@@ -230,11 +227,7 @@ function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarN
                 </span>
                 <span className="min-w-0 truncate">{node.title}</span>
                 {/* A row that stands outside its own view says where the node is, so the jump is no surprise. */}
-                {row.viewName && (
-                    <span className="min-w-0 shrink truncate text-xs text-text-faint">
-                        {row.projectName ? `${row.projectName} · ${row.viewName}` : row.viewName}
-                    </span>
-                )}
+                {row.viewName && <span className="min-w-0 shrink truncate text-xs text-text-faint">{row.viewName}</span>}
                 <span className="grow" />
                 {node.draft && (
                     <Tooltip label="Unsent draft">
@@ -480,23 +473,9 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
     );
 }
 
-/*
- * A row acts on the project it is a row of. Pressing it puts that workspace in focus first, so the
- * menus, the rename and the drop that follow read it as "the project in front of me"; the stores it
- * provides are what the row itself reads, which is another project's selection than the focused one.
- */
-function RowScope({ workspaceId, children }: { workspaceId: string; children: ReactNode }) {
-    const stores = workspaceById(workspaceId)?.stores ?? null;
-    return (
-        <div className="contents" onPointerDownCapture={() => focusWorkspace(workspaceId)} onFocusCapture={() => focusWorkspace(workspaceId)}>
-            {stores === null ? children : <WorkspaceStoresContext.Provider value={stores}>{children}</WorkspaceStoresContext.Provider>}
-        </div>
-    );
-}
-
 export function Sidebar() {
-    const sources = useSidebarSources();
-    const scope = useSettings((s) => s.sidebarScope);
+    const source = useSidebarSource();
+    const endpointId = useEndpointId();
     const sessions = useSessions((s) => s.byKey);
     const chats = useChats((s) => s.byKey);
     const drafts = useDrafts((s) => s.ids);
@@ -504,7 +483,6 @@ export function Sidebar() {
     const unseen = useAttention((s) => s.unseen);
     const tasks = useTasks((s) => s.byEndpoint);
     const open = useUi((s) => s.sidebarOpen);
-    const hasProject = useProject((s) => s.current !== null);
     const expanded = useUi(useShallow((s) => s.sidebarExpanded));
     const instant = useInstantWidth();
     const inset = useTrafficLightInset();
@@ -516,47 +494,43 @@ export function Sidebar() {
     /* The gap the row would drop into, drawn as a line between two rows. */
     const [insertAt, setInsertAt] = useState<number | null>(null);
 
-    const workspaces = useMemo<SidebarWorkspace[]>(
-        () =>
-            sources.map((source) => ({
-                id: source.id,
-                name: source.name,
-                focused: source.focused,
-                activeViewId: source.activeViewId,
-                openViewIds: source.openViewIds,
-                views: source.views.map((view) => {
-                    // The canvas store owns the view it holds, so its nodes are the fresher ones. It pairs on
-                    // the store's own view, not on the active one, which flips a tick before the canvas follows.
-                    const live = isCanvasView(view) ? (view.id === source.canvasViewId ? source.order.map((id) => source.nodes[id]!) : view.nodes) : [];
-                    const asRow = (node: StatusOf & { title: string; provider?: AgentKind }): SidebarNode => ({
-                        id: node.id,
-                        title: node.title,
-                        kind: node.kind,
-                        provider: node.provider ?? null,
-                        status: nodeStatus(node, sessions, chats, source.endpointId) ?? null,
-                        draft: node.kind === 'chat' && drafts.includes(node.id),
-                        alert: (warnings[source.endpointId] ?? []).some((alert) => alert.nodeId === node.id),
-                        finished: isUnseen(unseen, source.endpointId, node.id),
-                        task: childTask(tasks[source.endpointId], node.id)
-                    });
-                    const provider = view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : undefined;
-                    return {
-                        id: view.id,
-                        name: view.name ?? '',
-                        kind: view.kind,
-                        icon: viewIconOf(view),
-                        provider: provider ?? null,
-                        path: view.kind === 'file' ? view.path : null,
-                        nodes: live.filter((node) => isSessionKind(node.kind)).map(asRow),
-                        // Only a session view is a node of its own; a separator and a drawing have no status.
-                        self: isSessionView(view) ? asRow({ id: view.id, kind: view.kind, title: view.name, provider }) : null
-                    };
-                })
-            })),
-        [sources, sessions, chats, drafts, warnings, unseen, tasks]
+    const project = useMemo<SidebarProject>(
+        () => ({
+            activeViewId: source.activeViewId,
+            openViewIds: source.openViewIds,
+            views: source.views.map((view) => {
+                // The canvas store owns the view it holds, so its nodes are the fresher ones. It pairs on
+                // the store's own view, not on the active one, which flips a tick before the canvas follows.
+                const live = isCanvasView(view) ? (view.id === source.canvasViewId ? source.order.map((id) => source.nodes[id]!) : view.nodes) : [];
+                const asRow = (node: StatusOf & { title: string; provider?: AgentKind }): SidebarNode => ({
+                    id: node.id,
+                    title: node.title,
+                    kind: node.kind,
+                    provider: node.provider ?? null,
+                    status: nodeStatus(node, sessions, chats, endpointId) ?? null,
+                    draft: node.kind === 'chat' && drafts.includes(node.id),
+                    alert: (warnings[endpointId] ?? []).some((alert) => alert.nodeId === node.id),
+                    finished: isUnseen(unseen, endpointId, node.id),
+                    task: childTask(tasks[endpointId], node.id)
+                });
+                const provider = view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : undefined;
+                return {
+                    id: view.id,
+                    name: view.name ?? '',
+                    kind: view.kind,
+                    icon: viewIconOf(view),
+                    provider: provider ?? null,
+                    path: view.kind === 'file' ? view.path : null,
+                    nodes: live.filter((node) => isSessionKind(node.kind)).map(asRow),
+                    // Only a session view is a node of its own; a separator and a drawing have no status.
+                    self: isSessionView(view) ? asRow({ id: view.id, kind: view.kind, title: view.name, provider }) : null
+                };
+            })
+        }),
+        [source, endpointId, sessions, chats, drafts, warnings, unseen, tasks]
     );
 
-    const activeViewId = workspaces.find((workspace) => workspace.focused)?.activeViewId ?? null;
+    const activeViewId = project.activeViewId;
     const expandedIds = useMemo(() => new Set(expanded ?? (activeViewId === null ? [] : [activeViewId])), [expanded, activeViewId]);
 
     /* The list seeds itself with the canvas that is up, once per project. From there the set is the
@@ -566,10 +540,10 @@ export function Sidebar() {
             useUi.getState().setSidebarExpanded([activeViewId]);
         }
     }, [expanded, activeViewId]);
-    const sections = buildSidebar({ workspaces, scope, expandedIds });
+    const sections = buildSidebar({ project, expandedIds });
     const rows = rowOrder(sections);
     const roving = rovingId !== null && rows.includes(rovingId) ? rovingId : (rows[0] ?? null);
-    const empty = workspaces.every((workspace) => workspace.views.length === 0);
+    const empty = project.views.length === 0;
 
     /*
      * One gesture, two targets: a gap between two rows reorders the list, a cell of the grid opens
@@ -589,9 +563,7 @@ export function Sidebar() {
         }
     };
 
-    /* A drop writes the order into the file of the project the row came from: pressing the row put
-       its workspace in focus, so the document store here is that project's. The gap was read off the
-       list as it stands, so taking the row out of it first moves every gap below it up by one. */
+    /* The gap was read off the list as it stands, so taking the row out of it first moves every gap below it up by one. */
     const dropAt = (index: number): void => {
         const id = dragging?.viewId ?? null;
         onDrag(null);
@@ -605,17 +577,10 @@ export function Sidebar() {
         }
     };
 
-    /*
-     * A file dragged onto the list becomes a view of its own, in the gap it was let go of. It writes
-     * into the project whose list took the drop, so that workspace takes the focus first, the way
-     * pressing one of its rows would.
-     */
-    const dropFilesAt = (workspaceId: string, index: number, transfer: DataTransfer): void => {
+    /* A file dragged onto the list becomes a view of its own, in the gap it was let go of. */
+    const dropFilesAt = (index: number, transfer: DataTransfer): void => {
         setInsertAt(null);
-        focusWorkspace(workspaceId);
-        /* A drag out of the file manager is named by the shell of the machine the project runs on,
-           which is why the workspace takes the focus before the paths are read rather than after. */
-        const endpointId = workspaceById(workspaceId)?.connection.endpointId ?? '';
+        // A drag out of the file manager is named by the shell of the machine the project runs on.
         const paths = carriesPaths(transfer.types) ? droppedPaths(transfer) : finderPaths(transfer, endpointId);
         if (paths.length === 0) {
             return;
@@ -657,7 +622,7 @@ export function Sidebar() {
 
                 <div ref={listRef} className="mt-2 min-h-0 grow overflow-auto px-2">
                     {empty ? (
-                        <EmptyState>{hasProject ? 'This project has no views yet.' : 'No project is open yet.'}</EmptyState>
+                        <EmptyState>This project has no views yet.</EmptyState>
                     ) : (
                         sections.map((section) => {
                             // Only the list of views takes a drop, and only the one the row came out of; the
@@ -665,8 +630,7 @@ export function Sidebar() {
                             const reorderable = section.kind === 'views' && dragging?.sectionId === section.id;
                             /* A file out of the files panel or off a preview tab lands here as a view
                                of its own; the waiting list is not a place in any project's file. */
-                            const workspaceId = section.kind === 'views' ? section.workspaceId : null;
-                            const takesDrop = reorderable || workspaceId !== null;
+                            const takesDrop = reorderable || section.kind === 'views';
                             return (
                                 <div
                                     key={section.id}
@@ -704,7 +668,7 @@ export function Sidebar() {
                                                       dropAt(index);
                                                       return;
                                                   }
-                                                  dropFilesAt(workspaceId!, index, e.dataTransfer);
+                                                  dropFilesAt(index, e.dataTransfer);
                                               }
                                             : undefined
                                     }
@@ -719,14 +683,13 @@ export function Sidebar() {
                                     {section.rows.map((row) => {
                                         if (row.type === 'node') {
                                             return (
-                                                <RowScope key={row.rowId} workspaceId={row.workspaceId}>
-                                                    <NodeRow
-                                                        row={row}
-                                                        tabbable={row.rowId === roving}
-                                                        onFocus={() => setRovingId(row.rowId)}
-                                                        onArrow={moveFocus}
-                                                    />
-                                                </RowScope>
+                                                <NodeRow
+                                                    key={row.rowId}
+                                                    row={row}
+                                                    tabbable={row.rowId === roving}
+                                                    onFocus={() => setRovingId(row.rowId)}
+                                                    onArrow={moveFocus}
+                                                />
                                             );
                                         }
                                         const shared = {
@@ -741,26 +704,24 @@ export function Sidebar() {
                                         return (
                                             <Fragment key={row.rowId}>
                                                 {takesDrop && insertAt === row.index && <div className={INSERT_LINE} />}
-                                                <RowScope workspaceId={row.workspaceId}>
-                                                    {row.view.kind === 'separator' ? (
-                                                        <SeparatorRow {...shared} />
-                                                    ) : row.view.kind === 'unknown' ? (
-                                                        <UnknownViewRow {...shared} />
-                                                    ) : (
-                                                        <ViewRow
-                                                            {...shared}
-                                                            onToggle={() => {
-                                                                const next = new Set(expandedIds);
-                                                                if (row.expanded) {
-                                                                    next.delete(row.view.id);
-                                                                } else {
-                                                                    next.add(row.view.id);
-                                                                }
-                                                                useUi.getState().setSidebarExpanded([...next]);
-                                                            }}
-                                                        />
-                                                    )}
-                                                </RowScope>
+                                                {row.view.kind === 'separator' ? (
+                                                    <SeparatorRow {...shared} />
+                                                ) : row.view.kind === 'unknown' ? (
+                                                    <UnknownViewRow {...shared} />
+                                                ) : (
+                                                    <ViewRow
+                                                        {...shared}
+                                                        onToggle={() => {
+                                                            const next = new Set(expandedIds);
+                                                            if (row.expanded) {
+                                                                next.delete(row.view.id);
+                                                            } else {
+                                                                next.add(row.view.id);
+                                                            }
+                                                            useUi.getState().setSidebarExpanded([...next]);
+                                                        }}
+                                                    />
+                                                )}
                                             </Fragment>
                                         );
                                     })}
@@ -772,12 +733,8 @@ export function Sidebar() {
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1 border-t border-border p-2">
-                    {/* A view goes in a project file, so with none open the menu would offer nothing. */}
                     <Menu.Root>
-                        <Menu.Trigger
-                            disabled={!hasProject}
-                            className="flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-50 disabled:hover:bg-transparent data-[popup-open]:bg-surface-active"
-                        >
+                        <Menu.Trigger className="flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-50 disabled:hover:bg-transparent data-[popup-open]:bg-surface-active">
                             <Icon icon={Plus} size={14} /> New view
                         </Menu.Trigger>
                         <Menu.Portal>

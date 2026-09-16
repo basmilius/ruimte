@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { useEndpoints, type Endpoint } from '../state/endpoints';
-import { restoreLastEndpoint, switchRun, type SwitchDeps, type SwitchPlan, type Whereabouts } from './open';
+import { useWindow } from '../state/window';
+import type { OpenRequest } from '../transport/connections';
+import { bootWindow, switchRun, type SwitchDeps, type SwitchPlan, type Whereabouts } from './open';
 
 const endpoint = (id: string): Endpoint => ({
     id,
@@ -21,100 +23,78 @@ const fakeStorage = (storage: Map<string, string>) => ({
 
 const stored = (value: unknown): Map<string, string> => new Map([['ruimte.lastProject', JSON.stringify(value)]]);
 
-beforeEach(() => {
-    useEndpoints.setState({ endpoints: [endpoint('local'), endpoint('daemon-b')], activeId: 'local' });
-});
+const describeRequest = (request: OpenRequest): string => {
+    if ('projectId' in request) {
+        return `project:${request.projectId}`;
+    }
+    if ('folder' in request) {
+        return `folder:${request.folder}:${request.createFolder}`;
+    }
+    return `new:${request.name}`;
+};
 
-describe('the machine a cold boot lands on', () => {
-    test('the machine the last project was opened on becomes the active one', () => {
-        restoreLastEndpoint(fakeStorage(stored({ last: { endpointId: 'daemon-b', projectId: 'q1' }, byEndpoint: { 'daemon-b': 'q1' } })));
-        expect(useEndpoints.getState().activeId).toBe('daemon-b');
-    });
-
-    test('a machine that is no longer known leaves the active one where it is', () => {
-        restoreLastEndpoint(fakeStorage(stored({ last: { endpointId: 'daemon-gone', projectId: 'q1' }, byEndpoint: {} })));
-        expect(useEndpoints.getState().activeId).toBe('local');
-    });
-
-    test('a record from before there was a last says nothing about where the work was', () => {
-        restoreLastEndpoint(fakeStorage(stored({ 'daemon-b': 'q1' })));
-        expect(useEndpoints.getState().activeId).toBe('local');
-    });
-});
-
-const spyDeps = (over: Partial<SwitchDeps> = {}): { deps: SwitchDeps; steps: string[] } => {
+/* A window with a project on screen (or none), and every step the switch takes written down. */
+const spyDeps = (start: Whereabouts | null, over: Partial<SwitchDeps> = {}): { deps: SwitchDeps; steps: string[]; here: () => Whereabouts | null } => {
     const steps: string[] = [];
-    let current: { projectId: string | null; endpointId: string | null } = { projectId: 'p0', endpointId: 'local' };
+    let current = start;
     const deps: SwitchDeps = {
         ensure: async (endpointId) => {
             steps.push(`ensure:${endpointId}`);
             return endpointId;
         },
-        activeId: () => useEndpoints.getState().activeId,
         current: () => current,
-        activate: async (endpointId) => {
-            steps.push(`activate:${endpointId}`);
-            useEndpoints.getState().setActive(endpointId);
-            current = { projectId: null, endpointId: null };
+        leave: async () => {
+            steps.push('leave');
         },
-        settle: async () => void steps.push('settle'),
-        openProject: async (projectId) => {
-            steps.push(`project:${projectId}`);
-            current = { projectId, endpointId: useEndpoints.getState().activeId };
+        enter: async (endpointId, request) => {
+            steps.push(`enter:${endpointId}:${describeRequest(request)}`);
+            current = { endpointId, projectId: 'projectId' in request ? request.projectId : 'opened' };
         },
-        openFolder: async (folder, createFolder) => void steps.push(`open:${folder}:${createFolder}`),
-        remembered: (endpointId) => (endpointId === 'daemon-b' ? 'q-before' : null),
-        remember: (endpointId, projectId) => void steps.push(`remember:${endpointId}:${projectId}`),
+        toStart: () => {
+            steps.push('start');
+            current = null;
+        },
         ...over
     };
-    return { deps, steps };
+    return { deps, steps, here: () => current };
 };
 
 const HERE: Whereabouts = { endpointId: 'local', projectId: 'p0' };
 
 /* Runs the steps of a plan the way the switch does, with a signal nobody aborts unless the test passes one. */
 const run = (plan: SwitchPlan, deps: SwitchDeps, controller = new AbortController(), opening: () => void = () => undefined) => {
-    const handle = switchRun(plan, HERE, deps);
+    const handle = switchRun(plan, deps);
     return { handle, done: handle.steps({ signal: controller.signal, opening }) };
 };
 
 const folder = (endpointId: string, createFolder = false): SwitchPlan => ({ kind: 'folder', endpointId, folder: '/work/atlas', createFolder });
 
 describe('opening a folder on the machine it is on', () => {
-    test('the machine that is already active is reached, opens the folder and moves nothing', async () => {
-        const { deps, steps } = spyDeps();
+    test('from the start screen the machine is reached and the folder opens in a workspace', async () => {
+        const { deps, steps } = spyDeps(null);
         await run(folder('local'), deps).done;
-        // No machine keeps a link while nothing is open on it, the active one included.
-        expect(steps).toEqual(['ensure:local', 'open:/work/atlas:false']);
+        expect(steps).toEqual(['ensure:local', 'enter:local:folder:/work/atlas:false']);
     });
 
-    test('the active machine that cannot be reached opens nothing', async () => {
-        const { deps, steps } = spyDeps({
-            ensure: () => Promise.reject(new Error('That machine is not answering'))
-        });
-        await expect(run(folder('local'), deps).done).rejects.toThrow('That machine is not answering');
-        expect(steps).toEqual([]);
-    });
-
-    test('another machine is reached first, then takes over, and only then is the folder opened', async () => {
-        const { deps, steps } = spyDeps();
+    test('with a project open, that project is left before the next one is built', async () => {
+        const { deps, steps } = spyDeps(HERE);
         await run(folder('daemon-b', true), deps).done;
-        expect(steps).toEqual(['ensure:daemon-b', 'activate:daemon-b', 'settle', 'open:/work/atlas:true']);
+        expect(steps).toEqual(['ensure:daemon-b', 'leave', 'enter:daemon-b:folder:/work/atlas:true']);
     });
 
     test('a machine only the account knows is opened under the row the connect made for it', async () => {
-        const { deps, steps } = spyDeps({
+        const { deps, steps } = spyDeps(null, {
             ensure: async (endpointId) => {
                 steps.push(`ensure:${endpointId}`);
                 return 'attic-row';
             }
         });
         await run(folder('attic'), deps).done;
-        expect(steps).toEqual(['ensure:attic', 'activate:attic-row', 'settle', 'open:/work/atlas:false']);
+        expect(steps).toEqual(['ensure:attic', 'enter:attic-row:folder:/work/atlas:false']);
     });
 
-    test('a machine that cannot be reached fails with its reason and leaves the client where it is', async () => {
-        const { deps, steps } = spyDeps({
+    test('a machine that cannot be reached fails with its reason and leaves the open project alone', async () => {
+        const { deps, steps } = spyDeps(HERE, {
             ensure: () => Promise.reject(new Error('No network path to the machine'))
         });
         await expect(run(folder('daemon-b'), deps).done).rejects.toThrow('No network path to the machine');
@@ -122,10 +102,10 @@ describe('opening a folder on the machine it is on', () => {
     });
 });
 
-describe('opening a project on the machine it is on', () => {
+describe('opening a project', () => {
     test('the project step starts only once the machine answered', async () => {
         let resolveEnsure!: (id: string) => void;
-        const { deps } = spyDeps({ ensure: () => new Promise((resolve) => (resolveEnsure = resolve)) });
+        const { deps } = spyDeps(null, { ensure: () => new Promise((resolve) => (resolveEnsure = resolve)) });
         const phases: string[] = [];
         const { done } = run({ kind: 'project', endpointId: 'daemon-b', projectId: 'q1' }, deps, undefined, () => phases.push('opening'));
         await Promise.resolve();
@@ -135,21 +115,21 @@ describe('opening a project on the machine it is on', () => {
         expect(phases).toEqual(['opening']);
     });
 
-    test('another machine remembers the project before it takes over, so its boot opens that one', async () => {
-        const { deps, steps } = spyDeps();
-        await run({ kind: 'project', endpointId: 'daemon-b', projectId: 'q1' }, deps).done;
-        expect(steps).toEqual(['ensure:daemon-b', 'remember:daemon-b:q1', 'activate:daemon-b', 'settle', 'project:q1']);
+    test('the project that is already open moves nothing', async () => {
+        const { deps, steps } = spyDeps(HERE);
+        await run({ kind: 'project', endpointId: 'local', projectId: 'p0' }, deps).done;
+        expect(steps).toEqual(['ensure:local']);
     });
 
-    test('a project on the active machine is opened without moving anything', async () => {
-        const { deps, steps } = spyDeps();
-        await run({ kind: 'project', endpointId: 'local', projectId: 'p1' }, deps).done;
-        expect(steps).toEqual(['ensure:local', 'settle', 'project:p1']);
+    test('a new project is created in a workspace of its own', async () => {
+        const { deps, steps } = spyDeps(HERE);
+        await run({ kind: 'new', endpointId: 'local', name: 'Atlas' }, deps).done;
+        expect(steps).toEqual(['ensure:local', 'leave', 'enter:local:new:Atlas']);
     });
 
     test('a run cancelled while connecting stops before anything moves, and going back undoes nothing', async () => {
         const controller = new AbortController();
-        const { deps, steps } = spyDeps({
+        const { deps, steps } = spyDeps(HERE, {
             ensure: (_endpointId, signal) => new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(new Error('stopped'))))
         });
         const { handle, done } = run({ kind: 'project', endpointId: 'daemon-b', projectId: 'q1' }, deps, controller);
@@ -159,29 +139,97 @@ describe('opening a project on the machine it is on', () => {
         expect(steps).toEqual([]);
     });
 
-    test('going back from another machine restores what both machines remembered and returns to the one before', async () => {
-        const { deps, steps } = spyDeps();
+    test('going back after the next project opened leaves it and builds the one before again', async () => {
+        const { deps, steps, here } = spyDeps(HERE);
         const { handle, done } = run({ kind: 'project', endpointId: 'daemon-b', projectId: 'q1' }, deps);
         await done;
         steps.length = 0;
         await handle.back();
-        expect(steps).toEqual(['remember:daemon-b:q-before', 'remember:local:p0', 'activate:local', 'settle']);
+        expect(steps).toEqual(['leave', 'ensure:local', 'enter:local:project:p0']);
+        expect(here()).toEqual(HERE);
     });
 
-    test('going back on the same machine reopens the project that was open', async () => {
-        const { deps, steps } = spyDeps();
+    test('a project that does not open after the old one was left comes back on the way back', async () => {
+        const { deps, steps } = spyDeps(HERE, {
+            enter: async (endpointId, request) => {
+                steps.push(`enter:${endpointId}:${describeRequest(request)}`);
+                if (endpointId === 'daemon-b') {
+                    throw new Error('That project is gone');
+                }
+            }
+        });
+        const { handle, done } = run({ kind: 'project', endpointId: 'daemon-b', projectId: 'q1' }, deps);
+        await expect(done).rejects.toThrow('That project is gone');
+        steps.length = 0;
+        await handle.back();
+        expect(steps).toEqual(['ensure:local', 'enter:local:project:p0']);
+    });
+
+    test('a project that cannot come back leaves the start screen rather than a workspace without one', async () => {
+        const { deps, steps } = spyDeps(HERE, {
+            enter: () => Promise.reject(new Error('That machine is not answering'))
+        });
+        const { handle, done } = run({ kind: 'project', endpointId: 'daemon-b', projectId: 'q1' }, deps);
+        await expect(done).rejects.toThrow('That machine is not answering');
+        steps.length = 0;
+        await handle.back();
+        expect(steps).toEqual(['ensure:local', 'start']);
+    });
+
+    test('going back from a project opened on the start screen returns to the start screen', async () => {
+        const { deps, steps } = spyDeps(null);
         const { handle, done } = run({ kind: 'project', endpointId: 'local', projectId: 'p1' }, deps);
         await done;
         steps.length = 0;
         await handle.back();
-        expect(steps).toEqual(['project:p0']);
+        expect(steps).toEqual(['leave', 'start']);
     });
 });
 
-describe('opening a machine with nothing picked on it', () => {
-    test('the machine takes over and its boot is waited for', async () => {
-        const { deps, steps } = spyDeps();
-        await run({ kind: 'machine', endpointId: 'daemon-b' }, deps).done;
-        expect(steps).toEqual(['ensure:daemon-b', 'activate:daemon-b', 'settle']);
+describe('the cold start', () => {
+    beforeEach(() => {
+        useEndpoints.setState({ endpoints: [endpoint('local'), endpoint('daemon-b')], activeId: 'local' });
+        useWindow.setState({ content: { kind: 'start' }, booting: true });
+    });
+
+    test('nothing remembered goes to the start screen at once', async () => {
+        expect(await bootWindow(fakeStorage(new Map()))).toBeNull();
+        expect(useWindow.getState().booting).toBe(false);
+    });
+
+    test('a machine that is no longer known goes to the start screen at once', async () => {
+        expect(await bootWindow(fakeStorage(stored({ last: { endpointId: 'daemon-gone', projectId: 'q1' } })))).toBeNull();
+        expect(useWindow.getState().booting).toBe(false);
+    });
+
+    test('a record from before there was a last says nothing about where the work was', async () => {
+        expect(await bootWindow(fakeStorage(stored({ 'daemon-b': 'q1' })))).toBeNull();
+        expect(useWindow.getState().booting).toBe(false);
+    });
+
+    test('the last project is opened, and the start screen waits until that settled', async () => {
+        let finish!: (outcome: 'failed') => void;
+        const opened: string[] = [];
+        const booted = bootWindow(
+            fakeStorage(stored({ last: { endpointId: 'daemon-b', projectId: 'q1' }, byEndpoint: { 'daemon-b': 'q1' } })),
+            (endpointId, projectId) => {
+                opened.push(`${endpointId}:${projectId}`);
+                return new Promise((resolve) => (finish = resolve));
+            }
+        );
+        expect(opened).toEqual(['daemon-b:q1']);
+        expect(useWindow.getState().booting).toBe(true);
+        finish('failed');
+        expect(await booted).toBe('failed');
+        expect(useWindow.getState().booting).toBe(false);
+    });
+
+    test("the bare project id of the first versions was this machine's", async () => {
+        const opened: string[] = [];
+        await bootWindow(fakeStorage(new Map([['ruimte.lastProject', 'p7']])), async (endpointId, projectId) => {
+            opened.push(`${endpointId}:${projectId}`);
+            return 'done';
+        });
+        expect(opened).toEqual(['local:p7']);
     });
 });

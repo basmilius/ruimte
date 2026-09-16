@@ -2,8 +2,8 @@ import type { ProjectContent, ProjectDocument, ProjectIconChoice, ProjectLocal, 
 import type { StoreApi } from 'zustand';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
-import { dropClientLocal, overlayLocal, readClientLocal, writeClientLocal } from './client-local';
-import { browserStorage, readLastProject, rememberProject, type LastProjectStorage } from './last-project';
+import { overlayLocal, readClientLocal, writeClientLocal } from './client-local';
+import { browserStorage, rememberProject, type LastProjectStorage } from './last-project';
 import { mergeProject, type CanvasPatch } from './merge';
 import type { PanelsPort } from './panels-port';
 
@@ -85,8 +85,10 @@ interface ProjectClientOptions {
     drawings?: DrawingsAccess;
     /* A diagram keeps its camera in its own editor the way a drawing does. */
     diagrams?: DrawingsAccess;
-    /* Runs before a project is swapped in, so the drawing on screen reaches its own file first. */
-    beforeSwitch?: () => Promise<void>;
+    /* Runs before the project is left for another one, so the drawing on screen reaches its own file first. */
+    beforeLeave?: () => Promise<void>;
+    /* Runs in the tick the opened project reaches the stores, so the window shows it with nothing in between. */
+    onLoad?: () => void;
     /*
      * Ends what the views still hold on the machine they were opened on. Only a person closing a
      * project reaches this: switching away releases the project and leaves its sessions running.
@@ -94,8 +96,6 @@ interface ProjectClientOptions {
     endSessions?: (endpointId: string, views: readonly ProjectView[]) => void;
     /* Runs once the project is open on the daemon again after the link came back, so the drawings on screen can follow. */
     afterResume?: () => Promise<void>;
-    /* The boot tried the project this machine remembered, whether it opened or not; a link that dropped halfway does not count. */
-    onBooted?: () => void;
     /* Left out in tests, where there is no window to listen on. */
     window?: Pick<Window, 'addEventListener' | 'removeEventListener'> | null;
 }
@@ -109,7 +109,8 @@ const contentOf = (document: ProjectDocument): ProjectContent => {
 const isConnectionError = (e: unknown): boolean => e instanceof TransportError && (e.code === 'not-connected' || e.code === 'disconnected');
 
 /*
- * Keeps the canvas on screen and the project file in step. Edits save after a short pause;
+ * Keeps the canvas on screen and the project file in step, for the one project it opened: a client
+ * lives as long as its workspace, and the next project gets a client of its own. Edits save after a short pause;
  * the camera and the panels go to this client's storage and the machine-local file on their own,
  * slower clock. A change that arrives from disk merges into the editors on screen, and only a real
  * conflict replaces the canvas when nothing is unsaved or waits for a decision when something is.
@@ -123,16 +124,19 @@ export class ProjectClient {
     private readonly endpointId: () => string;
     private readonly saveDelayMs: number;
     private readonly localDelayMs: number;
-    private readonly beforeSwitch: () => Promise<void>;
+    private readonly beforeLeave: () => Promise<void>;
+    private readonly onLoad: () => void;
     private readonly endSessions: (endpointId: string, views: readonly ProjectView[]) => void;
     private readonly afterResume: () => Promise<void>;
-    private readonly onBooted: () => void;
     private readonly unsubscribe: Array<() => void> = [];
     private saveTimer: ReturnType<typeof setTimeout> | null = null;
     private localTimer: ReturnType<typeof setTimeout> | null = null;
     private saving: Promise<void> | null = null;
-    private booted = false;
-    private bootTask: Promise<void> | null = null;
+    /*
+     * Its own project reached the stores. Until then the stores may still hold the project this client
+     * replaces, and an edit there is not this client's to save on its machine.
+     */
+    private opened = false;
     /* What the daemon's file holds at the rev this client is on, which a merge measures against. */
     private base: ProjectContent | null = null;
     /* Why the last incoming document went to the person instead of being merged in. */
@@ -154,10 +158,10 @@ export class ProjectClient {
         this.endpointId = options.endpointId ?? (() => LOCAL_ENDPOINT_ID);
         this.saveDelayMs = options.saveDelayMs ?? 400;
         this.localDelayMs = options.localDelayMs ?? 1000;
-        this.beforeSwitch = options.beforeSwitch ?? (() => Promise.resolve());
+        this.beforeLeave = options.beforeLeave ?? (() => Promise.resolve());
+        this.onLoad = options.onLoad ?? ((): void => undefined);
         this.endSessions = options.endSessions ?? ((): void => undefined);
         this.afterResume = options.afterResume ?? (() => Promise.resolve());
-        this.onBooted = options.onBooted ?? ((): void => undefined);
         this.unsubscribe.push(
             transport.on('project.changed', ({ projectId, document }) => this.onChanged(projectId, document)),
             transport.on('project.summary', ({ summary }) => this.applySummary(summary)),
@@ -184,19 +188,11 @@ export class ProjectClient {
             host.addEventListener('pagehide', onLeave);
             this.unsubscribe.push(() => host.removeEventListener('pagehide', onLeave));
         }
-        if (transport.status === 'open') {
-            this.boot();
-        }
     }
 
     /* Why the last conflict was one; the id in it is what a person needs to make sense of the dialog. */
     get mergeRefusal(): string | null {
         return this.refusal;
-    }
-
-    /* Waits for the project this endpoint remembered, so a caller that wants another one does not race it. */
-    async settled(): Promise<void> {
-        await this.bootTask?.catch(() => undefined);
     }
 
     async refreshList(): Promise<ProjectSummary[]> {
@@ -219,6 +215,22 @@ export class ProjectClient {
     }
 
     /*
+     * Lets go of the project for another one: what is on screen is written first, and the daemon is told
+     * the project is released rather than closed, since switching away does not put it under Recent.
+     * The stores keep what they hold, for the next client to load over.
+     */
+    async leave(): Promise<void> {
+        const current = this.opened ? this.sink.getState().current : null;
+        await this.beforeLeave();
+        await this.flush();
+        this.flushLocal();
+        this.opened = false;
+        if (current) {
+            await this.transport.request('project.release', { projectId: current.projectId }).catch(() => undefined);
+        }
+    }
+
+    /*
      * Puts the project away: the sessions of its nodes end on the machine and the canvas is left
      * empty. What is on screen is saved first, so a session goes only after the file it belongs to
      * is on disk, and the views are read before the stores are emptied a few lines down.
@@ -232,20 +244,11 @@ export class ProjectClient {
             await this.transport.request('project.close', { projectId: current.projectId }).catch(() => undefined);
         }
         this.remember(null);
+        this.opened = false;
         this.base = null;
         this.documents.getState().load(null, null);
         this.panels.load(null, undefined);
         this.sink.setCurrent(null, 0);
-    }
-
-    async deleteProject(projectId: string, removeFiles: boolean): Promise<void> {
-        if (this.sink.getState().current?.projectId === projectId) {
-            await this.closeProject();
-        }
-        await this.transport.request('project.delete', { projectId, removeFiles });
-        // After the close, which wrote this client's copy on its way out.
-        dropClientLocal(this.storage, this.endpointId(), projectId);
-        await this.refreshList();
     }
 
     async rename(name: string, color?: string): Promise<void> {
@@ -351,62 +354,29 @@ export class ProjectClient {
         rememberProject(this.endpointId(), projectId, this.storage);
     }
 
-    private boot(): void {
-        if (this.booted) {
-            return;
-        }
-        this.booted = true;
-        this.bootTask = this.runBoot();
-    }
-
-    private async runBoot(): Promise<void> {
-        try {
-            const projects = await this.refreshList();
-            const remembered = readLastProject(this.storage, this.endpointId()).byEndpoint[this.endpointId()] ?? null;
-            /* Only what was open on this machine before. A machine with nothing remembered stays on
-               an empty canvas: opening a project is a choice, not something a boot makes for you. */
-            const target = projects.find((project) => project.projectId === remembered && project.available);
-            if (target) {
-                await this.open({ projectId: target.projectId });
-            }
-            this.onBooted();
-        } catch (e) {
-            this.booted = false;
-            if (!isConnectionError(e)) {
-                this.sink.setError(e instanceof Error ? e.message : 'The project could not be opened');
-                this.onBooted();
-            }
-        }
-    }
-
     private async open(payload: { projectId?: string; folder?: string; name?: string; createFolder?: boolean }): Promise<void> {
         this.sink.setSwitching(true);
         try {
-            await this.beforeSwitch();
-            await this.flush();
-            this.flushLocal();
-            const previous = this.sink.getState().current;
-            if (previous && previous.projectId !== payload.projectId) {
-                // Released, not closed: switching away is not the same as putting a project under Recent.
-                await this.transport.request('project.release', { projectId: previous.projectId }).catch(() => undefined);
-            }
             const result = await this.transport.request('project.open', payload);
             this.base = contentOf(result.document);
             const local = overlayLocal(result.local, readClientLocal(this.storage, this.endpointId(), result.summary.projectId));
+            this.onLoad();
+            this.opened = true;
             this.documents.getState().load(result.document, local);
             // In the same tick as the canvas, so the panels never paint the project that just left.
             this.panels.load(result.summary.projectId, local.panels);
             this.sink.setChosenIcon(result.document.icon ?? null);
             this.sink.setCurrent(result.summary, result.document.rev);
             this.remember(result.summary.projectId);
-            await this.refreshList();
+            // The project is open whatever the list says; a list that did not come is asked again when the link opens.
+            await this.refreshList().catch(() => undefined);
         } finally {
             this.sink.setSwitching(false);
         }
     }
 
     private onCanvas(state: CanvasSlice, previous: CanvasSlice): void {
-        if (state.loading || previous.loading || !this.sink.getState().current) {
+        if (state.loading || previous.loading || !this.opened || !this.sink.getState().current) {
             return;
         }
         if (state.nodes !== previous.nodes || state.texts !== previous.texts || state.edges !== previous.edges || state.order !== previous.order) {
@@ -423,7 +393,7 @@ export class ProjectClient {
      * the first kind. The view that is open and where its camera stood belong to this client.
      */
     private onDocument(state: ReturnType<DocumentAccess['getState']>, previous: ReturnType<DocumentAccess['getState']>): void {
-        if (state.loading || previous.loading || !this.sink.getState().current) {
+        if (state.loading || previous.loading || !this.opened || !this.sink.getState().current) {
             return;
         }
         if (state.edits !== previous.edits) {
@@ -467,7 +437,7 @@ export class ProjectClient {
 
     private saveLocal(): void {
         const current = this.sink.getState().current;
-        if (!current) {
+        if (!this.opened || !current) {
             return;
         }
         const local = this.localOfScreen();
@@ -490,7 +460,7 @@ export class ProjectClient {
         }
         const { current, rev, conflict } = this.sink.getState();
         // A link that is down keeps the edit dirty for the resume to write, rather than a request that can only fail.
-        if (!current || conflict || this.transport.status !== 'open') {
+        if (!this.opened || !current || conflict || this.transport.status !== 'open') {
             return Promise.resolve();
         }
         const content = this.contentOfScreen();
@@ -526,7 +496,7 @@ export class ProjectClient {
 
     private onChanged(projectId: string, document: ProjectDocument): void {
         const { current, dirty } = this.sink.getState();
-        if (!current || current.projectId !== projectId) {
+        if (!this.opened || !current || current.projectId !== projectId) {
             return;
         }
         /* Merged first on a clean screen too: a load swaps every editor out and blanks the canvas
@@ -582,7 +552,7 @@ export class ProjectClient {
     private applySummary(summary: ProjectSummary): void {
         const { current } = this.sink.getState();
         this.sink.patchProject(summary);
-        if (current?.projectId === summary.projectId) {
+        if (this.opened && current?.projectId === summary.projectId) {
             this.sink.setSummary(summary);
         }
     }
@@ -596,17 +566,9 @@ export class ProjectClient {
     }
 
     private onStatus(status: TransportStatus): void {
-        if (status !== 'open') {
-            this.booted = false;
-            return;
-        }
-        // A boot would load the project again and swap every editor out from under the canvas, which blanks it until it is measured.
-        if (this.sink.getState().current) {
-            this.booted = true;
+        if (status === 'open' && this.opened && this.sink.getState().current) {
             void this.resume();
-            return;
         }
-        this.boot();
     }
 
     /*

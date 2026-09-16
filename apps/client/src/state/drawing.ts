@@ -1,6 +1,6 @@
 import { createStore, type StoreApi } from 'zustand';
-import { createEditorRegistry, type EditorRegistry } from '@/state/editors';
-import { currentStores, editorHook, focusedEditor, subscribeCurrentWorkspace, useEditorStoreOf } from '@/state/workspace-stores';
+import { createEditorRegistry } from '@/state/editors';
+import { editorHook, focusedEditor, useEditorStoreOf } from '@/state/workspace-stores';
 import type {
     DrawingColor,
     DrawingContent,
@@ -652,44 +652,32 @@ export const createDrawingStore = (): StoreApi<DrawingState> =>
 
 export const defaultDrawingStore = createDrawingStore();
 
-/* The registry of no workspace at all; its blank editor is the store this module made. */
+/* The drawing editors of the window; its blank editor is the store this module made. */
 export const defaultDrawings = createEditorRegistry(createDrawingStore, defaultDrawingStore);
 
 /* What a component reads while it renders: the drawing of the cell it is drawn in. */
-export const useDrawing = editorHook('drawings', defaultDrawings);
+export const useDrawing = editorHook(defaultDrawings);
 
 /*
  * The drawing store of the cell a component is drawn in, as the store itself. Everything the view
  * does to its own drawing (a stroke, a pan, a paint, the dock's buttons) goes through this: the hook
  * above has no `getState`, so a cell can no longer draw into the one beside it.
  */
-export const useDrawingStore = (): StoreApi<DrawingState> => useEditorStoreOf('drawings', defaultDrawings);
+export const useDrawingStore = (): StoreApi<DrawingState> => useEditorStoreOf(defaultDrawings);
 
 /* The drawing of the cell that has the focus, for a shortcut or a palette row with no cell of its own. */
-export const focusedDrawing = (): StoreApi<DrawingState> => focusedEditor('drawings', defaultDrawings);
-
-/* The drawing editors of the workspace in front of us, which outside one is the default registry. */
-const drawings = (): EditorRegistry<DrawingState> => currentStores()?.drawings ?? defaultDrawings;
+export const focusedDrawing = (): StoreApi<DrawingState> => focusedEditor(defaultDrawings);
 
 /* What a drawing view holds right now, which is fresher than anything the daemon has been told. */
-export const liveDrawing = (viewId: string): DrawingState | null => drawings().peek(viewId)?.getState() ?? null;
+export const liveDrawing = (viewId: string): DrawingState | null => defaultDrawings.peek(viewId)?.getState() ?? null;
 
 /*
  * Every change in every drawing on screen, named by the view it happened in. A watcher about the
  * project subscribes here rather than to one editor, which is one cell and stops being that cell the
- * moment another view takes it. Rewired when the focus moves to another workspace.
+ * moment another view takes it.
  */
-export const subscribeDrawings = (listener: (viewId: string, state: DrawingState, previous: DrawingState) => void): (() => void) => {
-    let off = drawings().subscribe(listener);
-    const offWorkspaces = subscribeCurrentWorkspace(() => {
-        off();
-        off = drawings().subscribe(listener);
-    });
-    return () => {
-        off();
-        offWorkspaces();
-    };
-};
+export const subscribeDrawings = (listener: (viewId: string, state: DrawingState, previous: DrawingState) => void): (() => void) =>
+    defaultDrawings.subscribe(listener);
 
 /* Keeps the hand-drawn wobble of an element the same on every render and on every machine. */
 export const newSeed = (): number => Math.floor(Math.random() * 2 ** 31);

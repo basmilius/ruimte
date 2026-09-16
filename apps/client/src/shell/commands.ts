@@ -22,6 +22,7 @@ import { focusedDrawing } from '@/state/drawing';
 import { activeViewOf, useDocument } from '@/state/document';
 import { currentEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
+import { windowWorkspace } from '@/state/window';
 import { providersOf } from '@/state/providers';
 import { fileManagerName, serverInfoOf } from '@/state/server';
 import { useTheme } from '@/state/theme';
@@ -128,7 +129,8 @@ export const appCommands = (): Command[] => {
     /* A row that writes into a canvas is offered only while one is on screen. In a chat or a
        terminal view "New note" and "Zoom to fit" would act on a surface nobody is looking at. */
     const onCanvas = activeView !== null && isCanvasView(activeView);
-    const project = useProject.getState().current !== null;
+    /* The start screen is outside every project, so only the rows about the window are offered there. */
+    const inWorkspace = windowWorkspace() !== null;
     return [
         { id: 'open-folder', label: 'Open a folder as a project', run: () => useUi.getState().openFolderBrowser() },
         ...(folder
@@ -146,9 +148,7 @@ export const appCommands = (): Command[] => {
                   }
               ]
             : []),
-        /* Everything that writes into a canvas or the list of views. With no project open there
-           is no file behind any of it, so these rows are not offered rather than quietly lost. */
-        ...(project
+        ...(inWorkspace
             ? [
                   { id: 'view-new', label: 'New canvas view', shortcut: CANVAS_SHORTCUTS.newView, run: () => void newCanvasView() },
                   ...(activeViewId

@@ -21,6 +21,7 @@ import { PlanPanel } from '@/shell/PlanPanel';
 import { PreviewPanel } from '@/shell/PreviewPanel';
 import { ProjectBanner } from '@/shell/ProjectBanner';
 import { ProjectSwitchScreen } from '@/shell/ProjectSwitchScreen';
+import { StartScreen } from '@/shell/StartScreen';
 import { MachineUpdateDialog } from '@/shell/MachineUpdateDialog';
 import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
 import { closeLinkRequest, useLinkRequest } from '@/pulsar/link-request';
@@ -32,28 +33,25 @@ import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useUi, type SettingsSectionId } from '@/state/ui';
 import { startUpdates } from '@/state/updates';
-import { focusWorkspace, useMainWorkspace, useWorkspaceConnection } from '@/transport/connections';
-import { WorkspaceProvider } from '@/transport/context';
+import { useWindow } from '@/state/window';
+import type { Workspace } from '@/transport/connections';
+import { ConnectionProvider } from '@/transport/context';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { TooltipProvider } from '@/ui/Tooltip';
 
 /*
  * The project on screen, with the daemon it lives on under it. Everything inside reads its machine
- * from here instead of from "the active endpoint", which is what a second project next to it needs.
+ * from here instead of from "the active endpoint", which a switch moves before the project follows.
  */
-function Workspace() {
-    const workspace = useMainWorkspace();
-    const connection = useWorkspaceConnection(workspace);
+function WorkspaceShell({ workspace }: { workspace: Workspace }) {
     /* Once for the whole project rather than once per cell: a grid draws up to nine canvases. */
-    useCanvasShortcuts(workspace.stores);
+    useCanvasShortcuts();
     /* The window's toolbar is where a file view puts its controls, and the body that draws them sits
        under the same column, so the element they portal into is held here. */
     const [fileToolbarHost, setFileToolbarHost] = useState<HTMLElement | null>(null);
     return (
-        <WorkspaceProvider connection={connection} stores={workspace.stores}>
-            {/* A press anywhere in it makes this the workspace everything outside React means: the
-                shortcuts, the palette and the menus all act on the project that was touched last. */}
-            <div className="flex h-full w-full bg-bg" onPointerDownCapture={() => focusWorkspace(workspace.id)}>
+        <ConnectionProvider connection={workspace.connection}>
+            <div className="flex h-full w-full bg-bg">
                 <ErrorBoundary label="The sidebar failed to render" className="h-full w-[248px] shrink-0 border-r border-border">
                     <Sidebar />
                 </ErrorBoundary>
@@ -83,7 +81,22 @@ function Workspace() {
             <RemoveWorktreeDialog />
             <MergeWorktreeDialog />
             <ForkDialog />
-        </WorkspaceProvider>
+        </ConnectionProvider>
+    );
+}
+
+/* The start screen, or the blank frame before it while a cold start is still trying the last project. */
+function WindowContent() {
+    const content = useWindow((s) => s.content);
+    const booting = useWindow((s) => s.booting);
+    if (content.kind === 'workspace') {
+        return <WorkspaceShell workspace={content.workspace} />;
+    }
+    return (
+        <div className="relative h-full w-full bg-bg">
+            {!booting && <StartScreen />}
+            <ProjectSwitchScreen />
+        </div>
     );
 }
 
@@ -121,7 +134,7 @@ export function App() {
             {/* The last resort, for a failure outside every view, node and panel. It unmounts the
                 parked browser pages as well, which is why everything below carries a boundary of its own. */}
             <ErrorBoundary label="Something went wrong" className="fixed inset-0 bg-bg" reload>
-                <Workspace />
+                <WindowContent />
                 <CommandPalette />
                 <SettingsDialog />
                 <UsageDialog />

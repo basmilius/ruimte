@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { FolderOpen } from 'lucide-react';
 import { isCanvasView, isFileView, type ProjectView } from '@ruimte/contracts';
 import { Canvas } from '@/canvas/Canvas';
 import { SplitGrid } from '@/shell/SplitGrid';
@@ -12,22 +11,12 @@ import { ChatBody } from '@/nodes/ChatBody';
 import { TerminalBody } from '@/nodes/TerminalBody';
 import { FileSurface } from '@/shell/panels/FileSurface';
 import { useDocument } from '@/state/document';
-import { useEndpoints } from '@/state/endpoints';
 import { useProject } from '@/state/project';
-import { StationWelcome } from '@/shell/StationWelcome';
-import { isRealMachine } from '@/state/local-machine';
-import { useUi } from '@/state/ui';
 import { isApplePlatform } from '@/desktop/bridge';
 import { isLeaveNodeShortcut } from '@/terminal/keymap';
 import { focusViewRow } from '@/shell/sidebar-focus';
-import { Button } from '@/ui/Button';
-import { TOOLTIP_KBD } from '@/ui/classes';
-import { EmptyState } from '@/ui/EmptyState';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
-import { Icon } from '@/ui/Icon';
 import { isInFloatingLayer } from '@/ui/floating';
-import { APP_SHORTCUTS } from '@/shell/shortcuts';
-import { Kbd } from '@/ui/Kbd';
 
 /*
  * A view of its own has no canvas to fall back to, so leaving its body puts the keyboard on its row
@@ -95,34 +84,6 @@ function BrowserViewSurface({ id }: { id: string }) {
 }
 
 /*
- * No project open, which is where a fresh install and a machine that has just been paired both
- * start. Nothing is wrong, nothing is loading: a project is a thing you pick, and these are the two
- * ways to pick one.
- */
-function NoProject() {
-    return (
-        <div className="absolute inset-0 grid place-items-center bg-surface-sunken">
-            <EmptyState
-                icon={<Icon icon={FolderOpen} size={20} />}
-                action={
-                    <div className="flex items-center gap-2">
-                        <Button variant="secondary" onClick={() => useUi.getState().openPalette()}>
-                            Open a project
-                        </Button>
-                        <Button variant="secondary" onClick={() => useUi.getState().openFolderBrowser()}>
-                            Open a folder
-                        </Button>
-                    </div>
-                }
-            >
-                No project is open. Press <Kbd shortcut={APP_SHORTCUTS.palette} className={TOOLTIP_KBD} /> to open an existing one, or open a folder to start a
-                new one.
-            </EmptyState>
-        </div>
-    );
-}
-
-/*
  * One cell of the grid. A canvas view draws the canvas; every other kind draws the body of its one
  * node, without a frame. A cell draws what its view is and nothing else: the canvas used to stay
  * mounted under every other kind because it carried the app's shortcuts, and with up to nine cells that
@@ -143,15 +104,7 @@ export function ViewSurface({ view }: { view: ProjectView }) {
     );
 }
 
-/* The main column: the grid of cells, or what stands in for it when no project is open. */
+/* The main column: the grid of cells of the open project. */
 export function ViewHost() {
-    const hasProject = useProject((s) => s.current !== null);
-    // The web client before a machine is picked: nothing behind the page's own origin to open a project on.
-    const welcome = useEndpoints((s) => !isRealMachine(s.activeId));
-    return (
-        <>
-            {hasProject && <SplitGrid />}
-            {!hasProject && (welcome ? <StationWelcome /> : <NoProject />)}
-        </>
-    );
+    return <SplitGrid />;
 }

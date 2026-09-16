@@ -217,9 +217,8 @@ const fakeStorage = (storage: Map<string, string>) => ({
 });
 
 /*
- * `open` is which project this machine had open last, because that is the only thing a boot opens
- * now. A test that brings no storage of its own gets the first project listed, so a test about
- * saving or panels has a canvas without saying so; one that brings storage says it there instead.
+ * `open` is the project the client is built to open, the way a workspace is. A test that says nothing
+ * gets the first project listed, so a test about saving or panels has a canvas without saying so.
  */
 const setup = (
     options: {
@@ -242,14 +241,7 @@ const setup = (
     const { sink, state } = makeSink();
     const storage = options.storage ?? new Map<string, string>();
     const endpointId = options.endpointId ?? 'daemon-a';
-    const open = options.open === undefined ? (options.storage ? null : (transport.projects[0]?.projectId ?? null)) : options.open;
-    if (open !== null) {
-        const stored = JSON.parse(storage.get('ruimte.lastProject') ?? '{"last":null,"byEndpoint":{}}') as {
-            last: unknown;
-            byEndpoint: Record<string, string>;
-        };
-        storage.set('ruimte.lastProject', JSON.stringify({ ...stored, byEndpoint: { ...stored.byEndpoint, [endpointId]: open } }));
-    }
+    const open = options.open === undefined ? (transport.projects[0]?.projectId ?? null) : options.open;
     const panels = new PanelsPort();
     /* What the client asked to end, in the words the caller would kill it with: kind and id, on the machine it named. */
     const ended: Array<{ endpointId: string; nodes: string[] }> = [];
@@ -261,6 +253,10 @@ const setup = (
         storage: fakeStorage(storage),
         window: options.window ?? null
     });
+    if (open !== null) {
+        // On the first tick, so a test can still set up what the daemon answers.
+        setTimeout(() => void client.openProject(open), 0);
+    }
     const dispose = (): void => {
         client.dispose();
         panels.dispose();
@@ -269,7 +265,7 @@ const setup = (
 };
 
 describe('ProjectClient', () => {
-    test('boots into the project this machine had open, and loads its document and camera', async () => {
+    test('opens its project, and loads its document and camera', async () => {
         const { transport, state, dispose } = setup();
         await tick();
         expect(transport.of('project.open')[0]?.payload).toEqual({ projectId: 'p1' });
@@ -341,9 +337,8 @@ describe('ProjectClient', () => {
             addEventListener: (type: string, listener: () => void) => void listeners.set(type, listener),
             removeEventListener: (type: string) => void listeners.delete(type)
         } as unknown as Pick<Window, 'addEventListener' | 'removeEventListener'>;
-        const { client, transport, dispose } = setup({ storage, open: 'p1', window: host });
+        const { transport, dispose } = setup({ storage, open: 'p1', window: host });
         await tick();
-        await client.settled();
         // Synchronous from here on, so the pause of the local write cannot have run out.
         useUi.getState().togglePanel('git');
         expect(storage.get('ruimte.local')).toBeUndefined();
@@ -354,22 +349,6 @@ describe('ProjectClient', () => {
         expect(transport.of('project.save-local')).toHaveLength(1);
         dispose();
         expect(listeners.has('pagehide')).toBe(false);
-    });
-
-    test('a machine that has never had a project open boots into nothing, and opens nothing itself', async () => {
-        const { transport, state, dispose } = setup({ open: null });
-        await tick();
-        expect(transport.of('project.open')).toHaveLength(0);
-        expect(state.current).toBeNull();
-        dispose();
-    });
-
-    test('a project this machine had open that the daemon no longer lists opens nothing', async () => {
-        const { transport, state, dispose } = setup({ open: 'gone' });
-        await tick();
-        expect(transport.of('project.open')).toHaveLength(0);
-        expect(state.current).toBeNull();
-        dispose();
     });
 
     test('an edit saves after the pause against the loaded rev, and a camera move only touches the local file', async () => {
@@ -597,19 +576,60 @@ describe('ProjectClient', () => {
         dispose();
     });
 
-    test('switching projects flushes edits, lets go of the old one and remembers the new one', async () => {
-        const { transport, state, client, storage, dispose } = setup();
+    test('leaving flushes edits and releases the project, and the stores keep what they hold for the next client', async () => {
+        const { transport, state, client, dispose } = setup();
         await tick();
-        transport.projects = [summary('p1', '/repo'), summary('p2')];
         focusedCanvas().getState().addText({ x: 0, y: 0 });
-        await client.openProject('p2');
+        await client.leave();
         expect(transport.of('project.save')).toHaveLength(1);
         // Released and not closed: the project switched away from stays in the list, not under Recent.
         expect(transport.of('project.release').map((call) => call.payload)).toEqual([{ projectId: 'p1' }]);
         expect(transport.of('project.close')).toEqual([]);
-        expect(state.current?.projectId).toBe('p2');
-        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ last: { endpointId: 'daemon-a', projectId: 'p2' }, byEndpoint: { 'daemon-a': 'p2' } });
+        expect(state.current?.projectId).toBe('p1');
+        expect(useDocument.getState().views.map((view) => view.id)).toEqual(['main']);
         dispose();
+    });
+
+    test('a client that left saves nothing more, even when the stores change under it', async () => {
+        const { transport, client, dispose } = setup();
+        await tick();
+        await client.leave();
+        focusedCanvas().getState().addText({ x: 0, y: 0 });
+        await tick(20);
+        expect(transport.of('project.save')).toHaveLength(0);
+        dispose();
+    });
+
+    test('a client that has not opened its project yet leaves the project the stores still hold alone', async () => {
+        const before = setup();
+        await tick();
+        before.dispose();
+        const next = setup({ open: null });
+        focusedCanvas().getState().addText({ x: 0, y: 0 });
+        await tick(20);
+        expect(next.transport.of('project.save')).toHaveLength(0);
+        expect(next.transport.of('project.save-local')).toHaveLength(0);
+        next.dispose();
+    });
+
+    test('the project reaches the stores in the tick the window is told', async () => {
+        const stores = createWorkspaceStores();
+        stores.document.getState().load(null, null);
+        const transport = new FakeTransport();
+        const { sink } = makeSink();
+        const panels = new PanelsPort();
+        const seen: Array<string[]> = [];
+        const client = new ProjectClient(transport, stores.canvases, stores.document, panels, sink, {
+            storage: fakeStorage(new Map()),
+            window: null,
+            onLoad: () => seen.push(stores.document.getState().views.map((view) => view.id))
+        });
+        await client.openProject('p1');
+        // Before the load: what the window moves over is still the stores as they were.
+        expect(seen).toEqual([[]]);
+        expect(stores.document.getState().views.map((view) => view.id)).toEqual(['main']);
+        client.dispose();
+        panels.dispose();
     });
 
     test('the panels of the project that opens are applied, and the load itself writes nothing', async () => {
@@ -644,21 +664,6 @@ describe('ProjectClient', () => {
         dispose();
     });
 
-    test('another project brings its own panels, and the one that leaves takes its state with it', async () => {
-        const { transport, client, dispose } = setup();
-        await tick();
-        transport.projects = [summary('p1', '/repo'), summary('p2')];
-        useUi.getState().togglePanel('git');
-        transport.panels = undefined;
-        await client.openProject('p2');
-        // The pause had not run out, so the panel of the project that left is written on the way out.
-        const written = transport.of('project.save-local').at(-1)?.payload as { projectId: string; local: ProjectLocal };
-        expect(written).toMatchObject({ projectId: 'p1' });
-        expect(written.local.panels?.panel).toEqual({ open: true, kind: 'git' });
-        expect(useUi.getState().panel).toEqual({ open: false, kind: 'files' });
-        dispose();
-    });
-
     test('closing leaves an empty canvas and no current project', async () => {
         const { state, client, dispose } = setup();
         await tick();
@@ -683,32 +688,12 @@ describe('ProjectClient', () => {
         dispose();
     });
 
-    test('switching to another project leaves the sessions of the one that left running', async () => {
-        const { transport, client, ended, dispose } = setup();
-        await tick();
-        transport.projects = [summary('p1', '/repo'), summary('p2')];
-        focusedCanvas().getState().addNode('terminal', { x: 0, y: 0 });
-        await client.openProject('p2');
-        expect(ended).toEqual([]);
-        dispose();
-    });
-
-    test('deleting the open project ends its sessions on the way out', async () => {
+    test('leaving for another project leaves the sessions of the one that left running', async () => {
         const { client, ended, dispose } = setup();
         await tick();
-        const terminal = focusedCanvas().getState().addNode('terminal', { x: 0, y: 0 })!;
-        await client.deleteProject('p1', true);
-        expect(ended).toEqual([{ endpointId: 'daemon-a', nodes: [`terminal:${terminal}`] }]);
-        dispose();
-    });
-
-    test('a deleted project leaves no local state behind on this client', async () => {
-        const storage = new Map<string, string>([['ruimte.local', JSON.stringify({ 'daemon-b:p1': { at: 1, local: { activeViewId: null, views: {} } } })]]);
-        const { client, dispose } = setup({ storage, open: 'p1' });
-        await tick();
-        useUi.getState().togglePanel('git');
-        await client.deleteProject('p1', false);
-        expect(Object.keys(JSON.parse(storage.get('ruimte.local')!))).toEqual(['daemon-b:p1']);
+        focusedCanvas().getState().addNode('terminal', { x: 0, y: 0 });
+        await client.leave();
+        expect(ended).toEqual([]);
         dispose();
     });
 });
@@ -790,82 +775,40 @@ describe('a project with a drawing view', () => {
     });
 });
 
-describe('the project each machine had open', () => {
-    test('a second daemon opens its own project and leaves the first one remembered', async () => {
+describe('the project the window had open last', () => {
+    test('opening a project remembers it, whichever machine it is on', async () => {
         const storage = new Map<string, string>();
-        const first = setup({ storage, endpointId: 'daemon-a', projects: [summary('p1', '/repo'), summary('p2')] });
+        const first = setup({ storage, endpointId: 'daemon-a' });
         await tick();
-        await first.client.openProject('p2');
         first.dispose();
-
-        // The other machine has never had anything open, and p2 is not its to open anyway.
         const second = setup({ storage, endpointId: 'daemon-b', projects: [summary('q1', '/other')] });
         await tick();
-        expect(second.state.current).toBeNull();
-        await second.client.openProject('q1');
-        expect(second.state.current?.projectId).toBe('q1');
         second.dispose();
-
-        const back = setup({ storage, endpointId: 'daemon-a', projects: [summary('p1', '/repo'), summary('p2')] });
-        await tick();
-        expect(back.state.current?.projectId).toBe('p2');
-        back.dispose();
-        // What the person looked at last is the machine they ended on, which is what a cold boot follows.
-        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({
-            last: { endpointId: 'daemon-a', projectId: 'p2' },
-            byEndpoint: { 'daemon-a': 'p2', 'daemon-b': 'q1' }
-        });
+        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ last: { endpointId: 'daemon-b', projectId: 'q1' } });
     });
 
-    test('closing a project forgets it on this machine only', async () => {
-        const stored = { last: { endpointId: 'daemon-a', projectId: 'p1' }, byEndpoint: { 'daemon-a': 'p1', 'daemon-b': 'q1' } };
-        const storage = new Map<string, string>([['ruimte.lastProject', JSON.stringify(stored)]]);
+    test('closing the project forgets it', async () => {
+        const storage = new Map<string, string>();
         const { client, dispose } = setup({ storage, endpointId: 'daemon-a' });
         await tick();
         await client.closeProject();
-        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ last: null, byEndpoint: { 'daemon-b': 'q1' } });
+        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ last: null });
         dispose();
     });
 
-    test('the single project id this key used to hold belongs to the endpoint that is active', async () => {
-        const storage = new Map<string, string>([['ruimte.lastProject', 'p2']]);
-        const { state, dispose } = setup({ storage, endpointId: 'daemon-a', projects: [summary('p1', '/repo'), summary('p2')] });
-        await tick();
-        expect(state.current?.projectId).toBe('p2');
-        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ last: { endpointId: 'daemon-a', projectId: 'p2' }, byEndpoint: { 'daemon-a': 'p2' } });
-        dispose();
-    });
-
-    test('the record from before there was a last still says what each machine had open', async () => {
-        const storage = new Map<string, string>([['ruimte.lastProject', JSON.stringify({ 'daemon-a': 'p2', 'daemon-b': 'q1' })]]);
-        const { state, dispose } = setup({ storage, endpointId: 'daemon-a', projects: [summary('p1', '/repo'), summary('p2')] });
-        await tick();
-        expect(state.current?.projectId).toBe('p2');
-        dispose();
-    });
-
-    test('an endpoint that moves onto its daemon id takes what it had open along', () => {
+    test('an endpoint that moves onto its daemon id takes its project along, and the older shapes are read on the way', () => {
         const stored = { last: { endpointId: '10.0.0.4:4210', projectId: 'p7' }, byEndpoint: { '10.0.0.4:4210': 'p7', 'daemon-b': 'q1' } };
         const storage = new Map<string, string>([['ruimte.lastProject', JSON.stringify(stored)]]);
         rekeyLastProject('10.0.0.4:4210', 'daemon-x', fakeStorage(storage));
-        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({
-            last: { endpointId: 'daemon-x', projectId: 'p7' },
-            byEndpoint: { 'daemon-b': 'q1', 'daemon-x': 'p7' }
-        });
+        expect(JSON.parse(storage.get('ruimte.lastProject')!)).toEqual({ last: { endpointId: 'daemon-x', projectId: 'p7' } });
 
-        const legacy = new Map<string, string>([['ruimte.lastProject', 'p7']]);
-        rekeyLastProject('10.0.0.4:4210', 'daemon-x', fakeStorage(legacy));
-        expect(JSON.parse(legacy.get('ruimte.lastProject')!)).toEqual({
-            last: { endpointId: 'daemon-x', projectId: 'p7' },
-            byEndpoint: { 'daemon-x': 'p7' }
-        });
+        const other = new Map<string, string>([['ruimte.lastProject', JSON.stringify({ last: { endpointId: 'daemon-b', projectId: 'q1' } })]]);
+        rekeyLastProject('10.0.0.4:4210', 'daemon-x', fakeStorage(other));
+        expect(JSON.parse(other.get('ruimte.lastProject')!)).toEqual({ last: { endpointId: 'daemon-b', projectId: 'q1' } });
     });
 });
 
-/*
- * What phase 6 is for: one client per workspace, each on its own daemon and its own stores. Nothing
- * here is about the wire, it is about the client no longer having one canvas to boot a project into.
- */
+/* Two clients on one project, the way two windows or two people have it: each on its own stores. */
 describe('the same project in two clients', () => {
     type Client = ReturnType<typeof setup>;
 
@@ -960,52 +903,5 @@ describe('the same project in two clients', () => {
         expect(b.state.conflict).toBeNull();
         a.dispose();
         b.dispose();
-    });
-});
-
-describe('two workspaces side by side', () => {
-    test('each opens its own project on its own machine, into its own canvas', async () => {
-        const storage = new Map<string, string>();
-        const here = setup({ endpointId: 'daemon-a', stores: createWorkspaceStores(), storage, projects: [summary('p1', '/here')], open: 'p1' });
-        const there = setup({ endpointId: 'daemon-b', stores: createWorkspaceStores(), storage, projects: [summary('q1', '/there')], open: 'q1' });
-        await tick();
-
-        expect(here.state.current?.projectId).toBe('p1');
-        expect(there.state.current?.projectId).toBe('q1');
-        expect(here.transport.of('project.open')[0]?.payload).toEqual({ projectId: 'p1' });
-        expect(there.transport.of('project.open')[0]?.payload).toEqual({ projectId: 'q1' });
-        here.dispose();
-        there.dispose();
-    });
-
-    test('an edit in one saves to its own daemon and leaves the other alone', async () => {
-        const storage = new Map<string, string>();
-        const here = setup({ endpointId: 'daemon-a', stores: createWorkspaceStores(), storage, projects: [summary('p1', '/here')], open: 'p1' });
-        const there = setup({ endpointId: 'daemon-b', stores: createWorkspaceStores(), storage, projects: [summary('q1', '/there')], open: 'q1' });
-        await tick();
-
-        canvasOf(here.stores).getState().addText({ x: 0, y: 0 });
-        await tick(20);
-
-        expect(here.transport.of('project.save')).toHaveLength(1);
-        expect(there.transport.of('project.save')).toHaveLength(0);
-        expect(canvasOf(there.stores).getState().texts).toEqual({});
-        here.dispose();
-        there.dispose();
-    });
-
-    test('a document that arrives on one machine never lands on the other canvas', async () => {
-        const storage = new Map<string, string>();
-        const here = setup({ endpointId: 'daemon-a', stores: createWorkspaceStores(), storage, projects: [summary('p1', '/here')], open: 'p1' });
-        const there = setup({ endpointId: 'daemon-b', stores: createWorkspaceStores(), storage, projects: [summary('q1', '/there')], open: 'q1' });
-        await tick();
-
-        here.transport.emit('project.changed', { projectId: 'p1', document: document(9, [canvasView('main'), canvasView('notes')]) });
-        await tick();
-
-        expect(here.stores.document.getState().views.map((view) => view.id)).toEqual(['main', 'notes']);
-        expect(there.stores.document.getState().views.map((view) => view.id)).toEqual(['main']);
-        here.dispose();
-        there.dispose();
     });
 });

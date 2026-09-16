@@ -8,7 +8,7 @@ import { useServers, type ServerInfo } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { canShowReleaseNotes, ensureReleaseNotes, notesView, openReleaseNotes, useReleaseNotes } from '@/state/release-notes';
 import { describeUpdate, hasUpdate, setAutoDownload, useUpdates } from '@/state/updates';
-import { useFocusedConnection } from '@/transport/connections';
+import { useFocusedMachine } from '@/transport/connections';
 import { Button } from '@/ui/Button';
 import { BrandSymbol } from '@/ui/Brand';
 import { copyText } from '@/ui/clipboard';
@@ -56,7 +56,7 @@ const detailsOf = (server: ServerInfo | undefined): Detail[] => {
 
 /* Who Ruimte is, which versions this window runs, and the one update button there is. */
 export function AboutPane() {
-    const endpointId = useFocusedConnection().endpointId;
+    const endpointId = useFocusedMachine().endpointId;
     const server = useServers((s) => s.byEndpoint[endpointId]);
     const updates = useUpdates();
     const autoDownload = useSettings((s) => s.updatesAutoDownload);

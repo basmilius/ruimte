@@ -5,17 +5,12 @@ import { accentColor, FEATURED_ACCENTS, isFeatured, NODE_ACCENTS, type AccentId 
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Segmented, Stepper, Toggle } from '@/shell/settings/controls';
-import { FONT_SIZE_RANGE, INTERFACE_FONT_SIZE_RANGE, MONO_FONTS, useSettings, type SidebarScope } from '@/state/settings';
+import { FONT_SIZE_RANGE, INTERFACE_FONT_SIZE_RANGE, MONO_FONTS, useSettings } from '@/state/settings';
 import { useTheme, type Theme } from '@/state/theme';
 import { ACCENT_SWATCH } from '@/ui/classes';
 import { Select } from '@/ui/Select';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
-
-const SIDEBAR_SCOPES: Array<{ id: SidebarScope; label: string }> = [
-    { id: 'project', label: 'This project' },
-    { id: 'window', label: 'This window' }
-];
 
 const THEMES: Array<{ id: Theme; label: string }> = [
     { id: 'system', label: 'System' },
@@ -93,7 +88,6 @@ export function AppearancePane() {
     const fontSize = useSettings((s) => s.fontSize);
     const interfaceFontSize = useSettings((s) => s.interfaceFontSize);
     const dockAutoHide = useSettings((s) => s.dockAutoHide);
-    const sidebarScope = useSettings((s) => s.sidebarScope);
     const update = useSettings((s) => s.update);
 
     return (
@@ -119,18 +113,6 @@ export function AppearancePane() {
                             unit=" px"
                             label="Interface font size"
                             onChange={(value) => update({ interfaceFontSize: value })}
-                        />
-                    }
-                />
-                <SettingsRow
-                    label="Sidebar"
-                    description="This project lists the project you are working in. This window lists every project open in the window."
-                    control={
-                        <Segmented
-                            value={sidebarScope}
-                            options={SIDEBAR_SCOPES}
-                            onChange={(id) => update({ sidebarScope: id })}
-                            label="What the sidebar lists"
                         />
                     }
                 />

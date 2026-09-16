@@ -11,7 +11,7 @@ import { startTaskWatch } from '@/tasks/watch';
 import { startPlanPanelWatch } from '@/plan/plan-panel-watch';
 import { startProjectList } from '@/project/list';
 import { startShowViewWatch } from '@/project/show-view-watch';
-import { restoreLastEndpoint } from '@/project/open';
+import { bootWindow } from '@/project/open';
 import { startConnections } from '@/transport/connections';
 import { startPulsarAccount } from '@/pulsar/account';
 import { startLinkRequest } from '@/pulsar/link-request';
@@ -36,14 +36,14 @@ startAgentNotifications();
 startAttentionWatch();
 startServerInfo();
 startPing();
-/* Before the workspace is built: the machine the work was left on is the only one a boot connects to. */
-restoreLastEndpoint();
 startEndpointWatch();
 startProcessWarnings();
 startTaskWatch();
 startPlanPanelWatch();
 startConnections();
 startProjectList();
+/* After the cached lists are in, so the switch screen can name the project it is opening. */
+void bootWindow();
 startShowViewWatch();
 startInputModality();
 startKeepAwake();

@@ -1,70 +1,66 @@
+import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
+
 const LAST_PROJECT_KEY = 'ruimte.lastProject';
 
 export type LastProjectStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
+/* The last project the window had open, which is what a cold start opens again. */
 export interface LastProject {
-    /* The last thing the person looked at, so a cold boot lands on that machine and that project. */
-    last: { endpointId: string; projectId: string } | null;
-    /* What was open per machine, so switching back reopens that machine's project. */
-    byEndpoint: Record<string, string>;
+    endpointId: string;
+    projectId: string;
 }
-
-const EMPTY: LastProject = { last: null, byEndpoint: {} };
 
 export const browserStorage = (): LastProjectStorage | null => (typeof localStorage === 'undefined' ? null : localStorage);
 
+const isLastProject = (value: unknown): value is LastProject =>
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as LastProject).endpointId === 'string' &&
+    typeof (value as LastProject).projectId === 'string';
+
 /*
- * What was open per endpoint. A project id belongs to the daemon that minted it, so the project of
- * machine A is not in machine B's list and picking it up there would open whatever B lists first.
- * Two older shapes are read as well: a bare record from before there was a `last`, and the single
- * project id this key held before a client knew more than one daemon. `legacyEndpointId` is the
- * endpoint such a bare id belongs to.
+ * Two older shapes are read as well: a record that also kept a project per machine, whose `last` is
+ * still the answer, and the bare project id this key held before a client knew more than one daemon,
+ * which can only have been this machine's. A record with a project per machine and no `last` says
+ * nothing about which of them was on screen, so it opens nothing.
  */
-export const readLastProject = (storage: LastProjectStorage | null, legacyEndpointId: string | null): LastProject => {
+export const readLastProject = (storage: LastProjectStorage | null): LastProject | null => {
     const raw = storage?.getItem(LAST_PROJECT_KEY) ?? null;
     if (raw === null) {
-        return { ...EMPTY };
+        return null;
     }
     try {
         const parsed = JSON.parse(raw) as unknown;
         if (typeof parsed === 'object' && parsed !== null) {
-            const record = parsed as Partial<LastProject> & Record<string, unknown>;
-            if (typeof record.byEndpoint === 'object' && record.byEndpoint !== null) {
-                return { last: record.last ?? null, byEndpoint: { ...(record.byEndpoint as Record<string, string>) } };
-            }
-            return { last: null, byEndpoint: { ...(parsed as Record<string, string>) } };
+            const last = (parsed as { last?: unknown }).last;
+            return isLastProject(last) ? { endpointId: last.endpointId, projectId: last.projectId } : null;
         }
     } catch {
         // A bare project id, written before this key was a record.
     }
-    return legacyEndpointId === null ? { ...EMPTY } : { last: { endpointId: legacyEndpointId, projectId: raw }, byEndpoint: { [legacyEndpointId]: raw } };
+    return raw === '' ? null : { endpointId: LOCAL_ENDPOINT_ID, projectId: raw };
 };
 
-const write = (storage: LastProjectStorage | null, value: LastProject): void => {
-    storage?.setItem(LAST_PROJECT_KEY, JSON.stringify(value));
+const write = (storage: LastProjectStorage | null, last: LastProject | null): void => {
+    storage?.setItem(LAST_PROJECT_KEY, JSON.stringify({ last }));
 };
 
-/* What one machine has open now, and with it what the person looked at last. */
+/* The project the window has open now; null once that project on that machine is closed. */
 export const rememberProject = (endpointId: string, projectId: string | null, storage: LastProjectStorage | null = browserStorage()): void => {
-    const stored = readLastProject(storage, endpointId);
-    if (projectId === null) {
-        delete stored.byEndpoint[endpointId];
-        write(storage, { last: stored.last?.endpointId === endpointId ? null : stored.last, byEndpoint: stored.byEndpoint });
+    if (projectId !== null) {
+        write(storage, { endpointId, projectId });
         return;
     }
-    write(storage, { last: { endpointId, projectId }, byEndpoint: { ...stored.byEndpoint, [endpointId]: projectId } });
+    if (readLastProject(storage)?.endpointId === endpointId) {
+        write(storage, null);
+    }
 };
 
-/* An endpoint that moves onto its daemon id keeps what it had open (`rekeyEndpoint`). */
+/* An endpoint that moves onto its daemon id keeps the project it had open (`rekeyEndpoint`). */
 export const rekeyLastProject = (oldId: string, newId: string, storage: LastProjectStorage | null = browserStorage()): void => {
-    const stored = readLastProject(storage, oldId);
-    const projectId = stored.byEndpoint[oldId];
-    if (projectId === undefined) {
+    const last = readLastProject(storage);
+    if (last?.endpointId !== oldId) {
         return;
     }
-    delete stored.byEndpoint[oldId];
-    write(storage, {
-        last: stored.last?.endpointId === oldId ? { endpointId: newId, projectId: stored.last.projectId } : stored.last,
-        byEndpoint: { ...stored.byEndpoint, [newId]: projectId }
-    });
+    write(storage, { endpointId: newId, projectId: last.projectId });
 };

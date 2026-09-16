@@ -13,16 +13,7 @@ export const MONO_FONTS = [
 
 export type MonoFontId = (typeof MONO_FONTS)[number]['id'];
 
-/*
- * What the sidebar lists. `project` is the project of the workspace you are working in; `window` is
- * every workspace this window has open, each under the name of its own project. One window holds one
- * workspace today, so the second stand differs by the heading alone until panes arrive.
- */
-export type SidebarScope = 'project' | 'window';
-
 const WORKTREE_MERGE_STRATEGIES: readonly WorktreeMergeStrategy[] = WorktreeMergeStrategySchema.options;
-
-export const SIDEBAR_SCOPES: readonly SidebarScope[] = ['project', 'window'];
 
 /*
  * How a reply appears while it is written: a word at a time, a block at a time once each block is
@@ -57,8 +48,6 @@ export interface Settings {
     filesTabLimit: number;
     /* Whether the files tree shows dotfiles; the panel's eye button writes the same value. */
     filesShowHidden: boolean;
-    /* Which projects the sidebar lists: the one you are working in, or every one this window holds. */
-    sidebarScope: SidebarScope;
     /* Where the palette starts when it browses for a folder to open. Empty is the home of whichever
        machine is being browsed. One setting for every machine rather than one per machine, because
        the folders people keep their work in have the same name everywhere; a path that is not on the
@@ -133,7 +122,6 @@ const DEFAULT_SETTINGS: Settings = {
     interfaceFontSize: 15,
     filesTabLimit: 5,
     filesShowHidden: false,
-    sidebarScope: 'project',
     browseStartFolder: '',
     gitTree: true,
     diffLayout: 'stacked',
@@ -169,7 +157,6 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     filesTabLimit: clampSize(stored.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit),
     // A path is typed by hand and read back as one; anything else in the blob is no folder.
     browseStartFolder: typeof stored.browseStartFolder === 'string' ? stored.browseStartFolder : DEFAULT_SETTINGS.browseStartFolder,
-    sidebarScope: SIDEBAR_SCOPES.find((scope) => scope === stored.sidebarScope) ?? DEFAULT_SETTINGS.sidebarScope,
     // A client that stored null for the theme's own accent, or an id that has since gone, lands on the brand's.
     accent: NODE_ACCENTS.find((entry) => entry.id === stored.accent)?.id ?? DEFAULT_SETTINGS.accent,
     // Nothing moves a person's eyes unless that person said so, so only a stored `true` turns it on.
@@ -242,7 +229,6 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 interfaceFontSize,
                 filesTabLimit,
                 filesShowHidden,
-                sidebarScope,
                 browseStartFolder,
                 gitTree,
                 diffLayout,
@@ -267,7 +253,6 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 interfaceFontSize,
                 filesTabLimit,
                 filesShowHidden,
-                sidebarScope,
                 browseStartFolder,
                 gitTree,
                 diffLayout,

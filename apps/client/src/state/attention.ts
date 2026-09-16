@@ -92,7 +92,7 @@ export const chatsInSight = (workspace: ChatSightWorkspace, { planWidth }: { pla
     return chats;
 };
 
-/* The workspace that has the focus, as `chatsInSight` reads it. */
+/* The open project, as `chatsInSight` reads it. */
 export const liveChatSight = (): ChatSightWorkspace => {
     const { views, layout } = useDocument.getState();
     return {

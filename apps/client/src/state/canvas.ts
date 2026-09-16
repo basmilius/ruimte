@@ -1,6 +1,6 @@
 import { createStore, type StoreApi } from 'zustand';
-import { createEditorRegistry, type EditorRegistry } from '@/state/editors';
-import { currentStores, editorHook, focusedEditor, subscribeCurrentWorkspace, useEditorStoreOf } from '@/state/workspace-stores';
+import { createEditorRegistry } from '@/state/editors';
+import { editorHook, focusedEditor, useEditorStoreOf } from '@/state/workspace-stores';
 import {
     cameraCenteredOn,
     cameraOfView,
@@ -183,7 +183,7 @@ export interface CanvasState {
     /* Changes what a node carries (its page, its folder) without touching its placement. */
     updateNode(id: string, patch: Partial<Pick<CanvasNode, 'url' | 'cwd' | 'command' | 'resume' | 'body' | 'color' | 'provider'>>): void;
     duplicateNode(id: string): void;
-    /* Null with no view under the canvas: there is no project file such a node could live in. */
+    /* Null with no view under the canvas: nothing in the project file could hold such a node. */
     addNode(kind: NodeKind, at: Point, options?: AddNodeOptions): string | null;
     /* Wraps the selected nodes in a group; answers null when nothing is selected. */
     groupSelection(): string | null;
@@ -295,7 +295,7 @@ const snapshotOf = (s: Pick<CanvasState, 'nodes' | 'order' | 'texts' | 'edges' |
 /* Remembers the placement before a change; called by every action that changes it. */
 const remember = (s: CanvasState): Pick<CanvasState, 'past' | 'future'> => ({ past: [...s.past.slice(-(HISTORY_LIMIT - 1)), snapshotOf(s)], future: [] });
 
-/* One canvas editor, for one workspace. A second project on screen is a second one of these. */
+/* One canvas editor, for one view on screen. */
 export const createCanvasStore = (): StoreApi<CanvasState> =>
     createStore<CanvasState>((set, get) => ({
         viewId: null,
@@ -510,7 +510,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
             set({ order: [...order.filter((n) => n !== id), id] });
         },
         addNode(kind, at, options = {}) {
-            /* Without a view there is no project file behind the canvas, so a node here would be a live
+            /* Without a view nothing in the project file is behind the canvas, so a node here would be a live
            terminal or agent that nothing ever saves. The surfaces that offer one are hidden in that
            state; this is the floor under them. */
             if (get().viewId === null && options.viewId === undefined) {
@@ -823,31 +823,28 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         }
     }));
 
-/* The canvas of no workspace at all: what a unit test reads and what the hook falls back on. */
+/* The blank canvas of the window: what a view that is not a canvas reads, and what a unit test reads. */
 export const defaultCanvasStore = createCanvasStore();
 
-/* The registry of no workspace at all; its blank editor is the store this module made. */
+/* The canvas editors of the window; its blank editor is the store this module made. */
 export const defaultCanvases = createEditorRegistry(createCanvasStore, defaultCanvasStore);
 
 /* What a component reads while it renders: the canvas of the cell it is drawn in. */
-export const useCanvas = editorHook('canvases', defaultCanvases);
+export const useCanvas = editorHook(defaultCanvases);
 
 /*
  * The canvas store of the cell a component is drawn in, as the store itself. A component that
  * subscribes or writes rather than reads needs this: the hook above has no `getState`, because a
  * component holding one that answers for the cell beside it is the bug this is here to make hard.
  */
-export const useCanvasStore = (): StoreApi<CanvasState> => useEditorStoreOf('canvases', defaultCanvases);
+export const useCanvasStore = (): StoreApi<CanvasState> => useEditorStoreOf(defaultCanvases);
 
 /*
  * The canvas of the cell that has the focus. This is "the canvas in front of me", which is what a
  * shortcut, a window menu, a palette row or anything else with no cell of its own means. Inside a cell
  * it is the wrong store as often as not: use `useCanvasStore`.
  */
-export const focusedCanvas = (): StoreApi<CanvasState> => focusedEditor('canvases', defaultCanvases);
-
-/* The canvas editors of the workspace in front of us, which outside one is the default registry. */
-const canvases = (): EditorRegistry<CanvasState> => currentStores()?.canvases ?? defaultCanvases;
+export const focusedCanvas = (): StoreApi<CanvasState> => focusedEditor(defaultCanvases);
 
 /*
  * The editor of the view a node stands on, out of every canvas on screen. What arrives for one node
@@ -855,22 +852,20 @@ const canvases = (): EditorRegistry<CanvasState> => currentStores()?.canvases ??
  * not always the one with the focus.
  */
 export const canvasOfNode = (nodeId: string): StoreApi<CanvasState> | null =>
-    canvases()
-        .live()
-        .find(([, store]) => store.getState().nodes[nodeId] !== undefined)?.[1] ?? null;
+    defaultCanvases.live().find(([, store]) => store.getState().nodes[nodeId] !== undefined)?.[1] ?? null;
 
 /*
  * What a view holds right now. A view on screen is held by its editor, which is fresher than the
  * copy the document keeps of it, so anything asking what a project has must prefer this.
  */
-export const liveCanvas = (viewId: string): CanvasState | null => canvases().peek(viewId)?.getState() ?? null;
+export const liveCanvas = (viewId: string): CanvasState | null => defaultCanvases.peek(viewId)?.getState() ?? null;
 
 /*
  * Selects a node and brings the camera to it once it is on its canvas, for a node the machine writes
  * (a fork) and that arrives with the next `project.changed`. Nothing happens for a canvas not on screen.
  */
 export const revealWhenItLands = (viewId: string, nodeId: string): void => {
-    const store = canvases().peek(viewId);
+    const store = defaultCanvases.peek(viewId);
     if (!store) {
         return;
     }
@@ -888,27 +883,13 @@ export const revealWhenItLands = (viewId: string, nodeId: string): void => {
 };
 
 /* Every canvas on screen, which is what a watcher about the whole project walks over. */
-export const liveCanvases = (): [string, CanvasState][] =>
-    canvases()
-        .live()
-        .map(([viewId, store]) => [viewId, store.getState()]);
+export const liveCanvases = (): [string, CanvasState][] => defaultCanvases.live().map(([viewId, store]) => [viewId, store.getState()]);
 
 /*
  * Every change in every canvas on screen, and one opening or closing. A watcher that is about the
  * project subscribes here rather than to `useCanvas`, which is one cell and stops being that cell
- * the moment another view takes it. Rewired when the focus moves to another workspace.
+ * the moment another view takes it.
  */
-export const subscribeCanvases = (listener: () => void): (() => void) => {
-    let off = canvases().subscribe(listener);
-    const offWorkspaces = subscribeCurrentWorkspace(() => {
-        off();
-        off = canvases().subscribe(listener);
-        listener();
-    });
-    return () => {
-        off();
-        offWorkspaces();
-    };
-};
+export const subscribeCanvases = (listener: () => void): (() => void) => defaultCanvases.subscribe(listener);
 
 export const isNodeFocused = (mode: Mode, id: string): boolean => mode.kind === 'node' && mode.nodeId === id;

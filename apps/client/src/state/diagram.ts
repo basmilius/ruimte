@@ -11,8 +11,8 @@ import {
 import { layoutOf, type DiagramLayout } from '@ruimte/diagram';
 import { cameraOfView, cameraToFit, clampZoom, isMeasured, snapZoom, viewCameraOf, zoomAround, type Camera, type Point } from '@/canvas/math';
 import type { CameraRequest } from '@/state/canvas';
-import { createEditorRegistry, type EditorRegistry } from '@/state/editors';
-import { currentStores, editorHook, focusedEditor, subscribeCurrentWorkspace, useEditorStoreOf } from '@/state/workspace-stores';
+import { createEditorRegistry } from '@/state/editors';
+import { editorHook, focusedEditor, useEditorStoreOf } from '@/state/workspace-stores';
 
 interface Viewport {
     w: number;
@@ -309,33 +309,21 @@ export const createDiagramStore = (): StoreApi<DiagramState> =>
 
 export const defaultDiagramStore = createDiagramStore();
 
-/* The registry of no workspace at all; its blank editor is the store this module made. */
+/* The diagram editors of the window; its blank editor is the store this module made. */
 export const defaultDiagrams = createEditorRegistry(createDiagramStore, defaultDiagramStore);
 
 /* What a component reads while it renders: the diagram of the cell it is drawn in. */
-export const useDiagram = editorHook('diagrams', defaultDiagrams);
+export const useDiagram = editorHook(defaultDiagrams);
 
 /* The diagram store of the cell a component is drawn in, for everything that writes or subscribes. */
-export const useDiagramStore = (): StoreApi<DiagramState> => useEditorStoreOf('diagrams', defaultDiagrams);
+export const useDiagramStore = (): StoreApi<DiagramState> => useEditorStoreOf(defaultDiagrams);
 
 /* The diagram of the cell that has the focus, for a palette row with no cell of its own. */
-export const focusedDiagram = (): StoreApi<DiagramState> => focusedEditor('diagrams', defaultDiagrams);
-
-/* The diagram editors of the workspace in front of us, which outside one is the default registry. */
-const diagrams = (): EditorRegistry<DiagramState> => currentStores()?.diagrams ?? defaultDiagrams;
+export const focusedDiagram = (): StoreApi<DiagramState> => focusedEditor(defaultDiagrams);
 
 /* What a diagram view holds right now, which is fresher than anything the daemon has been told. */
-export const liveDiagram = (viewId: string): DiagramState | null => diagrams().peek(viewId)?.getState() ?? null;
+export const liveDiagram = (viewId: string): DiagramState | null => defaultDiagrams.peek(viewId)?.getState() ?? null;
 
-/* Every change in every diagram on screen, named by the view it happened in; rewired when the focus moves to another workspace. */
-export const subscribeDiagrams = (listener: (viewId: string, state: DiagramState, previous: DiagramState) => void): (() => void) => {
-    let off = diagrams().subscribe(listener);
-    const offWorkspaces = subscribeCurrentWorkspace(() => {
-        off();
-        off = diagrams().subscribe(listener);
-    });
-    return () => {
-        off();
-        offWorkspaces();
-    };
-};
+/* Every change in every diagram on screen, named by the view it happened in. */
+export const subscribeDiagrams = (listener: (viewId: string, state: DiagramState, previous: DiagramState) => void): (() => void) =>
+    defaultDiagrams.subscribe(listener);

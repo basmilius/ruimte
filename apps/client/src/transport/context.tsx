@@ -1,21 +1,15 @@
 import { createContext, useContext, type ReactElement, type ReactNode } from 'react';
-import { WorkspaceStoresContext, type WorkspaceStores } from '@/state/workspace-stores';
 import type { Connection } from './connections';
 import type { Transport } from './transport';
 
 const ConnectionContext = createContext<Connection | null>(null);
 
 /*
- * A workspace: one open project, the daemon it lives on and the stores that hold it. What is inside
- * asks for neither, it inherits both, which is what lets two projects from two machines be on screen
- * at once without a single endpoint id threaded through a panel or a node.
+ * The daemon of the open project. What is inside asks for no endpoint id, it inherits the connection,
+ * so a panel or a node never has to be told which machine it is on.
  */
-export function WorkspaceProvider({ connection, stores, children }: { connection: Connection; stores: WorkspaceStores; children: ReactNode }): ReactElement {
-    return (
-        <ConnectionContext.Provider value={connection}>
-            <WorkspaceStoresContext.Provider value={stores}>{children}</WorkspaceStoresContext.Provider>
-        </ConnectionContext.Provider>
-    );
+export function ConnectionProvider({ connection, children }: { connection: Connection; children: ReactNode }): ReactElement {
+    return <ConnectionContext.Provider value={connection}>{children}</ConnectionContext.Provider>;
 }
 
 /* Null outside a workspace, which is where the palette, the settings and the toasts live. */

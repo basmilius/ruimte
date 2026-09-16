@@ -1,6 +1,6 @@
 import { useEndpoints } from '@/state/endpoints';
 import { useOptionalConnection } from '@/transport/context';
-import { currentWorkspaceEndpointId } from '@/state/workspace-stores';
+import { windowWorkspace } from '@/state/window';
 
 /*
  * A row in a store is about one daemon, and its key says which. Node ids are random, so this is not
@@ -33,7 +33,7 @@ export const dropEndpoint = <T>(rows: Record<string, T>, endpointId: string): Re
 
 /*
  * Which machine the code on screen is about: the daemon of the workspace it is rendered in, and the
- * active one for the shell around it (the palette, the settings, a toast), which belongs to no project.
+ * active one for the shell around it (the palette, the settings, a toast), which is about the window rather than a project.
  */
 export const useEndpointId = (): string => {
     const connection = useOptionalConnection();
@@ -42,7 +42,7 @@ export const useEndpointId = (): string => {
 };
 
 /*
- * The same answer outside a render, where there is no subtree to ask: the machine of the workspace
- * that has the focus, and the active one before the first workspace is built.
+ * The same answer outside a render, where there is no subtree to ask: the machine of the workspace on
+ * screen, and the active one on the start screen.
  */
-export const currentEndpointId = (): string => currentWorkspaceEndpointId() ?? useEndpoints.getState().activeId;
+export const currentEndpointId = (): string => windowWorkspace()?.connection.endpointId ?? useEndpoints.getState().activeId;

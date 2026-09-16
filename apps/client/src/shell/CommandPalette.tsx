@@ -70,7 +70,7 @@ import { fileManagerName, serverInfoOf, useServers } from '@/state/server';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { pool, transportFor, type ConnectionState } from '@/transport';
-import { useFocusedConnection } from '@/transport/connections';
+import { useFocusedMachine } from '@/transport/connections';
 import type { Transport } from '@/transport/transport';
 import { useConnections, useOpenEndpoints } from '@/transport/status';
 import { desktop, isApplePlatform } from '@/desktop/bridge';
@@ -188,10 +188,10 @@ export function CommandPalette() {
     const endpoints = useEndpoints((s) => s.endpoints);
     const connected = useOpenEndpoints();
     const activeId = useEndpoints((s) => s.activeId);
-    /* The palette sits outside every workspace, so it works on the one the person has the focus in. */
-    const { transport } = useFocusedConnection();
+    /* The palette sits outside the workspace, so it works on the machine of the open project, or the active one on the start screen. */
+    const { transport } = useFocusedMachine();
     const browseAt = useUi((s) => s.paletteBrowseAt);
-    /* The machine the switcher asked the browser to open on, for a machine it lists no projects of. */
+    /* The machine the switcher asked the browser to open on, for a machine it lists nothing of. */
     const browseTarget = useUi((s) => s.paletteBrowseMachine);
     const browseStartFolder = useSettings((s) => s.browseStartFolder);
     const accountStatus = usePulsarAccount((s) => s.status);

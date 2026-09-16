@@ -7,9 +7,11 @@ export const REVEAL_DELAY_MS = 300;
 /* What a switch is on its way to, with whatever the cached list knew about it to name it on screen. */
 export interface SwitchTarget {
     endpointId: string;
-    /* The project from the cached list, or null for a folder, a machine, or a project the list does not have. */
+    /* The project from the cached list, or null for a folder, a new project, or a project the list does not have. */
     summary: ProjectSummary | null;
     folder: string | null;
+    /* What a new project is to be called. */
+    name: string | null;
 }
 
 export type SwitchState =
@@ -55,7 +57,7 @@ interface Entry {
 }
 
 /*
- * What the main column says while the client moves to another project: connecting to its machine,
+ * What the window says while it moves to another project: connecting to its machine,
  * opening it, going back after a cancel, or why it failed. One switch at a time; a second pick takes
  * over from the first without going back, since the person already said where they want to be.
  */

@@ -30,16 +30,11 @@ import { Kbd } from '@/ui/Kbd';
 
 /*
  * What "New view" offers: a canvas, or one session with no canvas around it. The agent submenus are
- * the ones the dock uses, so the CLI list can never drift apart between the two. A view belongs to a
- * project file, so with none open there is nothing here to offer.
+ * the ones the dock uses, so the CLI list can never drift apart between the two.
  */
 export function NewViewItems() {
-    const hasProject = useProject((s) => s.current !== null);
     /* A file comes out of the open folder, so a project without one has nothing to pick from. */
     const hasFolder = useProject((s) => s.current?.folder != null);
-    if (!hasProject) {
-        return null;
-    }
     return (
         <>
             <Menu.Item className="menu-item" onClick={() => newCanvasView()}>

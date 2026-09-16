@@ -50,7 +50,7 @@ import {
     type SplitDirection,
     type SplitZone
 } from '@/shell/split';
-import { CellViewContext, workspaceHook } from '@/state/workspace-stores';
+import { CellViewContext, storeHook } from '@/state/workspace-stores';
 
 export interface DocumentState {
     /* In sidebar order. The active canvas view is stale here: the canvas store is the editor of that one. */
@@ -158,9 +158,8 @@ export type StandaloneRequest =
     { kind: 'chat' | 'terminal'; name: string; id?: string; node: StandaloneNode } | { kind: 'browser'; name: string; id?: string; url: string };
 
 /*
- * The editors of the same workspace, handed in rather than imported, so a second project on screen
- * moves its own views into its own editors instead of into the ones that have the focus. They are
- * registries: the document decides which views are on screen, and an editor exists for exactly those.
+ * The editors of the project, handed in rather than imported, so a test with stores of its own moves
+ * its views into its own editors instead of into the window's. They are registries: the document decides which views are on screen, and an editor exists for exactly those.
  */
 export interface DocumentPeers {
     canvases: EditorRegistry<CanvasState>;
@@ -692,7 +691,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
 
 export const defaultDocumentStore = createDocumentStore({ canvases: defaultCanvases, drawings: defaultDrawings, diagrams: defaultDiagrams });
 
-export const useDocument = workspaceHook('document', defaultDocumentStore);
+export const useDocument = storeHook(defaultDocumentStore);
 
 /*
  * Whether the cell a component is drawn in has the focus; true outside a cell. A body that takes the

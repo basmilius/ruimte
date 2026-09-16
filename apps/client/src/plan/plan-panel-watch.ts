@@ -5,7 +5,6 @@ import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { findPlan, subscribePlanCreated, usePlans } from '@/state/plans';
 import { useUi } from '@/state/ui';
-import { subscribeCurrentWorkspace } from '@/state/workspace-stores';
 
 export const PLAN_MIN_WIDTH = 320;
 export const PLAN_DEFAULT_WIDTH = 360;
@@ -85,12 +84,7 @@ export const startPlanPanelWatch = (clock: PlanClock = windowClock): (() => void
         }
     });
     const offCanvases = subscribeCanvases(schedule);
-    let offDocument = useDocument.subscribe(schedule);
-    const offWorkspace = subscribeCurrentWorkspace(() => {
-        offDocument();
-        offDocument = useDocument.subscribe(schedule);
-        schedule();
-    });
+    const offDocument = useDocument.subscribe(schedule);
     const offPlans = usePlans.subscribe(schedule);
     const offUi = useUi.subscribe((state, before) => {
         if (state.planAnchor !== before.planAnchor || state.planOpen !== before.planOpen || state.planWidth !== before.planWidth) {
@@ -102,7 +96,6 @@ export const startPlanPanelWatch = (clock: PlanClock = windowClock): (() => void
         offCreated();
         offCanvases();
         offDocument();
-        offWorkspace();
         offPlans();
         offUi();
         own.dispose();

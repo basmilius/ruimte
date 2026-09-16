@@ -3,6 +3,7 @@ import { Dialog } from '@base-ui-components/react/dialog';
 import { Menu } from '@base-ui-components/react/menu';
 import { ExternalLink, Image, MoreHorizontal, Pencil, Trash, X } from 'lucide-react';
 import { projectClient } from '@/project';
+import { closeProject, deleteProject } from '@/project/open';
 import { closeWarning, sessionNodesOf } from '@/project/project-sessions';
 import { ProjectIconDialog } from '@/shell/ProjectIconDialog';
 import { ProjectNameDialog } from '@/shell/ProjectNameDialog';
@@ -40,7 +41,6 @@ export function ProjectActionsMenu() {
     }
 
     const reveal = async (folder: string): Promise<void> => {
-        // The folder is on the machine the project came from, which is not the active one mid-switch.
         await transportFor(currentEndpointId ?? activeId)
             ?.request('fs.reveal', { path: folder })
             .catch(() => undefined);
@@ -48,14 +48,14 @@ export function ProjectActionsMenu() {
 
     const close = async (): Promise<void> => {
         setClosing(null);
-        await projectClient.closeProject();
+        await closeProject();
     };
 
     const remove = async (): Promise<void> => {
         setBusy(true);
         setFailure(null);
         try {
-            await projectClient.deleteProject(current.projectId, true);
+            await deleteProject(currentEndpointId ?? activeId, current.projectId, true);
             setDeleteOpen(false);
         } catch (e) {
             setFailure(e instanceof Error ? e.message : 'That did not work');

@@ -86,7 +86,7 @@ describe('closeTab', () => {
 
 describe('the store and the preview panel', () => {
     beforeEach(() => {
-        // No project id, so the tabs stay out of storage the test environment does not have.
+        // Without a project id, the tabs stay out of storage the test environment does not have.
         useFiles.setState({ projectId: null, tabs: [], active: null, focusRequest: 0 });
         useUi.setState({ preview: { open: false } });
     });

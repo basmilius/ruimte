@@ -16,8 +16,10 @@ import { useUi } from '@/state/ui';
 import { cellCount, type SplitDirection } from '@/shell/split';
 import { matchesShortcut, type Shortcut } from '@/ui/shortcut';
 import { endpointKey } from '@/state/keys';
-import { currentWorkspaceEndpointId, isFocusedWorkspace, type WorkspaceStores } from '@/state/workspace-stores';
+import { windowWorkspace } from '@/state/window';
 import { isInFloatingLayer } from '@/ui/floating';
+
+const workspaceEndpointId = (): string | null => windowWorkspace()?.connection.endpointId ?? null;
 
 /* The first entry whose shortcut the event is, so a table reads as one condition. */
 const entryFor = <T extends string>(table: Record<T, Shortcut>, e: KeyboardEvent, apple: boolean): T | null =>
@@ -31,7 +33,7 @@ const onStandaloneView = (): boolean => {
 
 /* The page the keyboard means: a browser view in the focused cell, or the browser node stepped into on its canvas. */
 const focusedBrowserKey = (): string | null => {
-    const endpointId = currentWorkspaceEndpointId();
+    const endpointId = workspaceEndpointId();
     const view = activeViewOf(useDocument.getState());
     if (endpointId === null || view === null) {
         return null;
@@ -45,7 +47,7 @@ const focusedBrowserKey = (): string | null => {
 
 /* The chat the keyboard is in: a chat view whose body has it, or the chat node stepped into on its canvas. */
 const focusedChatKey = (): string | null => {
-    const endpointId = currentWorkspaceEndpointId();
+    const endpointId = workspaceEndpointId();
     const documentState = useDocument.getState();
     const view = activeViewOf(documentState);
     if (endpointId === null || view === null) {
@@ -76,21 +78,17 @@ export const isSpaceDown = (): boolean => spaceDown;
 
 /*
  * Every shortcut that acts on a project: the views it switches between, the nodes it adds and deletes,
- * the panel beside it. Bound on the window once per workspace, because a view has to answer with the
- * keyboard in the sidebar as well, and `isFocusedWorkspace` is what keeps it off the project in the
- * pane beside it. The shortcuts of the window itself (the palette, find in files, the settings, the
+ * the panel beside it. Bound on the window once, by the workspace, because a view has to answer with the
+ * keyboard in the sidebar as well; the start screen has no workspace and so none of these. The shortcuts of the window itself (the palette, find in files, the settings, the
  * sidebar) are not here at all: `shell/app-shortcuts.ts` has them.
  *
  * It hangs on the workspace and not on a canvas because a grid draws up to nine of them: nine
  * listeners would each act on the focused cell, so one shortcut would land nine times. What "the canvas
  * in front of me" means is `useCanvas` on its own, which is the focused cell by definition.
  */
-export const useCanvasShortcuts = (stores: WorkspaceStores | null): void => {
+export const useCanvasShortcuts = (): void => {
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent): void => {
-            if (!isFocusedWorkspace(stores)) {
-                return;
-            }
             const s = focusedCanvas().getState();
             if (e.code === 'Space' && !isTypingTarget(e.target)) {
                 spaceDown = true;
@@ -243,7 +241,7 @@ export const useCanvasShortcuts = (stores: WorkspaceStores | null): void => {
                 s.select([...s.order, ...Object.keys(s.texts)]);
             } else if ((e.key === 'Delete' || e.key === 'Backspace') && s.selection.length > 0) {
                 e.preventDefault();
-                const endpointId = currentWorkspaceEndpointId();
+                const endpointId = workspaceEndpointId();
                 void deleteSelectionAsking(focusedCanvas(), endpointId === null ? null : transportFor(endpointId));
             } else if (e.key === '=' || e.key === '+') {
                 s.zoomTo(Math.round(s.camera.zoom * 100 + 10) / 100);
@@ -258,7 +256,7 @@ export const useCanvasShortcuts = (stores: WorkspaceStores | null): void => {
          * listen on the window too, and only stopping the key here keeps them from also acting on it.
          */
         const onEscapeCapture = (e: KeyboardEvent): void => {
-            if (e.key !== 'Escape' || e.metaKey || e.ctrlKey || e.altKey || e.isComposing || !isFocusedWorkspace(stores)) {
+            if (e.key !== 'Escape' || e.metaKey || e.ctrlKey || e.altKey || e.isComposing) {
                 return;
             }
             if (isInFloatingLayer(e.target) || isTypingTarget(e.target)) {
@@ -283,5 +281,5 @@ export const useCanvasShortcuts = (stores: WorkspaceStores | null): void => {
             window.removeEventListener('keydown', onKeyDown);
             window.removeEventListener('keyup', onKeyUp);
         };
-    }, [stores]);
+    }, []);
 };

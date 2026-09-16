@@ -2,14 +2,11 @@ import { AuthChallengeResultSchema, type AuthSession, type EndpointInfo } from '
 import { dropClientLocalOf } from '@/project/client-local';
 import { browserStorage } from '@/project/last-project';
 import { useBrowser } from '@/browser/registry';
-import { projectClient } from '@/project';
 import { forgetCachedList } from '@/project/list';
 import { useChats } from '@/state/chats';
-import { useDocument } from '@/state/document';
 import { useLastSeen } from '@/state/last-seen';
 import { LOCAL_ENDPOINT_ID, activeEndpoint, endpointForDaemon, parsePairingUrl, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProjectList } from '@/state/project-list';
-import { useProject } from '@/state/project';
 import { useProvidersStore } from '@/state/providers';
 import { useServers } from '@/state/server';
 import { useSessions } from '@/state/sessions';
@@ -17,7 +14,8 @@ import { useToasts } from '@/state/toasts';
 import { useUsageStore } from '@/state/usage';
 import { mixedContentRefusal } from '@/station';
 import { connectionAddressFor, pool, transport } from '@/transport';
-import { dropMachine } from '@/transport/connections';
+import { dropMachine, leaveWorkspace, showStart } from '@/transport/connections';
+import { windowWorkspace } from '@/state/window';
 import { useProcesses, useProcessWarnings } from '@/state/processes';
 import { clientKey } from './client-key';
 import { currentClientLabel } from './client-label';
@@ -116,21 +114,11 @@ const refuseOwnDaemon = (daemonId: string | null): void => {
     }
 };
 
-/* Moves the whole client to another daemon: the canvas empties first, so nothing of the old one is recreated on the new. */
-export const activateEndpoint = async (id: string): Promise<void> => {
-    if (id === useEndpoints.getState().activeId) {
-        return;
-    }
-    await projectClient.flush();
-    useDocument.getState().load(null, null);
-    useProject.getState().setCurrent(null, 0, null);
-    useEndpoints.getState().setActive(id);
-};
-
-/* Forgetting the machine that is active goes home first, so the canvas is not left on a daemon nothing talks to. */
+/* Forgetting the machine the open project is on takes the window back to the start screen first, so nothing is left on a daemon nothing talks to. */
 export const forgetEndpoint = async (id: string): Promise<void> => {
-    if (id === useEndpoints.getState().activeId) {
-        await activateEndpoint(LOCAL_ENDPOINT_ID);
+    if (windowWorkspace()?.connection.endpointId === id) {
+        await leaveWorkspace().catch(() => undefined);
+        showStart();
     }
     useEndpoints.getState().remove(id);
     forgetTicket(id);

@@ -3,9 +3,8 @@ import clsx from 'clsx';
 import { Menu } from '@base-ui-components/react/menu';
 import { Check, ChevronDown, ChevronRight, FolderOpen, History, Plus } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { projectClient } from '@/project';
 import { menuProjects, type ProjectMenuRow } from '@/project/list';
-import { openProject } from '@/project/open';
+import { createProjectOn, openProject } from '@/project/open';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { ProjectNameDialog } from '@/shell/ProjectNameDialog';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
@@ -72,7 +71,6 @@ export function ProjectMenu() {
     const [newOpen, setNewOpen] = useState(false);
     const { open, recent } = useMemo(() => menuProjects(rows, endpoints, connected), [rows, endpoints, connected]);
     const showMachine = endpoints.length > 1;
-    /* The project's own machine, or the one the shell is pointed at while no project is open. */
     const machineId = currentEndpointId ?? activeId;
     /* The pill names a machine only when the work is somewhere else. Being on the machine the app
        runs on is the ordinary case, and a prefix that is on screen whatever you do says nothing. */
@@ -100,14 +98,10 @@ export function ProjectMenu() {
                             <span className="shrink-0 text-text-faint">/</span>
                         </>
                     )}
-                    {/* No project is the state that is on its way out: a splash page is to take that
-                        screen over, so nothing is designed around the placeholder here. */}
-                    {current ? (
+                    {current && (
                         <ProjectGlyph projectId={current.projectId} endpointId={currentEndpointId ?? undefined} icon={current.icon} color={current.color} />
-                    ) : (
-                        <span className="h-3 w-3 shrink-0 rounded-sm bg-text-faint" />
                     )}
-                    <span className="truncate text-sm font-medium text-text">{current?.name ?? 'No project'}</span>
+                    <span className="truncate text-sm font-medium text-text">{current?.name}</span>
                     <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
                 </Menu.Trigger>
                 <Menu.Portal>
@@ -161,7 +155,9 @@ export function ProjectMenu() {
                 description="Stored in the app, not in a folder. To share a project through git, open a folder instead."
                 action="Create"
                 fallback="Untitled project"
-                onSubmit={(name) => projectClient.createProject(name)}
+                onSubmit={async (name) => {
+                    await createProjectOn(machineId, name);
+                }}
             />
         </>
     );

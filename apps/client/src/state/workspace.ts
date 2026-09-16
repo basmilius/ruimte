@@ -7,8 +7,9 @@ import { createProjectStore, defaultProjectStore } from '@/state/project';
 import type { WorkspaceStores } from '@/state/workspace-stores';
 
 /*
- * The stores of one open project, made together because the document hands every view its editor and
- * reads back what those editors hold: peers of one workspace, never of the workspace next to it.
+ * A set of project stores of its own, made together because the document hands every view its editor
+ * and reads back what those editors hold. The app uses the module's set below; a test makes one of
+ * these when it wants to be left alone by the others.
  */
 export const createWorkspaceStores = (): WorkspaceStores => {
     const canvases = createEditorRegistry(createCanvasStore);
@@ -18,9 +19,8 @@ export const createWorkspaceStores = (): WorkspaceStores => {
 };
 
 /*
- * The set every store module made on its own. The first workspace takes these rather than fresh
- * ones, so a component that sits outside every provider (a dialog, a toast) still reads the project
- * the app started with instead of an empty store nothing writes to.
+ * The set every store module made on its own, which is the set of the window. A workspace fills it when
+ * it opens and empties it when it goes, so a watcher that holds these never has to be told about another.
  */
 export const defaultWorkspaceStores: WorkspaceStores = {
     canvases: defaultCanvases,

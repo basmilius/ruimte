@@ -7,12 +7,12 @@ import { matchesShortcut, type KeyLike } from '@/ui/shortcut';
 
 /*
  * The shortcuts that belong to the window rather than to a project. Each opens a surface that floats
- * over every workspace there is (the palette, the settings, the window's own sidebar), so they are
- * bound once on `window` and are the same key wherever the focus sits.
+ * over the workspace and the start screen alike (the palette, the settings, the window's own sidebar),
+ * so they are bound once on `window` and are the same key wherever the focus sits.
  *
- * Everything a shortcut can do to one project (switch views, add a node, undo, zoom, the panel beside
- * it) is not in here: those live in `canvas/Canvas.tsx` and run only for the workspace that has the
- * focus, so with two projects on screen a shortcut never lands on the other one.
+ * Everything a shortcut can do to the project (switch views, add a node, undo, zoom, the panel beside
+ * it) is not in here: those live in `canvas/canvas-shortcuts.ts`, which the workspace binds, so the
+ * start screen has none of them.
  */
 export type AppShortcut = 'palette' | 'find-in-files' | 'settings' | 'sidebar';
 

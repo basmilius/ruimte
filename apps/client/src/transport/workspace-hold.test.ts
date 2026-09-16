@@ -3,7 +3,7 @@ import type { EventMap, EventType, RequestMap, RequestType } from '@ruimte/contr
 import type { Endpoint } from '../state/endpoints';
 import { TransportPool, type PooledTransport } from './pool';
 import type { ConnectionState, TransportStatus } from './transport';
-import { LinkHold, wantsLink } from './workspace-hold';
+import { LinkHold } from './workspace-hold';
 
 const GRACE_MS = 30_000;
 
@@ -58,30 +58,12 @@ const setup = () => {
     return { pool, opened, hold: new LinkHold((row) => pool.hold(row)) };
 };
 
-const idle = { current: false, switching: false, remembered: false, booted: false };
-
 beforeEach(() => {
     jest.useFakeTimers();
 });
 
 afterEach(() => {
     jest.useRealTimers();
-});
-
-describe('whether a workspace keeps its machine connected', () => {
-    test('an open project or one on its way in does', () => {
-        expect(wantsLink({ ...idle, current: true })).toBe(true);
-        expect(wantsLink({ ...idle, switching: true })).toBe(true);
-    });
-
-    test('an empty workspace does not', () => {
-        expect(wantsLink(idle)).toBe(false);
-    });
-
-    test('a remembered project does until the boot tried it', () => {
-        expect(wantsLink({ ...idle, remembered: true })).toBe(true);
-        expect(wantsLink({ ...idle, remembered: true, booted: true })).toBe(false);
-    });
 });
 
 describe('the hold of a workspace', () => {
@@ -113,20 +95,5 @@ describe('the hold of a workspace', () => {
         hold.set(null);
         jest.advanceTimersByTime(GRACE_MS);
         expect(pool.peek('daemon-a')).toBeNull();
-    });
-
-    test('a boot connects only the machine whose project it restores', () => {
-        const { pool, opened } = setup();
-        const remembered: Record<string, string> = { 'daemon-b': 'project-1' };
-        const known = ['local', 'daemon-a', 'daemon-b'];
-        const activeId = 'daemon-b';
-        // Every known machine gets a workspace hold asked, as the most a boot could ever do; only the one with a remembered project takes it.
-        for (const endpointId of known) {
-            const hold = new LinkHold((row) => pool.hold(row));
-            const wanted = endpointId === activeId && wantsLink({ ...idle, remembered: remembered[endpointId] !== undefined });
-            hold.set(wanted ? endpoint(endpointId) : null);
-        }
-        expect(opened).toEqual(['daemon-b']);
-        expect(pool.ids()).toEqual(['daemon-b']);
     });
 });
