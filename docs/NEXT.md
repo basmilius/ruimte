@@ -48,7 +48,11 @@ larger ones becomes a GitHub issue when it starts.
 10. **Per-project settings** in `.ruimte/settings.json` (the terminal agent mode first), worktree
     merge and removal from the group menu (more pressing now that `agent` and `team --worktree` leave a
     worktree per role behind), shared paths (`node_modules`, `.env`) linked into a new
-    worktree, clone a repository as a project.
+    worktree, clone a repository as a project. Worktrees phase 1 is done: the register, counting the
+    work, removal that refuses work without force, the Worktrees section in the git panel and the
+    branch pill and menu block on a node. Next: a diff against the branch a worktree came from, then
+    merging (squash by default, uncommitted work committed first), the `worktree` verb, and shared
+    paths with the checkbox in the delete dialog.
 11. **The editor and the diff node**, the half of this the file node does not cover. Saving is the
     whole of it: there is no `fs.write` on the wire, and adding one is a decision about what a
     client may change on a machine, with a conflict question under it (an agent rewrote the file
