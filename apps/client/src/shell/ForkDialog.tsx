@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { GitFork } from 'lucide-react';
-import { CHAT_FORK_TITLE_MAX, isCanvasView } from '@ruimte/contracts';
-import { forkPointLabel, forkPointOf, forkRefusal } from '@/chat/logic/fork';
+import { CHAT_FORK_TITLE_MAX } from '@ruimte/contracts';
+import { forkOriginIn, forkPayload, forkPointLabel, forkPointOf, forkRefusal, forkShapes, type ForkShape } from '@/chat/logic/fork';
+import { showViewWhenItLands } from '@/project/views';
 import { canvasOfNode, revealWhenItLands } from '@/state/canvas';
 import { useChatRow } from '@/state/chats';
 import { useDocument } from '@/state/document';
@@ -11,11 +12,17 @@ import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Icon } from '@/ui/Icon';
-import { Select } from '@/ui/Select';
+import { Select, type SelectItem } from '@/ui/Select';
+
+const SHAPE_ITEMS: Record<ForkShape, SelectItem<ForkShape>> = {
+    node: { value: 'node', label: 'A node beside it' },
+    view: { value: 'view', label: 'A new view' }
+};
 
 /*
- * Forks a chat after one of its turns into a chat node beside it, with the history up to and
- * including that turn. The turn is where the person clicked, so the dialog only says which one it is.
+ * Forks a chat after one of its turns, with the history up to and including that turn: a chat view
+ * forks into a view listed after it, a node into a node beside it or, when picked, a view. The turn
+ * is where the person clicked, so the dialog only says which one it is.
  */
 export function ForkDialog() {
     const fork = useUi((s) => s.forkDialog);
@@ -49,19 +56,19 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
     const info = useChatRow(chatId, (row) => row?.info ?? null);
     const items = useChatRow(chatId, (row) => row?.structure);
     const order = useChatRow(chatId, (row) => row?.order);
-    const views = useDocument((s) => s.views);
-    const chatView = views.find((view) => view.kind === 'chat' && view.id === chatId);
-    const canvases = views.filter(isCanvasView);
-    const originalTitle = chatView?.name ?? canvasOfNode(chatId)?.getState().nodes[chatId]?.title ?? 'Chat';
+    const origin = useDocument((s) => forkOriginIn(s.views, chatId)?.shape ?? 'node');
+    const viewName = useDocument((s) => forkOriginIn(s.views, chatId)?.title);
+    // A node's live editor names it before a save has brought the document up to date.
+    const originalTitle = canvasOfNode(chatId)?.getState().nodes[chatId]?.title ?? viewName ?? 'Chat';
+    const shapes = forkShapes(origin);
     const [title, setTitle] = useState(`${originalTitle} (fork)`.slice(0, CHAT_FORK_TITLE_MAX));
-    const [canvasId, setCanvasId] = useState<string | null>(canvases[0]?.id ?? null);
+    const [shape, setShape] = useState<ForkShape>(shapes[0]!);
     const [busy, setBusy] = useState(false);
     const [failure, setFailure] = useState<string | null>(null);
 
     const point = items && order ? forkPointOf(items, order, turnId) : null;
     const refusal = forkRefusal(info, items?.[turnId]);
-    const needsCanvas = chatView !== undefined;
-    const ready = refusal === null && point !== null && title.trim() !== '' && (!needsCanvas || canvasId !== null);
+    const ready = refusal === null && point !== null && title.trim() !== '';
 
     const submit = async (): Promise<void> => {
         if (!ready || busy) {
@@ -70,13 +77,12 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
         setBusy(true);
         setFailure(null);
         try {
-            const result = await transport.request('chat.fork', {
-                chatId,
-                turnId,
-                title: title.trim(),
-                ...(needsCanvas && canvasId !== null ? { viewId: canvasId } : {})
-            });
-            revealWhenItLands(result.viewId, result.nodeId);
+            const result = await transport.request('chat.fork', forkPayload({ chatId, turnId, title: title.trim(), shape }));
+            if (shape === 'view') {
+                showViewWhenItLands(result.viewId);
+            } else {
+                revealWhenItLands(result.viewId, result.nodeId);
+            }
             onDone();
         } catch (e) {
             setFailure(e instanceof Error ? e.message : 'The fork could not be made');
@@ -89,8 +95,9 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
         <>
             <p className="mt-1 text-sm text-text-muted">{point ? forkPointLabel(point) : 'This turn is no longer in the conversation.'}</p>
             <p className="mt-2 text-sm text-text-muted">
-                A new chat node goes on from there with the same CLI, beside the original and with a line from it. Nothing is sent until you write the first
-                message.
+                {shape === 'view'
+                    ? `A new chat view goes on from there with the same CLI, right after ${origin === 'view' ? 'the original' : 'its canvas'} in the sidebar. Nothing is sent until you write the first message.`
+                    : 'A new chat node goes on from there with the same CLI, beside the original and with a line from it. Nothing is sent until you write the first message.'}
             </p>
             {point !== null && !point.last && (
                 <p className="mt-2 text-sm text-text-muted">The files stay as they are now; the agent is told the folder is newer than this turn.</p>
@@ -113,20 +120,16 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
                     }
                 }}
             />
-            {needsCanvas && (
+            {shapes.length > 1 && (
                 <div className="mt-3 flex items-center justify-between gap-3">
-                    <span className="text-xs text-text-muted">Canvas</span>
-                    {canvases.length === 0 ? (
-                        <span className="text-sm text-text-muted">This project has no canvas to put the fork on.</span>
-                    ) : (
-                        <Select
-                            label="Canvas"
-                            variant="outlined"
-                            value={canvasId}
-                            onValueChange={setCanvasId}
-                            items={canvases.map((canvas) => ({ value: canvas.id, label: canvas.name }))}
-                        />
-                    )}
+                    <span className="text-xs text-text-muted">Fork into</span>
+                    <Select<ForkShape>
+                        label="Fork into"
+                        variant="outlined"
+                        value={shape}
+                        onValueChange={setShape}
+                        items={shapes.map((value) => SHAPE_ITEMS[value])}
+                    />
                 </div>
             )}
             {refusal !== null && <p className="mt-2 text-sm text-text-muted">{refusal}.</p>}

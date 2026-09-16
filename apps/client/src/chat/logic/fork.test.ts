@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatInfo, ChatItem } from '@ruimte/contracts';
-import { forkPointLabel, forkPointOf, forkRefusal, lastSettledTurn, turnIdOfRow } from './fork';
+import type { ChatInfo, ChatItem, ProjectView } from '@ruimte/contracts';
+import { forkOriginIn, forkPayload, forkPointLabel, forkPointOf, forkRefusal, forkShapes, lastSettledTurn, turnIdOfRow } from './fork';
 import { deriveTimelineRows } from './timeline';
 
 const info = (patch: Partial<ChatInfo> = {}): ChatInfo => ({
@@ -63,5 +63,38 @@ describe('fork', () => {
         expect(forkPointLabel(forkPointOf(items, order, 't3')!)).toBe('After the last turn');
         expect(forkPointOf(items, order, 't2')!.prompt).toBe('Woken by 2 tasks');
         expect(forkPointOf(items, order, 'missing')).toBeNull();
+    });
+});
+
+describe('the shape of a fork', () => {
+    test('a view forks only into a view, and a node into a node unless a view is picked', () => {
+        expect(forkShapes('view')).toEqual(['view']);
+        expect(forkShapes('node')).toEqual(['node', 'view']);
+    });
+
+    test('only a view asks the machine for one', () => {
+        const base = { chatId: 'chat-1', turnId: 't1', title: 'Lexer (fork)' };
+        expect(forkPayload({ ...base, shape: 'node' })).toEqual(base);
+        expect(forkPayload({ ...base, shape: 'view' })).toEqual({ ...base, asView: true });
+    });
+
+    test('the original is found as a chat view or a chat node on any canvas, and nowhere once it is gone', () => {
+        const views: ProjectView[] = [
+            {
+                kind: 'canvas',
+                id: 'main',
+                name: 'Canvas',
+                nodes: [{ id: 'chat-2', kind: 'chat', title: 'Parser', x: 0, y: 0, w: 1, h: 1 }],
+                texts: [],
+                edges: [],
+                layouts: []
+            },
+            { kind: 'chat', id: 'chat-1', name: 'Lexer', node: {} },
+            { kind: 'terminal', id: 'term-1', name: 'Shell', node: {} }
+        ];
+        expect(forkOriginIn(views, 'chat-1')).toEqual({ shape: 'view', title: 'Lexer' });
+        expect(forkOriginIn(views, 'chat-2')).toEqual({ shape: 'node', title: 'Parser' });
+        expect(forkOriginIn(views, 'term-1')).toBeNull();
+        expect(forkOriginIn(views, 'chat-3')).toBeNull();
     });
 });

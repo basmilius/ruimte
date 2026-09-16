@@ -1,4 +1,4 @@
-import type { ChatInfo, ChatItem, ChatTurnItem } from '@ruimte/contracts';
+import { isCanvasView, type ChatForkPayload, type ChatInfo, type ChatItem, type ChatTurnItem, type ProjectView } from '@ruimte/contracts';
 import type { TimelineRow } from '@/chat/logic/timeline';
 
 /* The providers whose chat a machine can fork: the ones with a conversation the CLI keeps and can be cut. */
@@ -94,4 +94,38 @@ export const turnIdOfRow = (row: TimelineRow): string | null => {
         default:
             return null;
     }
+};
+
+/* What a fork becomes: a chat node on a canvas, or a chat view of its own in the sidebar. */
+export type ForkShape = 'node' | 'view';
+
+/* What the dialog offers, first the default: a view forks into a view, and a node into a node or, when asked, a view. */
+export const forkShapes = (origin: ForkShape): ForkShape[] => (origin === 'view' ? ['view'] : ['node', 'view']);
+
+export const forkPayload = (input: { chatId: string; turnId: string; title: string; shape: ForkShape }): ChatForkPayload => ({
+    chatId: input.chatId,
+    turnId: input.turnId,
+    title: input.title,
+    ...(input.shape === 'view' ? { asView: true } : {})
+});
+
+/* Where a chat stands in the project: a node on a canvas or a view of its own, under the name it goes by. */
+export interface ForkOrigin {
+    shape: ForkShape;
+    title: string;
+}
+
+export const forkOriginIn = (views: readonly ProjectView[], chatId: string): ForkOrigin | null => {
+    for (const view of views) {
+        if (view.kind === 'chat' && view.id === chatId) {
+            return { shape: 'view', title: view.name };
+        }
+        if (isCanvasView(view)) {
+            const node = view.nodes.find((candidate) => candidate.id === chatId && candidate.kind === 'chat');
+            if (node) {
+                return { shape: 'node', title: node.title };
+            }
+        }
+    }
+    return null;
 };

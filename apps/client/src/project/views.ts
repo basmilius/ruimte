@@ -28,6 +28,24 @@ export const showView = (id: string): void => {
 };
 
 /*
+ * Opens a view the machine writes (a fork) once it is in the document, which may be before or after
+ * the answer to the request that made it: the next `project.changed` is what carries it.
+ */
+export const showViewWhenItLands = (id: string): void => {
+    if (useDocument.getState().views.some((view) => view.id === id)) {
+        showView(id);
+        return;
+    }
+    const off = useDocument.subscribe((state) => {
+        if (state.views.some((view) => view.id === id)) {
+            // Before the open, which is a change this listener would otherwise hear again.
+            off();
+            state.setActiveView(id);
+        }
+    });
+};
+
+/*
  * The view a split puts in the cell it makes: the first one that is not standing anywhere yet, from
  * the focused view down the list and around. A view lives in at most one cell, so with every view
  * already up there is nothing to put beside them and the split does not happen.
