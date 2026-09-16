@@ -461,12 +461,22 @@ const readCiphertext = Buffer.concat([readCipher.update(Buffer.from(JSON.stringi
 const unsignedRead = { ...unsignedPush, pushType: 'background' as const, nonce: readNonce.toString('base64url'), ciphertext: readCiphertext.toString('base64url') };
 const pushReadEncryption = { ...pushEncryption, content: readContent,
     push: { ...unsignedRead, signature: sign(null, Buffer.from(push.pushMessage(unsignedRead)), privateKey).toString('base64url') } };
+const activityPush: push.PushEnvelope = { ...pushRouting, pushType: 'liveactivity', signature: '',
+    activity: { title: 'Mac', phase: 'needs-you', startedAt: 1000, runningCount: 1, attentionCount: 1,
+        agents: [
+            { nodeId: 'review-1', target: 'chat', title: 'Review café 🚀', phase: 'needs-you' },
+            { nodeId: 'build-2', target: 'terminal', title: 'Build app', phase: 'running' }
+        ]
+    }
+};
+const pushActivitySigning = { push: activityPush, message: push.pushMessage(activityPush) };
 outputs.set(
     'Tests/RuimtePulsarTests/Fixtures/wire.json',
     JSON.stringify(
         {
             pushEncryption,
             pushReadEncryption,
+            pushActivitySigning,
             requestTypes: Object.keys(REQUEST_SCHEMAS),
             eventTypes: Object.keys(EVENT_SCHEMAS),
             crypto,

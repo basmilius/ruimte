@@ -542,7 +542,15 @@ struct NotificationDestination: Identifiable, Hashable {
             runtime?.machines.contains(where: { $0.id == machine }) == true
         else { return }
         if collapse == Self.collapseID(machineID: machine, nodeID: Self.machineActivityNode) {
-            destination = NotificationDestination(machineID: machine, nodeID: "", target: "machine")
+            if let node = parts.queryItems?.first(where: { $0.name == "node" })?.value,
+                !node.isEmpty, node.count <= 256,
+                let target = parts.queryItems?.first(where: { $0.name == "target" })?.value,
+                target == "terminal" || target == "chat"
+            {
+                destination = NotificationDestination(machineID: machine, nodeID: node, target: target)
+            } else {
+                destination = NotificationDestination(machineID: machine, nodeID: "", target: "machine")
+            }
         } else if let node = follows[machine]?.first(where: {
             Self.collapseID(machineID: machine, nodeID: $0) == collapse
         }) {

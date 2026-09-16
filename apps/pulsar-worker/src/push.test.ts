@@ -639,3 +639,30 @@ test('an old round cannot queue its end or register while the new round waits fo
     expect(delivered).toHaveLength(2);
     expect(sqlite.query('SELECT started_at FROM push_activity').get()).toEqual({ started_at: NOW });
 });
+
+test('activity cards deliver signed agent rows and reject a substituted session link', async () => {
+    sqlite.query('UPDATE push_device SET start_token = ?').run('cd'.repeat(32));
+    const push = signed({
+        pushType: 'liveactivity',
+        activity: {
+            title: 'Mac',
+            phase: 'needs-you',
+            startedAt: NOW,
+            runningCount: 1,
+            attentionCount: 1,
+            agents: [
+                { nodeId: 'review', title: 'Write tests', target: 'chat', phase: 'needs-you' },
+                { nodeId: 'build', title: 'Refactor transport', target: 'terminal', phase: 'running' }
+            ]
+        }
+    });
+    expect((await sendPush(request(push), env, seams)).status).toBe(204);
+    expect(apnsPayload(delivered[0]!, true)).toMatchObject({
+        aps: { 'content-state': { agents: push.pushType === 'liveactivity' ? push.activity.agents : [] } }
+    });
+    if (push.pushType !== 'liveactivity') {
+        throw new Error('Expected activity fixture');
+    }
+    push.activity.agents![0]!.nodeId = 'other-session';
+    expect((await sendPush(request(push), env, seams)).status).toBe(403);
+});

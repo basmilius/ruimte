@@ -4,6 +4,17 @@ import Testing
 @testable import RuimtePulsar
 
 struct PushCryptoTests {
+    @Test func activityAgentRowsMatchTypeScriptSigningBytes() throws {
+        let fixture = try JSONValue.decode(
+            Data(contentsOf: #require(Bundle.module.url(forResource: "wire", withExtension: "json"))))
+        let sample = try #require(fixture["pushActivitySigning"])
+        #expect(try PushSigning.message(#require(sample["push"])) == sample["message"]?.stringValue)
+        let state = try JSONDecoder().decode(
+            PushActivityContent.self, from: #require(sample["push"]?["activity"]).encoded())
+        #expect(state.agents?.count == 2)
+        #expect(state.agents?.first?.title == "Review café 🚀")
+    }
+
     @Test func readWatermarksPreserveNewerNotificationsAndIgnoreLateClaims() throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

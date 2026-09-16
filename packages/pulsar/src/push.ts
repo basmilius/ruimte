@@ -45,12 +45,20 @@ export const PushReadContentSchema = z.object({
 });
 export type PushReadContent = z.infer<typeof PushReadContentSchema>;
 
+export const PushActivityAgentSchema = z.object({
+    nodeId: z.string().min(1).max(256),
+    target: z.enum(['terminal', 'chat']),
+    title: z.string().max(80),
+    phase: z.enum(['running', 'needs-you'])
+});
+
 export const PushActivityContentSchema = z.object({
     title: z.string().max(160),
     phase: z.enum(['running', 'tool', 'needs-you', 'done']),
     startedAt: z.number().int().nonnegative(),
     runningCount: z.number().int().nonnegative().optional(),
-    attentionCount: z.number().int().nonnegative().optional()
+    attentionCount: z.number().int().nonnegative().optional(),
+    agents: z.array(PushActivityAgentSchema).max(2).optional()
 });
 export type PushActivityContent = z.infer<typeof PushActivityContentSchema>;
 
@@ -112,6 +120,12 @@ export const pushMessage = (push: PushEnvelope): string => {
             : [push.activity.title, push.activity.phase, push.activity.startedAt];
     if (push.pushType === 'liveactivity' && (push.activity.runningCount !== undefined || push.activity.attentionCount !== undefined)) {
         body.push(push.activity.runningCount ?? null, push.activity.attentionCount ?? null);
+    }
+    if (push.pushType === 'liveactivity' && push.activity.agents !== undefined) {
+        body.push(push.activity.agents.length);
+        for (const agent of push.activity.agents) {
+            body.push(agent.nodeId, agent.target, agent.title, agent.phase);
+        }
     }
     return `pulsar-push-v1\n${JSON.stringify([push.machineId, push.handle, push.id, push.issuedAt, push.expiresAt, push.collapseId, push.pushType, ...body])}`;
 };

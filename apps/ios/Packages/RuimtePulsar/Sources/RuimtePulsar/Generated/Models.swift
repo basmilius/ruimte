@@ -2143,19 +2143,69 @@ public enum ServerFrame: Codable, Sendable, Equatable {
     }
 }
 
+public struct PushActivityAgent: Codable, Sendable, Equatable {
+    public let `nodeId`: String
+    public let `target`: PushActivityAgentTarget
+    public let `title`: String
+    public let `phase`: PushActivityAgentPhase
+
+    public init(`nodeId`: String, `target`: PushActivityAgentTarget, `title`: String, `phase`: PushActivityAgentPhase) {
+        self.`nodeId` = `nodeId`
+        self.`target` = `target`
+        self.`title` = `title`
+        self.`phase` = `phase`
+    }
+
+    public init(from decoder: Decoder) throws {
+        _ = try WireSchema.validate("PushActivityAgentSchema", JSONValue(from: decoder))
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        `nodeId` = try container.decode(String.self, forKey: .`nodeId`)
+        `target` = try container.decode(PushActivityAgentTarget.self, forKey: .`target`)
+        `title` = try container.decode(String.self, forKey: .`title`)
+        `phase` = try container.decode(PushActivityAgentPhase.self, forKey: .`phase`)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(`nodeId`, forKey: .`nodeId`)
+        try container.encode(`target`, forKey: .`target`)
+        try container.encode(`title`, forKey: .`title`)
+        try container.encode(`phase`, forKey: .`phase`)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case `nodeId` = "nodeId"
+        case `target` = "target"
+        case `title` = "title"
+        case `phase` = "phase"
+    }
+}
+
+public enum PushActivityAgentTarget: String, Codable, Sendable, Equatable {
+    case `terminal` = "terminal"
+    case `chat` = "chat"
+}
+
+public enum PushActivityAgentPhase: String, Codable, Sendable, Equatable {
+    case `running` = "running"
+    case `needsYou` = "needs-you"
+}
+
 public struct PushActivityContent: Codable, Sendable, Equatable {
     public let `title`: String
     public let `phase`: PushActivityContentPhase
     public let `startedAt`: Int64
     public let `runningCount`: Int64?
     public let `attentionCount`: Int64?
+    public let `agents`: [PushActivityAgent]?
 
-    public init(`title`: String, `phase`: PushActivityContentPhase, `startedAt`: Int64, `runningCount`: Int64? = nil, `attentionCount`: Int64? = nil) {
+    public init(`title`: String, `phase`: PushActivityContentPhase, `startedAt`: Int64, `runningCount`: Int64? = nil, `attentionCount`: Int64? = nil, `agents`: [PushActivityAgent]? = nil) {
         self.`title` = `title`
         self.`phase` = `phase`
         self.`startedAt` = `startedAt`
         self.`runningCount` = `runningCount`
         self.`attentionCount` = `attentionCount`
+        self.`agents` = `agents`
     }
 
     public init(from decoder: Decoder) throws {
@@ -2166,6 +2216,7 @@ public struct PushActivityContent: Codable, Sendable, Equatable {
         `startedAt` = try container.decode(Int64.self, forKey: .`startedAt`)
         `runningCount` = try container.decodeIfPresent(Int64.self, forKey: .`runningCount`)
         `attentionCount` = try container.decodeIfPresent(Int64.self, forKey: .`attentionCount`)
+        `agents` = try container.decodeIfPresent([PushActivityAgent].self, forKey: .`agents`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -2175,6 +2226,7 @@ public struct PushActivityContent: Codable, Sendable, Equatable {
         try container.encode(`startedAt`, forKey: .`startedAt`)
         try container.encodeIfPresent(`runningCount`, forKey: .`runningCount`)
         try container.encodeIfPresent(`attentionCount`, forKey: .`attentionCount`)
+        try container.encodeIfPresent(`agents`, forKey: .`agents`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -2183,6 +2235,7 @@ public struct PushActivityContent: Codable, Sendable, Equatable {
         case `startedAt` = "startedAt"
         case `runningCount` = "runningCount"
         case `attentionCount` = "attentionCount"
+        case `agents` = "agents"
     }
 }
 

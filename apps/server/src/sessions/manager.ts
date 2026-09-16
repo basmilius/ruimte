@@ -692,7 +692,7 @@ export class SessionManager {
     }
 
     private broadcastListChanged(): void {
-        for (const sink of this.sinks.values()) {
+        for (const sink of [...this.sinks.values(), ...this.observers]) {
             sink({ event: 'session.list-changed', payload: {} });
         }
     }

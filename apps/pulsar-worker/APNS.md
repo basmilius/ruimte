@@ -199,3 +199,68 @@ for the start claim and update-token generation, with registration at `178955008
 no queued update. This confirms a fresh registration rather than reuse of the old token.
 Bas confirmed that this fresh round is visible on the iPhone. Count transitions and
 acceptance of the compact design are being checked separately.
+
+
+### Agent card layout
+
+Bas confirmed the fresh activity and saw its attention icon/count update, but rejected the
+compact sentence layout. The replacement follows the supplied 11:17 reference: a text-only
+Ruimte header, machine caption, up to two agent rows and a footer. The compact Island says
+`N running` or `Needs you`. There is no app icon. Attention rows show `Review`, which opens
+the matching terminal or chat; it does not grant permission. Rows use the existing Lucide
+icons and generic source labels rather than invented tool progress.
+
+The daemon chooses active agents, prioritizes attention, and keeps total counts when more
+than two agents are active. Agent titles, destinations and phases are part of the signed,
+plaintext Live Activity content. Normal alerts and read receipts remain encrypted. Optional
+rows preserve decoding of older machine summaries. Worker
+`1151e4f2-9ae9-455e-a487-4cf31c77f698` is deployed with the expanded schema; no further
+migration was required. The corresponding signed app is installed on the physical iPhone.
+
+Validation: 113 targeted backend tests and 44 Swift tests passed, followed by a 31-test
+Worker run that also checks delivery of agent rows and refusal of a changed session link.
+The native build and repository checks passed. Visual acceptance and the physical Review
+link are pending. Two disposable fixtures named `Refactor transport` and `Write tests`
+exercise running and attention states without invoking an AI provider.
+
+
+`devicectl device capture screenshot` exposed a blank Lock Screen card and clipped expanded
+content. Constraining the linked rows to 40 points and bounding the footer width restored
+both rows and the Review control in a physical screenshot. The Island header now occupies
+its leading/trailing regions so the bottom region has room for the rows and footer. The
+corresponding iPhone build is installed; final full-card and Review checks remain pending.
+
+Repeated install tests also exposed a separate daemon lifecycle bug: session list changes
+went only to connected clients, so the push observer could miss the last terminal being
+killed and retain the old work-round start. `SessionManager` now sends list changes to its
+observers too. A deterministic test over the real manager and fake PTY failed before this
+fix (running instead of done), passes afterward, and proves a fresh start time for the next
+terminal. All 45 session-manager/push-service tests pass. The production daemon was not
+restarted. After the development reload, the physical iPhone registered generation
+`1789551551395` with the same start and update-token generation and no pending update.
+
+
+The first live retry still retained the previous registration after both fixtures stopped.
+With no active development terminals or chats, the isolated development daemon was then
+explicitly restarted on port 4211 with `RUIMTE_HOME=~/.ruimte-dev` to load the tested observer
+change. Production remained running. The native rows were tightened again after a screenshot
+showed the footer clipped by the Island's lower boundary.
+
+
+The next `devicectl` screenshot verified the complete expanded layout: both named rows,
+Review, the running/attention totals and the relative start time are visible without
+clipping. The machine caption truncates within the Island's trailing header region. These
+screenshots stay in `/tmp`; they include unrelated personal screen content and are not
+repository assets. Lock Screen and Review-link checks follow separately.
+
+
+Bas confirmed that Review opens the `Write tests` session. A second physical screenshot
+verified the complete Lock Screen card, including both rows, the action and footer. Its
+relative time could truncate after a few minutes, so the final build uses a fixed short
+start time instead. The latest native build includes that final formatting change.
+
+Both temporary agents and their test attention were cleared. After the explicit development
+reload, a read-only D1 check now confirms zero development update-token records and zero
+start claims after cleanup. There are no active development test terminals or chats. This
+physically verifies the previously missing last-terminal-exit transition. The isolated
+development daemon remains running; production was not restarted.

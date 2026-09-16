@@ -56,6 +56,40 @@
     },
     "now": 2000
   },
+  "pushActivitySigning": {
+    "push": {
+      "machineId": "machine-1",
+      "handle": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "id": "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII",
+      "issuedAt": 1000,
+      "expiresAt": 121000,
+      "collapseId": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+      "pushType": "liveactivity",
+      "signature": "",
+      "activity": {
+        "title": "Mac",
+        "phase": "needs-you",
+        "startedAt": 1000,
+        "runningCount": 1,
+        "attentionCount": 1,
+        "agents": [
+          {
+            "nodeId": "review-1",
+            "target": "chat",
+            "title": "Review café 🚀",
+            "phase": "needs-you"
+          },
+          {
+            "nodeId": "build-2",
+            "target": "terminal",
+            "title": "Build app",
+            "phase": "running"
+          }
+        ]
+      }
+    },
+    "message": "pulsar-push-v1\n[\"machine-1\",\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII\",1000,121000,\"CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC\",\"liveactivity\",\"Mac\",\"needs-you\",1000,1,1,2,\"review-1\",\"chat\",\"Review café 🚀\",\"needs-you\",\"build-2\",\"terminal\",\"Build app\",\"running\"]"
+  },
   "requestTypes": [
     "server.hello",
     "server.ping",

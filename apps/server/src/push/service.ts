@@ -22,13 +22,14 @@ interface PushServiceOptions {
     identity: { id: string; sign(message: string): string };
     now?: () => number;
     machineName?: () => string;
-    activityStates?: () => AgentStatus[];
+    activityNodes?: () => { nodeId: string; target: PushAlertContent['target']; title: string; status: AgentStatus }[];
     titleFor?: (nodeId: string) => string | null;
     send?: (push: PushEnvelope) => Promise<number>;
     onError?: (error: unknown) => void;
 }
 
 interface NodeState {
+    target: PushAlertContent['target'];
     status: AgentStatus;
     title: string;
     startedAt: number;
@@ -199,7 +200,7 @@ export class PushService {
         const previous = this.nodes.get(nodeId);
         const startedAt =
             status === 'running' && previous?.status !== 'running' && previous?.status !== 'needs-you' ? this.now() : (previous?.startedAt ?? this.now());
-        this.nodes.set(nodeId, { status, title, startedAt });
+        this.nodes.set(nodeId, { target, status, title, startedAt });
         this.synchronizeActivities();
         if (status === previous?.status) {
             return;
@@ -227,7 +228,18 @@ export class PushService {
     }
 
     synchronizeActivities(): void {
-        const states = this.options.activityStates?.() ?? [...this.nodes.values()].map((node) => node.status);
+        const nodes = this.options.activityNodes?.() ?? [...this.nodes].map(([nodeId, node]) => ({ nodeId, ...node }));
+        const states = nodes.map((node) => node.status);
+        const agents: NonNullable<PushActivityContent['agents']> = nodes
+            .filter((node) => node.status === 'running' || node.status === 'needs-you')
+            .sort((left, right) => Number(right.status === 'needs-you') - Number(left.status === 'needs-you') || left.nodeId.localeCompare(right.nodeId))
+            .slice(0, 2)
+            .map((node) => ({
+                nodeId: node.nodeId,
+                target: node.target,
+                title: (this.options.titleFor?.(node.nodeId) || node.title).slice(0, 80),
+                phase: node.status === 'needs-you' ? 'needs-you' : 'running'
+            }));
         const runningCount = states.filter((state) => state === 'running').length;
         const attentionCount = states.filter((state) => state === 'needs-you').length;
         const active = runningCount + attentionCount > 0;
@@ -239,7 +251,8 @@ export class PushService {
             phase: attentionCount ? 'needs-you' : runningCount ? 'running' : 'done',
             startedAt: this.machineStartedAt || this.now(),
             runningCount,
-            attentionCount
+            attentionCount,
+            agents
         };
         if (!active) {
             this.machineStartedAt = 0;

@@ -285,9 +285,20 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         identity,
         titleFor: (nodeId) => projects.index.titleFor(nodeId),
         machineName: () => identity.label,
-        activityStates: () => [
-            ...manager.list().flatMap((session) => (!session.exited && session.agent ? [session.agent.status] : [])),
-            ...chats.list().map((chat) => chat.status)
+        activityNodes: () => [
+            ...manager.list().flatMap((session) =>
+                !session.exited && session.agent
+                    ? [
+                          {
+                              nodeId: session.sessionId,
+                              target: 'terminal' as const,
+                              title: session.agent.suggestedTitle ?? 'Terminal agent',
+                              status: session.agent.status
+                          }
+                      ]
+                    : []
+            ),
+            ...chats.list().map((chat) => ({ nodeId: chat.chatId, target: 'chat' as const, title: chat.suggestedTitle ?? 'AI chat', status: chat.status }))
         ],
         onError: (error) => console.error('Push delivery failed:', errorText(error))
     });

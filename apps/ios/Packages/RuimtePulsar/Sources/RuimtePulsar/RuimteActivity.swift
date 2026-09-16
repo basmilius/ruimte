@@ -8,6 +8,12 @@
             hasher.combine(startedAt)
             hasher.combine(runningCount)
             hasher.combine(attentionCount)
+            for agent in agents ?? [] {
+                hasher.combine(agent.nodeId)
+                hasher.combine(agent.target.rawValue)
+                hasher.combine(agent.title)
+                hasher.combine(agent.phase.rawValue)
+            }
         }
     }
 

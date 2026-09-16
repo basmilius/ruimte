@@ -130,6 +130,15 @@ public enum PushSigning {
                 }
             }
         }
+        if type == "liveactivity", let agents = push["activity"]?["agents"]?.arrayValue {
+            fields.append(.integer(Int64(agents.count)))
+            for agent in agents {
+                for key in ["nodeId", "target", "title", "phase"] {
+                    guard let value = agent[key]?.stringValue else { throw PushCryptoError.invalid }
+                    fields.append(.string(value))
+                }
+            }
+        }
         return try SigningBytes.message("pulsar-push-v1", fields: fields)
     }
 }

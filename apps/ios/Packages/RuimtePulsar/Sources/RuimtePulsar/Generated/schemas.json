@@ -3671,6 +3671,41 @@
       }
     ]
   },
+  "PushActivityAgentSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "nodeId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "target": {
+        "type": "string",
+        "enum": [
+          "terminal",
+          "chat"
+        ]
+      },
+      "title": {
+        "type": "string",
+        "maxLength": 80
+      },
+      "phase": {
+        "type": "string",
+        "enum": [
+          "running",
+          "needs-you"
+        ]
+      }
+    },
+    "required": [
+      "nodeId",
+      "target",
+      "title",
+      "phase"
+    ]
+  },
   "PushActivityContentSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -3702,6 +3737,44 @@
         "type": "integer",
         "minimum": 0,
         "maximum": 9007199254740991
+      },
+      "agents": {
+        "maxItems": 2,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "nodeId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "target": {
+              "type": "string",
+              "enum": [
+                "terminal",
+                "chat"
+              ]
+            },
+            "title": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "phase": {
+              "type": "string",
+              "enum": [
+                "running",
+                "needs-you"
+              ]
+            }
+          },
+          "required": [
+            "nodeId",
+            "target",
+            "title",
+            "phase"
+          ]
+        }
       }
     },
     "required": [
@@ -4034,6 +4107,44 @@
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 9007199254740991
+              },
+              "agents": {
+                "maxItems": 2,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "nodeId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    },
+                    "target": {
+                      "type": "string",
+                      "enum": [
+                        "terminal",
+                        "chat"
+                      ]
+                    },
+                    "title": {
+                      "type": "string",
+                      "maxLength": 80
+                    },
+                    "phase": {
+                      "type": "string",
+                      "enum": [
+                        "running",
+                        "needs-you"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "nodeId",
+                    "target",
+                    "title",
+                    "phase"
+                  ]
+                }
               }
             },
             "required": [

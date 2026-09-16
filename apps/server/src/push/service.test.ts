@@ -320,7 +320,13 @@ describe('automatic machine activities', () => {
                 identity: { id, sign: (text) => signMessage(machine.privateKey, text) },
                 now: () => NOW,
                 machineName: () => id,
-                activityStates: () => ['running', 'needs-you', 'idle'],
+                activityNodes: () =>
+                    (['running', 'needs-you', 'idle'] as const).map((status, index) => ({
+                        nodeId: `agent-${index}`,
+                        target: 'chat',
+                        title: `Agent ${index}`,
+                        status
+                    })),
                 send: async (push) => {
                     pushes.push(push);
                     return 204;
@@ -372,4 +378,85 @@ test('a result seen before delivery does not leave an obsolete alert', async () 
     service.read('node', service.attention.snapshot()[0]!.issuedAt);
     await service.settled();
     expect(pushes.map((push) => push.pushType)).toEqual(['background']);
+});
+
+test('machine cards prioritize attention, bound the rows and sign session destinations', async () => {
+    await auth.setPush(sessionId, { ...subscription, activities: true, activityScope: 'machine' });
+    const target = new PushService({
+        auth,
+        identity: { id: 'machine', sign: (text) => signMessage(machine.privateKey, text) },
+        now: () => NOW,
+        activityNodes: () => [
+            { nodeId: 'first', target: 'terminal', title: 'Build app', status: 'running' },
+            { nodeId: 'second', target: 'chat', title: 'Write tests', status: 'needs-you' },
+            { nodeId: 'third', target: 'chat', title: 'Also running', status: 'running' },
+            { nodeId: 'old', target: 'chat', title: 'Finished', status: 'idle' }
+        ],
+        send: async (push) => {
+            pushes.push(push);
+            return 204;
+        }
+    });
+    target.synchronizeActivities();
+    await target.settled();
+    const push = pushes.find((item) => item.pushType === 'liveactivity')!;
+    expect(push.activity).toMatchObject({
+        runningCount: 2,
+        attentionCount: 1,
+        agents: [
+            { nodeId: 'second', target: 'chat', title: 'Write tests', phase: 'needs-you' },
+            { nodeId: 'first', target: 'terminal', title: 'Build app', phase: 'running' }
+        ]
+    });
+    expect(verifySignature(machine.publicKey, pushMessage(push), push.signature)).toBe(true);
+    push.activity.agents![0]!.nodeId = 'other';
+    expect(verifySignature(machine.publicKey, pushMessage(push), push.signature)).toBe(false);
+});
+
+test('killing the last terminal ends its machine round before another terminal starts', async () => {
+    await auth.setPush(sessionId, { ...subscription, activities: true, activityScope: 'machine' });
+    const harness = await makeHarness();
+    let now = NOW;
+    const target = new PushService({
+        auth,
+        identity: { id: 'machine', sign: (text) => signMessage(machine.privateKey, text) },
+        now: () => now,
+        activityNodes: () =>
+            harness.manager.list().flatMap((session) =>
+                session.agent && !session.exited
+                    ? [
+                          {
+                              nodeId: session.sessionId,
+                              target: 'terminal' as const,
+                              title: 'Test agent',
+                              status: session.agent.status
+                          }
+                      ]
+                    : []
+            ),
+        send: async (push) => {
+            pushes.push(push);
+            return 204;
+        }
+    });
+    const stop = harness.manager.observe((event) => target.consume(event));
+    try {
+        for (const nodeId of ['first', 'second']) {
+            await harness.manager.create({ sessionId: nodeId, cols: 80, rows: 24, shell: '/bin/sh', args: [], cwd: harness.home });
+            await harness.manager.applyHook('codex', harness.manager.get(nodeId)!.hookToken, { session_id: nodeId, hook_event_name: 'UserPromptSubmit' });
+            await target.settled();
+            const pty = harness.adapter.forSession(nodeId);
+            await harness.manager.kill(nodeId);
+            await pty.exited;
+            await target.settled();
+            expect(pushes.filter((push) => push.pushType === 'liveactivity').at(-1)?.activity.phase).toBe('done');
+            now += 1000;
+        }
+        const starts = pushes.filter((push) => push.pushType === 'liveactivity').filter((push) => push.activity.phase === 'running');
+        expect(starts.map((push) => push.activity.startedAt)).toEqual([NOW, NOW + 1000]);
+    } finally {
+        stop();
+        await target.settled();
+        await harness.cleanup();
+    }
 });
