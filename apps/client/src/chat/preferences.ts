@@ -68,6 +68,7 @@ export const withSelection = (preferences: ChatPreferences, provider: AgentKind,
 /* What a machine starts a chat with when it starts one with no client mounting it. */
 export const chatPreferencesPayload = (preferences: ChatPreferences): ChatPreferencesPayload => ({
     runtimeMode: preferences.runtimeMode,
+    terminalRuntimeMode: preferences.terminalRuntimeMode,
     selections: preferences.selectionByProvider,
     changedAt: preferences.changedAt
 });

@@ -83,8 +83,20 @@ describe('reading what is stored', () => {
 });
 
 describe('what a machine is told', () => {
-    test('the mode, a model per provider and the moment of the last change; the terminal mode stays with the client', () => {
-        const remembered = preferences({ selectionByProvider: { claude: sonnet, codex: gpt }, lastProvider: 'codex', runtimeMode: 'supervised', changedAt: 7 });
-        expect(chatPreferencesPayload(remembered)).toEqual({ runtimeMode: 'supervised', selections: { claude: sonnet, codex: gpt }, changedAt: 7 });
+    test('the modes, a model per provider and the moment of the last change', () => {
+        const remembered = preferences({
+            selectionByProvider: { claude: sonnet, codex: gpt },
+            lastProvider: 'codex',
+            runtimeMode: 'supervised',
+            terminalRuntimeMode: 'auto',
+            changedAt: 7
+        });
+        // The terminal mode too, since the machine starts terminal agents a verb opened on its own.
+        expect(chatPreferencesPayload(remembered)).toEqual({
+            runtimeMode: 'supervised',
+            terminalRuntimeMode: 'auto',
+            selections: { claude: sonnet, codex: gpt },
+            changedAt: 7
+        });
     });
 });
