@@ -11800,6 +11800,9 @@
       "viewId": {
         "type": "string",
         "minLength": 1
+      },
+      "asView": {
+        "type": "boolean"
       }
     },
     "required": [

@@ -542,19 +542,24 @@ export type ChatTurnDiffResult = z.infer<typeof ChatTurnDiffResultSchema>;
 export const CHAT_FORK_TITLE_MAX = 120;
 
 /*
- * A new chat node beside the original that goes on after `turnId`, with the history up to and
- * including that turn. `viewId` names the canvas for a chat that is a view of its own, which stands
- * on none.
+ * A new chat that goes on after `turnId`, with the history up to and including that turn. The fork of
+ * a node is a node beside it unless `asView` asks for a chat view of its own, listed right after the
+ * canvas the node stands on. The fork of a chat that is a view of its own is a view listed right after
+ * it, unless `viewId` names a canvas to put a node on instead.
  */
 export const ChatForkPayloadSchema = z.object({
     chatId: ChatIdSchema,
     turnId: z.string().min(1),
     title: z.string().trim().min(1).max(CHAT_FORK_TITLE_MAX).optional(),
-    viewId: z.string().min(1).optional()
+    viewId: z.string().min(1).optional(),
+    asView: z.boolean().optional()
 });
 export type ChatForkPayload = z.infer<typeof ChatForkPayloadSchema>;
 
-// `edgeId` is null when the original stands on no canvas, so no line could be drawn from it.
+/*
+ * `viewId` is the canvas the node landed on, or the fork's own view, whose id is `nodeId`. `edgeId`
+ * is null when no line could be drawn from the original: it stands on no canvas, or the fork does not.
+ */
 export const ChatForkResultSchema = z.object({ info: ChatInfoSchema, nodeId: z.string(), viewId: z.string(), edgeId: z.string().nullable() });
 export type ChatForkResult = z.infer<typeof ChatForkResultSchema>;
 
