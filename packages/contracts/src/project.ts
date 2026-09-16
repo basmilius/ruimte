@@ -550,6 +550,9 @@ export const ProjectPanelsSchema = z.object({
     // Whole pixels. Absent means the panel opens at the width the app picks for it.
     panelWidth: z.number().int().positive().optional(),
     previewWidth: z.number().int().positive().optional(),
+    // The plan the plan panel shows. Whether it is open follows from whether its chat is on screen, never from this file.
+    plan: z.object({ chatId: z.string().min(1), planId: z.string().min(1), dismissed: z.boolean() }).optional(),
+    planWidth: z.number().int().positive().optional(),
     tabs: z.array(ProjectFileTabSchema).optional(),
     activeTab: z.string().nullable().optional(),
     // What the file tree had open, the way the tree names a directory: relative, POSIX, trailing slash.

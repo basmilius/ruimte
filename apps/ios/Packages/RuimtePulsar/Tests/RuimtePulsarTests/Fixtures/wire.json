@@ -199,7 +199,9 @@
     "chat.kill",
     "chat.list",
     "task.list",
-    "agent.children"
+    "agent.children",
+    "plan.list",
+    "plan.apply"
   ],
   "eventTypes": [
     "push.attention",
@@ -226,7 +228,10 @@
     "usage.limitsChanged",
     "processes.sample",
     "processes.alerts",
-    "task.changed"
+    "task.changed",
+    "plan.changed",
+    "plan.removed",
+    "plan.created"
   ],
   "crypto": [
     {
@@ -817,6 +822,181 @@
         "chatId": "c",
         "text": "Hello"
       }
+    },
+    {
+      "schema": "event.plan.changed",
+      "input": {
+        "chatId": "c",
+        "plan": {
+          "id": "plan-1",
+          "rev": 2,
+          "createdAt": "2026-09-16T13:40:00Z",
+          "meta": {
+            "title": "Plan",
+            "kind": "test",
+            "checks": "person"
+          },
+          "items": [
+            {
+              "type": "section",
+              "id": "split",
+              "title": "Split",
+              "items": [
+                {
+                  "type": "text",
+                  "id": "prep",
+                  "title": "Before you start"
+                },
+                {
+                  "type": "step",
+                  "id": "grid",
+                  "title": "Grid",
+                  "future": true,
+                  "steps": [
+                    {
+                      "type": "step",
+                      "id": "zone",
+                      "title": "Zone",
+                      "steps": [
+                        {
+                          "type": "step",
+                          "id": "edge",
+                          "title": "Edge",
+                          "state": "done",
+                          "by": "person"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "step",
+              "id": "pixels",
+              "title": "Pixels",
+              "checks": "agent",
+              "unlocked": true
+            }
+          ]
+        }
+      },
+      "valid": true,
+      "output": {
+        "chatId": "c",
+        "plan": {
+          "id": "plan-1",
+          "rev": 2,
+          "createdAt": "2026-09-16T13:40:00Z",
+          "meta": {
+            "title": "Plan",
+            "kind": "test",
+            "checks": "person"
+          },
+          "items": [
+            {
+              "type": "section",
+              "id": "split",
+              "title": "Split",
+              "items": [
+                {
+                  "type": "text",
+                  "id": "prep",
+                  "title": "Before you start"
+                },
+                {
+                  "type": "step",
+                  "id": "grid",
+                  "title": "Grid",
+                  "steps": [
+                    {
+                      "type": "step",
+                      "id": "zone",
+                      "title": "Zone",
+                      "steps": [
+                        {
+                          "type": "step",
+                          "id": "edge",
+                          "title": "Edge",
+                          "state": "done",
+                          "by": "person"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "step",
+              "id": "pixels",
+              "title": "Pixels",
+              "checks": "agent",
+              "unlocked": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "schema": "event.plan.changed",
+      "input": {
+        "chatId": "c",
+        "plan": {
+          "id": "plan-1",
+          "rev": 2,
+          "createdAt": "2026-09-16T13:40:00Z",
+          "meta": {
+            "title": "Plan",
+            "kind": "test",
+            "checks": "person"
+          },
+          "items": [
+            {
+              "type": "section",
+              "id": "split",
+              "title": "Split",
+              "items": [
+                {
+                  "type": "text",
+                  "id": "prep",
+                  "title": "Before you start"
+                },
+                {
+                  "type": "step",
+                  "id": "grid",
+                  "title": "Grid",
+                  "future": true,
+                  "steps": [
+                    {
+                      "type": "step",
+                      "id": "zone",
+                      "title": "Zone",
+                      "steps": [
+                        {
+                          "type": "step",
+                          "id": "edge",
+                          "title": "Edge",
+                          "state": "finished",
+                          "by": "person"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "step",
+              "id": "pixels",
+              "title": "Pixels",
+              "checks": "agent",
+              "unlocked": true
+            }
+          ]
+        }
+      },
+      "valid": false
     },
     {
       "schema": "request.session.attach.payload",

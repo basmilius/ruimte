@@ -94,15 +94,22 @@ public enum WireSchema {
     @discardableResult
     public static func validate(_ name: String, _ value: JSONValue) throws -> JSONValue {
         guard let schema = try schemas.get()[name] else { throw WireValidationError.invalid("Unknown schema: \(name)") }
-        return try parse(value, schema: schema, path: name)
+        return try parse(value, schema: schema, path: name, definitions: schema["$defs"])
     }
 
-    private static func parse(_ input: JSONValue, schema: JSONValue, path: String) throws -> JSONValue {
+    private static func parse(_ input: JSONValue, schema: JSONValue, path: String, definitions: JSONValue?) throws -> JSONValue {
+        // A recursive schema, like the steps of a plan, points back at a definition beside its root.
+        if let reference = schema["$ref"]?.stringValue {
+            guard reference.hasPrefix("#/$defs/"), let target = definitions?[String(reference.dropFirst("#/$defs/".count))] else {
+                throw WireValidationError.invalid("Unsupported generated schema at \(path)")
+            }
+            return try parse(input, schema: target, path: path, definitions: definitions)
+        }
         let value = try projectEntry(input, metadata: schema["x-project-entry"])
         let fail = { WireValidationError.invalid("Invalid \(path)") }
         if let options = (schema["oneOf"] ?? schema["anyOf"])?.arrayValue {
             for option in options {
-                if let parsed = try? parse(value, schema: option, path: path) { return parsed }
+                if let parsed = try? parse(value, schema: option, path: path, definitions: definitions) { return parsed }
             }
             throw fail()
         }
@@ -112,7 +119,7 @@ public enum WireSchema {
             for type in types {
                 var candidate = schema.objectValue ?? [:]
                 candidate["type"] = type
-                if let parsed = try? parse(value, schema: .object(candidate), path: path) { return parsed }
+                if let parsed = try? parse(value, schema: .object(candidate), path: path, definitions: definitions) { return parsed }
             }
             throw fail()
         }
@@ -150,11 +157,11 @@ public enum WireSchema {
             return .array(
                 try array.enumerated().map { index, value in
                     if index < prefix.count {
-                        return try parse(value, schema: prefix[index], path: "\(path)[\(index)]")
+                        return try parse(value, schema: prefix[index], path: "\(path)[\(index)]", definitions: definitions)
                     }
                     if schema["items"] == .bool(false) { throw fail() }
                     guard let item = schema["items"], item.objectValue != nil else { return value }
-                    return try parse(value, schema: item, path: "\(path)[\(index)]")
+                    return try parse(value, schema: item, path: "\(path)[\(index)]", definitions: definitions)
                 })
         case "object":
             guard let object = value.objectValue else { throw fail() }
@@ -169,14 +176,14 @@ public enum WireSchema {
                         continue
                     }
                     if let propertyNames = schema["propertyNames"] {
-                        _ = try parse(.string(key), schema: propertyNames, path: "\(path).key")
+                        _ = try parse(.string(key), schema: propertyNames, path: "\(path).key", definitions: definitions)
                     }
-                    result[key] = try parse(input, schema: additional, path: "\(path).\(key)")
+                    result[key] = try parse(input, schema: additional, path: "\(path).\(key)", definitions: definitions)
                 }
             }
             for (key, property) in properties {
                 if let input = object[key] {
-                    result[key] = try parse(input, schema: property, path: "\(path).\(key)")
+                    result[key] = try parse(input, schema: property, path: "\(path).\(key)", definitions: definitions)
                 } else if let fallback = property["default"] {
                     result[key] = fallback
                 } else if required.contains(key) {

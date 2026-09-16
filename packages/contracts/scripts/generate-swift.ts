@@ -358,6 +358,40 @@ validationInputs.push(
     { schema: 'request.chat.send.payload', input: { chatId: 'c', text: '' } },
     { schema: 'request.chat.send.payload', input: { chatId: 'c', text: 'Hello' } }
 );
+// A plan's steps are recursive, so these reach a sub-step through a `$ref`.
+for (const state of ['done', 'finished']) {
+    validationInputs.push({
+        schema: 'event.plan.changed',
+        input: {
+            chatId: 'c',
+            plan: {
+                id: 'plan-1',
+                rev: 2,
+                createdAt: '2026-09-16T13:40:00Z',
+                meta: { title: 'Plan', kind: 'test', checks: 'person' },
+                items: [
+                    {
+                        type: 'section',
+                        id: 'split',
+                        title: 'Split',
+                        items: [
+                            { type: 'text', id: 'prep', title: 'Before you start' },
+                            {
+                                type: 'step',
+                                id: 'grid',
+                                title: 'Grid',
+                                future: true,
+                                steps: [{ type: 'step', id: 'zone', title: 'Zone', steps: [{ type: 'step', id: 'edge', title: 'Edge', state, by: 'person' }] }]
+                            }
+                        ]
+                    },
+                    { type: 'step', id: 'pixels', title: 'Pixels', checks: 'agent', unlocked: true }
+                ]
+            }
+        }
+    });
+}
+
 for (const payload of [
     { sessionId: 's' },
     { sessionId: 's', follow: true },

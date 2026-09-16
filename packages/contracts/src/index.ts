@@ -126,6 +126,15 @@ import {
 } from './diagram.ts';
 import { ProviderListResultSchema } from './model.ts';
 import {
+    PlanApplyPayloadSchema,
+    PlanApplyResultSchema,
+    PlanChangedEventSchema,
+    PlanCreatedEventSchema,
+    PlanListPayloadSchema,
+    PlanListResultSchema,
+    PlanRemovedEventSchema
+} from './plan.ts';
+import {
     ProjectChangedEventSchema,
     ProjectDeletePayloadSchema,
     ProjectListResultSchema,
@@ -184,6 +193,7 @@ export * from './git.ts';
 export * from './ids.ts';
 export * from './model.ts';
 export * from './node-defaults.ts';
+export * from './plan.ts';
 export * from './processes.ts';
 export * from './project.ts';
 export * from './project-migrate.ts';
@@ -309,7 +319,9 @@ export const REQUEST_SCHEMAS = {
     'chat.kill': { payload: ChatTargetPayloadSchema, result: EmptySchema },
     'chat.list': { payload: EmptySchema, result: ChatListResultSchema },
     'task.list': { payload: TaskListPayloadSchema, result: TaskListResultSchema },
-    'agent.children': { payload: AgentChildrenPayloadSchema, result: AgentChildrenResultSchema }
+    'agent.children': { payload: AgentChildrenPayloadSchema, result: AgentChildrenResultSchema },
+    'plan.list': { payload: PlanListPayloadSchema, result: PlanListResultSchema },
+    'plan.apply': { payload: PlanApplyPayloadSchema, result: PlanApplyResultSchema }
 } as const satisfies Record<string, { payload: z.ZodType; result: z.ZodType }>;
 
 export type RequestType = keyof typeof REQUEST_SCHEMAS;
@@ -346,7 +358,10 @@ export const EVENT_SCHEMAS = {
     'usage.limitsChanged': UsageLimitsSnapshotSchema,
     'processes.sample': ProcessesSampleEventSchema,
     'processes.alerts': ProcessesAlertsSchema,
-    'task.changed': TaskChangedEventSchema
+    'task.changed': TaskChangedEventSchema,
+    'plan.changed': PlanChangedEventSchema,
+    'plan.removed': PlanRemovedEventSchema,
+    'plan.created': PlanCreatedEventSchema
 } as const satisfies Record<string, z.ZodType>;
 
 export type EventType = keyof typeof EVENT_SCHEMAS;
