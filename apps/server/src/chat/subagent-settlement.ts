@@ -11,6 +11,27 @@ export interface SubagentSettlement {
     report: string | null;
 }
 
+/* The report an agent handed back with `SubagentHandback` before its last message, which then only points at it. */
+const handbackBefore = (lines: string[], end: number): string | null => {
+    for (let i = end - 1; i >= 0; i--) {
+        let entry: unknown;
+        try {
+            entry = JSON.parse(lines[i]!);
+        } catch {
+            continue;
+        }
+        const message = isRecord(entry) && entry.type === 'assistant' && isRecord(entry.message) ? entry.message : null;
+        const content = message && Array.isArray(message.content) ? message.content.filter(isRecord) : [];
+        for (const block of content) {
+            const input = block.type === 'tool_use' && block.name === 'SubagentHandback' && isRecord(block.input) ? block.input : null;
+            if (input && typeof input.message === 'string' && input.message.trim() !== '') {
+                return input.message;
+            }
+        }
+    }
+    return null;
+};
+
 /*
  * Whether the end of a Claude subagent transcript shows an agent that finished: the last line that
  * is a message is the assistant's, it ended its turn (`stop_reason: end_turn`) and it asked for no
@@ -43,10 +64,13 @@ export const settlementOf = (text: string): SubagentSettlement | null => {
             return null;
         }
         const time = typeof entry.timestamp === 'string' ? Date.parse(entry.timestamp) : Number.NaN;
-        const report = content
-            .map((block) => (block.type === 'text' && typeof block.text === 'string' ? block.text : ''))
-            .filter((part) => part.trim() !== '')
-            .join('\n');
+        const handedBack = handbackBefore(lines, i);
+        const report =
+            handedBack ??
+            content
+                .map((block) => (block.type === 'text' && typeof block.text === 'string' ? block.text : ''))
+                .filter((part) => part.trim() !== '')
+                .join('\n');
         return { finishedAt: Number.isFinite(time) ? time : null, report: report === '' ? null : report };
     }
     return null;

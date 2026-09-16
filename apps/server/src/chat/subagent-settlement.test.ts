@@ -29,9 +29,14 @@ const handback = assistant([{ type: 'tool_use', id: 'toolu_handback', name: 'Sub
 const lines = (...entries: string[]): string => `${entries.join('\n')}\n`;
 
 describe('what the end of a subagent transcript says', () => {
-    test('a last message that ended the turn is finished, with its time and its text', () => {
+    test('a last message that ended the turn is finished, with its time and its report', () => {
         const text = lines(handback, toolResult(), attachment, assistant([{ type: 'text', text: 'Het rapport staat hierboven.' }], 'end_turn'));
-        expect(settlementOf(text)).toEqual({ finishedAt: Date.parse('2026-09-16T09:12:12.045Z'), report: 'Het rapport staat hierboven.' });
+        // The last message only points at the report it handed back, so that report is the one kept.
+        expect(settlementOf(text)).toEqual({ finishedAt: Date.parse('2026-09-16T09:12:12.045Z'), report: 'The report' });
+        expect(settlementOf(lines(toolResult(), assistant([{ type: 'text', text: 'Het rapport staat hierboven.' }], 'end_turn')))).toEqual({
+            finishedAt: Date.parse('2026-09-16T09:12:12.045Z'),
+            report: 'Het rapport staat hierboven.'
+        });
     });
 
     test('an agent that ends mid tool call is not finished', () => {
