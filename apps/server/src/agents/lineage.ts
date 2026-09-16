@@ -12,12 +12,17 @@ const LineageSchema = z.object({
     /* Whether this is an agent node, which is what the depth and the per-caller cap are about. A
        record written before a plain node was written down at all is one of those, hence the default. */
     agent: z.boolean().default(true),
+    /* A fork is a sibling a person made beside `openedBy` rather than a node it opened; absent is opened by a verb. */
+    relation: z.literal('fork').optional(),
     createdAt: z.number(),
     /* When stopping or deleting the node that opened it ended this one too; a cascade never ends a node twice. */
     endedAt: z.number().optional()
 });
 
 type Lineage = z.infer<typeof LineageSchema>;
+
+/* Opened by the agent it names, which is what every rule about children is about; a fork lives on its own. */
+const openedByAgent = (entry: Lineage): boolean => entry.agent && entry.relation !== 'fork';
 
 // The id is a node id the client chose, so it is encoded before it becomes a file name.
 const fileName = (nodeId: string): string => `${encodeURIComponent(nodeId)}.json`;
@@ -84,7 +89,7 @@ export class AgentLineageStore {
         for (let i = -1; i < found.length; i++) {
             const parent = i === -1 ? nodeId : found[i]!;
             for (const entry of this.opened.values()) {
-                if (entry.openedBy === parent && entry.agent && entry.endedAt === undefined && !seen.has(entry.nodeId)) {
+                if (entry.openedBy === parent && openedByAgent(entry) && entry.endedAt === undefined && !seen.has(entry.nodeId)) {
                     seen.add(entry.nodeId);
                     found.push(entry.nodeId);
                 }
@@ -114,7 +119,10 @@ export class AgentLineageStore {
     /* The nodes of this project whose opener it no longer places, and that no cascade ended yet. */
     orphans(projectId: string, ids: ReadonlySet<string>): Array<{ nodeId: string; openedBy: string }> {
         return [...this.opened.values()]
-            .filter((entry) => entry.projectId === projectId && entry.agent && entry.endedAt === undefined && ids.has(entry.nodeId) && !ids.has(entry.openedBy))
+            .filter(
+                (entry) =>
+                    entry.projectId === projectId && openedByAgent(entry) && entry.endedAt === undefined && ids.has(entry.nodeId) && !ids.has(entry.openedBy)
+            )
             .map((entry) => ({ nodeId: entry.nodeId, openedBy: entry.openedBy }));
     }
 
@@ -136,7 +144,7 @@ export class AgentLineageStore {
     openedCount(callerId: string): number {
         let count = 0;
         for (const entry of this.opened.values()) {
-            if (entry.openedBy === callerId && entry.agent) {
+            if (entry.openedBy === callerId && openedByAgent(entry)) {
                 count += 1;
             }
         }
@@ -145,7 +153,8 @@ export class AgentLineageStore {
 
     /* Who made this node, or null for one a person made: the whole of the rule node delete follows. */
     madeBy(nodeId: string): string | null {
-        return this.opened.get(nodeId)?.openedBy ?? null;
+        const entry = this.opened.get(nodeId);
+        return entry === undefined || entry.relation === 'fork' ? null : entry.openedBy;
     }
 
     /* Drops what this project wrote down for ids it no longer has: the node was deleted. */

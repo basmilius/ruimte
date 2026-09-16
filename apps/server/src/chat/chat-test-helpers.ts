@@ -74,13 +74,15 @@ export class ChatRecorder {
 
 type ChatRecord = { info: ChatInfo; items: ChatItem[] };
 
+type ChatStoreWriteRest = Parameters<ChatStore['write']> extends [string, ChatInfo, ChatItem[], ...infer Rest] ? Rest : never;
+
 /* A store that says when a write landed, so a test reads the file after the write and not after a guess. */
 export class RecordingStore extends ChatStore {
     private readonly latest = new Map<string, ChatRecord>();
     private waiters: Array<{ chatId: string; check(record: ChatRecord): boolean; resolve(): void }> = [];
 
-    override async write(chatId: string, info: ChatInfo, items: ChatItem[]): Promise<number> {
-        const size = await super.write(chatId, info, items);
+    override async write(chatId: string, info: ChatInfo, items: ChatItem[], ...rest: ChatStoreWriteRest): Promise<number> {
+        const size = await super.write(chatId, info, items, ...rest);
         const record = { info, items };
         this.latest.set(chatId, record);
         const waiting = this.waiters;

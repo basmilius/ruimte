@@ -83,3 +83,21 @@ test('loading an empty home is not an error', async () => {
     await fresh.load();
     expect(fresh.depthOf('terminal-1')).toBe(0);
 });
+
+test('a fork keeps the depth of its original and lives on its own: no child, no count, no orphan and no maker', async () => {
+    await store.put({ projectId: 'p1', nodeId: 'chat-a', openedBy: 'chat-root', depth: 1, agent: true });
+    await store.put({ projectId: 'p1', nodeId: 'chat-b', openedBy: 'chat-a', depth: 1, agent: true, relation: 'fork' });
+    await store.put({ projectId: 'p1', nodeId: 'chat-c', openedBy: 'chat-b', depth: 2, agent: true });
+    expect(store.depthOf('chat-b')).toBe(1);
+    expect(store.descendants('chat-a')).toEqual([]);
+    expect(store.descendants('chat-b')).toEqual(['chat-c']);
+    expect(store.openedCount('chat-a')).toBe(0);
+    expect(store.madeBy('chat-b')).toBeNull();
+    // The original left the canvas; the fork stays, while what the fork opened still counts as its own.
+    expect(store.orphans('p1', new Set(['chat-b', 'chat-c']))).toEqual([]);
+    const restarted = new AgentLineageStore(home);
+    await restarted.load();
+    expect(restarted.descendants('chat-a')).toEqual([]);
+    await restarted.prune('p1', new Set(['chat-a']));
+    expect(restarted.projectOf('chat-b')).toBeNull();
+});

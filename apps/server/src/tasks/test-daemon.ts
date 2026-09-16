@@ -6,6 +6,7 @@ import type { AgentStart, CanvasHost } from '../canvas/verb.ts';
 import { AttachmentStore } from '../chat/attachment-store.ts';
 import { ChatManager } from '../chat/chat-manager.ts';
 import { ChatStore } from '../chat/chat-store.ts';
+import { chatForkDeps, forkChat } from '../chat/fork.ts';
 import { fakeClaude } from '../chat/fake-claude.ts';
 import { inProcess, type InProcessCli } from '../chat/fake-cli.ts';
 import { Dispatcher } from '../dispatcher.ts';
@@ -213,7 +214,8 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
 
     const dispatcher = new Dispatcher();
     registerSessionHandlers(dispatcher, sessions, endChildren.owe);
-    registerChatHandlers(dispatcher, chats, providers, endChildren.owe, endChildren.stopNode);
+    const forkDeps = chatForkDeps({ chats, host, titleFor: (id) => store.index.titleFor(id), lineage });
+    registerChatHandlers(dispatcher, chats, providers, endChildren.owe, endChildren.stopNode, (payload) => forkChat(forkDeps, payload));
     registerTaskHandlers(dispatcher, tasks, endChildren.children);
 
     return {

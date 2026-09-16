@@ -7,6 +7,8 @@
  * it named, `thread/name/set` renames it and says so, and `name?` answers with that name. The thread echoes the
  * model and the sandbox it was started with, so a test can see what a session asked for. `spawn: <prompt>` spawns an
  * agent whose thread holds more steps than a thread row keeps, and `thread/items/list` pages through it.
+ * `thread/fork` copies a thread's turns up to `lastTurnId` under a new id and keeps the request in
+ * `fakeCodexForks`, and `thread/turns/list` lists the turns a thread ran in any process.
  */
 import { VERBS_NOTE } from '../context/context-note.ts';
 import { runOverStdio, type FakeCli } from './fake-cli.ts';
@@ -20,6 +22,12 @@ export const FAKE_CHILD_STEPS = 250;
 
 // The threads of spawned agents, outside any one process: the real ones are on disk, so a process that never ran them reads them too.
 const childThreads = new Map<string, Frame[]>();
+
+// The turn ids per thread, outside any one process for the same reason.
+const threadTurns = new Map<string, string[]>();
+
+// Every `thread/fork` a fake was asked, oldest first, so a test can see what the daemon forked at.
+export const fakeCodexForks: Frame[] = [];
 
 export const fakeCodex: FakeCli = (io) => {
     const out = io.out;
@@ -81,7 +89,8 @@ export const fakeCodex: FakeCli = (io) => {
     };
 
     const turnStarted = (): void => {
-        turnId = `turn-${++itemCounter}`;
+        turnId = `turn-${nonce}-${++itemCounter}`;
+        threadTurns.set(threadId, [...(threadTurns.get(threadId) ?? []), turnId]);
         notify('thread/status/changed', { threadId, status: { type: 'active', activeFlags: [] } });
         notify('turn/started', { threadId, turn: { id: turnId, items: [], itemsView: 'notLoaded', status: 'inProgress', error: null } });
     };
@@ -320,6 +329,25 @@ export const fakeCodex: FakeCli = (io) => {
                 notify('thread/started', { thread });
                 return;
             }
+            case 'thread/fork': {
+                const source = String(params.threadId);
+                const turns = threadTurns.get(source) ?? [];
+                const last = typeof params.lastTurnId === 'string' ? turns.indexOf(params.lastTurnId) : turns.length - 1;
+                if (!threadTurns.has(source) || (typeof params.lastTurnId === 'string' && last < 0)) {
+                    out({ id, error: { code: -32600, message: `no rollout found for thread id ${source}` } });
+                    return;
+                }
+                fakeCodexForks.push(params);
+                const forked = `fork-${Math.random().toString(36).slice(2, 8)}`;
+                threadTurns.set(forked, turns.slice(0, last + 1));
+                out({ id, result: { thread: { id: forked, forkedFromId: source, cwd: params.cwd, turns: [] }, model: params.model ?? 'fake-model' } });
+                return;
+            }
+            case 'thread/turns/list': {
+                const turns = threadTurns.get(String(params.threadId)) ?? [];
+                out({ id, result: { data: turns.map((turn) => ({ id: turn, items: [], status: 'completed', error: null })), nextCursor: null } });
+                return;
+            }
             case 'thread/items/list': {
                 const steps = childThreads.get(String(params.threadId));
                 if (!steps) {
@@ -341,7 +369,7 @@ export const fakeCodex: FakeCli = (io) => {
                 notify('thread/name/updated', { threadId, threadName });
                 return;
             case 'turn/start':
-                out({ id, result: { turn: { id: `turn-${itemCounter + 1}`, items: [], status: 'inProgress', error: null } } });
+                out({ id, result: { turn: { id: `turn-${nonce}-${itemCounter + 1}`, items: [], status: 'inProgress', error: null } } });
                 handleTurnStart(params);
                 return;
             case 'turn/steer': {

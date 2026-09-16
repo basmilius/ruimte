@@ -66,6 +66,7 @@ import { childCounter, isIdle, workOf, type MachineWork } from './service/work.t
 import { BUILD, COMPILED as compiled, VERSION } from './version.ts';
 import { registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
+import { chatForkDeps, forkChat } from './chat/fork.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from './fs/file-route.ts';
 import { FolderWatcher } from './fs/watch.ts';
 import { registerBytesHandlers } from './handlers/bytes.ts';
@@ -390,7 +391,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerPushHandlers(dispatcher, auth, () => push.synchronizeActivities(), push);
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
     registerSessionHandlers(dispatcher, manager, endChildren.owe);
-    registerChatHandlers(dispatcher, chats, providers, endChildren.owe, endChildren.stopNode);
+    const forkDeps = chatForkDeps({ chats, host: canvasHost, titleFor: (id) => projects.index.titleFor(id), lineage });
+    registerChatHandlers(dispatcher, chats, providers, endChildren.owe, endChildren.stopNode, (payload) => forkChat(forkDeps, payload));
     registerTaskHandlers(dispatcher, tasks, endChildren.children);
     registerProjectHandlers(dispatcher, projects);
     registerDrawingHandlers(dispatcher, drawings);

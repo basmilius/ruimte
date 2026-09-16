@@ -32,6 +32,7 @@ import type { ChatRecord, ChatStore } from './chat-store.ts';
 import { ComposerPreferences } from './composer-preferences.ts';
 import { DeltaCoalescer } from './delta-coalescer.ts';
 import { ChatError } from './errors.ts';
+import type { CodexProcessSpec } from './codex-thread.ts';
 import { SubagentReader, type SubagentReaderOptions } from './subagent-reader.ts';
 import { errorText } from '../error-text.ts';
 import { usageRoots } from '../usage/roots.ts';
@@ -134,6 +135,8 @@ export class ChatManager {
     private readonly onInterruptedRun: ChatManagerOptions['onInterruptedRun'] | null;
     private readonly endedAt: (chatId: string) => number | null;
     private readonly taskRows: (chatId: string) => Task[];
+    /* Where Claude Code keeps its projects on this machine; empty when it has none. */
+    readonly claudeProjectsDir: string;
     // Clients following the conversation of a node a task opened, per row of the chat that gave it.
     private readonly childHolds = new Map<string, { parentId: string; toolUseId: string; childId: string; clients: Set<string> }>();
 
@@ -169,9 +172,12 @@ export class ChatManager {
         if (options.binDir) {
             this.env.PATH = this.env.PATH ? `${options.binDir}:${this.env.PATH}` : options.binDir;
         }
+        this.claudeProjectsDir =
+            options.subagents?.claudeProjectsDir ?? usageRoots(options.env ?? process.env).find((root) => root.provider === 'claude')?.path ?? '';
         this.subagents = new SubagentReader({
-            claudeProjectsDir: usageRoots(options.env ?? process.env).find((root) => root.provider === 'claude')?.path ?? '',
             ...options.subagents,
+            claudeProjectsDir: this.claudeProjectsDir,
+            chatInfo: async (chatId) => (await this.forkSource(chatId))?.info ?? null,
             chat: (chatId) => {
                 const session = this.chats.get(chatId);
                 return session
@@ -184,14 +190,43 @@ export class ChatManager {
                       }
                     : null;
             },
-            codexProcess: (info) => ({
-                command: this.commands.codex ?? this.providers.get('codex').command,
-                cwd: info.cwd,
-                env: this.env,
-                ...(this.spawn ? { spawn: this.spawn } : {})
-            }),
+            codexProcess: (info) => this.codexProcess(info.cwd),
             notify: (clientId, event) => this.sinks.get(clientId)?.({ event: 'chat.subagentChanged', payload: event })
         });
+    }
+
+    /* How an app-server is started for a question about a thread, apart from any chat's own process. */
+    codexProcess(cwd: string): CodexProcessSpec {
+        return { command: this.commands.codex ?? this.providers.get('codex').command, cwd, env: this.env, ...(this.spawn ? { spawn: this.spawn } : {}) };
+    }
+
+    /* A chat as it stands: the thread in memory, else the record on disk; null when this machine has no such chat. */
+    async forkSource(chatId: string): Promise<{ info: ChatInfo; items: ChatItem[] } | null> {
+        await this.creating.get(chatId)?.catch(() => undefined);
+        const session = this.chats.get(chatId);
+        if (session) {
+            return session.thread.snapshot();
+        }
+        const stored = await this.store?.read(chatId);
+        return stored ? { info: stored.info, items: stored.items } : null;
+    }
+
+    /* The record of a chat nobody has loaded, written whole: a fork's thread before its node exists. */
+    async writeRecord(chatId: string, info: ChatInfo, items: ChatItem[], preambles: string[]): Promise<void> {
+        if (!this.store) {
+            throw new ChatError('chat-unsupported', 'This machine keeps no chat records');
+        }
+        if (this.chats.has(chatId) || this.creating.has(chatId)) {
+            throw new ChatError('chat-busy', `Chat ${chatId} is already loaded`);
+        }
+        await this.store.write(chatId, info, items, { seq: 0, resetSeq: 0 }, preambles);
+    }
+
+    /* Takes back a record `writeRecord` wrote, as long as nobody loaded the chat since. */
+    async deleteRecord(chatId: string): Promise<void> {
+        if (!this.chats.has(chatId) && !this.creating.has(chatId)) {
+            await this.store?.delete(chatId);
+        }
     }
 
     /* The chat a context token belongs to. */
@@ -272,6 +307,7 @@ export class ChatManager {
         const session = new ChatSession({
             info,
             items: stored?.items ?? [],
+            preambles: stored?.preambles ?? [],
             provider,
             command: this.commands[kind] ?? provider.command,
             ...(this.spawn ? { spawn: this.spawn } : {}),
@@ -717,7 +753,7 @@ export class ChatManager {
             const log = this.logs.get(chatId);
             // Not folded here: an older write still in flight may land after this one, and the log is what covers for it.
             try {
-                this.store.writeSync(chatId, info, items, { seq: log?.seq ?? 0, resetSeq: log?.resetSeq ?? 0 });
+                this.store.writeSync(chatId, info, items, { seq: log?.seq ?? 0, resetSeq: log?.resetSeq ?? 0 }, session.preambles);
             } catch (e) {
                 console.error(`Chat record for ${chatId} failed:`, errorText(e));
             }
@@ -770,7 +806,7 @@ export class ChatManager {
             this.coalescers.get(chatId)?.flush();
             const { info, items } = session.thread.snapshot();
             const at = { seq: log.seq, resetSeq: log.resetSeq };
-            this.sizes.set(chatId, await this.store.write(chatId, info, items, at));
+            this.sizes.set(chatId, await this.store.write(chatId, info, items, at, session.preambles));
             // A chat killed while the write was out has no log left to fold.
             if (this.logs.get(chatId) === log && (fold || log.size > COMPACT_ABOVE_BYTES)) {
                 log.compact(at.seq);

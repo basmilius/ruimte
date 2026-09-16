@@ -2,6 +2,7 @@ import type { ChatItem } from '@ruimte/contracts';
 import type { SpawnChatProcess } from './chat-process.ts';
 import { CodexProtocol } from './codex-protocol.ts';
 import { CodexTransport } from './codex-transport.ts';
+import { ChatError } from './errors.ts';
 import { readingThread, settledReading } from './subagent-projection.ts';
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -67,12 +68,8 @@ export interface CodexProcessSpec {
     spawn?: SpawnChatProcess;
 }
 
-/*
- * A page asked of an app-server started for this one question, for a chat whose own process is not
- * running. The app-server reads a thread it never loaded from disk (checked against codex-cli 0.154.0),
- * so nothing has to be resumed first.
- */
-export const listThreadItemsOnce = async (spec: CodexProcessSpec, params: ThreadItemsParams): Promise<unknown> => {
+/* An app-server started for the questions `work` asks and ended after them, for a chat whose own process may not run. */
+const withAppServer = async <T>(spec: CodexProcessSpec, work: (transport: CodexTransport) => Promise<T>): Promise<T> => {
     const transport = new CodexTransport({
         command: spec.command,
         cwd: spec.cwd,
@@ -84,9 +81,74 @@ export const listThreadItemsOnce = async (spec: CodexProcessSpec, params: Thread
     try {
         await transport.request('initialize', { clientInfo: CLIENT_INFO, capabilities: { experimentalApi: true, requestAttestation: false } });
         transport.notify('initialized', {});
-        return await transport.request('thread/items/list', params);
+        return await work(transport);
     } finally {
         transport.end();
         transport.kill('SIGTERM');
     }
 };
+
+/*
+ * A page asked of an app-server started for this one question, for a chat whose own process is not
+ * running. The app-server reads a thread it never loaded from disk (checked against codex-cli 0.154.0),
+ * so nothing has to be resumed first.
+ */
+export const listThreadItemsOnce = (spec: CodexProcessSpec, params: ThreadItemsParams): Promise<unknown> =>
+    withAppServer(spec, (transport) => transport.request('thread/items/list', params));
+
+export interface ThreadForkParams {
+    threadId: string;
+    /* The turn the fork goes on after; null for all of it. */
+    at: { turnId: string } | { turns: number } | null;
+    /* The thread options the fork runs with: `cwd`, `model` and what the runtime mode says. */
+    options: Record<string, unknown>;
+}
+
+/* The id of the `turns`-th turn of a thread, oldest first, or null when it has fewer. */
+const nthTurnId = async (transport: CodexTransport, threadId: string, turns: number): Promise<string | null> => {
+    let seen = 0;
+    let cursor: string | null = null;
+    do {
+        const page = await transport.request('thread/turns/list', { threadId, limit: 100, sortDirection: 'asc', ...(cursor === null ? {} : { cursor }) });
+        const data = isRecord(page) && Array.isArray(page.data) ? page.data.filter(isRecord) : [];
+        for (const turn of data) {
+            if (++seen === turns) {
+                return typeof turn.id === 'string' ? turn.id : null;
+            }
+        }
+        cursor = isRecord(page) && typeof page.nextCursor === 'string' && page.nextCursor !== '' ? page.nextCursor : null;
+    } while (cursor !== null);
+    return null;
+};
+
+/*
+ * A new thread with the turns of `threadId` up to the one named, through `thread/fork`, and its id.
+ * Asked of a process of its own even while the chat's backend holds the thread: measured against
+ * codex-cli 0.154.0, with the original answering on in its own process afterwards.
+ */
+export const forkThreadOnce = (spec: CodexProcessSpec, params: ThreadForkParams): Promise<string> =>
+    withAppServer(spec, async (transport) => {
+        let lastTurnId: string | null = null;
+        if (params.at !== null) {
+            lastTurnId = 'turnId' in params.at ? params.at.turnId : await nthTurnId(transport, params.threadId, params.at.turns);
+            if (lastTurnId === null) {
+                throw new ChatError('turn-not-found', 'Codex keeps fewer turns in this thread than the chat shows, so the turn could not be found');
+            }
+        }
+        let result: unknown;
+        try {
+            result = await transport.request('thread/fork', {
+                threadId: params.threadId,
+                excludeTurns: true,
+                ...params.options,
+                ...(lastTurnId === null ? {} : { lastTurnId })
+            });
+        } catch (error) {
+            throw new ChatError('fork-failed', error instanceof Error ? error.message : String(error));
+        }
+        const thread = isRecord(result) && isRecord(result.thread) ? result.thread : null;
+        if (thread === null || typeof thread.id !== 'string' || thread.id === '') {
+            throw new ChatError('fork-failed', 'Codex answered the fork without a thread');
+        }
+        return thread.id;
+    });

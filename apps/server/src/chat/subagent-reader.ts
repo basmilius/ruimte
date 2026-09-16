@@ -1,6 +1,6 @@
 import type { ChatInfo, ChatItem, ChatSubagentChangedEvent, ChatSubagentResult } from '@ruimte/contracts';
 import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from '../fs/watch-seam.ts';
-import { findSubagentsDir, readSubagentMetas, TranscriptProjection } from './claude-transcript.ts';
+import { findSubagentsDir, readSubagentMetas, TranscriptProjection, type SubagentMeta } from './claude-transcript.ts';
 import { listThreadItemsOnce, parseThreadItemsPage, projectCodexItems, type CodexProcessSpec, type ThreadItemsParams } from './codex-thread.ts';
 import { ChatError } from './errors.ts';
 import { readSubagentSettlement, type SubagentSettlement } from './subagent-settlement.ts';
@@ -31,6 +31,8 @@ export interface SubagentChat {
 
 export interface SubagentReaderOptions {
     chat(chatId: string): SubagentChat | null;
+    /* What a chat is, loaded or not, for the step from a fork to the chat it was forked from. */
+    chatInfo?(chatId: string): Promise<ChatInfo | null>;
     /* Where Claude Code keeps its projects; empty when it has none on this machine. */
     claudeProjectsDir: string;
     /* How a Codex app-server is started for a chat whose own is not running. */
@@ -236,13 +238,11 @@ export class SubagentReader {
         if (known) {
             return known;
         }
-        const sessionId = chat.info.agentSessionId;
-        const dir = sessionId === null ? null : await findSubagentsDir(this.options.claudeProjectsDir, chat.info.cwd, sessionId);
-        // A grandchild has a file of its own in the same folder, found by the call that opened it like any other.
-        const meta = dir === null ? undefined : (await readSubagentMetas(dir)).find((candidate) => candidate.toolUseId === toolUseId);
-        if (!dir || !meta) {
+        const found = await this.claudeSubagentOf(chat.info, toolUseId);
+        if (found === null) {
             throw new ChatError('subagent-not-found', 'Claude has not written a transcript for this subagent');
         }
+        const { dir, meta } = found;
         const file = { dir, path: meta.transcript };
         this.claudeFiles.set(key, file);
         chat.noteNative(toolUseId, { agentId: meta.agentId });
@@ -256,6 +256,29 @@ export class SubagentReader {
         for (const path of idle.slice(0, Math.max(0, idle.length - MAX_IDLE_PROJECTIONS))) {
             this.projections.delete(path);
         }
+    }
+
+    /*
+     * The folder and meta of a subagent, in the chat's own session or, for a row a fork copied, in the
+     * session of the chat it was forked from: the CLI keeps subagents beside the session that ran them,
+     * and a fork's transcript is a new session with none. One step per fork, so a fork of a fork works too.
+     */
+    private async claudeSubagentOf(info: ChatInfo, toolUseId: string): Promise<{ dir: string; meta: SubagentMeta } | null> {
+        const seen = new Set<string>();
+        let current: ChatInfo | null = info;
+        while (current !== null && !seen.has(current.chatId)) {
+            seen.add(current.chatId);
+            const sessionId = current.agentSessionId;
+            const dir = sessionId === null ? null : await findSubagentsDir(this.options.claudeProjectsDir, current.cwd, sessionId);
+            // A grandchild has a file of its own in the same folder, found by the call that opened it like any other.
+            const meta = dir === null ? undefined : (await readSubagentMetas(dir)).find((candidate) => candidate.toolUseId === toolUseId);
+            if (dir !== null && meta !== undefined) {
+                return { dir, meta };
+            }
+            const origin: string | undefined = current.forkOf?.chatId;
+            current = origin === undefined || !this.options.chatInfo ? null : await this.options.chatInfo(origin);
+        }
+        return null;
     }
 
     private async readCodex(chat: SubagentChat, toolUseId: string, cursor: string | undefined, limit: number): Promise<ChatSubagentResult> {

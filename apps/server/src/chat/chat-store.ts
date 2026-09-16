@@ -14,7 +14,9 @@ const RecordSchema = z.object({
     info: ChatInfoSchema,
     items: z.array(ChatItemSchema),
     seq: z.number().int().nonnegative().optional(),
-    resetSeq: z.number().int().nonnegative().optional()
+    resetSeq: z.number().int().nonnegative().optional(),
+    // Never on the wire: what goes in front of the next real prompt, once (a fork's note for its agent).
+    preambles: z.array(z.string()).optional()
 });
 
 /* A thread as it stood when the daemon last wrote down anything about it: the snapshot with the log played over it. */
@@ -23,6 +25,7 @@ export interface ChatRecord {
     items: ChatItem[];
     seq: number;
     resetSeq: number;
+    preambles: string[];
     // The log as it is on disk, for the lines an attach with `since` may still be answered from.
     lines: ChatLogLine[];
 }
@@ -35,6 +38,9 @@ export interface ChatSeq {
 
 const fileName = (chatId: string): string => `${encodeURIComponent(chatId)}.json`;
 const logName = (chatId: string): string => `${encodeURIComponent(chatId)}.log`;
+
+const recordBody = (info: ChatInfo, items: ChatItem[], at: ChatSeq, preambles: readonly string[]): string =>
+    JSON.stringify({ info, items, ...at, ...(preambles.length === 0 ? {} : { preambles }) });
 
 /*
  * One JSON file per chat under `$RUIMTE_HOME/chats`, written while a turn runs and on shutdown, with
@@ -83,8 +89,8 @@ export class ChatStore {
     }
 
     /* Answers how many bytes the record took, which is what tells a caller whether writing it is cheap. */
-    async write(chatId: string, info: ChatInfo, items: ChatItem[], at: ChatSeq = { seq: 0, resetSeq: 0 }): Promise<number> {
-        const body = JSON.stringify({ info, items, ...at });
+    async write(chatId: string, info: ChatInfo, items: ChatItem[], at: ChatSeq = { seq: 0, resetSeq: 0 }, preambles: readonly string[] = []): Promise<number> {
+        const body = recordBody(info, items, at, preambles);
         await mkdir(this.dir, { recursive: true, mode: 0o700 });
         await writeAtomic(join(this.dir, fileName(chatId)), body);
         return body.length;
@@ -94,11 +100,11 @@ export class ChatStore {
      * The same write without a turn of the event loop. A `bun --watch` reload restarts the module
      * before an awaited write comes back, so a shutdown has to put the threads down synchronously.
      */
-    writeSync(chatId: string, info: ChatInfo, items: ChatItem[], at: ChatSeq = { seq: 0, resetSeq: 0 }): void {
+    writeSync(chatId: string, info: ChatInfo, items: ChatItem[], at: ChatSeq = { seq: 0, resetSeq: 0 }, preambles: readonly string[] = []): void {
         const target = join(this.dir, fileName(chatId));
         const temp = `${target}.${process.pid}.tmp`;
         mkdirSync(this.dir, { recursive: true, mode: 0o700 });
-        writeFileSync(temp, JSON.stringify({ info, items, ...at }), { mode: 0o600 });
+        writeFileSync(temp, recordBody(info, items, at, preambles), { mode: 0o600 });
         renameSync(temp, target);
     }
 
@@ -121,7 +127,7 @@ export class ChatStore {
                 resetSeq = line.seq;
             }
         }
-        return { ...thread.snapshot(), seq, resetSeq, lines };
+        return { ...thread.snapshot(), seq, resetSeq, preambles: snapshot.preambles ?? [], lines };
     }
 
     private async readSnapshot(chatId: string): Promise<z.infer<typeof RecordSchema> | null> {
@@ -185,5 +191,5 @@ const fromLogAlone = (lines: ChatLogLine[]): ChatRecord | null => {
             resetSeq = line.seq;
         }
     }
-    return { ...thread.snapshot(), seq: 0, resetSeq, lines };
+    return { ...thread.snapshot(), seq: 0, resetSeq, preambles: [], lines };
 };

@@ -1,3 +1,4 @@
+import type { ChatForkPayload, ChatForkResult } from '@ruimte/contracts';
 import { RequestError, type Dispatcher } from '../dispatcher.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { ChatError } from '../chat/errors.ts';
@@ -19,7 +20,8 @@ export const registerChatHandlers = (
     manager: ChatManager,
     providers: ProviderRegistry,
     beforeKill?: BeforeKill,
-    stopNode?: (nodeId: string, reason: string) => Promise<void>
+    stopNode?: (nodeId: string, reason: string) => Promise<void>,
+    fork?: (payload: ChatForkPayload) => Promise<ChatForkResult>
 ): void => {
     dispatcher.register('provider.list', async () => ({ providers: await providers.list() }));
 
@@ -88,6 +90,15 @@ export const registerChatHandlers = (
     );
 
     dispatcher.register('chat.turnDiff', (payload) => translate(async () => ({ diff: await manager.turnDiff(payload.chatId, payload.turnId) })));
+
+    dispatcher.register('chat.fork', (payload) =>
+        translate(() => {
+            if (!fork) {
+                throw new ChatError('chat-unsupported', 'This machine does not fork chats');
+            }
+            return fork(payload);
+        })
+    );
 
     dispatcher.register('chat.cancel', (payload) =>
         translate(async () => {

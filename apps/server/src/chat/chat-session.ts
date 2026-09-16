@@ -28,6 +28,8 @@ import { ChatThread } from './thread.ts';
 interface ChatSessionOptions {
     info: ChatInfo;
     items?: ChatItem[];
+    // Said once, in front of the next real prompt, and kept in the record until then (a fork's note for its agent).
+    preambles?: string[];
     provider: ChatProvider;
     // The executable and leading arguments; a test points this at a fake CLI.
     command: string[];
@@ -101,9 +103,11 @@ export class ChatSession {
     private frozen = false;
     // Background subagents a load found running whose transcript did not show an end yet; no CLI here will report them.
     private readonly orphans = new Set<string>();
+    private pendingPreambles: readonly string[];
 
     constructor(options: ChatSessionOptions) {
         this.options = options;
+        this.pendingPreambles = options.preambles ?? [];
         this.thread = new ChatThread(options.info, options.items);
         this.projector = new ThreadProjector(this.thread, { providerName: options.provider.name });
     }
@@ -118,6 +122,11 @@ export class ChatSession {
 
     get running(): boolean {
         return this.backend?.running === true;
+    }
+
+    /* What still waits for the next real prompt, for the record. */
+    get preambles(): readonly string[] {
+        return this.pendingPreambles;
     }
 
     get pid(): number | null {
@@ -315,6 +324,8 @@ export class ChatSession {
         this.projector.reset();
         // Null again, so the fresh CLI hears about its links at launch as it would on a first turn.
         this.lastSources = null;
+        // A cleared chat starts a new conversation, which what was waiting to be said no longer describes.
+        this.pendingPreambles = [];
         this.staleResults = 0;
         this.restartPending = false;
         this.turnReady = Promise.resolve();
@@ -769,7 +780,10 @@ export class ChatSession {
         const current = this.options.contextSources?.() ?? [];
         const previous = this.lastSources;
         this.lastSources = current;
-        const parts = [...(previous === null ? [] : [contextChangeNote(previous, current)]), ...(this.options.messages?.() ?? [])].filter(
+        // Every caller persists right after opening its turn, so the record forgets them along with the turn it writes.
+        const preambles = this.pendingPreambles;
+        this.pendingPreambles = [];
+        const parts = [...preambles, ...(previous === null ? [] : [contextChangeNote(previous, current)]), ...(this.options.messages?.() ?? [])].filter(
             (part): part is string => part !== null
         );
         return parts.length === 0 ? null : parts.join('\n\n');

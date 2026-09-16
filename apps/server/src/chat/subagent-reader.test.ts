@@ -130,6 +130,24 @@ describe('a Claude subagent', () => {
         expect(noted).toEqual([{ toolUseId: CHILD_CALL, native: { agentId: 'a4c2e8f10b3d5a7e9' } }]);
     });
 
+    test('a row a fork copied opens in the session of the chat it was forked from, one step per fork', async () => {
+        const original = info('chat-1', 'claude', SESSION);
+        const fork = { ...info('chat-fork', 'claude', 'fork-session'), forkOf: { chatId: 'chat-1', turnId: 'turn-1', at: 1 } };
+        const forkOfFork = { ...info('chat-fork-2', 'claude', 'fork-session-2'), forkOf: { chatId: 'chat-fork', turnId: 'turn-1', at: 2 } };
+        const stored = new Map([original, fork].map((entry) => [entry.chatId, entry]));
+        chats.set('chat-fork-2', { ...claudeChat([row(CHILD_CALL, { status: 'done' })]), info: forkOfFork });
+        const reader = new SubagentReader({
+            chat: (chatId) => chats.get(chatId) ?? null,
+            chatInfo: async (chatId) => stored.get(chatId) ?? null,
+            claudeProjectsDir: projects,
+            codexProcess: (chatInfo) => ({ command: ['codex', 'app-server'], cwd: chatInfo.cwd, env: {} }),
+            notify: () => undefined,
+            seams: watch
+        });
+        const page = await reader.read('chat-fork-2', CHILD_CALL);
+        expect(page.items[0]).toMatchObject({ kind: 'user', text: 'Survey the docs folder and say what is missing.' });
+    });
+
     test('a grandchild opens by the call that opened it, and is live while its row in the child says so', async () => {
         chats.set('chat-1', claudeChat([row(CHILD_CALL)]));
         const reader = makeReader();
