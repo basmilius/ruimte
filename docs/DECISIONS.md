@@ -2476,6 +2476,53 @@ code will not say on its own.
   could not be resumed after the machine restarted: <reason>", `notResumedNote`), so a person reads
   one kind of ending for everything a restart broke. Aborted rather than error because the turn did
   not fail; the machine went down under it. No new state: the wire keeps its enum.
+- The timeline tells that turn from one a person stopped (decided by Bas after phase 3): "Stopped after
+  X" where the machine ended it, "You stopped after X" where a person did. It reads the data already
+  there, the warning note with the not-resumed sentence in the turn (`abortedByMachine` in
+  `packages/contracts`, beside `notResumedNote`), rather than a field of its own; any other warning in
+  a stopped turn, a CLI that retried say, leaves it the person's.
+- Phase 4 (tasks) settles a chat child on the end of a turn, not on "the first turn" as such: the turn
+  that ends with no task of the child's own still open or still owing it a wake. For the ordinary child
+  that is its first turn; a child that delegated in turn would otherwise report "I asked a helper" as
+  its result and be done before its helper was. A terminal child settles only with `done` or fails when
+  its shell exits or its agent reports `exited`; a failed task raises attention on the child through the
+  push service, which is the same entry a client's finished mark now reads (below).
+- A wake waits for a busy chat without a clock and without a retry: the handler answers `wait`, the
+  entry keeps its file and its attempts and holds no lane (a `resume-run` of the same chat behind it
+  must not queue behind a wake that waits for that resume), and the daemon calls `OutboxWorker.wake`
+  from a chat observer whenever an event leaves a chat idle. A wake that lands while the handler is
+  still deciding to wait (the chat was loaded, and its settle freed it, inside the handler's own await)
+  is counted per target and runs the entry again, so it is never lost. After a restart nothing is
+  marked waiting and the handler simply looks again.
+- "Several children finishing close together give one turn" means: everything settled at the moment the
+  parent is free. A parent runs `agent --task` inside its own turn, so children that finish while it is
+  still working always wake it together; a child that finishes after the parent went idle wakes it at
+  once, and a later one wakes it again. Waiting for "all open tasks" would be a product rule (a wait
+  mode), which the "not a scheduler" rule leaves out.
+- A wake opens its turn through a method of its own (`ChatSession.wake`) and never through `send`: `send`
+  steps on a turn with `origin: 'agent'`, which is exactly what a wake turn is, so a second wake would
+  close the first one. It checks and opens in one synchronous step. The turn goes out before the tasks
+  are marked `sent`; the chat log is appended synchronously, so a restart in between finds the turn
+  with those `taskIds` and marks them without a second turn.
+- The row of a task in the parent's thread is derived from the task and written after the task store
+  write, deferred out of the broadcast of the child that settled it, and laid down again for every
+  task of a chat when that chat is loaded. It is not outbox work: it is a projection that heals itself.
+  `chat.subagent` on such a row reads the child's own thread through its history pages, with `source`
+  set after the child's CLI, since the result carries a closed set of sources. A terminal child has no
+  thread and answers `chat-unsupported`.
+- "Unseen" per node lives on the daemon as the push service's attention entries (`issuedAt` and
+  `readThrough` per node, written on every turn end and every alert whether or not a client is
+  connected), and a client lays the entries still unread for a machine over its own marks
+  (`unreadOnMachine` in `state/push-attention.ts`). Looking at a node already reads its entry, so the
+  two never disagree for long. A failed task and a parked wake are `attention` alerts, which is how they
+  count.
+- An outbox entry given up on leaves a note in the chat it was for: the chat that opened the node for a
+  `start-agent` or a `resume-run`, the chat itself for a `wake-parent`. A start is still never retried,
+  so its failure is handed to the same note right away and fails the task of that child.
+- Not built in phase 4: waking the parent with "asks a question" while a child's first turn waits on a
+  question. Such a task stays open until the question is answered and the turn ends. Marking a wake
+  about a question apart from the wake about the result needs a second wake per task, which the rule
+  "a task named in a turn has woken its parent" cannot express yet.
 
 ### Skipped on purpose
 
