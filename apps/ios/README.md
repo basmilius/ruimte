@@ -256,7 +256,7 @@ Required configuration and device acceptance:
    Register both extension IDs under the same Apple team. Enable app group
    `group.app.ruimte.mobile` for the app and notification extension, with the shared
    `app.ruimte.mobile.push` Keychain group. Regenerate provisioning profiles.
-2. Apply the Worker migrations through `0009_machine_activities.sql` to the intended
+2. Apply the Worker migrations through `0010_pending_activity_updates.sql` to the intended
    environment. Configure `APNS_SANDBOX_KEY` / `APNS_SANDBOX_KEY_ID` and
    `APNS_PRODUCTION_KEY` / `APNS_PRODUCTION_KEY_ID` with the matching APNs credentials.
    The repository now sets `APNS_TEAM_ID=7RGV9KKX87` and `APNS_TOPIC=app.ruimte.mobile`.

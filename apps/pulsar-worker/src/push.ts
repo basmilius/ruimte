@@ -64,7 +64,13 @@ const selectsActivity = async (device: ActivitySelection, machineId: string, col
     return device.start_machine_id === machineId && device.start_collapse_id === collapseId;
 };
 
-export const changePushDevice = async (request: Request, env: Env, handle: string, activity: 'update' | 'start' | null): Promise<Response> => {
+export const changePushDevice = async (
+    request: Request,
+    env: Env,
+    handle: string,
+    activity: 'update' | 'start' | null,
+    send: typeof deliverApns = deliverApns
+): Promise<Response> => {
     const session = await authenticate(request, env.DB);
     if (!session) {
         return failure('unauthorized', 'Sign in again');
@@ -146,6 +152,44 @@ export const changePushDevice = async (request: Request, env: Env, handle: strin
             )
                 .bind(handle, body.value.collapseId, body.value.token.toLowerCase(), Date.now(), body.value.machineId)
                 .run();
+            const pending = await env.DB.prepare('SELECT pending_push FROM push_activity_start WHERE handle = ?1 AND machine_id = ?2 AND collapse_id = ?3')
+                .bind(handle, body.value.machineId, body.value.collapseId)
+                .first<{ pending_push: string | null }>();
+            if (pending?.pending_push) {
+                const parsed = PushEnvelopeSchema.safeParse(JSON.parse(pending.pending_push));
+                const device = await env.DB.prepare('SELECT environment FROM push_device WHERE handle = ?1')
+                    .bind(handle)
+                    .first<{ environment: 'sandbox' | 'production' }>();
+                if (parsed.success && parsed.data.pushType === 'liveactivity' && device) {
+                    // A push-to-start can finish before iOS has supplied its update token.
+                    const result = await send(
+                        env,
+                        { token: body.value.token.toLowerCase(), environment: device.environment, startsActivity: false },
+                        parsed.data,
+                        Date.now()
+                    );
+                    if (result.ok) {
+                        if (parsed.data.activity.phase === 'done') {
+                            await env.DB.prepare('DELETE FROM push_activity WHERE handle = ?1 AND machine_id = ?2 AND collapse_id = ?3 AND token = ?4')
+                                .bind(handle, body.value.machineId, body.value.collapseId, body.value.token.toLowerCase())
+                                .run();
+                            await env.DB.prepare(
+                                'DELETE FROM push_activity_start WHERE handle = ?1 AND machine_id = ?2 AND collapse_id = ?3 AND pending_push = ?4'
+                            )
+                                .bind(handle, body.value.machineId, body.value.collapseId, pending.pending_push)
+                                .run();
+                        } else {
+                            await env.DB.prepare(
+                                'UPDATE push_activity_start SET pending_push = NULL WHERE handle = ?1 AND machine_id = ?2 AND collapse_id = ?3 AND pending_push = ?4'
+                            )
+                                .bind(handle, body.value.machineId, body.value.collapseId, pending.pending_push)
+                                .run();
+                        }
+                    } else {
+                        return failure('internal', 'The activity update could not be delivered');
+                    }
+                }
+            }
         }
     }
     return noContent();
@@ -242,8 +286,8 @@ export const sendPush = async (request: Request, env: Env, seams: PushDeliverySe
         return failure('bad-request', 'This notification was already submitted');
     }
     if (endsUnregisteredActivity) {
-        await env.DB.prepare('DELETE FROM push_activity_start WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3')
-            .bind(push.handle, push.collapseId, push.machineId)
+        await env.DB.prepare('UPDATE push_activity_start SET pending_push = ?4 WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3')
+            .bind(push.handle, push.collapseId, push.machineId, JSON.stringify(push))
             .run();
         return noContent();
     }
@@ -255,6 +299,9 @@ export const sendPush = async (request: Request, env: Env, seams: PushDeliverySe
             .bind(push.handle, push.collapseId, now + 8 * 60 * 60_000, now, push.machineId)
             .run();
         if (claim.meta.changes === 0) {
+            await env.DB.prepare('UPDATE push_activity_start SET pending_push = ?4 WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3')
+                .bind(push.handle, push.collapseId, push.machineId, JSON.stringify(push))
+                .run();
             return noContent();
         }
     }

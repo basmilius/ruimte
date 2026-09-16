@@ -89,7 +89,7 @@ states into one signed overview per machine. Legacy clients retain conversation-
 routing; new clients still send a known-session follow list for 0.0.17 daemons that do not
 understand `followAll`. Automatic overviews require the updated daemon, currently in the
 development checkout. Counts, account isolation, opt-out, ordered transitions and existing
-push behavior passed 176 Bun tests (one optional statement-key test skipped). The Swift
+push behavior passed 177 Bun tests (one optional statement-key test skipped). The Swift
 package passed 41 tests and the signed iPhone build was installed.
 
 The physical iPhone crash report `Ruimte-2026-09-16-094234.ips` identifies a UIKit assertion
@@ -97,3 +97,15 @@ while completing a notification response on the cooperative executor. The callba
 now finishes on the main thread, registers before launch completion and queues cold-start
 responses until the account has loaded. A repeat tap on-device and visible automatic
 start/update/end remain acceptance checks, not results established by the automated tests.
+
+Migration `0010_pending_activity_updates.sql` retains the latest signed state while a
+push-started activity is waiting for its update token, including an early end. The token
+registration flushes that state. The corresponding Worker version
+`560dab51-3ff1-4a14-88ea-e86a4497cdf8` was activated at 100% after the regression suite
+passed. Both migrations are additive.
+
+A physical-device smoke run used two temporary terminals on development machine
+`YW9IZV86g20` (one running, one transitioning to attention, then both idle). The device
+registered an ActivityKit update token with Pulsar. No new Ruimte crash report appeared
+on the iPhone after the run. Visible counts, the final end state and notification-tap
+navigation still require Bas's observation; an update token alone does not prove them.

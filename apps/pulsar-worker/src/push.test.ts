@@ -255,7 +255,7 @@ describe('push authorization and routing', () => {
         expect(delivered.length).toBe(1);
     });
 
-    test('foreign target registration is refused and a done event without an update token releases the start claim', async () => {
+    test('foreign registration is refused and an early end is delivered after the update token arrives', async () => {
         expect(
             (await changePushDevice(request({ token: 'ab'.repeat(32), machineId: 'foreign', collapseId: 'c'.repeat(43) }, 'PUT'), env, handle, 'start')).status
         ).toBe(404);
@@ -263,9 +263,14 @@ describe('push authorization and routing', () => {
         const activity = { title: 'Build', phase: 'running' as const, startedAt: NOW };
         await sendPush(request(signed({ pushType: 'liveactivity', activity } as Partial<PushEnvelope>)), env, seams);
         await sendPush(request(signed({ pushType: 'liveactivity', activity: { ...activity, phase: 'done' } } as Partial<PushEnvelope>)), env, seams);
+        expect(delivered.length).toBe(1);
+        expect(sqlite.query('SELECT pending_push FROM push_activity_start').get()).not.toBeNull();
+        await changePushDevice(request({ machineId: 'machine', collapseId: 'c'.repeat(43), token: 'ab'.repeat(32) }, 'PUT'), env, handle, 'update', seams.send);
+        expect(delivered.at(-1)).toMatchObject({ activity: { phase: 'done' } });
         expect(sqlite.query('SELECT * FROM push_activity_start').all()).toEqual([]);
+        expect(sqlite.query('SELECT * FROM push_activity').all()).toEqual([]);
         await sendPush(request(signed({ pushType: 'liveactivity', activity } as Partial<PushEnvelope>)), env, seams);
-        expect(delivered.length).toBe(2);
+        expect(delivered.length).toBe(3);
     });
 
     test('another machine cannot update an activity even when it knows its collapse id', async () => {
@@ -429,4 +434,28 @@ describe('automatic activity routing', () => {
         expect((await sendPush(request(push), env, seams)).status).toBe(404);
         expect(apnsPayload(push, true)).toMatchObject({ aps: { event: 'start', 'content-state': activity } });
     });
+});
+
+test('the latest count is retained while an automatic activity waits for its update token', async () => {
+    const collapseId = createHash('sha256').update(pushCollapseIdMessage('machine', MACHINE_ACTIVITY_NODE)).digest('base64url');
+    sqlite.query("UPDATE push_device SET activity_scope = 'machines', start_token = ?").run('cd'.repeat(32));
+    for (const runningCount of [1, 2, 3]) {
+        await sendPush(
+            request(
+                signed({
+                    pushType: 'liveactivity',
+                    collapseId,
+                    activity: { title: 'Computer', phase: 'running', startedAt: NOW, runningCount, attentionCount: 0 }
+                })
+            ),
+            env,
+            seams
+        );
+    }
+    expect(delivered.length).toBe(1);
+    const update = request({ machineId: 'machine', collapseId, token: 'ef'.repeat(32) }, 'PUT');
+    expect((await changePushDevice(update, env, handle, 'update', seams.send)).status).toBe(204);
+    expect(delivered.length).toBe(2);
+    expect(delivered.at(-1)).toMatchObject({ activity: { runningCount: 3 } });
+    expect(sqlite.query('SELECT pending_push FROM push_activity_start').get()).toEqual({ pending_push: null });
 });
