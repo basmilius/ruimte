@@ -1,25 +1,18 @@
 import { useEffect, useRef } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
-import { Eye, FolderX, GitBranch, LocateFixed, MoreHorizontal, Trash } from 'lucide-react';
-import type { CanvasNodeKind, Worktree } from '@ruimte/contracts';
+import { Eye, FolderX, GitBranch, GitMerge, LocateFixed, MoreHorizontal, Trash } from 'lucide-react';
+import type { Worktree } from '@ruimte/contracts';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { nodesInWorktree, originLabel, workCounts } from '@/shell/panels/worktree-rows';
 import { nodeWorking } from '@/state/agent-work';
 import { useChats } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
-import { worktreeLists } from '@/state/worktrees';
+import { worktreeLists, type WorktreeNode } from '@/state/worktrees';
 import { MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
-
-export interface WorktreeNode {
-    id: string;
-    kind: CanvasNodeKind;
-    title: string;
-    cwd?: string;
-}
 
 interface WorktreeSectionProps {
     /* The project folder the list is held for. */
@@ -31,6 +24,7 @@ interface WorktreeSectionProps {
     current: string | null;
     busy: boolean;
     onView(worktree: Worktree): void;
+    onMerge(worktree: Worktree): void;
     onRemove(worktree: Worktree): void;
     onReveal(nodeId: string): void;
 }
@@ -40,7 +34,7 @@ interface WorktreeSectionProps {
  * holds. It is the one place a worktree whose node is gone still shows up, which is what an agent
  * team leaves behind once its canvas is cleaned up.
  */
-export function WorktreeSection({ folder, worktrees, nodes, current, busy, onView, onRemove, onReveal }: WorktreeSectionProps) {
+export function WorktreeSection({ folder, worktrees, nodes, current, busy, onView, onMerge, onRemove, onReveal }: WorktreeSectionProps) {
     const endpointId = useEndpointId();
     const sessions = useSessions((s) => s.byKey);
     const chats = useChats((s) => s.byKey);
@@ -116,9 +110,14 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                                     <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
                                         <Menu.Popup className="menu-popup">
                                             {!worktree.missing && (
-                                                <Menu.Item className="menu-item" onClick={() => onView(worktree)}>
-                                                    <Icon icon={Eye} size={14} /> View
-                                                </Menu.Item>
+                                                <>
+                                                    <Menu.Item className="menu-item" onClick={() => onView(worktree)}>
+                                                        <Icon icon={Eye} size={14} /> View
+                                                    </Menu.Item>
+                                                    <Menu.Item className="menu-item" onClick={() => onMerge(worktree)}>
+                                                        <Icon icon={GitMerge} size={14} /> Merge...
+                                                    </Menu.Item>
+                                                </>
                                             )}
                                             {reveal !== null && (
                                                 <Menu.Item className="menu-item" onClick={() => onReveal(reveal)}>

@@ -18,6 +18,8 @@ interface PromptProps {
     confirmLabel: string;
     danger?: boolean;
     busy?: boolean;
+    /* A second way out next to the confirm, such as merging before removing. */
+    secondary?: { label: string; onClick(): void };
     onConfirm(value: string, body: string): void;
     onClose(): void;
 }
@@ -26,7 +28,7 @@ interface PromptProps {
  * The one dialog every git action asks its question in: a name to type, or a warning to agree with.
  * They share it so a confirm and a rename read the same and neither grows a layout of its own.
  */
-export function GitPrompt({ open, title, description, field, area, confirmLabel, danger = false, busy = false, onConfirm, onClose }: PromptProps) {
+export function GitPrompt({ open, title, description, field, area, confirmLabel, danger = false, busy = false, secondary, onConfirm, onClose }: PromptProps) {
     /* The dialog stays mounted between questions, so every opening starts from what it was handed.
        The token is what it was handed, so a new question resets the fields in the same render that
        shows it and not in a second one after. */
@@ -87,6 +89,11 @@ export function GitPrompt({ open, title, description, field, area, confirmLabel,
                     )}
                     <div className="mt-4 flex items-center justify-end gap-2">
                         <Button onClick={onClose}>Cancel</Button>
+                        {secondary !== undefined && (
+                            <Button disabled={busy} onClick={secondary.onClick}>
+                                {secondary.label}
+                            </Button>
+                        )}
                         <Button variant={danger ? 'danger' : 'primary'} disabled={busy || (field !== undefined && value.trim() === '')} onClick={submit}>
                             {confirmLabel}
                         </Button>

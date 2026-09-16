@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
 import { ArrowDown, ArrowUp, ChevronsDownUp, ChevronsUpDown, Folder, GitPullRequest, MoreHorizontal, RefreshCw } from 'lucide-react';
 import {
-    isCanvasView,
     type GitActionKind,
     type GitCapabilitiesResult,
     type GitCommit,
@@ -24,12 +23,11 @@ import { isUnmergedRefusal, pushButton } from '@/shell/panels/git-actions';
 import { activeDiffPath, allDirs } from '@/shell/panels/git-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
 import { useGitActions } from '@/shell/panels/use-git-actions';
-import { WorktreeSection, type WorktreeNode } from '@/shell/panels/WorktreeSection';
+import { WorktreeSection } from '@/shell/panels/WorktreeSection';
 import { worktreeBase, worktreeDiffTab } from '@/shell/panels/worktree-rows';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
 import { revealNode } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
-import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
 import { watchGit } from '@/state/git-watch';
@@ -39,7 +37,7 @@ import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { useToasts } from '@/state/toasts';
-import { useWorktrees, worktreeLists } from '@/state/worktrees';
+import { useProjectNodes, useWorktrees, worktreeLists } from '@/state/worktrees';
 import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP, MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
@@ -86,19 +84,12 @@ export function GitPanel() {
     const tabLimit = useSettings((s) => s.filesTabLimit);
     const endpointId = useEndpointId();
     const transport = useTransport();
-    const views = useDocument((s) => s.views);
     const worktrees = useWorktrees(transport, endpointId, folder, true);
     const derived = useMemo(() => gitTarget(nodes, selection, folder, worktrees), [nodes, selection, folder, worktrees]);
     /* A checkout picked by hand outranks the selection, until the selection points somewhere else
        of its own: `from` is the target it was picked over, so a click on the canvas takes over again. */
     const [picked, setPicked] = useState<{ target: GitTarget; from: string | null } | null>(null);
-    /* The nodes of every canvas of the project, with the canvas on screen as it is now rather than as last saved. */
-    const projectNodes = useMemo<WorktreeNode[]>(() => {
-        const live = Object.values(nodes);
-        const liveIds = new Set(live.map((node) => node.id));
-        const saved = views.flatMap((view) => (isCanvasView(view) ? view.nodes.filter((node) => !liveIds.has(node.id)) : []));
-        return [...live, ...saved];
-    }, [nodes, views]);
+    const projectNodes = useProjectNodes();
     const targets = useMemo(() => gitTargets(nodes, worktrees, folder), [nodes, worktrees, folder]);
     // A worktree picked by hand that has since been removed hands the panel back to the selection.
     const pickedStands =
@@ -476,7 +467,8 @@ export function GitPanel() {
                         current={cwd}
                         busy={busy}
                         onView={viewWorktree}
-                        onRemove={(worktree) => useUi.getState().setWorktreeRemoval({ folder, path: worktree.path })}
+                        onMerge={(worktree) => useUi.getState().setWorktreeMerge({ folder, paths: [worktree.path] })}
+                        onRemove={(worktree) => useUi.getState().setWorktreeRemoval({ folder, paths: [worktree.path] })}
                         onReveal={revealNode}
                     />
                 )}

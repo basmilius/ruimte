@@ -21985,6 +21985,134 @@
       }
     }
   },
+  "request.git.worktree-merge.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "repo": {
+        "type": "string",
+        "minLength": 1
+      },
+      "path": {
+        "type": "string",
+        "minLength": 1
+      },
+      "actionId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "strategy": {
+        "type": "string",
+        "enum": [
+          "merge",
+          "squash",
+          "rebase"
+        ]
+      },
+      "commitFirst": {
+        "type": "boolean"
+      },
+      "subject": {
+        "type": "string"
+      },
+      "body": {
+        "type": "string"
+      },
+      "remove": {
+        "type": "boolean"
+      },
+      "stopAgent": {
+        "type": "boolean"
+      },
+      "into": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "repo",
+      "path",
+      "actionId",
+      "strategy"
+    ]
+  },
+  "request.git.worktree-merge.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "actionId": {
+        "type": "string"
+      },
+      "summary": {
+        "type": "string"
+      },
+      "output": {
+        "type": "string"
+      },
+      "commit": {
+        "type": "object",
+        "properties": {
+          "hash": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "hash",
+          "subject"
+        ]
+      },
+      "url": {
+        "type": "string"
+      },
+      "cwd": {
+        "type": "string"
+      },
+      "into": {
+        "type": "string"
+      },
+      "conflicts": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "removed": {
+        "type": "boolean"
+      },
+      "branchDeleted": {
+        "type": "boolean"
+      },
+      "kept": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "actionId",
+      "summary",
+      "output"
+    ]
+  },
+  "request.git.worktree-abort.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "cwd": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "cwd"
+    ]
+  },
+  "request.git.worktree-abort.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.git.status.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

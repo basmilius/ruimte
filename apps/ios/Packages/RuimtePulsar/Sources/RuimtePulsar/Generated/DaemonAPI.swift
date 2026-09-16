@@ -69,6 +69,8 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `gitWorktreeAdd` = "git.worktree-add"
     case `gitWorktreeList` = "git.worktree-list"
     case `gitWorktreeRemove` = "git.worktree-remove"
+    case `gitWorktreeMerge` = "git.worktree-merge"
+    case `gitWorktreeAbort` = "git.worktree-abort"
     case `gitStatus` = "git.status"
     case `gitWatch` = "git.watch"
     case `gitUnwatch` = "git.unwatch"

@@ -9,7 +9,20 @@ interface GitOptions {
     stdin?: string;
 }
 
-export type GitErrorCode = 'not-a-repo' | 'git-failed' | 'worktree-not-found' | 'worktree-has-work' | 'worktree-locked';
+export type GitErrorCode =
+    | 'not-a-repo'
+    | 'git-failed'
+    | 'worktree-not-found'
+    | 'worktree-has-work'
+    | 'worktree-locked'
+    | 'worktree-missing'
+    | 'worktree-busy'
+    | 'no-branch'
+    | 'target-not-checked-out'
+    | 'target-busy'
+    | 'target-dirty'
+    | 'agent-working'
+    | 'merge-conflict';
 
 export class GitError extends Error {
     readonly code: GitErrorCode;

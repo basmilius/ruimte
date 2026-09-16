@@ -32,6 +32,19 @@ export interface WorktreeOrigin {
 export interface RemoveOptions {
     force?: boolean;
     keepBranch?: boolean;
+    /* The branch a squash just put this worktree's content on; its commits then no longer count as work. */
+    squashedInto?: string;
+}
+
+export interface WorktreeState {
+    entry: Listed | null;
+    /* The register key, which is the path git reported when the worktree was made. */
+    key: string | null;
+    record: WorktreeRecord | undefined;
+    missing: boolean;
+    work: WorktreeWork;
+    target: string | null;
+    label: string;
 }
 
 export interface RemoveResult {
@@ -40,7 +53,7 @@ export interface RemoveResult {
 }
 
 /* One entry of `git worktree list --porcelain`. */
-interface Listed {
+export interface Listed {
     path: string;
     /* Null on a detached HEAD. */
     branch: string | null;
@@ -247,49 +260,92 @@ export class Worktrees {
      */
     async remove(repo: string, path: string, options: RemoveOptions = {}): Promise<RemoveResult> {
         const { main } = await this.read(repo);
-        return await this.serialize(main, async () => {
-            const { entries } = await this.read(main);
-            const records = await this.registerOf(main).read();
-            const wanted = resolve(path);
-            const entry = entries.find((candidate) => candidate.path !== main && resolve(candidate.path) === wanted) ?? null;
-            const key = entry?.path ?? [...records.keys()].find((candidate) => resolve(candidate) === wanted) ?? null;
-            const record = key === null ? undefined : records.get(key);
-            if (entry === null && (record === undefined || !(await this.branchExists(main, record.branch)))) {
-                if (key !== null) {
-                    await this.registerOf(main).delete(key);
-                }
-                throw new GitError('worktree-not-found', `${path} is not a worktree of ${main}`);
-            }
-            const missing = entry === null || entry.prunable || !(await exists(entry.path));
-            const { work, target } = await this.inspect(main, entry, record, missing);
-            const label = entry?.branch ?? record?.branch ?? basename(wanted);
-            if (!options.force && hasWork(work)) {
-                throw new GitError('worktree-has-work', `${workSentence(label, work, target)}. Remove it with force to lose that.`);
-            }
-            if (!options.force && entry?.locked) {
-                throw new GitError('worktree-locked', `${label} is locked with "git worktree lock". Remove it with force to override the lock.`);
-            }
+        return await this.serialize(main, () => this.removeHeld(main, path, options));
+    }
 
-            if (entry !== null) {
-                await this.removeCheckout(main, entry, missing);
-            }
+    /*
+     * Runs work that inspects and changes the worktrees of a repository while no removal or merge of
+     * another client does, with the main checkout it resolved to.
+     */
+    async exclusive<T>(repo: string, work: (main: string) => Promise<T>): Promise<T> {
+        const { main } = await this.read(repo);
+        return await this.serialize(main, () => work(main));
+    }
 
-            const branch = this.branchToDelete(entry, record, options.keepBranch);
-            let result: RemoveResult = { branchDeleted: false };
-            if (branch !== null && (await this.branchExists(main, branch)) && (work.ahead === 0 || options.force)) {
-                const commit = (await git(['rev-parse', `refs/heads/${branch}`], main))?.trim();
-                // -D even when merged: -d asks whether HEAD of the main checkout has it, which is not the target the count was against.
-                const deleted = await runGit(['branch', '-D', branch], main);
-                result = deleted.code === 0 ? { branchDeleted: true, ...(commit ? { branchCommit: commit } : {}) } : { branchDeleted: false };
-            }
-
+    /*
+     * What the daemon knows about one worktree right now: the entry git lists (null when only the
+     * register still has its branch), its register record, and the work it holds against its target.
+     */
+    async describe(main: string, path: string): Promise<WorktreeState> {
+        const { entries } = await this.read(main);
+        const records = await this.registerOf(main).read();
+        const wanted = resolve(path);
+        const entry = entries.find((candidate) => candidate.path !== main && resolve(candidate.path) === wanted) ?? null;
+        const key = entry?.path ?? [...records.keys()].find((candidate) => resolve(candidate) === wanted) ?? null;
+        const record = key === null ? undefined : records.get(key);
+        if (entry === null && (record === undefined || !(await this.branchExists(main, record.branch)))) {
             if (key !== null) {
                 await this.registerOf(main).delete(key);
             }
-            await rm(join(this.checkpointsRoot, checkpointIndexFile(entry?.path ?? wanted)), { force: true });
-            this.announce(main);
-            return result;
-        });
+            throw new GitError('worktree-not-found', `${path} is not a worktree of ${main}`);
+        }
+        const missing = entry === null || entry.prunable || !(await exists(entry.path));
+        const { work, target } = await this.inspect(main, entry, record, missing);
+        return { entry, key, record, missing, work, target, label: entry?.branch ?? record?.branch ?? basename(wanted) };
+    }
+
+    /* Every checkout of the repository, the main one first, with the branch each has out. */
+    async checkouts(repo: string): Promise<Array<{ path: string; branch: string | null }>> {
+        await toplevel(repo);
+        return parsePorcelain(await run(['worktree', 'list', '--porcelain'], repo))
+            .filter((entry) => !entry.prunable)
+            .map((entry) => ({ path: entry.path, branch: entry.branch }));
+    }
+
+    /* `remove` for a caller that already holds the repository through `exclusive`. */
+    async removeHeld(main: string, path: string, options: RemoveOptions = {}): Promise<RemoveResult> {
+        const { entry, key, record, missing, work: counted, target, label } = await this.describe(main, path);
+        // A squash leaves the branch's commits off the target while their content is on it; that is not work to lose.
+        const squashed =
+            options.squashedInto !== undefined && entry?.branch !== null && entry !== null && (await this.contentIn(main, entry.branch, options.squashedInto));
+        const work = squashed ? { ...counted, ahead: 0 } : counted;
+        if (!options.force && hasWork(work)) {
+            throw new GitError('worktree-has-work', `${workSentence(label, work, target)}. Remove it with force to lose that.`);
+        }
+        if (!options.force && entry?.locked) {
+            throw new GitError('worktree-locked', `${label} is locked with "git worktree lock". Remove it with force to override the lock.`);
+        }
+
+        if (entry !== null) {
+            await this.removeCheckout(main, entry, missing);
+        }
+
+        const branch = this.branchToDelete(entry, record, options.keepBranch);
+        let result: RemoveResult = { branchDeleted: false };
+        if (branch !== null && (await this.branchExists(main, branch)) && (work.ahead === 0 || options.force)) {
+            const commit = (await git(['rev-parse', `refs/heads/${branch}`], main))?.trim();
+            // -D even when merged: -d asks whether HEAD of the main checkout has it, which is not the target the count was against.
+            const deleted = await runGit(['branch', '-D', branch], main);
+            result = deleted.code === 0 ? { branchDeleted: true, ...(commit ? { branchCommit: commit } : {}) } : { branchDeleted: false };
+        }
+
+        if (key !== null) {
+            await this.registerOf(main).delete(key);
+        }
+        await rm(join(this.checkpointsRoot, checkpointIndexFile(entry?.path ?? resolve(path))), { force: true });
+        this.announce(main);
+        return result;
+    }
+
+    /*
+     * Whether everything a branch changed is on the target already, whatever else the target gained:
+     * merging it would leave the target's tree as it is. A squash resolved differently from the branch
+     * is not, and then deleting the branch would lose its version.
+     */
+    private async contentIn(main: string, branch: string, target: string): Promise<boolean> {
+        const merged = await runGit(['merge-tree', '--write-tree', `refs/heads/${target}`, `refs/heads/${branch}`], main);
+        const tree = (await git(['rev-parse', `refs/heads/${target}^{tree}`], main))?.trim();
+        return merged.code === 0 && tree !== undefined && merged.stdout.split('\n')[0]?.trim() === tree;
     }
 
     /* The main checkout of the repository a path is in, and every other worktree git lists. */
@@ -362,7 +418,7 @@ export class Worktrees {
         return { work: { changed, untracked, ahead, ...(operation === null ? {} : { operation }), ...moved }, target };
     }
 
-    private async operationIn(path: string): Promise<string | null> {
+    async operationIn(path: string): Promise<string | null> {
         const output = await git(['rev-parse', ...OPERATIONS.flatMap((operation) => ['--git-path', operation.path])], path);
         if (output === null) {
             return null;
@@ -417,7 +473,7 @@ export class Worktrees {
         return next;
     }
 
-    private announce(main: string): void {
+    announce(main: string): void {
         for (const sink of this.sinks.values()) {
             sink({ event: 'git.worktrees', payload: { repo: main } });
         }

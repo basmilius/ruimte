@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Worktree } from '@ruimte/contracts';
 import { GitPrompt } from '@/shell/panels/GitDialogs';
-import { removedToast, removeQuestion } from '@/shell/panels/worktree-rows';
+import { removeAllQuestion, removedToast } from '@/shell/panels/worktree-rows';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
@@ -9,13 +9,14 @@ import { worktreeLists } from '@/state/worktrees';
 import { TransportError } from '@/transport';
 import { useTransport } from '@/transport/context';
 
-type Reading = { path: string; worktree: Worktree | null; failure: string | null };
+type Reading = { key: string; worktrees: Worktree[]; failure: string | null };
 
 /*
- * The question before a worktree goes, from the git panel and from a node's menu alike. It counts the
- * work again when it opens rather than trusting a list that may be minutes old, and it only sends
- * `force` when the numbers it showed said something would be lost: the daemon refuses anything else
- * with work in it, so a count that grew in between comes back here as a new question.
+ * The question before worktrees go, one from the git panel or a node's menu, or a group's all. It
+ * counts the work again when it opens rather than trusting a list that may be minutes old, and it only
+ * sends `force` when the numbers it showed said something would be lost: the daemon refuses anything
+ * else with work in it, so a count that grew in between comes back here as a new question. With work
+ * in one, merging first is offered next to removing.
  */
 export function RemoveWorktreeDialog() {
     const removal = useUi((s) => s.worktreeRemoval);
@@ -23,11 +24,12 @@ export function RemoveWorktreeDialog() {
     const transport = useTransport();
     const [reading, setReading] = useState<Reading | null>(null);
     const [busy, setBusy] = useState(false);
-    // Goes up to count again after a refusal, with the dialog still open on the same worktree.
+    // Goes up to count again after a refusal, with the dialog still open on the same worktrees.
     const [attempt, setAttempt] = useState(0);
+    const key = removal === null ? null : removal.paths.join('\u0000');
 
     useEffect(() => {
-        if (removal === null) {
+        if (removal === null || key === null) {
             return;
         }
         let cancelled = false;
@@ -35,58 +37,58 @@ export function RemoveWorktreeDialog() {
             .request('git.worktree-list', { repo: removal.folder, inspect: true })
             .then((answer) => {
                 if (!cancelled) {
-                    const worktree = answer.worktrees.find((entry) => entry.path === removal.path) ?? null;
-                    setReading({ path: removal.path, worktree, failure: worktree === null ? 'This worktree is already gone.' : null });
+                    const worktrees = removal.paths.map((path) => answer.worktrees.find((entry) => entry.path === path)).filter((entry) => entry !== undefined);
+                    setReading({ key, worktrees, failure: worktrees.length === 0 ? 'This worktree is already gone.' : null });
                 }
             })
             .catch((error: unknown) => {
                 if (!cancelled) {
-                    setReading({ path: removal.path, worktree: null, failure: error instanceof Error ? error.message : 'Could not read the worktree.' });
+                    setReading({ key, worktrees: [], failure: error instanceof Error ? error.message : 'Could not read the worktree.' });
                 }
             });
         return () => {
             cancelled = true;
         };
-    }, [transport, removal, attempt]);
+    }, [transport, removal, key, attempt]);
 
     const close = (): void => {
         setReading(null);
         useUi.getState().setWorktreeRemoval(null);
     };
 
-    const shown = removal !== null && reading?.path === removal.path ? reading : null;
-    const question = shown?.worktree ? removeQuestion(shown.worktree) : null;
+    const shown = key !== null && reading?.key === key ? reading : null;
+    const question = shown !== null && shown.worktrees.length > 0 ? removeAllQuestion(shown.worktrees) : null;
+    const mergeable = shown?.worktrees.filter((worktree) => !worktree.missing) ?? [];
 
-    const confirm = (): void => {
-        if (removal === null || shown?.worktree == null || question === null) {
+    const confirm = async (): Promise<void> => {
+        if (removal === null || shown === null || question === null) {
             return;
         }
-        const worktree = shown.worktree;
         setBusy(true);
-        transport
-            .request('git.worktree-remove', { repo: removal.folder, path: worktree.path, ...(question.force ? { force: true } : {}) })
-            .then((result) => {
-                close();
-                useToasts.getState().show({
-                    title: `Removed worktree ${worktree.branch}`,
-                    ...(removedToast(worktree.branch, result) ?? {}),
-                    kind: 'success'
+        try {
+            // One after the other, stopping at the first refusal so what follows it stays as it was.
+            for (const worktree of shown.worktrees) {
+                const result = await transport.request('git.worktree-remove', {
+                    repo: removal.folder,
+                    path: worktree.path,
+                    ...(question.force ? { force: true } : {})
                 });
-            })
-            .catch((error: unknown) => {
-                if (error instanceof TransportError && error.code === 'worktree-has-work') {
-                    setReading(null);
-                    setAttempt((count) => count + 1);
-                    return;
-                }
-                close();
-                const message = error instanceof Error ? error.message : 'That did not work.';
-                useToasts.getState().show({ title: 'Removing the worktree failed', description: message, kind: 'error', output: message });
-            })
-            .finally(() => {
-                setBusy(false);
-                worktreeLists.reload(endpointId, removal.folder);
-            });
+                useToasts.getState().show({ title: `Removed worktree ${worktree.branch}`, ...(removedToast(worktree.branch, result) ?? {}), kind: 'success' });
+            }
+            close();
+        } catch (error: unknown) {
+            if (error instanceof TransportError && error.code === 'worktree-has-work') {
+                setReading(null);
+                setAttempt((count) => count + 1);
+                return;
+            }
+            close();
+            const message = error instanceof Error ? error.message : 'That did not work.';
+            useToasts.getState().show({ title: 'Removing the worktree failed', description: message, kind: 'error', output: message });
+        } finally {
+            setBusy(false);
+            worktreeLists.reload(endpointId, removal.folder);
+        }
     };
 
     return (
@@ -108,7 +110,18 @@ export function RemoveWorktreeDialog() {
             confirmLabel={question?.confirmLabel ?? 'Remove'}
             danger
             busy={busy || question === null}
-            onConfirm={confirm}
+            secondary={
+                removal !== null && question?.force === true && mergeable.length > 0
+                    ? {
+                          label: 'Merge first...',
+                          onClick: () => {
+                              close();
+                              useUi.getState().setWorktreeMerge({ folder: removal.folder, paths: mergeable.map((worktree) => worktree.path), remove: true });
+                          }
+                      }
+                    : undefined
+            }
+            onConfirm={() => void confirm()}
             onClose={close}
         />
     );

@@ -10,6 +10,7 @@ import { EndChildrenDialog } from '@/agents/EndChildrenDialog';
 import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { ViewHost } from '@/shell/ViewHost';
 import { ForkDialog } from '@/shell/ForkDialog';
+import { MergeWorktreeDialog } from '@/shell/MergeWorktreeDialog';
 import { RemoveWorktreeDialog } from '@/shell/RemoveWorktreeDialog';
 import { WorktreeDialog } from '@/shell/WorktreeDialog';
 import { SettingsDialog } from '@/shell/SettingsDialog';
@@ -78,6 +79,7 @@ function Workspace() {
             <EndChildrenDialog />
             <WorktreeDialog />
             <RemoveWorktreeDialog />
+            <MergeWorktreeDialog />
             <ForkDialog />
         </WorkspaceProvider>
     );

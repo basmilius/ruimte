@@ -35,7 +35,7 @@ import { ApprovalStrip } from '@/canvas/ApprovalStrip';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { useCellHasFocus } from '@/state/document';
 import { useProject } from '@/state/project';
-import { useWorktreeOf } from '@/state/worktrees';
+import { useGroupWorktrees, useWorktreeOf } from '@/state/worktrees';
 import { BTN_GROUP } from '@/ui/classes';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Pill } from '@/ui/Pill';
@@ -195,6 +195,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const task = useChildTask(id);
     const hasContext = useHasContextLinks(id);
     const nodeWorktree = useWorktreeOf(node?.kind === 'terminal' || node?.kind === 'chat' ? node.cwd : undefined);
+    const groupWorktrees = useGroupWorktrees(node?.kind === 'group' && !node.worktree ? id : null);
     const hidden = useCanvas((s) => s.hidden.has(id));
 
     if (!node || hidden) {
@@ -296,6 +297,13 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         <Tooltip label={nodeWorktree.path}>
                             <Pill mono icon={<Icon icon={GitBranch} size={12} />}>
                                 {nodeWorktree.branch}
+                            </Pill>
+                        </Tooltip>
+                    )}
+                    {isGroup && !node.worktree && groupWorktrees.length > 0 && (
+                        <Tooltip label={groupWorktrees.map((worktree) => worktree.branch).join(', ')}>
+                            <Pill className="tabular-nums" icon={<Icon icon={GitBranch} size={12} />}>
+                                {groupWorktrees.length === 1 ? '1 worktree' : `${groupWorktrees.length} worktrees`}
                             </Pill>
                         </Tooltip>
                     )}

@@ -61,6 +61,34 @@ export const removeQuestion = (worktree: Worktree): RemoveQuestion => {
     };
 };
 
+/*
+ * What removing several worktrees at once asks: a plain confirm when none holds work, otherwise each
+ * one with work named with its numbers, since that is what goes.
+ */
+export const removeAllQuestion = (worktrees: readonly Worktree[]): RemoveQuestion => {
+    if (worktrees.length === 1 && worktrees[0] !== undefined) {
+        return removeQuestion(worktrees[0]);
+    }
+    const title = `Remove ${worktrees.length} worktrees?`;
+    const holding = worktrees.filter((worktree) => hasWork(worktree.work));
+    if (holding.length === 0) {
+        return {
+            title,
+            description: 'Nothing in them is lost: none holds uncommitted files, new files or commits its branch lacks.',
+            confirmLabel: 'Remove',
+            force: false
+        };
+    }
+    const lines = holding.map((worktree) => `${worktree.branch} holds ${workSentence(worktree, worktree.work!)}`);
+    return {
+        title,
+        description: `${lines.join('. ')}. That is lost, and so are their branches.`,
+        confirmLabel: 'Remove anyway',
+        force: true,
+        note: 'Files git ignores in them, such as .env or a local database, go too and are not counted above.'
+    };
+};
+
 /* What the toast adds under its title: that a branch stayed, or how to bring back one that held commits. */
 export const removedToast = (branch: string, result: WorktreeRemoveResult): { description: string } | null => {
     if (result.branchDeleted === false) {

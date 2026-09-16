@@ -109,3 +109,11 @@ describe('the STUN servers of a direct connection', () => {
         expect(settingsFrom({ directStunServers: 3 as unknown as string }).directStunServers).toBe(DEFAULT_STUN_SERVER);
     });
 });
+
+describe('worktreeMergeStrategy', () => {
+    test('starts on squash and keeps what this client picked, but not a strategy that does not exist', () => {
+        expect(settingsFrom({}).worktreeMergeStrategy).toBe('squash');
+        expect(settingsFrom({ worktreeMergeStrategy: 'rebase' }).worktreeMergeStrategy).toBe('rebase');
+        expect(settingsFrom({ worktreeMergeStrategy: 'octopus' as unknown as 'merge' }).worktreeMergeStrategy).toBe('squash');
+    });
+});

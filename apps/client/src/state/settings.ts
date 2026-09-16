@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { WorktreeMergeStrategySchema, type WorktreeMergeStrategy } from '@ruimte/contracts';
 import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
 
 const STORAGE_KEY = 'ruimte.settings';
@@ -18,6 +19,8 @@ export type MonoFontId = (typeof MONO_FONTS)[number]['id'];
  * workspace today, so the second stand differs by the heading alone until panes arrive.
  */
 export type SidebarScope = 'project' | 'window';
+
+const WORKTREE_MERGE_STRATEGIES: readonly WorktreeMergeStrategy[] = WorktreeMergeStrategySchema.options;
 
 export const SIDEBAR_SCOPES: readonly SidebarScope[] = ['project', 'window'];
 
@@ -67,6 +70,8 @@ export interface Settings {
     diffLayout: 'stacked' | 'split';
     /* Whether a diff counts and shows changes that are whitespace alone. */
     diffWhitespace: boolean;
+    /* How the merge dialog lands a worktree, as last picked on this client. */
+    worktreeMergeStrategy: WorktreeMergeStrategy;
     /* Whether a drawing snaps to the canvas grid while you draw. Cmd inverts it for one gesture. */
     drawingSnap: boolean;
     /* Whether the dock of a canvas or a drawing waits below the edge until the pointer comes near. */
@@ -133,6 +138,7 @@ const DEFAULT_SETTINGS: Settings = {
     gitTree: true,
     diffLayout: 'stacked',
     diffWhitespace: true,
+    worktreeMergeStrategy: 'squash',
     drawingSnap: false,
     dockAutoHide: false,
     chatStreaming: 'words',
@@ -177,6 +183,7 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     // Same rule as the block: nothing makes a sound unless a stored `true` asked for it.
     agentsTurnSound: stored.agentsTurnSound === true,
     browserSwipe: stored.browserSwipe !== false,
+    worktreeMergeStrategy: WORKTREE_MERGE_STRATEGIES.find((strategy) => strategy === stored.worktreeMergeStrategy) ?? DEFAULT_SETTINGS.worktreeMergeStrategy,
     // The key before it, `directStunServer`, held the previous default for nearly every client, since the field was hidden
     // and every save writes the whole blob; a new key leaves that value behind instead of recognizing it.
     directStunServers: typeof stored.directStunServers === 'string' ? stored.directStunServers : DEFAULT_SETTINGS.directStunServers
@@ -240,6 +247,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 gitTree,
                 diffLayout,
                 diffWhitespace,
+                worktreeMergeStrategy,
                 drawingSnap,
                 dockAutoHide,
                 chatStreaming,
@@ -264,6 +272,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 gitTree,
                 diffLayout,
                 diffWhitespace,
+                worktreeMergeStrategy,
                 drawingSnap,
                 dockAutoHide,
                 chatStreaming,

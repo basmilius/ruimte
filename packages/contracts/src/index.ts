@@ -88,6 +88,8 @@ import {
     WorktreeAddResultSchema,
     WorktreeListPayloadSchema,
     WorktreeListResultSchema,
+    WorktreeMergePayloadSchema,
+    WorktreeMergeResultSchema,
     WorktreeRemovePayloadSchema,
     WorktreeRemoveResultSchema
 } from './git.ts';
@@ -264,6 +266,8 @@ export const REQUEST_SCHEMAS = {
     'git.worktree-add': { payload: WorktreeAddPayloadSchema, result: WorktreeAddResultSchema },
     'git.worktree-list': { payload: WorktreeListPayloadSchema, result: WorktreeListResultSchema },
     'git.worktree-remove': { payload: WorktreeRemovePayloadSchema, result: WorktreeRemoveResultSchema },
+    'git.worktree-merge': { payload: WorktreeMergePayloadSchema, result: WorktreeMergeResultSchema },
+    'git.worktree-abort': { payload: GitCwdPayloadSchema, result: EmptySchema },
     'git.status': { payload: GitCwdPayloadSchema, result: GitStatusSchema },
     'git.watch': { payload: GitCwdPayloadSchema, result: EmptySchema },
     'git.unwatch': { payload: GitCwdPayloadSchema, result: EmptySchema },

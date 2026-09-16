@@ -1,7 +1,9 @@
 import { useEffect, useMemo } from 'react';
 import { create } from 'zustand';
-import type { Worktree } from '@ruimte/contracts';
+import { isCanvasView, type CanvasNodeKind, type Worktree } from '@ruimte/contracts';
 import { worktreeOfPath } from '@/shell/panels/worktree-rows';
+import { membersOf, useCanvas } from '@/state/canvas';
+import { useDocument } from '@/state/document';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useOptionalConnection } from '@/transport/context';
@@ -164,4 +166,58 @@ export const useWorktreeOf = (cwd: string | undefined): Worktree | null => {
     const wanted = cwd !== undefined && folder !== null && cwd !== folder;
     const worktrees = useWorktrees(wanted ? (connection?.transport ?? null) : null, endpointId, wanted ? folder : null);
     return useMemo(() => (wanted ? worktreeOfPath(worktrees, cwd) : null), [wanted, worktrees, cwd]);
+};
+
+/* A node of the project as the worktree list names it. */
+export interface WorktreeNode {
+    id: string;
+    kind: CanvasNodeKind;
+    title: string;
+    cwd?: string;
+}
+
+/* The nodes of every canvas of the project, with the canvas on screen as it is now rather than as last saved. */
+export const useProjectNodes = (): WorktreeNode[] => {
+    const nodes = useCanvas((s) => s.nodes);
+    const views = useDocument((s) => s.views);
+    return useMemo<WorktreeNode[]>(() => {
+        const live = Object.values(nodes);
+        const liveIds = new Set(live.map((node) => node.id));
+        const saved = views.flatMap((view) => (isCanvasView(view) ? view.nodes.filter((node) => !liveIds.has(node.id)) : []));
+        return [...live, ...saved];
+    }, [nodes, views]);
+};
+
+/*
+ * The worktrees a group carries: the one it is bound to, and every worktree one of its members works
+ * in, in the order of its members. A team's group has no worktree of its own but a member in each.
+ */
+export const useGroupWorktrees = (groupId: string | null): readonly Worktree[] => {
+    const connection = useOptionalConnection();
+    const endpointId = useEndpointId();
+    const folder = useProject((s) => s.current?.folder ?? null);
+    const nodes = useCanvas((s) => s.nodes);
+    const texts = useCanvas((s) => s.texts);
+    const group = groupId === null ? undefined : nodes[groupId];
+    const wanted = group?.kind === 'group' && folder !== null;
+    const worktrees = useWorktrees(wanted ? (connection?.transport ?? null) : null, endpointId, wanted ? folder : null);
+    return useMemo(() => {
+        if (!wanted || group === undefined || worktrees.length === 0) {
+            return NONE;
+        }
+        const found: Worktree[] = [];
+        const add = (worktree: Worktree | null | undefined): void => {
+            if (worktree && !found.includes(worktree)) {
+                found.push(worktree);
+            }
+        };
+        add(group.worktree ? worktrees.find((entry) => entry.path === group.worktree?.path) : null);
+        for (const id of membersOf(group, nodes, texts)) {
+            const member = nodes[id];
+            if (member?.kind === 'terminal' || member?.kind === 'chat') {
+                add(worktreeOfPath(worktrees, member.cwd));
+            }
+        }
+        return found.length === 0 ? NONE : found;
+    }, [wanted, group, worktrees, nodes, texts]);
 };

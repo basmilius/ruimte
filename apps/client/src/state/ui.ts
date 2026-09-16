@@ -109,6 +109,15 @@ export type PaletteMode = 'default' | 'grep' | 'file';
    asked knows the point that was right-clicked and the palette does not. */
 export type FilePick = { kind: 'node'; at: { x: number; y: number } } | { kind: 'view' };
 
+export interface WorktreeMergeRequest {
+    /* The project folder whose repository holds the worktrees. */
+    folder: string;
+    /* In the order they are merged; a group's are in the order of its members. */
+    paths: string[];
+    /* Whether "remove afterwards" starts ticked; removing a worktree with work asks to merge first with it on. */
+    remove?: boolean;
+}
+
 interface UiStore {
     paletteOpen: boolean;
     paletteMode: PaletteMode;
@@ -142,15 +151,18 @@ interface UiStore {
     layoutDialogOpen: boolean;
     /* The group a worktree is being bound to, while its dialog is up. */
     worktreeDialogFor: string | null;
-    /* The worktree a person is removing, by the project folder whose repository holds it, while its question is up. */
-    worktreeRemoval: { folder: string; path: string } | null;
+    /* The worktrees a person is removing, one or a group's all, by the project folder whose repository holds them, while the question is up. */
+    worktreeRemoval: { folder: string; paths: string[] } | null;
+    /* The worktrees a person is merging, one or a group's all, while the merge dialog is up. */
+    worktreeMerge: WorktreeMergeRequest | null;
     /* The chat and the turn a fork goes on after, while its dialog is up. */
     forkDialog: { chatId: string; turnId: string } | null;
     /* What a view is being asked about, from the sidebar, the breadcrumb or the palette alike. */
     viewDialog: ViewDialog;
     setUsageOpen(open: boolean): void;
     setWorktreeDialogFor(groupId: string | null): void;
-    setWorktreeRemoval(removal: { folder: string; path: string } | null): void;
+    setWorktreeRemoval(removal: { folder: string; paths: string[] } | null): void;
+    setWorktreeMerge(merge: WorktreeMergeRequest | null): void;
     setForkDialog(fork: { chatId: string; turnId: string } | null): void;
     setViewDialog(dialog: ViewDialog): void;
     setSidebarOpen(open: boolean): void;
@@ -201,6 +213,7 @@ export const useUi = create<UiStore>((set, get) => ({
     layoutDialogOpen: false,
     worktreeDialogFor: null,
     worktreeRemoval: null,
+    worktreeMerge: null,
     forkDialog: null,
     viewDialog: null,
     setUsageOpen(open) {
@@ -211,6 +224,9 @@ export const useUi = create<UiStore>((set, get) => ({
     },
     setWorktreeRemoval(removal) {
         set({ worktreeRemoval: removal });
+    },
+    setWorktreeMerge(merge) {
+        set({ worktreeMerge: merge });
     },
     setForkDialog(fork) {
         set({ forkDialog: fork });

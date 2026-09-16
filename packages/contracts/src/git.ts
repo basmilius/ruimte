@@ -368,3 +368,46 @@ export const GitSuggestMessageResultSchema = z.object({
     body: z.string()
 });
 export type GitSuggestMessageResult = z.infer<typeof GitSuggestMessageResultSchema>;
+
+// How a worktree's branch lands on the branch it was made from.
+export const WorktreeMergeStrategySchema = z.enum(['merge', 'squash', 'rebase']);
+export type WorktreeMergeStrategy = z.infer<typeof WorktreeMergeStrategySchema>;
+
+/*
+ * Merges a worktree's branch into the branch it was made from, in the checkout that has that branch
+ * out. Progress goes over `git.progress` under `actionId`, and `git.cancel` stops it until the merge
+ * step itself starts.
+ */
+export const WorktreeMergePayloadSchema = z.object({
+    repo: z.string().min(1),
+    path: z.string().min(1),
+    actionId: z.string().min(1),
+    // `merge` writes a merge commit, `squash` one commit with `subject`, `rebase` puts the commits on top and fast-forwards.
+    strategy: WorktreeMergeStrategySchema,
+    // Commits the uncommitted and untracked files in the worktree first, under `subject`; without it such work is refused.
+    commitFirst: z.boolean().optional(),
+    // The message of that commit and of a squash commit.
+    subject: z.string().optional(),
+    body: z.string().optional(),
+    // Removes the worktree and its branch once the merge went through.
+    remove: z.boolean().optional(),
+    // Stops the agents working in the worktree first instead of refusing while one is in a turn.
+    stopAgent: z.boolean().optional(),
+    // Merges into this branch instead of the one the worktree was made from.
+    into: z.string().min(1).optional()
+});
+export type WorktreeMergePayload = z.infer<typeof WorktreeMergePayloadSchema>;
+
+export const WorktreeMergeResultSchema = GitActionResultSchema.extend({
+    // The checkout the merge ran in, where a conflict waits and `git.worktree-abort` acts.
+    cwd: z.string().optional(),
+    // The branch it merged into.
+    into: z.string().optional(),
+    // Files that conflict; the merge waits in `cwd` for a person to resolve or abort it.
+    conflicts: z.array(z.string()).optional(),
+    removed: z.boolean().optional(),
+    branchDeleted: z.boolean().optional(),
+    // Why the worktree stayed although removing it was asked for.
+    kept: z.string().optional()
+});
+export type WorktreeMergeResult = z.infer<typeof WorktreeMergeResultSchema>;

@@ -9,6 +9,7 @@ import { GitError } from '../git/run.ts';
 import { discardPaths, stagePaths, unstagePaths } from '../git/stage.ts';
 import type { GitStatusWatcher } from '../git/status-watcher.ts';
 import { mergeBaseWith } from '../git/status.ts';
+import type { WorktreeMerge } from '../git/worktree-merge.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 
@@ -22,7 +23,13 @@ const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
             throw e;
         });
 
-export const registerGitHandlers = (dispatcher: Dispatcher, worktrees: Worktrees, statuses: GitStatusWatcher, providers: ProviderRegistry): void => {
+export const registerGitHandlers = (
+    dispatcher: Dispatcher,
+    worktrees: Worktrees,
+    merges: WorktreeMerge,
+    statuses: GitStatusWatcher,
+    providers: ProviderRegistry
+): void => {
     const actions = new GitActions();
 
     dispatcher.register('git.worktree-add', (payload) =>
@@ -42,6 +49,22 @@ export const registerGitHandlers = (dispatcher: Dispatcher, worktrees: Worktrees
                 ...(payload.keepBranch === undefined ? {} : { keepBranch: payload.keepBranch })
             })
         )
+    );
+
+    /* Progress goes to the client that asked, under the action id it chose, the way `git.action` streams. */
+    dispatcher.register('git.worktree-merge', (payload, client) =>
+        translate(() =>
+            merges.merge(payload, (phase, line) => {
+                sendEvent(client, 'git.progress', { cwd: payload.path, actionId: payload.actionId, phase, line });
+            })
+        )
+    );
+
+    dispatcher.register('git.worktree-abort', (payload) =>
+        translate(async () => {
+            await merges.abort(payload.cwd);
+            return {};
+        })
     );
 
     dispatcher.register('git.status', (payload) => translate(() => statuses.status(payload.cwd)));
@@ -105,6 +128,7 @@ export const registerGitHandlers = (dispatcher: Dispatcher, worktrees: Worktrees
 
     dispatcher.register('git.cancel', (payload) => {
         actions.cancel(payload.actionId);
+        merges.cancel(payload.actionId);
         return {};
     });
 

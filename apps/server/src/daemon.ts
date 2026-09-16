@@ -84,6 +84,8 @@ import { registerProcessHandlers } from './handlers/processes.ts';
 import { registerUsageHandlers } from './handlers/usage.ts';
 import { Checkpoints } from './git/checkpoints.ts';
 import { GitStatusWatcher } from './git/status-watcher.ts';
+import { worktreeAgents } from './git/worktree-agents.ts';
+import { WorktreeMerge } from './git/worktree-merge.ts';
 import { Worktrees } from './git/worktrees.ts';
 import { ProcessMonitor } from './processes/monitor.ts';
 import { createSampler } from './processes/sampler.ts';
@@ -432,7 +434,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     });
     registerUsageHandlers(dispatcher, usage, limits);
     registerProcessHandlers(dispatcher, processes);
-    registerGitHandlers(dispatcher, worktrees, statuses, providers);
+    const merges = new WorktreeMerge(
+        worktrees,
+        worktreeAgents({ chats: () => chats.list(), sessions: () => manager.list(), stopNode: (nodeId, reason) => endChildren.stopNode(nodeId, reason) })
+    );
+    registerGitHandlers(dispatcher, worktrees, merges, statuses, providers);
 
     // A TURN server that restarts under an allocation must not take the daemon with it.
     guardWeriftTurn(process);

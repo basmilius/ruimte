@@ -9,6 +9,7 @@ import {
     ExternalLink,
     Frame,
     GitBranch,
+    GitMerge,
     Link2,
     Maximize2,
     MessageSquare,
@@ -39,7 +40,7 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useSessionRow } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
-import { useWorktreeOf } from '@/state/worktrees';
+import { useGroupWorktrees, useWorktreeOf } from '@/state/worktrees';
 import { useTransport } from '@/transport/context';
 import { ACCENT_SWATCH, ACCENT_SWATCH_PICKED, MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
@@ -60,6 +61,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
     const projectFolder = useProject((s) => s.current?.folder ?? null);
     const transport = useTransport();
     const nodeWorktree = useWorktreeOf(node?.kind === 'terminal' || node?.kind === 'chat' ? node.cwd : undefined);
+    const groupWorktrees = useGroupWorktrees(node?.kind === 'group' ? id : null);
 
     if (!node) {
         return null;
@@ -143,6 +145,28 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                                     <Icon icon={GitBranch} size={14} /> Bind to worktree
                                 </ContextMenu.Item>
                             )}
+                            {groupWorktrees.length > 0 && projectFolder !== null && (
+                                <>
+                                    <ContextMenu.Item
+                                        className="menu-item"
+                                        onClick={() =>
+                                            useUi.getState().setWorktreeMerge({ folder: projectFolder, paths: groupWorktrees.map((worktree) => worktree.path) })
+                                        }
+                                    >
+                                        <Icon icon={GitMerge} size={14} /> {groupWorktrees.length === 1 ? 'Merge worktree...' : 'Merge worktrees...'}
+                                    </ContextMenu.Item>
+                                    <ContextMenu.Item
+                                        className="menu-item"
+                                        onClick={() =>
+                                            useUi
+                                                .getState()
+                                                .setWorktreeRemoval({ folder: projectFolder, paths: groupWorktrees.map((worktree) => worktree.path) })
+                                        }
+                                    >
+                                        <Icon icon={Trash} size={14} /> {groupWorktrees.length === 1 ? 'Remove worktree...' : 'Remove worktrees...'}
+                                    </ContextMenu.Item>
+                                </>
+                            )}
                         </>
                     )}
                     {nodeWorktree && projectFolder !== null && (
@@ -163,7 +187,13 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                             </ContextMenu.Item>
                             <ContextMenu.Item
                                 className="menu-item"
-                                onClick={() => useUi.getState().setWorktreeRemoval({ folder: projectFolder, path: nodeWorktree.path })}
+                                onClick={() => useUi.getState().setWorktreeMerge({ folder: projectFolder, paths: [nodeWorktree.path] })}
+                            >
+                                <Icon icon={GitMerge} size={14} /> Merge worktree...
+                            </ContextMenu.Item>
+                            <ContextMenu.Item
+                                className="menu-item"
+                                onClick={() => useUi.getState().setWorktreeRemoval({ folder: projectFolder, paths: [nodeWorktree.path] })}
                             >
                                 <Icon icon={Trash} size={14} /> Remove worktree...
                             </ContextMenu.Item>
