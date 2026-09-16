@@ -53,7 +53,7 @@ const AGENT_DETAIL: readonly string[] = [
     `limit\tA canvas holds at most ${MAX_CANVAS_NODES} nodes`,
     TITLE_LINE,
     ...DEPTH_LIMIT_LINES,
-    'note\tThe node starts working the moment a client shows it; with nobody looking, the daemon holds the prompt until one does'
+    'note\tThe machine starts the node right away, whether or not anyone has its canvas open; a client that shows it later joins what runs'
 ];
 
 export interface AgentNodeSpec {
@@ -197,6 +197,14 @@ export const agentVerb = defineVerb({
                     if (prompt !== null) {
                         await call.host.holdPrompt(place.projectId, id, prompt);
                     }
+                    await call.host.startAgent({
+                        projectId: place.projectId,
+                        nodeId: id,
+                        openedBy: call.caller,
+                        node: chat ? 'chat' : 'terminal',
+                        provider: kind,
+                        cwd: cwd ?? place.folder
+                    });
                 },
                 content: {
                     ...content,

@@ -18,6 +18,10 @@ import { ClaudeTitleReader } from './agents/claude-title.ts';
 import { CodexTitleReader } from './agents/codex-title.ts';
 import { AgentLineageStore } from './agents/lineage.ts';
 import { PendingPromptStore } from './agents/pending-prompts.ts';
+import { OutboxStore } from './outbox/outbox.ts';
+import { OutboxWorker } from './outbox/outbox-worker.ts';
+import { startAgentHandler } from './outbox/start-agent.ts';
+import type { AgentStart } from './canvas/verb.ts';
 import { connectionOpener, socketChannel, type ClientChannel, type OpenConnection, type SocketChannel } from './connection.ts';
 import { authenticateChannel } from './pulsar/channel-auth.ts';
 import { AUTHENTICATED_FRAME_CHARS } from './pulsar/data-channel.ts';
@@ -134,6 +138,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     // And for the messages one node left for another: they outlive the CLI they are waiting for.
     const notices = new NoticeStore(config.home);
     await notices.load();
+    // And for the agents a verb made that the daemon still has to start.
+    const outbox = new OutboxStore(config.home);
+    await outbox.load();
     /* What a node hears the moment it can: taken here, so whichever channel gets there first is the
        only one that delivers it. */
     const messagesFor = (targetId: string): string[] => notices.take(targetId).map(renderNotice);
@@ -192,6 +199,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         void prompts.prune(projectId, ids).catch((e) => console.error('Pruning pending prompts failed:', errorText(e)));
         void lineage.prune(projectId, ids).catch((e) => console.error('Pruning agent lineage failed:', errorText(e)));
         void notices.prune(projectId, ids).catch((e) => console.error('Pruning waiting messages failed:', errorText(e)));
+        void outbox.prune(projectId, ids).catch((e) => console.error('Pruning the outbox failed:', errorText(e)));
     };
     const drawings = new DrawingStore(projects);
     projects.attachDrawings(drawings);
@@ -199,6 +207,21 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     projects.attachDiagrams(diagrams);
     // Before the socket answers, so an agent whose project nobody opened since the restart still reads its links.
     await projects.warmIndex();
+    // Started once hooks have an address, and without waiting for any client: that is the whole point.
+    const outboxWorker = new OutboxWorker({
+        store: outbox,
+        handlers: {
+            'start-agent': startAgentHandler({
+                placed: (nodeId) => projects.index.locate(nodeId) !== null,
+                hasChat: (chatId) => chats.get(chatId) !== undefined,
+                createChat: (payload) => chats.create(payload),
+                killChat: (chatId) => chats.kill(chatId),
+                hasSession: (sessionId) => manager.get(sessionId) !== undefined,
+                createSession: (options) => manager.create(options),
+                killSession: (sessionId) => manager.kill(sessionId)
+            })
+        }
+    });
     const folders = new FolderWatcher();
     const statuses = new GitStatusWatcher();
     const usage = new UsageService({ home: config.home, allowPriceFetch: config.priceFetch, knownProjects: () => projects.known() });
@@ -252,6 +275,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 .catch(() => []),
         installedAgents: async () => (await providers.list()).filter((provider) => provider.installed).map((provider) => provider.kind),
         holdPrompt: (projectId: string, nodeId: string, prompt: string) => prompts.put(projectId, nodeId, prompt),
+        startAgent: ({ projectId, nodeId, openedBy, node, provider, cwd }: AgentStart) => {
+            const runtimeMode = node === 'chat' ? chats.get(openedBy)?.info.runtimeMode : undefined;
+            return outboxWorker.enqueue(projectId, nodeId, { kind: 'start-agent', payload: { node, provider, cwd, ...(runtimeMode ? { runtimeMode } : {}) } });
+        },
         depthOf: (nodeId: string) => lineage.depthOf(nodeId),
         openedCount: (callerId: string) => lineage.openedCount(callerId),
         recordMade: (record: { projectId: string; nodeId: string; openedBy: string; depth: number; agent: boolean }) => lineage.put(record),
@@ -649,6 +676,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     // Hooks and context always go over loopback, whatever interface the socket listens on.
     manager.hookUrl = `http://127.0.0.1:${server.port}${HOOKS_PATH}`;
     manager.contextUrl = `http://127.0.0.1:${server.port}${CONTEXT_PATH}`;
+    outboxWorker.start();
 
     /* The built client from one directory; anything that is not a file falls back to the app shell. */
     const serveClient = async (dir: string, pathname: string): Promise<Response> => {
@@ -677,6 +705,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         shuttingDown = true;
         console.log(`ruimte server stopping for ${reason}, writing snapshots`);
         selfUpdate.stop();
+        outboxWorker.stop();
         snapshotSchedule.stop();
         usage.stop();
         limits.stop();

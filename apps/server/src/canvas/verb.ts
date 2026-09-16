@@ -29,6 +29,8 @@ export interface CanvasHost {
     installedAgents(): Promise<AgentKind[]>;
     /* Holds the first prompt of a node against its id until the session or the chat for it is made. */
     holdPrompt(projectId: string, nodeId: string, prompt: string): Promise<void>;
+    /* Owes the start of an agent node's chat or terminal, which the daemon makes whether or not a client shows the node. */
+    startAgent(start: AgentStart): Promise<void>;
     /* How deep in the chain of agents opening agents this node sits; 0 for one a person opened. */
     depthOf(nodeId: string): number;
     /* The agent nodes this caller has opened and not lost, which is what caps one caller in a loop. */
@@ -47,6 +49,17 @@ export interface CanvasHost {
     notify(notice: Omit<Notice, 'createdAt'>): Promise<NoticeDelivery>;
     /* Replaces the diagram of a view, whether or not anyone has its project open, and answers the new rev. */
     writeDiagram(projectId: string, viewId: string, content: DiagramContent): Promise<number>;
+}
+
+export interface AgentStart {
+    projectId: string;
+    nodeId: string;
+    /* The node that ran the verb; a chat hands its permission mode on to a chat it opens. */
+    openedBy: string;
+    node: 'chat' | 'terminal';
+    provider: AgentKind;
+    /* Where a client mounting the node would start it: its own directory, else the project folder. */
+    cwd: string | null;
 }
 
 export interface VerbCall {

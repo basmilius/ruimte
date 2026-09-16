@@ -1,0 +1,211 @@
+import { afterEach, beforeEach, expect, test } from 'bun:test';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { OutboxStore, type OutboxEntry, type OutboxWork } from './outbox.ts';
+import { OutboxWorker, RETRY_DELAYS_MS, type OutboxClock } from './outbox-worker.ts';
+
+/* A clock a test moves by hand: a timer fires only inside `advance`, never on its own. */
+class ManualClock implements OutboxClock {
+    private time = 1_000_000;
+    private timers: Array<{ at: number; run: () => void; id: number }> = [];
+    private nextId = 1;
+
+    now(): number {
+        return this.time;
+    }
+
+    setTimeout(run: () => void, ms: number): unknown {
+        const id = this.nextId++;
+        this.timers.push({ at: this.time + ms, run, id });
+        return id;
+    }
+
+    clearTimeout(handle: unknown): void {
+        this.timers = this.timers.filter((timer) => timer.id !== handle);
+    }
+
+    advance(ms: number): void {
+        this.time += ms;
+        const due = this.timers.filter((timer) => timer.at <= this.time);
+        this.timers = this.timers.filter((timer) => timer.at > this.time);
+        for (const timer of due) {
+            timer.run();
+        }
+    }
+}
+
+const work = (node: 'chat' | 'terminal' = 'chat'): OutboxWork => ({ kind: 'start-agent', payload: { node, provider: 'claude', cwd: null } });
+
+let home: string;
+let store: OutboxStore;
+let clock: ManualClock;
+
+beforeEach(async () => {
+    home = await mkdtemp(join(tmpdir(), 'ruimte-outbox-'));
+    store = new OutboxStore(home);
+    clock = new ManualClock();
+});
+
+afterEach(async () => {
+    await rm(home, { recursive: true, force: true });
+});
+
+const filesOnDisk = async (): Promise<string[]> => readdir(store.dir).catch(() => []);
+
+test('an entry is on disk until its work is done, and then it is gone', async () => {
+    const seen: string[] = [];
+    let release: () => void = () => undefined;
+    const worker = new OutboxWorker({
+        store,
+        clock,
+        handlers: {
+            'start-agent': (entry) => {
+                seen.push(entry.target);
+                return new Promise((resolve) => {
+                    release = resolve;
+                });
+            }
+        }
+    });
+    worker.start();
+    await worker.enqueue('project', 'chat-1', work());
+    expect(seen).toEqual(['chat-1']);
+    expect(await filesOnDisk()).toHaveLength(1);
+    release();
+    await worker.settled();
+    expect(await filesOnDisk()).toEqual([]);
+    expect(store.list()).toEqual([]);
+});
+
+test('what an earlier run owed is started once after a restart, and not again after the next one', async () => {
+    // The verb wrote its entry and the daemon went down before the worker got to it.
+    await store.put('project', 'terminal-1', work('terminal'), clock.now());
+
+    const runs: string[] = [];
+    const restart = async (): Promise<OutboxWorker> => {
+        const reloaded = new OutboxStore(home);
+        await reloaded.load();
+        const worker = new OutboxWorker({
+            store: reloaded,
+            clock,
+            handlers: {
+                'start-agent': async (entry) => {
+                    runs.push(entry.target);
+                }
+            }
+        });
+        worker.start();
+        await worker.settled();
+        return worker;
+    };
+
+    await restart();
+    expect(runs).toEqual(['terminal-1']);
+    await restart();
+    expect(runs).toEqual(['terminal-1']);
+});
+
+test('entries for one target run one after the other, oldest first, while other targets do not wait', async () => {
+    const order: string[] = [];
+    const releases = new Map<string, () => void>();
+    let secondStarted: () => void = () => undefined;
+    const second = new Promise<void>((resolve) => {
+        secondStarted = resolve;
+    });
+    const worker = new OutboxWorker({
+        store,
+        clock,
+        handlers: {
+            'start-agent': (entry) => {
+                const key = `${entry.target}:${entry.payload.node}`;
+                order.push(key);
+                if (key === 'node-a:terminal') {
+                    secondStarted();
+                }
+                return new Promise((resolve) => {
+                    releases.set(key, resolve);
+                });
+            }
+        }
+    });
+    await store.put('project', 'node-a', work('chat'), clock.now());
+    clock.advance(1);
+    await store.put('project', 'node-a', work('terminal'), clock.now());
+    clock.advance(1);
+    await store.put('project', 'node-b', work('chat'), clock.now());
+    worker.start();
+    expect(order).toEqual(['node-a:chat', 'node-b:chat']);
+
+    releases.get('node-a:chat')!();
+    await second;
+    expect(order).toEqual(['node-a:chat', 'node-b:chat', 'node-a:terminal']);
+    releases.get('node-a:terminal')!();
+    releases.get('node-b:chat')!();
+    await worker.settled();
+    expect(store.list()).toEqual([]);
+});
+
+test('a failure waits 1, 5 and 30 seconds on the clock and is then given up on', async () => {
+    let attempts = 0;
+    const parked: OutboxEntry[] = [];
+    const worker = new OutboxWorker({
+        store,
+        clock,
+        handlers: {
+            'start-agent': async () => {
+                attempts += 1;
+                throw new Error('no');
+            }
+        },
+        onParked: (entry) => parked.push(entry)
+    });
+    worker.start();
+    await worker.enqueue('project', 'chat-1', work());
+    await worker.settled();
+    expect(attempts).toBe(1);
+
+    for (const [index, delay] of RETRY_DELAYS_MS.entries()) {
+        clock.advance(delay - 1);
+        await worker.settled();
+        expect(attempts).toBe(index + 1);
+        clock.advance(1);
+        await worker.settled();
+        expect(attempts).toBe(index + 2);
+    }
+    expect(parked.map((entry) => [entry.target, entry.attempts])).toEqual([['chat-1', RETRY_DELAYS_MS.length]]);
+    expect(store.list()).toEqual([]);
+    expect(await filesOnDisk()).toEqual([]);
+});
+
+test('a retry that was waiting survives a restart with its attempts', async () => {
+    const worker = new OutboxWorker({
+        store,
+        clock,
+        handlers: {
+            'start-agent': async () => {
+                throw new Error('no');
+            }
+        }
+    });
+    worker.start();
+    await worker.enqueue('project', 'chat-1', work());
+    await worker.settled();
+    worker.stop();
+
+    const reloaded = new OutboxStore(home);
+    await reloaded.load();
+    expect(reloaded.list().map((entry) => [entry.attempts, entry.notBefore - clock.now()])).toEqual([[1, RETRY_DELAYS_MS[0]]]);
+});
+
+test('pruning drops what a project owed for nodes it no longer places', async () => {
+    await store.put('project', 'kept', work(), clock.now());
+    await store.put('project', 'gone', work(), clock.now());
+    await store.put('other', 'gone', work(), clock.now());
+    await store.prune('project', new Set(['kept']));
+    expect(store.list().map((entry) => [entry.projectId, entry.target])).toEqual([
+        ['project', 'kept'],
+        ['other', 'gone']
+    ]);
+    expect(await filesOnDisk()).toHaveLength(2);
+});

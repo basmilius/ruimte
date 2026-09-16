@@ -44,7 +44,7 @@ import { MAX_ROLES, ROLES_SHAPE } from './team-verb.ts';
 import { MAX_PROJECT_VIEWS, VIEW_KINDS, viewVerb } from './view-verb.ts';
 import { MAX_NOTICE_LENGTH } from '../context/notices.ts';
 import type { Notice, NoticeDelivery } from '../context/notices.ts';
-import { MAX_TITLE_LENGTH, type CanvasHost } from './verb.ts';
+import { MAX_TITLE_LENGTH, type AgentStart, type CanvasHost } from './verb.ts';
 import { VERBS } from './verbs.ts';
 
 const VIEW_SUBS = viewVerb.subcommands ?? [];
@@ -60,6 +60,7 @@ let projectId: string;
 let worktrees: string[];
 let installed: AgentKind[];
 let held: Array<{ projectId: string; nodeId: string; prompt: string }>;
+let started: AgentStart[];
 let lineage: AgentLineageStore;
 let deleteAnyView: boolean;
 let ended: string[];
@@ -117,6 +118,7 @@ beforeEach(async () => {
     breakWrites = false;
     installed = ['claude', 'codex', 'gemini', 'copilot'];
     held = [];
+    started = [];
     deleteAnyView = false;
     ended = [];
     watching = [];
@@ -160,6 +162,9 @@ const host = (): CanvasHost => ({
     installedAgents: async () => installed,
     holdPrompt: async (projectId, nodeId, prompt) => {
         held.push({ projectId, nodeId, prompt });
+    },
+    startAgent: async (start) => {
+        started.push(start);
     },
     depthOf: (nodeId) => lineage.depthOf(nodeId),
     openedCount: (callerId) => lineage.openedCount(callerId),
@@ -864,6 +869,8 @@ describe('agent', () => {
         // Context flows from the edge's `from` into the agent at `to`, so the caller is what the new agent may read.
         expect(canvas.edges).toEqual([{ id: edgeId!, from: 'term-1', to: id!, label: 'context' }]);
         expect(held).toEqual([{ projectId, nodeId: id!, prompt: 'say hello' }]);
+        // Started by the daemon, not by whichever client shows it first, where a client would start it.
+        expect(started).toEqual([{ projectId, nodeId: id!, openedBy: 'term-1', node: 'terminal', provider: 'claude', cwd: folder }]);
     });
 
     test('--chat makes a chat node fixed to its CLI', async () => {
@@ -872,6 +879,8 @@ describe('agent', () => {
         expect(kind).toBe('chat');
         const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === id)!;
         expect([node.provider, node.providerFixed, node.title, node.titleSource]).toEqual(['codex', true, 'Reviewer', 'user']);
+        // Without a prompt it is still started: a chat registers and waits, a terminal runs its CLI at its own prompt.
+        expect(started).toEqual([{ projectId, nodeId: id!, openedBy: 'term-1', node: 'chat', provider: 'codex', cwd: folder }]);
     });
 
     test('--chat is refused for a CLI without a chat backend, with the ones that have one', async () => {
@@ -952,6 +961,7 @@ describe('agent', () => {
         const { lines } = await post('agent', ['claude', '--cwd', 'src']);
         const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === lines[0]!.split('\t')[0])!;
         expect(node.cwd).toBe('./src');
+        expect(started.map((start) => start.cwd)).toEqual([join(folder, 'src')]);
     });
 
     test('a write the store refuses leaves no held prompt and no lineage, and neither does a dry run', async () => {
@@ -963,6 +973,7 @@ describe('agent', () => {
         expect((await post('agent', ['claude', '--prompt', 'say hello', '--dry-run'])).status).toBe(200);
         expect((await onDisk()).rev).toBe(1);
         expect(held).toEqual([]);
+        expect(started).toEqual([]);
         expect(lineage.openedCount('term-1')).toBe(0);
     });
 });
@@ -979,6 +990,7 @@ describe('team', () => {
         expect(lines[0]).toStartWith('refused\tproject-invalid\t');
         expect((await onDisk()).rev).toBe(1);
         expect(held).toEqual([]);
+        expect(started).toEqual([]);
         expect(lineage.openedCount('term-1')).toBe(0);
     });
 
@@ -1026,6 +1038,11 @@ describe('team', () => {
             ids.map((id, index) => [members[index]![5], 'term-1', id, 'context'])
         );
         expect(held).toEqual(ids.map((id, index) => ({ projectId, nodeId: id, prompt: THREE[index]!.prompt })));
+        expect(started.map((start) => [start.nodeId, start.node, start.provider, start.openedBy, start.cwd])).toEqual([
+            [ids[0], 'terminal', 'claude', 'term-1', folder],
+            [ids[1], 'chat', 'codex', 'term-1', folder],
+            [ids[2], 'terminal', 'gemini', 'term-1', folder]
+        ]);
     });
 
     test('the agents stand beside each other inside the frame, never on top of one another', async () => {

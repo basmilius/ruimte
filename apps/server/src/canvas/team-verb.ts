@@ -70,7 +70,7 @@ const TEAM_DETAIL: readonly string[] = [
     TITLE_LINE,
     ...DEPTH_LIMIT_LINES,
     `depth\tA role lands at depth ${MAX_TEAM_DEPTH}: it may open a single agent of its own with agent, and a team of its own is refused`,
-    'note\tEvery agent starts working the moment a client shows it; with nobody looking, the daemon holds the prompts until one does'
+    'note\tThe machine starts every agent right away, whether or not anyone has its canvas open; a client that shows one later joins what runs'
 ];
 
 /*
@@ -195,7 +195,7 @@ export const teamVerb = defineVerb({
             const nodes: ProjectNode[] = [group];
             const edges: ProjectEdge[] = [];
             const lines = [[groupId, 'group', field(label), canvas.id, '-', '-'].join('\t')];
-            const made: Array<{ id: string; prompt: string }> = [];
+            const made: Array<{ id: string; prompt: string; chat: boolean; provider: AgentKind }> = [];
 
             for (const [index, role] of roles.entries()) {
                 const chat = kindOf(role) === 'chat';
@@ -216,15 +216,23 @@ export const teamVerb = defineVerb({
                     edgeId = mint('edge');
                     edges.push({ id: edgeId, from: caller.id, to: id, label: 'context' });
                 }
-                made.push({ id, prompt: role.prompt });
+                made.push({ id, prompt: role.prompt, chat, provider: role.provider });
                 lines.push([id, chat ? 'chat' : 'terminal', field(role.title), canvas.id, role.provider, edgeId].join('\t'));
             }
 
             return {
                 landed: async () => {
-                    for (const { id, prompt } of made) {
+                    for (const { id, prompt, chat, provider } of made) {
                         await call.host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: call.caller, depth, agent: true });
                         await call.host.holdPrompt(place.projectId, id, prompt);
+                        await call.host.startAgent({
+                            projectId: place.projectId,
+                            nodeId: id,
+                            openedBy: call.caller,
+                            node: chat ? 'chat' : 'terminal',
+                            provider,
+                            cwd: cwd ?? place.folder
+                        });
                     }
                 },
                 content: {
