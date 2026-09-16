@@ -163,6 +163,13 @@ export class AgentLineageStore {
         return entry?.relation === 'fork' ? entry.openedBy : null;
     }
 
+    /* The forks of this project whose node is gone, read before `prune` forgets them. */
+    forksLeaving(projectId: string, ids: ReadonlySet<string>): string[] {
+        return [...this.opened.values()]
+            .filter((entry) => entry.projectId === projectId && entry.relation === 'fork' && !ids.has(entry.nodeId))
+            .map((entry) => entry.nodeId);
+    }
+
     /* Drops what this project wrote down for ids it no longer has: the node was deleted. */
     async prune(projectId: string, ids: ReadonlySet<string>): Promise<void> {
         for (const entry of [...this.opened.values()]) {

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -111,7 +112,7 @@ describe('forking a Claude chat', () => {
         expect(turnsOf(record.items).map((turn) => turn.id)).toEqual([turns[0]!.id, turns[1]!.id]);
         expect(record.items.at(-1)).toMatchObject({
             kind: 'note',
-            text: 'Forked from Lexer after turn 2 of 4. The files stay as they are now, which may be newer than that turn.'
+            text: 'Forked from Lexer after turn 2 of 4. The files stay as they are now, which may be newer than that turn. The folder is in no git repository, so the fork has no worktree of its own.'
         });
         expect(record.preambles).toEqual([expect.stringContaining('forked from node chat-lead ("Lexer") after turn 2 of 4')]);
 
@@ -183,6 +184,40 @@ describe('forking a Claude chat', () => {
         expect((await new ChatStore(home).read(nodeId))!.preambles).toEqual([]);
         // The fork resumed its own session, never the original's.
         expect(daemon.claude.started.at(-1)!.argv).toContain(daemon.chats.get(nodeId)!.info.agentSessionId!);
+    });
+
+    test('a fork deleted unused takes its record and transcript copy along, loaded or not, and one written in keeps its record', async () => {
+        const { turns } = await fourTurns();
+        const forkAt = async (turnId: string): Promise<{ nodeId: string; copy: string }> => {
+            const answer = await daemon.request('chat.fork', { chatId: 'chat-lead', turnId });
+            const { nodeId, info } = (answer as { result: { nodeId: string; info: ChatInfo } }).result;
+            return { nodeId, copy: join(daemon.chats.claudeProjectsDir, claudeProjectSlug(folder), `${info.agentSessionId}.jsonl`) };
+        };
+        const unopened = await forkAt(turns[1]!.id);
+        const loaded = await forkAt(turns[2]!.id);
+        const spoken = await forkAt(turns[3]!.id);
+        await daemon.chats.create({ chatId: loaded.nodeId });
+        await daemon.chats.create({ chatId: spoken.nodeId });
+        await say(spoken.nodeId, 'go on');
+
+        const gone = new Set([unopened.nodeId, loaded.nodeId, spoken.nodeId]);
+        await store.mutate(projectId, (current) => ({
+            content: {
+                ...current,
+                views: current.views.map((view) =>
+                    view.kind === 'canvas' ? { ...view, nodes: view.nodes.filter((node) => !gone.has(node.id)), edges: [] } : view
+                )
+            },
+            result: null
+        }));
+        // What a client does for a node that left, which only reaches a chat this daemon has loaded.
+        await daemon.request('chat.kill', { chatId: loaded.nodeId });
+        await daemon.pruned();
+        const chats = new ChatStore(home);
+        expect([await chats.read(unopened.nodeId), await chats.read(loaded.nodeId)]).toEqual([null, null]);
+        expect([existsSync(unopened.copy), existsSync(loaded.copy)]).toEqual([false, false]);
+        expect(await chats.read(spoken.nodeId)).not.toBeNull();
+        expect(existsSync(spoken.copy)).toBe(true);
     });
 
     test('a running turn is refused, and stopping or deleting the original leaves the fork alone', async () => {
@@ -274,6 +309,11 @@ describe('forkChat', () => {
                 asked.codex.push(input.at);
                 return 'thread-2';
             },
+            branchesOf: async () => null,
+            addWorktree: async () => Promise.reject(new Error('no worktrees here')),
+            treeExists: async () => false,
+            takeTree: async () => null,
+            restoreTree: async () => undefined,
             writeRecord: async (_chatId, written, items, preambles) => {
                 asked.written.push({ info: written, items, preambles });
             },
@@ -332,6 +372,42 @@ describe('forkChat', () => {
         );
         expect(onCanvas).toMatchObject({ viewId: 'main', edgeId: null });
         expect((document.views[0] as ProjectCanvasView).nodes.map((node) => node.id)).toContain(onCanvas.nodeId);
+    });
+
+    test('a record that cannot be written takes back the worktree and the transcript copy made for the fork', async () => {
+        const { deps } = stub({ info: info('claude'), items: [turn('turn-1', { lastUuid: 'u-1' }), turn('turn-2', { lastUuid: 'u-2' })] });
+        const undone: string[] = [];
+        const refused = forkChat(
+            {
+                ...deps,
+                branchesOf: async () => ['main'],
+                addWorktree: async ({ branch }) => ({
+                    worktree: { path: `/worktrees/${branch}`, branch },
+                    cwd: `/worktrees/${branch}`,
+                    undo: async () => {
+                        undone.push('worktree');
+                    }
+                }),
+                forkClaude: async () => ({
+                    undo: async () => {
+                        undone.push('transcript');
+                    }
+                }),
+                writeRecord: () => Promise.reject(new Error('disk full'))
+            },
+            { chatId: 'chat-lead', turnId: 'turn-1', worktree: {} }
+        );
+        await expect(refused).rejects.toThrow('disk full');
+        expect(undone).toEqual(['transcript', 'worktree']);
+    });
+
+    test('a worktree is refused outside a repository and for a branch that exists, before anything is made', async () => {
+        const { deps, asked } = stub({ info: info('claude'), items: [turn('turn-1', { lastUuid: 'u-1' })] });
+        await expect(forkChat(deps, { chatId: 'chat-lead', turnId: 'turn-1', worktree: {} })).rejects.toMatchObject({ code: 'not-a-repository' });
+        await expect(
+            forkChat({ ...deps, branchesOf: async () => ['main', 'taken'] }, { chatId: 'chat-lead', turnId: 'turn-1', worktree: { branch: 'taken' } })
+        ).rejects.toMatchObject({ code: 'branch-exists' });
+        expect([asked.claude, asked.written]).toEqual([[], []]);
     });
 
     test('a refused CLI step writes nothing', async () => {

@@ -66,7 +66,7 @@ import { childCounter, isIdle, workOf, type MachineWork } from './service/work.t
 import { BUILD, COMPILED as compiled, VERSION } from './version.ts';
 import { registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
-import { chatForkDeps, forkChat } from './chat/fork.ts';
+import { chatForkDeps, forkChat, readForkInfo } from './chat/fork.ts';
 import { withForkOrigin } from './context/fork-origin.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from './fs/file-route.ts';
 import { FolderWatcher } from './fs/watch.ts';
@@ -191,11 +191,12 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         targetForToken
     });
     const attachments = new AttachmentStore(config.home);
+    const checkpoints = new Checkpoints(config.home);
     const chats: ChatManager = new ChatManager({
         providers,
         store: new ChatStore(config.home, attachments),
         attachments,
-        checkpoints: new Checkpoints(config.home),
+        checkpoints,
         contextUrl,
         binDir,
         hasContext: (chatId) => context.has(chatId),
@@ -232,6 +233,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     projects.index.onPlaces = (projectId, ids) => {
         endChildren.places(projectId, ids);
         void prompts.prune(projectId, ids).catch((e) => console.error('Pruning pending prompts failed:', errorText(e)));
+        for (const forkId of lineage.forksLeaving(projectId, ids)) {
+            void chats.dropUnspokenFork(forkId).catch((e) => console.error('Removing an unused fork failed:', errorText(e)));
+        }
         void lineage.prune(projectId, ids).catch((e) => console.error('Pruning agent lineage failed:', errorText(e)));
         void notices.prune(projectId, ids).catch((e) => console.error('Pruning waiting messages failed:', errorText(e)));
         void outbox.prune(projectId, ids).catch((e) => console.error('Pruning the outbox failed:', errorText(e)));
@@ -397,8 +401,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerPushHandlers(dispatcher, auth, () => push.synchronizeActivities(), push);
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
     registerSessionHandlers(dispatcher, manager, endChildren.owe);
-    const forkDeps = chatForkDeps({ chats, host: canvasHost, titleFor: (id) => projects.index.titleFor(id), lineage });
-    registerChatHandlers(dispatcher, chats, providers, endChildren.owe, endChildren.stopNode, (payload) => forkChat(forkDeps, payload));
+    const forkDeps = chatForkDeps({ chats, host: canvasHost, titleFor: (id) => projects.index.titleFor(id), lineage, worktrees, checkpoints });
+    registerChatHandlers(dispatcher, chats, providers, endChildren.owe, endChildren.stopNode, {
+        fork: (payload) => forkChat(forkDeps, payload),
+        info: (payload) => readForkInfo(forkDeps, payload)
+    });
     registerTaskHandlers(dispatcher, tasks, endChildren.children);
     registerProjectHandlers(dispatcher, projects);
     registerDrawingHandlers(dispatcher, drawings);

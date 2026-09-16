@@ -8,7 +8,7 @@ const RecordSchema = z.object({
     from: z.object({ branch: z.string().optional(), commit: z.string().min(1) }),
     projectId: z.string().optional(),
     nodeId: z.string().optional(),
-    madeBy: z.enum(['verb', 'client']),
+    madeBy: z.enum(['verb', 'client', 'fork']),
     // False when the worktree checked out a branch that was already there; that branch is not the daemon's to delete.
     branchMade: z.boolean().default(true),
     madeAt: z.number()

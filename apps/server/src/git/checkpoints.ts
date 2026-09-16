@@ -3,11 +3,13 @@ import { mkdir } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import type { ChatCheckpointDiff } from '@ruimte/contracts';
 import { diffTrees } from './diff.ts';
-import { git } from './run.ts';
+import { GitError, git, gitOrThrow, runGit } from './run.ts';
 
 export interface CheckpointService {
     take(cwd: string): Promise<string | null>;
     diff(cwd: string, tree: string): Promise<ChatCheckpointDiff | null>;
+    /* The diff of a turn that ended, with the tree of the folder it was taken against: where that turn left the files. */
+    settle(cwd: string, tree: string): Promise<{ diff: ChatCheckpointDiff; after: string } | null>;
 }
 
 /* The name of the index file a checkout's turns are written through; removing a worktree removes it too. */
@@ -67,6 +69,10 @@ export class Checkpoints implements CheckpointService {
      * worktree of its own, which is its own repository root) only answers for what lies under it.
      */
     async diff(cwd: string, tree: string): Promise<ChatCheckpointDiff | null> {
+        return (await this.settle(cwd, tree))?.diff ?? null;
+    }
+
+    async settle(cwd: string, tree: string): Promise<{ diff: ChatCheckpointDiff; after: string } | null> {
         const top = await this.toplevel(cwd);
         const prefix = await git(['rev-parse', '--show-prefix'], cwd);
         if (top === null || prefix === null) {
@@ -78,7 +84,27 @@ export class Checkpoints implements CheckpointService {
         if (now === null) {
             return null;
         }
-        return await diffTrees(top, tree, now, prefix.trim());
+        const diff = await diffTrees(top, tree, now, prefix.trim());
+        return diff === null ? null : { diff, after: now };
+    }
+
+    /* Whether git still has a tree; one no ref points at is collected after a while. */
+    async exists(cwd: string, tree: string): Promise<boolean> {
+        return (await runGit(['cat-file', '-e', `${tree}^{tree}`], cwd)).code === 0;
+    }
+
+    /*
+     * Puts a checkout's files to a tree and its index back on HEAD, so what differs from HEAD stays as
+     * unstaged changes, the way the agent left it. Ignored files were never in the tree and stay.
+     * Only ever run on a checkout nobody works in yet: it throws away what the working tree held.
+     */
+    async restore(cwd: string, tree: string): Promise<void> {
+        const top = await this.toplevel(cwd);
+        if (top === null) {
+            throw new GitError('not-a-repo', `${cwd} is not inside a git repository`);
+        }
+        await gitOrThrow(['read-tree', '-u', '--reset', tree], top);
+        await gitOrThrow(['reset', '--quiet'], top);
     }
 
     private async toplevel(cwd: string): Promise<string | null> {

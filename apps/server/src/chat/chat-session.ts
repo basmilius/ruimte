@@ -749,20 +749,20 @@ export class ChatSession {
             .catch(() => undefined);
     }
 
-    /* The diff of a turn that just ended, so a reload shows it without asking git again. */
+    /* The diff of a turn that just ended, so a reload shows it without asking git again, and the tree a fork after it starts from. */
     private settleCheckpoint(turnId: string): void {
         const turn = this.thread.get(turnId);
         if (turn?.kind !== 'turn' || turn.checkpoint === undefined || turn.checkpointDiff || !this.options.checkpoints) {
             return;
         }
         void this.options.checkpoints
-            .diff(this.thread.info.cwd, turn.checkpoint)
-            .then((diff) => {
+            .settle(this.thread.info.cwd, turn.checkpoint)
+            .then((answer) => {
                 const settled = this.thread.get(turnId);
-                if (diff === null || settled?.kind !== 'turn') {
+                if (answer === null || settled?.kind !== 'turn') {
                     return;
                 }
-                this.emit([this.thread.upsert({ ...settled, checkpointDiff: diff })]);
+                this.emit([this.thread.upsert({ ...settled, checkpointDiff: answer.diff, checkpointAfter: answer.after })]);
                 this.options.persist();
             })
             .catch(() => undefined);

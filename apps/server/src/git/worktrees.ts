@@ -26,7 +26,7 @@ const OPERATIONS: ReadonlyArray<{ path: string; name: string }> = [
 export interface WorktreeOrigin {
     projectId?: string;
     nodeId?: string;
-    madeBy: 'verb' | 'client';
+    madeBy: 'verb' | 'client' | 'fork';
 }
 
 export interface RemoveOptions {

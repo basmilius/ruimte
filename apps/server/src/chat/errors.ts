@@ -13,7 +13,11 @@ type ChatErrorCode =
     | 'transcript-format'
     | 'fork-failed'
     | 'not-on-a-canvas'
-    | 'canvas-full';
+    | 'canvas-full'
+    | 'not-a-repository'
+    | 'branch-exists'
+    | 'worktree-failed'
+    | 'checkpoint-missing';
 
 export class ChatError extends Error {
     readonly code: ChatErrorCode;

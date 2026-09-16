@@ -6,11 +6,11 @@ import type { AgentStart, CanvasHost } from '../canvas/verb.ts';
 import { AttachmentStore } from '../chat/attachment-store.ts';
 import { ChatManager } from '../chat/chat-manager.ts';
 import { ChatStore } from '../chat/chat-store.ts';
-import { chatForkDeps, forkChat } from '../chat/fork.ts';
+import { chatForkDeps, forkChat, readForkInfo } from '../chat/fork.ts';
 import { fakeClaude } from '../chat/fake-claude.ts';
 import { inProcess, type InProcessCli } from '../chat/fake-cli.ts';
 import { Dispatcher } from '../dispatcher.ts';
-import type { CheckpointService } from '../git/checkpoints.ts';
+import { Checkpoints, type CheckpointService } from '../git/checkpoints.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import { registerChatHandlers } from '../handlers/chat.ts';
 import { registerSessionHandlers } from '../handlers/session.ts';
@@ -46,6 +46,8 @@ export interface TestDaemon {
     alerts: string[];
     /* A request over the wire from one client, answered by the same handlers a socket reaches. */
     request(type: string, payload: unknown): Promise<ServerFrame>;
+    /* Resolves once what a deleted node took along (an unused fork's record) is gone. */
+    pruned(): Promise<void>;
     /* Resolves once `check` holds, looked at again on every event and every task written. */
     until(check: () => boolean): Promise<void>;
     stop(): Promise<void>;
@@ -164,9 +166,13 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         }
     };
     sessions.observe((event) => wiring.coordinator.sessionEvent(event));
+    const drops: Promise<void>[] = [];
     store.index.onPlaces = (id, ids) => {
         endChildren.places(id, ids);
         void prompts.prune(id, ids);
+        for (const forkId of lineage.forksLeaving(id, ids)) {
+            drops.push(chats.dropUnspokenFork(forkId));
+        }
         void lineage.prune(id, ids);
         void outbox.prune(id, ids);
         void wiring.prune(id, ids);
@@ -214,8 +220,18 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
 
     const dispatcher = new Dispatcher();
     registerSessionHandlers(dispatcher, sessions, endChildren.owe);
-    const forkDeps = chatForkDeps({ chats, host, titleFor: (id) => store.index.titleFor(id), lineage });
-    registerChatHandlers(dispatcher, chats, providers, endChildren.owe, endChildren.stopNode, (payload) => forkChat(forkDeps, payload));
+    const forkDeps = chatForkDeps({
+        chats,
+        host,
+        titleFor: (id) => store.index.titleFor(id),
+        lineage,
+        ...(worktrees ? { worktrees } : {}),
+        ...(checkpoints instanceof Checkpoints ? { checkpoints } : {})
+    });
+    registerChatHandlers(dispatcher, chats, providers, endChildren.owe, endChildren.stopNode, {
+        fork: (payload) => forkChat(forkDeps, payload),
+        info: (payload) => readForkInfo(forkDeps, payload)
+    });
     registerTaskHandlers(dispatcher, tasks, endChildren.children);
 
     return {
@@ -235,6 +251,9 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
             const frames: ServerFrame[] = [];
             await dispatcher.handle({ id: 'client-1', send: (frame) => frames.push(frame) }, JSON.stringify({ id: 'request', type, payload }));
             return frames[0]!;
+        },
+        pruned: async () => {
+            await Promise.all(drops);
         },
         until: (check) => (check() ? Promise.resolve() : new Promise((resolve) => waiters.push({ check, resolve }))),
         stop: async () => {

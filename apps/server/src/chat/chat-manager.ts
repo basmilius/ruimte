@@ -1,5 +1,7 @@
 import { randomBytes } from 'node:crypto';
+import { rm } from 'node:fs/promises';
 import { homedir } from 'node:os';
+import { join } from 'node:path';
 import type {
     AgentKind,
     ChatAttachment,
@@ -33,6 +35,7 @@ import { ComposerPreferences } from './composer-preferences.ts';
 import { DeltaCoalescer } from './delta-coalescer.ts';
 import { ChatError } from './errors.ts';
 import type { CodexProcessSpec } from './codex-thread.ts';
+import { claudeProjectSlug } from './claude-transcript.ts';
 import { SubagentReader, type SubagentReaderOptions } from './subagent-reader.ts';
 import { errorText } from '../error-text.ts';
 import { usageRoots } from '../usage/roots.ts';
@@ -651,7 +654,36 @@ export class ChatManager {
                 this.tokens.delete(token);
             }
         }
-        await Promise.all([this.store?.delete(chatId), this.attachments.removeAll(chatId)]);
+        await Promise.all([this.store?.delete(chatId), this.attachments.removeAll(chatId), this.dropForkCopy(session.thread.snapshot())]);
+    }
+
+    /*
+     * Removes what a fork nobody ever wrote in leaves behind once its node is gone: the record and the
+     * transcript copy made for it. A loaded chat goes through `kill`; a fork that has turns of its
+     * own is a conversation, and a worktree is never removed on its own.
+     */
+    async dropUnspokenFork(chatId: string): Promise<void> {
+        await this.creating.get(chatId)?.catch(() => undefined);
+        if (this.chats.has(chatId) || !this.store) {
+            return;
+        }
+        const stored = await this.store.read(chatId);
+        if (stored === null || !unspokenFork(stored.items, stored.info)) {
+            return;
+        }
+        await Promise.all([this.store.delete(chatId), this.attachments.removeAll(chatId), this.dropForkCopy(stored)]);
+    }
+
+    /* The transcript copy of a Claude fork nobody resumed; Codex keeps its forked thread where Ruimte cannot remove it. */
+    private async dropForkCopy(chat: { info: ChatInfo; items: readonly ChatItem[] }): Promise<void> {
+        const { info } = chat;
+        if (info.provider !== 'claude' || info.agentSessionId === null || this.claudeProjectsDir === '' || !unspokenFork(chat.items, info)) {
+            return;
+        }
+        if (/[/\\]|\.\./.test(info.agentSessionId)) {
+            return;
+        }
+        await rm(join(this.claudeProjectsDir, claudeProjectSlug(info.cwd), `${info.agentSessionId}.jsonl`), { force: true });
     }
 
     /*
@@ -914,4 +946,14 @@ const interruptedTurn = (record: { info: ChatInfo; items: ChatItem[] }): Extract
     const turnId = record.info.activeTurnId;
     const turn = turnId === null ? undefined : record.items.find((item) => item.id === turnId);
     return turn?.kind === 'turn' && turn.state === 'running' ? turn : null;
+};
+
+/* A fork with no turn after the one it was cut at: nobody wrote in it, so its CLI never touched the copy. */
+export const unspokenFork = (items: readonly ChatItem[], info: ChatInfo): boolean => {
+    const forkOf = info.forkOf;
+    if (forkOf === undefined) {
+        return false;
+    }
+    const turns = items.filter((item) => item.kind === 'turn');
+    return turns.at(-1)?.id === forkOf.turnId;
 };
