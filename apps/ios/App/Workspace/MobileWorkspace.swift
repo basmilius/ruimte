@@ -209,6 +209,20 @@ final class MobileWorkspace {
         await edit { $0.setting("views", .array(self.views.map { $0.stableID == id ? change($0) : $0 })) }
     }
 
+    /// A view, or a node on any canvas, by id.
+    func item(_ id: String) -> JSONValue? {
+        views.first { $0.stableID == id } ?? views.lazy.flatMap { $0.list("nodes") }.first { $0.stableID == id }
+    }
+
+    /// Waits for an item the machine wrote to reach this copy of the project, for at most a few seconds.
+    func arrival(of id: String) async -> Bool {
+        for _ in 0..<50 {
+            if item(id) != nil { return true }
+            do { try await Task.sleep(for: .milliseconds(100)) } catch { return false }
+        }
+        return item(id) != nil
+    }
+
     func ensureSession(_ item: JSONValue) async throws {
         let kind = item.text("kind")
         guard kind == "chat" || kind == "terminal" else { return }

@@ -41,6 +41,7 @@ final class ChatModel {
         self.client = client
         self.chatID = chatID
         draft = UserDefaults.standard.string(forKey: "ruimte.chat.draft.\(chatID)") ?? ""
+        presentation.forkable = true
     }
 
     private func refreshPending() {
@@ -119,6 +120,7 @@ final class ChatModel {
                 let result = try await providerResult
                 guard !Task.isCancelled, generation == current else { return }
                 providers = result["providers"]?.arrayValue ?? []
+                await refreshForks()
             } catch is CancellationError {} catch {
                 guard generation == current else { return }
                 loading = false
@@ -183,6 +185,13 @@ final class ChatModel {
             revision += 1
         default: break
         }
+    }
+
+    /// Counts the forks after each turn among the chats the machine has loaded; a machine that cannot say leaves
+    /// the turns unmarked.
+    func refreshForks() async {
+        guard let chats = try? await client.request("chat.list", payload: .object([:])) else { return }
+        presentation.setForkCounts(ChatForking.forkCounts(chats: chats.list("chats"), chatID: chatID))
     }
 
     func loadOlder() async {

@@ -43,6 +43,15 @@ final class ChatPresentation {
     var conversationRequest: SubagentCrumb?
     /// The machine answered that it cannot read a subagent's conversation, so only rows with a pointer open.
     var subagentsRefused = false
+    /// Whether this is a chat's own thread, which can fork; a sub-agent's thread in its place cannot.
+    @ObservationIgnored var forkable = false
+    /// A row asked to fork after this turn; the screen shows the fork sheet.
+    var forkRequest: ChatForkRequest?
+    /// A row asked to open another chat of the project (a summary's fork); the screen pushes it.
+    var openRequest: String?
+    /// How many forks this device knows of per turn, for the mark on the turn.
+    private(set) var forkCounts: [String: Int] = [:]
+    var places: ChatPlaces?
     private(set) var scrollRequest = 0
     @ObservationIgnored private var activeID: String?
     @ObservationIgnored private var historyBoundaries = Set<String>()
@@ -126,6 +135,29 @@ final class ChatPresentation {
         }
         activityLabel = !connected ? "Connection lost" : blocked ? "Waiting for you" : "Working for"
         isAnimating = connected && !blocked && nextID != nil
+    }
+
+    func item(_ id: String) -> JSONValue? { records[id]?.value }
+
+    var values: [JSONValue] { order.compactMap { records[$0]?.value } }
+
+    /// The last turn that ended, which is where a fork from the conversation menu goes on after. Read from the end,
+    /// since the screen asks on every render.
+    var lastSettledTurnID: String? {
+        for id in order.reversed() {
+            if let value = records[id]?.value, value.text("kind") == "turn", value.text("state") != "running" {
+                return value.stableID
+            }
+        }
+        return nil
+    }
+
+    func setForkCounts(_ counts: [String: Int]) {
+        if counts != forkCounts { forkCounts = counts }
+    }
+
+    func forkRefusal(turnID: String) -> String? {
+        ChatForking.refusal(info: info, turn: records[turnID]?.value)
     }
 
     func toggleTurn(_ id: String) {

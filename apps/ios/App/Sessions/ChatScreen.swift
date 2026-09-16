@@ -31,11 +31,17 @@ struct ChatScreen: View {
     @Environment(\.colorScheme) private var colorScheme
     let title: String
     let isPrepared: Bool
+    /// The project the chat stands in, which is what a fork's way back and a summary's way to the fork need.
+    let workspace: MobileWorkspace?
 
-    init(client: any MachineRequesting, chatID: String, title: String, isPrepared: Bool = true) {
+    init(
+        client: any MachineRequesting, chatID: String, title: String, isPrepared: Bool = true,
+        workspace: MobileWorkspace? = nil
+    ) {
         _model = State(initialValue: ChatModel(client: client, chatID: chatID))
         self.title = title
         self.isPrepared = isPrepared
+        self.workspace = workspace
     }
 
     var body: some View {
@@ -121,6 +127,7 @@ struct ChatScreen: View {
         .background(MobileStyle.surface.ignoresSafeArea())
         .tint(MobileStyle.accent)
         .navigationTitle(title)
+        .modifier(ChatForkTitle(subtitle: forkSubtitle) { forkBackItems })
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityAction(.escape) { composerFocused = false }
         .toolbar {
@@ -135,6 +142,7 @@ struct ChatScreen: View {
                     Picker("Streaming", selection: $streamingMode) {
                         ForEach(ChatStreamingMode.allCases, id: \.self) { mode in Text(mode.label).tag(mode) }
                     }
+                    Section { forkItems }
                     Button("Clear conversation", lucideIcon: "trash", role: .destructive) { showingClear = true }
                     Button("Reload", lucideIcon: "refresh-cw") { model.attach() }
                 } label: {
@@ -142,6 +150,26 @@ struct ChatScreen: View {
                 }
                 .accessibilityLabel("Conversation actions")
                 .disabled(!isPrepared)
+            }
+        }
+        .mobileSheet(
+            item: Binding(
+                get: { model.presentation.forkRequest }, set: { model.presentation.forkRequest = $0 })
+        ) { request in
+            ChatForkSheet(
+                model: model, turnID: request.turnID,
+                originalTitle: workspace.flatMap { ChatForking.origin(in: $0.views, chatID: model.chatID)?.title }
+                    ?? title,
+                origin: workspace.flatMap { ChatForking.origin(in: $0.views, chatID: model.chatID)?.shape },
+                forked: openFork)
+        }
+        .navigationDestination(
+            item: Binding(get: { model.presentation.openRequest }, set: { model.presentation.openRequest = $0 })
+        ) { id in
+            if let workspace, let item = workspace.item(id) {
+                ProjectItemPage(workspace: workspace, item: item)
+            } else {
+                ContentUnavailableView("This chat is no longer in the project", lucideIcon: "square-x")
             }
         }
         .navigationDestination(item: $subagentList) { _ in
@@ -232,6 +260,75 @@ struct ChatScreen: View {
         guard !holdingChat else { return }
         holdingChat = true
         if let machineSession { model = machineSession.retainChat(model) } else { model.start() }
+        if let workspace {
+            model.presentation.places = ChatPlaces(
+                title: { ChatForking.origin(in: workspace.views, chatID: $0)?.title },
+                shape: { ChatForking.origin(in: workspace.views, chatID: $0)?.shape },
+                arrival: { await workspace.arrival(of: $0) })
+        }
+    }
+
+    private var forkOf: String? { model.info["forkOf"]?["chatId"]?.stringValue }
+    private var originalTitle: String? { forkOf.flatMap { model.presentation.places?.title($0) } }
+
+    private var forkSubtitle: String? {
+        guard forkOf != nil else { return nil }
+        return originalTitle.map { "Fork of \($0)" } ?? "Fork"
+    }
+
+    /// "Fork conversation" after the last turn that ended, and for a fork the ways back to its original.
+    @ViewBuilder private var forkItems: some View {
+        if let turnID = model.presentation.lastSettledTurnID {
+            let refusal = model.presentation.forkRefusal(turnID: turnID)
+            Button {
+                model.presentation.forkRequest = ChatForkRequest(turnID: turnID)
+            } label: {
+                Label("Fork conversation", lucideIcon: "git-fork")
+                if let refusal { Text(refusal) }
+            }
+            .disabled(refusal != nil)
+        }
+        forkBackItems
+    }
+
+    @ViewBuilder private var forkBackItems: some View {
+        if let forkOf {
+            let refusal = ChatForking.summaryRefusal(
+                info: model.info, originalPresent: workspace == nil || originalTitle != nil)
+            Button {
+                summarize()
+            } label: {
+                Label(
+                    originalTitle.map { "Summarize for \($0)" } ?? "Summarize for the original",
+                    lucideIcon: "message-square-share")
+                if let refusal { Text(refusal) }
+            }
+            .disabled(refusal != nil)
+            Button("Show original", lucideIcon: "undo-2") { model.presentation.openRequest = forkOf }
+                .disabled(originalTitle == nil)
+        }
+    }
+
+    private func summarize() {
+        let model = model
+        Task {
+            do {
+                _ = try await model.client.request("chat.summarize", payload: model.target())
+                model.error = nil
+            } catch {
+                model.error = ChatForking.message(for: error, action: "ask a fork for a summary")
+            }
+        }
+    }
+
+    /// Opens the fork once the machine has written it into the project, as the desktop reveals it.
+    private func openFork(_ id: String) {
+        let model = model
+        Task {
+            await model.refreshForks()
+            guard !id.isEmpty, let places = model.presentation.places, await places.arrival(id) else { return }
+            model.presentation.openRequest = id
+        }
     }
 
     /// The toolbar offers the list only once the chat has a sub-agent to open.
@@ -710,6 +807,22 @@ private struct ChatQuestionSheet: View {
                             })
                 }
             }
+        }
+    }
+}
+
+/// "Fork of <original>" under a fork's title, and the title opens the ways back to the original.
+private struct ChatForkTitle<Items: View>: ViewModifier {
+    let subtitle: String?
+    @ViewBuilder let items: () -> Items
+
+    func body(content: Content) -> some View {
+        if let subtitle {
+            content
+                .navigationSubtitle(subtitle)
+                .toolbarTitleMenu { items() }
+        } else {
+            content
         }
     }
 }

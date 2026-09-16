@@ -343,7 +343,8 @@ struct ProjectItemPage: View {
                         SessionErrorBanner(message: problem) { Task { await prepare() } }
                     }
                     ChatScreen(
-                        client: workspace.client, chatID: current.stableID, title: title, isPrepared: ready)
+                        client: workspace.client, chatID: current.stableID, title: title, isPrepared: ready,
+                        workspace: workspace)
                 }
             } else if let problem {
                 ContentUnavailableView {

@@ -656,27 +656,35 @@ struct ChatEntryView: View {
             case .activity: ChatWorkingRow(presentation: presentation)
             case .turnFold:
                 if let turn = entry.items.first {
-                    ChatExpansionButton(
-                        expanding: !presentation.expandedTurns.contains(turn.value.text("turnId", fallback: turn.id))
-                    ) {
-                        presentation.toggleTurn(turn.value.text("turnId", fallback: turn.id))
-                    } label: {
-                        Label(
-                            ChatPresentation.turnLabel(turn.value, items: entry.items.map(\.value)),
-                            lucideIcon: presentation.expandedTurns.contains(
-                                turn.value.text("turnId", fallback: turn.id)) ? "chevron-down" : "chevron-right",
-                            iconSize: 12
-                        )
-                        .font(.footnote).foregroundStyle(
-                            turn.value.text("state") == "error" ? Color.red : MobileStyle.muted
-                        )
-                        .padding(.horizontal, 10).frame(minHeight: 44)
-                        .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 8))
-                        .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(MobileStyle.border) }
-                    }.buttonStyle(.plain)
-                        .accessibilityValue(
-                            presentation.expandedTurns.contains(turn.value.text("turnId", fallback: turn.id))
-                                ? "Expanded" : "Collapsed")
+                    HStack(spacing: 10) {
+                        ChatExpansionButton(
+                            expanding: !presentation.expandedTurns.contains(
+                                turn.value.text("turnId", fallback: turn.id))
+                        ) {
+                            presentation.toggleTurn(turn.value.text("turnId", fallback: turn.id))
+                        } label: {
+                            Label(
+                                ChatPresentation.turnLabel(turn.value, items: entry.items.map(\.value)),
+                                lucideIcon: presentation.expandedTurns.contains(
+                                    turn.value.text("turnId", fallback: turn.id)) ? "chevron-down" : "chevron-right",
+                                iconSize: 12
+                            )
+                            .font(.footnote).foregroundStyle(
+                                turn.value.text("state") == "error" ? Color.red : MobileStyle.muted
+                            )
+                            .padding(.horizontal, 10).frame(minHeight: 44)
+                            .background(MobileStyle.panel, in: RoundedRectangle(cornerRadius: 8))
+                            .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(MobileStyle.border) }
+                        }.buttonStyle(.plain)
+                            .accessibilityValue(
+                                presentation.expandedTurns.contains(turn.value.text("turnId", fallback: turn.id))
+                                    ? "Expanded" : "Collapsed"
+                            )
+                            .modifier(ChatForkMenu(presentation: presentation, turnID: turn.id))
+                        if let forks = presentation.forkCounts[turn.id], forks > 0 {
+                            ChatForkedMark(count: forks)
+                        }
+                    }
                 }
             case .turnStart:
                 if let turn = entry.items.first {
@@ -700,14 +708,16 @@ struct ChatEntryView: View {
                 }
 
             case .message:
-                if let item = entry.items.first { ChatObservedRow(record: item, client: client, chatID: chatID) }
+                if let item = entry.items.first {
+                    ChatObservedRow(record: item, client: client, chatID: chatID, presentation: presentation)
+                }
             case .tools:
                 if entry.items.count == 1, let item = entry.items.first {
-                    ChatObservedRow(record: item, client: client, chatID: chatID)
+                    ChatObservedRow(record: item, client: client, chatID: chatID, presentation: presentation)
                 } else {
                     DisclosureGroup(isExpanded: $expanded) {
                         ForEach(entry.items) { item in
-                            ChatObservedRow(record: item, client: client, chatID: chatID)
+                            ChatObservedRow(record: item, client: client, chatID: chatID, presentation: presentation)
                         }
                     } label: {
                         Label(
@@ -732,9 +742,21 @@ struct ChatObservedRow: View {
     let record: ChatItemState
     let client: any MachineRequesting
     let chatID: String
+    /// The thread the row stands in, when that thread can fork or lead to another chat.
+    var presentation: ChatPresentation?
     var body: some View {
-        ChatTimelineRow(item: record.value, client: client, chatID: chatID)
-            .modifier(ChatMessageMenu(text: ChatSubagents.handbackReport(record.value) ?? record.value.text("text")))
+        ChatTimelineRow(item: record.value, client: client, chatID: chatID, presentation: presentation)
+            .modifier(
+                ChatMessageMenu(
+                    text: ChatSubagents.handbackReport(record.value) ?? record.value.text("text"),
+                    presentation: forkable ? presentation : nil, turnID: record.value.text("turnId")))
+    }
+
+    /// Whether "Fork from here" belongs on this row: what the person asked or the answer of a turn.
+    private var forkable: Bool {
+        let value = record.value
+        return ["user", "assistant"].contains(value.text("kind")) && value["turnId"]?.stringValue != nil
+            && value["parentToolUseId"]?.stringValue == nil
     }
 }
 
@@ -742,6 +764,7 @@ private struct ChatTimelineRow: View {
     let item: JSONValue
     let client: any MachineRequesting
     let chatID: String
+    let presentation: ChatPresentation?
     private var kind: String { item["kind"]?.stringValue ?? "" }
     var body: some View {
         content
@@ -797,16 +820,7 @@ private struct ChatTimelineRow: View {
                     }
                 }
             case "note":
-                let level = item.text("level")
-                Label(
-                    item.text("text"),
-                    lucideIcon: level == "error" ? "circle-alert" : level == "warning" ? "triangle-alert" : "info",
-                    iconSize: 14
-                )
-                .font(.callout).foregroundStyle(
-                    level == "error" ? Color.red : level == "warning" ? Color.orange : MobileStyle.muted
-                )
-                .accessibilityLabel("\(level.capitalized): \(item.text("text"))")
+                ChatNoteRow(item: item, presentation: presentation)
             case "turn":
                 Label(
                     item["label"]?.stringValue ?? "Turn \(item["state"]?.stringValue ?? "")",
