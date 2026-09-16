@@ -68,7 +68,7 @@ const launchFlags = (launch: AgentLaunch, runtimeMode: RuntimeMode | undefined):
  *
  * A first prompt rides on that same line as the CLI's own prompt argument, rather than being typed
  * into the CLI once it is up: nobody can tell when a CLI is ready for input, and the line is built
- * here at `session.create`, so a node made on a daemon that restarts before any client mounts it
+ * here at `session.create`, so a node made on a daemon that restarts before the node is started
  * still starts on its prompt. It also means the person sees the prompt in the shell, as a line they
  * could have typed themselves.
  */

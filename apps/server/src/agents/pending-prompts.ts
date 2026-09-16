@@ -28,7 +28,7 @@ const fileName = (nodeId: string): string => `${encodeURIComponent(nodeId)}.json
  * The first prompt of an agent node, held against the node id until the session or the chat for it
  * comes into being. It does not belong in `project.json`: the prompt is not part of the canvas two
  * people share, and a project open in two windows would deliver it twice. On disk, because the node
- * may well be made on a daemon that is restarted before any client mounts it.
+ * may well be made on a daemon that is restarted before the node is started.
  */
 export class PendingPromptStore {
     readonly dir: string;

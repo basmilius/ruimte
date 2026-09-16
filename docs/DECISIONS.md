@@ -659,7 +659,10 @@ canvas, against Ruimte, one verdict each.
   (`SessionManager.create`, `ChatManager.create`). On disk under `$RUIMTE_HOME/prompts`, because
   the node is made whether or not a client is looking and the daemon may well restart first. The
   in-memory map is emptied before the first await of `take`, so two clients mounting the same node
-  cannot both get it, and the file is gone before the caller is answered.
+  cannot both get it, and the file is gone before the caller is answered. Since orchestration phase
+  2 the daemon starts the node itself right after the write (see "Orchestration"), and the prompt
+  store stays the seam that makes the delivery exactly once: the daemon's start and a client's
+  mount both go through the same create.
 - A terminal agent gets its prompt on the line the daemon types into the shell, as the CLI's own
   prompt argument, rather than typed in after the CLI is up. Nothing can tell when a CLI is ready
   for input, and the line is built at `session.create` anyway, so a node made before a restart
@@ -2397,6 +2400,31 @@ code will not say on its own.
   draws them flat with the same rows as the thread (`chat/ui/rows/Rows.tsx`).
 - `renderTranscript` gives a subagent one line with its tool use id in it, because that id is what
   `read <id> --subagent` takes and an agent has nowhere else to find it.
+- Phase 2 (the daemon starts agents) is the outbox with its first kind, `start-agent`, and not a
+  scan of the prompt store at start: a node opened without a prompt is started as well, and the
+  later kinds (`resume-run`, `wake-parent`, `end-children`) need the same file per piece of owed work.
+  The worker starts after the socket listens rather than right after `warmIndex`, since a terminal
+  started before `hookUrl` is set would run without hooks for the rest of its life.
+- A start that fails is not retried, although the worker can: both creates take the prompt before
+  they spawn, so a second attempt would start the agent without its task. The entry goes with a log
+  line and the node stays as it was, so a client that mounts it starts it the way it always did. The
+  retries of 1, 5 and 30 seconds are there for the kinds of the later phases.
+- `ChatManager.create` and `SessionManager.create` make one id at a time and every caller shares
+  the outcome. The design took `ChatManager.create` to be safe against a second caller, and it was
+  not: both managers awaited a disk read between the check and the insert, so the daemon starting a
+  node and a client mounting it in the same moment made two shells, or two chats of which one held
+  the prompt, and a chat was in the map before its prompt was sent. A kill that arrives during a
+  create waits for it, so a node deleted mid-start ends what was made; the handler also checks that
+  a project still places the node before and after the create, for a delete that did not come
+  with a kill.
+- A terminal the daemon starts is 120 columns by 40 rows and the first client that attaches sizes
+  it to itself, like every attach. A chat opened by a chat takes that chat's permission mode; any
+  other chat takes the mode a new chat gets on the daemon, not the composer preference a mounting
+  client would have sent, and a terminal node carries no mode, so its launch has none. Phase 5 puts
+  the ceiling on the mode.
+- Nothing about approvals changed: a terminal agent with nobody attached has no client that wants
+  a request held, so its CLI's own prompt asks (or an offline device through a push), and a client
+  that mounts the node later sees the prompt on the screen.
 
 ### Skipped on purpose
 
