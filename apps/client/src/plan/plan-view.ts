@@ -2,7 +2,7 @@ import type { AgentKind, Plan, PlanItem, PlanSection, PlanStep, PlanStepState, P
 import { allItems, allSteps, isParentStep, planProgress, stepState, type PlanProgress } from '@ruimte/plan';
 
 /* Which steps the panel lists; local to this client, never part of the plan. */
-export type PlanFilter = 'all' | 'open' | 'failed';
+export type PlanFilter = 'all' | 'open' | 'issues';
 
 export interface PlanViewOptions {
     filter: PlanFilter;
@@ -29,7 +29,7 @@ export type PlanRow =
 
 const LEAF_MATCHES: Record<Exclude<PlanFilter, 'all'>, ReadonlySet<PlanStepState>> = {
     open: new Set(['open', 'active', 'blocked']),
-    failed: new Set(['failed'])
+    issues: new Set(['failed', 'blocked', 'warning'])
 };
 
 const leavesOf = (items: readonly PlanItem[]): PlanStep[] => allSteps(items).filter((step) => !isParentStep(step));
@@ -130,10 +130,13 @@ export const stateLabel = (kind: Plan['meta']['kind'], state: PlanStepState): st
 };
 
 /* The states a person picks from; active is the agent's word for where it works. */
-export const PERSON_STATES: readonly PlanStepState[] = ['open', 'done', 'failed', 'skipped', 'blocked'];
+export const PERSON_STATES: readonly PlanStepState[] = ['open', 'done', 'warning', 'info', 'failed', 'skipped', 'blocked'];
 
-/* The four outcomes the mark of a test step offers. */
-export const TEST_OUTCOMES: readonly PlanStepState[] = ['done', 'failed', 'skipped', 'blocked'];
+/* The outcomes the mark of a test step offers. */
+export const TEST_OUTCOMES: readonly PlanStepState[] = ['done', 'warning', 'info', 'failed', 'skipped', 'blocked'];
+
+/* A state that is only worth something with a line about what happened, so picking it opens the note. */
+export const asksForNote = (state: PlanStepState): boolean => state === 'failed' || state === 'warning' || state === 'info';
 
 /* A click on the mark of a step in a steps plan: done, or back to open. */
 export const toggledState = (state: PlanStepState): PlanStepState => (state === 'done' ? 'open' : 'done');
@@ -166,27 +169,21 @@ export const stepSetBy = (step: Pick<PlanStep, 'by'>, state: PlanStepState, agen
 };
 
 /*
- * What "Send results to chat" puts in the prompt: every failed and blocked step with its note, under
- * the plan's title. Null when there is nothing to report.
+ * What "Send results to chat" puts in the prompt: every failed, blocked, warning and info step with
+ * its note, under the plan's title. Null when there is nothing to report.
  */
 export const resultsText = (plan: Plan): string | null => {
     const lines = (state: PlanStepState): string[] =>
         leavesOf(plan.items)
             .filter((step) => step.state === state)
             .map((step) => `- ${step.title}${step.note ? `: ${step.note.replace(/\s*\n\s*/g, ' ')}` : ''}`);
-    const failed = lines('failed');
-    const blocked = lines('blocked');
-    if (failed.length === 0 && blocked.length === 0) {
+    const groups = (['failed', 'blocked', 'warning', 'info'] as const)
+        .map((state) => ({ heading: `${stateLabel('steps', state)}:`, lines: lines(state) }))
+        .filter((group) => group.lines.length > 0);
+    if (groups.length === 0) {
         return null;
     }
-    const parts = [`Results of the plan "${plan.meta.title}":`];
-    if (failed.length > 0) {
-        parts.push(['Failed:', ...failed].join('\n'));
-    }
-    if (blocked.length > 0) {
-        parts.push(['Blocked:', ...blocked].join('\n'));
-    }
-    return parts.join('\n\n');
+    return [`Results of the plan "${plan.meta.title}":`, ...groups.map((group) => [group.heading, ...group.lines].join('\n'))].join('\n\n');
 };
 
 /* One step as a line of Markdown, for Copy in its menu. */

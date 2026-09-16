@@ -27,9 +27,9 @@ const MIN_GRID_WIDTH = 360;
 const TRANSITION_MS = 200;
 
 const FILTERS: { id: PlanFilter; label: string }[] = [
-    { id: 'all', label: 'All steps' },
-    { id: 'open', label: 'Open steps' },
-    { id: 'failed', label: 'Failed steps' }
+    { id: 'all', label: 'All' },
+    { id: 'open', label: 'Open' },
+    { id: 'issues', label: 'Issues' }
 ];
 
 const hasLockedStep = (plan: Plan): boolean => allSteps(plan.items).some((step) => effectiveChecks(plan, step) === 'agent');

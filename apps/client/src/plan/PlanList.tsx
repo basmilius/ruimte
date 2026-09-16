@@ -28,6 +28,7 @@ import { Markdown } from '@/chat/ui/Markdown';
 import { collapsedOf, planClient, planViewKey, usePlanViewPrefs } from '@/plan/plan-actions';
 import {
     activeStep,
+    asksForNote,
     agentName,
     PERSON_STATES,
     planRows,
@@ -65,15 +66,17 @@ const STATE_TONE: Record<PlanStepState, string> = {
     skipped: 'text-text-faint',
     blocked: 'text-status-needs-you',
     warning: 'text-status-needs-you',
-    info: 'text-accent'
+    info: 'text-status-running'
 };
 
-// Each level of sub-steps moves over by the width of the fold arrow and the mark together.
-const INDENT_PX = 20;
-// With the row's `mx-1` it adds up to the 12px the header's text starts at.
+// A row has one 20px column before its title (a parent's caret or a leaf's mark), so a level of
+// sub-steps moves over by that column and its gap, and a child's mark stands under its parent's title.
+const INDENT_PX = 24;
+// With the row's `mx-1` it puts a step's column under the caret of the section above it.
 const ROW_PADDING_PX = 8;
-// A group's row folds on a click anywhere, rounded and lit like a sidebar item.
-const TOGGLE_ROW = 'cursor-default rounded-md outline-none hover:bg-surface-hover focus-visible:ring-1 focus-visible:ring-accent';
+/* A group's row folds on a click anywhere, rounded and lit like a sidebar item. The ring asks for
+   keyboard modality too, since `:focus-visible` alone stays on for a click after any keystroke. */
+const TOGGLE_ROW = 'cursor-default rounded-md outline-none hover:bg-surface-hover focus-visible:ring-accent in-data-[modality=keyboard]:focus-visible:ring-1';
 
 const TIME = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
 const DAY_AND_TIME = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -164,6 +167,8 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
                 )}
                 <div className="mt-1 flex h-1.5 overflow-hidden rounded-full bg-surface-sunken" aria-hidden>
                     <span className="bg-positive" style={{ flexGrow: progress.done }} />
+                    <span className="bg-status-needs-you" style={{ flexGrow: progress.warning }} />
+                    <span className="bg-status-running" style={{ flexGrow: progress.info }} />
                     <span className="bg-status-error" style={{ flexGrow: progress.failed }} />
                     <span className="bg-text-faint" style={{ flexGrow: progress.skipped + progress.blocked }} />
                     <span style={{ flexGrow: progress.open + progress.active }} />
@@ -172,7 +177,7 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
             <div className="min-h-0 grow overflow-y-auto py-1">
                 {rows.length === 0 && (
                     <p className="px-4 py-6 text-center text-xs text-text-muted">
-                        {filter === 'failed' ? 'Nothing failed.' : filter === 'open' ? 'Nothing is open.' : 'This plan has no steps yet.'}
+                        {filter === 'issues' ? 'No issues.' : filter === 'open' ? 'Nothing is open.' : 'This plan has no steps yet.'}
                     </p>
                 )}
                 {rows.map((row) => (
@@ -211,7 +216,7 @@ function ActiveRing({ working, agent, size }: { working: boolean; agent: string;
 
 function Caret({ collapsed }: { collapsed: boolean }) {
     return (
-        <span className="grid h-5 w-4 shrink-0 place-items-center text-text-faint" aria-hidden>
+        <span className="grid h-5 w-5 shrink-0 place-items-center text-text-faint" aria-hidden>
             <Icon icon={collapsed ? ChevronRight : ChevronDown} size={14} />
         </span>
     );
@@ -243,16 +248,23 @@ const toggleRowProps = (collapsed: boolean, onToggle: () => void) => ({
 function PlanRowView({ row, context }: { row: PlanRow; context: StepContext }) {
     if (row.type === 'section') {
         return (
-            <div className="px-2 pt-3 pb-1">
-                <div className={clsx('flex min-w-0 items-center gap-1 px-1', TOGGLE_ROW)} {...toggleRowProps(row.collapsed, () => context.toggle(row.item.id))}>
-                    <Caret collapsed={row.collapsed} />
+            <div className="pt-2">
+                {/* The same box as a parent step's row, so a section and a step are equally tall and their carets line up. */}
+                <div
+                    className={clsx('mx-1 flex min-w-0 items-start gap-1 py-1 pr-2', TOGGLE_ROW)}
+                    style={{ paddingLeft: ROW_PADDING_PX }}
+                    {...toggleRowProps(row.collapsed, () => context.toggle(row.item.id))}
+                >
+                    <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center">
+                        <Caret collapsed={row.collapsed} />
+                    </span>
                     <span className="min-w-0 grow truncate text-sm font-medium text-text select-text">{row.item.title}</span>
-                    <span className="shrink-0 text-xs text-text-muted tabular-nums">
+                    <span className="mt-px flex h-5 shrink-0 items-center text-xs text-text-muted tabular-nums">
                         {row.progress.finished}/{row.progress.total}
                     </span>
                 </div>
                 {row.item.description && !row.collapsed && (
-                    <div className="pr-1 pl-6 text-text-muted select-text">
+                    <div className="mx-1 pr-2 pl-8 text-text-muted select-text">
                         <Markdown text={row.item.description} fileLinks={false} />
                     </div>
                 )}
@@ -292,10 +304,9 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
                 style={{ paddingLeft: ROW_PADDING_PX + row.depth * INDENT_PX }}
                 {...(parent ? toggleRowProps(row.collapsed, () => context.toggle(step.id)) : {})}
             >
-                {/* The glyphs sit 1px lower than the line box centers them, where the eye puts the middle of the title's first line. */}
-                <span className="mt-px flex h-5 w-4 shrink-0 items-center justify-center">{parent && <Caret collapsed={row.collapsed} />}</span>
+                {/* The glyph sits 1px lower than the line box centers it, where the eye puts the middle of the title's first line. */}
                 <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center">
-                    <StepMark row={row} context={context} locked={locked} setBy={setBy.tooltip} />
+                    {parent ? <Caret collapsed={row.collapsed} /> : <StepMark row={row} context={context} locked={locked} setBy={setBy.tooltip} />}
                 </span>
                 <div className="min-w-0 grow">
                     <div className={clsx('text-sm wrap-anywhere select-text', finished ? 'text-text-muted' : 'text-text')}>{step.title}</div>
@@ -321,7 +332,7 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
                                 type="button"
                                 className={clsx(
                                     'block w-full text-left text-xs whitespace-pre-wrap wrap-anywhere select-text',
-                                    row.state === 'failed' ? 'text-status-error' : 'text-text-muted'
+                                    row.state === 'failed' ? 'text-status-error' : row.state === 'warning' ? 'text-status-needs-you' : 'text-text-muted'
                                 )}
                                 onClick={() => context.setEditingNote(step.id)}
                             >
@@ -344,7 +355,7 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
                                         className="menu-item"
                                         onClick={() => {
                                             context.setState([step.id], state);
-                                            if (state === 'failed') {
+                                            if (asksForNote(state)) {
                                                 context.setEditingNote(step.id);
                                             }
                                         }}
@@ -472,7 +483,7 @@ function StepMark({ row, context, locked, setBy }: { row: Extract<PlanRow, { typ
                                 className="menu-item"
                                 onClick={() => {
                                     context.setState([row.item.id], outcome);
-                                    if (outcome === 'failed') {
+                                    if (asksForNote(outcome)) {
                                         context.setEditingNote(row.item.id);
                                     }
                                 }}

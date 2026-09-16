@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import type { Plan } from '@ruimte/contracts';
-import { foldableIds, hasFailedStep, planCounter, planRows, resultsText, stepSetBy, toggledState, type PlanViewOptions } from '@/plan/plan-view';
+import type { Plan, PlanStepState } from '@ruimte/contracts';
+import { asksForNote, foldableIds, hasFailedStep, planCounter, planRows, resultsText, stepSetBy, toggledState, type PlanViewOptions } from '@/plan/plan-view';
 
 const plan: Plan = {
     id: 'plan-1',
@@ -69,7 +69,7 @@ describe('the rows of a plan', () => {
     });
 
     test('Failed keeps only what failed', () => {
-        expect(ids(planRows(plan, options({ filter: 'failed' })))).toEqual(['split', 'full-grid', 'focus']);
+        expect(ids(planRows(plan, options({ filter: 'issues' })))).toEqual(['split', 'full-grid', 'focus', 'pixels']);
     });
 
     test('Collapse done folds what is all done or skipped and leaves the rest open', () => {
@@ -107,6 +107,24 @@ describe('what the plan says in a line', () => {
         expect(stepSetBy({ by: 'agent' }, 'failed', 'Claude', '')).toEqual({ text: null, tooltip: 'Claude set it' });
         expect(stepSetBy({ by: 'agent' }, 'open', 'Claude', '19:40')).toEqual({ text: null, tooltip: null });
         expect(stepSetBy({}, 'done', 'Claude', '19:40')).toEqual({ text: null, tooltip: null });
+    });
+
+    test('the results name warning and info steps after failed and blocked ones', () => {
+        const items: Plan['items'] = [
+            { type: 'step', id: 'one', title: 'One', state: 'info', note: 'Slow on a cold start' },
+            { type: 'step', id: 'two', title: 'Two', state: 'warning' },
+            { type: 'step', id: 'three', title: 'Three', state: 'failed' }
+        ];
+        expect(resultsText({ ...plan, items })).toBe(
+            'Results of the plan "Test the split placement":\n\nFailed:\n- Three\n\nWarning:\n- Two\n\nInfo:\n- One: Slow on a cold start'
+        );
+    });
+
+    test('failed, warning and info open the note, the other states do not', () => {
+        const noting: PlanStepState[] = ['failed', 'warning', 'info'];
+        const silent: PlanStepState[] = ['open', 'active', 'done', 'skipped', 'blocked'];
+        expect(noting.every(asksForNote)).toBe(true);
+        expect(silent.some(asksForNote)).toBe(false);
     });
 
     test('no results when nothing failed or is blocked', () => {
