@@ -6,7 +6,7 @@ import type { ContextSource } from '@ruimte/contracts';
  * stale unnoticed, while this sentence travels with the daemon and `help` renders from the registry.
  */
 export const VERBS_NOTE =
-    'Ruimte: `ruimte-context` reads context linked to you and places nodes on the canvas; `ruimte-context help` lists what it does and `ruimte-context help <verb>` details one.';
+    'Ruimte: `ruimte-context` reads context linked to you and places nodes on the canvas; `ruimte-context help` lists what it does and `ruimte-context help <verb>` details one. Ids in its output are for your commands; when you talk to the person, name things by their title, never by id.';
 
 const CONTEXT_PROMPT =
     'The person linked context to this chat on their canvas. Run `ruimte-context` to list it and `ruimte-context read <id>` to read one item, whenever it could help.';

@@ -26,6 +26,9 @@ const REFUSAL_LINE =
 const SCOPE_LINE =
     'scope\tlist and read are what a person linked into this session; nodes, edges, views, node, agent, team, done, tasks, link, notify, view, open, group, arrange, rename, diagram and worktree are the project itself, and plan is the chat of the caller\ta node you add is readable through read only once a line runs from it into you';
 
+/* Agents repeat ids to people, who know nodes, views and plans only by their titles. */
+const IDS_LINE = 'ids\tIds in this output are for your commands. When you talk to the person, name things by their title, never by id';
+
 /* Said once under the list, since the flag is on some verbs and refused by name on the rest. */
 const dryRunLine = (): string => `dry run\t--${DRY_RUN_FLAG}\t${dryRunVerbNames().join(', ')}\tsame checks, nothing made; every other verb refuses the flag`;
 
@@ -59,7 +62,7 @@ const helpVerb = defineVerb({
     flags: z.object({}),
     run: async ({ positionals: [name] }) => {
         if (name === undefined) {
-            return [...verbSummaryLines(), SCOPE_LINE, dryRunLine(), 'detail\truimte-context help <verb>\tone verb in full', REFUSAL_LINE];
+            return [...verbSummaryLines(), SCOPE_LINE, IDS_LINE, dryRunLine(), 'detail\truimte-context help <verb>\tone verb in full', REFUSAL_LINE];
         }
         const verb = verbNamed(name);
         if (!verb) {

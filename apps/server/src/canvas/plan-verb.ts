@@ -23,11 +23,14 @@ import { VerbRefusal, defineSubVerb, defineVerbGroup, field, orNote, placeOf, ty
 
 const HELP_LINE = 'detail\truimte-context help plan';
 
+/* Agents repeat ids to people, who only know a plan and its steps by their titles. */
+const IDS_LINE = 'ids\tIds are for your commands. When you talk to the person, name the plan and its steps by their title, never by id';
+
 const META_FIELDS: Record<keyof typeof PlanDraftMetaSchema.shape, string> = {
     title: 'What the plan is called; --title wins over it, and one of the two is required',
     kind: 'steps for progress you keep, test for a test plan a person runs; steps when absent, and --kind wins',
-    summary: 'A short Markdown paragraph under the title',
-    status: 'One line under the title about where the work stands; plan status changes it later',
+    summary: 'A short Markdown paragraph under the title about what the plan is for, never its progress',
+    status: 'One short sentence about what happens now or next, such as Fixing the focus bug in the grid; never counts or progress, since the panel shows those, and absent rather than a repeat of the title or summary; plan status changes it later',
     checks: 'Who sets a step that names no checks of its own: anyone, agent (a person unlocks it) or person; anyone when absent, and --checks wins'
 };
 
@@ -195,6 +198,7 @@ const newSub = defineSubVerb('plan', {
         'prints\tplan\tid\trev 0\tkind\ttitle\tthe plan made; dry run instead of plan with --dry-run',
         'prints\titem\tid\ttype\tunder\ttitle\tone line per item in document order; under is the section or step it stands in, - at the top',
         'prints\texample\ta command that checks off the first step',
+        'prints\tids\ta reminder that ids are for commands, never for the person',
         "document\t{ meta, items }\tone JSON object; by and at are the daemon's and cannot be written",
         ...fieldLines('meta.', PlanDraftMetaSchema.shape, META_FIELDS),
         ...fieldLines('items[] step.', PlanDraftStepSchema.shape, STEP_FIELDS),
@@ -251,6 +255,7 @@ const newSub = defineSubVerb('plan', {
             firstStep
                 ? `example\truimte-context plan set ${firstStep.id} --state done`
                 : 'example\truimte-context plan add --type step --title "The first step"',
+            IDS_LINE,
             ...(dryRun ? ['note\tNothing was written; run it again without --dry-run to make the plan'] : [])
         ];
     }
@@ -453,8 +458,13 @@ const removeSub = defineSubVerb('plan', {
 const statusSub = defineSubVerb('plan', {
     name: 'status',
     usage: '--text T [--plan P]',
-    summary: 'Sets the line under the title that says where the work stands; an empty text clears it',
-    detail: [`flag\t--text T\trequired\tOne line, at most ${PLAN_LIMITS.status} characters`, PLAN_FLAG, 'prints\tplan\tid\trev N\tkind\ttitle\tprogress'],
+    summary: 'Sets the line under the title about what happens now or next; an empty text clears it',
+    detail: [
+        `flag\t--text T\trequired\tOne short sentence, at most ${PLAN_LIMITS.status} characters, such as Fixing the focus bug in the grid`,
+        'never\tNo counts or progress numbers, since the panel shows progress itself; clear the line rather than repeat the title or summary',
+        PLAN_FLAG,
+        'prints\tplan\tid\trev N\tkind\ttitle\tprogress'
+    ],
     positionals: z.tuple([], { error: 'plan status takes no arguments; the line goes in --text' }),
     flags: z.object({ text: textFlag('plan status needs --text with the line, or an empty one to clear it'), plan: planFlag }),
     async run({ flags }, call) {
@@ -491,6 +501,8 @@ export const planVerb = defineVerbGroup({
         'active\tMark the step you work on with plan set <id> --state active, and move on with plan set <id> --state done --next <id>',
         'checks\tanyone: you and a person; agent: only you, until a person unlocks it; person: only a person, refused as person-only',
         'person\tA state a person set is never yours to change (set-by-person), and a step a person unlocked stays unlocked (unlocked-by-person)',
+        'status\tThe status line is one short sentence about what happens now or next, never counts, since the panel shows progress itself',
+        IDS_LINE,
         'compaction\tAfter a compaction you may no longer know the ids: ruimte-context plan read without arguments prints them',
         'others\truimte-context read <chat> on a linked chat shows its plans above the conversation; you never set steps of another chat',
         REFUSAL_CODES

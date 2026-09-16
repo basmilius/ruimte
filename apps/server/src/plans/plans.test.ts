@@ -112,7 +112,8 @@ describe('plan verbs', () => {
             'item\ttests\tstep\t-\tWrite the tests',
             'item\tcheck\tstep\t-\tA person checks it',
             'item\tmine\tstep\t-\tOnly the agent',
-            'example\truimte-context plan set build --state done'
+            'example\truimte-context plan set build --state done',
+            'ids\tIds are for your commands. When you talk to the person, name the plan and its steps by their title, never by id'
         ]);
         expect(events.map((event) => event.event)).toEqual(['plan.changed', 'plan.created']);
         expect(events[0]!.payload).toMatchObject({ chatId: 'chat-lead', plan: { id: planId, rev: 0, createdAt: new Date(clock.now()).toISOString() } });
