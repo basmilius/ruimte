@@ -215,6 +215,27 @@ describe('resume-run', () => {
         expect(daemon.outbox.list()).toEqual([]);
     });
 
+    test('a resume that cannot be owed ends the turn aborted with the failure in its note', async () => {
+        const { turnId } = await interruptChild();
+
+        const daemon = await boot();
+        daemon.worker.enqueue = () => Promise.reject(new Error('the outbox is not writable'));
+        await daemon.chats.recoverInterrupted();
+
+        expect(turnOf(daemon, turnId)).toMatchObject({ state: 'aborted' });
+        expect(
+            daemon.chats
+                .get('chat-child')
+                ?.thread.list()
+                .find((item) => item.kind === 'note')
+        ).toMatchObject({
+            turnId,
+            level: 'warning',
+            text: 'This turn could not be resumed after the machine restarted: the outbox is not writable'
+        });
+        expect(daemon.claude.started).toHaveLength(0);
+    });
+
     test('a resume whose CLI will not start is tried after 1, 5 and 30 seconds and then ends the turn with the reason', async () => {
         const { turnId } = await interruptChild();
 
@@ -245,54 +266,70 @@ describe('resume-run', () => {
         expect(daemon.outbox.list()).toEqual([]);
     });
 
-    test('a turn that was resumed once, or that no project holds, is not resumed again', async () => {
+    test('a turn that is not resumed ends aborted with a note that names the reason', async () => {
         const store = new ChatStore(home);
-        const stored = (chatId: string, attempt: number | undefined): { info: ChatInfo; items: ChatItem[] } => {
-            const turn: ChatItem = {
-                id: 'turn-1',
-                kind: 'turn',
-                createdAt: 1,
-                turnId: 'turn-1',
-                state: 'running',
-                origin: 'user',
-                endedAt: null,
-                costUsd: 0,
-                attempt
-            };
-            return {
-                info: {
-                    chatId,
-                    provider: 'claude',
-                    cwd: folder,
-                    agentSessionId: 'session-1',
-                    model: null,
-                    selection: { model: 'claude-sonnet-5', options: {} },
-                    runtimeMode: 'full-access',
-                    status: 'running',
-                    running: true,
-                    activeTurnId: 'turn-1',
-                    slashCommands: [],
-                    usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
-                    createdAt: 1
-                },
-                items: [turn]
-            };
-        };
-        for (const [chatId, attempt] of [
-            ['chat-child', 2],
-            ['chat-elsewhere', undefined]
-        ] as const) {
-            const record = stored(chatId, attempt);
+        const turn = (id: string, attempt?: number): ChatItem => ({
+            id,
+            kind: 'turn',
+            createdAt: 1,
+            turnId: id,
+            state: 'running',
+            origin: 'user',
+            endedAt: null,
+            costUsd: 0,
+            attempt
+        });
+        const stored = (chatId: string, agentSessionId: string | null, items: ChatItem[]): { info: ChatInfo; items: ChatItem[] } => ({
+            info: {
+                chatId,
+                provider: 'claude',
+                cwd: folder,
+                agentSessionId,
+                model: null,
+                selection: { model: 'claude-sonnet-5', options: {} },
+                runtimeMode: 'full-access',
+                status: 'running',
+                running: true,
+                activeTurnId: 'turn-1',
+                slashCommands: [],
+                usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
+                createdAt: 1
+            },
+            items
+        });
+        const cases = [
+            // An older running turn beside the active one is a record that was already broken; it ends too.
+            { chatId: 'chat-child', record: stored('chat-child', 'session-1', [turn('turn-0'), turn('turn-1', 2)]) },
+            { chatId: 'chat-elsewhere', record: stored('chat-elsewhere', 'session-1', [turn('turn-1')]) },
+            { chatId: 'chat-view', record: stored('chat-view', null, [turn('turn-1')]) }
+        ];
+        for (const { chatId, record } of cases) {
             await store.write(chatId, record.info, record.items);
         }
 
         const daemon = await boot();
         await daemon.chats.recoverInterrupted();
         expect(daemon.outbox.list()).toEqual([]);
-        for (const chatId of ['chat-child', 'chat-elsewhere']) {
-            expect(daemon.chats.get(chatId)?.thread.get('turn-1')).toMatchObject({ state: 'error' });
+        const notesOf = (chatId: string): Array<{ turnId: string | null; level: string; text: string }> =>
+            (daemon.chats.get(chatId)?.thread.list() ?? []).flatMap((item) =>
+                item.kind === 'note' ? [{ turnId: item.turnId, level: item.level, text: item.text }] : []
+            );
+        const note = (turnId: string, reason: string) => ({
+            turnId,
+            level: 'warning',
+            text: `This turn could not be resumed after the machine restarted: ${reason}`
+        });
+        expect(notesOf('chat-child')).toEqual([
+            note('turn-0', 'it was not the turn the chat was running'),
+            note('turn-1', 'it was already resumed after an earlier restart')
+        ]);
+        expect(notesOf('chat-elsewhere')).toEqual([note('turn-1', 'no project holds this chat any more')]);
+        expect(notesOf('chat-view')).toEqual([note('turn-1', 'the agent had not started a session to resume yet')]);
+        for (const { chatId } of cases) {
+            expect(daemon.chats.get(chatId)?.thread.get('turn-1')).toMatchObject({ state: 'aborted' });
             expect(daemon.chats.get(chatId)?.info).toMatchObject({ status: 'idle', activeTurnId: null });
         }
+        expect(daemon.chats.get('chat-child')?.thread.get('turn-0')).toMatchObject({ state: 'aborted' });
         expect(daemon.claude.started).toHaveLength(0);
     });
 

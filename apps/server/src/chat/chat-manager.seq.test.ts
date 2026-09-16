@@ -152,11 +152,21 @@ describe('the stream of a chat', () => {
         expect(info).toMatchObject({ status: 'running', activeTurnId: turnId, running: false });
         expect(second.manager.get('chat')?.thread.get(turnId)).toMatchObject({ state: 'running' });
 
-        // Without anyone to owe it to, the turn ends the way it always did.
+        // With nothing to owe it to, the turn ends aborted and the note says why.
         await second.manager.shutdown();
         const third = boot();
         await third.manager.create({ chatId: 'chat' });
-        expect(third.manager.get('chat')?.thread.get(turnId)).toMatchObject({ state: 'error' });
+        expect(third.manager.get('chat')?.thread.get(turnId)).toMatchObject({ state: 'aborted' });
         expect(third.manager.get('chat')?.info).toMatchObject({ status: 'idle', activeTurnId: null });
+        expect(
+            third.manager
+                .get('chat')
+                ?.thread.list()
+                .find((item) => item.kind === 'note')
+        ).toMatchObject({
+            turnId,
+            level: 'warning',
+            text: 'This turn could not be resumed after the machine restarted: this machine does not resume turns'
+        });
     });
 });

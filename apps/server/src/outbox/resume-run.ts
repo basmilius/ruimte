@@ -1,4 +1,5 @@
 import type { InterruptedRun } from '../chat/chat-manager.ts';
+import { notResumedNote } from '../chat/chat-session.ts';
 import { errorText } from '../error-text.ts';
 import type { OutboxEntry, OutboxWork, ResumeRunEntry } from './outbox.ts';
 
@@ -49,6 +50,6 @@ export const resumeRunParked =
     (deps: Pick<ResumeRunDeps, 'abandonRun'>) =>
     (entry: OutboxEntry, error: unknown): void => {
         if (entry.kind === 'resume-run') {
-            deps.abandonRun(entry.target, entry.payload.turnId, `This turn could not be resumed after the machine restarted: ${errorText(error)}`);
+            deps.abandonRun(entry.target, entry.payload.turnId, notResumedNote(errorText(error)));
         }
     };

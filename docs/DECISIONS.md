@@ -2462,13 +2462,20 @@ code will not say on its own.
   (`recoverInterrupted`, after the socket listens) only loads those chats, so a client that opens
   one first goes through the same rule and the handler finds the resume already owed. One resume
   per turn: a resumed CLI sees its transcript up to the break and may run a command again, so a
-  second restart ends the turn as `error` instead of looping. A resume whose CLI will not start is
+  second restart ends the turn instead of looping. A resume whose CLI will not start is
   retried after 1, 5 and 30 seconds and then ends the turn `aborted` with a note; stopping a turn
   that waits for its resume ends it the same way without a note. No message of a person is made up:
   the prompt that says the machine restarted goes to the CLI only, and the thread gets a note.
 - A chat that is a view of its own is resumed like a chat on a canvas. `ProjectIndex.locate` already
   placed a session view under its own id with no canvas, so nothing in the rule had to change; a
   test holds it there, because "a chat no canvas holds" was how the rule read at first.
+- A running turn that a restart does not take up again ends `aborted` with a warning note that names
+  the reason, never as a silent `error` (decided by Bas after phase 3): no CLI session yet, already
+  resumed once, no project holds the chat, the resume could not be owed, or an older running turn
+  beside the active one. The sentence is the one the resume that gives up already used ("This turn
+  could not be resumed after the machine restarted: <reason>", `notResumedNote`), so a person reads
+  one kind of ending for everything a restart broke. Aborted rather than error because the turn did
+  not fail; the machine went down under it. No new state: the wire keeps its enum.
 
 ### Skipped on purpose
 

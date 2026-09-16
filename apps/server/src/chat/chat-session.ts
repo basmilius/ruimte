@@ -329,12 +329,21 @@ export class ChatSession {
      * except the turn a restart takes up again. Said as events, so a client that comes back with a
      * seq from before the restart hears it as well.
      */
-    settleStored(selection: ModelSelection, resumeTurnId: string | null): void {
+    settleStored(selection: ModelSelection, resume: ResumeDecision): void {
         const events: ChatEvent[] = [];
+        const resumeTurnId = resume.resumeTurnId;
+        const now = Date.now();
         for (const item of this.thread.list()) {
             const settled = settleStoredItem(item, resumeTurnId);
-            if (settled !== item) {
-                events.push(this.thread.upsert(settled));
+            if (settled === item) {
+                continue;
+            }
+            events.push(this.thread.upsert(settled));
+            if (item.kind === 'turn' && settled.kind === 'turn' && settled.state === 'aborted') {
+                const reason = item.id === this.thread.info.activeTurnId && resume.reason !== null ? resume.reason : 'it was not the turn the chat was running';
+                events.push(
+                    this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId: item.id, level: 'warning', text: notResumedNote(reason) })
+                );
             }
         }
         const info = this.thread.info;
@@ -779,6 +788,15 @@ export class ChatSession {
     }
 }
 
+/* The turn a restart takes up again, or else why the turn the daemon went down in ends (null when none was running). */
+export interface ResumeDecision {
+    resumeTurnId: string | null;
+    reason: string | null;
+}
+
+/* The one sentence a turn that a restart did not take up again ends with, whatever the reason. */
+export const notResumedNote = (reason: string): string => `This turn could not be resumed after the machine restarted: ${reason}`;
+
 // Whatever was open when the daemon went down: nobody is going to answer it now.
 const settleStoredItem = (item: ChatItem, resumeTurnId: string | null): ChatItem => {
     if (item.kind === 'assistant' && item.streaming) {
@@ -793,8 +811,9 @@ const settleStoredItem = (item: ChatItem, resumeTurnId: string | null): ChatItem
     if (item.kind === 'tool' && item.state === 'running') {
         return { ...item, state: 'error' };
     }
+    // Aborted rather than error: the turn did not fail, the machine went down under it.
     if (item.kind === 'turn' && item.state === 'running' && item.id !== resumeTurnId) {
-        return { ...item, state: 'error', endedAt: item.endedAt ?? item.createdAt };
+        return { ...item, state: 'aborted', endedAt: item.endedAt ?? item.createdAt };
     }
     return item;
 };

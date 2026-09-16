@@ -24,7 +24,7 @@ import { SkillIndex } from '../skills/skills.ts';
 import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import type { AttachmentStore } from './attachment-store.ts';
 import type { SpawnChatProcess } from './chat-process.ts';
-import { ChatSession, type ChatSendExtras } from './chat-session.ts';
+import { ChatSession, type ChatSendExtras, type ResumeDecision } from './chat-session.ts';
 import { ChatLog, COMPACT_ABOVE_BYTES } from './chat-log.ts';
 import type { ChatTitleInput } from './chat-title.ts';
 import type { ChatRecord, ChatStore } from './chat-store.ts';
@@ -81,7 +81,8 @@ interface ChatManagerOptions {
     subagents?: Partial<Pick<SubagentReaderOptions, 'claudeProjectsDir' | 'seams' | 'now' | 'listOnce'>>;
     /*
      * Asked when a chat is loaded with a turn that could be resumed: true once the resume is owed
-     * (written to the outbox), and the turn stays running. Without it, or on false, the turn ends as it always did.
+     * (written to the outbox), and the turn stays running. False means no project holds the chat; then, or without it,
+     * the turn ends aborted with a note that says why.
      */
     onInterruptedRun?: (run: InterruptedRun) => Promise<boolean>;
 }
@@ -244,7 +245,7 @@ export class ChatManager {
                   usage: { contextTokens: 0, contextWindow: catalog.contextWindowFor(selection), costUsd: 0, turns: 0 },
                   createdAt: Date.now()
               };
-        const resumeTurnId = stored ? await this.owedResume(payload.chatId, stored) : null;
+        const resume: ResumeDecision = stored ? await this.owedResume(payload.chatId, stored) : { resumeTurnId: null, reason: null };
         const token = randomBytes(24).toString('base64url');
         this.tokens.set(token, payload.chatId);
         const claudeTitles = this.claudeTitles;
@@ -270,7 +271,7 @@ export class ChatManager {
         });
         this.chats.set(session.id, session);
         if (stored) {
-            session.settleStored(selection, resumeTurnId);
+            session.settleStored(selection, resume);
         }
         // Sent before the info goes back, so the client's attach already carries it: a prompt an
         // agent was made with has to read as the first message of the thread, not as a turn out of
@@ -675,16 +676,28 @@ export class ChatManager {
     }
 
     /* The running turn of a stored chat, when it may be resumed and the resume is now owed; null otherwise. */
-    private async owedResume(chatId: string, stored: ChatRecord): Promise<string | null> {
+    /* Every reason says why in the words of the note the turn ends with, so a person can tell a skip from a failure. */
+    private async owedResume(chatId: string, stored: ChatRecord): Promise<ResumeDecision> {
         const turn = interruptedTurn(stored);
-        if (turn === null || !this.onInterruptedRun || stored.info.agentSessionId === null || (turn.attempt ?? 1) >= MAX_ATTEMPTS) {
-            return null;
+        const skip = (reason: string): ResumeDecision => ({ resumeTurnId: null, reason });
+        if (turn === null) {
+            return { resumeTurnId: null, reason: null };
+        }
+        if (!this.onInterruptedRun) {
+            return skip('this machine does not resume turns');
+        }
+        if (stored.info.agentSessionId === null) {
+            return skip('the agent had not started a session to resume yet');
+        }
+        if ((turn.attempt ?? 1) >= MAX_ATTEMPTS) {
+            return skip('it was already resumed after an earlier restart');
         }
         try {
-            return (await this.onInterruptedRun({ chatId, turnId: turn.id, attempt: (turn.attempt ?? 1) + 1 })) ? turn.id : null;
+            const owed = await this.onInterruptedRun({ chatId, turnId: turn.id, attempt: (turn.attempt ?? 1) + 1 });
+            return owed ? { resumeTurnId: turn.id, reason: null } : skip('no project holds this chat any more');
         } catch (e) {
             console.error(`Owing a resume for chat ${chatId} failed:`, errorText(e));
-            return null;
+            return skip(errorText(e));
         }
     }
 
