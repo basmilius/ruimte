@@ -11,7 +11,19 @@ import { checkCwd, readPromptFile } from './project-paths.ts';
 import { MAX_TASK_PROMPT_LENGTH, TASK_LINES, requireChatParent, taskBrief } from './task-verbs.ts';
 import { unescapeText } from './text-escapes.ts';
 import { WORKTREE_LINES, branchSlug, branchesForWorktrees, freeBranch, makeWorktrees } from './worktree.ts';
-import { MAX_TITLE_LENGTH, TITLE_LINE, VerbRefusal, canvasFor, defineVerb, field, orNote, placeOf, titleField, type VerbCall } from './verb.ts';
+import {
+    MAX_TITLE_LENGTH,
+    OPENING_OFF_CANVAS,
+    TITLE_LINE,
+    VerbRefusal,
+    canvasFor,
+    defineVerb,
+    field,
+    orNote,
+    placeOf,
+    titleField,
+    type VerbCall
+} from './verb.ts';
 
 export const AGENT_KINDS = AgentKindSchema.options;
 
@@ -30,7 +42,7 @@ const KIND_MESSAGE = `agent needs a CLI: ${AGENT_KINDS.join(', ')}`;
 
 const AGENT_DETAIL: readonly string[] = [
     `argument\t<cli>\trequired\t${AGENT_KINDS.join(', ')}`,
-    'prints\tid\tkind\tview\tcli\tedge\ttask\tthe new node, its kind (terminal or chat), the canvas it landed on, the CLI it runs, the id of the edge drawn into it and, with --task, the id of the task',
+    'prints\tid\tkind\tview\tcli\tedge\ttask\tthe new node, its kind (terminal or chat), the canvas it landed on, the CLI it runs, the id of the edge drawn into it (- when none was drawn) and, with --task, the id of the task',
     `flag\t--chat\tno value\tMakes a chat node instead of a terminal node; only a CLI with a chat backend takes it (${chatKinds().join(', ')})`,
     `flag\t--prompt T\toptional\tWhat the agent starts working on; \\n, \\t and \\\\ are read as escapes, at most ${MAX_PROMPT_LENGTH} characters`,
     'flag\t--prompt-file F\toptional\tThe same prompt out of a file, for one with exact bytes; not together with --prompt',
@@ -47,11 +59,12 @@ const AGENT_DETAIL: readonly string[] = [
     'kinds\tterminal\tThat CLI running in a shell, which is what the person sees and can type in',
     'kinds\tchat\tThe CLI as a thread in the node, fixed to that CLI, with no model picker on the composer',
     'edge\tThe edge runs from you into the new node, which is the direction that makes you readable to it: it can run ruimte-context read on your id',
+    'edge\tOnly a node on that canvas gets one: a chat that is a view of its own, or a node of another canvas, gets no edge and the edge column shows -',
     'edge\tOne way only: you do not read the new agent through it. ruimte-context link --to <its id> draws the line back when you want that too',
     'edge\truimte-context edges lists what is drawn on the canvas now',
     'without a prompt\tLeave --prompt out and the node opens with the CLI waiting, so the person types the first thing themselves',
     'groups\truimte-context nodes lists the nodes of a canvas; a row of kind group is what --group takes',
-    'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
+    'where\tWithout --view the canvas you are a node on; a chat that is a view of its own is a node on no canvas, so it names one with --view and no edge is drawn',
     'where\tWithout --beside and --group the first free spot right of the caller, or right of everything when the caller is not on that canvas',
     'group\tThe node lands in a row under the title bar of the group, which grows when it has no room; a collapsed group also takes the id into its members',
     'paths\t--cwd and --prompt-file are resolved against the project folder, never against your own directory; both may also be absolute',
@@ -133,7 +146,7 @@ const promptOf = async (flags: { prompt?: string; 'prompt-file'?: string }, call
 export const agentVerb = defineVerb({
     name: 'agent',
     usage: `<${AGENT_KINDS.join('|')}> [--chat] [--prompt T | --prompt-file F] [--cwd P] [--view V] [--beside N] [--group G] [--title T] [--task T] [--mode M] [--worktree [--branch B]] [--dry-run]`,
-    summary: 'Opens an agent node that starts working, with an edge from you into it so it can read what you have',
+    summary: 'Opens an agent node that starts working, with an edge from you into it when you are a node on that canvas, so it can read what you have',
     detail: AGENT_DETAIL,
     dryRun: true,
     positionals: z.tuple([z.enum(AGENT_KINDS, { error: KIND_MESSAGE })], {
@@ -215,7 +228,7 @@ export const agentVerb = defineVerb({
                 if (flags.task !== undefined) {
                     requireChatParent(content, call.caller);
                 }
-                const canvas = canvasFor(content, place, flags.view);
+                const canvas = canvasFor(content, place, flags.view, OPENING_OFF_CANVAS);
                 if (canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
                     throw canvasFull(canvas, 1);
                 }

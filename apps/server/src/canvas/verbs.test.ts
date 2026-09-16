@@ -355,7 +355,7 @@ describe('help', () => {
     test('help agent covers what a first-time caller cannot see from the canvas', async () => {
         const { lines } = await post('help', ['agent']);
         expect(lines).toContain(
-            'prints\tid\tkind\tview\tcli\tedge\ttask\tthe new node, its kind (terminal or chat), the canvas it landed on, the CLI it runs, the id of the edge drawn into it and, with --task, the id of the task'
+            'prints\tid\tkind\tview\tcli\tedge\ttask\tthe new node, its kind (terminal or chat), the canvas it landed on, the CLI it runs, the id of the edge drawn into it (- when none was drawn) and, with --task, the id of the task'
         );
         // Which CLIs take --chat, from the registry rather than from a sentence that can drift.
         expect(lines.some((line) => line.startsWith('flag\t--chat\t') && line.includes('claude, codex'))).toBe(true);
@@ -1265,6 +1265,16 @@ describe('team', () => {
     });
 
     test('a caller that is not a node on the canvas gets a team without edges', async () => {
+        // Without --view a chat that is a view of its own is told both halves: name a canvas, and no edge comes with it.
+        for (const verb of [
+            ['team', ...args(THREE)],
+            ['agent', 'claude']
+        ]) {
+            const refused = await post(verb[0]!, verb.slice(1), 'chat');
+            expect(refused.lines[0]).toBe(
+                'refused\tview-required\tYou are not a node on a canvas; name the canvas with --view, and what you open lands there without an edge from you, so the edge column shows -'
+            );
+        }
         const { lines } = await post('team', [...args(THREE), '--view', 'board'], 'chat');
         expect(lines.every((line) => line.split('\t')[3] === 'board')).toBe(true);
         // No caller on that canvas, so no edge to name in the last column either.

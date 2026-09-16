@@ -332,11 +332,20 @@ export const canvasLines = (content: ProjectContent): string[] =>
         'This project has no canvas; a node only ever lands on one'
     );
 
+/* What `agent` and `team` say when the caller is on no canvas: where the node goes is not all that changes. */
+export const OPENING_OFF_CANVAS =
+    'You are not a node on a canvas; name the canvas with --view, and what you open lands there without an edge from you, so the edge column shows -';
+
 /*
  * The canvas a verb works on: the one `--view` names, else the one the caller is a node on. Ids
  * only, never names, so an agent cannot aim at a canvas by naming something else after it.
  */
-export const canvasFor = (content: ProjectContent, place: IndexedPlace, view: string | undefined): ProjectCanvasView => {
+export const canvasFor = (
+    content: ProjectContent,
+    place: IndexedPlace,
+    view: string | undefined,
+    offCanvas = 'This session is not on a canvas; name one with --view'
+): ProjectCanvasView => {
     if (view !== undefined) {
         const named = content.views.find((candidate) => candidate.id === view);
         if (!named || !isCanvasView(named)) {
@@ -346,7 +355,7 @@ export const canvasFor = (content: ProjectContent, place: IndexedPlace, view: st
     }
     const own = place.canvasId === null ? undefined : content.views.find((candidate) => candidate.id === place.canvasId);
     if (!own || !isCanvasView(own)) {
-        throw new VerbRefusal('view-required', 'This session is not on a canvas; name one with --view', canvasLines(content));
+        throw new VerbRefusal('view-required', offCanvas, canvasLines(content));
     }
     return own;
 };

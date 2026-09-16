@@ -10,7 +10,7 @@ import { MAX_CANVAS_NODES, canvasFull, newId } from './node-verb.ts';
 import { placeFree, placeTeam, TEAM_COLUMNS } from './placement.ts';
 import { checkCwd } from './project-paths.ts';
 import { MAX_TASK_PROMPT_LENGTH, TASK_LINES, requireChatParent, taskBrief } from './task-verbs.ts';
-import { MAX_TITLE_LENGTH, TITLE_LINE, VerbRefusal, canvasFor, defineVerb, field, lengthOf, placeOf, titleField } from './verb.ts';
+import { MAX_TITLE_LENGTH, OPENING_OFF_CANVAS, TITLE_LINE, VerbRefusal, canvasFor, defineVerb, field, lengthOf, placeOf, titleField } from './verb.ts';
 import { WORKTREE_LINES, branchSlug, branchesForWorktrees, freeBranch, makeWorktrees } from './worktree.ts';
 
 /* The design's number: past eight the group is a wall of terminals and the bill is somebody's day. */
@@ -59,16 +59,17 @@ const TEAM_DETAIL: readonly string[] = [
     `example\truimte-context team --label "Parser work" --roles '[{"title":"Lexer","prompt":"Fix the tokenizer in src/lex.ts","provider":"claude"},{"title":"Reviewer","prompt":"Read the Lexer node and review its work","provider":"codex","chat":true}]'`,
     'prints\tid\tkind\ttitle\tview\tcli\tedge\ttask\tthe group first, its label in the title column and a dash for the CLI and the edge, then one line per role in the order of --roles, with the id of its task last under --task; the title is what tells two rows of one CLI apart',
     'flag\t--cwd P\toptional\tThe directory every agent starts in; a directory per role is --worktree',
-    'flag\t--view V\toptional\tThe canvas to add to, by view id; ruimte-context views lists them',
+    'flag\t--view V\toptional\tThe canvas to add to, by view id; ruimte-context views lists them. Without it the canvas you are a node on',
     'flag\t--mode M\toptional\tThe permission mode every role runs in: supervised, auto-accept-edits, auto or full-access, never wider than your own',
     'flag\t--worktree\tno value\tStarts every role in a git worktree of its own, on a new branch named after the role; not together with --cwd',
     `flag\t--task\tno value\tGives every role a task titled after the role, which its prompt describes; you are woken once, with the results of all roles, when the last of them settles; each prompt at most ${MAX_TASK_PROMPT_LENGTH} characters`,
     "flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field of every line is dry-run and the last names the edge it would draw, as <from> -> <the role's title>",
-    'edges\tOne edge per role, from you into that agent, so each of them can read you with ruimte-context read',
+    'edges\tOne edge per role, from you into that agent, so each of them can read you with ruimte-context read; only when you are a node on that canvas',
     'edges\tOne way only: you do not read them through it, and the roles do not read each other',
     "edges\truimte-context link --to <the role's id> draws the line back, which is how you read what a role has done; its id is the first field of that role's row",
     'edges\truimte-context edges lists what is drawn on the canvas now',
     'where\tThe group lands on the first free spot right of you, or right of everything when you are not on that canvas',
+    'where\tA chat that is a view of its own is a node on no canvas: it names one with --view, no edge is drawn, and the edge column of every row shows -',
     `group\tThe agents stand in rows of at most ${TEAM_COLUMNS} inside the frame, and the frame is sized to hold them`,
     'refusal\tA role that is wrong is named by its place in the array, counting from 0',
     'paths\t--cwd is resolved against the project folder and has to stay inside it or a worktree of its repository',
@@ -118,7 +119,7 @@ const kindOf = (role: Role): 'chat' | 'terminal' => (role.chat === true ? 'chat'
 export const teamVerb = defineVerb({
     name: 'team',
     usage: `--label L --roles '${ROLES_SHAPE}' [--view V] [--cwd P] [--task] [--mode M] [--worktree] [--dry-run]`,
-    summary: `Opens up to ${MAX_ROLES} agents at once in a group, each with an edge from you into it`,
+    summary: `Opens up to ${MAX_ROLES} agents at once in a group, each with an edge from you into it when you are a node on that canvas`,
     detail: TEAM_DETAIL,
     dryRun: true,
     switches: ['task', 'worktree'],
@@ -196,7 +197,7 @@ export const teamVerb = defineVerb({
                 if (tasked) {
                     requireChatParent(content, call.caller);
                 }
-                const canvas = canvasFor(content, place, flags.view);
+                const canvas = canvasFor(content, place, flags.view, OPENING_OFF_CANVAS);
                 // The group counts too, which is the one node a caller does not name in --roles.
                 if (canvas.nodes.length + roles.length + 1 > MAX_CANVAS_NODES) {
                     throw canvasFull(canvas, roles.length + 1);
