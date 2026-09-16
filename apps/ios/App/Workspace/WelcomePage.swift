@@ -61,7 +61,7 @@ struct WelcomePage: View {
                     .font(.title2.weight(.semibold))
             }
             VStack(spacing: 14) {
-                Text("Space for AI Engineering")
+                Text("Space for AI Engineering.")
                     .font(.largeTitle.weight(.bold))
                     .accessibilityAddTraits(.isHeader)
                 Text("Pick up your projects and check in on your agents.")
