@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Hervatten met minder context</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h4 { font-size: 16px; margin: 20px 0 8px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .ref { fill: var(--panel); stroke: var(--reference); stroke-dasharray: 5 4; }
+.diagram .edge { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .edge.soft { stroke: var(--reference); stroke-dasharray: 5 4; }
+.diagram .arrow { fill: var(--accent); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+.accept { font-size: 15px; color: var(--muted); }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 13px; white-space: pre-wrap; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+.question { padding-top: 20px; border-top: 1px solid var(--line); margin-top: 20px; }
+.question h3 { margin-top: 0; }
+.question .options { padding-left: 0; list-style: none; }
+.question .options li { padding-left: 28px; position: relative; }
+.question .options li::before { content: attr(data-option); position: absolute; left: 0; color: var(--accent); font-weight: 600; }
+.advice { padding: 12px 16px; background: var(--highlight); border-radius: 8px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  .recommendation, .panel, .badge, .advice { print-color-adjust: exact; }
+}
+.mock { max-width: 560px; margin: 20px 0 8px; background: var(--paper); border-radius: 14px; box-shadow: var(--shadow-border); overflow: hidden; font-size: 13px; line-height: 1.4; }
+.mock-dock { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.mock-dock svg { flex: none; color: var(--accent); }
+.mock-dock .text { flex: 1; min-width: 0; }
+.mock-dock strong { display: block; font-weight: 600; }
+.mock-dock span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.mock-btn { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 7px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.mock-btn.primary { background: var(--accent); color: var(--paper); }
+.mock-btn.ghost { color: var(--muted); }
+.mock-input { padding: 12px; color: var(--reference); min-height: 52px; }
+.mock-bar { display: flex; align-items: center; gap: 6px; padding: 0 8px 8px; color: var(--muted); font-size: 12px; }
+.mock-bar .grow { flex: 1; }
+.mock-chip { padding: 3px 8px; border-radius: 6px; background: var(--panel); }
+</style>
+</head>
+<body>
+<a class="skip" href="#kort">Naar de samenvatting</a>
+<header>
+  <p class="eyebrow">RUIMTE / ONTWERP / 16 SEPTEMBER 2026</p>
+  <h1>Hervatten met minder context</h1>
+  <p class="intro">Een chat die lang stil lag en veel context draagt, kost bij de volgende boodschap veel: de CLI stuurt het hele gesprek opnieuw, en na een uur is daar niets meer van in de cache. Dit ontwerp laat de composer dat moment herkennen en in één klik aanbieden om de context eerst te compacteren.</p>
+  <p class="status">Ontwerp, tegen <code>5b3b2d69</code>; nog geen code geschreven</p>
+  <p class="caption">Bronnen: <code>apps/client/src/chat/ui</code> (<code>Composer.tsx</code>, <code>ContextMeter.tsx</code>, <code>PendingDock.tsx</code>), <code>apps/client/src/shell/usage/limits.ts</code>, <code>apps/server/src/chat</code> (<code>chat-session.ts</code>, <code>claude-protocol.ts</code>, <code>codex-protocol.ts</code>, <code>projector.ts</code>), <code>packages/contracts/src/chat.ts</code> en het fork-ontwerp (<code>docs/reports/2026-09-16-fork-design.html</code>). <span class="badge confirmed">geverifieerd</span> staat bij wat in de code is nagelezen, <span class="badge warning">afgeleid</span> bij wat pas tijdens de bouw hard wordt.</p>
+  <nav aria-label="Inhoud">
+    <a href="#kort">Kort</a>
+    <a href="#nu">Wat er al is</a>
+    <a href="#persoon">Wat een persoon ziet</a>
+    <a href="#regel">Wanneer</a>
+    <a href="#bouw">Bouw</a>
+    <a href="#grenzen">Grenzen</a>
+  </nav>
+</header>
+<main>
+  <section id="kort" class="recommendation">
+    <h2>Kort</h2>
+    <p>Bovenaan de composer verschijnt een dock "Resume with less context", met het aantal tokens dat de chat meedraagt en twee knoppen: <strong>Compact</strong> en <strong>Keep full history</strong>. Het dock staat er alleen bij een Claude- of Codex-chat die minstens 100.000 tokens context heeft, waarvan de laatste beurt minstens 70 minuten geleden eindigde, en die nu niets doet en op niemand wacht.</p>
+    <p>Compact is de bestaande <code>chat.compact</code>: Claude krijgt <code>/compact</code>, Codex <code>thread/compact/start</code>, en de thread krijgt de bestaande compactierij. Er komt geen eigen samenvatting, geen nieuwe sessie en geen nieuwe node. Er komt geen knop om het aanbod voorgoed uit te zetten. Het is werk in de client alleen: een pure beslisfunctie, een dock en een onthouden weigering per chat. De wire, de daemon en de iPhone-app veranderen niet.</p>
+  </section>
+
+  <section id="nu">
+    <h2>Wat er al is</h2>
+    <ul>
+      <li><span class="badge confirmed">geverifieerd</span> <code>ChatInfo.usage</code> (<code>ChatUsageSchema</code>, <code>chat.ts:9</code>) draagt <code>contextTokens</code>, <code>contextWindow</code>, <code>costUsd</code> en <code>turns</code>. Claude vult <code>contextTokens</code> met input plus cache-creatie plus cache-lezen van het laatste <code>assistant</code>-frame (<code>claude-protocol.ts:31</code>), het venster uit <code>modelUsage</code> van het <code>result</code>-frame. Codex neemt <code>tokenUsage.last.totalTokens</code> en <code>modelContextWindow</code> uit <code>thread/tokenUsage/updated</code>.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>ContextMeter</code> tekent een ring in de werkbalk van de composer, met een popover die percentage, tokens, beurten, kosten en een knop "Compact context" toont. Die knop, en <code>/compact</code> in de composer, roepen <code>chatClient.compact(chatId)</code> aan.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>ChatSession.compact()</code> kiest per CLI: Claude (<code>'prompt'</code>) krijgt <code>/compact</code> als gewone beurt, Codex (<code>'native'</code>) een beurt zonder boodschap met <code>thread/compact/start</code>, een terminal-provider weigert met <code>chat-unsupported</code>. Claude's <code>compact_boundary</code> (met <code>pre_tokens</code>) en Codex' <code>contextCompaction</code> worden een <code>compaction</code>-item, dat de client als <code>CompactionRow</code> tekent.</li>
+      <li><span class="badge confirmed">geverifieerd</span> Het einde van een beurt staat al op de wire: <code>ChatTurnItemSchema.endedAt</code>. Er is dus geen nieuw veld nodig om te weten hoe lang een chat stil ligt.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>QuestionDock</code> en <code>ApprovalDock</code> zitten bovenaan de kaart van de composer, één tegelijk, vóór de menu's en de invoer (<code>Composer.tsx:692</code>). Dat is de plek en de vorm voor het nieuwe dock.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>limits.ts</code> heeft een klok die per minuut <code>Date.now()</code> ververst (regel 67), maar die is lokaal voor die module.</li>
+    </ul>
+    <p class="note">De meter laat al zien hoe vol de context is, en compacteren kan al. Wat ontbreekt is het moment: een persoon die na een lunch of een nacht terugkomt, ziet niet dat de volgende boodschap het hele gesprek zonder cache opnieuw laat lezen.</p>
+  </section>
+
+  <section id="persoon">
+    <h2>Wat een persoon ziet</h2>
+    <div class="mock" role="img" aria-label="Schets van de composer met bovenaan het dock: een icoon met twee pijlen naar binnen, de titel Resume with less context, de regel 212k tokens from earlier, en de knoppen Keep full history en Compact. Daaronder het invoerveld en de werkbalk.">
+      <div class="mock-dock">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 10 7-7"/><path d="M20 10h-6V4"/><path d="m3 21 7-7"/><path d="M4 14h6v6"/></svg>
+        <div class="text"><strong>Resume with less context</strong><span>212k tokens from earlier</span></div>
+        <span class="mock-btn ghost">Keep full history</span>
+        <span class="mock-btn primary">Compact</span>
+      </div>
+      <div class="mock-input">Ask anything</div>
+      <div class="mock-bar"><span class="mock-chip">Opus</span><span class="mock-chip">Default</span><span class="grow"></span><span>21%</span></div>
+    </div>
+    <p class="caption">Schets, geen screenshot. De UI-teksten zijn Engels, zoals de rest van de app.</p>
+    <ul>
+      <li><strong>Compact</strong> roept <code>chatClient.compact(chatId)</code> aan. De chat wordt daarmee bezig, dus het dock verdwijnt; na afloop staat de compactierij in de thread en zakt de ring.</li>
+      <li><strong>Keep full history</strong> onthoudt de weigering voor deze chat tot er een nieuwe beurt is geweest. Ligt de chat daarna weer 70 minuten stil, dan komt het dock terug.</li>
+      <li>Een persoon die gewoon typt en verstuurt, kiest daarmee de volle geschiedenis. Het dock blokkeert niets en vangt geen toetsen af; Enter blijft versturen.</li>
+      <li>Een vraag of goedkeuring gaat voor: zolang <code>QuestionDock</code> of <code>ApprovalDock</code> staat, verschijnt dit dock niet.</li>
+    </ul>
+    <p>Het dock telt niet mee als aandacht (<code>state/attention.ts</code>). Het is een aanbod binnen een chat die iemand al voor zich heeft, geen reden om een node op te lichten.</p>
+  </section>
+
+  <section id="regel">
+    <h2>Wanneer het dock verschijnt</h2>
+    <div class="table" role="region" aria-label="Voorwaarden" tabindex="0">
+      <table>
+        <caption>Alle voorwaarden moeten gelden.</caption>
+        <thead><tr><th scope="col">Voorwaarde</th><th scope="col">Waarom</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>capabilities.compaction !== 'none'</code></th><td>Claude (<code>'prompt'</code>) en Codex (<code>'native'</code>) kunnen compacteren; een terminal-provider niet. <code>ProviderCapabilities.compaction</code> (<code>model.ts:72</code>) is in de composer al bekend, dus de regel noemt geen provider bij naam.</td></tr>
+          <tr><th scope="row"><code>usage.contextTokens &gt;= 100_000</code></th><td>Een absoluut aantal, geen percentage: de kosten van opnieuw lezen hangen af van de tokens, niet van hoe groot het venster is. Bij een venster van 1M is 100k maar 10% en toch duur.</td></tr>
+          <tr><th scope="row">laatste <code>turn.endedAt</code> minstens 70 min geleden</th><td><span class="badge warning">afgeleid</span> De langste promptcache van Claude houdt een uur; 70 minuten ligt daar zeker voorbij. Een drempel onder het uur zou compacteren aanbieden terwijl de cache nog warm is. Voor Codex geldt dezelfde drempel; hoe lang zijn cache houdt, is niet nagegaan.</td></tr>
+          <tr><th scope="row">niet bezig, geen wachtrij, geen vraag of goedkeuring</th><td>Compacteren tijdens een beurt kan niet, en wat op de persoon wacht gaat voor.</td></tr>
+          <tr><th scope="row">geen <code>compaction</code>-item in de laatste beurt</th><td><span class="badge warning">afgeleid</span> Na een compactie kan <code>contextTokens</code> nog het oude getal tonen tot het volgende verzoek. Zonder deze regel zou het dock direct terugkomen. De regel kijkt naar de beurt en niet naar de laatste boodschap, omdat de compactie van Codex een beurt zonder boodschap van de persoon is.</td></tr>
+          <tr><th scope="row">niet geweigerd voor deze laatste beurt</th><td>"Keep full history" geldt tot de volgende beurt.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>De twee getallen zijn constanten in de code, geen instelling. Een instelling komt pas als iemand erom vraagt.</p>
+  </section>
+
+  <section id="bouw">
+    <h2>Bouw</h2>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>De beslissing, puur en getest</h3>
+        <ul>
+          <li><code>apps/client/src/chat/logic/resume-compaction.ts</code> (nieuw): <code>RESUME_COMPACTION_TOKENS = 100_000</code>, <code>RESUME_COMPACTION_IDLE_MS = 70 * 60_000</code> en <code>resumeCompactionOffer({ info, items, dismissedTurnId, now })</code>. Die geeft <code>null</code> of <code>{ turnId, tokens }</code>, waarbij <code>turnId</code> de laatste beurt is en dient als sleutel voor de weigering.</li>
+          <li>De functie leest alleen <code>ChatInfo</code> en de items die de client al heeft. <code>busy</code> en <code>waiting</code> komen uit dezelfde bronnen als in <code>Composer.tsx</code>, zodat dock en knoppen het eens zijn.</li>
+          <li><code>resume-compaction.test.ts</code>: elke voorwaarde uit de tabel apart, een Claude-, een Codex- en een terminal-chat, de grens precies op 100.000 tokens en op 70 minuten, een compactiebeurt van beide vormen (met <code>/compact</code> en zonder boodschap), een weigering voor een oudere beurt. <code>now</code> is een argument, dus geen klok in de test.</li>
+        </ul>
+        <p class="accept">Klaar als de tests slagen zonder timers of <code>Date.now()</code>.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>De klok en de weigering</h3>
+        <ul>
+          <li>De minutenklok uit <code>limits.ts</code> wordt een gedeelde hook (bijvoorbeeld <code>useMinuteNow</code>), en <code>limits.ts</code> gebruikt die ook. De composer zet hem alleen aan als de chat kan compacteren en genoeg tokens draagt, zodat niet elke chat op het canvas een timer heeft.</li>
+          <li>De weigering is lokale state per client, niet in <code>project.json</code>: een zustand-map van chat naar <code>dismissedTurnId</code>, met de sleutel uit <code>state/keys.ts</code>. Alleen in het geheugen: na herladen komt het aanbod terug, en dat is prima voor iets wat hooguit een keer per stilte verschijnt.</li>
+        </ul>
+        <p class="accept">Klaar als de bestaande tests van <code>limits.ts</code> nog slagen en <code>bun run check</code> geen nieuwe selector meldt die per aanroep een object bouwt.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Het dock</h3>
+        <ul>
+          <li><code>ResumeCompactionDock</code> in <code>chat/ui/PendingDock.tsx</code>, naast de twee andere docks en met dezelfde rand en afstanden. Icoon <code>Minimize2</code> via <code>Icon</code>, titel, tokens met <code>formatTokens</code> uit <code>ContextMeter.tsx</code> (die functie gaat naar een gedeelde plek), en twee <code>Button</code>s.</li>
+          <li><code>Composer.tsx</code>: toont het dock als <code>!question &amp;&amp; !approvals[0] &amp;&amp; offer</code>. Compact deelt de handler met de <code>ContextMeter</code>; een fout wordt de bestaande <code>notice</code>-regel in plaats van een stille <code>catch</code>.</li>
+          <li>Geen sneltoets: dit aanbod verdient er geen, en een toets zonder modifier mag niet.</li>
+        </ul>
+        <p class="accept">Klaar als in de Electron-dev-app een Claude-chat en een Codex-chat met elk ruim 100k tokens, waarvan <code>endedAt</code> van de laatste beurt handmatig 71 minuten terug is gezet in het record, het dock tonen; Compact bij beide een compactierij oplevert en het dock weghaalt; Keep full history het dock weghaalt tot na de volgende beurt; een openstaande goedkeuring het dock verbergt; het dock in licht en donker alleen semantische tokens gebruikt.</p>
+      </div></li>
+    </ol>
+    <p>Omvang: drie nieuwe of aangepaste bestanden in <code>chat</code>, een verplaatste hook en een verplaatste formatter. Geen wijziging in <code>packages/contracts</code>, dus geen Swift-generatie.</p>
+  </section>
+
+  <section id="grenzen">
+    <h2>Grenzen en risico's</h2>
+    <ul>
+      <li><span class="badge confirmed">geverifieerd</span> <strong>Na een herstart van de daemon.</strong> Het chatrecord bewaart de hele <code>ChatInfo</code>, dus ook <code>usage</code> (<code>chat-store.ts:42</code>); alleen een nieuwe chat begint op 0 (<code>chat-manager.ts:298</code>). Een chat die een nacht stil lag en waarvan de daemon intussen herstartte, krijgt het dock dus ook.</li>
+      <li><span class="badge warning">afgeleid</span> <strong>De samenvatting is die van de CLI.</strong> Wat Claude of Codex na een compactie onthoudt, bepaalt die CLI. De tekst van het dock belooft daarom minder context, geen behoud van alles.</li>
+      <li><strong>De drempels zijn geen meting.</strong> 70 minuten volgt uit de cacheduur van Claude en is voor Codex overgenomen, 100.000 tokens is een oordeel. Beide zijn één constante om bij te stellen.</li>
+      <li><strong>De iPhone-app</strong> krijgt het dock niet in deze ronde. Er verandert niets op de wire, dus de app kan dezelfde regel later zelf toepassen.</li>
+      <li><strong>Geen automatische compactie.</strong> Het dock stelt voor, de persoon beslist. Er draait geen klok die zelf iets start; dat past bij de regel dat een canvas geen scheduler is.</li>
+    </ul>
+  </section>
+
+</main>
+<footer><p>Nagelezen: <code>ChatUsageSchema</code> en <code>ChatTurnItemSchema</code> in contracts, <code>ChatSession.compact</code>, het parsen van usage en compactie in beide protocollen, <code>projector.ts</code>, <code>ContextMeter.tsx</code>, de plek van de docks in <code>Composer.tsx</code> en de klok in <code>limits.ts</code>. Ook nagelezen: het bewaren van <code>usage</code> in het chatrecord. Afgeleid: de cacheduur als grond voor 70 minuten, ook voor Codex, en het oude <code>contextTokens</code> direct na een compactie. Niet gedaan: code geschreven, een drempel gemeten, dit rapport in een browser gerenderd.</p></footer>
+</body>
+</html>
