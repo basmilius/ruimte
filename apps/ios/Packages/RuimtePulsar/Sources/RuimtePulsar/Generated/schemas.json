@@ -6654,6 +6654,9 @@
                       "type": "string"
                     }
                   }
+                },
+                "checkpointAfter": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -7801,6 +7804,9 @@
                       "type": "string"
                     }
                   }
+                },
+                "checkpointAfter": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -8667,6 +8673,9 @@
                       "type": "string"
                     }
                   }
+                },
+                "checkpointAfter": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -9527,6 +9536,9 @@
                               "type": "string"
                             }
                           }
+                        },
+                        "checkpointAfter": {
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -10919,6 +10931,9 @@
                                 "type": "string"
                               }
                             }
+                          },
+                          "checkpointAfter": {
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -11803,6 +11818,19 @@
       },
       "asView": {
         "type": "boolean"
+      },
+      "worktree": {
+        "type": "object",
+        "properties": {
+          "branch": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        }
+      },
+      "filesAfterTurn": {
+        "type": "boolean"
       }
     },
     "required": [
@@ -12073,6 +12101,83 @@
           "string",
           "null"
         ]
+      },
+      "worktree": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "branch": {
+            "type": "string"
+          },
+          "from": {
+            "type": "object",
+            "properties": {
+              "branch": {
+                "type": "string"
+              },
+              "commit": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "commit"
+            ]
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "nodeId": {
+            "type": "string"
+          },
+          "madeAt": {
+            "type": "number"
+          },
+          "missing": {
+            "type": "boolean"
+          },
+          "locked": {
+            "type": "boolean"
+          },
+          "work": {
+            "type": "object",
+            "properties": {
+              "changed": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "untracked": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "ahead": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "operation": {
+                "type": "string"
+              },
+              "behind": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "changed",
+              "untracked",
+              "ahead"
+            ]
+          }
+        },
+        "required": [
+          "path",
+          "branch"
+        ]
       }
     },
     "required": [
@@ -12080,6 +12185,54 @@
       "nodeId",
       "viewId",
       "edgeId"
+    ]
+  },
+  "request.chat.forkInfo.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "turnId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "chatId",
+      "turnId"
+    ]
+  },
+  "request.chat.forkInfo.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "repository": {
+        "type": "boolean"
+      },
+      "branches": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "branch": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "filesAfterTurn": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "repository",
+      "branches",
+      "branch",
+      "filesAfterTurn"
     ]
   },
   "request.chat.subagent.payload": {
@@ -12867,6 +13020,9 @@
                       "type": "string"
                     }
                   }
+                },
+                "checkpointAfter": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -26546,6 +26702,9 @@
                             "type": "string"
                           }
                         }
+                      },
+                      "checkpointAfter": {
+                        "type": "string"
                       }
                     },
                     "required": [
@@ -27938,6 +28097,9 @@
                               "type": "string"
                             }
                           }
+                        },
+                        "checkpointAfter": {
+                          "type": "string"
                         }
                       },
                       "required": [

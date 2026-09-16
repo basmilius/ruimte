@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AgentKindSchema, AgentStatusSchema, SuggestedTitleSchema } from './agent.ts';
+import { WorktreeSchema } from './git.ts';
 import { ModelSelectionSchema, RuntimeModeSchema } from './model.ts';
 
 // The client picks the id (its node id), like a terminal session.
@@ -297,7 +298,9 @@ export const ChatTurnItemSchema = z.object({
     // The tasks whose results woke the chat for this turn; only a turn the daemon opened carries them.
     taskIds: z.array(z.string()).optional(),
     // The CLI's own name for where this turn ended, which is what a fork after this turn is cut at.
-    native: z.object({ turnId: z.string().optional(), lastUuid: z.string().optional() }).optional()
+    native: z.object({ turnId: z.string().optional(), lastUuid: z.string().optional() }).optional(),
+    // The git tree of the chat's folder when the turn settled: what a fork after this turn starts its files from.
+    checkpointAfter: z.string().optional()
 });
 
 /* What a turn a restart could not take up again ends with, so a client can tell it from a turn a person stopped. */
@@ -552,7 +555,11 @@ export const ChatForkPayloadSchema = z.object({
     turnId: z.string().min(1),
     title: z.string().trim().min(1).max(CHAT_FORK_TITLE_MAX).optional(),
     viewId: z.string().min(1).optional(),
-    asView: z.boolean().optional()
+    asView: z.boolean().optional(),
+    // A git worktree of its own on a new branch; absent is the original's folder. The branch defaults to one named after the title.
+    worktree: z.object({ branch: z.string().trim().min(1).max(CHAT_FORK_TITLE_MAX).optional() }).optional(),
+    // With a worktree: its files as they were after the turn rather than the branch's HEAD.
+    filesAfterTurn: z.boolean().optional()
 });
 export type ChatForkPayload = z.infer<typeof ChatForkPayloadSchema>;
 
@@ -560,8 +567,30 @@ export type ChatForkPayload = z.infer<typeof ChatForkPayloadSchema>;
  * `viewId` is the canvas the node landed on, or the fork's own view, whose id is `nodeId`. `edgeId`
  * is null when no line could be drawn from the original: it stands on no canvas, or the fork does not.
  */
-export const ChatForkResultSchema = z.object({ info: ChatInfoSchema, nodeId: z.string(), viewId: z.string(), edgeId: z.string().nullable() });
+export const ChatForkResultSchema = z.object({
+    info: ChatInfoSchema,
+    nodeId: z.string(),
+    viewId: z.string(),
+    edgeId: z.string().nullable(),
+    worktree: WorktreeSchema.optional()
+});
 export type ChatForkResult = z.infer<typeof ChatForkResultSchema>;
+
+export const ChatForkInfoPayloadSchema = z.object({ chatId: ChatIdSchema, turnId: z.string().min(1) });
+export type ChatForkInfoPayload = z.infer<typeof ChatForkInfoPayloadSchema>;
+
+/*
+ * What the fork dialog asks before it offers a worktree: whether the chat's folder is in a repository,
+ * the branches taken there with a free one to suggest, and whether the files after that turn can
+ * still be put back (a tree git collected, or a turn that never had one, cannot).
+ */
+export const ChatForkInfoResultSchema = z.object({
+    repository: z.boolean(),
+    branches: z.array(z.string()),
+    branch: z.string().nullable(),
+    filesAfterTurn: z.boolean()
+});
+export type ChatForkInfoResult = z.infer<typeof ChatForkInfoResultSchema>;
 
 export const ChatListResultSchema = z.object({
     chats: z.array(ChatInfoSchema)
