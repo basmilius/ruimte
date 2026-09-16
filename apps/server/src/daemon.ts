@@ -180,7 +180,6 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         sources: (targetId) =>
             withForkOrigin(targetId, projects.index.sourcesFor(targetId), {
                 forkedFrom: (id) => lineage.forkedFrom(id),
-                forksOf: (id) => lineage.forksOf(id),
                 locate: (id) => projects.index.locate(id),
                 titleFor: (id) => projects.index.titleFor(id)
             }),
