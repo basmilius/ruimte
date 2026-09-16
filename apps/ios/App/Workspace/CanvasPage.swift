@@ -24,7 +24,12 @@ struct CanvasPage: View {
                             selectedID = node.stableID
                         } label: {
                             Label {
-                                Text(node.text("title"))
+                                HStack(spacing: 8) {
+                                    Text(node.text("title"))
+                                    if let task = workspace.session.tasks.childTask(node.stableID) {
+                                        TaskMark(task: task)
+                                    }
+                                }
                             } icon: {
                                 WorkspaceViewIcon(item: node)
                             }
@@ -38,6 +43,12 @@ struct CanvasPage: View {
                 MobileScrollViewport { insets in
                     CanvasViewport(
                         canvas: canvas, statuses: workspace.session.attention.statuses,
+                        tasks: workspace.session.tasks.tasks.values.reduce(into: [:]) { marks, task in
+                            let child = task.text("childId")
+                            if marks[child].map({ $0.number("createdAt") <= task.number("createdAt") }) ?? true {
+                                marks[child] = task
+                            }
+                        },
                         unseen: workspace.session.attention.unseen,
                         needingYou: Set(
                             canvas.list("nodes").filter { workspace.session.attention.needsYou($0.stableID) }.map(
@@ -221,6 +232,7 @@ func canvasWithoutNode(_ canvas: JSONValue, id: String) -> JSONValue {
 private struct CanvasViewport: UIViewRepresentable {
     let canvas: JSONValue
     let statuses: [String: String]
+    let tasks: [String: JSONValue]
     let unseen: Set<String>
     let needingYou: Set<String>
     let camera: JSONValue?
@@ -233,7 +245,7 @@ private struct CanvasViewport: UIViewRepresentable {
     func updateUIView(_ view: CanvasScrollView, context: Context) {
         view.contentInset = viewportInsets
         view.scrollIndicatorInsets = viewportInsets
-        view.setAttention(statuses: statuses, unseen: unseen, needingYou: needingYou)
+        view.setAttention(statuses: statuses, unseen: unseen, needingYou: needingYou, tasks: tasks)
         view.open = open
         view.menu = menu
         view.cameraChanged = cameraChanged
@@ -294,8 +306,11 @@ final class CanvasScrollView: UIScrollView, UIScrollViewDelegate {
         }
         updateVisible()
     }
-    func setAttention(statuses: [String: String], unseen: Set<String>, needingYou: Set<String>) {
+    func setAttention(
+        statuses: [String: String], unseen: Set<String>, needingYou: Set<String>, tasks: [String: JSONValue] = [:]
+    ) {
         surface.statuses = statuses
+        surface.tasks = tasks
         surface.unseen = unseen
         surface.needingYou = needingYou
         surface.redraw()
@@ -387,6 +402,7 @@ private final class CanvasSurface: UIView {
     private let drawing = CanvasDrawing()
     var open: (String) -> Void = { _ in }
     var statuses: [String: String] = [:]
+    var tasks: [String: JSONValue] = [:]
     var unseen = Set<String>()
     var needingYou = Set<String>()
     private var nodes: [JSONValue] = []
@@ -497,8 +513,18 @@ private final class CanvasSurface: UIView {
             }
             let title = node.text("title", fallback: node.text("kind"))
             drawText(
-                title, rect: CGRect(x: frame.minX + 20, y: frame.minY + 18, width: frame.width - 40, height: 50),
+                title,
+                rect: CGRect(
+                    x: frame.minX + 20, y: frame.minY + 18, width: frame.width - 40, height: tasks[id] == nil ? 50 : 30),
                 font: .preferredFont(forTextStyle: .headline), color: .label)
+            if let task = tasks[id] {
+                // The line into a task's node says so on the desktop; here the node carries the word itself.
+                let status = task.text("status")
+                drawText(
+                    "Task: " + TaskMark.word(status),
+                    rect: CGRect(x: frame.minX + 20, y: frame.minY + 50, width: frame.width - 40, height: 24),
+                    font: .preferredFont(forTextStyle: .caption1), color: AgentWorkLook(taskStatus: status).uiColor)
+            }
             let detail =
                 node.text("kind") == "note"
                 ? node.text("body")
@@ -531,7 +557,9 @@ private final class CanvasSurface: UIView {
             let rect = nodeRect(node)
             guard rect.intersects(viewport) else { return nil }
             let element = CanvasAccessibleNode(accessibilityContainer: self)
-            element.accessibilityLabel = node.text("title") + ", " + node.text("kind")
+            element.accessibilityLabel =
+                node.text("title") + ", " + node.text("kind")
+                + (tasks[node.stableID].map { ", task " + TaskMark.word($0.text("status")) } ?? "")
             element.accessibilityTraits = .button
             element.accessibilityFrameInContainerSpace = rect.offsetBy(dx: -origin.x, dy: -origin.y)
             element.action = { [weak self] in self?.open(node.stableID) }

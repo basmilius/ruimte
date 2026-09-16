@@ -184,7 +184,7 @@ final class ChatPresentation {
             let notices = work.filter { $0.value.text("kind") == "note" }
             let folded = work.filter { $0 !== final && $0.value.text("kind") != "note" }
             if !rowsFor(folded, children: children).isEmpty {
-                rows.append(ChatTimelineEntry(id: "fold-\(turnID)", kind: .turnFold, items: [turn]))
+                rows.append(ChatTimelineEntry(id: "fold-\(turnID)", kind: .turnFold, items: [turn] + notices))
                 if expandedTurns.contains(turnID) { rows += rowsFor(folded, children: children) }
             }
             let edits = work.filter {
@@ -235,14 +235,39 @@ final class ChatPresentation {
         return rows
     }
 
-    static func turnLabel(_ item: JSONValue) -> String {
+    /// The notes of the turn tell a turn a person stopped from one the machine ended after a restart.
+    static func turnLabel(_ item: JSONValue, items: [JSONValue] = []) -> String {
         let duration = ChatToolPresentation.elapsed(
             item.number("endedAt", fallback: item.number("createdAt")) - item.number("createdAt"))
         switch item.text("state") {
         case "error": return "Failed after \(duration)"
-        case "aborted": return "You stopped after \(duration)"
+        case "aborted":
+            return abortedByMachine(item, items: items) ? "Stopped after \(duration)" : "You stopped after \(duration)"
         default: return "Worked for \(duration)"
         }
+    }
+
+    // The daemon's warning note in a turn it could not resume, `notResumedNote` in the contracts.
+    private static let notResumedPrefix = "This turn could not be resumed after the machine restarted: "
+
+    static func abortedByMachine(_ turn: JSONValue, items: [JSONValue]) -> Bool {
+        let turnID = turn.text("turnId", fallback: turn.stableID)
+        return turn.text("state") == "aborted"
+            && items.contains {
+                $0.text("kind") == "note" && $0.text("turnId") == turnID && $0.text("level") == "warning"
+                    && $0.text("text").hasPrefix(notResumedPrefix)
+            }
+    }
+
+    /// The header of a turn the chat did not start from a person's message.
+    static func agentTurnLabel(_ turn: JSONValue) -> String {
+        let label = turn.text("label")
+        let tasks = turn.list("taskIds").count
+        if tasks > 0 {
+            // A turn the machine opened with the results of tasks this chat gave; the label is their titles.
+            return "Woken by \(tasks == 1 ? "a task" : "\(tasks) tasks")\(label.isEmpty ? "" : ": \(label)")"
+        }
+        return label.isEmpty ? "Continued on its own" : "Sub-agent finished: \(label)"
     }
 
 }

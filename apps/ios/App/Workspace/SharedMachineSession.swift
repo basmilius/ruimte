@@ -28,6 +28,7 @@ final class SharedMachineSession {
     }
     private weak var runtime: AppRuntime?
     @ObservationIgnored lazy var attention = AttentionStore(client: rpc)
+    @ObservationIgnored lazy var tasks = TaskStore(client: rpc)
     @ObservationIgnored lazy var icons = MachineIconState(client: rpc, fallback: machine.icon)
     @ObservationIgnored lazy var rpc = MachineClient(send: { [weak self] text in
         guard let lease = self?.lease else { throw TransportFailure.invalid("This machine is not connected.") }
@@ -97,6 +98,7 @@ final class SharedMachineSession {
             await self.runtime?.notifications.applyRead(machineID: self.machine.id, nodeID: nodeID, through: through)
         }
         attention.start()
+        tasks.start()
         icons.start()
         startPreferences()
     }
@@ -126,6 +128,7 @@ final class SharedMachineSession {
         guard references == 0 else { return }
         clearChats()
         attention.stop()
+        tasks.stop()
         icons.stop()
         stopPreferences()
         lease?.release()
@@ -193,6 +196,7 @@ final class SharedMachineSession {
         invalidated = true
         clearChats()
         attention.stop()
+        tasks.stop()
         icons.stop()
         stopPreferences()
         projectSubscriptions.invalidate()

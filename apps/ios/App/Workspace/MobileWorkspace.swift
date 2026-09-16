@@ -41,6 +41,7 @@ final class MobileWorkspace {
         stopped = false
         session.retain()
         session.retainProject(projectID)
+        session.tasks.watch(projectID)
         subscriptions.append(
             client.subscribe("project.changed") { [weak self] event in
                 guard let self, event.text("projectId") == projectID, let incoming = event["document"] else { return }
@@ -68,6 +69,7 @@ final class MobileWorkspace {
         localTask?.cancel()
         subscriptions.forEach { $0() }
         subscriptions.removeAll()
+        session.tasks.unwatch(projectID)
         Task { [projectID, session] in
             await session.releaseProject(projectID)
             session.release()

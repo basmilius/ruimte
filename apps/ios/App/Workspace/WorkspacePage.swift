@@ -297,6 +297,7 @@ struct WorkspacePage: View {
             Text(item.text("name", fallback: item.text("kind")))
                 .font(.callout).lineLimit(1).truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            if let task = workspace.session.tasks.childTask(item.stableID) { TaskMark(task: task) }
             AttentionMark(store: workspace.session.attention, id: item.stableID)
             if !isSidebar {
                 Image(lucide: "chevron-right", size: 12)

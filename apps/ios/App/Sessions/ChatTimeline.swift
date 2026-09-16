@@ -662,7 +662,7 @@ struct ChatEntryView: View {
                         presentation.toggleTurn(turn.value.text("turnId", fallback: turn.id))
                     } label: {
                         Label(
-                            ChatPresentation.turnLabel(turn.value),
+                            ChatPresentation.turnLabel(turn.value, items: entry.items.map(\.value)),
                             lucideIcon: presentation.expandedTurns.contains(
                                 turn.value.text("turnId", fallback: turn.id)) ? "chevron-down" : "chevron-right",
                             iconSize: 12
@@ -683,12 +683,8 @@ struct ChatEntryView: View {
                     Button {
                         presentation.openSubagent(toolUseID: turn.value.text("taskToolUseId"))
                     } label: {
-                        Label(
-                            turn.value.text("label").isEmpty
-                                ? "Continued on its own" : "Sub-agent finished: \(turn.value.text("label"))",
-                            lucideIcon: "bot", iconSize: 14
-                        )
-                        .font(.footnote).foregroundStyle(MobileStyle.muted).frame(minHeight: 44)
+                        Label(ChatPresentation.agentTurnLabel(turn.value), lucideIcon: "bot", iconSize: 14)
+                            .font(.footnote).foregroundStyle(MobileStyle.muted).frame(minHeight: 44)
                     }.buttonStyle(.plain).disabled(turn.value.text("taskToolUseId").isEmpty)
                 }
             case .changedFiles:
