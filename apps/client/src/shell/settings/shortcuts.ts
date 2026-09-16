@@ -97,6 +97,13 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
         shortcuts: [{ keys: CANVAS_SHORTCUTS.togglePanel, label: 'Toggle the last open panel' }]
     },
     {
+        title: 'Chat',
+        shortcuts: [
+            { keys: CANVAS_SHORTCUTS.previousMessage, label: 'Previous message you sent' },
+            { keys: CANVAS_SHORTCUTS.nextMessage, label: 'Next message you sent' }
+        ]
+    },
+    {
         title: 'Browser',
         shortcuts: [
             { keys: CANVAS_SHORTCUTS.browserBack, label: 'Back' },

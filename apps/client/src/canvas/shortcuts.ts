@@ -25,7 +25,9 @@ export const CANVAS_SHORTCUTS = {
     zoomSelection: shortcut('Shift+2'),
     deleteSelection: shortcut('Backspace'),
     zoomIn: shortcut('+'),
-    zoomOut: shortcut('-')
+    zoomOut: shortcut('-'),
+    previousMessage: shortcut('Alt+ArrowUp'),
+    nextMessage: shortcut('Alt+ArrowDown')
 } as const;
 
 export const ADD_NODE_SHORTCUTS = {

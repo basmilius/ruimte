@@ -58,3 +58,22 @@ export const pageTimeline = (chatId: string, direction: -1 | 1): boolean => {
     element.scrollBy({ top: direction * element.clientHeight * PAGE_OVERLAP, behavior: 'smooth' });
     return true;
 };
+
+/*
+ * The keyboard steps from one message of the person to the next through the timeline on screen,
+ * which is the only side that knows where its rows start. Keyed with `endpointKey`, the way the
+ * workspace's shortcuts name the chat that has the focus.
+ */
+const steppers = new Map<string, (direction: -1 | 1) => boolean>();
+
+export const registerMessageStepper = (key: string, step: (direction: -1 | 1) => boolean): (() => void) => {
+    steppers.set(key, step);
+    return () => {
+        if (steppers.get(key) === step) {
+            steppers.delete(key);
+        }
+    };
+};
+
+/* False when that chat has no timeline on screen or no message in that direction. */
+export const stepTimelineMessage = (key: string, direction: -1 | 1): boolean => steppers.get(key)?.(direction) ?? false;

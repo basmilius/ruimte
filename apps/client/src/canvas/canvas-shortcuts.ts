@@ -7,6 +7,7 @@ import { addNodeAtCenter } from '@/shell/commands';
 import { newCanvasView, showView, splitFocusedCell, stepView, viewAtIndex } from '@/project/views';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { useSubagentView } from '@/chat/subagent-view';
+import { stepTimelineMessage } from '@/chat/timeline-scroll';
 import { focusedCanvas } from '@/state/canvas';
 import { transportFor } from '@/transport';
 import { focusedDiagram } from '@/state/diagram';
@@ -167,6 +168,15 @@ export const useCanvasShortcuts = (stores: WorkspaceStores | null): void => {
                     } else {
                         browserRegistry.back(key);
                     }
+                    return;
+                }
+            }
+            /* The composer leaves these keys alone (its keymap is the standard one, without moving lines), so
+               they work while typing. Nothing is taken when the chat has no message that way. */
+            if (is(CANVAS_SHORTCUTS.previousMessage) || is(CANVAS_SHORTCUTS.nextMessage)) {
+                const key = focusedChatKey();
+                if (key !== null && !isInFloatingLayer(e.target) && stepTimelineMessage(key, is(CANVAS_SHORTCUTS.nextMessage) ? 1 : -1)) {
+                    e.preventDefault();
                     return;
                 }
             }
