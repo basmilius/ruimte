@@ -7,7 +7,7 @@ import { projectNodes } from '@/project/views';
 import { notifyTurnDone } from '@/shell/notifications';
 import { viewIdsIn } from '@/shell/split';
 import { nodeWorking } from '@/state/agent-work';
-import { seePushNotifications, clearPushNotification } from '@/state/push-attention';
+import { seePushNotifications, clearPushNotification, subscribePushAttention, unreadOnMachine } from '@/state/push-attention';
 import { liveCanvas, subscribeCanvases } from '@/state/canvas';
 import { useChats, type ChatsById } from '@/state/chats';
 import { useDocument } from '@/state/document';
@@ -231,7 +231,8 @@ export const startAttentionWatch = (): (() => void) => {
             previous,
             needsYou: new Set(groups.needsYou.map(keyOf)),
             seen: new Set([...visible].map(keyOf)),
-            unseen: new Set(Object.keys(useAttention.getState().unseen)),
+            // The machine's own unread entries count too: a turn that ended while no client was connected still leaves its mark.
+            unseen: new Set([...Object.keys(useAttention.getState().unseen), ...unreadOnMachine(endpointId).map(keyOf)]),
             known: new Set(nodes.map((node) => keyOf(node.id)))
         };
         const settled = settledSince(result);
@@ -276,6 +277,7 @@ export const startAttentionWatch = (): (() => void) => {
     const offChats = useChats.subscribe(pass);
     const offCanvases = subscribeCanvases(schedule);
     const offDocument = useDocument.subscribe(schedule);
+    const offPushAttention = subscribePushAttention(schedule);
     window.addEventListener('focus', pass);
     window.addEventListener('blur', pass);
     pass();
@@ -284,6 +286,7 @@ export const startAttentionWatch = (): (() => void) => {
         offChats();
         offCanvases();
         offDocument();
+        offPushAttention();
         window.removeEventListener('focus', pass);
         window.removeEventListener('blur', pass);
     };

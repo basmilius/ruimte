@@ -52,3 +52,26 @@ test('only readable nodes acknowledge results, including results received after 
     expect(reads.length).toBe(2);
     sync.dispose();
 });
+
+test('what the machine holds unread is known the moment a socket opens, and a read takes it off', async () => {
+    const transport = {
+        status: 'open',
+        on: () => () => {},
+        subscribeStatus: () => () => {},
+        request: async (type: string) =>
+            type === 'push.attention'
+                ? {
+                      entries: [
+                          { nodeId: 'finished-while-away', issuedAt: 100, readThrough: 0 },
+                          { nodeId: 'already-seen', issuedAt: 90, readThrough: 90 }
+                      ]
+                  }
+                : {}
+    } as unknown as Transport;
+    const sync = new PushAttentionSync(transport);
+    await flush();
+    expect(sync.unread()).toEqual(['finished-while-away']);
+    sync.markSeen('finished-while-away');
+    await flush();
+    expect(sync.unread()).toEqual([]);
+});

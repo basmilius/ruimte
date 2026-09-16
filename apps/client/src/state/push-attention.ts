@@ -1,6 +1,8 @@
 import type { PushAttentionEntry } from '@ruimte/contracts';
 import type { Transport } from '@/transport/transport';
 
+const changeListeners = new Set<() => void>();
+
 export class PushAttentionSync {
     private readonly entries = new Map<string, PushAttentionEntry>();
     private visible: ReadonlySet<string> = new Set();
@@ -54,6 +56,11 @@ export class PushAttentionSync {
             .finally(() => this.pending.delete(key));
     }
 
+    /* The nodes the machine holds something unread for: a turn that ended or a task that failed, whether or not a client was there. */
+    unread(): string[] {
+        return [...this.entries.values()].filter((entry) => entry.readThrough < entry.issuedAt).map((entry) => entry.nodeId);
+    }
+
     dispose(): void {
         this.disposed = true;
         this.generation++;
@@ -68,6 +75,9 @@ export class PushAttentionSync {
             readThrough: Math.max(entry.readThrough, previous?.readThrough ?? 0)
         };
         this.entries.set(entry.nodeId, merged);
+        for (const listener of changeListeners) {
+            listener();
+        }
         if (this.visible.has(entry.nodeId)) {
             this.markSeen(entry.nodeId);
         }
@@ -106,6 +116,16 @@ export const seePushNotifications = (endpointId: string, nodes: ReadonlySet<stri
     for (const [id, sync] of machines) {
         sync.setVisible(id === endpointId ? nodes : new Set());
     }
+};
+
+/* What a machine still holds unread, which the marks start from after a client was away. */
+export const unreadOnMachine = (endpointId: string): string[] => machines.get(endpointId)?.unread() ?? [];
+
+export const subscribePushAttention = (listener: () => void): (() => void) => {
+    changeListeners.add(listener);
+    return () => {
+        changeListeners.delete(listener);
+    };
 };
 
 export const clearPushNotification = (endpointId: string, nodeId: string): void => machines.get(endpointId)?.markSeen(nodeId);
