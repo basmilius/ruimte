@@ -4,7 +4,6 @@ import type {
     ChatCheckpointDiff,
     ChatConfigurePayload,
     ChatInfo,
-    ChatItem,
     ChatSkill,
     FsSearchResult,
     ModelSelection,
@@ -35,6 +34,8 @@ export interface ChatSendExtras {
 
 interface Mounted extends ChatOpenOptions {
     attached: boolean;
+    // The last place in the chat's stream the store holds, so a reattach asks only for what came after.
+    seq?: number;
 }
 
 interface ProviderSink {
@@ -61,7 +62,13 @@ export class ChatClient {
         this.sink = sink;
         this.providers = providers;
         this.unsubscribe.push(
-            transport.on('chat.event', ({ chatId, event }) => this.sink.apply(chatId, event)),
+            transport.on('chat.event', ({ chatId, event, seq }) => {
+                this.sink.apply(chatId, event);
+                const entry = this.mounted.get(chatId);
+                if (entry && seq !== undefined) {
+                    entry.seq = seq;
+                }
+            }),
             transport.subscribeStatus((status) => this.onStatus(status))
         );
         if (transport.status === 'open') {
@@ -215,7 +222,11 @@ export class ChatClient {
         }
     }
 
-    private async attach(chatId: string): Promise<{ info: ChatInfo; items: ChatItem[] }> {
+    /*
+     * A reattach offers the last seq the store holds. The daemon answers only what came after it when
+     * it still has all of that, and the whole thread otherwise, so a short drop costs a few events.
+     */
+    private async attach(chatId: string): Promise<void> {
         const entry = this.mounted.get(chatId);
         await this.transport.request('chat.create', {
             chatId,
@@ -225,13 +236,23 @@ export class ChatClient {
             selection: entry?.selection,
             runtimeMode: entry?.runtimeMode
         });
-        const result = await this.transport.request('chat.attach', { chatId });
+        const since = entry?.seq;
+        const result = await this.transport.request('chat.attach', { chatId, ...(since === undefined ? {} : { since }) });
         const current = this.mounted.get(chatId);
-        if (current) {
-            current.attached = true;
-            this.sink.reset(chatId, result.info, result.items);
+        if (!current) {
+            return;
         }
-        return result;
+        current.attached = true;
+        if (result.seq !== undefined) {
+            current.seq = result.seq;
+        }
+        if (result.events && since !== undefined && current === entry) {
+            for (const event of result.events) {
+                this.sink.apply(chatId, event);
+            }
+            return;
+        }
+        this.sink.reset(chatId, result.info, result.items);
     }
 
     private onStatus(status: TransportStatus): void {

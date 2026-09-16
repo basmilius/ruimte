@@ -26,6 +26,8 @@ class FakeTransport implements Transport {
     status: TransportStatus = 'open';
     readonly calls: Call[] = [];
     items: ChatItem[] = [];
+    // What `chat.attach` answers when a test wants more than the thread, such as a seq or the events after `since`.
+    attachResult: ((payload: RequestMap['chat.attach']['payload']) => Partial<RequestMap['chat.attach']['result']>) | null = null;
     private readonly statusHandlers = new Set<(status: TransportStatus) => void>();
     private readonly eventHandlers = new Map<string, Set<(payload: unknown) => void>>();
 
@@ -39,7 +41,11 @@ class FakeTransport implements Transport {
             case 'chat.create':
                 return Promise.resolve(info(chatId) as RequestMap[T]['result']);
             case 'chat.attach':
-                return Promise.resolve({ info: info(chatId), items: this.items } as RequestMap[T]['result']);
+                return Promise.resolve({
+                    info: info(chatId),
+                    items: this.items,
+                    ...this.attachResult?.(payload as RequestMap['chat.attach']['payload'])
+                } as RequestMap[T]['result']);
             case 'chat.configure':
                 return Promise.resolve({ ...info(chatId), runtimeMode: 'auto' } as RequestMap[T]['result']);
             case 'provider.list':
@@ -152,6 +158,30 @@ describe('ChatClient', () => {
         await flush();
         expect(transport.of('chat.attach').map((c) => c.payload)).toEqual([{ chatId: 'a' }]);
         expect(sink.resets.map((r) => r.chatId)).toEqual(['a', 'b', 'a']);
+    });
+
+    test('a reconnect offers the last seq it holds and applies only the events that came after it', async () => {
+        const { transport, sink, client } = setup();
+        const later: ChatEvent = { type: 'delta', itemId: 'a1', text: 'more' };
+        transport.attachResult = (payload) => (payload.since === undefined ? { seq: 4 } : { items: [], seq: 6, events: [later] });
+        await client.open('a', {});
+        expect(transport.of('chat.attach')[0]?.payload).toEqual({ chatId: 'a' });
+        transport.emit('chat.event', { chatId: 'a', event: { type: 'delta', itemId: 'a1', text: 'x' }, seq: 5 });
+
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        await flush();
+        expect(transport.of('chat.attach').at(-1)?.payload).toEqual({ chatId: 'a', since: 5 });
+        expect(sink.resets).toHaveLength(1);
+        expect(sink.events.at(-1)).toEqual({ chatId: 'a', event: later });
+
+        // The daemon no longer holds what came after the seq it was offered, so the whole thread comes instead.
+        transport.attachResult = () => ({ seq: 9 });
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        await flush();
+        expect(transport.of('chat.attach').at(-1)?.payload).toEqual({ chatId: 'a', since: 6 });
+        expect(sink.resets).toHaveLength(2);
     });
 
     test('letting go of the machine detaches every chat and kills none', async () => {
