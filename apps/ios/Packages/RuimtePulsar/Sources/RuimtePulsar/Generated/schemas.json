@@ -11831,6 +11831,40 @@
       },
       "filesAfterTurn": {
         "type": "boolean"
+      },
+      "provider": {
+        "type": "string",
+        "enum": [
+          "claude",
+          "codex",
+          "gemini",
+          "copilot"
+        ]
+      },
+      "selection": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "minLength": 1
+          },
+          "options": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": [
+                "string",
+                "boolean"
+              ]
+            }
+          }
+        },
+        "required": [
+          "model",
+          "options"
+        ]
       }
     },
     "required": [

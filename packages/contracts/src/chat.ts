@@ -559,7 +559,11 @@ export const ChatForkPayloadSchema = z.object({
     // A git worktree of its own on a new branch; absent is the original's folder. The branch defaults to one named after the title.
     worktree: z.object({ branch: z.string().trim().min(1).max(CHAT_FORK_TITLE_MAX).optional() }).optional(),
     // With a worktree: its files as they were after the turn rather than the branch's HEAD.
-    filesAfterTurn: z.boolean().optional()
+    filesAfterTurn: z.boolean().optional(),
+    // Another CLI to go on with, which gets the conversation as text; absent is the original's CLI.
+    provider: AgentKindSchema.optional(),
+    // The model of that CLI; absent is the newest composer pick for it.
+    selection: ModelSelectionSchema.optional()
 });
 export type ChatForkPayload = z.infer<typeof ChatForkPayloadSchema>;
 
