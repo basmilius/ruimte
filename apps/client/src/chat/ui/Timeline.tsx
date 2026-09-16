@@ -2,13 +2,13 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import clsx from 'clsx';
+import type { ChatSubagentItem } from '@ruimte/contracts';
 import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
 import { registerTimeline, setTimelineAtEnd } from '@/chat/timeline-scroll';
 import { EMPTY_TARGET, readTimelineTarget, withCurrentText, type TimelineTarget } from '@/chat/logic/timeline-target';
 import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
-import { AgentTurnRow, ApprovalHistoryRow, AssistantRow, CompactionRow, NoteRow, QuestionHistoryRow, ThinkingRow, UserRow } from '@/chat/ui/rows/MessageRows';
-import { SubagentRow } from '@/chat/ui/rows/SubagentRow';
-import { ChangedFilesRow, TurnFoldRow, WorkGroupRow, WorkLiveRow, WorkRow, WorkingRow } from '@/chat/ui/rows/WorkRows';
+import { Row } from '@/chat/ui/rows/Rows';
+import { useUi } from '@/state/ui';
 import { useChatRow, useChats } from '@/state/chats';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { FileLinkContext } from '@/shell/panels/file-links';
@@ -18,52 +18,6 @@ import { EmptyState } from '@/ui/EmptyState';
 /* Below this distance from the bottom the thread follows new content; above it the reader scrolled back on purpose. */
 const FOLLOW_THRESHOLD_PX = 40;
 const ESTIMATED_ROW_PX = 56;
-
-interface RowProps {
-    row: TimelineRow;
-    chatId: string;
-    toggleGroup(id: string): void;
-    toggleTurn(id: string): void;
-    toggleSubagent(id: string): void;
-    openSubagent(toolUseId: string): void;
-}
-
-function Row({ row, chatId, toggleGroup, toggleTurn, toggleSubagent, openSubagent }: RowProps) {
-    switch (row.kind) {
-        case 'user':
-            return <UserRow chatId={chatId} item={row.item} />;
-        case 'turn-start': {
-            const toolUseId = row.turn.taskToolUseId;
-            return <AgentTurnRow label={row.label} onOpen={toolUseId ? () => openSubagent(toolUseId) : undefined} />;
-        }
-        case 'assistant':
-            return <AssistantRow chatId={chatId} item={row.item} />;
-        case 'thinking':
-            return <ThinkingRow chatId={chatId} item={row.item} />;
-        case 'work':
-            return <WorkRow tool={row.tool} />;
-        case 'work-live':
-            return <WorkLiveRow tool={row.tool} />;
-        case 'work-group':
-            return <WorkGroupRow tools={row.tools} summary={row.summary} expanded={row.expanded} onToggle={() => toggleGroup(row.id)} />;
-        case 'subagent':
-            return <SubagentRow item={row.item} work={row.children} expanded={row.expanded} onToggle={() => toggleSubagent(row.id)} />;
-        case 'turn-fold':
-            return <TurnFoldRow turn={row.turn} label={row.label} expanded={row.expanded} onToggle={() => toggleTurn(row.turn.id)} />;
-        case 'changed-files':
-            return <ChangedFilesRow chatId={chatId} turnId={row.turnId} tools={row.tools} diff={row.diff} checkpoint={row.checkpoint} />;
-        case 'approval':
-            return <ApprovalHistoryRow item={row.item} />;
-        case 'question':
-            return <QuestionHistoryRow item={row.item} />;
-        case 'note':
-            return <NoteRow level={row.level} text={row.text} />;
-        case 'compaction':
-            return <CompactionRow preTokens={row.preTokens} />;
-        case 'working':
-            return <WorkingRow startedAt={row.startedAt} />;
-    }
-}
 
 /* Extra room under the last row so the floating composer never covers it. */
 const COMPOSER_CLEARANCE_PX = 168;
@@ -158,6 +112,11 @@ export function Timeline({ chatId }: { chatId: string }) {
         followRef.current = false;
     };
 
+    /* The whole of what a sub-agent did, beside the thread: its row only keeps the beginning. */
+    const openConversation = (item: ChatSubagentItem): void => {
+        useUi.getState().openSubagentPanel(endpointId, chatId, { toolUseId: item.toolUseId, description: item.description });
+    };
+
     /* The header of a turn a sub-agent woke: it points at the row that agent worked in. */
     const openSubagent = (toolUseId: string): void => {
         const index = rows.findIndex((row) => row.kind === 'subagent' && row.item.toolUseId === toolUseId);
@@ -226,6 +185,7 @@ export function Timeline({ chatId }: { chatId: string }) {
                                         toggleTurn={(id) => toggle(setExpandedTurns, id)}
                                         toggleSubagent={(id) => toggle(setExpandedSubagents, id)}
                                         openSubagent={openSubagent}
+                                        openConversation={openConversation}
                                     />
                                 </div>
                             );

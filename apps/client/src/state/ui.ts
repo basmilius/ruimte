@@ -3,9 +3,25 @@ import { create } from 'zustand';
 
 export type SettingsSectionId = 'appearance' | 'keyboard' | 'views' | 'files' | 'agents' | 'usage' | 'machines' | 'about';
 
-export type PanelKind = ProjectPanelKind;
+/* A subagent's conversation is a panel too, but one nobody keeps open: it is never stored with a project's panels. */
+export type PanelKind = ProjectPanelKind | 'subagent';
 
-const PANEL_KINDS: readonly PanelKind[] = ['files', 'git', 'processes'];
+const PANEL_KINDS: readonly ProjectPanelKind[] = ['files', 'git', 'processes'];
+
+/* One conversation on the way down from the chat: the call that opened it and what that call called it. */
+export interface SubagentCrumb {
+    toolUseId: string;
+    description: string;
+}
+
+export interface SubagentPanelState {
+    endpointId: string;
+    chatId: string;
+    /* From the subagent the chat opened down to the one on screen, which is the last. */
+    trail: SubagentCrumb[];
+    /* The project panel that was up before, which is what the project's file keeps in its place. */
+    before: ProjectPanelKind;
+}
 
 const SIDEBAR_STORAGE_KEY = 'ruimte.sidebar';
 
@@ -38,21 +54,27 @@ export interface PanelState {
     kind: PanelKind;
 }
 
+/* A panel as a project's file keeps it. */
+export interface StoredPanelState {
+    open: boolean;
+    kind: ProjectPanelKind;
+}
+
 export interface PreviewState {
     open: boolean;
 }
 
-const CLOSED_PANEL: PanelState = { open: false, kind: 'files' };
+const CLOSED_PANEL: StoredPanelState = { open: false, kind: 'files' };
 const CLOSED_PREVIEW: PreviewState = { open: false };
 
 /* The kind on its own for an open panel, `closed:` in front for one that is not, so a toggle still
    knows which panel it reopens. The shape the legacy key was written in. */
-export const parsePanel = (raw: string | null): PanelState => {
+export const parsePanel = (raw: string | null): StoredPanelState => {
     if (!raw) {
         return CLOSED_PANEL;
     }
     const open = !raw.startsWith('closed:');
-    const kind = (open ? raw : raw.slice('closed:'.length)) as PanelKind;
+    const kind = (open ? raw : raw.slice('closed:'.length)) as ProjectPanelKind;
     return PANEL_KINDS.includes(kind) ? { open, kind } : CLOSED_PANEL;
 };
 
@@ -73,7 +95,7 @@ const readLegacy = (key: string): string | null => {
 };
 
 export interface PanelDefaults {
-    panel: PanelState;
+    panel: StoredPanelState;
     preview: PreviewState;
     panelWidth: number | null;
     previewWidth: number | null;
@@ -170,6 +192,14 @@ interface UiStore {
     /* Puts a project's panels on screen in one go, when it opens; they land without sliding. */
     setPanels(state: PanelDefaults): void;
     setSidebarExpanded(ids: string[] | null): void;
+    /* The conversation the subagent panel shows, or the last it showed; null before any was opened. */
+    subagentPanel: SubagentPanelState | null;
+    /* Opens a subagent of a chat in the panel, in place of whatever the panel showed. */
+    openSubagentPanel(endpointId: string, chatId: string, crumb: SubagentCrumb): void;
+    /* Goes one level down, to a subagent that the one on screen opened. */
+    openSubagentChild(crumb: SubagentCrumb): void;
+    /* Goes back up the breadcrumb to the conversation at `index`. */
+    openSubagentCrumb(index: number): void;
 }
 
 /* Which app-level dialog is up; nothing here belongs to a node. The panels do belong to a project:
@@ -277,5 +307,29 @@ export const useUi = create<UiStore>((set, get) => ({
             previewWidth: state.previewWidth,
             panelsRestoring: true
         });
+    },
+    subagentPanel: null,
+    openSubagentPanel(endpointId, chatId, crumb) {
+        const { panel, subagentPanel } = get();
+        const before = panel.kind === 'subagent' ? (subagentPanel?.before ?? 'files') : panel.kind;
+        set({ subagentPanel: { endpointId, chatId, trail: [crumb], before }, panel: { open: true, kind: 'subagent' }, panelsRestoring: false });
+    },
+    openSubagentChild(crumb) {
+        const current = get().subagentPanel;
+        if (!current) {
+            return;
+        }
+        set({ subagentPanel: { ...current, trail: [...current.trail, crumb] } });
+    },
+    openSubagentCrumb(index) {
+        const current = get().subagentPanel;
+        if (!current || index < 0 || index >= current.trail.length) {
+            return;
+        }
+        set({ subagentPanel: { ...current, trail: current.trail.slice(0, index + 1) } });
     }
 }));
+
+/* The panel as a project's file may hold it: a subagent's conversation is kept as the panel it covered, closed. */
+export const storedPanelOf = (panel: PanelState, subagentPanel: SubagentPanelState | null): StoredPanelState =>
+    panel.kind === 'subagent' ? { open: false, kind: subagentPanel?.before ?? 'files' } : { open: panel.open, kind: panel.kind };

@@ -7,6 +7,7 @@ import { PanelHeaderProvider } from '@/shell/PanelHeaderSlot';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
 import { GitPanel } from '@/shell/panels/GitPanel';
 import { ProcessesPanel } from '@/shell/panels/ProcessesPanel';
+import { SubagentPanel } from '@/shell/panels/SubagentPanel';
 import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useUi, type PanelKind } from '@/state/ui';
@@ -17,6 +18,7 @@ import { Tooltip } from '@/ui/Tooltip';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 
 const DEFAULT_WIDTH = 540;
+const SUBAGENT_PANEL = { label: 'Sub-agent', minWidth: 320 };
 // A drag stops here instead of squeezing the canvas away.
 const MIN_CANVAS_WIDTH = 360;
 // How long the open and close motion takes; the same number as `.panel-shell` in `styles.css`.
@@ -30,6 +32,8 @@ function PanelBody({ kind }: { kind: PanelKind }) {
             return <GitPanel />;
         case 'processes':
             return <ProcessesPanel />;
+        case 'subagent':
+            return <SubagentPanel />;
     }
 }
 
@@ -56,7 +60,8 @@ export function Panel() {
     }
     const present = open || !settled;
     const ref = useRef<HTMLElement>(null);
-    const entry = PANELS.find((candidate) => candidate.kind === panel.kind);
+    // A sub-agent's conversation has no button of its own, so it is not among the panels the toolbar lists.
+    const entry = panel.kind === 'subagent' ? SUBAGENT_PANEL : PANELS.find((candidate) => candidate.kind === panel.kind);
     const bounds = { min: entry?.minWidth ?? 240, max: () => window.innerWidth - MIN_CANVAS_WIDTH };
     // The project may have been on a wider window than this one, so its width is clamped on the way in.
     const width = clampColumnWidth(bounds, stored ?? DEFAULT_WIDTH);
