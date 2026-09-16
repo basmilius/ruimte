@@ -19,6 +19,10 @@ struct AppHome: View {
     @State private var pairAfterDismiss = false
     @State private var search = ""
     @State private var sceneID = UUID().uuidString
+    @State private var restoreAttempted = false
+    /// The project a cold start reopened, until it opens or fails.
+    @State private var restoring: WorkspaceNavigation?
+    @State private var restoreProblem: String?
     @Environment(\.scenePhase) private var phase
     @AppStorage("ruimte.ios.appearance") private var appearance = "system"
 
@@ -59,13 +63,25 @@ struct AppHome: View {
         .task {
             await runtime.start()
             await runtime.notifications.restore()
+            restoreLastProject()
         }
         .task(id: machineRevision) { projects.reconcile(runtime: runtime) }
         .task(id: runtime.attentionKeys) { await runtime.notifications.syncBadge(liveKeys: runtime.attentionKeys) }
         .onOpenURL { runtime.notifications.openActivityURL($0) }
         .preferredColorScheme(appearance == "light" ? .light : appearance == "dark" ? .dark : nil)
+        .onChange(of: restoreFailure) { _, failure in
+            guard let failure, let restoring else { return }
+            restoreProblem =
+                "Could not reopen your last project on \(restoring.workspace.session.machine.name). \(failure)"
+            self.restoring = nil
+            if activeProject === restoring { activeProject = nil }
+        }
+        .onChange(of: restoring?.workspace.ready) { _, ready in
+            if ready == true { restoring = nil }
+        }
         .onChange(of: runtime.account?.id) { _, account in
-            activeProject = nil
+            // The account restored on launch may land after the last project reopened.
+            if restoring == nil || activeProject !== restoring { activeProject = nil }
             if account != nil { signIn = false }
         }
         .onChange(of: runtime.notifications.destination) { _, destination in
@@ -110,7 +126,7 @@ struct AppHome: View {
                     activeProject = nil
                     runtime.notifications.destination = notification
                 case nil:
-                    activeProject = nil
+                    if activeProject != nil { closeProject() }
                     runtime.notifications.destination = nil
                 }
             })
@@ -160,7 +176,7 @@ struct AppHome: View {
                             .sharedBackgroundVisibility(.hidden)
                     }
                 }
-                .navigationDestination(item: $activeProject) { project in
+                .navigationDestination(item: sidebarProject) { project in
                     WorkspacePage(navigation: project, isSidebar: true)
                 }
             }
@@ -242,8 +258,61 @@ struct AppHome: View {
         }
     }
 
+    private var sidebarProject: Binding<WorkspaceNavigation?> {
+        Binding(
+            get: { activeProject },
+            set: { project in
+                if let project {
+                    activeProject = project
+                } else if activeProject != nil {
+                    closeProject()
+                }
+            })
+    }
+
+    private var restoreFailure: String? {
+        guard let restoring, !restoring.workspace.ready else { return nil }
+        let workspace = restoring.workspace
+        if let problem = workspace.problem { return problem }
+        return workspace.session.failedAttempts >= 3
+            ? workspace.session.problem ?? "The machine is not answering." : nil
+    }
+
+    private func restoreLastProject() {
+        guard !restoreAttempted else { return }
+        restoreAttempted = true
+        guard let last = LastProject.read(), activeProject == nil, runtime.notifications.destination == nil else {
+            return
+        }
+        guard let machine = runtime.machines.first(where: { $0.id == last.machineID }) else {
+            restoreProblem = "Could not reopen your last project. Its machine is no longer connected to this device."
+            // Keep it when the machine list itself failed to load, so the next start tries again.
+            if runtime.problem == nil { LastProject.forget() }
+            return
+        }
+        let navigation = WorkspaceNavigation(
+            workspace: MobileWorkspace(session: runtime.session(for: machine), projectID: last.projectID))
+        restoring = navigation
+        activeProject = navigation
+    }
+
+    private func retryRestore() {
+        restoreProblem = nil
+        restoreAttempted = false
+        restoreLastProject()
+    }
+
+    private func closeProject() {
+        activeProject = nil
+        restoring = nil
+        LastProject.forget()
+    }
+
     private func openWorkspace(_ workspace: MobileWorkspace) {
         machines = false
+        restoreProblem = nil
+        restoring = nil
+        LastProject.remember(machineID: workspace.session.machine.id, projectID: workspace.projectID)
         withAnimation(reduceMotion ? nil : .default) {
             runtime.notifications.destination = nil
             activeProject = WorkspaceNavigation(workspace: workspace)
@@ -263,6 +332,28 @@ struct AppHome: View {
 
     private var projectList: some View {
         MobileList {
+            if let restoreProblem {
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(restoreProblem).font(.subheadline).foregroundStyle(MobileStyle.text)
+                        HStack(spacing: 16) {
+                            if LastProject.read() != nil {
+                                Button("Try again") { retryRestore() }
+                            }
+                            Button("Dismiss") {
+                                self.restoreProblem = nil
+                                LastProject.forget()
+                            }
+                        }
+                        .buttonStyle(.borderless).font(.subheadline)
+                    }
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(MobileStyle.panel, in: .rect(cornerRadius: 16))
+                    .accessibilityIdentifier("projects.restoreProblem")
+                }
+                .listSectionSeparator(.hidden, edges: .top)
+            }
             if !visibleProjects.isEmpty {
                 Section {
                     ProjectLinks(runtime: runtime, rows: visibleProjects)

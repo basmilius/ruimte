@@ -15,6 +15,9 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   Separators group the view list into sections; rows show the name and desktop Lucide or chosen emoji icon.
   Projects use native grouped lists with a separate recently closed page. Custom image icons,
   including `.idea/icon.svg`, use the existing authenticated `projectIcon` byte resource and dark variant.
+  A cold start reopens the project you left open; if that fails, the list says why and offers Try again.
+  Going back to the list forgets it. An empty canvas offers tiles for the installed agents from `provider.list`
+  and for each kind of node, and an empty drawing or diagram says so until its first element.
 - Native chat timeline, streaming, markdown/code highlighting, model options, drafts,
   attachments, context selection, approvals and questions. The composer styles Markdown
   while editing and shows selected files and skills as inline badges.

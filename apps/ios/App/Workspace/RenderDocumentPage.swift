@@ -19,6 +19,16 @@ struct RenderDocumentPage: View {
                 MobileScrollViewport { insets in
                     NativeScene(scene: scene, viewportInsets: insets)
                 }
+                .overlay {
+                    if kind == "diagram" && scene.list("elements").isEmpty {
+                        ContentUnavailableView(
+                            "This diagram is empty", lucideIcon: "workflow",
+                            description: Text("An agent fills it with ruimte-context diagram.")
+                        )
+                        .allowsHitTesting(false)
+                        .accessibilityIdentifier("diagram.empty")
+                    }
+                }
             } else if let problem {
                 ContentUnavailableView(
                     "Could not load \(kind)", lucideIcon: "triangle-alert", description: Text(problem))

@@ -315,6 +315,19 @@ func newCanvas() -> JSONValue {
     ])
 }
 
+/// A node for a canvas, placed right of the nodes it already has.
+func newCanvasNode(kind: String, title: String, after nodes: [JSONValue], extra: [String: JSONValue] = [:]) -> JSONValue
+{
+    let right = nodes.map { $0.number("x") + $0.number("w") }.max() ?? -40
+    var node: [String: JSONValue] = [
+        "id": .string(kind + "-" + UUID().uuidString), "kind": .string(kind), "title": .string(title),
+        "titleSource": .string("user"), "x": .number(right + 40), "y": .number(0),
+        "w": .number(kind == "chat" ? 480 : 400), "h": .number(300),
+    ]
+    node.merge(extra) { _, new in new }
+    return .object(node)
+}
+
 struct ProjectItemPage: View {
     let workspace: MobileWorkspace
     let item: JSONValue
@@ -434,11 +447,25 @@ struct AddProjectItem: View {
     let workspace: MobileWorkspace
     let canvasID: String?
     @Environment(\.dismiss) private var dismiss
-    @State private var kind = "chat"
+    @State private var kind: String
     @State private var name = ""
     @State private var detail = ""
     @State private var provider = "codex"
+    @State private var providers: [JSONValue]?
     @State private var saving = false
+
+    init(workspace: MobileWorkspace, canvasID: String?, kind: String = "chat") {
+        self.workspace = workspace
+        self.canvasID = canvasID
+        _kind = State(initialValue: kind)
+    }
+
+    private var chatAgents: [(kind: String, name: String)] {
+        guard let providers else { return [("codex", "Codex"), ("claude", "Claude Code")] }
+        return AgentCatalog.installed(providers, target: "chat").map {
+            ($0.text("kind"), $0.text("name", fallback: $0.text("kind")))
+        }
+    }
     var body: some View {
         NavigationStack {
             MobileForm {
@@ -457,8 +484,8 @@ struct AddProjectItem: View {
                 if kind == "note" { TextEditor(text: $detail).frame(minHeight: 140) }
                 if kind == "chat" {
                     Picker("Agent", selection: $provider) {
-                        Text("Codex").tag("codex")
-                        Text("Claude Code").tag("claude")
+                        ForEach(chatAgents, id: \.kind) { agent in Text(agent.name).tag(agent.kind) }
+                        Text("Choose a model in the chat").tag("")
                     }
                 }
                 if let problem = workspace.problem { Text(problem).foregroundStyle(.red) }
@@ -471,6 +498,15 @@ struct AddProjectItem: View {
                     }
                 }
         }
+        .task(id: workspace.session.generation) {
+            guard workspace.session.connected, let loaded = try? await AgentCatalog.load(workspace.client) else {
+                return
+            }
+            providers = loaded
+            if !provider.isEmpty && !chatAgents.contains(where: { $0.kind == provider }) {
+                provider = chatAgents.first?.kind ?? ""
+            }
+        }
     }
     private func add() async {
         saving = true
@@ -478,34 +514,27 @@ struct AddProjectItem: View {
         let id = kind + "-" + UUID().uuidString
         let title = name.isEmpty ? kind.capitalized : name
         var item: [String: JSONValue] = ["id": .string(id), "kind": .string(kind)]
-        if let canvasID {
-            let nodes = workspace.views.first(where: { $0.stableID == canvasID })?.list("nodes") ?? []
-            let right = nodes.map { $0.number("x") + $0.number("w") }.max() ?? -40
-            item.merge([
-                "title": .string(title), "titleSource": .string("user"), "x": .number(right + 40), "y": .number(0),
-                "w": .number(kind == "chat" ? 480 : 400), "h": .number(300),
-            ]) { _, new in new }
-            if kind == "chat" {
-                item["provider"] = .string(provider)
-                item["providerFixed"] = .bool(true)
-            }
+        let agent: [String: JSONValue] =
+            kind == "chat" && !provider.isEmpty
+            ? ["provider": .string(provider), "providerFixed": .bool(true)] : [:]
+        if canvasID != nil {
+            item.merge(agent) { _, new in new }
             if kind == "group" { item["memberIds"] = .array([]) }
             if kind == "note" { item["body"] = .string(detail) }
         } else {
             item["name"] = .string(title)
             item["titleSource"] = .string("user")
-            if kind == "chat" || kind == "terminal" {
-                item["node"] =
-                    kind == "chat"
-                    ? .object(["provider": .string(provider), "providerFixed": .bool(true)]) : .object([:])
-            }
+            if kind == "chat" || kind == "terminal" { item["node"] = .object(agent) }
             if kind == "canvas" { for key in ["nodes", "texts", "edges", "layouts"] { item[key] = .array([]) } }
         }
         if kind == "browser" { item["url"] = .string(detail) }
         if kind == "file" { item["path"] = .string(detail) }
         let value = JSONValue.object(item)
         if let canvasID {
-            await workspace.updateView(canvasID) { $0.setting("nodes", .array($0.list("nodes") + [value])) }
+            await workspace.updateView(canvasID) { view in
+                let node = newCanvasNode(kind: kind, title: title, after: view.list("nodes"), extra: item)
+                return view.setting("nodes", .array(view.list("nodes") + [node]))
+            }
         } else {
             await workspace.edit { $0.setting("views", .array($0.list("views") + [value])) }
             workspace.select(id)

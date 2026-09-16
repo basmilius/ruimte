@@ -27,6 +27,17 @@ struct DrawingEditorPage: View {
                         editText: { element, isNew in edit = DrawingTextEdit(element: element, isNew: isNew) },
                         showStyle: { showStyle = true })
                 }
+                .overlay {
+                    if model.elements.isEmpty {
+                        ContentUnavailableView(
+                            "Nothing drawn yet", lucideIcon: "pen-tool",
+                            description: Text(
+                                "Pick a pen or a shape from the tools below and draw with a finger or Apple Pencil.")
+                        )
+                        .allowsHitTesting(false)
+                        .accessibilityIdentifier("drawing.empty")
+                    }
+                }
             } else if let problem = model.problem {
                 ContentUnavailableView("Could not open drawing", lucideIcon: "pen-tool", description: Text(problem))
             } else {

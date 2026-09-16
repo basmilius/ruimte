@@ -8,6 +8,7 @@ struct CanvasPage: View {
     @State private var selectedID: String?
     @State private var menuID: String?
     @State private var adding = false
+    @State private var addingKind = "chat"
     @State private var listed = false
     @State private var fit = 0
     @State private var renameID: String?
@@ -59,14 +60,13 @@ struct CanvasPage: View {
                 }
                 .overlay {
                     if canvas.list("nodes").isEmpty && canvas.list("texts").isEmpty {
-                        ContentUnavailableView {
-                            Label("An open canvas", lucideIcon: "layout-grid", iconSize: 48)
-                        } description: {
-                            Text("Add a chat, terminal, note or file to get started.")
-                        } actions: {
-                            Button("Add node") { adding = true }.buttonStyle(.borderedProminent)
-                                .foregroundStyle(MobileStyle.onAccent)
-                        }
+                        CanvasStartGrid(
+                            workspace: workspace, viewID: viewID,
+                            compose: { kind in
+                                addingKind = kind
+                                adding = true
+                            },
+                            added: { fit += 1 })
                     }
                 }
             }
@@ -79,7 +79,10 @@ struct CanvasPage: View {
                 Spacer()
                 Button("Fit canvas", lucideIcon: "maximize-2") { fit += 1 }.disabled(listed)
                 Spacer()
-                Button("Add node", lucideIcon: "plus") { adding = true }
+                Button("Add node", lucideIcon: "plus") {
+                    addingKind = "chat"
+                    adding = true
+                }
             }
         }
         .navigationDestination(item: $selectedID) { id in
@@ -87,7 +90,7 @@ struct CanvasPage: View {
                 ProjectItemPage(workspace: workspace, item: node)
             }
         }
-        .mobileSheet(isPresented: $adding) { AddProjectItem(workspace: workspace, canvasID: viewID) }
+        .mobileSheet(isPresented: $adding) { AddProjectItem(workspace: workspace, canvasID: viewID, kind: addingKind) }
         .confirmationDialog(
             "Node", isPresented: Binding(get: { menuID != nil }, set: { if !$0 { menuID = nil } }),
             titleVisibility: .visible
