@@ -5,6 +5,7 @@ import { Menu } from '@base-ui-components/react/menu';
 import {
     Check,
     ChevronDown,
+    CheckCheck,
     ChevronRight,
     Circle,
     CircleAlert,
@@ -13,7 +14,6 @@ import {
     CircleX,
     Copy,
     Info,
-    ListChecks,
     CirclePause,
     LoaderCircle,
     Lock,
@@ -146,7 +146,7 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
         <div className="flex min-h-0 grow flex-col">
             <div className="flex shrink-0 flex-col gap-1.5 border-b border-border px-4 pt-3 pb-3">
                 <div className="flex min-w-0 items-center gap-2 text-base font-medium text-text">
-                    <Icon icon={ListChecks} size={16} className="shrink-0 text-text-muted" />
+                    <Icon icon={CheckCheck} size={16} className="shrink-0 text-text-muted" />
                     <span className="min-w-0 truncate select-text">{plan.meta.title}</span>
                 </div>
                 {plan.meta.summary && <p className="text-xs whitespace-pre-wrap text-text-muted select-text">{plan.meta.summary}</p>}
