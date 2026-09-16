@@ -238,6 +238,8 @@ describe('a task wakes the chat that gave it', () => {
         // A question keeps the child's first turn open, so the task is still open when the node goes.
         const child = await delegate(daemon, 'Lexer', 'ask: which color');
         await daemon.until(() => daemon.chats.get(child.childId)?.info.activeTurnId !== null);
+        // The start-agent handler checks the node is still placed after its create; removing it before that check lands would let the handler end the chat first.
+        await daemon.worker.settled();
 
         await store.mutate(projectId, (current) => ({
             content: {
