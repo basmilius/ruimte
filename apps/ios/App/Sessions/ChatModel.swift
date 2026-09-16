@@ -12,6 +12,9 @@ final class ChatModel {
     var items: [JSONValue] = []
     private(set) var messageCount = 0
     private(set) var pending: [JSONValue] = []
+    /// Whether the thread holds a subagent row, and one with a pointer of its own; kept apart from `items` so the
+    /// screen does not observe every streamed delta.
+    private(set) var subagentRows = (any: false, native: false)
     var draft: String { didSet { UserDefaults.standard.set(draft, forKey: draftKey) } }
     var attachments: [ChatUpload] = []
     var mentions: [String] = []
@@ -42,6 +45,9 @@ final class ChatModel {
 
     private func refreshPending() {
         messageCount = items.count
+        let rows = items.filter { $0.text("kind") == "subagent" && !$0.text("toolUseId").isEmpty }
+        let next = (any: !rows.isEmpty, native: rows.contains { $0["native"]?.objectValue != nil })
+        if next != subagentRows { subagentRows = next }
         let visibleIDs = Set(items.compactMap { $0["id"]?.stringValue })
         let requests =
             history.pending.values.filter { !visibleIDs.contains($0.text("id")) }.sorted {

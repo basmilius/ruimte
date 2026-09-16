@@ -11,43 +11,27 @@ struct ChatSubagentRow: View {
     @State private var showingResult = false
     private var item: JSONValue { agent.value }
     private var running: Bool { item.text("status") == "running" }
-    private var expanded: Bool { presentation.expandedSubagents.contains(agent.id) }
+    private var expanded: Bool { !opens && presentation.expandedSubagents.contains(agent.id) }
+    private var opens: Bool { ChatSubagents.canOpen(item, machineRefused: presentation.subagentsRefused) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ChatExpansionButton(expanding: !expanded) {
-                presentation.toggleSubagent(agent.id)
-            } label: {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Image(lucide: "bot", size: 14)
-                        // A node another agent opened with `--task` reads as the task it is.
-                        ChatLiveLabel(text: item.text("origin") == "ruimte" ? "Task" : "Sub-agent", active: running)
-                        Spacer(minLength: 4)
-                        if running {
-                            ChatElapsed(startedAt: item.number("startedAt"))
-                        } else {
-                            Text(item.text("status") == "failed" ? "Failed" : "Done")
-                                .foregroundStyle(item.text("status") == "failed" ? Color.red : MobileStyle.muted)
-                            if let end = item["finishedAt"]?.numberValue {
-                                Text("in \(ChatToolPresentation.elapsed(end - item.number("startedAt")))")
-                            }
-                        }
-                        Image(lucide: expanded ? "chevron-down" : "chevron-right", size: 12)
-                    }
-                    Text(item.text("description", fallback: item.text("summary"))).lineLimit(2).padding(.leading, 22)
-                    if item["background"]?.boolValue == true || running && !item.text("lastTool").isEmpty {
-                        Text(
-                            [
-                                item["background"]?.boolValue == true ? "Background" : "",
-                                running ? item.text("lastTool") : "",
-                            ].filter { !$0.isEmpty }.joined(separator: " · ")
-                        )
-                        .font(.caption).padding(.leading, 22)
-                    }
-                }.frame(minHeight: 44).contentShape(Rectangle())
-            }.buttonStyle(.plain).font(.footnote).foregroundStyle(MobileStyle.muted)
-                .accessibilityValue(expanded ? "Expanded" : "Collapsed")
+            if opens {
+                // The conversation opens on a page of its own, as a row of the sub-agent list does.
+                Button {
+                    presentation.conversationRequest = SubagentCrumb(item)
+                } label: {
+                    header
+                }.buttonStyle(.plain).font(.footnote).foregroundStyle(MobileStyle.muted)
+                    .accessibilityHint("Opens the conversation")
+            } else {
+                ChatExpansionButton(expanding: !expanded) {
+                    presentation.toggleSubagent(agent.id)
+                } label: {
+                    header
+                }.buttonStyle(.plain).font(.footnote).foregroundStyle(MobileStyle.muted)
+                    .accessibilityValue(expanded ? "Expanded" : "Collapsed")
+            }
             if expanded {
                 VStack(alignment: .leading, spacing: 8) {
                     if item["itemsTruncated"]?.boolValue == true {
@@ -82,5 +66,36 @@ struct ChatSubagentRow: View {
                 .overlay(alignment: .leading) { Rectangle().fill(MobileStyle.border).frame(width: 1) }
             }
         }
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Image(lucide: "bot", size: 14)
+                // A node another agent opened with `--task` reads as the task it is.
+                ChatLiveLabel(text: item.text("origin") == "ruimte" ? "Task" : "Sub-agent", active: running)
+                Spacer(minLength: 4)
+                if running {
+                    ChatElapsed(startedAt: item.number("startedAt"))
+                } else {
+                    Text(item.text("status") == "failed" ? "Failed" : "Done")
+                        .foregroundStyle(item.text("status") == "failed" ? Color.red : MobileStyle.muted)
+                    if let end = item["finishedAt"]?.numberValue {
+                        Text("in \(ChatToolPresentation.elapsed(end - item.number("startedAt")))")
+                    }
+                }
+                Image(lucide: opens || !expanded ? "chevron-right" : "chevron-down", size: 12)
+            }
+            Text(item.text("description", fallback: item.text("summary"))).lineLimit(2).padding(.leading, 22)
+            if item["background"]?.boolValue == true || running && !item.text("lastTool").isEmpty {
+                Text(
+                    [
+                        item["background"]?.boolValue == true ? "Background" : "",
+                        running ? item.text("lastTool") : "",
+                    ].filter { !$0.isEmpty }.joined(separator: " · ")
+                )
+                .font(.caption).padding(.leading, 22)
+            }
+        }.frame(minHeight: 44).contentShape(Rectangle())
     }
 }

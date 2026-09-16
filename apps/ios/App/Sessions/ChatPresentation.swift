@@ -39,6 +39,10 @@ final class ChatPresentation {
     private(set) var expandedTurns: Set<String> = []
     private(set) var expandedSubagents: Set<String> = []
     private(set) var requestedItemID: String?
+    /// A subagent row asked to open its conversation; the screen that shows this timeline pushes it.
+    var conversationRequest: SubagentCrumb?
+    /// The machine answered that it cannot read a subagent's conversation, so only rows with a pointer open.
+    var subagentsRefused = false
     private(set) var scrollRequest = 0
     @ObservationIgnored private var activeID: String?
     @ObservationIgnored private var historyBoundaries = Set<String>()
@@ -218,7 +222,8 @@ final class ChatPresentation {
             if Self.parent(value) != nil || kind == "turn" { continue }
             if kind == "approval" && value.text("decision") == "pending" { continue }
             if kind == "question" && value.text("state") == "pending" { continue }
-            if kind == "tool" && value.text("state") != "running" {
+            // A subagent's `SubagentHandback` call reads as the report it carries rather than as a tool call.
+            if kind == "tool" && value.text("state") != "running" && ChatSubagents.handbackReport(value) == nil {
                 if rows.last?.kind == .tools && !historyBoundaries.contains(item.id) {
                     rows[rows.count - 1].items.append(item)
                 } else {

@@ -734,7 +734,7 @@ struct ChatObservedRow: View {
     let chatID: String
     var body: some View {
         ChatTimelineRow(item: record.value, client: client, chatID: chatID)
-            .modifier(ChatMessageMenu(text: record.value.text("text")))
+            .modifier(ChatMessageMenu(text: ChatSubagents.handbackReport(record.value) ?? record.value.text("text")))
     }
 }
 
@@ -761,7 +761,13 @@ private struct ChatTimelineRow: View {
             case "thinking":
                 ChatThinkingRow(item: item)
             case "tool":
-                ChatToolRow(item: item)
+                if let report = ChatSubagents.handbackReport(item) {
+                    Text("Report").font(.caption.weight(.medium)).foregroundStyle(MobileStyle.faint)
+                        .accessibilityAddTraits(.isHeader)
+                    MarkdownMessage(text: report)
+                } else {
+                    ChatToolRow(item: item)
+                }
             case "subagent":
                 DisclosureGroup(item["description"]?.stringValue ?? "Agent") {
                     Text(item["status"]?.stringValue ?? "").font(.caption)

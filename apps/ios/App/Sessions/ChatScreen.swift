@@ -12,6 +12,7 @@ struct ChatScreen: View {
     @State private var holdingChat = false
     @State private var showingFiles = false
     @State private var showingClear = false
+    @State private var subagentList: SubagentListRoute?
     @State private var pickerKind: String?
     @State private var photo: PhotosPickerItem?
     @State private var question: JSONValue?
@@ -122,6 +123,12 @@ struct ChatScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityAction(.escape) { composerFocused = false }
         .toolbar {
+            if hasSubagents {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Sub-agents", lucideIcon: "bot") { subagentList = SubagentListRoute(chatID: model.chatID) }
+                        .accessibilityIdentifier("chat.subagents")
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Picker("Streaming", selection: $streamingMode) {
@@ -135,6 +142,18 @@ struct ChatScreen: View {
                 .accessibilityLabel("Conversation actions")
                 .disabled(!isPrepared)
             }
+        }
+        .navigationDestination(item: $subagentList) { _ in
+            SubagentListPage(model: model, tasks: machineSession?.tasks)
+        }
+        .navigationDestination(
+            item: Binding(
+                get: { model.presentation.conversationRequest },
+                set: { model.presentation.conversationRequest = $0 })
+        ) { crumb in
+            SubagentConversationPage(
+                client: model.client, chatID: model.chatID, crumb: crumb, cwd: model.info.text("cwd"),
+                parent: model.presentation)
         }
         .onAppear {
             visible = true
@@ -211,6 +230,11 @@ struct ChatScreen: View {
         guard !holdingChat else { return }
         holdingChat = true
         if let machineSession { model = machineSession.retainChat(model) } else { model.start() }
+    }
+
+    /// The toolbar offers the list only once the chat has a sub-agent to open.
+    private var hasSubagents: Bool {
+        model.presentation.subagentsRefused ? model.subagentRows.native : model.subagentRows.any
     }
 
     private var hasDraft: Bool {
