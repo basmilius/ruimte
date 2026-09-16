@@ -5,6 +5,12 @@ const RETENTION_MS = 30 * 24 * 60 * 60_000;
 
 export class PushAttention {
     private readonly entries = new Map<string, PushAttentionEntry>();
+    /*
+     * The first moment this ledger ran on a version whose clients mark nodes from it. Entries from
+     * before were only ever about notifications, and up to 30 days of them would otherwise all turn
+     * into marks after an update.
+     */
+    readonly marksFrom: number;
 
     private readonly path: string | undefined;
     private readonly now: () => number;
@@ -12,13 +18,19 @@ export class PushAttention {
     constructor(path?: string, now: () => number = Date.now) {
         this.path = path;
         this.now = now;
+        let marksFrom: number | undefined;
         if (path && existsSync(path)) {
             const saved = PushAttentionResultSchema.parse(JSON.parse(readFileSync(path, 'utf8')));
             for (const entry of saved.entries) {
                 this.entries.set(entry.nodeId, entry);
             }
+            marksFrom = saved.marksFrom;
         }
+        this.marksFrom = marksFrom ?? this.now();
         this.prune();
+        if (marksFrom === undefined) {
+            this.save();
+        }
     }
 
     snapshot(): PushAttentionEntry[] {
@@ -67,7 +79,7 @@ export class PushAttention {
         if (!this.path) {
             return;
         }
-        writeFileSync(`${this.path}.tmp`, JSON.stringify({ entries: [...this.entries.values()] }), { mode: 0o600 });
+        writeFileSync(`${this.path}.tmp`, JSON.stringify({ entries: [...this.entries.values()], marksFrom: this.marksFrom }), { mode: 0o600 });
         renameSync(`${this.path}.tmp`, this.path);
     }
 }

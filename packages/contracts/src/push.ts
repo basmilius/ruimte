@@ -21,5 +21,9 @@ export const PushAttentionEntrySchema = z.object({
     readThrough: z.number().int().nonnegative()
 });
 export type PushAttentionEntry = z.infer<typeof PushAttentionEntrySchema>;
-export const PushAttentionResultSchema = z.object({ entries: z.array(PushAttentionEntrySchema).max(1000) });
+export const PushAttentionResultSchema = z.object({
+    entries: z.array(PushAttentionEntrySchema).max(1000),
+    // When the machine started keeping entries a client may mark nodes from; what was issued before stays unmarked.
+    marksFrom: z.number().int().nonnegative().optional()
+});
 export const PushReadPayloadSchema = PushAttentionEntrySchema.pick({ nodeId: true, issuedAt: true });

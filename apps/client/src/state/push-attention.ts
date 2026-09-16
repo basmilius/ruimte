@@ -9,6 +9,8 @@ export class PushAttentionSync {
     private readonly pending = new Set<string>();
     private readonly off: (() => void)[];
     private generation = 0;
+    // What the machine holds from before it said when marks start is left alone; null until it says, and for a machine that never does.
+    private marksFrom: number | null = null;
     private disposed = false;
 
     private readonly transport: Transport;
@@ -58,7 +60,11 @@ export class PushAttentionSync {
 
     /* The nodes the machine holds something unread for: a turn that ended or a task that failed, whether or not a client was there. */
     unread(): string[] {
-        return [...this.entries.values()].filter((entry) => entry.readThrough < entry.issuedAt).map((entry) => entry.nodeId);
+        const from = this.marksFrom;
+        if (from === null) {
+            return [];
+        }
+        return [...this.entries.values()].filter((entry) => entry.readThrough < entry.issuedAt && entry.issuedAt >= from).map((entry) => entry.nodeId);
     }
 
     dispose(): void {
@@ -86,10 +92,11 @@ export class PushAttentionSync {
     private async refresh(): Promise<void> {
         const generation = this.generation;
         try {
-            const { entries } = await this.transport.request('push.attention', {});
+            const { entries, marksFrom } = await this.transport.request('push.attention', {});
             if (generation !== this.generation) {
                 return;
             }
+            this.marksFrom = marksFrom ?? null;
             for (const entry of entries) {
                 this.receive(entry);
             }

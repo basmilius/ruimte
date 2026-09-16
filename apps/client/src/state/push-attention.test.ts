@@ -63,8 +63,11 @@ test('what the machine holds unread is known the moment a socket opens, and a re
                 ? {
                       entries: [
                           { nodeId: 'finished-while-away', issuedAt: 100, readThrough: 0 },
-                          { nodeId: 'already-seen', issuedAt: 90, readThrough: 90 }
-                      ]
+                          { nodeId: 'already-seen', issuedAt: 90, readThrough: 90 },
+                          // Issued before the machine ran a version that marks nodes: it never becomes a mark.
+                          { nodeId: 'before-the-update', issuedAt: 40, readThrough: 0 }
+                      ],
+                      marksFrom: 50
                   }
                 : {}
     } as unknown as Transport;
@@ -74,4 +77,17 @@ test('what the machine holds unread is known the moment a socket opens, and a re
     sync.markSeen('finished-while-away');
     await flush();
     expect(sync.unread()).toEqual([]);
+});
+
+test('a machine that does not say when marks start gives none', async () => {
+    const transport = {
+        status: 'open',
+        on: () => () => {},
+        subscribeStatus: () => () => {},
+        request: async (type: string) => (type === 'push.attention' ? { entries: [{ nodeId: 'unread', issuedAt: 100, readThrough: 0 }] } : {})
+    } as unknown as Transport;
+    const sync = new PushAttentionSync(transport);
+    await flush();
+    expect(sync.unread()).toEqual([]);
+    sync.dispose();
 });
