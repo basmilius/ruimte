@@ -7,8 +7,18 @@ export const PushHandleSchema = key;
 export const RuimteActivityAttributesSchema = z.object({ machineId: MachineIdSchema, collapseId: key });
 export const PushRegisterDevicePayloadSchema = z.object({ token, environment: z.enum(['sandbox', 'production']) });
 export const PushRegisterDeviceResultSchema = z.object({ handle: PushHandleSchema });
-export const PushActivityRegistrationSchema = z.object({ machineId: MachineIdSchema, collapseId: key, token: token.nullable() });
-export const PushStartActivityRegistrationSchema = z.object({ token: token.nullable() });
+export const PushActivityRegistrationSchema = z.object({
+    machineId: MachineIdSchema,
+    collapseId: key,
+    token: token.nullable(),
+    reserve: z.boolean().optional(),
+    release: z.boolean().optional()
+});
+export const PushStartActivityRegistrationSchema = z.object({
+    token: token.nullable(),
+    machineId: MachineIdSchema.nullable().optional(),
+    collapseId: key.nullable().optional()
+});
 export type PushRegisterDevicePayload = z.infer<typeof PushRegisterDevicePayloadSchema>;
 
 export const PushAlertContentSchema = z.object({

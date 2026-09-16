@@ -3,6 +3,8 @@ import RuimtePulsar
 
 @MainActor public protocol MachineRequesting: AnyObject {
     func request(_ type: String, payload: JSONValue) async throws -> JSONValue
+    func request(_ type: String, payload: JSONValue, onResult: @escaping @MainActor @Sendable (JSONValue) -> Void)
+        async throws -> JSONValue
     func subscribe(_ event: String, handler: @escaping @MainActor @Sendable (JSONValue) -> Void) -> () -> Void
     func acquireSubscription(start: String, stop: String, payload: JSONValue, stopPayload: JSONValue)
         -> MachineSubscription
@@ -55,6 +57,14 @@ import RuimtePulsar
 }
 
 @MainActor extension MachineRequesting {
+    public func request(
+        _ type: String, payload: JSONValue, onResult: @escaping @MainActor @Sendable (JSONValue) -> Void
+    ) async throws -> JSONValue {
+        let result = try await request(type, payload: payload)
+        onResult(result)
+        return result
+    }
+
     public func acquireSubscription(start: String, stop: String, payload: JSONValue, stopPayload: JSONValue)
         -> MachineSubscription
     {
@@ -169,6 +179,12 @@ public enum MachineClientError: Error, LocalizedError, Sendable, Equatable {
 
     public func request(_ type: String, payload: JSONValue) async throws -> JSONValue {
         try await routedRequest(type, payload: payload, onResult: nil)
+    }
+
+    public func request(
+        _ type: String, payload: JSONValue, onResult: @escaping @MainActor @Sendable (JSONValue) -> Void
+    ) async throws -> JSONValue {
+        try await routedRequest(type, payload: payload, onResult: onResult)
     }
 
     private func routedRequest(

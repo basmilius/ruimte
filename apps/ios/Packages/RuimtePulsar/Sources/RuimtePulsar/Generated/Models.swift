@@ -2187,11 +2187,15 @@ public struct PushActivityRegistration: Codable, Sendable, Equatable {
     public let `machineId`: String
     public let `collapseId`: String
     public let `token`: String?
+    public let `reserve`: Bool?
+    public let `release`: Bool?
 
-    public init(`machineId`: String, `collapseId`: String, `token`: String?) {
+    public init(`machineId`: String, `collapseId`: String, `token`: String?, `reserve`: Bool? = nil, `release`: Bool? = nil) {
         self.`machineId` = `machineId`
         self.`collapseId` = `collapseId`
         self.`token` = `token`
+        self.`reserve` = `reserve`
+        self.`release` = `release`
     }
 
     public init(from decoder: Decoder) throws {
@@ -2200,6 +2204,8 @@ public struct PushActivityRegistration: Codable, Sendable, Equatable {
         `machineId` = try container.decode(String.self, forKey: .`machineId`)
         `collapseId` = try container.decode(String.self, forKey: .`collapseId`)
         `token` = try container.decode(String?.self, forKey: .`token`)
+        `reserve` = try container.decodeIfPresent(Bool.self, forKey: .`reserve`)
+        `release` = try container.decodeIfPresent(Bool.self, forKey: .`release`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -2207,12 +2213,16 @@ public struct PushActivityRegistration: Codable, Sendable, Equatable {
         try container.encode(`machineId`, forKey: .`machineId`)
         try container.encode(`collapseId`, forKey: .`collapseId`)
         try container.encode(`token`, forKey: .`token`)
+        try container.encodeIfPresent(`reserve`, forKey: .`reserve`)
+        try container.encodeIfPresent(`release`, forKey: .`release`)
     }
 
     private enum CodingKeys: String, CodingKey {
         case `machineId` = "machineId"
         case `collapseId` = "collapseId"
         case `token` = "token"
+        case `reserve` = "reserve"
+        case `release` = "release"
     }
 }
 
@@ -2588,24 +2598,42 @@ public struct PushRouting: Codable, Sendable, Equatable {
 
 public struct PushStartActivityRegistration: Codable, Sendable, Equatable {
     public let `token`: String?
+    public let `machineId`: Presence<String>
+    public let `collapseId`: Presence<PushHandle>
 
-    public init(`token`: String?) {
+    public init(`token`: String?, `machineId`: Presence<String> = .missing, `collapseId`: Presence<PushHandle> = .missing) {
         self.`token` = `token`
+        self.`machineId` = `machineId`
+        self.`collapseId` = `collapseId`
     }
 
     public init(from decoder: Decoder) throws {
         _ = try WireSchema.validate("PushStartActivityRegistrationSchema", JSONValue(from: decoder))
         let container = try decoder.container(keyedBy: CodingKeys.self)
         `token` = try container.decode(String?.self, forKey: .`token`)
+        `machineId` = try container.contains(.`machineId`) ? (container.decodeNil(forKey: .`machineId`) ? .null : .value(container.decode(String.self, forKey: .`machineId`))) : .missing
+        `collapseId` = try container.contains(.`collapseId`) ? (container.decodeNil(forKey: .`collapseId`) ? .null : .value(container.decode(PushHandle.self, forKey: .`collapseId`))) : .missing
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(`token`, forKey: .`token`)
+        switch `machineId` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`machineId`)
+        case .value(let value): try container.encode(value, forKey: .`machineId`)
+        }
+        switch `collapseId` {
+        case .missing: break
+        case .null: try container.encodeNil(forKey: .`collapseId`)
+        case .value(let value): try container.encode(value, forKey: .`collapseId`)
+        }
     }
 
     private enum CodingKeys: String, CodingKey {
         case `token` = "token"
+        case `machineId` = "machineId"
+        case `collapseId` = "collapseId"
     }
 }
 

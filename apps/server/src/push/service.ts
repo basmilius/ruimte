@@ -210,7 +210,11 @@ export class PushService {
 
     private async deliverActivity(nodeId: string, activity: PushActivityContent): Promise<void> {
         for (const { sessionId, subscription } of await this.options.auth.pushSubscriptions()) {
-            if (!subscription.activities || !subscription.follow.includes(nodeId)) {
+            if (
+                !subscription.activities ||
+                !subscription.follow.includes(nodeId) ||
+                (subscription.activityNodeId !== undefined && subscription.activityNodeId !== nodeId)
+            ) {
                 continue;
             }
             const cacheKey = `${sessionId}:${nodeId}`;

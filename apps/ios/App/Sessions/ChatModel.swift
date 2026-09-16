@@ -22,6 +22,9 @@ final class ChatModel {
     var error: String?
     var connected = false
     var loading = false
+    private(set) var loadingHistory = false
+    private(set) var history = ChatHistory()
+    private var historyRevision = 0
     var sending = false
     var revision = 0
     private var unsubscribe: [() -> Void] = []
@@ -39,10 +42,12 @@ final class ChatModel {
 
     private func refreshPending() {
         messageCount = items.count
-        let requests = items.filter {
-            ($0.text("kind") == "approval" && $0.text("decision") == "pending")
-                || ($0.text("kind") == "question" && $0.text("state") == "pending")
-        }
+        let visibleIDs = Set(items.compactMap { $0["id"]?.stringValue })
+        let requests =
+            history.pending.values.filter { !visibleIDs.contains($0.text("id")) }.sorted {
+                $0.text("id") < $1.text("id")
+            }
+            + items.filter(ChatHistory.isPending)
         if requests != pending { pending = requests }
     }
 
@@ -97,7 +102,8 @@ final class ChatModel {
             do {
                 guard let attachment else { throw CancellationError() }
                 async let providerResult = loadProviders()
-                _ = try await attachment.snapshot(payload: target()) { [weak self] snapshot in
+                _ = try await attachment.snapshot(payload: target(["historyLimit": .number(60)])) {
+                    [weak self] snapshot in
                     guard let self, self.generation == current else { return }
                     self.replace(snapshot)
                     self.loading = false
@@ -120,6 +126,9 @@ final class ChatModel {
     }
 
     func replace(_ snapshot: JSONValue) {
+        historyRevision += 1
+        loadingHistory = false
+        history.replace(snapshot)
         info = snapshot["info"] ?? .null
         items = snapshot["items"]?.arrayValue ?? []
         positions = Dictionary(
@@ -139,6 +148,10 @@ final class ChatModel {
             presentation.setInfo(info)
         case "item":
             guard let item = event["item"], let id = item["id"]?.stringValue else { return }
+            guard history.includes(item, index: event["historyIndex"]) else {
+                refreshPending()
+                return
+            }
             if let index = positions[id] {
                 items[index] = item
             } else {
@@ -163,6 +176,35 @@ final class ChatModel {
             presentation.upsert(.object(item), textOnly: true)
             revision += 1
         default: break
+        }
+    }
+
+    func loadOlder() async {
+        guard connected, !loading, !loadingHistory, let cursor = history.cursor else { return }
+        let current = generation
+        let currentHistory = historyRevision
+        loadingHistory = true
+        defer { if currentHistory == historyRevision { loadingHistory = false } }
+        do {
+            _ = try await client.request(
+                "chat.history", payload: target(["cursor": .string(cursor), "limit": .number(60)])
+            ) { [weak self] page in
+                guard let self, self.generation == current, self.historyRevision == currentHistory else { return }
+                self.items = self.history.prepend(page, to: self.items)
+                self.positions = Dictionary(
+                    self.items.enumerated().map { ($0.element.text("id"), $0.offset) },
+                    uniquingKeysWith: { _, newest in newest })
+                self.refreshPending()
+                self.presentation.prepend(page["items"]?.arrayValue ?? [])
+                self.revision += 1
+            }
+        } catch {
+            guard generation == current, historyRevision == currentHistory else { return }
+            if case MachineClientError.server(code: "history-expired", message: _) = error {
+                attach()
+            } else {
+                self.error = error.localizedDescription
+            }
         }
     }
 

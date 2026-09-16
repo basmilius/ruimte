@@ -40,6 +40,29 @@ import Testing
         #expect(received == [large, "delta", "new connection"])
     }
 
+    @Test func historyPageIsAppliedBeforeTheFollowingDelta() async throws {
+        var client: MachineClient!
+        var text = ""
+        client = MachineClient(
+            send: { frame in
+                try answer(
+                    client, JSONValue.decode(Data(frame.utf8)),
+                    .object([
+                        "items": .array([]), "history": .object(["start": .number(0), "cursor": .null]),
+                    ]))
+                client.receive(
+                    #"{"type":"event","event":"chat.event","payload":{"chatId":"c","event":{"type":"delta","itemId":"i","text":" delta"}}}"#
+                )
+            }, connected: true)
+        let stop = client.subscribe("chat.event") { text += $0["event"]?["text"]?.stringValue ?? "" }
+        defer { stop() }
+        let requesting: any MachineRequesting = client
+        _ = try await requesting.request(
+            "chat.history", payload: .object(["chatId": .string("c"), "cursor": .string("epoch:1")])
+        ) { _ in text = "snapshot" }
+        #expect(text == "snapshot delta")
+    }
+
     @Test func initialRoutesPreserveRelayFallbackAndCandidateDeduplication() {
         let host = "candidate:1 1 udp 123 192.168.1.2 4567 typ host"
         let relay = "candidate:2 1 udp 100 203.0.113.2 4568 typ relay"

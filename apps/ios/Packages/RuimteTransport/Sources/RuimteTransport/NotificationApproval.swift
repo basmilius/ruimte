@@ -7,7 +7,7 @@ public enum NotificationApproval {
     ) throws -> JSONValue {
         guard alert.kind == .approval, alert.target == .chat, Double(alert.expiresAt) > now,
             let requestID = alert.requestId,
-            snapshot["items"]?.arrayValue?.contains(where: {
+            ((snapshot["items"]?.arrayValue ?? []) + (snapshot["pending"]?.arrayValue ?? [])).contains(where: {
                 $0["kind"] == .string("approval") && $0["requestId"] == .string(requestID)
                     && $0["decision"] == .string("pending")
             }) == true

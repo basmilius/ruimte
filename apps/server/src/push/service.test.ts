@@ -213,6 +213,20 @@ describe('offline push delivery', () => {
         disconnected();
     });
 
+    test('an explicit latest chat limits activities without changing alert follows', async () => {
+        await auth.setPush(sessionId, { ...subscription, activities: true, activityNodeId: 'other' });
+        status('running');
+        await service.settled();
+        expect(pushes.length).toBe(0);
+        status('idle');
+        await service.settled();
+        expect(pushes.map((push) => push.pushType)).toEqual(['alert']);
+        await auth.setPush(sessionId, { ...subscription, activities: true, activityNodeId: null });
+        status('running');
+        await service.settled();
+        expect(pushes.length).toBe(1);
+    });
+
     test('activity delivery is explicit opt-in and contains only approved title/phase/time', async () => {
         await auth.setPush(sessionId, { ...subscription, activities: true });
         status('running');

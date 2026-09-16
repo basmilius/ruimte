@@ -91,6 +91,7 @@ beforeEach(() => {
         APNS_TEAM_ID: 'test',
         APNS_TOPIC: 'app.ruimte.mobile'
     };
+    sqlite.query('UPDATE push_device SET start_machine_id = ?, start_collapse_id = ?').run('machine', 'c'.repeat(43));
     delivered = [];
     seams = {
         now: () => NOW,
@@ -117,7 +118,7 @@ describe('push authorization and routing', () => {
     test('only the registering session can change or delete activity/device tokens', async () => {
         const collapseId = 'c'.repeat(43);
         expect((await changePushDevice(request({ machineId: 'machine', collapseId, token: 'ef'.repeat(32) }, 'PUT'), env, handle, 'update')).status).toBe(204);
-        expect((await changePushDevice(request({ token: 'ab'.repeat(32) }, 'PUT'), env, handle, 'start')).status).toBe(204);
+        expect((await changePushDevice(request({ token: 'ab'.repeat(32), machineId: 'machine', collapseId }, 'PUT'), env, handle, 'start')).status).toBe(204);
         expect(sqlite.query('SELECT token FROM push_activity').get()).toEqual({ token: 'ef'.repeat(32) });
         const otherAccess = 'b'.repeat(43);
         sqlite
@@ -193,6 +194,50 @@ describe('push authorization and routing', () => {
                 .status
         ).toBe(204);
         expect(delivered.length).toBe(1);
+    });
+
+    test('push-to-start is restricted to the selected conversation and opt-out revokes both routes', async () => {
+        const activity = { title: 'Build', phase: 'running' as const, startedAt: NOW };
+        const token = 'ef'.repeat(32);
+        expect((await changePushDevice(request({ token, machineId: 'machine', collapseId: 'c'.repeat(43) }, 'PUT'), env, handle, 'start')).status).toBe(204);
+        expect(
+            (await sendPush(request(signed({ pushType: 'liveactivity', activity, collapseId: 'x'.repeat(43) } as Partial<PushEnvelope>)), env, seams)).status
+        ).toBe(404);
+        expect((await sendPush(request(signed({ pushType: 'liveactivity', activity } as Partial<PushEnvelope>)), env, seams)).status).toBe(204);
+        await changePushDevice(request({ machineId: 'machine', collapseId: 'c'.repeat(43), token }, 'PUT'), env, handle, 'update');
+        await changePushDevice(request({ token: null }, 'PUT'), env, handle, 'start');
+        expect((await sendPush(request(signed({ pushType: 'liveactivity', activity } as Partial<PushEnvelope>)), env, seams)).status).toBe(404);
+        expect((await changePushDevice(request({ machineId: 'machine', collapseId: 'c'.repeat(43), token }, 'PUT'), env, handle, 'update')).status).toBe(404);
+        expect(delivered.length).toBe(1);
+    });
+
+    test('foreground and push starts share one claim; releasing a failed local start permits another start', async () => {
+        sqlite.query('UPDATE push_device SET start_token = ?').run('ef'.repeat(32));
+        const body = { machineId: 'machine', collapseId: 'c'.repeat(43), token: null, reserve: true };
+        const first = await changePushDevice(request(body, 'PUT'), env, handle, 'update');
+        expect(await first.json()).toEqual({ reserved: true });
+        expect(await (await changePushDevice(request(body, 'PUT'), env, handle, 'update')).json()).toEqual({ reserved: false });
+        const activity = { title: 'Build', phase: 'running' as const, startedAt: NOW };
+        const realClock = { ...seams, now: Date.now };
+        const push = () => signed({ pushType: 'liveactivity', activity, issuedAt: Date.now(), expiresAt: Date.now() + 110_000 } as Partial<PushEnvelope>);
+        await sendPush(request(push()), env, realClock);
+        expect(delivered.length).toBe(0);
+        await changePushDevice(request({ ...body, reserve: false, release: true }, 'PUT'), env, handle, 'update');
+        await sendPush(request(push()), env, realClock);
+        expect(delivered.length).toBe(1);
+    });
+
+    test('foreign target registration is refused and a done event without an update token releases the start claim', async () => {
+        expect(
+            (await changePushDevice(request({ token: 'ab'.repeat(32), machineId: 'foreign', collapseId: 'c'.repeat(43) }, 'PUT'), env, handle, 'start')).status
+        ).toBe(404);
+        sqlite.query('UPDATE push_device SET start_token = ?').run('ef'.repeat(32));
+        const activity = { title: 'Build', phase: 'running' as const, startedAt: NOW };
+        await sendPush(request(signed({ pushType: 'liveactivity', activity } as Partial<PushEnvelope>)), env, seams);
+        await sendPush(request(signed({ pushType: 'liveactivity', activity: { ...activity, phase: 'done' } } as Partial<PushEnvelope>)), env, seams);
+        expect(sqlite.query('SELECT * FROM push_activity_start').all()).toEqual([]);
+        await sendPush(request(signed({ pushType: 'liveactivity', activity } as Partial<PushEnvelope>)), env, seams);
+        expect(delivered.length).toBe(2);
     });
 
     test('another machine cannot update an activity even when it knows its collapse id', async () => {

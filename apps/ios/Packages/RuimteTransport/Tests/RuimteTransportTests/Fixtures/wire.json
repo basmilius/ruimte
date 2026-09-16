@@ -50,6 +50,7 @@
     "agent.answerApproval",
     "agent.setApprovals",
     "chat.create",
+    "chat.history",
     "chat.attach",
     "chat.detach",
     "chat.send",

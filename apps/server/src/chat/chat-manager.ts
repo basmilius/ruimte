@@ -3,6 +3,8 @@ import { homedir } from 'node:os';
 import type {
     AgentKind,
     ChatAttachment,
+    ChatAttachResult,
+    ChatHistoryResult,
     ChatAttachmentUpload,
     ChatCheckpointDiff,
     ChatConfigurePayload,
@@ -220,7 +222,7 @@ export class ChatManager {
         return this.require(payload.chatId).configure(payload);
     }
 
-    attach(chatId: string, clientId: string): { info: ChatInfo; items: ChatItem[] } {
+    attach(chatId: string, clientId: string, historyLimit?: number): ChatAttachResult {
         const session = this.require(chatId);
         let clients = this.attached.get(chatId);
         if (!clients) {
@@ -231,7 +233,15 @@ export class ChatManager {
         // client is on the list: the text is either in the snapshot or in the stream, never both.
         this.coalescers.get(chatId)?.flush();
         clients.add(clientId);
-        return session.thread.snapshot();
+        return historyLimit === undefined
+            ? session.thread.snapshot()
+            : { info: session.info, ...session.thread.history(historyLimit), pending: session.thread.pending() };
+    }
+
+    history(chatId: string, cursor: string, limit?: number): ChatHistoryResult {
+        const session = this.require(chatId);
+        this.coalescers.get(chatId)?.flush();
+        return session.thread.history(limit, cursor);
     }
 
     detach(chatId: string, clientId: string): void {

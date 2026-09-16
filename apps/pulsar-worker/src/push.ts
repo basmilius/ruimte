@@ -71,8 +71,15 @@ export const changePushDevice = async (request: Request, env: Env, handle: strin
         if ('response' in body) {
             return body.response;
         }
-        await env.DB.prepare('UPDATE push_device SET start_token = ?1 WHERE handle = ?2 AND session_id = ?3')
-            .bind(body.value.token?.toLowerCase() ?? null, handle, session.id)
+        const { machineId, collapseId } = body.value;
+        if ((machineId == null) !== (collapseId == null)) {
+            return failure('bad-request', 'An activity needs a machine and conversation');
+        }
+        if (machineId && !(await env.DB.prepare('SELECT id FROM machine WHERE id = ?1 AND account_id = ?2').bind(machineId, session.account.id).first())) {
+            return failure('not-found', 'No machine on this account');
+        }
+        await env.DB.prepare('UPDATE push_device SET start_token = ?1, start_machine_id = ?4, start_collapse_id = ?5 WHERE handle = ?2 AND session_id = ?3')
+            .bind(body.value.token?.toLowerCase() ?? null, handle, session.id, machineId ?? null, collapseId ?? null)
             .run();
     } else {
         const body = await readBody(request, PushActivityRegistrationSchema);
@@ -83,10 +90,33 @@ export const changePushDevice = async (request: Request, env: Env, handle: strin
         if (!machine) {
             return failure('not-found', 'No machine on this account');
         }
+        if (body.value.reserve || body.value.token !== null) {
+            const selected = await env.DB.prepare('SELECT handle FROM push_device WHERE handle = ?1 AND start_machine_id = ?2 AND start_collapse_id = ?3')
+                .bind(handle, body.value.machineId, body.value.collapseId)
+                .first();
+            if (!selected) {
+                return failure('not-found', 'This conversation is not selected for Live Activities');
+            }
+        }
+        if (body.value.reserve) {
+            const now = Date.now();
+            const claim = await env.DB.prepare(
+                `INSERT INTO push_activity_start (handle, machine_id, collapse_id, expires_at) VALUES (?1, ?2, ?3, ?4)
+                ON CONFLICT(handle, machine_id, collapse_id) DO UPDATE SET expires_at = excluded.expires_at WHERE push_activity_start.expires_at <= ?5`
+            )
+                .bind(handle, body.value.machineId, body.value.collapseId, now + 8 * 60 * 60_000, now)
+                .run();
+            return json({ reserved: claim.meta.changes > 0 });
+        }
         if (body.value.token === null) {
             await env.DB.prepare('DELETE FROM push_activity WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3')
                 .bind(handle, body.value.collapseId, body.value.machineId)
                 .run();
+            if (body.value.release) {
+                await env.DB.prepare('DELETE FROM push_activity_start WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3')
+                    .bind(handle, body.value.collapseId, body.value.machineId)
+                    .run();
+            }
         } else {
             await env.DB.prepare(
                 `INSERT INTO push_activity (handle, collapse_id, token, updated_at, machine_id) VALUES (?1, ?2, ?3, ?4, ?5)
@@ -132,13 +162,20 @@ export const sendPush = async (request: Request, env: Env, seams: PushDeliverySe
     }
     // Access-token expiry does not end a device; revoked or expired account sessions do.
     const device = await env.DB.prepare(
-        `SELECT device.token, device.environment, device.start_token, machine.public_key
+        `SELECT device.token, device.environment, device.start_token, device.start_machine_id, device.start_collapse_id, machine.public_key
         FROM push_device AS device JOIN session ON session.id = device.session_id AND session.account_id = device.account_id
         JOIN machine ON machine.account_id = device.account_id AND machine.id = ?1
         WHERE device.handle = ?2 AND session.revoked_at IS NULL AND session.expires_at > ?3`
     )
         .bind(push.machineId, push.handle, now)
-        .first<{ token: string; environment: 'sandbox' | 'production'; start_token: string | null; public_key: string }>();
+        .first<{
+            token: string;
+            environment: 'sandbox' | 'production';
+            start_token: string | null;
+            start_machine_id: string | null;
+            start_collapse_id: string | null;
+            public_key: string;
+        }>();
     if (!device) {
         return failure('unauthorized', 'The machine and active device must belong to the same account');
     }
@@ -159,13 +196,18 @@ export const sendPush = async (request: Request, env: Env, seams: PushDeliverySe
     }
     let token = device.token;
     let startsActivity = false;
+    let endsUnregisteredActivity = false;
     if (push.pushType === 'liveactivity') {
+        if (device.start_machine_id !== push.machineId || device.start_collapse_id !== push.collapseId) {
+            return failure('not-found', 'This conversation is not selected for Live Activities');
+        }
         const activity = await env.DB.prepare('SELECT token FROM push_activity WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3')
             .bind(push.handle, push.collapseId, push.machineId)
             .first<{ token: string }>();
         token = activity?.token ?? device.start_token ?? '';
         startsActivity = !activity;
-        if (!token || (startsActivity && push.activity.phase === 'done')) {
+        endsUnregisteredActivity = startsActivity && push.activity.phase === 'done';
+        if (!token && !endsUnregisteredActivity) {
             return failure('not-found', 'No activity token for this notification');
         }
     }
@@ -175,6 +217,12 @@ export const sendPush = async (request: Request, env: Env, seams: PushDeliverySe
         .run();
     if (receipt.meta.changes === 0) {
         return failure('bad-request', 'This notification was already submitted');
+    }
+    if (endsUnregisteredActivity) {
+        await env.DB.prepare('DELETE FROM push_activity_start WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3')
+            .bind(push.handle, push.collapseId, push.machineId)
+            .run();
+        return noContent();
     }
     if (startsActivity) {
         const claim = await env.DB.prepare(

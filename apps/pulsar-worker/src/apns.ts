@@ -56,6 +56,7 @@ export const apnsPayload = (push: PushEnvelope, startsActivity: boolean): object
             ...(startsActivity && !done
                 ? {
                       'attributes-type': 'RuimteActivityAttributes',
+                      'input-push-token': 1,
                       attributes: { machineId: push.machineId, collapseId: push.collapseId },
                       alert: { title: 'Ruimte', body: push.activity.title }
                   }
@@ -76,7 +77,7 @@ export const deliverApns = async (env: Env, target: ApnsTarget, push: PushEnvelo
             authorization: `bearer ${await providerToken(env, now)}`,
             'apns-topic': push.pushType === 'liveactivity' ? `${env.APNS_TOPIC}.push-type.liveactivity` : env.APNS_TOPIC!,
             'apns-push-type': push.pushType,
-            'apns-priority': push.pushType === 'alert' ? '10' : '5',
+            'apns-priority': push.pushType === 'alert' || target.startsActivity ? '10' : '5',
             'apns-expiration': String(Math.floor(push.expiresAt / 1000)),
             'apns-collapse-id': push.collapseId,
             'content-type': 'application/json'

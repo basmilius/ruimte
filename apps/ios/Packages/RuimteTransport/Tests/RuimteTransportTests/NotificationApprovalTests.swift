@@ -36,6 +36,18 @@ struct NotificationApprovalTests {
             }
         }
     }
+    @Test func approvalOutsideTheHistoryPageCanStillBeAnswered() throws {
+        let snapshot: JSONValue = .object([
+            "items": .array([]),
+            "pending": .array([
+                .object(["kind": .string("approval"), "requestId": .string("r"), "decision": .string("pending")])
+            ]),
+        ])
+        #expect(
+            try NotificationApproval.chatPayload(alert: alert(), snapshot: snapshot, allow: false, now: 10)["decision"]
+                == .string("deny"))
+    }
+
     @Test func terminalActionUsesFreshChoiceAndSessionIdentity() throws {
         let request: JSONValue = .object([
             "requestId": .string("r"), "expiresAt": .number(80),

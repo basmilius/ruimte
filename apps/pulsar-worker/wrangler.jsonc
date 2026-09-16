@@ -18,6 +18,8 @@
   ],
   "vars": {
     "PUBLIC_ORIGIN": "https://pulsar.ruimte.app",
+    "APNS_TOPIC": "app.ruimte.mobile",
+    "APNS_TEAM_ID": "7RGV9KKX87",
     "ALLOWED_ORIGINS": "https://station.ruimte.app"
   },
   // Expired logins, codes, rate limit windows and dead sessions.

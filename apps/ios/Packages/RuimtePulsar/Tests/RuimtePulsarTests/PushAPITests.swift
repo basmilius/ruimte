@@ -9,6 +9,36 @@ private actor PushRequests {
 }
 
 struct PushAPITests {
+    @Test func anIdleAgentProcessDoesNotKeepAnActivityRunning() {
+        #expect(PushActivityContentPhase.chat(.object(["status": .string("idle"), "running": .bool(true)])) == .done)
+        #expect(PushActivityContentPhase.chat(.object(["status": .string("running")])) == .running)
+        #expect(PushActivityContentPhase.chat(.object(["status": .string("needs-you")])) == .needsYou)
+    }
+
+    @Test func startRoutingAndForegroundReservationsUseTheSameConversation() async throws {
+        let requests = PushRequests()
+        let handle = String(repeating: "A", count: 43)
+        let api = PushAPI(fetch: { request in
+            await requests.append(request)
+            return (
+                Data(#"{"reserved":true}"#.utf8),
+                HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            )
+        })
+        try await api.startActivity(
+            handle: handle, token: String(repeating: "ab", count: 32), machineID: "machine", collapseID: handle,
+            accessToken: "access")
+        #expect(
+            try await api.reserveActivity(
+                handle: handle, machineID: "machine", collapseID: handle, accessToken: "access"))
+        let sent = await requests.values
+        let route = try JSONValue.decode(#require(sent[0].httpBody))
+        let reserve = try JSONValue.decode(#require(sent[1].httpBody))
+        #expect(route["machineId"] == reserve["machineId"])
+        #expect(route["collapseId"] == reserve["collapseId"])
+        #expect(reserve["reserve"] == .bool(true))
+    }
+
     @Test func registersAndRoutesActivityTokensToTheMachine() async throws {
         let requests = PushRequests()
         let handle = String(repeating: "A", count: 43)

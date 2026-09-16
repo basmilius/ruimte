@@ -18,21 +18,44 @@ public struct PushAPI: Sendable {
         let data = try await call("POST", path: "/v1/push/devices", body: payload, accessToken: accessToken)
         return try JSONDecoder().decode(PushRegisterDeviceResult.self, from: data).handle
     }
-    public func activity(handle: String, machineID: String, collapseID: String, token: String?, accessToken: String)
+    public func activity(
+        handle: String, machineID: String, collapseID: String, token: String?, release: Bool = false,
+        accessToken: String
+    )
         async throws
     {
         let payload = try WireSchema.validate(
             "PushActivityRegistrationSchema",
             .object([
                 "machineId": .string(machineID), "collapseId": .string(collapseID),
-                "token": token.map(JSONValue.string) ?? .null,
+                "token": token.map(JSONValue.string) ?? .null, "release": .bool(release),
             ]))
         _ = try await call(
             "PUT", path: "/v1/push/devices/\(handle)/activities", body: payload, accessToken: accessToken)
     }
-    public func startActivity(handle: String, token: String?, accessToken: String) async throws {
+    public func reserveActivity(handle: String, machineID: String, collapseID: String, accessToken: String) async throws
+        -> Bool
+    {
         let payload = try WireSchema.validate(
-            "PushStartActivityRegistrationSchema", .object(["token": token.map(JSONValue.string) ?? .null]))
+            "PushActivityRegistrationSchema",
+            .object([
+                "machineId": .string(machineID), "collapseId": .string(collapseID), "token": .null,
+                "reserve": .bool(true),
+            ]))
+        let data = try await call(
+            "PUT", path: "/v1/push/devices/\(handle)/activities", body: payload, accessToken: accessToken)
+        return try JSONValue.decode(data)["reserved"] == .bool(true)
+    }
+    public func startActivity(
+        handle: String, token: String?, machineID: String? = nil, collapseID: String? = nil, accessToken: String
+    ) async throws {
+        let payload = try WireSchema.validate(
+            "PushStartActivityRegistrationSchema",
+            .object([
+                "token": token.map(JSONValue.string) ?? .null,
+                "machineId": machineID.map(JSONValue.string) ?? .null,
+                "collapseId": collapseID.map(JSONValue.string) ?? .null,
+            ]))
         _ = try await call(
             "PUT", path: "/v1/push/devices/\(handle)/start-activity", body: payload, accessToken: accessToken)
     }

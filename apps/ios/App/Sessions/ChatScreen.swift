@@ -61,6 +61,22 @@ struct ChatScreen: View {
                     .allowsHitTesting(false)
                 }
             }
+            .overlay(alignment: .top) {
+                if model.history.cursor != nil && !model.loading {
+                    Button {
+                        Task { await model.loadOlder() }
+                    } label: {
+                        if model.loadingHistory {
+                            ProgressView()
+                        } else {
+                            Label("Load older messages", lucideIcon: "arrow-up", iconSize: 14)
+                        }
+                    }
+                    .frame(minHeight: 44).buttonStyle(.bordered).glassEffect().padding(.top, 8)
+                    .disabled(model.loadingHistory || !model.connected)
+                    .accessibilityLabel(model.loadingHistory ? "Loading older messages" : "Load older messages")
+                }
+            }
             .overlay(alignment: .bottom) {
                 HStack(alignment: .bottom, spacing: 16) {
                     GlassEffectContainer(spacing: 8) {

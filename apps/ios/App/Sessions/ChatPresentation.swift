@@ -41,10 +41,12 @@ final class ChatPresentation {
     private(set) var requestedItemID: String?
     private(set) var scrollRequest = 0
     @ObservationIgnored private var activeID: String?
+    @ObservationIgnored private var historyBoundaries = Set<String>()
 
     func replace(_ values: [JSONValue], info: JSONValue) {
         records = [:]
         order = []
+        historyBoundaries = []
         expandedTurns = []
         expandedSubagents = []
         for value in values where !value.stableID.isEmpty {
@@ -53,6 +55,23 @@ final class ChatPresentation {
         }
         self.info = info
         refreshActivity()
+        rebuild()
+    }
+
+    func prepend(_ values: [JSONValue]) {
+        if let first = order.first { historyBoundaries.insert(first) }
+        let visibleTurns = Set(records.values.compactMap { $0.value["turnId"]?.stringValue })
+        for value in values where value.text("kind") == "turn" {
+            if let turn = value["turnId"]?.stringValue, visibleTurns.contains(turn) {
+                expandedTurns.insert(turn)
+            }
+        }
+        var older: [String] = []
+        for value in values where !value.stableID.isEmpty && records[value.stableID] == nil {
+            records[value.stableID] = ChatItemState(value)
+            older.append(value.stableID)
+        }
+        order = older + order
         rebuild()
     }
 
@@ -200,7 +219,7 @@ final class ChatPresentation {
             if kind == "approval" && value.text("decision") == "pending" { continue }
             if kind == "question" && value.text("state") == "pending" { continue }
             if kind == "tool" && value.text("state") != "running" {
-                if rows.last?.kind == .tools {
+                if rows.last?.kind == .tools && !historyBoundaries.contains(item.id) {
                     rows[rows.count - 1].items.append(item)
                 } else {
                     rows.append(ChatTimelineEntry(id: "tools-\(item.id)", kind: .tools, items: [item]))

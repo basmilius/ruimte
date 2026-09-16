@@ -16,6 +16,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `agentAnswerApproval` = "agent.answerApproval"
     case `agentSetApprovals` = "agent.setApprovals"
     case `chatCreate` = "chat.create"
+    case `chatHistory` = "chat.history"
     case `chatAttach` = "chat.attach"
     case `chatDetach` = "chat.detach"
     case `chatSend` = "chat.send"

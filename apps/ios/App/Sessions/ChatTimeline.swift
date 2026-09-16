@@ -435,6 +435,12 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         displayLink?.invalidate()
         displayLink = nil
         guard let (values, revision) = pendingUpdate, !applyingSnapshot else { return }
+        // A prepend waits for the finger to lift so its reading anchor can be restored.
+        if collection.userIsScrolling, let first = source.snapshot().itemIdentifiers.first,
+            values.first?.id != first
+        {
+            return
+        }
         pendingUpdate = nil
         collection.prepareForContentChange()
         let interactionRevision = collection.viewport.interactionRevision
@@ -497,9 +503,15 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         collection.targetOffset(proposedContentOffset)
     }
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-        if !decelerate { collection.finishUserScroll() }
+        if !decelerate {
+            collection.finishUserScroll()
+            scheduleUpdate()
+        }
     }
-    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) { collection.finishUserScroll() }
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        collection.finishUserScroll()
+        scheduleUpdate()
+    }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)

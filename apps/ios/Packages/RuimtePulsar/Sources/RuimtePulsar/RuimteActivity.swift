@@ -13,3 +13,13 @@
         public typealias ContentState = PushActivityContent
     }
 #endif
+
+extension PushActivityContentPhase {
+    public static func chat(_ info: JSONValue) -> Self {
+        switch info["status"]?.stringValue {
+        case "needs-you": .needsYou
+        case "running": .running
+        default: .done
+        }
+    }
+}

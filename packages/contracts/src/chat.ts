@@ -328,7 +328,7 @@ export type ChatCompactionItem = z.infer<typeof ChatCompactionItemSchema>;
 // A `delta` appends to an assistant item's text or to a running tool item's partial output.
 // A `reset` replaces the whole thread, which is how a cleared chat reaches a client that was looking.
 export const ChatEventSchema = z.discriminatedUnion('type', [
-    z.object({ type: z.literal('item'), item: ChatItemSchema }),
+    z.object({ type: z.literal('item'), item: ChatItemSchema, historyIndex: z.number().int().nonnegative().optional() }),
     z.object({ type: z.literal('delta'), itemId: z.string(), text: z.string() }),
     z.object({ type: z.literal('info'), info: ChatInfoSchema }),
     z.object({ type: z.literal('reset'), info: ChatInfoSchema, items: z.array(ChatItemSchema) })
@@ -366,9 +366,23 @@ export type ChatTargetPayload = z.infer<typeof ChatTargetPayloadSchema>;
 export const ChatClearPayloadSchema = ChatTargetPayloadSchema.extend({ force: z.boolean().optional() });
 export type ChatClearPayload = z.infer<typeof ChatClearPayloadSchema>;
 
+export const ChatAttachPayloadSchema = ChatTargetPayloadSchema.extend({ historyLimit: z.number().int().min(1).max(100).optional() });
+export const ChatHistoryPayloadSchema = ChatTargetPayloadSchema.extend({
+    cursor: z.string().min(1).max(128),
+    limit: z.number().int().min(1).max(100).optional()
+});
+export const ChatHistoryPageSchema = z.object({
+    start: z.number().int().nonnegative(),
+    cursor: z.string().nullable()
+});
+export const ChatHistoryResultSchema = z.object({ items: z.array(ChatItemSchema), history: ChatHistoryPageSchema });
+export type ChatHistoryResult = z.infer<typeof ChatHistoryResultSchema>;
+
 export const ChatAttachResultSchema = z.object({
     info: ChatInfoSchema,
-    items: z.array(ChatItemSchema)
+    items: z.array(ChatItemSchema),
+    history: ChatHistoryPageSchema.optional(),
+    pending: z.array(ChatItemSchema).optional()
 });
 export type ChatAttachResult = z.infer<typeof ChatAttachResultSchema>;
 
