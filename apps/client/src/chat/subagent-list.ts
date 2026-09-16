@@ -1,3 +1,4 @@
+import { CircleCheck, CircleSlash, CircleX, LoaderCircle, type LucideIcon } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem, Task } from '@ruimte/contracts';
 import { stripMarkdown } from '@/chat/logic/timeline-copy';
 import { toolSummary } from '@/chat/logic/tools';
@@ -35,6 +36,27 @@ export const taskIdOf = (item: ChatSubagentItem): string | null => (item.origin 
 /* A cancelled task is a failed row on the wire, and only the task itself still says which it was. */
 export const statusWordOf = (item: ChatSubagentItem, task: Task | null): SubagentStatusWord =>
     item.status === 'failed' && task?.status === 'cancelled' ? 'cancelled' : item.status;
+
+/* How an entry's state looks in front of its title. */
+export interface SubagentStatusLook {
+    icon: LucideIcon;
+    tone: string;
+    spins: boolean;
+}
+
+/*
+ * The same states look the same elsewhere: a failed or cancelled task on its node (`TaskMark`), what
+ * finished in the toolbar (`StatusSummary`) and work in progress in a toast. A spinner stops under
+ * reduced motion with every other animation (`styles.css`).
+ */
+const STATUS_LOOKS: Record<SubagentStatusWord, SubagentStatusLook> = {
+    running: { icon: LoaderCircle, tone: 'text-status-running', spins: true },
+    done: { icon: CircleCheck, tone: 'text-status-idle', spins: false },
+    failed: { icon: CircleX, tone: 'text-status-error', spins: false },
+    cancelled: { icon: CircleSlash, tone: 'text-text-faint', spins: false }
+};
+
+export const statusLookOf = (word: SubagentStatusWord): SubagentStatusLook => STATUS_LOOKS[word];
 
 export const previewOfItem = (item: ChatItem): SubagentPreview | null => {
     switch (item.kind) {

@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
-import { Bot, ListChecks } from 'lucide-react';
+import { Bot } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem } from '@ruimte/contracts';
 import { SubagentConversation } from '@/chat/subagent-conversation';
 import {
     needsTail,
     previewFor,
     sectionSubagents,
+    statusLookOf,
     statusWordOf,
     subagentTitle,
     taskIdOf,
@@ -93,6 +94,7 @@ function Entry({ chatId, item, work }: { chatId: string; item: ChatSubagentItem;
     const tail = useTail(chatId, item.toolUseId, needsTail(item, work, refused));
     const preview = previewFor(item, work, tail);
     const word = statusWordOf(item, task);
+    const look = statusLookOf(word);
     // The stop is a button of its own beside the entry, since a button cannot hold another.
     return (
         <div className="-mx-2 flex w-[calc(100%+16px)] items-start gap-1 rounded-md hover:bg-surface-hover">
@@ -102,11 +104,11 @@ function Entry({ chatId, item, work }: { chatId: string; item: ChatSubagentItem;
                 onClick={() => show(openFromList(crumbOf(item)))}
             >
                 <span className="flex min-w-0 items-center gap-2">
-                    {/* A node another agent opened with `--task` reads as the task it is, as its row in the thread does. */}
-                    <span className={clsx(ROW_GUTTER, 'text-text-muted')}>
-                        <Icon icon={item.origin === 'ruimte' ? ListChecks : Bot} size={12} />
+                    <span className={clsx(ROW_GUTTER, look.tone)}>
+                        <Icon icon={look.icon} size={14} className={clsx(look.spins && 'animate-spin')} />
                     </span>
-                    <span className="min-w-0 truncate font-medium text-text">{subagentTitle(item)}</span>
+                    {/* The title reads at the size of the chat's own messages; the line under it stays small. */}
+                    <span className="min-w-0 truncate text-sm font-medium text-text">{subagentTitle(item)}</span>
                     <span className={clsx('ml-auto shrink-0 pl-3', STATUS_CLASS[word])}>{word}</span>
                 </span>
                 {preview !== null && (

@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { CircleCheck, CircleSlash, CircleX, LoaderCircle } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem, ChatToolItem, Task } from '@ruimte/contracts';
 import {
     latestPreview,
@@ -6,6 +7,7 @@ import {
     previewFor,
     previewOfItem,
     sectionSubagents,
+    statusLookOf,
     statusWordOf,
     stopOf,
     subagentTitle,
@@ -186,4 +188,11 @@ describe('stopping an active entry', () => {
         expect(stopOf(subagent('f', { status: 'failed', origin: 'ruimte', childId: 'node-1' }), false)).toBeNull();
         expect(stopOf(subagent('o', { origin: 'ruimte' }), false)).toBeNull();
     });
+});
+
+test('each state has the icon and tone it has elsewhere, and only running spins', () => {
+    expect(statusLookOf('running')).toEqual({ icon: LoaderCircle, tone: 'text-status-running', spins: true });
+    expect(statusLookOf('done')).toEqual({ icon: CircleCheck, tone: 'text-status-idle', spins: false });
+    expect(statusLookOf('failed')).toEqual({ icon: CircleX, tone: 'text-status-error', spins: false });
+    expect(statusLookOf('cancelled')).toEqual({ icon: CircleSlash, tone: 'text-text-faint', spins: false });
 });
