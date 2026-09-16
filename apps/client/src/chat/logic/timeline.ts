@@ -91,7 +91,14 @@ export const formatDuration = (ms: number): string => {
  * What a turn nobody asked for is about. The CLI wakes the agent when a background subagent settles
  * and hands over its summary; without one all that is known is that the agent went on by itself.
  */
-export const agentTurnLabel = (turn: ChatTurnItem): string => (turn.label ? `Sub-agent finished: ${turn.label}` : 'Continued on its own');
+export const agentTurnLabel = (turn: ChatTurnItem): string => {
+    // A turn the machine opened with the results of tasks this chat gave; the label is their titles.
+    if (turn.taskIds !== undefined && turn.taskIds.length > 0) {
+        const count = turn.taskIds.length;
+        return `Woken by ${count === 1 ? 'a task' : `${count} tasks`}${turn.label ? `: ${turn.label}` : ''}`;
+    }
+    return turn.label ? `Sub-agent finished: ${turn.label}` : 'Continued on its own';
+};
 
 /* The items of the turn tell a turn a person stopped from one the machine ended after a restart. */
 export const turnLabel = (turn: ChatTurnItem, items: readonly ChatItem[] = []): string => {

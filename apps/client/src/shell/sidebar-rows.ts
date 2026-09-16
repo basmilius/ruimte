@@ -1,4 +1,4 @@
-import type { AgentKind, AgentStatus, CanvasNodeKind, ProjectIconChoice, ProjectViewKind } from '@ruimte/contracts';
+import type { AgentKind, AgentStatus, CanvasNodeKind, ProjectIconChoice, ProjectViewKind, Task } from '@ruimte/contracts';
 import type { SidebarScope } from '@/state/settings';
 
 export interface SidebarNode {
@@ -14,6 +14,8 @@ export interface SidebarNode {
     alert?: boolean;
     /* Its turn ended while nobody was looking, and nobody has looked since. */
     finished?: boolean;
+    /* The task another agent opened it with. */
+    task?: Task | null;
 }
 
 export interface SidebarView {

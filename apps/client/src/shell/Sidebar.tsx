@@ -53,6 +53,8 @@ import {
 import { useSidebarSources } from '@/shell/sidebar-source';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { UnseenMark } from '@/attention/UnseenMark';
+import { TaskMark } from '@/tasks/TaskMark';
+import { childTask, useTasks } from '@/state/tasks';
 import { Favicon } from '@/browser/Favicon';
 import { resetTitle } from '@/nodes/node-host';
 import { StatusDot } from '@/canvas/NodeFrame';
@@ -238,6 +240,7 @@ function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarN
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />
                     </Tooltip>
                 )}
+                {node.task && <TaskMark task={node.task} />}
                 {node.finished && <UnseenMark />}
                 {node.alert && <ProcessWarningMark />}
                 {node.status && <StatusDot status={node.status} plain />}
@@ -497,6 +500,7 @@ export function Sidebar() {
     const drafts = useDrafts((s) => s.ids);
     const warnings = useProcessWarnings((s) => s.byEndpoint);
     const unseen = useAttention((s) => s.unseen);
+    const tasks = useTasks((s) => s.byEndpoint);
     const open = useUi((s) => s.sidebarOpen);
     const hasProject = useProject((s) => s.current !== null);
     const expanded = useUi(useShallow((s) => s.sidebarExpanded));
@@ -530,7 +534,8 @@ export function Sidebar() {
                         status: nodeStatus(node, sessions, chats, source.endpointId) ?? null,
                         draft: node.kind === 'chat' && drafts.includes(node.id),
                         alert: (warnings[source.endpointId] ?? []).some((alert) => alert.nodeId === node.id),
-                        finished: isUnseen(unseen, source.endpointId, node.id)
+                        finished: isUnseen(unseen, source.endpointId, node.id),
+                        task: childTask(tasks[source.endpointId], node.id)
                     });
                     const provider = view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : undefined;
                     return {
@@ -546,7 +551,7 @@ export function Sidebar() {
                     };
                 })
             })),
-        [sources, sessions, chats, drafts, warnings, unseen]
+        [sources, sessions, chats, drafts, warnings, unseen, tasks]
     );
 
     const activeViewId = workspaces.find((workspace) => workspace.focused)?.activeViewId ?? null;

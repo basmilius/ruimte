@@ -212,6 +212,8 @@ describe('labels', () => {
         const turn = { id: 't', kind: 'turn' as const, createdAt: 0, turnId: 't', state: 'done' as const, endedAt: 1, costUsd: 0 };
         expect(agentTurnLabel({ ...turn, origin: 'agent', label: 'slept' })).toBe('Sub-agent finished: slept');
         expect(agentTurnLabel({ ...turn, origin: 'agent' })).toBe('Continued on its own');
+        expect(agentTurnLabel({ ...turn, origin: 'agent', label: 'Lexer', taskIds: ['task-1'] })).toBe('Woken by a task: Lexer');
+        expect(agentTurnLabel({ ...turn, origin: 'agent', label: 'Lexer, Docs', taskIds: ['task-1', 'task-2'] })).toBe('Woken by 2 tasks: Lexer, Docs');
     });
 });
 

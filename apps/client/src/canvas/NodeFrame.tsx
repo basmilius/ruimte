@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { UnseenMark } from '@/attention/UnseenMark';
+import { TaskMark } from '@/tasks/TaskMark';
+import { useChildTask } from '@/state/tasks';
 import { useUnseen } from '@/state/attention';
 import { isNodeFocused, useCanvas, useCanvasStore, type AgentStatus } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
@@ -181,6 +183,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const status = useNodeStatus(node);
     const unseen = useUnseen(id);
     const processAlerts = useNodeAlerts(id);
+    const task = useChildTask(id);
     const hasContext = useHasContextLinks(id);
     const hidden = useCanvas((s) => s.hidden.has(id));
 
@@ -290,6 +293,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     )}
                     {/* Up close this is already gone, since looking clears it. It is for the canvas
                         zoomed out over everything and for the window standing beside another app. */}
+                    {task && !renaming && <TaskMark task={task} />}
                     {unseen && !renaming && <UnseenMark />}
                     {!renaming && <ProcessAlertMark alerts={processAlerts} />}
                     {node.kind === 'file' && <span ref={setFileControls} className={`${BTN_GROUP} shrink-0`} />}

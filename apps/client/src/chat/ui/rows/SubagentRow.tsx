@@ -104,7 +104,8 @@ export function SubagentRow({
     const line = (
         <ToggleLine
             icon={<Icon icon={Bot} size={12} />}
-            label="Sub-agent"
+            // A node another agent opened with `--task` reads as the task it is, not as a helper of the CLI's own.
+            label={item.origin === 'ruimte' ? 'Task' : 'Sub-agent'}
             detail={detail}
             open={expanded}
             onToggle={onToggle}

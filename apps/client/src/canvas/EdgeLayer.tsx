@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { isAgentKind, useCanvas, useCanvasStore } from '@/state/canvas';
 import { anchors, curve, edgeLines, selectedLine, textRect, type EdgeLine } from '@/canvas/edge-lines';
 import type { Point, Rect } from '@/canvas/math';
+import { useEndpointId } from '@/state/keys';
+import { TASK_EDGE_LABEL, edgeTask, useTasks } from '@/state/tasks';
 
 function EdgeLabel({
     ids,
@@ -68,6 +70,8 @@ export function EdgeLayer() {
     const draft = useCanvas((s) => s.linkDraft);
     const [hovered, setHovered] = useState<string | null>(null);
     const [editing, setEditing] = useState<string | null>(null);
+    const endpointId = useEndpointId();
+    const tasks = useTasks((s) => s.byEndpoint[endpointId]);
 
     const lines = useMemo(() => edgeLines(edges), [edges]);
 
@@ -118,6 +122,10 @@ export function EdgeLayer() {
                 const active = hovered === key || line.ids.some((id) => selection.includes(id));
                 const context = carriesContext(line);
                 const stroke = context ? 'var(--accent)' : active ? 'var(--text-muted)' : 'var(--border-strong)';
+                // A line a task went along says how the task stands, and stays dashed only while it is open.
+                const task = edgeTask(tasks, line.edge.from, line.edge.to) ?? (line.back === null ? null : edgeTask(tasks, line.back.from, line.back.to));
+                const label = task === null ? line.label : TASK_EDGE_LABEL[task.status];
+                const dashed = task === null ? context : task.status === 'open';
                 return (
                     <g key={key} onPointerEnter={() => setHovered(key)} onPointerLeave={() => setHovered((h) => (h === key ? null : h))}>
                         {/* A wide invisible stroke gives the thin line something to hover and click; a double-click names it. */}
@@ -143,15 +151,15 @@ export function EdgeLayer() {
                             stroke={stroke}
                             strokeWidth={active ? 3 : 2}
                             strokeOpacity={context ? (active ? 0.95 : 0.55) : 1}
-                            strokeDasharray={context ? '6 6' : undefined}
+                            strokeDasharray={dashed ? '6 6' : undefined}
                         />
                         <circle cx={p.bx} cy={p.by} r="4" fill={stroke} />
                         {/* A head at the tail too: the pair reads at a glance as both nodes reading each other. */}
                         {line.back !== null && <circle cx={p.ax} cy={p.ay} r="4" fill={stroke} />}
-                        <EdgeLabel ids={line.ids} label={line.label} at={mid} editing={editing === key} onEdit={(on) => setEditing(on ? key : null)} />
+                        <EdgeLabel ids={line.ids} label={label} at={mid} editing={editing === key} onEdit={(on) => setEditing(on ? key : null)} />
                         {active && editing !== key && (
                             <g
-                                transform={`translate(${mid.x + (line.label ? 40 : 0)}, ${mid.y})`}
+                                transform={`translate(${mid.x + (label ? 40 : 0)}, ${mid.y})`}
                                 className="pointer-events-auto cursor-pointer"
                                 onPointerDown={(e) => {
                                     e.stopPropagation();
