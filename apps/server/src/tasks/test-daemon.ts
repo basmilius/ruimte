@@ -176,7 +176,11 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
     // A task is written after the event that settled it, so the wait looks again once it is on disk.
     tasks.onChange(() => queueMicrotask(recheck));
 
-    const modes = { chatMode: (id: string) => chats.get(id)?.info.runtimeMode, launch: (id: string) => sessions.get(id)?.launch };
+    const modes = {
+        chatMode: (id: string) => chats.get(id)?.info.runtimeMode,
+        launch: (id: string) => sessions.get(id)?.launch,
+        reportedMode: (id: string) => sessions.get(id)?.reportedMode
+    };
     const host: CanvasHost = {
         locate: (id) => store.index.locate(id),
         read: (id) => store.read(id),

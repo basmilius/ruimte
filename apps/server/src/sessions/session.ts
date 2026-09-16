@@ -1,6 +1,6 @@
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { Terminal } from '@xterm/headless';
-import type { AgentInfo, AgentLaunch } from '@ruimte/contracts';
+import type { AgentInfo, AgentLaunch, RuntimeMode } from '@ruimte/contracts';
 import type { PtyAdapter, PtyProcess } from '../pty/pty.ts';
 
 const SCROLLBACK_LINES = 10_000;
@@ -58,6 +58,8 @@ export class Session {
     readonly hookToken: string;
     readonly launch: AgentLaunch | null;
     agent: AgentInfo | null;
+    // The permission mode the CLI's hooks last reported, which outranks the launch: a person can switch it in the TUI.
+    reportedMode: RuntimeMode | null = null;
     private readonly terminal: Terminal;
     private readonly serializer: SerializeAddon;
     private readonly pty: PtyProcess;

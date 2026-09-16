@@ -10,13 +10,15 @@ export interface NodeModeDeps {
     chatMode(nodeId: string): RuntimeMode | undefined;
     /* The launch a terminal session was started with: null for a plain shell, undefined for no session at all. */
     launch(nodeId: string): AgentLaunch | null | undefined;
+    /* The mode a terminal agent's hooks last reported; null or undefined while none did. */
+    reportedMode(nodeId: string): RuntimeMode | null | undefined;
 }
 
 /* The mode a node runs in as far as the daemon knows it, which is what an agent it opens may get at most. */
 export const nodeMode =
     (deps: NodeModeDeps) =>
     (nodeId: string): RuntimeMode =>
-        deps.chatMode(nodeId) ?? launchedMode(deps.launch(nodeId) ?? null);
+        deps.chatMode(nodeId) ?? deps.reportedMode(nodeId) ?? launchedMode(deps.launch(nodeId) ?? null);
 
 /*
  * The entry a verb owes for a node it made. A chat opened by a chat takes that chat's mode unless

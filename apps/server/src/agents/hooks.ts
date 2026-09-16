@@ -1,10 +1,12 @@
-import type { AgentKind, AgentStatus } from '@ruimte/contracts';
+import type { AgentKind, AgentStatus, RuntimeMode } from '@ruimte/contracts';
 
 interface HookOutcome {
     agentSessionId: string;
     transcriptPath: string | null;
     // Null means the agent has left the shell.
     status: AgentStatus | null;
+    // The CLI's own name for its permission mode, on the events that carry one.
+    permissionMode: string | null;
 }
 
 // What each hook event means for the person watching the node. Claude Code and Codex share the
@@ -97,5 +99,35 @@ export const normalizeHook = (body: unknown): HookOutcome | null => {
     if (status === undefined) {
         return null;
     }
-    return { agentSessionId, transcriptPath, status: status === 'gone' ? null : status };
+    return { agentSessionId, transcriptPath, status: status === 'gone' ? null : status, permissionMode: asString(hook.permission_mode) };
+};
+
+/*
+ * Claude Code 2.1.273 names its modes on `UserPromptSubmit`, `Stop` and the tool events (measured; not
+ * on `SessionStart`). `plan` and `dontAsk` both leave the person every decision a tool asks for, so
+ * they are as narrow as `default`.
+ */
+const PERMISSION_MODES: Record<string, RuntimeMode> = {
+    default: 'supervised',
+    plan: 'supervised',
+    dontAsk: 'supervised',
+    acceptEdits: 'auto-accept-edits',
+    auto: 'auto',
+    bypassPermissions: 'full-access'
+};
+
+/*
+ * The mode a terminal agent runs in by what its hook reported, null when the hook named none. A name
+ * this table does not know counts as the strictest. Codex 0.154 reports only `default` or
+ * `bypassPermissions` (measured), and launches every asking mode with the same flags, so its
+ * `default` cannot tell those apart: the mode it was launched in stands, unless that was full access.
+ */
+export const modeOfHook = (kind: AgentKind, permissionMode: string | null, launched: RuntimeMode): RuntimeMode | null => {
+    if (permissionMode === null) {
+        return null;
+    }
+    if (kind === 'codex' && permissionMode === 'default') {
+        return launched === 'full-access' ? 'supervised' : launched;
+    }
+    return PERMISSION_MODES[permissionMode] ?? 'supervised';
 };

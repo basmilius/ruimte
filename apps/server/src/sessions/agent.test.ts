@@ -76,6 +76,24 @@ describe('agent status via hooks', () => {
         expect(await harness.agents.read('s1')).toBeNull();
     });
 
+    test('the permission mode the hooks last reported is kept per session until the CLI leaves', async () => {
+        await createAgent('s1', { kind: 'claude', runtimeMode: 'full-access' });
+        const session = harness.manager.get('s1')!;
+        const apply = (event: string, extra: Record<string, unknown> = {}) => harness.manager.applyHook('claude', session.hookToken, hook(event, extra));
+
+        await apply('SessionStart');
+        expect(session.reportedMode).toBeNull();
+        await apply('UserPromptSubmit', { permission_mode: 'plan' });
+        expect(session.reportedMode).toBe('supervised');
+        // An event that names no mode leaves the last one standing.
+        await apply('Notification', { notification_type: 'permission_prompt' });
+        expect(session.reportedMode).toBe('supervised');
+        await apply('Stop', { permission_mode: 'acceptEdits' });
+        expect(session.reportedMode).toBe('auto-accept-edits');
+        await apply('SessionEnd');
+        expect(session.reportedMode).toBeNull();
+    });
+
     test('a shell without a hook URL gets no hook variables', async () => {
         await harness.cleanup();
         await freshHarness({ hookUrl: undefined });

@@ -15,7 +15,7 @@ export const narrowerMode = (mode: RuntimeMode, ceiling: RuntimeMode): RuntimeMo
 export const MODE_LINES: readonly string[] = [
     `mode\t${ORDER.join(' < ')}\tfrom the narrowest to the widest`,
     "mode\tAn agent you open never runs in a wider mode than you: without --mode a chat opened by a chat takes your mode, and anything else takes the person's default narrowed to yours",
-    'mode\tA terminal agent counts as the mode its CLI was started in; one the machine cannot tell counts as supervised'
+    'mode\tA terminal agent counts as the mode its CLI last reported, or else the mode it was started in; one the machine cannot tell counts as supervised'
 ];
 
 const modeLines = (mine: RuntimeMode): string[] => [

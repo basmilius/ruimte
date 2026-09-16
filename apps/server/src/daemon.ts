@@ -305,7 +305,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     manager.isAgentGone = (sessionId) => processes.isAgentGone(sessionId);
 
     const worktrees = new Worktrees(config.home);
-    const modes = { chatMode: (id: string) => chats.get(id)?.info.runtimeMode, launch: (id: string) => manager.get(id)?.launch };
+    const modes = {
+        chatMode: (id: string) => chats.get(id)?.info.runtimeMode,
+        launch: (id: string) => manager.get(id)?.launch,
+        reportedMode: (id: string) => manager.get(id)?.reportedMode
+    };
     const canvasHost = {
         locate: (id: string) => projects.index.locate(id),
         read: (projectId: string) => projects.read(projectId),

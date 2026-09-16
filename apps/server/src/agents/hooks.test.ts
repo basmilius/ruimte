@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { hasHooks, normalizeHook } from './hooks.ts';
+import { hasHooks, modeOfHook, normalizeHook } from './hooks.ts';
 
 const hook = (event: string, extra: Record<string, unknown> = {}) => ({
     session_id: 'abc',
@@ -35,8 +35,33 @@ describe('normalizeHook', () => {
     });
 
     test('carries the session id and transcript path', () => {
-        expect(normalizeHook(hook('Stop'))).toEqual({ agentSessionId: 'abc', transcriptPath: '/tmp/t.jsonl', status: 'idle' });
+        expect(normalizeHook(hook('Stop'))).toEqual({ agentSessionId: 'abc', transcriptPath: '/tmp/t.jsonl', status: 'idle', permissionMode: null });
         expect(normalizeHook(hook('Stop', { transcript_path: undefined }))?.transcriptPath).toBeNull();
+    });
+});
+
+describe('the permission mode a hook reports', () => {
+    test('is read off the payload as the CLI names it', () => {
+        expect(normalizeHook(hook('UserPromptSubmit', { permission_mode: 'acceptEdits' }))?.permissionMode).toBe('acceptEdits');
+        expect(normalizeHook(hook('SessionStart'))?.permissionMode).toBeNull();
+    });
+
+    test("maps Claude Code's modes onto Ruimte's order, anything unknown as the strictest", () => {
+        const claude = (mode: string) => modeOfHook('claude', mode, 'full-access');
+        expect(claude('default')).toBe('supervised');
+        expect(claude('plan')).toBe('supervised');
+        expect(claude('dontAsk')).toBe('supervised');
+        expect(claude('acceptEdits')).toBe('auto-accept-edits');
+        expect(claude('auto')).toBe('auto');
+        expect(claude('bypassPermissions')).toBe('full-access');
+        expect(claude('somethingNew')).toBe('supervised');
+        expect(modeOfHook('claude', null, 'full-access')).toBeNull();
+    });
+
+    test("keeps a Codex launch among the asking modes, since Codex's default cannot tell them apart", () => {
+        expect(modeOfHook('codex', 'default', 'auto')).toBe('auto');
+        expect(modeOfHook('codex', 'default', 'full-access')).toBe('supervised');
+        expect(modeOfHook('codex', 'bypassPermissions', 'supervised')).toBe('full-access');
     });
 });
 

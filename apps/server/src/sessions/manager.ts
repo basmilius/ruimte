@@ -4,8 +4,8 @@ import { homedir } from 'node:os';
 import type { AgentInfo, AgentKind, AgentLaunch, ContextSource, EventMap, EventType, SessionInfo } from '@ruimte/contracts';
 import type { AgentStore } from '../agents/agent-store.ts';
 import { ApprovalStore, parsePermissionAsk, type ApprovalDecision } from '../agents/approvals.ts';
-import { normalizeHook } from '../agents/hooks.ts';
-import { freshCommand, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
+import { modeOfHook, normalizeHook } from '../agents/hooks.ts';
+import { freshCommand, launchedMode, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
 import { contextHint } from '../context/context-note.ts';
 import { defaultShell, defaultShellArgs, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
@@ -281,6 +281,7 @@ export class SessionManager {
             // The CLI is up and speaking for itself, so the resume it answers to is done.
             this.resuming.delete(session.id);
         }
+        session.reportedMode = agent === null ? null : (modeOfHook(kind, outcome.permissionMode, launchedMode(session.launch)) ?? session.reportedMode);
         await this.setAgent(session, agent);
         if (agent !== null) {
             this.refreshTitle(session, agent);

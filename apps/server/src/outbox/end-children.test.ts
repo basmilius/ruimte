@@ -234,6 +234,19 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
         await daemon.worker.settled();
         expect(daemon.chats.get(line!.split('\t')[0]!)?.info.runtimeMode).toBe('supervised');
     });
+
+    test('a terminal agent counts as the mode its hooks report, not the one it was launched in', async () => {
+        const daemon = await boot();
+        await daemon.sessions.create({ sessionId: 'term-lead', cols: 80, rows: 24, cwd: folder, agent: { kind: 'claude', runtimeMode: 'full-access' } });
+        const token = daemon.sessions.get('term-lead')!.hookToken;
+        await daemon.sessions.applyHook('claude', token, { session_id: 'c1', hook_event_name: 'UserPromptSubmit', permission_mode: 'default' });
+        const [refusal] = await runVerb(daemon, 'term-lead', 'agent', ['claude', '--mode', 'auto-accept-edits']);
+        expect(refusal).toStartWith('refused\tmode-above-parent\tYou run in supervised');
+
+        await daemon.sessions.applyHook('claude', token, { session_id: 'c1', hook_event_name: 'Stop', permission_mode: 'bypassPermissions' });
+        const [line] = await runVerb(daemon, 'term-lead', 'agent', ['claude', '--mode', 'full-access']);
+        expect(line).not.toStartWith('refused');
+    });
 });
 
 describe('stopping one task from the list of the chat that gave it', () => {

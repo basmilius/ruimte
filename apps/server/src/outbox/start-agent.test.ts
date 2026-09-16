@@ -155,7 +155,11 @@ const boot = async (): Promise<Daemon> => {
     const unused = (): never => {
         throw new Error('not used by agent and team');
     };
-    const modes = { chatMode: (id: string) => chats.get(id)?.info.runtimeMode, launch: (id: string) => sessions.get(id)?.launch };
+    const modes = {
+        chatMode: (id: string) => chats.get(id)?.info.runtimeMode,
+        launch: (id: string) => sessions.get(id)?.launch,
+        reportedMode: (id: string) => sessions.get(id)?.reportedMode
+    };
     const host: CanvasHost = {
         locate: (id) => store.index.locate(id),
         read: (id) => store.read(id),
@@ -401,7 +405,12 @@ describe('the start of one agent node', () => {
         const modes = {
             chatMode: (id: string) => (id === 'lead' ? ('auto' as const) : undefined),
             launch: (id: string) =>
-                id === 'shell' ? { kind: 'claude' as const, runtimeMode: 'auto-accept-edits' as const } : id === 'plain' ? null : undefined
+                id === 'shell' || id === 'switched'
+                    ? { kind: 'claude' as const, runtimeMode: 'auto-accept-edits' as const }
+                    : id === 'plain'
+                      ? null
+                      : undefined,
+            reportedMode: (id: string) => (id === 'switched' ? ('supervised' as const) : null)
         };
         const start = { projectId: 'p', nodeId: 'n', node: 'chat' as const, provider: 'claude' as const, cwd: null };
         expect(startAgentWork({ ...start, openedBy: 'lead' }, modes).payload).toEqual({
@@ -420,8 +429,12 @@ describe('the start of one agent node', () => {
         // A CLI typed into a plain shell, or a node the daemon runs nothing for, counts as the strictest.
         expect(nodeMode(modes)('plain')).toBe('supervised');
         expect(nodeMode(modes)('nobody')).toBe('supervised');
-        expect(nodeMode({ chatMode: () => undefined, launch: () => ({ kind: 'codex' }) })('x')).toBe('full-access');
-        expect(nodeMode({ chatMode: () => undefined, launch: () => ({ kind: 'codex', resume: 'abc' }) })('x')).toBe('supervised');
+        const unreported = { chatMode: () => undefined, reportedMode: () => undefined };
+        expect(nodeMode({ ...unreported, launch: () => ({ kind: 'codex' }) })('x')).toBe('full-access');
+        expect(nodeMode({ ...unreported, launch: () => ({ kind: 'codex', resume: 'abc' }) })('x')).toBe('supervised');
+        // What the hooks reported outranks the launch, since a person can switch modes inside the CLI.
+        expect(nodeMode(modes)('switched')).toBe('supervised');
+        expect(nodeMode({ chatMode: () => undefined, launch: () => null, reportedMode: () => 'full-access' })('x')).toBe('full-access');
     });
 
     test('a chat takes the model and mode of the composer preference, and the mode of the chat that opened it beats it', async () => {
