@@ -15,6 +15,7 @@ import { ProjectNameDialog } from '@/shell/ProjectNameDialog';
 import { linkDot, linkHint, machineLink } from '@/shell/palette-browse';
 import { SignInButtons } from '@/shell/SignInButtons';
 import { STRIP_PADDING_PX } from '@/shell/Sidebar';
+import { runAppShortcut } from '@/shell/app-shortcuts';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { AddMachineDialog } from '@/shell/settings/MachinesSection';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
@@ -131,21 +132,23 @@ function SignInCard({ description }: { description: string }) {
     );
 }
 
+const FOOTER_BUTTON = 'flex items-center gap-1.5 rounded-sm hover:text-text';
+
 /* The keys that work from here, and which Ruimte this is. It stays at the bottom, and what scrolls under it fades out. */
 function Footer() {
     const currentVersion = useUpdates((s) => s.currentVersion);
     const version = isDesktop() && currentVersion ? currentVersion : null;
     return (
         <footer className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 bg-linear-to-t from-bg from-40% to-transparent px-8 pt-10 pb-4 text-xs text-text-faint *:pointer-events-auto">
-            <span className="flex items-center gap-1.5">
+            <button className={FOOTER_BUTTON} onClick={() => runAppShortcut('palette')}>
                 <Kbd shortcut={APP_SHORTCUTS.palette} className={TOOLTIP_KBD} /> Command palette
-            </span>
-            <span className="flex items-center gap-1.5">
+            </button>
+            <button className={FOOTER_BUTTON} onClick={() => runAppShortcut('settings')}>
                 <Kbd shortcut={APP_SHORTCUTS.settings} className={TOOLTIP_KBD} /> Settings
-            </span>
+            </button>
             {version && <span>Version {version}</span>}
             {version && canShowReleaseNotes() && (
-                <button className="rounded-sm hover:text-text" onClick={() => openReleaseNotes(version)}>
+                <button className={FOOTER_BUTTON} onClick={() => openReleaseNotes(version)}>
                     What's new
                 </button>
             )}

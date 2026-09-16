@@ -44,7 +44,8 @@ export const appShortcutFor = (e: KeyLike, { inNode, apple }: ShortcutContext): 
     return null;
 };
 
-const run = (shortcut: AppShortcut): void => {
+/* What a window shortcut does, for the key and for a button that offers the same thing. */
+export const runAppShortcut = (shortcut: AppShortcut): void => {
     const ui = useUi.getState();
     if (shortcut === 'palette') {
         if (ui.paletteOpen) {
@@ -75,7 +76,7 @@ export const useAppShortcuts = (): void => {
                 return;
             }
             e.preventDefault();
-            run(shortcut);
+            runAppShortcut(shortcut);
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
