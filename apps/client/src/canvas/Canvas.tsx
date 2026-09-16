@@ -1,7 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Menu } from '@base-ui-components/react/menu';
-import { ChevronDown, Globe, MessageSquare, Plus, Terminal } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
@@ -10,19 +8,12 @@ import { isSpaceDown } from '@/canvas/canvas-shortcuts';
 import { NODE_SIZE, useCanvas, useCanvasStore } from '@/state/canvas';
 import { useEndpointId } from '@/state/keys';
 import { showFileOnCanvas } from '@/project/views';
-import { addAgentNodeAtCenter, addNodeAtCenter } from '@/shell/commands';
-import { AgentSubmenus } from '@/agents/AgentMenus';
 import { CanvasMenuPopup } from '@/canvas/CanvasMenu';
+import { EmptyCanvas } from '@/canvas/EmptyCanvas';
 import { EdgeLayer } from '@/canvas/EdgeLayer';
 import { NodeFrame } from '@/canvas/NodeFrame';
 import { TextElementView } from '@/canvas/TextElementView';
-import { Button } from '@/ui/Button';
-import { EmptyState } from '@/ui/EmptyState';
 import { isInFloatingLayer } from '@/ui/floating';
-import { Icon } from '@/ui/Icon';
-import { ADD_NODE_SHORTCUTS } from '@/canvas/shortcuts';
-import { APP_SHORTCUTS } from '@/shell/shortcuts';
-import { Kbd } from '@/ui/Kbd';
 import { isModHeld } from '@/ui/shortcut';
 import { isApplePlatform } from '@/desktop/bridge';
 
@@ -550,39 +541,7 @@ export function Canvas() {
                         <NodeFrame key={id} id={id} />
                     ))}
                 </div>
-                {renderOrder.length === 0 && textIds.length === 0 && (
-                    <div className="pointer-events-none absolute inset-0 grid place-items-center">
-                        <EmptyState
-                            className="pointer-events-auto"
-                            action={
-                                <Menu.Root>
-                                    <Menu.Trigger render={<Button variant="secondary" />}>
-                                        <Icon icon={Plus} size={12} /> Add
-                                        <Icon icon={ChevronDown} size={12} />
-                                    </Menu.Trigger>
-                                    <Menu.Portal>
-                                        <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={6} align="center">
-                                            <Menu.Popup className="menu-popup">
-                                                <Menu.Item className="menu-item" onClick={() => addNodeAtCenter('terminal')}>
-                                                    <Icon icon={Terminal} size={14} /> Terminal <Kbd shortcut={ADD_NODE_SHORTCUTS.terminal} />
-                                                </Menu.Item>
-                                                <Menu.Item className="menu-item" onClick={() => addNodeAtCenter('chat')}>
-                                                    <Icon icon={MessageSquare} size={14} /> Chat <Kbd shortcut={ADD_NODE_SHORTCUTS.chat} />
-                                                </Menu.Item>
-                                                <AgentSubmenus onPick={(target, provider) => addAgentNodeAtCenter(target, provider)} />
-                                                <Menu.Item className="menu-item" onClick={() => addNodeAtCenter('browser')}>
-                                                    <Icon icon={Globe} size={14} /> Browser <Kbd shortcut={ADD_NODE_SHORTCUTS.browser} />
-                                                </Menu.Item>
-                                            </Menu.Popup>
-                                        </Menu.Positioner>
-                                    </Menu.Portal>
-                                </Menu.Root>
-                            }
-                        >
-                            Right-click anywhere to add a node, or press <Kbd shortcut={APP_SHORTCUTS.palette} />.
-                        </EmptyState>
-                    </div>
-                )}
+                {renderOrder.length === 0 && textIds.length === 0 && <EmptyCanvas />}
                 {dropping && <div className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-accent ring-inset" aria-hidden />}
                 {box && (
                     <div
