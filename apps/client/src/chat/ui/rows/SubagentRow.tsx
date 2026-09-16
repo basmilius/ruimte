@@ -1,14 +1,14 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { Bot, ChevronDown, PanelRightOpen } from 'lucide-react';
+import { Bot, ChevronDown } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem } from '@ruimte/contracts';
 import { formatDuration } from '@/chat/logic/timeline';
 import { Markdown } from '@/chat/ui/Markdown';
 import { RunningFor, ToggleLine, WorkLiveRow, WorkRow } from '@/chat/ui/rows/WorkRows';
 import { useSubagentSupport } from '@/chat/subagent-support';
+import { canOpenSubagent } from '@/chat/subagent-view';
 import { useEndpointId } from '@/state/keys';
 import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
 
 // The work of a long-running agent scrolls inside its row instead of pushing the thread away.
 const CHILDREN_MAX_PX = 320;
@@ -78,8 +78,9 @@ function SubagentResult({ result }: { result: string }) {
 }
 
 /*
- * One agent the agent delegated to. Collapsed it says what it is doing and for how long; opened it
- * shows its own work and, once it settled, the report it wrote.
+ * One agent the agent delegated to. The line says what it is doing and for how long; pressing it
+ * opens the whole conversation in the thread's place, and where there is none to open it folds out
+ * the work the thread kept and, once it settled, the report it wrote.
  */
 export function SubagentRow({
     item,
@@ -92,7 +93,7 @@ export function SubagentRow({
     work: ChatItem[];
     expanded: boolean;
     onToggle(): void;
-    /* Opens everything it did beside the thread, for a surface that has somewhere to open it. */
+    /* Opens everything it did in the thread's place, for a surface that has somewhere to open it. */
     onOpenConversation?(): void;
 }) {
     const running = item.status === 'running';
@@ -100,41 +101,26 @@ export function SubagentRow({
     const endpointId = useEndpointId();
     // A row that carries no pointer on a machine that already said no has nothing to open.
     const refused = useSubagentSupport((s) => s.unsupported[endpointId] === true);
-    const canOpen = onOpenConversation !== undefined && (item.native !== undefined || !refused);
-    const line = (
-        <ToggleLine
-            icon={<Icon icon={Bot} size={12} />}
-            // A node another agent opened with `--task` reads as the task it is, not as a helper of the CLI's own.
-            label={item.origin === 'ruimte' ? 'Task' : 'Sub-agent'}
-            detail={detail}
-            open={expanded}
-            onToggle={onToggle}
-            failed={item.status === 'failed'}
-            live={running}
-            inline={canOpen}
-            trailing={
-                <>
-                    {item.background && <span className="shrink-0 text-xs text-text-faint">background</span>}
-                    {running && item.lastTool && <span className="shrink-0 text-xs text-text-faint">{item.lastTool}</span>}
-                    <StatusPill item={item} />
-                </>
-            }
-        />
-    );
+    const press = onOpenConversation !== undefined && canOpenSubagent(item, refused) ? onOpenConversation : onToggle;
     return (
         <div>
-            {canOpen ? (
-                <div className="-mx-1 flex w-[calc(100%+8px)] items-center gap-1">
-                    {line}
-                    <Tooltip label="Open conversation" name>
-                        <button className="icon-btn mb-0.5 shrink-0" onClick={onOpenConversation}>
-                            <Icon icon={PanelRightOpen} size={12} />
-                        </button>
-                    </Tooltip>
-                </div>
-            ) : (
-                line
-            )}
+            <ToggleLine
+                icon={<Icon icon={Bot} size={12} />}
+                // A node another agent opened with `--task` reads as the task it is, not as a helper of the CLI's own.
+                label={item.origin === 'ruimte' ? 'Task' : 'Sub-agent'}
+                detail={detail}
+                open={expanded}
+                onToggle={press}
+                failed={item.status === 'failed'}
+                live={running}
+                trailing={
+                    <>
+                        {item.background && <span className="shrink-0 text-xs text-text-faint">background</span>}
+                        {running && item.lastTool && <span className="shrink-0 text-xs text-text-faint">{item.lastTool}</span>}
+                        <StatusPill item={item} />
+                    </>
+                }
+            />
             {expanded && (
                 <div className="mb-1">
                     <SubagentWork item={item} work={work} />

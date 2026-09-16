@@ -25,8 +25,7 @@ export function ToggleLine({
     failed,
     live,
     trailing,
-    className,
-    inline = false
+    className
 }: {
     icon: React.ReactNode;
     label: string;
@@ -37,8 +36,6 @@ export function ToggleLine({
     live?: boolean;
     trailing?: React.ReactNode;
     className?: string;
-    /* Shares its line with a control beside it, which then owns the bleed into the margins. */
-    inline?: boolean;
 }) {
     return (
         <button
@@ -46,8 +43,7 @@ export function ToggleLine({
                 // A button sizes itself to its content whatever its display is, so a long command
                 // would push the row past the column it sits in and never reach the truncation
                 // below. The width is the row's own plus the 4px it bleeds into either margin.
-                inline ? 'min-w-0 grow' : '-mx-1 w-[calc(100%+8px)]',
-                'mb-0.5 flex h-7 items-center gap-2 rounded-md px-1 text-left text-xs text-text-muted hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
+                '-mx-1 mb-0.5 flex h-7 w-[calc(100%+8px)] items-center gap-2 rounded-md px-1 text-left text-xs text-text-muted hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
                 failed && 'text-status-error',
                 className
             )}

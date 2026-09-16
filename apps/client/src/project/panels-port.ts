@@ -4,7 +4,7 @@ import { useFiles } from '@/state/files';
 import { currentEndpointId } from '@/state/keys';
 import { DEFAULT_LOG_HEIGHT, DEFAULT_SCOPE, useGit } from '@/state/git';
 import { parsePanels, serializePanels, type PanelsState } from '@/state/panel-state';
-import { PANEL_DEFAULTS, storedPanelOf, useUi } from '@/state/ui';
+import { PANEL_DEFAULTS, useUi } from '@/state/ui';
 
 const defaults = (): PanelsState => ({
     ...PANEL_DEFAULTS,
@@ -22,7 +22,7 @@ const read = (): PanelsState => {
     const ui = useUi.getState();
     const files = useFiles.getState();
     return {
-        panel: storedPanelOf(ui.panel, ui.subagentPanel),
+        panel: ui.panel,
         preview: ui.preview,
         panelWidth: ui.panelWidth,
         previewWidth: ui.previewWidth,

@@ -1,15 +1,19 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
+import clsx from 'clsx';
 import type { AgentKind, ModelSelection } from '@ruimte/contracts';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { defaultProvider, readChatPreferences, selectionFor } from '@/chat/preferences';
+import { showsComposer, useSubagentTrail } from '@/chat/subagent-view';
 import { deriveNodeTitle } from '@/chat/title';
 import { Composer } from '@/chat/ui/Composer';
+import { SubagentTimeline } from '@/chat/ui/SubagentTimeline';
 import { Timeline } from '@/chat/ui/Timeline';
 import { useChatRow } from '@/state/chats';
 import { useProject } from '@/state/project';
 import { useTransportStatus } from '@/transport/status';
 import { NodeNotice } from '@/nodes/NodeNotice';
 import { readNodeHost, renameHost, updateHost, useNodeHost, useSuggestedTitle } from '@/nodes/node-host';
+import { ErrorBoundary } from '@/ui/ErrorBoundary';
 
 // The worker pool and its highlighter load with the first chat node, not with the app.
 const DiffPool = lazy(() => import('@/chat/ui/DiffPool'));
@@ -22,6 +26,8 @@ export function ChatBody({ id, focused }: { id: string; focused: boolean }) {
     const status = useTransportStatus();
     const [failure, setFailure] = useState<string | null>(null);
     const [generation, setGeneration] = useState(0);
+    const { trail } = useSubagentTrail(id);
+    const subagent = trail.at(-1);
 
     useEffect(() => {
         let cancelled = false;
@@ -81,10 +87,20 @@ export function ChatBody({ id, focused }: { id: string; focused: boolean }) {
             )}
             <Suspense fallback={<div className="grow" />}>
                 <DiffPool>
-                    <Timeline chatId={id} />
+                    {/* Hidden rather than unmounted, so coming back finds the thread where it was left. */}
+                    <div className={clsx('flex min-h-0 grow flex-col', subagent && 'invisible')} aria-hidden={subagent ? true : undefined}>
+                        <Timeline chatId={id} />
+                    </div>
+                    {subagent && (
+                        <div className="absolute inset-0 flex flex-col bg-surface">
+                            <ErrorBoundary label="This conversation failed to render" resetKeys={[subagent.toolUseId]}>
+                                <SubagentTimeline key={subagent.toolUseId} chatId={id} toolUseId={subagent.toolUseId} />
+                            </ErrorBoundary>
+                        </div>
+                    )}
                 </DiffPool>
             </Suspense>
-            {info && (
+            {info && showsComposer(trail) && (
                 <Composer
                     chatId={id}
                     info={info}

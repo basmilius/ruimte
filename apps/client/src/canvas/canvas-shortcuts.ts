@@ -6,6 +6,7 @@ import { isApplePlatform } from '@/desktop/bridge';
 import { addNodeAtCenter } from '@/shell/commands';
 import { newCanvasView, showView, splitFocusedCell, stepView, viewAtIndex } from '@/project/views';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
+import { useSubagentView } from '@/chat/subagent-view';
 import { focusedCanvas } from '@/state/canvas';
 import { transportFor } from '@/transport';
 import { focusedDiagram } from '@/state/diagram';
@@ -39,6 +40,21 @@ const focusedBrowserKey = (): string | null => {
     }
     const { mode, nodes } = focusedCanvas().getState();
     return mode.kind === 'node' && nodes[mode.nodeId]?.kind === 'browser' ? endpointKey(endpointId, mode.nodeId) : null;
+};
+
+/* The chat the keyboard is in: a chat view whose body has it, or the chat node stepped into on its canvas. */
+const focusedChatKey = (): string | null => {
+    const endpointId = currentWorkspaceEndpointId();
+    const documentState = useDocument.getState();
+    const view = activeViewOf(documentState);
+    if (endpointId === null || view === null) {
+        return null;
+    }
+    if (!isCanvasView(view)) {
+        return view.kind === 'chat' && documentState.bodyFocused ? endpointKey(endpointId, view.id) : null;
+    }
+    const { mode, nodes } = focusedCanvas().getState();
+    return mode.kind === 'node' && nodes[mode.nodeId]?.kind === 'chat' ? endpointKey(endpointId, mode.nodeId) : null;
 };
 
 export const isTypingTarget = (el: EventTarget | null): boolean => {
@@ -225,14 +241,35 @@ export const useCanvasShortcuts = (stores: WorkspaceStores | null): void => {
                 s.zoomTo(Math.round(s.camera.zoom * 100 - 10) / 100);
             }
         };
+        /*
+         * Escape in a chat that shows a sub-agent goes one level back up before it does anything else,
+         * the way a drawing clears its selection before it lets go of the keyboard. It listens in the
+         * capture phase, because leaving the node (below) and leaving a view of its own (`ViewHost`) both
+         * listen on the window too, and only stopping the key here keeps them from also acting on it.
+         */
+        const onEscapeCapture = (e: KeyboardEvent): void => {
+            if (e.key !== 'Escape' || e.metaKey || e.ctrlKey || e.altKey || e.isComposing || !isFocusedWorkspace(stores)) {
+                return;
+            }
+            if (isInFloatingLayer(e.target) || isTypingTarget(e.target)) {
+                return;
+            }
+            const key = focusedChatKey();
+            if (key !== null && useSubagentView.getState().back(key)) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        };
         const onKeyUp = (e: KeyboardEvent): void => {
             if (e.code === 'Space') {
                 spaceDown = false;
             }
         };
+        window.addEventListener('keydown', onEscapeCapture, true);
         window.addEventListener('keydown', onKeyDown);
         window.addEventListener('keyup', onKeyUp);
         return () => {
+            window.removeEventListener('keydown', onEscapeCapture, true);
             window.removeEventListener('keydown', onKeyDown);
             window.removeEventListener('keyup', onKeyUp);
         };

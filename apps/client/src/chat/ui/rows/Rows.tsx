@@ -11,7 +11,7 @@ export interface RowProps {
     toggleTurn(id: string): void;
     toggleSubagent(id: string): void;
     openSubagent(toolUseId: string): void;
-    /* Opens a subagent's whole conversation beside the thread; absent where there is nowhere to open it. */
+    /* Opens a subagent's whole conversation in the thread's place; absent where there is nowhere to open it. */
     openConversation?(item: ChatSubagentItem): void;
 }
 

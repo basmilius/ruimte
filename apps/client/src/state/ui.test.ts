@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { parsePanel, parsePreview, parseWidth, storedPanelOf, useUi } from './ui';
+import { parsePanel, parsePreview, parseWidth, useUi } from './ui';
 
 describe('ui', () => {
     beforeEach(() => {
@@ -119,32 +119,5 @@ describe('ui', () => {
         useUi.getState().setPanels({ panel: { open: true, kind: 'files' }, preview: { open: true }, panelWidth: 720, previewWidth: 480 });
         unsubscribe();
         expect(notified).toBe(1);
-    });
-
-    test("a sub-agent's conversation takes the panel, goes down and back up its breadcrumb, and is replaced by the next one", () => {
-        useUi.setState({ subagentPanel: null });
-        useUi.getState().togglePanel('git');
-        useUi.getState().openSubagentPanel('machine-1', 'chat-1', { toolUseId: 'toolu_1', description: 'Survey' });
-        expect(useUi.getState().panel).toEqual({ open: true, kind: 'subagent' });
-        useUi.getState().openSubagentChild({ toolUseId: 'toolu_2', description: 'Count' });
-        useUi.getState().openSubagentChild({ toolUseId: 'toolu_3', description: 'Deeper' });
-        expect(useUi.getState().subagentPanel?.trail.map((crumb) => crumb.toolUseId)).toEqual(['toolu_1', 'toolu_2', 'toolu_3']);
-        useUi.getState().openSubagentCrumb(0);
-        expect(useUi.getState().subagentPanel?.trail.map((crumb) => crumb.toolUseId)).toEqual(['toolu_1']);
-
-        useUi.getState().openSubagentPanel('machine-1', 'chat-2', { toolUseId: 'toolu_9', description: 'Other' });
-        expect(useUi.getState().subagentPanel).toEqual({
-            endpointId: 'machine-1',
-            chatId: 'chat-2',
-            trail: [{ toolUseId: 'toolu_9', description: 'Other' }],
-            before: 'git'
-        });
-    });
-
-    test("the project's file keeps the panel a sub-agent's conversation covered, closed, and never the conversation", () => {
-        const subagentPanel = { endpointId: 'm', chatId: 'c', trail: [], before: 'processes' as const };
-        expect(storedPanelOf({ open: true, kind: 'subagent' }, subagentPanel)).toEqual({ open: false, kind: 'processes' });
-        expect(storedPanelOf({ open: true, kind: 'git' }, subagentPanel)).toEqual({ open: true, kind: 'git' });
-        expect(storedPanelOf({ open: true, kind: 'subagent' }, null)).toEqual({ open: false, kind: 'files' });
     });
 });

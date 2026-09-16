@@ -4,11 +4,11 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import clsx from 'clsx';
 import type { ChatSubagentItem } from '@ruimte/contracts';
 import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
+import { crumbOf, openFromMain, useSubagentTrail } from '@/chat/subagent-view';
 import { registerTimeline, setTimelineAtEnd } from '@/chat/timeline-scroll';
 import { EMPTY_TARGET, readTimelineTarget, withCurrentText, type TimelineTarget } from '@/chat/logic/timeline-target';
 import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
 import { Row } from '@/chat/ui/rows/Rows';
-import { useUi } from '@/state/ui';
 import { useChatRow, useChats } from '@/state/chats';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { FileLinkContext } from '@/shell/panels/file-links';
@@ -46,6 +46,7 @@ export function Timeline({ chatId }: { chatId: string }) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const followRef = useRef(true);
     const [target, setTarget] = useState<TimelineTarget>(EMPTY_TARGET);
+    const { show } = useSubagentTrail(chatId);
 
     const rows = useMemo(() => {
         if (!order || !items) {
@@ -112,9 +113,9 @@ export function Timeline({ chatId }: { chatId: string }) {
         followRef.current = false;
     };
 
-    /* The whole of what a sub-agent did, beside the thread: its row only keeps the beginning. */
+    /* The whole of what a sub-agent did, in the thread's place: its row only keeps the beginning. */
     const openConversation = (item: ChatSubagentItem): void => {
-        useUi.getState().openSubagentPanel(endpointId, chatId, { toolUseId: item.toolUseId, description: item.description });
+        show(openFromMain(crumbOf(item)));
     };
 
     /* The header of a turn a sub-agent woke: it points at the row that agent worked in. */

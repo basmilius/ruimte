@@ -42,6 +42,7 @@ import { Tooltip } from '@/ui/Tooltip';
 import { useHeldWhileVisible, useNodeInViewport, useReadableZoom } from '@/canvas/culling';
 import { TerminalBody, TerminalPlate } from '@/nodes/TerminalBody';
 import { ChatBody } from '@/nodes/ChatBody';
+import { SubagentBreadcrumb, SubagentMenu } from '@/chat/ui/SubagentControls';
 import { BrowserBody } from '@/nodes/BrowserBody';
 import { NoteNode } from '@/canvas/nodes/NoteNode';
 import { DiagramNode, DiagramPlate } from '@/canvas/nodes/DiagramNode';
@@ -275,6 +276,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     <span className="flex min-w-0 grow items-center" onDoubleClick={() => setRenaming(!isUnknown)}>
                         <Title id={id} title={node.title} editing={renaming} onDone={() => setRenaming(false)} />
                     </span>
+                    {node.kind === 'chat' && !renaming && <SubagentBreadcrumb chatId={id} className="shrink" />}
                     {collapsed && <Pill className="tabular-nums">{node.memberIds?.length ?? 0} inside</Pill>}
                     {isGroup && node.worktree && (
                         <Tooltip label={node.worktree.path}>
@@ -300,6 +302,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     {!renaming && <ProcessAlertMark alerts={processAlerts} />}
                     {node.kind === 'file' && <span ref={setFileControls} className={`${BTN_GROUP} shrink-0`} />}
                     <div className={`${BTN_GROUP} shrink-0`}>
+                        {node.kind === 'chat' && <SubagentMenu chatId={id} />}
                         <Tooltip label="Zoom to node" name>
                             <button className="icon-btn h-7 w-7" onClick={() => canvasStore.getState().goToNode(id)}>
                                 <Icon icon={Maximize2} size={16} />
