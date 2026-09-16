@@ -11424,6 +11424,15 @@
           "full-access"
         ]
       },
+      "terminalRuntimeMode": {
+        "type": "string",
+        "enum": [
+          "supervised",
+          "auto-accept-edits",
+          "auto",
+          "full-access"
+        ]
+      },
       "selections": {
         "type": "object",
         "propertyNames": {
@@ -24818,6 +24827,34 @@
     },
     "required": [
       "tasks"
+    ]
+  },
+  "request.agent.children.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "nodeId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "nodeId"
+    ]
+  },
+  "request.agent.children.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "nodeIds": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "nodeIds"
     ]
   },
   "event.push.attention": {

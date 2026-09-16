@@ -150,7 +150,7 @@ import {
     SessionTargetPayloadSchema,
     SessionWritePayloadSchema
 } from './session.ts';
-import { TaskChangedEventSchema, TaskListPayloadSchema, TaskListResultSchema } from './task.ts';
+import { AgentChildrenPayloadSchema, AgentChildrenResultSchema, TaskChangedEventSchema, TaskListPayloadSchema, TaskListResultSchema } from './task.ts';
 import { UsageChangedEventSchema, UsageLimitsSnapshotSchema, UsageSummaryPayloadSchema, UsageSummaryResultSchema } from './usage.ts';
 
 export * from './agent.ts';
@@ -285,7 +285,8 @@ export const REQUEST_SCHEMAS = {
     'direct.signal': { payload: DirectSignalPayloadSchema, result: EmptySchema },
     'chat.kill': { payload: ChatTargetPayloadSchema, result: EmptySchema },
     'chat.list': { payload: EmptySchema, result: ChatListResultSchema },
-    'task.list': { payload: TaskListPayloadSchema, result: TaskListResultSchema }
+    'task.list': { payload: TaskListPayloadSchema, result: TaskListResultSchema },
+    'agent.children': { payload: AgentChildrenPayloadSchema, result: AgentChildrenResultSchema }
 } as const satisfies Record<string, { payload: z.ZodType; result: z.ZodType }>;
 
 export type RequestType = keyof typeof REQUEST_SCHEMAS;

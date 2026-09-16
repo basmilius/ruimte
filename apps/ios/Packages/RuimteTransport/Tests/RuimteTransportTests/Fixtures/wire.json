@@ -190,7 +190,8 @@
     "direct.signal",
     "chat.kill",
     "chat.list",
-    "task.list"
+    "task.list",
+    "agent.children"
   ],
   "eventTypes": [
     "push.attention",

@@ -99,6 +99,7 @@ public enum WireRequest: String, CaseIterable, Sendable {
     case `chatKill` = "chat.kill"
     case `chatList` = "chat.list"
     case `taskList` = "task.list"
+    case `agentChildren` = "agent.children"
 
     public func validatePayload(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("request.\(rawValue).payload", value) }
     public func validateResult(_ value: JSONValue) throws -> JSONValue { try WireSchema.validate("request.\(rawValue).result", value) }

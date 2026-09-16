@@ -391,6 +391,8 @@ export type ChatConfigurePayload = z.infer<typeof ChatConfigurePayloadSchema>;
  */
 export const ChatPreferencesPayloadSchema = z.object({
     runtimeMode: RuntimeModeSchema.optional(),
+    // The mode a terminal agent node starts in, for the terminals the daemon starts on its own.
+    terminalRuntimeMode: RuntimeModeSchema.optional(),
     // Per provider, because a model slug only means something in its own CLI's catalog.
     selections: z.partialRecord(AgentKindSchema, ModelSelectionSchema).optional(),
     // When the person last changed it, in milliseconds since the epoch; absent is older than any pick.
