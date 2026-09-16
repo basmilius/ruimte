@@ -1,3 +1,5 @@
+> Statuscorrectie, 16 september 2026: de eerste drie punten hieronder zijn opgepakt in `86dbcfc5`. De signed iPhone-build is geïnstalleerd en gestart. De daemon is niet herstart; APNs mist credentials en Worker-migratie 0008 is nog niet gedeployd. Distributie is uitgesteld op verzoek. Lees de actuele secties van [het rapport](2026-09-15-ios-app.html) en het laatste [iteratieverslag](2026-09-15-ios-composer-review.md). De oorspronkelijke opdracht hieronder blijft als historie bewaard en is geen opdracht om de implementatie opnieuw te doen.
+
 # Ruimte iOS: vervolg in een schone sessie
 
 Werk de bestaande native Ruimte-app af. Bas focust zich tijdelijk op ander werk. Ga zelfstandig door met uitvoerbare verbeteringen en geef korte voortgangsupdates in het Nederlands. Deze prompt is de overdracht van 16 september 2026, na commit `54e636b3` op lokale `main`. Controleer de huidige werkboom en nieuwe commits voordat je wijzigt. Behoud werk van anderen.

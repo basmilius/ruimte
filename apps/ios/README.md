@@ -19,12 +19,12 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   attachments, context selection, approvals and questions. The composer styles Markdown
   while editing and shows selected files and skills as inline badges.
 - Drawing with a finger or Apple Pencil, pressure, pen colors and widths, whole-element
-  erasing, undo, pan and zoom. Existing shapes survive edits; shape and text creation
-  tools are not yet included. Unsaved drawing drafts persist locally for recovery.
+  erasing, undo, pan and zoom. Selection, shapes and text creation are included.
+  Unsaved drawing drafts persist locally for recovery.
 - SwiftTerm terminals with snapshots, output, resync, keyboard controls and paste confirmation.
   `session.attach` uses `follow:true` so opening a phone never resizes the desktop PTY.
-- File and media previews, filesystem updates, Git changes/staging/commits, processes and
-  signals, usage and machine access management. Destructive actions require confirmation.
+- File and media previews, filesystem updates, Git changes/staging/commits,
+  usage and machine access management. Destructive actions require confirmation.
   Usage follows the OS region: EUR regions use the supplied exchange rate; other regions use USD.
   Missing or invalid rates keep dollar amounts and show an explanation.
 - Optional encrypted push alerts and approval actions, per-session follows, a notification
@@ -52,7 +52,12 @@ a thumbnail opens the original through Quick Look.
 Text deltas update observable message records without rebuilding the timeline structure.
 Completed Markdown segments are cached, code highlighting processes the latest pending
 text at bounded intervals, and the collection keeps its existing reading anchors.
-History still arrives as a full snapshot. This rendering work does not add pagination.
+History uses an optional 60-item first page and a Load older messages control. The daemon
+uses a 512 KiB item budget per page; a larger atomic item travels alone, without truncation.
+Pending approvals and questions are included separately. Cursors expire after clear/reset,
+and history replies apply before the next stream event. Older daemons still return their
+full snapshot; the app accepts it and does not issue unsupported history requests.
+Pagination becomes live only after the daemon is updated.
 
 The implementation and targeted state/parser/scroll tests are recorded in
 [`2026-09-16-ios-chat-parity.md`](../../docs/reports/2026-09-16-ios-chat-parity.md).
@@ -93,30 +98,19 @@ The chat composer always shows its context, photo and model controls. Its glass 
 uses concentric corners to follow the screen or window, with a minimum 24-point radius
 where it is away from those corners.
 
-For small UI iterations, build and install directly on Bas's development iPhone and
-iPad Pro for review. Both devices are authorized installation targets. Use targeted
-regression tests for connection, protocol and state changes;
-reserve the full simulator suite for changes that need broader coverage.
-
-For simulator tests, replace the destination with an installed simulator if needed:
+Current iteration agreement: build and install only on Bas's physical iPhone,
+`00008130-001C7D411E20001C`. No simulator, UI tests or iPad installation. Targeted
+protocol, crypto and state tests run on the Mac. Do not restart the running daemon.
 
 ```sh
-xcodebuild -project apps/ios/Ruimte.xcodeproj -scheme Ruimte \
-    -destination 'platform=iOS Simulator,name=iPhone 18 Pro,OS=27.0' \
-    -parallel-testing-enabled NO -derivedDataPath /tmp/ruimte-ios-xcode \
-    test CODE_SIGN_IDENTITY=-
-```
-
-Keep local ad hoc signing enabled. `CODE_SIGNING_ALLOWED=NO` removes the simulator's
-application identity and Keychain access fails with `errSecMissingEntitlement`.
-No provisioning profile, distribution certificate or deployment is needed for these
-simulator tests. A physical device needs your development signing identity.
-
-```sh
+xcodebuild -project apps/ios/Ruimte.xcodeproj -scheme Ruimte -configuration Debug \
+    -destination 'generic/platform=iOS' -derivedDataPath /tmp/ruimte-ios-xcode \
+    -allowProvisioningUpdates build
+xcrun devicectl device install app --device 00008130-001C7D411E20001C \
+    /tmp/ruimte-ios-xcode/Build/Products/Debug-iphoneos/Ruimte.app
 swift test --package-path apps/ios/Packages/RuimtePulsar --scratch-path /tmp/ruimte-ios-pulsar-build
 swift test --package-path apps/ios/Packages/RuimteTransport --scratch-path /tmp/ruimte-ios-transport-build
 bun run check
-bun test
 ```
 
 ## Native Apple sign-in
@@ -227,7 +221,17 @@ Notifications are opt-in in Settings. Follow sessions under each machine; approv
 be enabled independently. The phone registers its APNs token with the address book and
 sends its opaque handle, push public key and preferences to each authenticated machine.
 The machine sends alerts only when the paired key has no connected client. Live Activity
-updates are separate from alert visibility.
+updates are separate from alert visibility. The iPhone stores the latest viewed chat as
+its ActivityKit destination, independent of the alert follow list. iPad Live Activities
+are outside the current scope. The Worker checks the selected machine and conversation
+for both starts and updates; foreground and push starts share an atomic reservation.
+Current and rotated push-to-start/update tokens are uploaded through the authenticated
+account routes. Opt-out clears the remote destination and ends local activities.
+Failed device revocations keep their opaque handle for retry after local keys are erased.
+
+Background approval actions are claimed once, then checked against fresh machine state.
+An expired or already answered request opens its conversation without sending a decision.
+The snapshot check also considers approvals outside the loaded history page.
 
 Alert content uses ephemeral X25519, HKDF-SHA256 and AES-256-GCM. Routing fields are
 additional authenticated data, and the machine signs the full envelope with ed25519. The
@@ -236,16 +240,17 @@ then claims the message ID under a shared lock before displaying plaintext. The 
 key derivation and ciphertext are checked against a generated Bun/CryptoKit fixture.
 Live Activity titles, phases and timing are the intentional plaintext exception.
 
-Required configuration, outside this repository's source:
+Required configuration and device acceptance:
 
 1. Enable Push Notifications and Time Sensitive Notifications for `app.ruimte.mobile`.
    Register both extension IDs under the same Apple team. Enable app group
    `group.app.ruimte.mobile` for the app and notification extension, with the shared
    `app.ruimte.mobile.push` Keychain group. Regenerate provisioning profiles.
-2. Apply Worker migration `apps/pulsar-worker/migrations/0006_push.sql` to the intended
-   environment. Configure `APNS_KEY` (the .p8 contents), `APNS_KEY_ID`, `APNS_TEAM_ID`
-   and `APNS_TOPIC=app.ruimte.mobile` as Worker secrets/variables. Missing configuration
-   produces an explicit `not-configured` response; no credentials are embedded here.
+2. Apply the Worker migrations through `0008_activity_target.sql` to the intended
+   environment. Configure `APNS_KEY` with the APNs .p8 contents and `APNS_KEY_ID`.
+   The repository now sets `APNS_TEAM_ID=7RGV9KKX87` and `APNS_TOPIC=app.ruimte.mobile`.
+   The key must have APNs rights for that team; the Apple login key is not a substitute.
+   Missing configuration produces an explicit `not-configured` response; no credentials are embedded here.
 3. Deploy the matching Worker and daemon through the project's normal release process.
    Registration is bound to an active account session. Delivery requires an authorized
    machine on the same account; a manually paired machine outside that account cannot
@@ -256,6 +261,10 @@ Required configuration, outside this repository's source:
 5. Enable Live Activities and follow a turn. Check phase changes, completion, expiry and
    push-to-start on the Lock Screen and Dynamic Island. Try the same node ID on two
    machines to verify that activity routing stays separate.
+
+On September 16, the production Worker secret-name list contained no APNs entries.
+The new Worker configuration and migration have not been deployed. The new daemon code
+has not been started; existing sessions were left running. Distribution is deferred.
 
 Production APNs delivery and background success rates require those device tests. Unit
 tests inject APNs transport and do not send real notifications.

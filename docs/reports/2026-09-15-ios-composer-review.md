@@ -665,3 +665,90 @@ No simulator, UI automation, screenshots or iPad installation were used. Live vi
 timing, selection while streaming, VoiceOver, large text, iPad multitasking and physical
 performance remain acceptance work. Full-history transfer is unchanged. No daemon
 restart is required.
+
+
+## History pagination and notification follow-up, September 16
+
+Commit `86dbcfc5` implements the first three remaining items from the iOS report.
+The signed Debug build was installed and launched on Bas's physical iPhone,
+`00008130-001C7D411E20001C`. The daemon was not restarted. Nothing was pushed,
+deployed or uploaded; distribution remains deferred.
+
+`chat.attach` accepts an optional `historyLimit`; iOS requests 60 items. `chat.history`
+reads earlier pages using a generation-bound cursor. Reset invalidates old cursors.
+A page targets 512 KiB of item JSON, with an exception for one oversized atomic item.
+Pending approvals and questions are additional data, so this is not a hard frame cap.
+No item text is silently truncated. Existing desktop/web callers still receive the full
+snapshot. An older daemon ignores `historyLimit`; iOS accepts the complete reply and
+does not request unsupported history pages.
+
+The daemon flushes coalesced deltas before a page snapshot. The transport's synchronous
+reply callback applies each page before later stream events. History indices keep old
+item updates outside the loaded timeline while still updating pending requests. Prepending
+preserves message objects and disclosure state; the collection delays a prepend during
+an active scroll so its reading anchor can be restored. Visual scroll acceptance remains
+open because no UI tests or screenshots were used for the app.
+
+| Measurement | Full history | First page |
+| --- | ---: | ---: |
+| Bun fixture, 2,871 synthetic items | 18,264,193 bytes | 381,809 bytes |
+| Swift fixture, 2,871 synthetic items | 18,212,515 bytes | 380,641 bytes |
+| Swift JSON decoding, one Mac run | 44.4 ms | 1.0 ms |
+
+The server fixture recovered every item across 48 pages. The Swift fixture has fewer
+item fields, explaining the different byte counts. These are local synthetic measurements,
+not network transfer or iPhone opening times. No user conversations were copied into tests.
+
+Push-to-start now observes the current ActivityKit token and token updates, and persists
+the latest viewed iPhone chat. The authenticated Worker route binds that destination to
+the device's account and machine. New migration `0008_activity_target.sql` adds the
+selected machine and collapse ID. Both foreground and remote starts claim the existing
+activity-start table, preventing a duplicate while the update token is still arriving.
+The APNs start payload includes `input-push-token: 1` and priority 10, following
+[Apple's ActivityKit push documentation](https://developer.apple.com/documentation/activitykit/starting-and-updating-live-activities-with-activitykit-push-notifications).
+Opt-out blocks both starts and updates. Existing and rotated update tokens are uploaded;
+ended activities and failed foreground starts release their registration. A running CLI
+process with an idle chat no longer keeps the Live Activity in its running phase.
+
+Notification registration retries now work when no initial handle was created. Failed
+remote device deletion preserves an opaque handle for a later retry while deleting local
+decryption secrets immediately. Approval actions use a distinct, shared one-time claim
+and recheck expiry and current machine state. Pending requests outside the first history
+page remain answerable. Failed, expired and already settled actions retain navigation to
+the conversation. X25519/HKDF/AES-GCM, routing AAD, signatures and delivery replay checks
+remain unchanged and pass their existing fixtures.
+
+At 07:56 CEST, `wrangler secret list` against the production Worker returned no APNs
+secret names. No secret values were read or printed. `APNS_TOPIC=app.ruimte.mobile` and
+`APNS_TEAM_ID=7RGV9KKX87` are now declared in the repository config, but not deployed.
+An APNs-enabled `.p8` and its key ID still need to be supplied as `APNS_KEY` and
+`APNS_KEY_ID`. The existing Apple login key does not establish APNs rights. Apply the
+Worker migration and matching code only after that setup is available. The running
+daemon still needs a later restart before the installed app receives paginated history.
+
+Validation passed:
+
+- `bun run format`, `bun run check` and generated Swift schema/fixture checks.
+  Existing lint warnings remain; no new check failures.
+- 176 Bun tests covering chat manager/projector/history, push service and Worker/APNs
+  routing. Fixtures cover selected-chat routing, account ownership, opt-out, competing
+  start claims, failed local start cleanup and completion without an update token.
+- 39 RuimteTransport tests across XCTest and Swift Testing, including history state,
+  an old snapshot without paging metadata, page-before-delta ordering and approvals
+  outside the page. The final synthetic measurement was rerun with the history group.
+- 39 RuimtePulsar tests, including Bun/CryptoKit interoperability, tampering, expiry,
+  concurrent replay claims, APNs token routing and idle-chat activity state.
+- Signed iOS build, installation and process launch on the physical iPhone.
+
+Logs are in `/tmp/ruimte-ios-build.log`, `/tmp/ruimte-ios-logic-tests.log`,
+`/tmp/ruimte-swift-history.log`, `/tmp/ruimte-swift-history-measurement.log`,
+`/tmp/ruimte-swift-push.log`, `/tmp/ruimte-ios-push-final.log` and `/tmp/ruimte-ios-check.log`. No simulator, iPad installation
+or UI tests ran. Actual APNs delivery, suspension/wake behavior, Wi-Fi/5G, old-page scroll
+stability and device opening times still need acceptance. The HTML report's anchors and
+local links were checked structurally; visual rendering was unavailable because the
+browser tool reported no available browser.
+
+The source comparison with desktop/web is in the report's new parity section. The main
+candidates are Git history and branch/worktree operations, project-wide content search,
+terminal-agent resume, saved provider defaults and a central action palette. Processes,
+canvas node repositioning and iPad Live Activities remain outside the agreed scope.

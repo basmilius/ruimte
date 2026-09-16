@@ -175,13 +175,14 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
 <header>
   <p class="eyebrow">Ruimte / Status en overdracht / 16 september 2026</p>
   <h1>Een eigen app voor iPhone en iPad, zonder machine aan boord</h1>
-  <p class="intro">De kern van de native app staat op de iPhone. Verbinden met de Mac duurt in de laatste meting 0,7 seconde. Grote chats, Live Activity push-to-start en de afronding van meldingen en distributie vragen nog werk. Hieronder staan de actuele status en de opdracht voor een tweede, schone sessie.</p>
-  <p class="status">Kernfuncties gebouwd · nog niet feature complete</p>
-  <p class="caption">Bijgewerkt op 16 september 2026, broncode op lokale <code>main</code> na <code>54e636b3</code>. Geen nieuwe vergelijking met remote main of externe Apple-configuratie in deze documentronde. Het onderzoek van 15 september blijft als historische context bewaard.</p>
+  <p class="intro">Chatpaginering, Live Activity push-to-start en herstel van de notificatieketen zijn gebouwd. De nieuwe build staat op de iPhone en is gestart. De draaiende machine gebruikt nog de oude code; pushbezorging wacht op APNs-credentials en een Worker-update.</p>
+  <p class="status">Vervolg gebouwd · apparaatacceptatie en APNs-configuratie open</p>
+  <p class="caption">Bijgewerkt op 16 september 2026 na lokale implementatie <code>86dbcfc5</code>. Geen push, daemonherstart of distributiewerk. De oorspronkelijke analyse hieronder blijft historische context.</p>
   <nav aria-label="Inhoud">
     <a href="#uitvoering">Huidige status</a>
     <a href="#restwerk">Resterend werk</a>
-    <a href="#prompt">Startprompt nieuwe sessie</a>
+    <a href="#pariteit">Verschillen met desktop/web</a>
+    <a href="#prompt">Overdracht</a>
     <a href="#samenvatting">Oorspronkelijk plan</a>
     <a href="#hercontrole">Hercontrole main</a>
     <a href="#uitgangspunt">Uitgangspunt</a>
@@ -204,46 +205,52 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
 <main>
 
 <section id="uitvoering" class="recommendation">
-  <h2>Huidige status op 16 september</h2>
-  <p>De dagelijkse kernfuncties zijn geïmplementeerd. De app is nog niet volledig afgerond. Ontbrekende functionaliteit, apparaatacceptatie en distributie zijn hieronder apart benoemd. De laatste codewijziging is <code>54e636b3</code>, <code>perf: connect mobile clients sooner and retain recent chats</code>. Die build is ondertekend, op Bas' iPhone geïnstalleerd en gestart.</p>
+  <h2>De eerste drie vervolgpunten zijn opgepakt</h2>
+  <p>Implementatie <code>86dbcfc5</code> voegt paginering aan contracten, daemon en iOS toe, registreert push-to-start voor de laatst bekeken iPhone-chat en herstelt gaten in registratie en achtergrondacties. De ondertekende build is op Bas' iPhone geïnstalleerd en gestart. De daemon is niet herstart en de Worker is niet gedeployd.</p>
   <div class="stats">
-    <div><strong>709 ms</strong><span>Verbinden met deze Mac, eerder 5.625 ms</span></div>
-    <div><strong>30 s</strong><span>Laatste verborgen chat blijft live beschikbaar</span></div>
-    <div><strong>iPhone</strong><span>Enige actuele installatie- en builddoel voor iteraties</span></div>
+    <div><strong>382 kB</strong><span>Eerste pagina van een synthetische chat van 18,3 MB</span></div>
+    <div><strong>176</strong><span>Geslaagde gerichte Bun-tests</span></div>
+    <div><strong>78</strong><span>Geslaagde Swift-logica- en protocoltests op de Mac</span></div>
   </div>
-  <div class="table" role="region" aria-label="Actuele implementatie en bewijs" tabindex="0"><table>
-    <caption>Gebouwd, gemeten en nog open</caption>
-    <thead><tr><th scope="col">Onderdeel</th><th scope="col">Huidige stand</th></tr></thead><tbody>
-      <tr><th scope="row">Login en projecten</th><td>Native Apple-login, GitHub-login en HTTPS-pairinglinks. Eén projectenlijst over machines, custom projecticonen, Recently closed, views hernoemen en iconen aanpassen. iPad gebruikt een permanente sidebar met detail. De tagline is <em>Space for AI Engineering</em>.</td></tr>
-      <tr><th scope="row">Chat en terminal</th><td>Streaming, markdown/code, modellen, bijlagen, mentions/skills, approvals en vragen. Composer en timeline hebben meerdere apparaatiteraties gehad. SwiftTerm volgt de bestaande PTY-maat. Grote chatgeschiedenissen zijn nog niet gepagineerd.</td></tr>
-      <tr><th scope="row">Overige views</th><td>Canvas, bestanden/media, Git, usage, browser en diagrammen. De tekeneditor heeft pen/Pencil, selectie, vormen, tekst, wissen en undo. Processes is op verzoek verwijderd. Canvasnodes blijven op hun bestaande positie en maat.</td></tr>
-      <tr><th scope="row">Verbinding en laden</th><td>Het initiële ICE-venster is 250 ms bij een bruikbare candidate; de vijfsecondenfallback blijft voor ontbrekende routes. Latere candidates volgen na het antwoord, zonder duplicaten. Direct is normaal; TURN blijft terugval. JSON-decoding gebeurt buiten de main actor, in berichtvolgorde. De laatste verborgen chat blijft maximaal 30 seconden live, zodat heropenen geen nieuwe volledige snapshot nodig heeft.</td></tr>
-      <tr><th scope="row">Meldingen en Live Activities</th><td>Pushroutes, encryptie, notificatie-extensie, achtergrondacties en ActivityKit-code bestaan. End-to-end betrouwbaarheid is niet volledig aangetoond. De iPhone volgt standaard de laatst geopende chat. Push-to-start ontbreekt nog. Live Activities op iPad zijn bewust uit scope.</td></tr>
-      <tr><th scope="row">Signing en distributie</th><td>Development-signing met team <code>7RGV9KKX87</code> werkt. Bundle <code>app.ruimte.mobile</code>. XcodeGen, privacy-manifesten en Xcode Cloud-scripts staan in de repository. Een afgeronde distributie-/TestFlight-route is nog niet aangetoond; externe Apple-configuratie moet worden gecontroleerd.</td></tr>
+  <div class="table" role="region" aria-label="Implementatie en bewijs" tabindex="0"><table>
+    <caption>Wat is veranderd</caption>
+    <thead><tr><th scope="col">Onderdeel</th><th scope="col">Gebouwd en gecontroleerd</th></tr></thead><tbody>
+      <tr><th scope="row">Grote chats</th><td><code>chat.attach</code> ondersteunt optioneel <code>historyLimit</code>; iOS vraagt 60 items. <code>chat.history</code> haalt oudere pagina's op met een cursor die na clear/reset vervalt. De huidige oudere daemon levert nog zijn volledige snapshot, die de app blijft accepteren. Bestaande desktop/webclients krijgen dezelfde volledige geschiedenis als voorheen.</td></tr>
+      <tr><th scope="row">Streaming en lezen</th><td>De daemon spoelt wachtende delta's vóór een snapshot. iOS verwerkt de pagina vóór het volgende event, bewaart bestaande berichtobjecten en voegt oudere items zonder dubbelen toe. Vragen en approvals worden apart meegestuurd en blijven direct beschikbaar. Een prepend wacht tijdens scrollen tot de gebruiker loslaat; bestaande leesankers en opengeklapte turns blijven behouden.</td></tr>
+      <tr><th scope="row">Push-to-start</th><td>De app volgt <code>pushToStartTokenUpdates</code>, bewaart de laatst bekeken chat en uploadt huidige en vernieuwde activiteitstokens. De Worker bindt de bestemming aan account, apparaat, machine en chat. Een gedeelde databaseclaim voorkomt een dubbele lokale en remote start. Opt-out blokkeert updates en starts; afgeronde activiteiten en mislukte lokale starts geven hun registratie vrij. iPad blijft buiten scope.</td></tr>
+      <tr><th scope="row">Notificaties</th><td>Opnieuw registreren werkt ook wanneer de eerste registratie nog geen handle opleverde. Een mislukte apparaatintrekking blijft lokaal bewaard voor een volgende poging; de decryptiesleutel wordt direct verwijderd. Achtergrondacties claimen een verzoek eenmalig en controleren de actuele pending-status. Een verlopen of al afgehandeld verzoek opent de chat. Die controle werkt ook bij gepagineerde geschiedenis. Een idle agentproces houdt niet langer een Live Activity aan.</td></tr>
+      <tr><th scope="row">APNs</th><td>Op 16 september, 07:56 CEST, gaf de lijst van productie-Worker-secrets geen APNs-configuratie terug. Alleen secretnamen zijn bekeken. <code>APNS_TOPIC=app.ruimte.mobile</code> en team <code>7RGV9KKX87</code> staan nu in de lokale Worker-configuratie. Een APNs-sleutel en key-id ontbreken nog. Lokale transportfixtures bewijzen geen bezorging door Apple.</td></tr>
     </tbody></table></div>
-  <h3>Wat de laatste meting bewijst</h3>
-  <p>De fysieke iPhone verbond met de Mac in 709 ms, eerder 5.625 ms. De tweede machine ging van 5.528 naar 681 ms. Beide geselecteerde routes waren host/host, zonder TURN. Dit zijn losse metingen vanaf linkcreatie, exclusief accountdiscovery en het laden van project- of chatgegevens. Ze bewijzen geen broker-vrije LAN-route of langdurige netwerkstabiliteit.</p>
-  <p>De signed build, formattering en repositorychecks slaagden, met bestaande lintwaarschuwingen. Elf gerichte transporttests op de Mac slaagden. Alleen de fysieke iPhone kreeg deze build; er zijn geen UI-tests of simulator gedraaid. De chatcache en de openingstijd van chats zijn in deze iteratie niet via de device-UI gemeten. Zie het <a href="2026-09-15-ios-composer-review.md">iteratieverslag</a> voor bewijs en eerdere controles.</p>
-  <p class="note">De actuele werkafspraken en startprompt hieronder gaan vóór tegenstrijdige aanbevelingen uit het oorspronkelijke onderzoek en de README. De oude passages over Apple-weblogin, Processes, iPad Live Activities en simulator-tests zijn geen huidige opdracht.</p>
+  <h3>Metingen en grenzen</h3>
+  <p>Een synthetische serverfixture met 2.871 items bevatte 18.264.193 bytes. De eerste pagina was 381.809 bytes; 48 pagina's leverden alle oorspronkelijke items terug. Een afzonderlijke Swift-fixture decodeerde op de Mac 18.212.515 bytes in 44,4 ms en 380.641 bytes in 1,0 ms. De fixtures bevatten geen gebruikersgesprekken. De objectvorm verschilt tussen beide metingen, daarom verschillen de byteaantallen.</p>
+  <p>De pagina heeft maximaal 100 items, met 60 als iOS-keuze, en een richtbudget van 512 KiB voor iteminhoud. Een groter los item reist volledig en alleen; pending-verzoeken komen daar apart bij. Dit is dus geen harde framelimiet. Er wordt geen tekst stil afgekapt. Openingstijden en scrollgedrag op de iPhone zijn nog niet opnieuw beoordeeld.</p>
+  <p>De ondertekende iPhone-build, <code>bun run format</code>, <code>bun run check</code>, codegencontrole, 176 gerichte Bun-tests en 78 Swift-tests slaagden. De bekende repository-lintwaarschuwingen blijven aanwezig. Er zijn geen simulator, UI-tests of iPad-installaties uitgevoerd. Zie het <a href="2026-09-15-ios-composer-review.md">iteratieverslag</a> voor testgroepen en logpaden.</p>
 </section>
 
 <section id="restwerk">
-  <h2>Resterend werk voor de nieuwe sessie</h2>
-  <div class="table" role="region" aria-label="Resterende implementatie en acceptatie" tabindex="0"><table>
-    <thead><tr><th scope="col">Prioriteit</th><th scope="col">Werk en afrondingscriterium</th></tr></thead><tbody>
-      <tr><th scope="row">1. Grote chats<br><span class="badge warning">implementatie</span></th><td>Maak een begrensde eerste historypagina en laden van oudere berichten, via contracten, daemon en iOS. Behoud compatibiliteit met de draaiende oudere daemon. Snapshot/delta-volgorde, approvals, clear/reset en scrollpositie bij oudere berichten blijven correct. De huidige grens van 64 Mi UTF-16 voorkomt de eerdere fout, maar vermindert de eerste overdracht niet.</td></tr>
-      <tr><th scope="row">2. Push-to-start<br><span class="badge warning">implementatie</span></th><td>De huidige app start een activity met <code>Activity.request</code> in de voorgrond. Voeg de ontbrekende push-to-start-tokenverwerking en backendroute toe voor de laatst bekeken iPhone-chat, inclusief intrekking, opt-out en het voorkomen van dubbele activities. Maak onderscheid tussen werkende lokale fixtures en daadwerkelijke aflevering.</td></tr>
-      <tr><th scope="row">3. Meldingen<br><span class="badge info">controle en acceptatie</span></th><td>Controleer de huidige APNs-configuratie en de complete codeketen. Herstel concrete gaten in registratie, decryptie, verlopen of al beantwoorde verzoeken en achtergrondacties. Wi-Fi/5G, langdurig achtergrondgebruik en echte bezorging blijven apparaatacceptatie wanneer ze niet uitgevoerd kunnen worden.</td></tr>
-      <tr><th scope="row">4. Distributie<br><span class="badge info">voorbereiding</span></th><td>Controleer Xcode Cloud-scripts, archiveconfiguratie, signing en privacy-informatie. Werk README en rapport bij. Benoem precies welke Apple-accountstappen of credentials nog nodig zijn. Geen upload of publicatie vanuit deze vervolgopdracht.</td></tr>
+  <h2>Wat nog nodig is</h2>
+  <div class="table" role="region" aria-label="Resterende ingebruikname en acceptatie" tabindex="0"><table>
+    <thead><tr><th scope="col">Onderdeel</th><th scope="col">Volgende stap</th></tr></thead><tbody>
+      <tr><th scope="row">Daemon</th><td>Later, wanneer actieve sessies dat toelaten, de nieuwe daemoncode starten. Tot die tijd blijft chatopening compatibel maar ongepagineerd. Er is in deze sessie geen herstart uitgevoerd.</td></tr>
+      <tr><th scope="row">Pulsar en APNs</th><td>Een APNs-tokenkey met Push Notifications-rechten voor team <code>7RGV9KKX87</code> beschikbaar maken als <code>APNS_KEY</code> en <code>APNS_KEY_ID</code>. De bestaande Apple-login-key is geen aangetoonde APNs-key. Vervolgens migratie <code>0008_activity_target.sql</code> en de bijbehorende Worker deployen. App- en extensiecapabilities en de Apple-keyrechten moeten extern worden gecontroleerd.</td></tr>
+      <tr><th scope="row">iPhone-acceptatie</th><td>Grote chat openen, meerdere oudere pagina's laden en blijven lezen tijdens streaming; een vraag buiten de eerste pagina beantwoorden; clear/reset en reconnect. Daarna echte alerts, lokale start tegenover pushstart, tokenvernieuwing, chatwissel, opt-out en beide approvalacties controleren. Wi-Fi/5G en langdurig achtergrondgebruik blijven aparte apparaatproeven.</td></tr>
+      <tr><th scope="row">Distributie</th><td>Uitgesteld op verzoek. Geen Xcode Cloud-, archief-, TestFlight- of publicatiestappen uitgevoerd.</td></tr>
     </tbody></table></div>
-  <h3>Werkafspraken die blijven gelden</h3>
-  <ul>
-    <li>Snelle iteraties, alleen builds en installaties op Bas' iPhone. Geen UI-tests, simulator of iPad-installaties. Gerichte logica- en protocoltests waar de wijziging die nodig maakt.</li>
-    <li>De draaiende daemon niet herstarten; actieve sessies blijven lopen. Serverwerk kan lokaal worden voorbereid. Maak duidelijk wat pas na een latere herstart live wordt.</li>
-    <li>Native navigatie en publieke Apple-API's behouden. Geen nieuwe UI-herinrichting of herstel van bewust verwijderde functies.</li>
-    <li>Afgerond werk lokaal committen, niet pushen. Geen TestFlight-upload. Alleen Codex wanneer sub-agents nodig zijn.</li>
-  </ul>
-  <p>De nieuwe sessie kan de uitvoerbare punten oppakken terwijl Bas ander werk doet. Een extern geblokkeerd onderdeel hoeft andere implementatie niet stil te leggen. <em>Feature complete</em> betekent dat alle afgesproken functies zijn gebouwd; apparaatacceptatie en releasegereedheid worden afzonderlijk gerapporteerd.</p>
+  <p class="note">De codewijzigingen zijn lokaal gecommit. De geïnstalleerde app is geen bewijs dat nieuwe daemonroutes of APNs al live werken. De bestaande daemon en de productie-Worker bleven ongewijzigd.</p>
+</section>
+
+<section id="pariteit">
+  <h2>Verschillen met desktop en web</h2>
+  <p>Een gerichte broncodevergelijking laat nog de onderstaande verschillen zien. Ze zijn niet in deze sessie geïmplementeerd. Git-inzage en zoeken in bestanden lijken mij de nuttigste volgende uitbreiding voor gebruik onderweg.</p>
+  <div class="table" role="region" aria-label="Functies die mobiel nog ontbreken" tabindex="0"><table>
+    <thead><tr><th scope="col">Functie</th><th scope="col">Huidig verschil en voorstel</th></tr></thead><tbody>
+      <tr><th scope="row">Git</th><td>iOS heeft status, diff, staging en commit. Desktop/web bieden ook commitgeschiedenis, branches en worktreekeuze, fetch/pull/push, stash en commitberichtvoorstellen. Begin met geschiedenis en branch/worktree-inzage; voeg muterende acties daarna met dezelfde bevestigingen toe. Bron: <code>GitPage.swift</code> tegenover <code>GitPanel.tsx</code>, <code>BranchMenu.tsx</code>, <code>CommitLog.tsx</code> en <code>CommitBox.tsx</code>.</td></tr>
+      <tr><th scope="row">Zoeken in bestanden</th><td>De mobiele bestandslijst filtert alleen namen in de geopende map. De webpalette zoekt ook in inhoud via <code>fs.grep</code>. Voeg projectbreed zoeken met bestand- en regellinks toe; de mobiele viewer ondersteunt die regellinks al. Bron: <code>MachineFilesPage.swift</code> en <code>shell/palette-grep.ts</code>.</td></tr>
+      <tr><th scope="row">Terminalagent hervatten</th><td>Desktop/web gebruiken <code>agent.resume</code>; de mobiele terminal biedt die handeling nog niet. Voeg een expliciete hervatknop toe wanneer de machine aangeeft dat de agent hervatbaar is. Een scherm openen mag de sessie niet automatisch herstarten. Bron: <code>terminal/session-client.ts</code> en <code>TerminalScreen.swift</code>.</td></tr>
+      <tr><th scope="row">Agentvoorkeuren</th><td>Model en opties zijn mobiel per chat beschikbaar. De centrale provider-/modeldefaults uit <code>AgentsPane.tsx</code> ontbreken in <code>MobileSettings</code>. Bewaarde defaults voor nieuwe chats zijn een bruikbare uitbreiding.</td></tr>
+      <tr><th scope="row">Snel navigeren</th><td>Mobiel heeft project- en viewzoekvelden, maar geen equivalent van de centrale commandpalette voor acties en bestandszoekopdrachten. Vooral met een extern toetsenbord kan dat helpen. Dit volgt na de dagelijkse iPhone-functies.</td></tr>
+    </tbody></table></div>
+  <p>Shapes en tekst in drawings, contextlinks, markdown, code, bijlagen en chatapprovals bestaan al. Processes is bewust verwijderd. Het niet verplaatsen of resizen van canvasnodes en het ontbreken van iPad Live Activities zijn afspraken, geen vergeten implementatie.</p>
 </section>
 
 <section id="historische-uitvoering">
@@ -786,82 +793,14 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
 </section>
 
 <section id="prompt">
-  <h2>Startprompt voor een tweede, schone sessie</h2>
-  <p>Deze prompt bevat de context, werkvolgorde, codepaden, buildcommando's en actuele afspraken. Dezelfde tekst staat in een <a href="2026-09-16-ios-startprompt.md">los Markdown-bestand</a>. Er is vanuit deze documentronde geen nieuwe agent gestart.</p>
-  <p>Een korte opdracht voor de nieuwe sessie:</p>
-  <pre class="handoff"><code>Lees docs/reports/2026-09-16-ios-startprompt.md en voer die vervolgopdracht uit. Werk zelfstandig door en houd me kort op de hoogte.</code></pre>
-  <details open><summary>Volledige startprompt</summary>
-  <pre class="handoff"><code># Ruimte iOS: vervolg in een schone sessie
-
-Werk de bestaande native Ruimte-app af. Bas focust zich tijdelijk op ander werk. Ga zelfstandig door met uitvoerbare verbeteringen en geef korte voortgangsupdates in het Nederlands. Deze prompt is de overdracht van 16 september 2026, na commit `54e636b3` op lokale `main`. Controleer de huidige werkboom en nieuwe commits voordat je wijzigt. Behoud werk van anderen.
-
-## Lees eerst
-
-- `docs/reports/2026-09-15-ios-app.html`: de actuele status en restpunten bovenaan. Het oude onderzoek en faseplan daaronder zijn historische context.
-- `docs/reports/2026-09-15-ios-composer-review.md`: bewijs en beperkingen per iteratie, vooral de laatste secties.
-- De toepasselijke repository-instructies, `CLAUDE.md` en de iOS-besluiten in `docs/DECISIONS.md`, voor zover aanwezig. `apps/ios/README.md` loopt op onderdelen achter op de code en moet worden bijgewerkt.
-
-## Afspraken met Bas
-
-- Itereer snel. Bouw en installeer uitsluitend op zijn fysieke iPhone: `00008130-001C7D411E20001C`. Geen iPad-installaties, simulator of UI-tests. Kleine gerichte tests voor gewijzigd protocol, crypto of state zijn toegestaan; draai geen brede suite voor een kleine UI-wijziging. Niet gemeten apparaatgedrag blijft expliciet open.
-- Gebruik alleen publieke Apple-API&#x27;s en behoud native navigatie. Geen gesture-workarounds die knopinteractie onderscheppen. De huidige UI is samen met Bas uitgewerkt; geen nieuwe herinrichting zonder aanleiding.
-- Herstart de draaiende Ruimte-daemon niet: daar lopen actieve sessies. Server- en contractcode mag worden voorbereid en met geïsoleerde fixtures worden gecontroleerd. Een wijziging aan de huidige daemon is pas live na een later afgesproken herstart.
-- Development-signing werkt al. Bundle `app.ruimte.mobile`, team `7RGV9KKX87`, lokale signing in `apps/ios/Signing.xcconfig`. Geen sleutels of tokens in output of commits.
-- Commit afgerond werk lokaal met Engelse conventional commits, zonder attributie. Niet pushen of naar TestFlight uploaden. Bereid externe configuratie concreet voor en vermeld wat daarna nog nodig is. De eerdere toestemming voor Pulsar-updates blijft gelden voor noodzakelijke backendwijzigingen; beoordeel de concrete wijziging en bestaande configuratie eerst.
-- Gebruik Codex wanneer je sub-agents inzet, nooit Claude. Delegatie is niet nodig om deze opdracht te beginnen.
-- Gebruik toepasselijke skills, waaronder code-comments bij code en html-report/unslop voor de rapportage. Werk binnen bestaande toestemming door; stel alleen een vraag als een ontbrekend antwoord het werk werkelijk blokkeert.
-
-## Huidige implementatie
-
-De app staat in `apps/ios`, minimum iOS/iPadOS 26, lokaal Xcode 27. SwiftUI met UIKit voor timeline/canvas, SwiftTerm voor terminals en LucideSwift voor iconen. Geen lokale daemon in de app.
-
-Gebouwd zijn native Apple-login, GitHub-login, HTTPS-pairinglinks, een gezamenlijke projectenlijst, iPad master-detail, views, chats, terminal, bestanden/media, Git, usage, browser, canvas, tekeneditor met vormen/tekst en Apple Pencil, notificatie-extensie en Live Activities. Dat is implementatiebewijs, geen volledige apparaatacceptatie.
-
-Belangrijke actuele keuzes:
-- Tagline: `Space for AI Engineering`. Apple staat vóór GitHub.
-- Processes is bewust uit de app verwijderd. Live Activities zijn in deze app alleen voor iPhone, standaard voor de laatst geopende chat. De oude tekst over iPad-activiteiten is geen actuele opdracht.
-- Gebruik de grijze webpalette, monochrome iconen en de gedeelde sidebar-rijen met geanimeerde press-state. Native toggles behouden hun systeemkleur. Projecttitels en viewnamen hebben maximaal één regel met ellipsis.
-- iPad heeft altijd een sidebar met detail na login. Projectkeuze wisselt de sidebar; het detail start met een selectieprompt. De Ruimte-branding staat alleen in de startsidebar. Behoud de zachte border en de tabs/zoekinteractie.
-- Canvasnodes worden niet verplaatst of geresized. Tekenelementen in een drawing hebben hun eigen selectie- en bewerkingstools. Browserpagina&#x27;s hebben geen privileged machine bridge.
-- Chat/terminal-attachments en machineverbindingen worden gedeeld. Een pagina sluiten mag geen agentsessie stoppen of een andere scene loskoppelen. Terminal attach gebruikt `follow:true` en verandert de desktopmaat niet.
-
-## Al opgeloste performanceproblemen
-
-`NativeWebRTCLink.swift` wacht sinds `54e636b3` maximaal een eerste venster van 250 ms op bruikbare initiële candidates, in plaats van standaard de vijf seconden gather-timeout af te wachten. Zonder candidate blijft de vijfsecondenfallback bestaan. Normale ICE-policy is `all`: direct waar mogelijk, TURN als terugval. Relay-only is uitsluitend diagnostiek. Bewaar candidate-deduplicatie en stuur extra candidates pas na het antwoord; eerdere replay veroorzaakte broker-rate-limits en verbroken verbindingen. Behoud pinned machine keys, gesigneerde signaling, channelBinding en handshake-limieten.
-
-Op de fysieke iPhone is de verbinding met deze Mac gemeten op 709 ms in plaats van 5.625 ms; de tweede machine op 681 ms in plaats van 5.528 ms. Beide host/host, zonder TURN. Dit zijn losse metingen vanaf linkcreatie, exclusief accountdiscovery en laden van gegevens. Het bewijst geen broker-vrije LAN-route. Log: `/tmp/ruimte-connection-iphone-fast.log`, als die nog aanwezig is.
-
-`SharedMachineSession` houdt de laatste verborgen ChatModel maximaal 30 seconden live. Zichtbare scenes delen ownership; disconnects verwijderen verborgen chats. Heropenen kan de snapshot en providerlijst hergebruiken en slaat een overbodige `chat.create` over. `MachineClient.receiveInOrder` decodeert buiten de main actor, bewaart volgorde en negeert frames van vorige verbindingen. Deze cache is nog niet met een UI-meting getimed.
-
-## Werkvolgorde
-
-1. Maak een korte actuele inventaris van concrete functionele gaten tegenover de bedoelde mobiele scope. Scheid ontbrekende code, ongetest gedrag en distributiewerk. Oude README-claims over ontbrekende tekentools, Processes of de Apple-webflow zijn achterhaald. Herbouw bestaande onderdelen niet.
-2. Pak grote chats structureel aan. `chat.attach` stuurt nu alle items. Een echte App: Codex-chat had circa 17,7 miljoen UTF-16-eenheden en 2.871 items, vooral tooloutput. De receiverlimiet is tijdelijk 64 Mi UTF-16, handshake 4.096. Ontwerp een begrensde eerste historypagina en laden van oudere items via het gedeelde contract, daemon en iOS. Bewaar snapshot/delta-volgorde, approvals, resets/clear en scrollpositie bij prepend. Ondersteun de draaiende oudere daemon zonder de link te verbreken of stil items weg te laten. Verifieer de aanpak met kleine synthetische fixtures; kopieer geen gebruikersgesprekken naar tests. Verhoog niet opnieuw alleen de framelimiet. Meet waar mogelijk bytes, decodeertijd en requestaantallen; label on-device openingstijden als ongemeten zolang Bas ze niet heeft beoordeeld.
-3. Maak Live Activity push-to-start af voor de laatst bekeken iPhone-chat. De huidige `NotificationCoordinator` start via `Activity.request` wanneer de app actief is; er is nog geen verwerking van `pushToStartTokenUpdates`. Controleer de gedeelde tokenroutes, account/device-binding, intrekking, opt-out en daemon/Worker-payloads. Voorkom dubbele activities. Behoud de grens dat alleen toegestane ActivityKit-inhoud onversleuteld reist. Raadpleeg actuele officiële Apple-documentatie bij implementatie. iPad-activiteiten blijven uit scope.
-4. Controleer de notificatieketen op concrete ontbrekende implementatie: toestemming, registratie, encryptie/decryptie, verlopen of al beantwoorde verzoeken, eenmalige achtergrondacties en fallback naar de chat. Gebruik de bestaande X25519/HKDF/AES-GCM, routing-AAD en machinehandtekening. Replay-, expiry- en intrekkingscontroles blijven intact. Onderzoek de huidige APNs-configuratie zonder secrets te tonen. Lokale tests bewijzen geen APNs-bezorging, Wi-Fi/5G-succesratio of gedrag na langdurig achtergrondgebruik; leg die resterende acceptatie vast.
-5. Werk README en dit rapport bij. Bereid de Xcode Cloud/TestFlight-route voor op basis van de aanwezige `apps/ios/ci_scripts`, signing en privacy-manifesten. Maak concreet welke repositorywijzigingen af zijn en welke Apple-accountconfiguratie, distributiesigning of upload nog nodig is. Development-signing is al geregeld. Publiceren/uploaden is geen onderdeel van deze opdracht.
-
-Een extern geblokkeerd onderdeel mag zelfstandig werk aan andere onderdelen niet stilleggen. Noteer de blokkade met bewijs en ga verder. Noem de app pas feature complete wanneer alle afgesproken functies zijn geïmplementeerd; rapporteer apparaatacceptatie en releasegereedheid afzonderlijk.
-
-## Build, controle en overdracht
-
-Werk vanuit `/Users/bas/Development/Projects/ruimte`. `apps/ios/project.yml` is de projectbron. Genereer na projectwijzigingen met `xcodegen generate --spec apps/ios/project.yml`. Behoud packagepins en commit geen buildoutput of xcuserdata. Format gewijzigde Swift-code. `NativeWebRTCLink.swift` heeft een buitenste `#if` met niet-ingesprongen inhoud; voorkom formatterruis. Draai `bun run format` en `bun run check` vóór een commit. Controleer gewijzigde contracten/codegen gericht; bestaande lintwaarschuwingen zijn bekend.
-
-```sh
-xcodebuild -project apps/ios/Ruimte.xcodeproj -scheme Ruimte -configuration Debug \
-  -destination &#x27;id=00008130-001C7D411E20001C&#x27; -derivedDataPath /tmp/ruimte-ios-xcode \
-  -allowProvisioningUpdates build
-xcrun devicectl device install app --device 00008130-001C7D411E20001C \
-  /tmp/ruimte-ios-xcode/Build/Products/Debug-iphoneos/Ruimte.app
-xcrun devicectl device process launch --device 00008130-001C7D411E20001C \
-  --terminate-existing app.ruimte.mobile
-```
-
-Laat een onbereikbare of vergrendelde iPhone geen reden zijn om codewerk te stoppen. Meld installatie dan als open. Optionele verbindingstracing gebruikt alleen tijdelijk `RUIMTE_TRACE_CONNECTION=1`; start daarna normaal. Geen screenshots of UI-automatisering als vervanging van de afgesproken snelle iteratie.
-
-Werk het actuele deel van het HTML-rapport en `docs/reports/2026-09-15-ios-composer-review.md` bij met commits, concrete resultaten en beperkingen. Eindig met wat is gebouwd/geïnstalleerd, wat nog niet live is op de daemon, en wat Bas later moet beoordelen. Vraag niet tussendoor om algemene bevestiging om verder te gaan.
-</code></pre>
-  </details>
+  <h2>Overdracht na deze uitvoering</h2>
+  <p>De eerste drie punten uit de vorige startprompt zijn uitgevoerd in <code>86dbcfc5</code>. Lees eerst de actuele status bovenaan; herbouw de bestaande functies niet. De <a href="2026-09-16-ios-startprompt.md">eerdere startprompt</a> is voorzien van deze statuscorrectie.</p>
+  <pre class="handoff"><code>Lees docs/reports/2026-09-15-ios-app.html en de laatste sectie van docs/reports/2026-09-15-ios-composer-review.md.
+Controleer eerst de werkboom. Chatpaginering en push-to-start zijn gebouwd en de iPhone-build is geïnstalleerd en gestart.
+De draaiende daemon is bewust niet herstart. APNs mist credentials; de Worker en migratie 0008 zijn nog niet gedeployd.
+Vervolg alleen de concrete opdracht van Bas. Distributie is uitgesteld. Native navigatie behouden, geen simulator, UI-tests of iPad-installatie.
+Commit afgerond werk lokaal en push niet. Leg echte apparaatacceptatie apart vast van lokale testresultaten.</code></pre>
+  <p>Voor ActivityKit is de officiële <a href="https://developer.apple.com/documentation/activitykit/starting-and-updating-live-activities-with-activitykit-push-notifications">Apple-documentatie over starten en bijwerken via push</a> geraadpleegd. De startpayload vraagt een update-token aan met <code>input-push-token: 1</code>.</p>
 </section>
 
 <section id="bronnen">
@@ -899,7 +838,7 @@ Werk het actuele deel van het HTML-rapport en `docs/reports/2026-09-15-ios-compo
 </section>
 </main>
 <footer>
-  <p>Status en startprompt bijgewerkt op 16 september 2026 na <code>54e636b3</code>. De actuele secties onderscheiden implementatie, metingen en resterende acceptatie. Het oorspronkelijke onderzoek, leveranciersinformatie en ramingen zijn niet opnieuw extern geverifieerd. Deze documentronde wijzigt geen appcode en start geen builds, installaties of agents.</p>
+  <p>Status bijgewerkt op 16 september 2026 na <code>86dbcfc5</code>. Implementatie, installatie en lokale tests zijn vastgelegd; APNs-bezorging en apparaatacceptatie blijven open. Het oorspronkelijke onderzoek is historisch en niet opnieuw volledig extern geverifieerd.</p>
 </footer>
 </body>
 </html>
