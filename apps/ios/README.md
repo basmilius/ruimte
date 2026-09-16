@@ -54,6 +54,20 @@ tasks woke them, and a failed task or a wake the machine gave up on leaves an un
 Model and permission picks are remembered and sent to every connected machine for the chats it
 starts on its own. Older machines keep working: requests they do not know are ignored.
 
+Long-press a message you sent, an answer or a turn's duration label for Fork from here. A sheet
+asks what the desktop dialog asks: the title, the CLI and model to continue with, a node beside the
+original or a view of its own (a chat view always forks into a view), and in a repository a git
+worktree on a free branch with the work after the turn undone. The conversation menu forks after the
+last turn that ended. Once the machine has written the fork into the project, the app opens it. A
+fork shows "Fork of <original>" under its title; the title menu and the conversation menu offer
+Summarize for <original> and Show original. In the original, the summary note shows its first line,
+folds the rest open and offers Open fork, and a turn that was forked says so beside its duration.
+A machine without these requests says it needs an update and nothing else changes.
+
+With three or more messages, a Messages button lists what you sent and the turns tasks woke: a
+popover on iPad, a sheet on iPhone. It opens scrolled to what is on screen, marks those messages,
+searches, jumps on a tap and offers Copy and Fork from here on a long press or a swipe.
+
 Messages support nested lists, tasks, quotes, tables, matching code fences and reference
 links. Long prompts can fold; mentions and skills retain their styling. Message context
 menus copy text or Markdown. File links open the machine's native file viewer, including

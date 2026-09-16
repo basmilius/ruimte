@@ -45,7 +45,8 @@ larger ones becomes a GitHub issue when it starts.
    menu and a chat view's row; a worktree per fork with the work after the turn undone; another CLI
    with a handoff of the last whole turns; a summary written by the fork and delivered to the original
    as a note and a preamble). Left for later: "Restore files to this turn" as its own action on a turn
-   (the shared-folder undo), forking on iOS, and a verb for agents to fork.
+   (the shared-folder undo) and a verb for agents to fork. The iOS app forks too (a sheet from a
+   message's menu, the way back, summaries and a message index in place of the strip).
 9. **Settings and keyboard**: one binding table with `when` contexts, read by the handlers and the
    Keyboard pane (which lists them read-only today), then overrides with press-to-record, conflict
    labels and reset. A "restore defaults" action, a canvas font size for chat and text elements,
