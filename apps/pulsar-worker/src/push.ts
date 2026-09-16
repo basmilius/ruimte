@@ -22,9 +22,6 @@ export const registerPushDevice = async (request: Request, env: Env): Promise<Re
     if (!session) {
         return failure('unauthorized', 'Sign in again');
     }
-    if (!apnsConfigured(env)) {
-        return failure('not-configured', 'Push notifications are not configured');
-    }
     const limited = await overLimit(env.DB, `push-register:${session.id}`, 20);
     if (limited) {
         return limited;
@@ -32,6 +29,9 @@ export const registerPushDevice = async (request: Request, env: Env): Promise<Re
     const body = await readBody(request, PushRegisterDevicePayloadSchema);
     if ('response' in body) {
         return body.response;
+    }
+    if (!apnsConfigured(env, body.value.environment)) {
+        return failure('not-configured', 'Push notifications are not configured');
     }
     const row = await env.DB.prepare(
         `INSERT INTO push_device (handle, account_id, session_id, token, environment, updated_at)
@@ -191,7 +191,7 @@ export const sendPush = async (request: Request, env: Env, seams: PushDeliverySe
             return limited;
         }
     }
-    if (!apnsConfigured(env)) {
+    if (!apnsConfigured(env, device.environment)) {
         return failure('not-configured', 'Push notifications are not configured');
     }
     let token = device.token;

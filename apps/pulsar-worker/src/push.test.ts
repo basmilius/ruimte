@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { Database } from 'bun:sqlite';
-import { createHash, generateKeyPairSync, randomBytes, sign } from 'node:crypto';
+import { createHash, generateKeyPairSync, randomBytes, sign, verify } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pushMessage, type PushEnvelope } from '@ruimte/pulsar';
@@ -86,8 +86,8 @@ beforeEach(() => {
     env = {
         DB: d1(sqlite),
         PUBLIC_ORIGIN: 'https://pulsar.test',
-        APNS_KEY: 'injected',
-        APNS_KEY_ID: 'test',
+        APNS_SANDBOX_KEY: 'injected',
+        APNS_SANDBOX_KEY_ID: 'test',
         APNS_TEAM_ID: 'test',
         APNS_TOPIC: 'app.ruimte.mobile'
     };
@@ -179,10 +179,38 @@ describe('push authorization and routing', () => {
     });
 
     test('missing APNs configuration never sends and an unregistered token is deleted', async () => {
-        expect((await sendPush(request(signed()), { ...env, APNS_KEY: undefined }, seams)).status).toBe(503);
+        expect((await sendPush(request(signed()), { ...env, APNS_SANDBOX_KEY: undefined }, seams)).status).toBe(503);
         expect(delivered).toEqual([]);
         await sendPush(request(signed()), env, { ...seams, send: async () => ({ ok: false, status: 410 }) });
         expect(sqlite.query('SELECT handle FROM push_device').all()).toEqual([]);
+    });
+
+    test('registration checks the requested environment without overwriting the other device', async () => {
+        const register = (environment: string) => request({ token: 'cd'.repeat(32), environment });
+        expect((await registerPushDevice(register('production'), env)).status).toBe(503);
+        expect(sqlite.query('SELECT environment, token FROM push_device').all()).toEqual([{ environment: 'sandbox', token: 'ab'.repeat(32) }]);
+        const both = { ...env, APNS_PRODUCTION_KEY: 'production-key', APNS_PRODUCTION_KEY_ID: 'production-id' };
+        expect((await registerPushDevice(register('production'), both)).status).toBe(200);
+        expect(sqlite.query('SELECT environment, token FROM push_device ORDER BY environment').all()).toEqual([
+            { environment: 'production', token: 'cd'.repeat(32) },
+            { environment: 'sandbox', token: 'ab'.repeat(32) }
+        ]);
+    });
+
+    test('a shared Worker requires credentials for the registered device environment', async () => {
+        const productionOnly = {
+            ...env,
+            APNS_SANDBOX_KEY: undefined,
+            APNS_SANDBOX_KEY_ID: undefined,
+            APNS_PRODUCTION_KEY: 'production-key',
+            APNS_PRODUCTION_KEY_ID: 'production-id'
+        };
+        expect((await sendPush(request(signed()), productionOnly, seams)).status).toBe(503);
+        sqlite.query("UPDATE push_device SET environment = 'production'").run();
+        expect((await sendPush(request(signed()), env, seams)).status).toBe(503);
+        expect(delivered).toEqual([]);
+        expect((await sendPush(request(signed()), productionOnly, seams)).status).toBe(204);
+        expect(delivered).toHaveLength(1);
     });
 
     test('distinct phase updates cannot start duplicate activities before an update token arrives', async () => {
@@ -282,7 +310,7 @@ describe('push authorization and routing', () => {
 
 test('APNs provider signs with the configured topic and environment, and enforces the 4 KB payload', async () => {
     const key = generateKeyPairSync('ec', { namedCurve: 'prime256v1' }).privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
-    const apnsEnv = { ...env, APNS_KEY: key };
+    const apnsEnv = { ...env, APNS_SANDBOX_KEY: key };
     let called: { url: string; headers: Headers; body: string } | null = null;
     const send = (async (url: string | URL | Request, init?: RequestInit) => {
         called = { url: String(url), headers: new Headers(init?.headers), body: String(init?.body) };
@@ -306,4 +334,55 @@ test('APNs provider signs with the configured topic and environment, and enforce
             send
         )
     ).toEqual({ ok: false, status: 413 });
+});
+
+test('APNs selects and caches each environment key independently, including rotation', async () => {
+    const sandbox = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+    const production = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+    const rotated = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+    const apnsEnv = {
+        ...env,
+        APNS_SANDBOX_KEY: sandbox.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
+        APNS_SANDBOX_KEY_ID: 'sandbox-id',
+        APNS_PRODUCTION_KEY: production.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
+        APNS_PRODUCTION_KEY_ID: 'production-id'
+    };
+    const seen = new Map<string, string>();
+    for (const environment of ['sandbox', 'production', 'sandbox', 'production'] as const) {
+        const selected = environment === 'sandbox' ? sandbox : production;
+        const send = (async (url: string | URL | Request, init?: RequestInit) => {
+            expect(String(url)).toStartWith(environment === 'sandbox' ? 'https://api.sandbox.push.apple.com/' : 'https://api.push.apple.com/');
+            const token = new Headers(init?.headers).get('authorization')!.slice('bearer '.length);
+            const [header, payload, signature] = token.split('.');
+            expect(JSON.parse(Buffer.from(header!, 'base64url').toString()).kid).toBe(`${environment}-id`);
+            expect(JSON.parse(Buffer.from(payload!, 'base64url').toString()).iss).toBe(env.APNS_TEAM_ID);
+            expect(
+                verify(
+                    'sha256',
+                    Buffer.from(`${header}.${payload}`),
+                    { key: selected.publicKey, dsaEncoding: 'ieee-p1363' },
+                    Buffer.from(signature!, 'base64url')
+                )
+            ).toBe(true);
+            if (seen.has(environment)) {
+                expect(token).toBe(seen.get(environment)!);
+            }
+            seen.set(environment, token);
+            return new Response(null, { status: 200 });
+        }) as typeof fetch;
+        expect((await deliverApns(apnsEnv, { token: 'ab'.repeat(32), environment, startsActivity: false }, signed(), NOW, send)).ok).toBe(true);
+    }
+    apnsEnv.APNS_SANDBOX_KEY = rotated.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+    apnsEnv.APNS_SANDBOX_KEY_ID = 'rotated-id';
+    const rotatedSend = (async (_url: string | URL | Request, init?: RequestInit) => {
+        const token = new Headers(init?.headers).get('authorization')!.slice('bearer '.length);
+        const [header, payload, signature] = token.split('.');
+        expect(JSON.parse(Buffer.from(header!, 'base64url').toString()).kid).toBe('rotated-id');
+        expect(token).not.toBe(seen.get('sandbox')!);
+        expect(
+            verify('sha256', Buffer.from(`${header}.${payload}`), { key: rotated.publicKey, dsaEncoding: 'ieee-p1363' }, Buffer.from(signature!, 'base64url'))
+        ).toBe(true);
+        return new Response(null, { status: 200 });
+    }) as typeof fetch;
+    expect((await deliverApns(apnsEnv, { token: 'ab'.repeat(32), environment: 'sandbox', startsActivity: false }, signed(), NOW, rotatedSend)).ok).toBe(true);
 });

@@ -780,3 +780,29 @@ The signed iPhone build passes and is installed on Bas's iPhone. `bun run format
 agreement, no simulator or UI tests were run. Live streaming, Markdown transitions, growing code blocks and reading position
 still need physical acceptance; compilation is not proof that the reported overlap is
 gone. Build log: `/tmp/ruimte-ios-streaming-build.log`.
+
+
+## Separate APNs keys on shared infrastructure, September 16
+
+Bas supplied development key ID `Q39B5735J7` and production key ID `9X8N3H3LXC`.
+Both P-256 private keys are now in `~/.private/ruimte/apns`, outside the repository,
+with directory mode 700 and file mode 600. Verified copies replaced the Downloads
+files. No key contents were printed or committed.
+
+The Worker selects distinct Sandbox and Production credentials from the registered
+device environment. JWT caching is separate per environment, checks key rotation and
+retries after failed signing. A missing environment's pair cannot fall back to the
+other. Device registration checks the requested environment before writing its record.
+The existing shared broker and TURN services require no changes.
+
+29 focused push tests and `bun run check` pass. The tests verify actual fixture JWT
+signatures with different keys while interleaving both environments, key rotation,
+missing-key refusal and independent device records. `bun run format` passes.
+An initial broad Worker test attempt could not start its local server inside the
+sandbox; the completed run uses the focused Worker and daemon push tests instead.
+
+Automatic approval review rejected uploading the keys to Cloudflare without explicit
+permission to transfer these credentials there. No cloud version or secrets were
+uploaded. Local configuration is ready; external activation, migration 0008, a daemon
+restart and real APNs delivery remain pending. Details are in
+[APNs operations](../../apps/pulsar-worker/APNS.md).

@@ -1,7 +1,9 @@
 export interface Env {
     DB: D1Database;
-    APNS_KEY?: string;
-    APNS_KEY_ID?: string;
+    APNS_SANDBOX_KEY?: string;
+    APNS_SANDBOX_KEY_ID?: string;
+    APNS_PRODUCTION_KEY?: string;
+    APNS_PRODUCTION_KEY_ID?: string;
     APNS_TEAM_ID?: string;
     APNS_TOPIC?: string;
     // The origin the provider's callback is registered under; a request's own URL is not trusted for it.

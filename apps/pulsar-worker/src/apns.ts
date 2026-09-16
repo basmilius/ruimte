@@ -2,9 +2,11 @@ import type { PushEnvelope } from '@ruimte/pulsar';
 import type { Env } from './env.ts';
 import { signEs256Jwt } from './jwt.ts';
 
+type ApnsEnvironment = 'sandbox' | 'production';
+
 interface ApnsTarget {
     token: string;
-    environment: 'sandbox' | 'production';
+    environment: ApnsEnvironment;
     startsActivity: boolean;
 }
 export interface ApnsResult {
@@ -12,12 +14,19 @@ export interface ApnsResult {
     status: number;
 }
 
-let cached: { secret: string; keyId: string; teamId: string; issuedAt: number; token: Promise<string> } | null = null;
+const tokens = new Map<ApnsEnvironment, { secret: string; keyId: string; teamId: string; issuedAt: number; token: Promise<string> }>();
 
-const providerToken = (env: Env, now: number): Promise<string> => {
-    const secret = env.APNS_KEY!;
-    const keyId = env.APNS_KEY_ID!;
+const credentials = (env: Env, environment: ApnsEnvironment) =>
+    environment === 'sandbox'
+        ? { secret: env.APNS_SANDBOX_KEY, keyId: env.APNS_SANDBOX_KEY_ID }
+        : { secret: env.APNS_PRODUCTION_KEY, keyId: env.APNS_PRODUCTION_KEY_ID };
+
+const providerToken = (env: Env, environment: ApnsEnvironment, now: number): Promise<string> => {
+    const selected = credentials(env, environment);
+    const secret = selected.secret!;
+    const keyId = selected.keyId!;
     const teamId = env.APNS_TEAM_ID!;
+    const cached = tokens.get(environment);
     if (
         cached &&
         cached.secret === secret &&
@@ -34,11 +43,19 @@ const providerToken = (env: Env, now: number): Promise<string> => {
         const key = await crypto.subtle.importKey('pkcs8', der, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
         return signEs256Jwt(key, { kid: keyId }, { iss: teamId, iat: Math.floor(now / 1000) });
     })();
-    cached = { secret, keyId, teamId, issuedAt: now, token };
+    tokens.set(environment, { secret, keyId, teamId, issuedAt: now, token });
+    void token.catch(() => {
+        if (tokens.get(environment)?.token === token) {
+            tokens.delete(environment);
+        }
+    });
     return token;
 };
 
-export const apnsConfigured = (env: Env): boolean => !!(env.APNS_KEY && env.APNS_KEY_ID && env.APNS_TEAM_ID && env.APNS_TOPIC);
+export const apnsConfigured = (env: Env, environment: ApnsEnvironment): boolean => {
+    const { secret, keyId } = credentials(env, environment);
+    return !!(secret && keyId && env.APNS_TEAM_ID && env.APNS_TOPIC);
+};
 
 export const apnsPayload = (push: PushEnvelope, startsActivity: boolean): object => {
     if (push.pushType === 'alert') {
@@ -70,11 +87,14 @@ export const deliverApns = async (env: Env, target: ApnsTarget, push: PushEnvelo
     if (new TextEncoder().encode(body).byteLength > 4096) {
         return { ok: false, status: 413 };
     }
+    if (!apnsConfigured(env, target.environment)) {
+        return { ok: false, status: 503 };
+    }
     const host = target.environment === 'sandbox' ? 'api.sandbox.push.apple.com' : 'api.push.apple.com';
     const response = await send(`https://${host}/3/device/${target.token}`, {
         method: 'POST',
         headers: {
-            authorization: `bearer ${await providerToken(env, now)}`,
+            authorization: `bearer ${await providerToken(env, target.environment, now)}`,
             'apns-topic': push.pushType === 'liveactivity' ? `${env.APNS_TOPIC}.push-type.liveactivity` : env.APNS_TOPIC!,
             'apns-push-type': push.pushType,
             'apns-priority': push.pushType === 'alert' || target.startsActivity ? '10' : '5',
