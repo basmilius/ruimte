@@ -10,6 +10,9 @@ final class AttentionStore {
     private(set) var unseen = Set<String>()
     private(set) var approvalCounts: [String: Int] = [:]
     private var pushEntries: [String: JSONValue] = [:]
+    /// When the machine began keeping entries a client may mark nodes from; nil for a machine that never says, whose
+    /// entries only ever concerned notifications and would otherwise all turn into marks after an update.
+    private var marksFrom: Double?
     private var pendingReads = Set<String>()
     var onRead: ((String, Double) async -> Void)?
     private var focused: [String: Int] = [:]
@@ -47,6 +50,7 @@ final class AttentionStore {
                 refreshTask?.cancel()
                 guard connected else { return }
                 pushEntries.removeAll()
+                marksFrom = nil
                 refreshTask = Task { [weak self] in
                     while !Task.isCancelled {
                         await self?.refresh()
@@ -111,12 +115,24 @@ final class AttentionStore {
                 Task { await onRead?(id, read) }
             }
         }
+        // A turn that ended, a task that failed or a wake the machine gave up on while nobody was connected.
+        if let marksFrom, issued >= marksFrom, read < issued, focused[id, default: 0] == 0 { unseen.insert(id) }
         if focused[id, default: 0] > 0 { markSeen(id) }
+    }
+
+    private var unreadPushIDs: Set<String> {
+        guard let marksFrom else { return [] }
+        return Set(
+            pushEntries.values.filter {
+                let issued = $0.number("issuedAt")
+                return issued >= marksFrom && $0.number("readThrough") < issued
+            }.map { $0.text("nodeId") })
     }
 
     private func refresh() async {
         if let snapshot = try? await client.request("push.attention", payload: .object([:])) {
             guard !Task.isCancelled else { return }
+            marksFrom = snapshot["marksFrom"]?.numberValue
             for entry in snapshot.list("entries") { receivePush(entry) }
         }
         do {
@@ -139,7 +155,7 @@ final class AttentionStore {
             }
             statuses = statuses.filter { ids.contains($0.key) }
             approvalCounts = approvalCounts.filter { ids.contains($0.key) }
-            unseen.formIntersection(ids)
+            unseen.formIntersection(ids.union(unreadPushIDs))
         } catch {}
     }
 }
