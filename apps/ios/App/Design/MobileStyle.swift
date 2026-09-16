@@ -22,6 +22,9 @@ enum MobileStyle {
     static let text = Color(uiColor: textColor)
     static let muted = Color(uiColor: mutedColor)
     static let faint = Color(uiColor: adaptive(light: 0xa1a1aa, dark: 0x5f5f6b))
+    static let positive = Color(uiColor: adaptive(light: 0x15803d, dark: 0x4ade80))
+    static let statusError = Color(uiColor: adaptive(light: 0xdc2626, dark: 0xef4444))
+    static let statusNeedsYou = Color(uiColor: adaptive(light: 0xd97706, dark: 0xfbbf24))
 
     private static func adaptive(light: UInt32, dark: UInt32) -> UIColor {
         UIColor { traits in

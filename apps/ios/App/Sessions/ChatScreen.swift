@@ -169,8 +169,12 @@ struct ChatScreen: View {
             }
             if let plans = machineSession?.plans, let plan = plans.plans(for: model.chatID).first {
                 ToolbarItem(placement: .topBarTrailing) {
-                    PlanButton(plan: plan, unseen: plans.unseen.contains(model.chatID)) { showingPlans = true }
+                    PlanButton(
+                        plan: plan, unseen: plans.unseen.contains(model.chatID),
+                        working: model.info["activeTurnId"]?.stringValue != nil
+                    ) { showingPlans = true }
                 }
+                .sharedBackgroundVisibility(.hidden)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -214,7 +218,7 @@ struct ChatScreen: View {
         }
         .mobileSheet(isPresented: $showingPlans) {
             if let plans = machineSession?.plans {
-                PlanSheet(store: plans, chatID: model.chatID, model: model)
+                PlanSheet(store: plans, chatID: model.chatID, chatTitle: title, model: model)
             }
         }
         .navigationDestination(item: $subagentList) { _ in

@@ -105,6 +105,46 @@ final class PlanOutlineTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(PlanStep(step("a", state: "done"))).toggled, .open)
     }
 
+    func testRowsFollowTheFilterAndTheFolds() throws {
+        let document = try document(
+            plan(
+                kind: "test",
+                items: [
+                    .object(["type": .string("text"), "id": .string("intro"), "title": .string("Before")]),
+                    step("a", state: "done"),
+                    .object([
+                        "type": .string("section"), "id": .string("done"), "title": .string("Done"),
+                        "items": .array([step("b", state: "done"), step("c", state: "skipped")]),
+                    ]),
+                    .object([
+                        "type": .string("section"), "id": .string("mixed"), "title": .string("Mixed"),
+                        "items": .array([step("d", steps: [step("d1", state: "failed"), step("d2")])]),
+                    ]),
+                ]))
+        XCTAssertEqual(
+            document.rows(filter: .all, collapseDone: false, collapsed: []).map(\.id),
+            ["intro", "a", "done", "b", "c", "mixed", "d", "d1", "d2"])
+        XCTAssertEqual(
+            document.rows(filter: .all, collapseDone: true, collapsed: ["d"]).map(\.id),
+            ["intro", "a", "done", "mixed", "d"])
+        XCTAssertEqual(
+            document.rows(filter: .failed, collapseDone: false, collapsed: []).map(\.id), ["mixed", "d", "d1"])
+        XCTAssertEqual(
+            document.rows(filter: .open, collapseDone: false, collapsed: []).map(\.id), ["mixed", "d", "d2"])
+        XCTAssertEqual(document.word(for: .open), "Not run")
+    }
+
+    func testCopyWritesAStepAsMarkdown() throws {
+        let document = try document(plan(kind: "test", items: []))
+        var value = step("a", state: "failed")
+        if case .object(var fields) = value {
+            fields["note"] = .string("Broke\ntwice")
+            value = .object(fields)
+        }
+        XCTAssertEqual(
+            document.markdown(for: try XCTUnwrap(PlanStep(value))), "- [ ] Step a (failed)\n    > Broke\n    > twice")
+    }
+
     func testNewestPlanComesFirst() throws {
         let plans = try [
             document(plan("old", createdAt: "2026-09-16T09:00:00Z", items: [])),

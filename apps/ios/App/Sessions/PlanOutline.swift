@@ -6,6 +6,50 @@ enum PlanStepState: String, CaseIterable, Sendable {
     case open, active, done, failed, skipped, blocked
 }
 
+extension PlanStepState {
+    /// The states a person picks from; active is the agent's word for where it works.
+    static let personStates: [PlanStepState] = [.open, .done, .failed, .skipped, .blocked]
+    /// The outcomes the mark of a test step offers.
+    static let testOutcomes: [PlanStepState] = [.done, .failed, .skipped, .blocked]
+
+    var isFinished: Bool { self == .done || self == .skipped }
+}
+
+/// Which steps the sheet lists; local to this phone, never part of the plan.
+enum PlanFilter: String, CaseIterable, Sendable {
+    case all, open, failed
+
+    var label: String {
+        switch self {
+        case .all: "All"
+        case .open: "Open"
+        case .failed: "Failed"
+        }
+    }
+
+    func matches(_ leaves: [PlanStep]) -> Bool {
+        switch self {
+        case .all: true
+        case .open: leaves.contains { [.open, .active, .blocked].contains($0.state) }
+        case .failed: leaves.contains { $0.state == .failed }
+        }
+    }
+}
+
+enum PlanRow: Identifiable, Equatable, Sendable {
+    case section(PlanGroup, collapsed: Bool)
+    case text(PlanText)
+    case step(PlanStep, depth: Int, collapsed: Bool)
+
+    var id: String {
+        switch self {
+        case .section(let group, _): group.id
+        case .text(let text): text.id
+        case .step(let step, _, _): step.id
+        }
+    }
+}
+
 enum PlanChecks: String, Sendable {
     case anyone, agent, person
 }
@@ -206,15 +250,57 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
         return parts.joined(separator: ", ")
     }
 
+    /// The same words as `stateLabel` in the desktop client: a test is passed, not done.
     func word(for state: PlanStepState) -> String {
         switch state {
-        case .open: "Open"
-        case .active: "In progress"
+        case .open: kind == .test ? "Not run" : "Open"
+        case .active: kind == .test ? "Running" : "Active"
         case .done: kind == .test ? "Passed" : "Done"
         case .failed: "Failed"
         case .skipped: "Skipped"
         case .blocked: "Blocked"
         }
+    }
+
+    /// The plan as the rows the sheet draws, in document order, with folds and the filter applied, as `planRows` in
+    /// the desktop client.
+    func rows(filter: PlanFilter, collapseDone: Bool, collapsed: Set<String>) -> [PlanRow] {
+        var rows: [PlanRow] = []
+        func folded(_ id: String, _ leaves: [PlanStep]) -> Bool {
+            collapsed.contains(id) || (collapseDone && !leaves.isEmpty && leaves.allSatisfy { $0.state.isFinished })
+        }
+        func add(_ step: PlanStep, depth: Int) {
+            guard filter.matches(step.leaves) else { return }
+            let isCollapsed = step.isParent && folded(step.id, step.leaves)
+            rows.append(.step(step, depth: depth, collapsed: isCollapsed))
+            guard step.isParent && !isCollapsed else { return }
+            for child in step.steps { add(child, depth: depth + 1) }
+        }
+        for group in groups {
+            let leaves = group.steps.flatMap(\.leaves)
+            if group.title != nil {
+                guard filter.matches(leaves) else { continue }
+                let isCollapsed = folded(group.id, leaves)
+                rows.append(.section(group, collapsed: isCollapsed))
+                if isCollapsed { continue }
+            }
+            for entry in group.entries {
+                switch entry {
+                case .text(let text): if filter == .all { rows.append(.text(text)) }
+                case .step(let step): add(step, depth: 0)
+                }
+            }
+        }
+        return rows
+    }
+
+    /// One step as a line of Markdown, as Copy in the desktop client writes it.
+    func markdown(for step: PlanStep) -> String {
+        let state = step.state
+        let mark = state == .done ? "[x]" : "[ ]"
+        let label = state == .open || state == .done ? "" : " (\(word(for: state).lowercased()))"
+        let note = step.note.map { "\n    > " + $0.replacingOccurrences(of: "\n", with: "\n    > ") } ?? ""
+        return "- \(mark) \(step.title)\(label)\(note)"
     }
 
     /// Newest first, which is the plan a chat shows until a person picks another. A later place in the machine's
