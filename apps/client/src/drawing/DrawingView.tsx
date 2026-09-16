@@ -5,6 +5,7 @@ import { boundsOfElements, elementAt, rectFromPoints, resizeRect, scaleElement, 
 import { GRID, toWorld } from '@/canvas/math';
 import { DrawingDock } from '@/drawing/DrawingDock';
 import { DrawingOverlay } from '@/drawing/DrawingOverlay';
+import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import { loadDrawingFont } from '@/drawing/fonts';
 import {
     DRAG_THRESHOLD,
@@ -26,7 +27,9 @@ import { nextId } from '@/state/canvas';
 import { isWritten, newSeed, useDrawing, useDrawingStore } from '@/state/drawing';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/state/theme';
+import { TOOLTIP_KBD } from '@/ui/classes';
 import { isInFloatingLayer } from '@/ui/floating';
+import { Kbd } from '@/ui/Kbd';
 import { isModHeld } from '@/ui/shortcut';
 import { isApplePlatform } from '@/desktop/bridge';
 
@@ -56,6 +59,37 @@ type Gesture =
 
 /* The wheel settles on a whole percent this long after the last tick, as the canvas does. */
 const ZOOM_SETTLE_MS = 160;
+
+/* The letters of the tools a first stroke usually starts with, as the keys in `use-drawing-keys.ts` read them. */
+const FIRST_TOOLS: readonly { key: string; name: string }[] = [
+    { key: 'R', name: 'rectangle' },
+    { key: 'O', name: 'ellipse' },
+    { key: 'A', name: 'arrow' },
+    { key: 'P', name: 'pen' },
+    { key: 'T', name: 'text' }
+];
+
+/* A word on an empty drawing about how to begin; it goes with the first element, and with a stroke on its way. */
+function EmptyDrawing({ id }: { id: string }) {
+    const empty = useDrawing((s) => s.viewId === id && !s.loading && s.elements.length === 0 && s.draft === null && s.editingTextId === null);
+    if (!empty) {
+        return null;
+    }
+    return (
+        <div className="pointer-events-none absolute inset-0 grid place-items-center px-6 pt-6 pb-20">
+            <p className="max-w-md text-center text-sm leading-relaxed text-text-muted">
+                Nothing drawn yet. Pick a tool with{' '}
+                {FIRST_TOOLS.map((tool, at) => (
+                    <span key={tool.key}>
+                        <kbd className={TOOLTIP_KBD}>{tool.key}</kbd> {tool.name}
+                        {at < FIRST_TOOLS.length - 1 ? ', ' : ''}
+                    </span>
+                ))}
+                , or paste shapes copied from another drawing with <Kbd shortcut={DRAWING_SHORTCUTS.paste} className={TOOLTIP_KBD} />.
+            </p>
+        </div>
+    );
+}
 
 /*
  * A drawing on screen: one canvas for what is drawn, a second for the stroke in the making, and a
@@ -521,6 +555,7 @@ export function DrawingView({ id }: { id: string }) {
             <canvas ref={sceneRef} className="absolute inset-0 h-full w-full" />
             <canvas ref={draftRef} className="absolute inset-0 h-full w-full" />
             <DrawingOverlay marquee={marquee} />
+            <EmptyDrawing id={id} />
             <DrawingDock />
         </div>
     );

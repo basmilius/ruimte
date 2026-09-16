@@ -2,14 +2,16 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
-import { Braces, FileJson, MoreHorizontal, Pencil, RotateCcw } from 'lucide-react';
+import { Bot, Braces, FileJson, MoreHorizontal, Pencil, RotateCcw, Sparkles } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { DEFAULT_NODE_TONE } from '@ruimte/diagram';
 import { GRID, type Point } from '@/canvas/math';
 import { isApplePlatform } from '@/desktop/bridge';
 import { DiagramDock } from '@/diagram/DiagramDock';
 import { DiagramScene } from '@/diagram/DiagramScene';
+import { exampleDiagram } from '@/diagram/example';
 import { copyDiagramJson, openDiagramJson } from '@/diagram/export';
+import { askAgentAboutDiagram } from '@/project/views';
 import { Swatches } from '@/drawing/DrawingDock';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { useDiagram, useDiagramStore } from '@/state/diagram';
@@ -18,6 +20,7 @@ import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { isInFloatingLayer } from '@/ui/floating';
 import { Icon } from '@/ui/Icon';
 import { isModHeld } from '@/ui/shortcut';
+import { Tile } from '@/ui/Tile';
 import { Tooltip } from '@/ui/Tooltip';
 
 const isChrome = (target: EventTarget | null): boolean =>
@@ -148,6 +151,45 @@ function NodeMenuPopup({ id, onRename }: { id: string; onRename: () => void }) {
                 </ContextMenu.Popup>
             </ContextMenu.Positioner>
         </ContextMenu.Portal>
+    );
+}
+
+/*
+ * What an empty diagram offers: an agent to write it, its file to write it by hand, or an example to
+ * start from. It stands over the paper outside the gestures (`data-diagram-chrome`), so a press on a
+ * tile is a click and not the start of a pan, and it goes the moment the diagram has a node.
+ */
+function EmptyDiagram({ viewId }: { viewId: string }) {
+    const store = useDiagramStore();
+    const written = useDiagram((s) => s.rev > 0);
+    const hasFolder = useProject((s) => s.current?.folder != null);
+    return (
+        <div className="pointer-events-none absolute inset-0 grid place-items-center px-6 pt-6 pb-20">
+            <div data-diagram-chrome className="pointer-events-auto flex w-full max-w-md flex-col gap-2">
+                <p className="pb-2 text-center text-sm text-text-muted">This diagram is empty. An agent writes one from what you tell it.</p>
+                <Tile
+                    icon={<Icon icon={Bot} size={16} />}
+                    title="Ask an agent"
+                    description="A chat beside it on the canvas"
+                    primary
+                    onClick={() => askAgentAboutDiagram(viewId)}
+                />
+                {hasFolder && written && (
+                    <Tile
+                        icon={<Icon icon={FileJson} size={16} />}
+                        title="Open JSON"
+                        description="Write the nodes and edges by hand"
+                        onClick={() => openDiagramJson(viewId)}
+                    />
+                )}
+                <Tile
+                    icon={<Icon icon={Sparkles} size={16} />}
+                    title="Insert an example"
+                    description="A small flow to edit into your own"
+                    onClick={() => store.getState().replaceContent(exampleDiagram(store.getState().content.meta.title))}
+                />
+            </div>
+        </div>
     );
 }
 
@@ -312,13 +354,7 @@ export function DiagramView({ id }: { id: string }) {
                 </ContextMenu.Trigger>
                 {menuNode !== null && <NodeMenuPopup id={menuNode} onRename={() => setRenaming(menuNode)} />}
             </ContextMenu.Root>
-            {empty && (
-                <div className="pointer-events-none absolute inset-0 grid place-items-center p-6">
-                    <p className="max-w-80 text-center text-sm text-text-muted">
-                        This diagram is empty. Write its nodes and edges into its JSON file, or ask an agent to write it.
-                    </p>
-                </div>
-            )}
+            {empty && <EmptyDiagram viewId={id} />}
             {renaming !== null && <RenameField key={renaming} id={renaming} onDone={() => setRenaming(null)} />}
             <DiagramDock />
             {host !== null && createPortal(<DiagramControls viewId={id} />, host)}

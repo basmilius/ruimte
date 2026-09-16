@@ -10,10 +10,11 @@ import {
     type ProjectView
 } from '@ruimte/contracts';
 import { askBeforeEndingAgents } from '@/agents/end-children';
-import { toWorld, type Point } from '@/canvas/math';
+import { offerDraft } from '@/chat/drafts';
+import { GRID, toWorld, type Point } from '@/canvas/math';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import { viewIdsIn, type SplitDirection } from '@/shell/split';
-import { focusedCanvas, liveCanvas } from '@/state/canvas';
+import { NODE_SIZE, focusedCanvas, liveCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { currentEndpointId } from '@/state/keys';
 import { useDocument, viewOfNode, type DocumentState } from '@/state/document';
@@ -126,6 +127,29 @@ export const showOnCanvas = (viewId: string): string | null => {
     }
     canvas.goToNode(id);
     return id;
+};
+
+/*
+ * An empty diagram handed to an agent: the diagram goes on the canvas, a chat next to it with a line
+ * from the diagram into it, and a first question in its prompt that the person finishes and sends.
+ */
+export const askAgentAboutDiagram = (viewId: string): string | null => {
+    const view = useDocument.getState().views.find((candidate) => candidate.id === viewId);
+    const mirror = showOnCanvas(viewId);
+    if (!view || mirror === null) {
+        return null;
+    }
+    const canvas = focusedCanvas().getState();
+    const box = canvas.nodes[mirror]!;
+    const at = { x: box.x - GRID * 4 - NODE_SIZE.chat.w / 2, y: box.y + box.h / 2 };
+    const chat = canvas.addNode('chat', at);
+    if (chat === null) {
+        return null;
+    }
+    canvas.addEdge(mirror, chat);
+    offerDraft(chat, `Fill the empty diagram "${view.name ?? viewId}" with \`ruimte-context diagram ${viewId}\`. It should show `);
+    canvas.goToNode(chat);
+    return chat;
 };
 
 /* The canvas a file lands on: the one on screen, else the one that was up last. */
