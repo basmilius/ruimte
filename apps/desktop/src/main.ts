@@ -49,7 +49,7 @@ const smoke = process.env.RUIMTE_SMOKE === '1';
 const capturePath = process.env.RUIMTE_CAPTURE ?? null;
 const port = Number(process.env.RUIMTE_PORT ?? DEFAULT_PORT);
 // The home the daemon runs with, where its local secret lives; a checkout uses the dev home, as the server's `bun dev` does.
-const ruimteHome = process.env.RUIMTE_HOME ?? join(homedir(), app.isPackaged ? '.ruimte' : '.ruimte-dev');
+const ruimteHome = app.isPackaged ? (process.env.RUIMTE_HOME ?? join(homedir(), '.ruimte')) : (process.env.RUIMTE_DEV_HOME ?? join(homedir(), '.ruimte-dev'));
 
 let daemon: ChildProcess | null = null;
 let mainWindow: Electron.BrowserWindow | null = null;

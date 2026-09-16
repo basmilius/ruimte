@@ -47,15 +47,16 @@ public struct PushAPI: Sendable {
         return try JSONValue.decode(data)["reserved"] == .bool(true)
     }
     public func startActivity(
-        handle: String, token: String?, machineID: String? = nil, collapseID: String? = nil, accessToken: String
+        handle: String, token: String?, machineID: String? = nil, collapseID: String? = nil, scope: String? = nil,
+        accessToken: String
     ) async throws {
+        var fields: [String: JSONValue] = [
+            "token": token.map(JSONValue.string) ?? .null, "machineId": machineID.map(JSONValue.string) ?? .null,
+            "collapseId": collapseID.map(JSONValue.string) ?? .null,
+        ]
+        if let scope { fields["scope"] = .string(scope) }
         let payload = try WireSchema.validate(
-            "PushStartActivityRegistrationSchema",
-            .object([
-                "token": token.map(JSONValue.string) ?? .null,
-                "machineId": machineID.map(JSONValue.string) ?? .null,
-                "collapseId": collapseID.map(JSONValue.string) ?? .null,
-            ]))
+            "PushStartActivityRegistrationSchema", .object(fields))
         _ = try await call(
             "PUT", path: "/v1/push/devices/\(handle)/start-activity", body: payload, accessToken: accessToken)
     }

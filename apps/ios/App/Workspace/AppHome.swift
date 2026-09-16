@@ -69,7 +69,14 @@ struct AppHome: View {
             if account != nil { signIn = false }
         }
         .onChange(of: runtime.notifications.destination) { _, destination in
-            if destination != nil { activeProject = nil }
+            if destination != nil {
+                activeProject = nil
+                settings = false
+                pairing = false
+                machines = false
+                recentProjects = false
+                signIn = false
+            }
         }
         .onChange(of: phase, initial: true) { _, current in
             runtime.connections.setScene(sceneID, foreground: current != .background)
@@ -83,17 +90,41 @@ struct AppHome: View {
 
     private var usesSidebar: Bool { UIDevice.current.userInterfaceIdiom == .pad && hasWorkspace }
 
+    private enum PhoneDestination: Hashable {
+        case workspace(WorkspaceNavigation)
+        case notification(NotificationDestination)
+    }
+
+    private var phoneDestination: Binding<PhoneDestination?> {
+        Binding(
+            get: {
+                if let destination = runtime.notifications.destination { return .notification(destination) }
+                return activeProject.map(PhoneDestination.workspace)
+            },
+            set: { destination in
+                switch destination {
+                case .workspace(let project):
+                    runtime.notifications.destination = nil
+                    activeProject = project
+                case .notification(let notification):
+                    activeProject = nil
+                    runtime.notifications.destination = notification
+                case nil:
+                    activeProject = nil
+                    runtime.notifications.destination = nil
+                }
+            })
+    }
+
     private var projectNavigation: some View {
         NavigationStack {
             homeContent
-                .navigationDestination(item: $activeProject) { project in
-                    WorkspacePage(navigation: project)
-                }
-                .navigationDestination(
-                    item: Binding(
-                        get: { runtime.notifications.destination }, set: { runtime.notifications.destination = $0 })
-                ) { destination in
-                    NotificationSessionPage(runtime: runtime, destination: destination)
+                .navigationDestination(item: phoneDestination) { destination in
+                    switch destination {
+                    case .workspace(let project): WorkspacePage(navigation: project)
+                    case .notification(let notification):
+                        NotificationSessionPage(runtime: runtime, destination: notification).id(notification.id)
+                    }
                 }
         }
         .containerBackground(MobileStyle.surface, for: .navigation)
@@ -143,7 +174,7 @@ struct AppHome: View {
                         item: Binding(
                             get: { runtime.notifications.destination }, set: { runtime.notifications.destination = $0 })
                     ) { destination in
-                        NotificationSessionPage(runtime: runtime, destination: destination)
+                        NotificationSessionPage(runtime: runtime, destination: destination).id(destination.id)
                     }
             }
             .containerBackground(MobileStyle.surface, for: .navigation)
@@ -214,6 +245,7 @@ struct AppHome: View {
     private func openWorkspace(_ workspace: MobileWorkspace) {
         machines = false
         withAnimation(reduceMotion ? nil : .default) {
+            runtime.notifications.destination = nil
             activeProject = WorkspaceNavigation(workspace: workspace)
         }
     }

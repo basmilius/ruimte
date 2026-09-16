@@ -9,6 +9,22 @@ private actor PushRequests {
 }
 
 struct PushAPITests {
+    @Test func automaticActivitiesDoNotRequireASelectedConversation() async throws {
+        let requests = PushRequests()
+        let api = PushAPI(fetch: { request in
+            await requests.append(request)
+            return (Data(), HTTPURLResponse(url: request.url!, statusCode: 204, httpVersion: nil, headerFields: nil)!)
+        })
+        try await api.startActivity(
+            handle: String(repeating: "A", count: 43), token: String(repeating: "ab", count: 32), scope: "machines",
+            accessToken: "access")
+        let sent = await requests.values
+        let body = try JSONValue.decode(#require(sent.first?.httpBody))
+        #expect(body["scope"] == .string("machines"))
+        #expect(body["machineId"] == .null)
+        #expect(body["collapseId"] == .null)
+    }
+
     @Test func anIdleAgentProcessDoesNotKeepAnActivityRunning() {
         #expect(PushActivityContentPhase.chat(.object(["status": .string("idle"), "running": .bool(true)])) == .done)
         #expect(PushActivityContentPhase.chat(.object(["status": .string("running")])) == .running)

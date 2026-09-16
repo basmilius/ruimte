@@ -3692,6 +3692,16 @@
         "type": "integer",
         "minimum": 0,
         "maximum": 9007199254740991
+      },
+      "runningCount": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "attentionCount": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
       }
     },
     "required": [
@@ -3942,6 +3952,16 @@
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 9007199254740991
+              },
+              "runningCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "attentionCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
               }
             },
             "required": [
@@ -4063,6 +4083,10 @@
             "type": "null"
           }
         ]
+      },
+      "scope": {
+        "type": "string",
+        "const": "machines"
       },
       "machineId": {
         "anyOf": [
@@ -4759,6 +4783,13 @@
       },
       "approvals": {
         "type": "boolean"
+      },
+      "followAll": {
+        "type": "boolean"
+      },
+      "activityScope": {
+        "type": "string",
+        "const": "machine"
       },
       "activities": {
         "type": "boolean"

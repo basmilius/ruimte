@@ -7,6 +7,8 @@ import {
     PushRegisterDevicePayloadSchema,
     PushStartActivityRegistrationSchema,
     pushMessage,
+    pushCollapseIdMessage,
+    MACHINE_ACTIVITY_NODE,
     type PushEnvelope
 } from '@ruimte/pulsar';
 import { apnsConfigured, deliverApns, type ApnsResult } from './apns.ts';
@@ -44,6 +46,24 @@ export const registerPushDevice = async (request: Request, env: Env): Promise<Re
     return json({ handle: row!.handle });
 };
 
+interface ActivitySelection {
+    activity_scope: string | null;
+    start_machine_id: string | null;
+    start_collapse_id: string | null;
+}
+
+const selectsActivity = async (device: ActivitySelection, machineId: string, collapseId: string): Promise<boolean> => {
+    if (device.activity_scope === 'machines') {
+        const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pushCollapseIdMessage(machineId, MACHINE_ACTIVITY_NODE)));
+        const expected = btoa(String.fromCharCode(...new Uint8Array(hash)))
+            .replaceAll('+', '-')
+            .replaceAll('/', '_')
+            .replaceAll('=', '');
+        return collapseId === expected;
+    }
+    return device.start_machine_id === machineId && device.start_collapse_id === collapseId;
+};
+
 export const changePushDevice = async (request: Request, env: Env, handle: string, activity: 'update' | 'start' | null): Promise<Response> => {
     const session = await authenticate(request, env.DB);
     if (!session) {
@@ -71,15 +91,17 @@ export const changePushDevice = async (request: Request, env: Env, handle: strin
         if ('response' in body) {
             return body.response;
         }
-        const { machineId, collapseId } = body.value;
+        const { machineId, collapseId, scope } = body.value;
         if ((machineId == null) !== (collapseId == null)) {
             return failure('bad-request', 'An activity needs a machine and conversation');
         }
         if (machineId && !(await env.DB.prepare('SELECT id FROM machine WHERE id = ?1 AND account_id = ?2').bind(machineId, session.account.id).first())) {
             return failure('not-found', 'No machine on this account');
         }
-        await env.DB.prepare('UPDATE push_device SET start_token = ?1, start_machine_id = ?4, start_collapse_id = ?5 WHERE handle = ?2 AND session_id = ?3')
-            .bind(body.value.token?.toLowerCase() ?? null, handle, session.id, machineId ?? null, collapseId ?? null)
+        await env.DB.prepare(
+            'UPDATE push_device SET start_token = ?1, start_machine_id = ?4, start_collapse_id = ?5, activity_scope = ?6 WHERE handle = ?2 AND session_id = ?3'
+        )
+            .bind(body.value.token?.toLowerCase() ?? null, handle, session.id, machineId ?? null, collapseId ?? null, scope ?? null)
             .run();
     } else {
         const body = await readBody(request, PushActivityRegistrationSchema);
@@ -91,10 +113,10 @@ export const changePushDevice = async (request: Request, env: Env, handle: strin
             return failure('not-found', 'No machine on this account');
         }
         if (body.value.reserve || body.value.token !== null) {
-            const selected = await env.DB.prepare('SELECT handle FROM push_device WHERE handle = ?1 AND start_machine_id = ?2 AND start_collapse_id = ?3')
-                .bind(handle, body.value.machineId, body.value.collapseId)
-                .first();
-            if (!selected) {
+            const selected = await env.DB.prepare('SELECT activity_scope, start_machine_id, start_collapse_id FROM push_device WHERE handle = ?1')
+                .bind(handle)
+                .first<ActivitySelection>();
+            if (!selected || !(await selectsActivity(selected, body.value.machineId, body.value.collapseId))) {
                 return failure('not-found', 'This conversation is not selected for Live Activities');
             }
         }
@@ -162,7 +184,7 @@ export const sendPush = async (request: Request, env: Env, seams: PushDeliverySe
     }
     // Access-token expiry does not end a device; revoked or expired account sessions do.
     const device = await env.DB.prepare(
-        `SELECT device.token, device.environment, device.start_token, device.start_machine_id, device.start_collapse_id, machine.public_key
+        `SELECT device.token, device.environment, device.start_token, device.start_machine_id, device.start_collapse_id, device.activity_scope, machine.public_key
         FROM push_device AS device JOIN session ON session.id = device.session_id AND session.account_id = device.account_id
         JOIN machine ON machine.account_id = device.account_id AND machine.id = ?1
         WHERE device.handle = ?2 AND session.revoked_at IS NULL AND session.expires_at > ?3`
@@ -172,6 +194,7 @@ export const sendPush = async (request: Request, env: Env, seams: PushDeliverySe
             token: string;
             environment: 'sandbox' | 'production';
             start_token: string | null;
+            activity_scope: string | null;
             start_machine_id: string | null;
             start_collapse_id: string | null;
             public_key: string;
@@ -198,7 +221,7 @@ export const sendPush = async (request: Request, env: Env, seams: PushDeliverySe
     let startsActivity = false;
     let endsUnregisteredActivity = false;
     if (push.pushType === 'liveactivity') {
-        if (device.start_machine_id !== push.machineId || device.start_collapse_id !== push.collapseId) {
+        if (!(await selectsActivity(device, push.machineId, push.collapseId))) {
             return failure('not-found', 'This conversation is not selected for Live Activities');
         }
         const activity = await env.DB.prepare('SELECT token FROM push_activity WHERE handle = ?1 AND collapse_id = ?2 AND machine_id = ?3')

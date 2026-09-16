@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import {
     ADDRESS_BOOK_URL,
+    MACHINE_ACTIVITY_NODE,
     PUSH_MAX_AGE_MS,
     pushMessage,
     pushCollapseIdMessage,
@@ -18,6 +19,8 @@ interface PushServiceOptions {
     auth: AuthStore;
     identity: { id: string; sign(message: string): string };
     now?: () => number;
+    machineName?: () => string;
+    activityStates?: () => AgentStatus[];
     titleFor?: (nodeId: string) => string | null;
     send?: (push: PushEnvelope) => Promise<number>;
     onError?: (error: unknown) => void;
@@ -46,6 +49,9 @@ export class PushService {
     private readonly nodes = new Map<string, NodeState>();
     private readonly approvals = new Map<string, Set<string>>();
     private readonly activityTimes = new Map<string, { phase: string; at: number }>();
+    private machineActivityQueue = Promise.resolve();
+    private machineStartedAt = 0;
+    private readonly machineActivityStates = new Map<string, string>();
     private readonly pending = new Set<Promise<void>>();
     private readonly now: () => number;
 
@@ -76,6 +82,13 @@ export class PushService {
     }
 
     consume(event: SessionEvent): void {
+        if (event.event === 'session.exit') {
+            this.nodes.delete(event.payload.sessionId);
+            this.synchronizeActivities();
+        }
+        if (event.event === 'session.list-changed') {
+            this.synchronizeActivities();
+        }
         if (event.event === 'session.status' && event.payload.agent) {
             const { sessionId, agent } = event.payload;
             this.status('terminal', sessionId, agent.status, agent.suggestedTitle ?? 'Agent');
@@ -148,6 +161,7 @@ export class PushService {
         const startedAt =
             status === 'running' && previous?.status !== 'running' && previous?.status !== 'needs-you' ? this.now() : (previous?.startedAt ?? this.now());
         this.nodes.set(nodeId, { status, title, startedAt });
+        this.synchronizeActivities();
         if (status === previous?.status) {
             return;
         }
@@ -164,6 +178,51 @@ export class PushService {
         if (status === 'running' || status === 'needs-you' || status === 'idle' || status === 'error' || status === 'exited') {
             const phase = status === 'running' ? 'running' : status === 'needs-you' ? 'needs-you' : 'done';
             this.track(this.deliverActivity(nodeId, { title: title.slice(0, 160), phase, startedAt }));
+        }
+    }
+
+    synchronizeActivities(): void {
+        const states = this.options.activityStates?.() ?? [...this.nodes.values()].map((node) => node.status);
+        const runningCount = states.filter((state) => state === 'running').length;
+        const attentionCount = states.filter((state) => state === 'needs-you').length;
+        const active = runningCount + attentionCount > 0;
+        if (active && !this.machineStartedAt) {
+            this.machineStartedAt = this.now();
+        }
+        const activity: PushActivityContent = {
+            title: (this.options.machineName?.() ?? 'Ruimte').slice(0, 160),
+            phase: attentionCount ? 'needs-you' : runningCount ? 'running' : 'done',
+            startedAt: this.machineStartedAt || this.now(),
+            runningCount,
+            attentionCount
+        };
+        if (!active) {
+            this.machineStartedAt = 0;
+        }
+        // Preserve start/update/end order when several agents change state in the same turn.
+        this.machineActivityQueue = this.machineActivityQueue
+            .then(() => this.deliverMachineActivity(activity))
+            .catch((error: unknown) => this.options.onError?.(error));
+        this.track(this.machineActivityQueue);
+    }
+
+    private async deliverMachineActivity(activity: PushActivityContent): Promise<void> {
+        const state = JSON.stringify(activity.phase === 'done' ? { ...activity, startedAt: 0 } : activity);
+        for (const { sessionId, subscription } of await this.options.auth.pushSubscriptions()) {
+            if (!subscription.activities || subscription.activityScope !== 'machine') {
+                this.machineActivityStates.delete(sessionId);
+                continue;
+            }
+            const cacheKey = JSON.stringify([subscription.handle, state]);
+            if (this.machineActivityStates.get(sessionId) === cacheKey) {
+                continue;
+            }
+            const routing = this.routing(subscription, MACHINE_ACTIVITY_NODE, this.now() + PUSH_MAX_AGE_MS);
+            const push: PushEnvelope = { ...routing, pushType: 'liveactivity', activity, signature: '' };
+            push.signature = this.options.identity.sign(pushMessage(push));
+            if (await this.sendCurrent(sessionId, subscription, push)) {
+                this.machineActivityStates.set(sessionId, cacheKey);
+            }
         }
     }
 
@@ -193,7 +252,7 @@ export class PushService {
         for (const { sessionId, subscription } of await this.options.auth.pushSubscriptions()) {
             if (
                 this.connectedSessions.has(sessionId) ||
-                (content.kind === 'approval' ? !subscription.approvals : !subscription.follow.includes(content.nodeId))
+                (content.kind === 'approval' ? !subscription.approvals : !subscription.followAll && !subscription.follow.includes(content.nodeId))
             ) {
                 continue;
             }
@@ -211,6 +270,7 @@ export class PushService {
     private async deliverActivity(nodeId: string, activity: PushActivityContent): Promise<void> {
         for (const { sessionId, subscription } of await this.options.auth.pushSubscriptions()) {
             if (
+                subscription.activityScope === 'machine' ||
                 !subscription.activities ||
                 !subscription.follow.includes(nodeId) ||
                 (subscription.activityNodeId !== undefined && subscription.activityNodeId !== nodeId)

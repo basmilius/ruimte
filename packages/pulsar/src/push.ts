@@ -16,6 +16,7 @@ export const PushActivityRegistrationSchema = z.object({
 });
 export const PushStartActivityRegistrationSchema = z.object({
     token: token.nullable(),
+    scope: z.literal('machines').optional(),
     machineId: MachineIdSchema.nullable().optional(),
     collapseId: key.nullable().optional()
 });
@@ -39,7 +40,9 @@ export type PushAlertContent = z.infer<typeof PushAlertContentSchema>;
 export const PushActivityContentSchema = z.object({
     title: z.string().max(160),
     phase: z.enum(['running', 'tool', 'needs-you', 'done']),
-    startedAt: z.number().int().nonnegative()
+    startedAt: z.number().int().nonnegative(),
+    runningCount: z.number().int().nonnegative().optional(),
+    attentionCount: z.number().int().nonnegative().optional()
 });
 export type PushActivityContent = z.infer<typeof PushActivityContentSchema>;
 
@@ -74,6 +77,7 @@ export const PushEnvelopeSchema = z.discriminatedUnion('pushType', [
 ]);
 export type PushEnvelope = z.infer<typeof PushEnvelopeSchema>;
 
+export const MACHINE_ACTIVITY_NODE = '__ruimte_machine_activity__';
 export const PUSH_MAX_AGE_MS = 120_000;
 export const PUSH_MAX_CLOCK_SKEW_MS = 30_000;
 export const PUSH_HKDF_SALT = 'pulsar-push-encryption-v1';
@@ -82,7 +86,10 @@ export const pushEncryptionInfo = (machineId: string, handle: string): string =>
 export const pushRoutingMessage = (push: PushRouting): string =>
     `pulsar-push-routing-v1\n${JSON.stringify([push.machineId, push.handle, push.id, push.issuedAt, push.expiresAt, push.collapseId])}`;
 export const pushMessage = (push: PushEnvelope): string => {
-    const body =
+    const body: (string | number | null)[] =
         push.pushType === 'alert' ? [push.ephemeralKey, push.nonce, push.ciphertext] : [push.activity.title, push.activity.phase, push.activity.startedAt];
+    if (push.pushType === 'liveactivity' && (push.activity.runningCount !== undefined || push.activity.attentionCount !== undefined)) {
+        body.push(push.activity.runningCount ?? null, push.activity.attentionCount ?? null);
+    }
     return `pulsar-push-v1\n${JSON.stringify([push.machineId, push.handle, push.id, push.issuedAt, push.expiresAt, push.collapseId, push.pushType, ...body])}`;
 };

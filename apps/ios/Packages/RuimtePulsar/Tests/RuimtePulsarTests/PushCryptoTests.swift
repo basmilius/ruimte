@@ -4,6 +4,17 @@ import Testing
 @testable import RuimtePulsar
 
 struct PushCryptoTests {
+    @Test func machineSummaryCountsAreIncludedInSignedBytes() throws {
+        let push = try JSONValue.decode(
+            Data(
+                #"{"machineId":"machine","handle":"handle","id":"id","issuedAt":1,"expiresAt":2,"collapseId":"collapse","pushType":"liveactivity","activity":{"title":"Mac","phase":"needs-you","startedAt":1,"runningCount":2,"attentionCount":1}}"#
+                    .utf8)
+        )
+        #expect(
+            try PushSigning.message(push) == "pulsar-push-v1\n"
+                + #"["machine","handle","id",1,2,"collapse","liveactivity","Mac","needs-you",1,2,1]"#)
+    }
+
     @Test func replayClaimsAreAtomicAndExpire() async throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)

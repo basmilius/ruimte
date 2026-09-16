@@ -3,7 +3,7 @@ import { Database } from 'bun:sqlite';
 import { createHash, generateKeyPairSync, randomBytes, sign, verify } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { pushMessage, type PushEnvelope } from '@ruimte/pulsar';
+import { MACHINE_ACTIVITY_NODE, pushCollapseIdMessage, pushMessage, type PushEnvelope } from '@ruimte/pulsar';
 import type { Env } from './env.ts';
 import { changePushDevice, registerPushDevice, sendPush, type PushDeliverySeams } from './push.ts';
 import { apnsPayload, deliverApns } from './apns.ts';
@@ -385,4 +385,48 @@ test('APNs selects and caches each environment key independently, including rota
         return new Response(null, { status: 200 });
     }) as typeof fetch;
     expect((await deliverApns(apnsEnv, { token: 'ab'.repeat(32), environment: 'sandbox', startsActivity: false }, signed(), NOW, rotatedSend)).ok).toBe(true);
+});
+
+describe('automatic activity routing', () => {
+    const collapse = (machineId: string) => createHash('sha256').update(pushCollapseIdMessage(machineId, MACHINE_ACTIVITY_NODE)).digest('base64url');
+    const activity = { title: 'Computer', phase: 'running' as const, startedAt: NOW, runningCount: 2, attentionCount: 0 };
+
+    test('device opts in once and accepts a machine summary without selecting a conversation', async () => {
+        const start = await changePushDevice(request({ token: 'cd'.repeat(32), scope: 'machines' }, 'PUT'), env, handle, 'start');
+        expect(start.status).toBe(204);
+        const push = signed({ pushType: 'liveactivity', collapseId: collapse('machine'), activity });
+        expect((await sendPush(request(push), env, seams)).status).toBe(204);
+        expect(delivered).toMatchObject([{ id: push.id, activity, collapseId: collapse('machine') }]);
+        expect(
+            (await changePushDevice(request({ machineId: 'machine', collapseId: collapse('machine'), token: 'ef'.repeat(32) }, 'PUT'), env, handle, 'update'))
+                .status
+        ).toBe(204);
+        expect((await sendPush(request(signed({ pushType: 'liveactivity', collapseId: 'x'.repeat(43), activity })), env, seams)).status).toBe(404);
+    });
+
+    test('counts are signed and another account cannot register or send a summary', async () => {
+        sqlite.query("UPDATE push_device SET activity_scope = 'machines', start_token = ?").run('cd'.repeat(32));
+        const push = signed({ pushType: 'liveactivity', collapseId: collapse('machine'), activity });
+        if (push.pushType !== 'liveactivity') {
+            throw new Error('Expected activity');
+        }
+        push.activity = { ...push.activity, runningCount: 100 };
+        expect((await sendPush(request(push), env, seams)).status).toBe(403);
+        expect(
+            (await sendPush(request(signed({ machineId: 'stranger', pushType: 'liveactivity', collapseId: collapse('stranger'), activity })), env, seams))
+                .status
+        ).toBe(401);
+        expect(
+            (await changePushDevice(request({ machineId: 'stranger', collapseId: collapse('stranger'), token: 'ef'.repeat(32) }, 'PUT'), env, handle, 'update'))
+                .status
+        ).toBe(404);
+    });
+
+    test('turning activities off revokes automatic starts and the APNs payload carries both counts', async () => {
+        await changePushDevice(request({ token: 'cd'.repeat(32), scope: 'machines' }, 'PUT'), env, handle, 'start');
+        await changePushDevice(request({ token: null }, 'PUT'), env, handle, 'start');
+        const push = signed({ pushType: 'liveactivity', collapseId: collapse('machine'), activity });
+        expect((await sendPush(request(push), env, seams)).status).toBe(404);
+        expect(apnsPayload(push, true)).toMatchObject({ aps: { event: 'start', 'content-state': activity } });
+    });
 });

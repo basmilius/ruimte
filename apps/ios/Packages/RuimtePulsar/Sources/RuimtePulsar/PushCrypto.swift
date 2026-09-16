@@ -92,6 +92,18 @@ public enum PushSigning {
                 let started = push["activity"]?["startedAt"]?.numberValue, started >= 0, started < Double(Int64.max)
             else { throw PushCryptoError.invalid }
             fields += [.string(title), .string(phase), .integer(Int64(started))]
+            if push["activity"]?["runningCount"] != nil || push["activity"]?["attentionCount"] != nil {
+                for name in ["runningCount", "attentionCount"] {
+                    if let value = push["activity"]?[name]?.numberValue {
+                        guard value >= 0, value < Double(Int64.max), value.rounded() == value else {
+                            throw PushCryptoError.invalid
+                        }
+                        fields.append(.integer(Int64(value)))
+                    } else {
+                        fields.append(.null)
+                    }
+                }
+            }
         }
         return try SigningBytes.message("pulsar-push-v1", fields: fields)
     }

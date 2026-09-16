@@ -11,7 +11,9 @@ struct NotificationSessionPage: View {
     var body: some View {
         Group {
             if let session, session.connected {
-                if target == "chat" {
+                if target == "machine" {
+                    MachineActivityPage(session: session)
+                } else if target == "chat" {
                     ChatScreen(client: session.rpc, chatID: destination.nodeID, title: "Chat")
                 } else if target == "terminal" {
                     TerminalScreen(client: session.rpc, sessionID: destination.nodeID, title: "Terminal")
@@ -48,7 +50,7 @@ struct NotificationSessionPage: View {
             session = shared
             lease = MachineNavigationLease(shared)
             target = destination.target
-            await shared.markSeen(destination.nodeID)
+            if target != "machine" { await shared.markSeen(destination.nodeID) }
         }
         .task(id: session?.generation) {
             guard let session, session.connected, target == "unknown" else { return }
@@ -66,5 +68,79 @@ struct NotificationSessionPage: View {
                 }
             } catch { problem = error.localizedDescription }
         }
+    }
+}
+
+private struct MachineActivityPage: View {
+    let session: SharedMachineSession
+    @State private var sessions: [JSONValue] = []
+    @State private var chats: [JSONValue] = []
+    @State private var problem: String?
+    @State private var subscriptions: [() -> Void] = []
+
+    var body: some View {
+        MobileList {
+            if let problem { Text(problem).foregroundStyle(.red) }
+            Section("Needs your attention") { rows(status: "needs-you") }
+            Section("Working") { rows(status: "running") }
+            if !sessions.contains(where: { active($0["agent"]?.text("status")) })
+                && !chats.contains(where: { active($0.text("status")) })
+            {
+                ContentUnavailableView(
+                    "All caught up", lucideIcon: "circle-check",
+                    description: Text("No agents are working or waiting for you on this machine."))
+            }
+        }
+        .navigationTitle(session.machine.name)
+        .task(id: session.generation) {
+            subscriptions.forEach { $0() }
+            subscriptions = ["session.status", "session.list-changed", "chat.event"].map { event in
+                session.rpc.subscribe(event) { payload in
+                    if event == "chat.event", payload["event"]?.text("type") != "info" { return }
+                    Task { await load() }
+                }
+            }
+            await load()
+        }
+        .refreshable { await load() }
+        .onDisappear {
+            subscriptions.forEach { $0() }
+            subscriptions.removeAll()
+        }
+    }
+
+    @ViewBuilder private func rows(status: String) -> some View {
+        ForEach(chats.filter { $0.text("status") == status }, id: \.stableID) { chat in
+            NavigationLink {
+                ChatScreen(
+                    client: session.rpc, chatID: chat.text("chatId", fallback: chat.stableID),
+                    title: chat.text("suggestedTitle", fallback: "Chat"))
+            } label: {
+                Text(chat.text("suggestedTitle", fallback: "Chat"))
+            }
+        }
+        ForEach(sessions.filter { $0["agent"]?.text("status") == status }, id: \.stableID) { terminal in
+            NavigationLink {
+                TerminalScreen(
+                    client: session.rpc, sessionID: terminal.text("sessionId"),
+                    title: terminal["agent"]?.text("suggestedTitle", fallback: "Terminal") ?? "Terminal")
+            } label: {
+                Text(terminal["agent"]?.text("suggestedTitle", fallback: "Terminal") ?? "Terminal")
+            }
+        }
+    }
+
+    private func active(_ status: String?) -> Bool { status == "running" || status == "needs-you" }
+
+    private func load() async {
+        do {
+            async let terminalResult = session.rpc.request("session.list")
+            async let chatResult = session.rpc.request("chat.list")
+            sessions = try await terminalResult.list("sessions").filter { $0["exited"] != .bool(true) }.map {
+                $0.setting("id", $0["sessionId"])
+            }
+            chats = try await chatResult.list("chats").map { $0.setting("id", $0["chatId"] ?? $0["id"]) }
+            problem = nil
+        } catch { problem = error.localizedDescription }
     }
 }

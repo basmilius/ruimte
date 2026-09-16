@@ -278,3 +278,73 @@ describe('offline push delivery', () => {
         }
     });
 });
+
+describe('automatic machine activities', () => {
+    const activities = () => pushes.filter((push) => push.pushType === 'liveactivity');
+    const automatic = async () => auth.setPush(sessionId, { ...subscription, follow: [], followAll: true, activities: true, activityScope: 'machine' });
+
+    test('combines agents, prioritizes attention, and ends only when everyone has finished', async () => {
+        await automatic();
+        status('running', 'first');
+        status('running', 'second');
+        status('needs-you', 'first');
+        status('idle', 'second');
+        status('idle', 'first');
+        await service.settled();
+        expect(activities().map((push) => [push.activity.phase, push.activity.runningCount, push.activity.attentionCount])).toEqual([
+            ['running', 1, 0],
+            ['running', 2, 0],
+            ['needs-you', 1, 1],
+            ['needs-you', 0, 1],
+            ['done', 0, 0]
+        ]);
+        expect(new Set(activities().map((push) => push.collapseId)).size).toBe(1);
+        expect(activities().every((push) => verifySignature(machine.publicKey, pushMessage(push), push.signature))).toBe(true);
+        expect(pushes.filter((push) => push.pushType === 'alert').length).toBe(3);
+    });
+
+    test('a terminal exit removes it from the overview and duplicate status does not resend', async () => {
+        await automatic();
+        status('running');
+        status('running');
+        service.consume({ event: 'session.exit', payload: { sessionId: 'node', exitCode: 0 } });
+        await service.settled();
+        expect(activities().map((push) => push.activity.phase)).toEqual(['running', 'done']);
+    });
+
+    test('subscription sync includes work already running and keeps machine routes separate', async () => {
+        await automatic();
+        for (const id of ['first-machine', 'second-machine']) {
+            const target = new PushService({
+                auth,
+                identity: { id, sign: (text) => signMessage(machine.privateKey, text) },
+                now: () => NOW,
+                machineName: () => id,
+                activityStates: () => ['running', 'needs-you', 'idle'],
+                send: async (push) => {
+                    pushes.push(push);
+                    return 204;
+                }
+            });
+            target.synchronizeActivities();
+            await target.settled();
+        }
+        expect(activities().length).toBe(2);
+        expect(activities()[0]!.collapseId).not.toBe(activities()[1]!.collapseId);
+        expect(activities().every((push) => push.activity.runningCount === 1 && push.activity.attentionCount === 1)).toBe(true);
+    });
+
+    test('automatic activities still respect opt-out and foreground suppresses only alerts', async () => {
+        await automatic();
+        const disconnect = service.connected(sessionId);
+        status('running', 'unfollowed');
+        status('idle', 'unfollowed');
+        await service.settled();
+        expect(pushes.map((push) => push.pushType)).toEqual(['liveactivity', 'liveactivity']);
+        await auth.setPush(sessionId, { ...subscription, activities: false, activityScope: 'machine' });
+        status('running', 'unfollowed');
+        await service.settled();
+        expect(pushes.length).toBe(2);
+        disconnect();
+    });
+});

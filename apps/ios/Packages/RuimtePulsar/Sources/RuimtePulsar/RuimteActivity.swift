@@ -6,6 +6,8 @@
             hasher.combine(title)
             hasher.combine(phase.rawValue)
             hasher.combine(startedAt)
+            hasher.combine(runningCount)
+            hasher.combine(attentionCount)
         }
     }
 

@@ -217,17 +217,27 @@ wait between phases, but these criteria are not established by simulator success
 
 ## Notifications and Live Activities
 
-Notifications are opt-in in Settings. Follow sessions under each machine; approvals can
-be enabled independently. The phone registers its APNs token with the address book and
-sends its opaque handle, push public key and preferences to each authenticated machine.
-The machine sends alerts only when the paired key has no connected client. Live Activity
-updates are separate from alert visibility. The iPhone stores the latest viewed chat as
-its ActivityKit destination, independent of the alert follow list. iPad Live Activities
-are outside the current scope. The Worker checks the selected machine and conversation
-for both starts and updates; foreground and push starts share an atomic reservation.
-Current and rotated push-to-start/update tokens are uploaded through the authenticated
-account routes. Opt-out clears the remote destination and ends local activities.
-Failed device revocations keep their opaque handle for retry after local keys are erased.
+Notifications are opt-in in Settings and automatically cover agents on every connected
+machine; approvals can be enabled independently. The phone registers its APNs token
+with the address book and sends its opaque handle, push public key and preferences to
+each authenticated machine. Alerts are sent only while the paired key has no connected
+client. Older daemons receive a snapshot of known sessions as a compatibility follow list.
+
+Live Activities show one automatic overview per daemon, combining terminal agents and
+native chats. The overview counts working agents and agents needing attention, and ends
+only when neither remains. Opening another chat does not select or replace the overview.
+Several machines can each have an activity; tapping one opens that machine's active
+agents. The Worker accepts only the fixed machine-summary collapse ID in automatic mode,
+checks account ownership and verifies the signature over the counts as well as routing.
+Current and rotated push-to-start/update tokens are uploaded through authenticated
+account routes. Opt-out disables remote starts and ends local activities. iPad Live
+Activities are outside the current scope. Failed device revocations retain their opaque
+handle for retry after local keys are erased.
+
+Notification callbacks are installed in the app delegate before launch finishes. Responses
+received before account restoration are queued, and UIKit completion handlers run on the
+main thread. A single phone navigation destination replaces a workspace with the selected
+notification route without competing navigation bindings.
 
 Background approval actions are claimed once, then checked against fresh machine state.
 An expired or already answered request opens its conversation without sending a decision.
@@ -238,7 +248,7 @@ additional authenticated data, and the machine signs the full envelope with ed25
 notification extension verifies the pinned machine key, device handle and validity window,
 then claims the message ID under a shared lock before displaying plaintext. The nonce,
 key derivation and ciphertext are checked against a generated Bun/CryptoKit fixture.
-Live Activity titles, phases and timing are the intentional plaintext exception.
+Live Activity machine names, phases, counts and timing are the intentional plaintext exception.
 
 Required configuration and device acceptance:
 
@@ -246,8 +256,9 @@ Required configuration and device acceptance:
    Register both extension IDs under the same Apple team. Enable app group
    `group.app.ruimte.mobile` for the app and notification extension, with the shared
    `app.ruimte.mobile.push` Keychain group. Regenerate provisioning profiles.
-2. Apply the Worker migrations through `0008_activity_target.sql` to the intended
-   environment. Configure `APNS_KEY` with the APNs .p8 contents and `APNS_KEY_ID`.
+2. Apply the Worker migrations through `0009_machine_activities.sql` to the intended
+   environment. Configure `APNS_SANDBOX_KEY` / `APNS_SANDBOX_KEY_ID` and
+   `APNS_PRODUCTION_KEY` / `APNS_PRODUCTION_KEY_ID` with the matching APNs credentials.
    The repository now sets `APNS_TEAM_ID=7RGV9KKX87` and `APNS_TOPIC=app.ruimte.mobile`.
    The key must have APNs rights for that team; the Apple login key is not a substitute.
    Missing configuration produces an explicit `not-configured` response; no credentials are embedded here.

@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "RUIMTE_HOME=${RUIMTE_HOME:-$HOME/.ruimte-dev} bun --watch src/main.ts --port 4211",
+    "dev": "RUIMTE_HOME=${RUIMTE_DEV_HOME:-$HOME/.ruimte-dev} bun --watch src/main.ts --port 4211",
     "start": "bun src/main.ts",
     "typecheck": "tsc --noEmit",
     "smoke": "bun src/smoke.ts",

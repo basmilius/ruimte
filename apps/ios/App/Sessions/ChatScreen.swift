@@ -143,9 +143,6 @@ struct ChatScreen: View {
         .onChange(of: isPrepared) { _, prepared in
             if prepared && visible { start() }
         }
-        .onChange(of: model.info) { _, info in
-            if visible { machineSession?.viewedChat(model.chatID, title: title, info: info) }
-        }
         .onDisappear {
             visible = false
             if holdingChat {
@@ -214,7 +211,6 @@ struct ChatScreen: View {
         guard !holdingChat else { return }
         holdingChat = true
         if let machineSession { model = machineSession.retainChat(model) } else { model.start() }
-        machineSession?.viewedChat(model.chatID, title: title, info: model.info)
     }
 
     private var hasDraft: Bool {

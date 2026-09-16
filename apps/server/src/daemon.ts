@@ -283,6 +283,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         auth,
         identity,
         titleFor: (nodeId) => projects.index.titleFor(nodeId),
+        machineName: () => identity.label,
+        activityStates: () => [
+            ...manager.list().flatMap((session) => (!session.exited && session.agent ? [session.agent.status] : [])),
+            ...chats.list().map((chat) => chat.status)
+        ],
         onError: (error) => console.error('Push delivery failed:', errorText(error))
     });
     manager.observe((event) => push.consume(event));
@@ -290,7 +295,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     manager.offlineApprovals = () => push.hasOfflineApprovals();
 
     const dispatcher = new Dispatcher();
-    registerPushHandlers(dispatcher, auth);
+    registerPushHandlers(dispatcher, auth, () => push.synchronizeActivities());
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
     registerSessionHandlers(dispatcher, manager);
     registerChatHandlers(dispatcher, chats, providers);

@@ -8,6 +8,33 @@ import UIKit
 
 @MainActor final class NotificationAppDelegate: NSObject, UIApplicationDelegate {
     static var latestToken: Data?
+    private static let delivery = NotificationDeliveryBridge()
+    private static weak var coordinator: NotificationCoordinator?
+    private static var pendingResponses: [(Data, String)] = []
+
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions options: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        UNUserNotificationCenter.current().delegate = Self.delivery
+        return true
+    }
+
+    static func receive(_ data: Data, action: String) async {
+        guard let coordinator else {
+            pendingResponses.append((data, action))
+            return
+        }
+        await coordinator.respond(data: data, action: action)
+    }
+
+    static func attach(_ value: NotificationCoordinator) async {
+        coordinator = value
+        let pending = pendingResponses
+        pendingResponses.removeAll()
+        for (data, action) in pending { await value.respond(data: data, action: action) }
+    }
+
     static let tokenChanged = Notification.Name("ruimte.push-token")
     static let tokenFailed = Notification.Name("ruimte.push-token-failed")
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
@@ -19,6 +46,32 @@ import UIKit
     }
 }
 
+private final class NotificationDeliveryBridge: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping @Sendable (UNNotificationPresentationOptions) -> Void
+    ) {
+        Task { @MainActor in completionHandler([.banner, .sound]) }
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping @Sendable () -> Void
+    ) {
+        let data = response.notification.request.content.userInfo["ruimte"].flatMap {
+            try? JSONSerialization.data(withJSONObject: $0)
+        }
+        let action = response.actionIdentifier
+        Task { @MainActor in
+            // UIKit's notification completion updates scene snapshots and must run on the main thread.
+            defer { completionHandler() }
+            if let data, action != UNNotificationDismissActionIdentifier {
+                await NotificationAppDelegate.receive(data, action: action)
+            }
+        }
+    }
+}
+
 struct NotificationDestination: Identifiable, Hashable {
     let id = UUID()
     let machineID: String
@@ -26,16 +79,13 @@ struct NotificationDestination: Identifiable, Hashable {
     let target: String
 }
 
-@MainActor @Observable final class NotificationCoordinator: NSObject, UNUserNotificationCenterDelegate {
+@MainActor @Observable final class NotificationCoordinator: NSObject {
     private weak var runtime: AppRuntime?
     private let api: PushAPI
     private(set) var enabled = UserDefaults.standard.bool(forKey: "ruimte.push.enabled")
     var approvals = UserDefaults.standard.object(forKey: "ruimte.push.approvals") as? Bool ?? true
     var activities = UserDefaults.standard.object(forKey: "ruimte.push.activities") as? Bool ?? true
     var supportsActivities: Bool { UIDevice.current.userInterfaceIdiom == .phone }
-    private var latestChat: (machineID: String, nodeID: String, title: String, info: JSONValue)?
-    private var activitySelection = 0
-    private var latestActivityTask: Task<Void, Never>?
     var problem: String?
     var busy = false
     var destination: NotificationDestination?
@@ -45,8 +95,6 @@ struct NotificationDestination: Identifiable, Hashable {
     private var startTokenTask: Task<Void, Never>?
     private var activityRegistrationTask: Task<Void, Never>?
     private var startToken: Data?
-    private var activityTarget: [String: String] =
-        UserDefaults.standard.dictionary(forKey: "ruimte.push.activity-target") as? [String: String] ?? [:]
     private var activityStateTasks: [String: Task<Void, Never>] = [:]
     private var liveAttentionKeys = Set<String>()
     private var retiredHandles: [String] {
@@ -67,7 +115,7 @@ struct NotificationDestination: Identifiable, Hashable {
     func restore() async {
         guard !restored else { return }
         restored = true
-        UNUserNotificationCenter.current().delegate = self
+        await NotificationAppDelegate.attach(self)
         let allow = UNNotificationAction(identifier: "ruimte.allow", title: "Allow", options: [.authenticationRequired])
         let deny = UNNotificationAction(identifier: "ruimte.deny", title: "Deny", options: [.authenticationRequired])
         UNUserNotificationCenter.current().setNotificationCategories([
@@ -189,22 +237,22 @@ struct NotificationDestination: Identifiable, Hashable {
         try await waitForConnection(session)
         guard enabled, revision == current, try SharedPushStore().context()?.handle == context.handle else { return }
         let key = try SharedPushStore().key()
+        // Older daemons ignore followAll, so keep their known sessions subscribed during an upgrade.
+        let terminals = try await session.rpc.request("session.list").list("sessions")
+        let chats = try await session.rpc.request("chat.list").list("chats")
+        let known = Set(terminals.map { $0.text("sessionId") } + chats.map { $0.text("chatId", fallback: $0.stableID) })
+            .filter { !$0.isEmpty }.sorted().prefix(500)
         _ = try await session.rpc.request(
             "push.subscribe",
             payload: .object([
                 "handle": .string(context.handle), "publicKey": .string(key.publicKey),
-                "follow": .array((follows[machine.id] ?? []).map(JSONValue.string)), "approvals": .bool(approvals),
+                "follow": .array(known.map(JSONValue.string)), "followAll": .bool(true), "approvals": .bool(approvals),
                 "activities": .bool(activities && supportsActivities),
-                "activityNodeId": activities && supportsActivities && activityTarget["machine"] == machine.id
-                    ? activityTarget["node"].map(JSONValue.string) ?? .null : .null,
+                "activityScope": .string("machine"),
             ]))
     }
     func disable() async {
         revision += 1
-        activitySelection += 1
-        latestActivityTask?.cancel()
-        latestChat = nil
-        activityTarget = [:]
         UserDefaults.standard.removeObject(forKey: "ruimte.push.activity-target")
         enabled = false
         UserDefaults.standard.set(false, forKey: "ruimte.push.enabled")
@@ -246,14 +294,7 @@ struct NotificationDestination: Identifiable, Hashable {
         UserDefaults.standard.set(activities, forKey: "ruimte.push.activities")
         if activities && supportsActivities {
             startActivityObservers()
-            if let latestChat {
-                viewedChat(
-                    machineID: latestChat.machineID, nodeID: latestChat.nodeID, title: latestChat.title,
-                    info: latestChat.info)
-            }
         } else {
-            activitySelection += 1
-            latestActivityTask?.cancel()
             startTokenTask?.cancel()
             startTokenTask = nil
             activityDiscoveryTask?.cancel()
@@ -268,132 +309,6 @@ struct NotificationDestination: Identifiable, Hashable {
         }
         await synchronize()
     }
-    func follows(machineID: String, nodeID: String) -> Bool { follows[machineID]?.contains(nodeID) == true }
-    func follow(machineID: String, nodeID: String, enabled: Bool) async {
-        var values = Set(follows[machineID] ?? [])
-        if enabled {
-            guard values.contains(nodeID) || values.count < 500 else {
-                problem = "You can follow at most 500 sessions on one machine."
-                return
-            }
-            values.insert(nodeID)
-        } else {
-            values.remove(nodeID)
-        }
-        follows[machineID] = Array(values).sorted()
-        UserDefaults.standard.set(follows, forKey: "ruimte.push.follows")
-        await synchronize()
-    }
-    func availableSessions(_ machine: Machine) async throws -> [JSONValue] {
-        guard let runtime else { return [] }
-        let session = runtime.session(for: machine)
-        session.retain()
-        defer { session.release() }
-        try await waitForConnection(session)
-        let terminals = try await session.rpc.request("session.list").list("sessions").filter {
-            $0["exited"] != .bool(true)
-        }.map {
-            $0.setting("id", $0["sessionId"]).setting("title", .string($0["agent"]?.text("kind") ?? "Terminal"))
-                .setting("target", .string("terminal"))
-        }
-        let chats = try await session.rpc.request("chat.list").list("chats").map {
-            $0.setting("id", $0["chatId"] ?? $0["id"]).setting("target", .string("chat")).setting(
-                "title", .string($0.text("suggestedTitle", fallback: "Chat")))
-        }
-        return terminals + chats
-    }
-    func viewedChat(machineID: String, nodeID: String, title: String, info: JSONValue) {
-        guard supportsActivities, info != .null else { return }
-        latestChat = (machineID, nodeID, title, info)
-        let nextTarget = ["machine": machineID, "node": nodeID]
-        let changedTarget = activityTarget != nextTarget
-        activityTarget = nextTarget
-        UserDefaults.standard.set(activityTarget, forKey: "ruimte.push.activity-target")
-        guard activities, ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        activitySelection += 1
-        let selection = activitySelection
-        let previous = latestActivityTask
-        previous?.cancel()
-        latestActivityTask = Task { [weak self] in
-            await previous?.value
-            guard let self, !Task.isCancelled, selection == self.activitySelection else { return }
-            let collapse = Self.collapseID(machineID: machineID, nodeID: nodeID)
-            for activity in Activity<RuimteActivityAttributes>.activities
-            where activity.attributes.machineId != machineID || activity.attributes.collapseId != collapse {
-                await retire(activity)
-            }
-            guard selection == activitySelection, !Task.isCancelled, activities else { return }
-            let phase = PushActivityContentPhase.chat(info)
-            let existing = Activity<RuimteActivityAttributes>.activities.first {
-                $0.attributes.machineId == machineID && $0.attributes.collapseId == collapse
-            }
-            let content = PushActivityContent(
-                title: String(decoding: title.utf16.prefix(159), as: UTF16.self), phase: phase,
-                startedAt: existing?.content.state.startedAt ?? Int64(Date().timeIntervalSince1970 * 1000))
-            let value = ActivityContent(state: content, staleDate: Date().addingTimeInterval(900))
-            var reservedContext: (handle: String, access: String)?
-            do {
-                if !follows(machineID: machineID, nodeID: nodeID) {
-                    var followed = follows[machineID] ?? []
-                    if followed.count >= 500 { followed.removeFirst() }
-                    followed.append(nodeID)
-                    follows[machineID] = followed
-                    UserDefaults.standard.set(follows, forKey: "ruimte.push.follows")
-                }
-                if enabled && changedTarget {
-                    await synchronizeActivityTarget()
-                    Task { await synchronize() }
-                }
-                guard selection == activitySelection, !Task.isCancelled, activities else { return }
-                if phase == .done {
-                    if let existing { await retire(existing) }
-                } else if let existing {
-                    if existing.content.state != content { await Self.updateActivity(id: existing.id, state: content) }
-                } else {
-                    guard UIApplication.shared.applicationState == .active else { return }
-                    if enabled {
-                        guard let context = try SharedPushStore().context(),
-                            let access = try await runtime?.vault?.accessToken()
-                        else { return }
-                        // The Worker arbitrates foreground and push starts with the same atomic claim.
-                        guard
-                            try await api.reserveActivity(
-                                handle: context.handle, machineID: machineID, collapseID: collapse, accessToken: access)
-                        else { return }
-                        reservedContext = (context.handle, access)
-                        guard selection == activitySelection, !Task.isCancelled, activities else {
-                            throw CancellationError()
-                        }
-                    }
-                    let activity = try Activity.request(
-                        attributes: RuimteActivityAttributes(machineId: machineID, collapseId: collapse),
-                        content: value, pushType: .token)
-                    reservedContext = nil
-                    if enabled { observe(activity) }
-                }
-            } catch {
-                if let reservedContext {
-                    let cleanup = Task {
-                        try? await api.activity(
-                            handle: reservedContext.handle, machineID: machineID, collapseID: collapse, token: nil,
-                            release: true, accessToken: reservedContext.access)
-                    }
-                    await cleanup.value
-                }
-                if selection == activitySelection, !(error is CancellationError) {
-                    problem = error.localizedDescription
-                }
-            }
-        }
-    }
-
-    private nonisolated static func updateActivity(id: String, state: PushActivityContent) async {
-        guard !Task.isCancelled,
-            let activity = Activity<RuimteActivityAttributes>.activities.first(where: { $0.id == id })
-        else { return }
-        await activity.update(ActivityContent(state: state, staleDate: Date().addingTimeInterval(900)))
-    }
-
     private func startActivityObservers() {
         guard enabled, activities, supportsActivities else { return }
         for activity in Activity<RuimteActivityAttributes>.activities { observe(activity) }
@@ -429,13 +344,10 @@ struct NotificationDestination: Identifiable, Hashable {
                 let active =
                     self.enabled && self.activities && self.supportsActivities
                     && ActivityAuthorizationInfo().areActivitiesEnabled
-                let machine = active ? self.activityTarget["machine"] : nil
-                let node = active ? self.activityTarget["node"] : nil
-                let collapse = machine.flatMap { machine in node.map { Self.collapseID(machineID: machine, nodeID: $0) }
-                }
                 try await self.api.startActivity(
-                    handle: context.handle, token: active ? self.startToken.map(Self.hex) : nil, machineID: machine,
-                    collapseID: collapse, accessToken: access)
+                    handle: context.handle, token: active ? self.startToken.map(Self.hex) : nil,
+                    scope: active ? "machines" : nil, accessToken: access)
+
             } catch { if current == self.revision { self.problem = error.localizedDescription } }
         }
         await activityRegistrationTask?.value
@@ -463,9 +375,9 @@ struct NotificationDestination: Identifiable, Hashable {
 
     private func observe(_ activity: Activity<RuimteActivityAttributes>) {
         guard activityTasks[activity.id] == nil, enabled, activities, supportsActivities else { return }
-        guard activity.attributes.machineId == activityTarget["machine"],
-            activityTarget["node"].map({ Self.collapseID(machineID: activity.attributes.machineId, nodeID: $0) })
-                == activity.attributes.collapseId,
+        guard runtime?.machines.contains(where: { $0.id == activity.attributes.machineId }) == true,
+            activity.attributes.collapseId
+                == Self.collapseID(machineID: activity.attributes.machineId, nodeID: Self.machineActivityNode),
             !Activity<RuimteActivityAttributes>.activities.contains(where: {
                 $0.id != activity.id && activityTasks[$0.id] != nil && $0.attributes == activity.attributes
             })
@@ -500,8 +412,8 @@ struct NotificationDestination: Identifiable, Hashable {
         do {
             guard let context = try SharedPushStore().context(), let access = try await runtime?.vault?.accessToken(),
                 !Task.isCancelled, enabled, activities, supportsActivities,
-                activityTarget["machine"] == machineID,
-                activityTarget["node"].map({ Self.collapseID(machineID: machineID, nodeID: $0) }) == collapseID
+                runtime?.machines.contains(where: { $0.id == machineID }) == true,
+                Self.collapseID(machineID: machineID, nodeID: Self.machineActivityNode) == collapseID
             else { return }
             try await api.activity(
                 handle: context.handle, machineID: machineID, collapseID: collapseID, token: Self.hex(token),
@@ -531,25 +443,17 @@ struct NotificationDestination: Identifiable, Hashable {
             let parts = URLComponents(url: url, resolvingAgainstBaseURL: false),
             let machine = parts.queryItems?.first(where: { $0.name == "machine" })?.value,
             let collapse = parts.queryItems?.first(where: { $0.name == "collapse" })?.value,
-            let node = follows[machine]?.first(where: { Self.collapseID(machineID: machine, nodeID: $0) == collapse })
+            runtime?.machines.contains(where: { $0.id == machine }) == true
         else { return }
-        destination = NotificationDestination(machineID: machine, nodeID: node, target: "unknown")
+        if collapse == Self.collapseID(machineID: machine, nodeID: Self.machineActivityNode) {
+            destination = NotificationDestination(machineID: machine, nodeID: "", target: "machine")
+        } else if let node = follows[machine]?.first(where: {
+            Self.collapseID(machineID: machine, nodeID: $0) == collapse
+        }) {
+            destination = NotificationDestination(machineID: machine, nodeID: node, target: "unknown")
+        }
     }
-    nonisolated func userNotificationCenter(
-        _ center: UNUserNotificationCenter, willPresent notification: UNNotification
-    ) async -> UNNotificationPresentationOptions {
-        await updateBadge()
-        return [.banner, .sound]
-    }
-    nonisolated func userNotificationCenter(
-        _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse
-    ) async {
-        guard let raw = response.notification.request.content.userInfo["ruimte"],
-            let data = try? JSONSerialization.data(withJSONObject: raw)
-        else { return }
-        await respond(data: data, action: response.actionIdentifier)
-    }
-    private func respond(data: Data, action: String) async {
+    fileprivate func respond(data: Data, action: String) async {
         do {
             let envelope = try JSONValue.decode(data)
             let store = try SharedPushStore()
@@ -659,6 +563,7 @@ struct NotificationDestination: Identifiable, Hashable {
         for await connected in stream { if connected { return } }
         throw CancellationError()
     }
+    private static let machineActivityNode = "__ruimte_machine_activity__"
     private static func hex(_ data: Data) -> String { data.map { String(format: "%02x", $0) }.joined() }
     private static func collapseID(machineID: String, nodeID: String) -> String {
         let bytes = try! JSONValue.array([.string(machineID), .string(nodeID)]).encoded()

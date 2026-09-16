@@ -2147,11 +2147,15 @@ public struct PushActivityContent: Codable, Sendable, Equatable {
     public let `title`: String
     public let `phase`: PushActivityContentPhase
     public let `startedAt`: Int64
+    public let `runningCount`: Int64?
+    public let `attentionCount`: Int64?
 
-    public init(`title`: String, `phase`: PushActivityContentPhase, `startedAt`: Int64) {
+    public init(`title`: String, `phase`: PushActivityContentPhase, `startedAt`: Int64, `runningCount`: Int64? = nil, `attentionCount`: Int64? = nil) {
         self.`title` = `title`
         self.`phase` = `phase`
         self.`startedAt` = `startedAt`
+        self.`runningCount` = `runningCount`
+        self.`attentionCount` = `attentionCount`
     }
 
     public init(from decoder: Decoder) throws {
@@ -2160,6 +2164,8 @@ public struct PushActivityContent: Codable, Sendable, Equatable {
         `title` = try container.decode(String.self, forKey: .`title`)
         `phase` = try container.decode(PushActivityContentPhase.self, forKey: .`phase`)
         `startedAt` = try container.decode(Int64.self, forKey: .`startedAt`)
+        `runningCount` = try container.decodeIfPresent(Int64.self, forKey: .`runningCount`)
+        `attentionCount` = try container.decodeIfPresent(Int64.self, forKey: .`attentionCount`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -2167,12 +2173,16 @@ public struct PushActivityContent: Codable, Sendable, Equatable {
         try container.encode(`title`, forKey: .`title`)
         try container.encode(`phase`, forKey: .`phase`)
         try container.encode(`startedAt`, forKey: .`startedAt`)
+        try container.encodeIfPresent(`runningCount`, forKey: .`runningCount`)
+        try container.encodeIfPresent(`attentionCount`, forKey: .`attentionCount`)
     }
 
     private enum CodingKeys: String, CodingKey {
         case `title` = "title"
         case `phase` = "phase"
         case `startedAt` = "startedAt"
+        case `runningCount` = "runningCount"
+        case `attentionCount` = "attentionCount"
     }
 }
 
@@ -2598,11 +2608,13 @@ public struct PushRouting: Codable, Sendable, Equatable {
 
 public struct PushStartActivityRegistration: Codable, Sendable, Equatable {
     public let `token`: String?
+    public let `scope`: String?
     public let `machineId`: Presence<String>
     public let `collapseId`: Presence<PushHandle>
 
-    public init(`token`: String?, `machineId`: Presence<String> = .missing, `collapseId`: Presence<PushHandle> = .missing) {
+    public init(`token`: String?, `scope`: String? = nil, `machineId`: Presence<String> = .missing, `collapseId`: Presence<PushHandle> = .missing) {
         self.`token` = `token`
+        self.`scope` = `scope`
         self.`machineId` = `machineId`
         self.`collapseId` = `collapseId`
     }
@@ -2611,6 +2623,7 @@ public struct PushStartActivityRegistration: Codable, Sendable, Equatable {
         _ = try WireSchema.validate("PushStartActivityRegistrationSchema", JSONValue(from: decoder))
         let container = try decoder.container(keyedBy: CodingKeys.self)
         `token` = try container.decode(String?.self, forKey: .`token`)
+        `scope` = try container.decodeIfPresent(String.self, forKey: .`scope`)
         `machineId` = try container.contains(.`machineId`) ? (container.decodeNil(forKey: .`machineId`) ? .null : .value(container.decode(String.self, forKey: .`machineId`))) : .missing
         `collapseId` = try container.contains(.`collapseId`) ? (container.decodeNil(forKey: .`collapseId`) ? .null : .value(container.decode(PushHandle.self, forKey: .`collapseId`))) : .missing
     }
@@ -2618,6 +2631,7 @@ public struct PushStartActivityRegistration: Codable, Sendable, Equatable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(`token`, forKey: .`token`)
+        try container.encodeIfPresent(`scope`, forKey: .`scope`)
         switch `machineId` {
         case .missing: break
         case .null: try container.encodeNil(forKey: .`machineId`)
@@ -2632,6 +2646,7 @@ public struct PushStartActivityRegistration: Codable, Sendable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case `token` = "token"
+        case `scope` = "scope"
         case `machineId` = "machineId"
         case `collapseId` = "collapseId"
     }
