@@ -637,14 +637,14 @@ export class ChatManager {
         session.compact();
     }
 
-    /* Empties the thread and drops the CLI's session; `force` stops a turn that is in the way. */
+    /* Empties the thread and drops the CLI's session and the chat's plans; `force` stops a turn that is in the way. */
     async clear(chatId: string, force = false): Promise<void> {
         const session = this.require(chatId);
         session.clear(force);
         // A debounced write still waiting holds the old thread and must not land after the empty one.
         this.cancelWaiting(chatId);
         // Folded right away: every line before the reset describes a thread that is gone.
-        await Promise.all([this.persistNow(chatId, true), this.attachments.removeAll(chatId)]);
+        await Promise.all([this.persistNow(chatId, true), this.attachments.removeAll(chatId), this.plans?.removeChat(chatId)]);
     }
 
     /* Stops the running turn; with `subagents` also marks the CLI's own subagents stopped, which that turn no longer waits on. */

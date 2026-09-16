@@ -286,15 +286,26 @@ describe('plans and the chat they belong to', () => {
         expect(stepOf(original, 'tests').state).toBeUndefined();
     });
 
-    test('killing a chat removes its plans file and says so for each plan; clearing it keeps them', async () => {
+    test('clearing a chat removes its plans file and says so for each plan', async () => {
         const daemon = await boot();
         daemon.worker.start();
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
         const planId = await newPlan(daemon);
         const path = join(home, 'chats', planFileName('chat-lead'));
 
-        await daemon.chats.clear('chat-lead');
-        expect(await exists(path)).toBe(true);
+        const events = listen(daemon);
+        expect(await daemon.request('chat.clear', { chatId: 'chat-lead' })).toMatchObject({ ok: true });
+        expect(await exists(path)).toBe(false);
+        expect(events).toEqual([{ event: 'plan.removed', payload: { chatId: 'chat-lead', planId } }]);
+        expect(await daemon.request('plan.list', {})).toMatchObject({ ok: true, result: { plans: [] } });
+    });
+
+    test('killing a chat removes its plans file and says so for each plan', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
+        const planId = await newPlan(daemon);
+        const path = join(home, 'chats', planFileName('chat-lead'));
 
         const events = listen(daemon);
         expect(await daemon.request('chat.kill', { chatId: 'chat-lead' })).toMatchObject({ ok: true });
