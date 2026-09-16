@@ -43,6 +43,17 @@ links from automatic follow-up turns. Changed files use checkpoint diffs when av
 then provider patches or replacement fragments. Tool output initially shows 4,000
 characters; large diffs initially show 400 lines, with explicit expansion controls.
 
+A chat with sub-agents shows a Sub-agents button. It opens a list with Active and Done
+sections, most recently updated first, each entry with its state, the latest tool call or
+reply (or the report a sub-agent handed back) and its running time or end time. An entry, or a
+subagent row in the timeline, opens that conversation read-only on its own page; Back returns
+one level. Swipe or long-press an active entry to stop a task (after a confirmation that counts
+what ends) or mark a sub-agent of the CLI's own as stopped. Long-press the composer's Stop for
+Stop with sub-agents. Task marks appear on the nodes a task opened, wake turns say how many
+tasks woke them, and a failed task or a wake the machine gave up on leaves an unseen mark.
+Model and permission picks are remembered and sent to every connected machine for the chats it
+starts on its own. Older machines keep working: requests they do not know are ignored.
+
 Messages support nested lists, tasks, quotes, tables, matching code fences and reference
 links. Long prompts can fold; mentions and skills retain their styling. Message context
 menus copy text or Markdown. File links open the machine's native file viewer, including
