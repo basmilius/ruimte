@@ -73,6 +73,13 @@ const setState = (step: PlanStep, state: PlanStepState, actor: PlanActor, now: s
     if (actor === 'agent' && step.by === 'person' && step.state === state) {
         return;
     }
+    // A person taking a mark away leaves nothing an agent has to respect, so a mis-click never locks the agent out.
+    if (actor === 'person' && state === 'open') {
+        step.state = state;
+        delete step.by;
+        delete step.at;
+        return;
+    }
     step.state = state;
     step.by = actor;
     step.at = now;

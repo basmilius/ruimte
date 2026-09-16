@@ -117,6 +117,18 @@ describe('who may set a step', () => {
         expect(stepIn(noted, 'a').note).toBe('Looking');
     });
 
+    test('a person who sets a step back to open leaves no mark the agent has to respect', () => {
+        const plan = planOf([step('a', { state: 'done', by: 'person', at: '2026-09-16T14:00:00Z' })]);
+        const reopened = applied(apply(plan, [{ op: 'set', ids: ['a'], state: 'open' }], 'person')).plan;
+        expect(stepIn(reopened, 'a').state).toBe('open');
+        expect(stepIn(reopened, 'a').by).toBeUndefined();
+        expect(stepIn(reopened, 'a').at).toBeUndefined();
+        expect(stepIn(applied(apply(reopened, [{ op: 'set', ids: ['a'], state: 'active' }], 'agent')).plan, 'a')).toMatchObject({
+            state: 'active',
+            by: 'agent'
+        });
+    });
+
     test('a person overrides a state the agent set', () => {
         const plan = planOf([step('a', { state: 'done', by: 'agent', at: NOW })]);
         const result = applied(apply(plan, [{ op: 'set', ids: ['a'], state: 'failed', note: 'Broken' }], 'person')).plan;

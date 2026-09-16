@@ -6,6 +6,7 @@ export type PlanRefusalCode =
     | 'unlocked-by-person'
     | 'step-locked'
     | 'plan-missing-item'
+    | 'plan-not-found'
     | 'op-not-allowed'
     | 'plan-not-a-step'
     | 'plan-parent-state'
