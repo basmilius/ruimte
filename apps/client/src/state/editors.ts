@@ -1,15 +1,15 @@
 import type { StoreApi } from 'zustand';
 
 /*
- * The editors of one workspace that hold a single view each, by view id. A canvas and a drawing were
- * one store per workspace, which is what kept a project to one view on screen: the store was the
+ * The editors of the open project that hold a single view each, by view id. A canvas and a drawing were
+ * one store for the project, which is what kept it to one view on screen: the store was the
  * editor of whichever view was active and a switch wrote it back and loaded the next. A store per
  * view is what lets a grid of cells edit nine of them without any of them knowing the others exist.
  */
 export interface EditorRegistry<T> {
     /*
-     * The editor of no view at all. A workspace whose view on screen is a chat or a terminal has no
-     * canvas to read, and this is what it reads instead: empty, per workspace, never saved.
+     * The editor of no view at all. A project whose view on screen is a chat or a terminal has no
+     * canvas to read, and this is what it reads instead: empty, one per registry, never saved.
      */
     readonly blank: StoreApi<T>;
     /* The editor of a view on screen, made the first time it is asked for. */

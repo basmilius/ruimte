@@ -8,7 +8,7 @@ const mac = { inNode: false, apple: true };
 const other = { inNode: false, apple: false };
 
 describe('the shortcuts of the window', () => {
-    test('the palette, find in files and the settings open over every workspace', () => {
+    test('the palette, find in files and the settings open over the workspace and the start screen alike', () => {
         expect(appShortcutFor(key({ metaKey: true, key: 'k', code: 'KeyK' }), mac)).toBe('palette');
         expect(appShortcutFor(key({ metaKey: true, shiftKey: true, key: 'F', code: 'KeyF' }), mac)).toBe('find-in-files');
         expect(appShortcutFor(key({ metaKey: true, key: ',', code: 'Comma' }), mac)).toBe('settings');
@@ -35,8 +35,7 @@ describe('the shortcuts of the window', () => {
     });
 
     test('a shortcut that acts on one project is not one of them', () => {
-        /* These belong to the workspace with the focus and live in the canvas, which is what keeps
-           them off the project in the pane next to it. */
+        /* These belong to the open project, which binds them, so the start screen has none of them. */
         expect(appShortcutFor(key({ metaKey: true, key: '1', code: 'Digit1' }), mac)).toBeNull();
         expect(appShortcutFor(key({ metaKey: true, key: 't', code: 'KeyT' }), mac)).toBeNull();
         expect(appShortcutFor(key({ metaKey: true, shiftKey: true, key: ']', code: 'BracketRight' }), mac)).toBeNull();

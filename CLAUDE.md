@@ -74,7 +74,7 @@ Decisions the code cannot show. Do not reverse one without asking Bas.
 - Always curly braces, also for one-line early returns. No one-letter variable names except `i`, `e`, `x`, `y`.
 - Arrow functions inside functions; class methods are never arrow properties.
 - Comments explain WHY, never what the code already says.
-- Keyboard shortcuts are bound on `window`, once: the window's own in `shell/app-shortcuts.ts`, anything acting on a project once per workspace in `canvas/canvas-shortcuts.ts` behind `isFocusedWorkspace`. Never per cell or per node.
+- Keyboard shortcuts are bound on `window`, once: the window's own in `shell/app-shortcuts.ts`, anything acting on the project once, by the workspace, in `canvas/canvas-shortcuts.ts`, so the start screen has none of those. Never per cell or per node.
 - A new surface that draws data of its own gets an `ErrorBoundary` (`src/ui/ErrorBoundary.tsx`), keyed so it resets only while it holds an error.
 - UI: only semantic tokens from `styles.css`, no raw colors elsewhere. Tooltips are `Tooltip` (`src/ui/Tooltip.tsx`), never a `title` attribute. Related icon buttons go in a `BTN_GROUP` (`src/ui/classes.ts`). Icons are Lucide through `Icon`; the only exceptions are file icons (`FileIcon`, `@pierre/trees` with its own colors) and provider marks (`ProviderLogo`). No fractional pixels; a `rem` or `em` must resolve to whole pixels.
 - In anything a person reads (UI text, tooltips, errors, toasts, empty states) a daemon is a **machine**. Code, comments and docs say daemon.

@@ -24,8 +24,7 @@ interface ProjectListStore {
 
 /*
  * What every machine has to offer, in one list. This is the client's knowledge and not a workspace's:
- * the menu that picks a project is the same menu whether one project is open or two, so the union
- * stays a singleton while the project each workspace has open does not.
+ * the start screen and the switcher read the same union, whichever project is open or none.
  */
 export const useProjectList = create<ProjectListStore>((set, get) => ({
     projects: [],

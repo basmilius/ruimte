@@ -74,9 +74,11 @@ larger ones becomes a GitHub issue when it starts.
     CI) and whatever it finds; a DOM setup for `bun test` with first specs for the composer and the
     canvas wiring; a daemon-backed e2e job in CI for the terminal spec.
 13. **Usage v2**: a Days table, price and plan overrides, a currency setting, and an export.
-14. **Two projects side by side**: `openWorkspace` and the four stores per workspace are there, the
-    layout is not. `docs/research/windows.md` is the design: a project opens in a window of its own
-    rather than in a split pane.
+14. **More than one window**: a window shows a start screen or one project, and two projects side by
+    side never share one (decided 16 September). A second project opens in a window of its own;
+    `docs/research/windows.md` is the design. The empty states that stay a sentence: the Files and Git
+    panels of a project without a folder, since linking a folder to a project needs a request the
+    wire does not have.
 15. **Smaller ones**: a color or an arrowhead per plain line; a note's title as the first heading
     of its body; "Clear" in a chat node's menu (`chat.clear` exists, only the composer offers it);
     what happens to a chat's background subagents when its backend goes away on a clear; lazy
