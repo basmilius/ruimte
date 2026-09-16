@@ -109,8 +109,71 @@ export const planCounter = (plan: Pick<Plan, 'items'>): string => {
 
 export const hasFailedStep = (plan: Pick<Plan, 'items'>): boolean => leavesOf(plan.items).some((step) => step.state === 'failed');
 
-/* The first active step, which the header names under the status line. */
-export const activeStep = (plan: Pick<Plan, 'items'>): PlanStep | null => leavesOf(plan.items).find((step) => step.state === 'active') ?? null;
+export interface ActiveStep {
+    id: string;
+    title: string;
+}
+
+/* The steps an agent is on, in document order. */
+export const activeSteps = (plan: Pick<Plan, 'items'>): ActiveStep[] =>
+    leavesOf(plan.items)
+        .filter((step) => step.state === 'active')
+        .map((step) => ({ id: step.id, title: step.title }));
+
+export const sameActiveSteps = (a: readonly ActiveStep[], b: readonly ActiveStep[]): boolean =>
+    a.length === b.length && a.every((step, i) => step.id === b[i].id && step.title === b[i].title);
+
+/* "Fix focus", or "Fix focus and 2 more". */
+export const activeStepsLabel = (steps: readonly ActiveStep[]): string => {
+    if (steps.length === 0) {
+        return '';
+    }
+    return steps.length === 1 ? steps[0].title : `${steps[0].title} and ${steps.length - 1} more`;
+};
+
+/* The step a click on the active item goes to: the first, and on each next click the one after the last. */
+export const nextActiveTarget = (steps: readonly ActiveStep[], last: string | null): string | null => {
+    if (steps.length === 0) {
+        return null;
+    }
+    const index = steps.findIndex((step) => step.id === last);
+    return steps[(index + 1) % steps.length].id;
+};
+
+/* The sections and parent steps around an item, outermost first; null when the plan has no such item. */
+export const ancestorIds = (plan: Pick<Plan, 'items'>, id: string): string[] | null => {
+    const walk = (items: readonly PlanItem[], path: string[]): string[] | null => {
+        for (const item of items) {
+            if (item.id === id) {
+                return path;
+            }
+            const children = item.type === 'section' ? item.items : item.type === 'step' ? (item.steps ?? []) : [];
+            const found = walk(children, [...path, item.id]);
+            if (found !== null) {
+                return found;
+            }
+        }
+        return null;
+    };
+    return walk(plan.items, []);
+};
+
+/*
+ * The view options that show one step: every fold around it opened, and the filter or Collapse done
+ * let go only when they would still hide it, so a person's choice survives whenever it can.
+ */
+export const revealOptions = (plan: Pick<Plan, 'items'>, options: PlanViewOptions, id: string): PlanViewOptions => {
+    const around = new Set(ancestorIds(plan, id) ?? []);
+    const opened: PlanViewOptions = { ...options, collapsed: new Set([...options.collapsed].filter((entry) => !around.has(entry))) };
+    const shows = (candidate: PlanViewOptions): boolean => planRows(plan, candidate).some((row) => row.item.id === id);
+    const candidates: PlanViewOptions[] = [
+        opened,
+        { ...opened, filter: 'all' },
+        { ...opened, collapseDone: false },
+        { ...opened, filter: 'all', collapseDone: false }
+    ];
+    return candidates.find(shows) ?? candidates[candidates.length - 1];
+};
 
 /* What a state reads as in a plan of this kind: a test is passed, not done. */
 export const stateLabel = (kind: Plan['meta']['kind'], state: PlanStepState): string => {

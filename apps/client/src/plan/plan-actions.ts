@@ -3,7 +3,7 @@ import { isCanvasView, type Plan } from '@ruimte/contracts';
 import { planToMarkdown } from '@ruimte/plan';
 import { offerDraft } from '@/chat/drafts';
 import { PlanClient } from '@/plan/plan-client';
-import { foldableIds, resultsText, type PlanFilter } from '@/plan/plan-view';
+import { foldableIds, resultsText, revealOptions, type PlanFilter } from '@/plan/plan-view';
 import { revealNode, showView } from '@/project/views';
 import { liveCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
@@ -56,6 +56,36 @@ export const collapseAll = (planKey: string, plan: Pick<Plan, 'items'>): void =>
 export const expandAll = (planKey: string): void => {
     usePlanViewPrefs.getState().setCollapsed(planKey, NO_IDS);
     usePlanViewPrefs.getState().setCollapseDone(false);
+};
+
+interface PlanReveal {
+    /* The step the list scrolls to and lights up; the nonce makes a second click on the same step count. */
+    target: { planKey: string; stepId: string; nonce: number } | null;
+    reveal(planKey: string, stepId: string): void;
+}
+
+export const usePlanReveal = create<PlanReveal>((set, get) => ({
+    target: null,
+    reveal(planKey, stepId) {
+        set({ target: { planKey, stepId, nonce: (get().target?.nonce ?? 0) + 1 } });
+    }
+}));
+
+/* Opens what hides a step in the list, then asks the list to bring it into view. */
+export const revealPlanStep = (planKey: string, plan: Pick<Plan, 'items'>, stepId: string): void => {
+    const prefs = usePlanViewPrefs.getState();
+    const current = { filter: prefs.filter, collapseDone: prefs.collapseDone, collapsed: new Set(collapsedOf(prefs.collapsed, planKey)) };
+    const next = revealOptions(plan, current, stepId);
+    if (next.filter !== current.filter) {
+        prefs.setFilter(next.filter);
+    }
+    if (next.collapseDone !== current.collapseDone) {
+        prefs.setCollapseDone(next.collapseDone);
+    }
+    if (next.collapsed.size !== current.collapsed.size) {
+        prefs.setCollapsed(planKey, [...next.collapsed]);
+    }
+    usePlanReveal.getState().reveal(planKey, stepId);
 };
 
 export const collapsedOf = (collapsed: PlanViewPrefs['collapsed'], planKey: string): readonly string[] => collapsed[planKey] ?? NO_IDS;

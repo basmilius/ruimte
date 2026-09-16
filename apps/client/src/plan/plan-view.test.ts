@@ -1,6 +1,21 @@
 import { describe, expect, test } from 'bun:test';
 import type { Plan, PlanStepState } from '@ruimte/contracts';
-import { asksForNote, foldableIds, hasFailedStep, planCounter, planRows, resultsText, stepSetBy, toggledState, type PlanViewOptions } from '@/plan/plan-view';
+import {
+    activeSteps,
+    activeStepsLabel,
+    ancestorIds,
+    asksForNote,
+    foldableIds,
+    nextActiveTarget,
+    revealOptions,
+    hasFailedStep,
+    planCounter,
+    planRows,
+    resultsText,
+    stepSetBy,
+    toggledState,
+    type PlanViewOptions
+} from '@/plan/plan-view';
 
 const plan: Plan = {
     id: 'plan-1',
@@ -129,5 +144,54 @@ describe('what the plan says in a line', () => {
 
     test('no results when nothing failed or is blocked', () => {
         expect(resultsText({ ...plan, items: [{ type: 'step', id: 'one', title: 'One', state: 'done' }] })).toBeNull();
+    });
+});
+
+describe('the active steps', () => {
+    const two = { items: [...plan.items, { type: 'step' as const, id: 'last', title: 'Last', state: 'active' as const }] };
+
+    test('in document order, named by the first', () => {
+        expect(activeSteps(two).map((step) => step.id)).toEqual(['fix', 'last']);
+        expect(activeStepsLabel(activeSteps(plan))).toBe('Fix focus');
+        expect(activeStepsLabel(activeSteps(two))).toBe('Fix focus and 1 more');
+    });
+
+    test('a click goes to the first, the next click to the one after it, then around', () => {
+        const steps = activeSteps(two);
+        expect(nextActiveTarget(steps, null)).toBe('fix');
+        expect(nextActiveTarget(steps, 'fix')).toBe('last');
+        expect(nextActiveTarget(steps, 'last')).toBe('fix');
+        expect(nextActiveTarget(steps, 'gone')).toBe('fix');
+        expect(nextActiveTarget([], null)).toBeNull();
+    });
+});
+
+describe('revealing a step', () => {
+    test('the folds around an item, outermost first', () => {
+        expect(ancestorIds(plan, 'fix')).toEqual(['split', 'full-grid']);
+        expect(ancestorIds(plan, 'pixels')).toEqual([]);
+        expect(ancestorIds(plan, 'nope')).toBeNull();
+    });
+
+    test('opens the folds around it and keeps the others', () => {
+        const next = revealOptions(plan, options({ collapsed: new Set(['split', 'full-grid', 'closing']) }), 'fix');
+        expect([...next.collapsed]).toEqual(['closing']);
+        expect(next.filter).toBe('all');
+    });
+
+    test('keeps a filter that already shows it', () => {
+        expect(revealOptions(plan, options({ filter: 'open' }), 'fix').filter).toBe('open');
+    });
+
+    test('lets go of a filter that hides it', () => {
+        expect(revealOptions(plan, options({ filter: 'issues' }), 'fix').filter).toBe('all');
+    });
+
+    test('lets go of Collapse done only when it hides the step', () => {
+        const done = {
+            items: [{ type: 'section' as const, id: 's', title: 'S', items: [{ type: 'step' as const, id: 'a', title: 'A', state: 'done' as const }] }]
+        };
+        expect(revealOptions(done, options({ collapseDone: true }), 'a').collapseDone).toBe(false);
+        expect(revealOptions(plan, options({ collapseDone: true }), 'fix').collapseDone).toBe(true);
     });
 });

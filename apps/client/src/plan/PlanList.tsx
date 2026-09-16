@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
@@ -25,23 +25,11 @@ import {
 import { PLAN_LIMITS, type Plan, type PlanStepState } from '@ruimte/contracts';
 import { effectiveChecks, planProgress, progressText } from '@ruimte/plan';
 import { Markdown } from '@/chat/ui/Markdown';
-import { collapsedOf, planClient, planViewKey, usePlanViewPrefs } from '@/plan/plan-actions';
-import {
-    activeStep,
-    asksForNote,
-    agentName,
-    PERSON_STATES,
-    planRows,
-    stateLabel,
-    stepMarkdown,
-    stepSetBy,
-    TEST_OUTCOMES,
-    toggledState,
-    type PlanRow
-} from '@/plan/plan-view';
+import { collapsedOf, planClient, planViewKey, usePlanReveal, usePlanViewPrefs } from '@/plan/plan-actions';
+import { usePlanAgent } from '@/plan/plan-agent';
+import { asksForNote, PERSON_STATES, planRows, stateLabel, stepMarkdown, stepSetBy, TEST_OUTCOMES, toggledState, type PlanRow } from '@/plan/plan-view';
 import { chatWorking } from '@/state/agent-work';
 import { useChatRow } from '@/state/chats';
-import { useDocument } from '@/state/document';
 import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
@@ -78,6 +66,9 @@ const ROW_PADDING_PX = 8;
    keyboard modality too, since `:focus-visible` alone stays on for a click after any keystroke. */
 const TOGGLE_ROW = 'cursor-default rounded-md outline-none hover:bg-surface-hover focus-visible:ring-accent in-data-[modality=keyboard]:focus-visible:ring-1';
 
+// The length of `.plan-step-revealed` in `styles.css`, which also ends the mark with motion turned off.
+const REVEAL_MS = 1600;
+
 const TIME = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
 const DAY_AND_TIME = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
@@ -87,22 +78,6 @@ const whenText = (at: string): string => {
         return '';
     }
     return date.toDateString() === new Date().toDateString() ? TIME.format(date) : DAY_AND_TIME.format(date);
-};
-
-/* The provider of a chat as the project names it, for a chat this client has not attached yet. */
-const providerIn = (views: ReturnType<typeof useDocument.getState>['views'], chatId: string): string | null => {
-    for (const view of views) {
-        if (view.kind === 'chat' && view.id === chatId) {
-            return view.node.provider ?? null;
-        }
-        if (view.kind === 'canvas') {
-            const node = view.nodes.find((candidate) => candidate.id === chatId);
-            if (node) {
-                return node.provider ?? null;
-            }
-        }
-    }
-    return null;
 };
 
 interface PlanListProps {
@@ -122,14 +97,42 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
     const planKey = planViewKey(endpointId, chatId, plan.id);
     const collapsedIds = usePlanViewPrefs((s) => collapsedOf(s.collapsed, planKey));
     const working = useChatRow(chatId, (row) => chatWorking(row));
-    const liveProvider = useChatRow(chatId, (row) => row?.info.provider ?? null);
-    const documentProvider = useDocument((s) => providerIn(s.views, chatId));
-    const agent = agentName(liveProvider ?? documentProvider);
+    const agent = usePlanAgent(chatId);
     const [editingNote, setEditingNote] = useState<string | null>(null);
+    const target = usePlanReveal((s) => (s.target?.planKey === planKey ? s.target : null));
+    const [revealed, setRevealed] = useState<{ id: string; nonce: number } | null>(null);
+    const scroller = useRef<HTMLDivElement>(null);
+    // A reveal asked for before this list mounted is not one to act on.
+    const handled = useRef(target?.nonce ?? null);
 
     const rows = useMemo(() => planRows(plan, { filter, collapseDone, collapsed: new Set(collapsedIds) }), [plan, filter, collapseDone, collapsedIds]);
     const progress = planProgress(plan.items);
-    const now = activeStep(plan);
+
+    // Rows as well: the folds and filter the reveal opened only draw in the render after it.
+    useEffect(() => {
+        if (target === null || handled.current === target.nonce) {
+            return;
+        }
+        const row = scroller.current?.querySelector(`[data-plan-step="${CSS.escape(target.stepId)}"]`);
+        if (!row) {
+            return;
+        }
+        handled.current = target.nonce;
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        row.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
+        setRevealed({ id: target.stepId, nonce: target.nonce });
+    }, [target, rows]);
+
+    useEffect(() => {
+        if (revealed === null) {
+            return;
+        }
+        const timer = window.setTimeout(() => setRevealed(null), REVEAL_MS);
+        return () => {
+            window.clearTimeout(timer);
+        };
+    }, [revealed]);
+
     const context: StepContext = {
         plan,
         agent,
@@ -139,7 +142,8 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
         unlock: (id) => void planClient.unlock(endpointId, chatId, plan.id, [id]),
         toggle: (id) => usePlanViewPrefs.getState().toggleCollapsed(planKey, id),
         editingNote,
-        setEditingNote
+        setEditingNote,
+        revealed
     };
 
     return (
@@ -159,12 +163,6 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
                         ))}
                 </div>
                 {plan.meta.status && <p className="text-xs text-text select-text">{plan.meta.status}</p>}
-                {now && (
-                    <div className="flex min-w-0 items-center gap-1.5 text-xs text-text-muted">
-                        <ActiveRing working={working} agent={agent} size={12} />
-                        <span className="min-w-0 truncate">{now.title}</span>
-                    </div>
-                )}
                 <div className="mt-1 flex h-1.5 overflow-hidden rounded-full bg-surface-sunken" aria-hidden>
                     <span className="bg-positive" style={{ flexGrow: progress.done }} />
                     <span className="bg-status-needs-you" style={{ flexGrow: progress.warning }} />
@@ -174,7 +172,7 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
                     <span style={{ flexGrow: progress.open + progress.active }} />
                 </div>
             </div>
-            <div className="min-h-0 grow overflow-y-auto py-1">
+            <div ref={scroller} className="min-h-0 grow overflow-y-auto py-1">
                 {rows.length === 0 && (
                     <p className="px-4 py-6 text-center text-xs text-text-muted">
                         {filter === 'issues' ? 'No issues.' : filter === 'open' ? 'Nothing is open.' : 'This plan has no steps yet.'}
@@ -198,6 +196,7 @@ interface StepContext {
     toggle(id: string): void;
     editingNote: string | null;
     setEditingNote(id: string | null): void;
+    revealed: { id: string; nonce: number } | null;
 }
 
 /* The ring of the step an agent is on while its chat works; a pause once it stopped, so a still ring never reads as work. */
@@ -296,14 +295,17 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
         <ContextMenu.Root>
             <ContextMenu.Trigger
                 render={<div />}
+                data-plan-step={step.id}
                 className={clsx(
-                    'mx-1 flex min-w-0 items-start gap-1 rounded-md py-1 pr-2',
+                    'relative mx-1 flex min-w-0 items-start gap-1 rounded-md py-1 pr-2',
                     parent && TOGGLE_ROW,
                     row.state === 'active' && !parent && context.working && 'bg-accent-soft'
                 )}
                 style={{ paddingLeft: ROW_PADDING_PX + row.depth * INDENT_PX }}
                 {...(parent ? toggleRowProps(row.collapsed, () => context.toggle(step.id)) : {})}
             >
+                {/* Keyed on the click, so a second click on the same step starts the fade again. */}
+                {context.revealed?.id === step.id && <span key={context.revealed.nonce} className="plan-step-revealed" aria-hidden />}
                 {/* The glyph sits 1px lower than the line box centers it, where the eye puts the middle of the title's first line. */}
                 <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center">
                     {parent ? <Caret collapsed={row.collapsed} /> : <StepMark row={row} context={context} locked={locked} setBy={setBy.tooltip} />}

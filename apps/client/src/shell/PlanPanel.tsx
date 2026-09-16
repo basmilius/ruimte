@@ -6,6 +6,7 @@ import type { Plan } from '@ruimte/contracts';
 import { allSteps, effectiveChecks } from '@ruimte/plan';
 import { forkOriginIn } from '@/chat/logic/fork';
 import { hasOverlayControls } from '@/desktop/bridge';
+import { ActiveStepButton } from '@/plan/ActiveStepButton';
 import { collapseAll, copyPlanMarkdown, expandAll, focusChat, planClient, planViewKey, sendResultsToChat, usePlanViewPrefs } from '@/plan/plan-actions';
 import { closePlanPanel, pickPlan, PLAN_DEFAULT_WIDTH, PLAN_MIN_WIDTH } from '@/plan/plan-panel-watch';
 import { PlanList } from '@/plan/PlanList';
@@ -161,6 +162,7 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
                 </Menu.Root>
             )}
             <div className={clsx(BTN_GROUP, 'ml-auto shrink-0')}>
+                <ActiveStepButton chatId={chatId} plan={plan} planKey={planKey} />
                 <Menu.Root>
                     <Tooltip label="Plan actions" name>
                         <Menu.Trigger className="icon-btn">

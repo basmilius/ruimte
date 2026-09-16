@@ -804,6 +804,20 @@
         from { background: var(--accent-soft); }
         to { background: transparent; }
     }
+    /* The mark over a plan step the active item in the header went to. A layer of its own, so a row
+       with a background keeps it while the mark fades; with motion off it stays until the timer ends it. */
+    .plan-step-revealed {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: var(--accent-soft);
+        pointer-events: none;
+        animation: plan-step-flash 1.6s ease-out forwards;
+    }
+    @keyframes plan-step-flash {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
 
     /* The page an HTML file is drawn as. A <webview> needs a size in both directions of its own, and
        the white is the ground a browser gives a document that brings no background: a themed surface
