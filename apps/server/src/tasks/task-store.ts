@@ -76,7 +76,7 @@ export class TaskStore {
         };
     }
 
-    async open(record: { projectId: string; parentId: string; childId: string; title: string; prompt: string }, now: number): Promise<Task> {
+    async open(record: { projectId: string; parentId: string; childId: string; title: string; prompt: string; batchId?: string }, now: number): Promise<Task> {
         const task: Task = {
             ...record,
             id: `task-${randomBytes(6).toString('hex')}`,
@@ -152,6 +152,21 @@ export class TaskStore {
     /* Settled tasks of this parent that it has not been woken about yet, oldest first. */
     pendingWake(parentId: string): Task[] {
         return this.ofParent(parentId).filter((task) => task.status !== 'open' && task.wake === 'pending');
+    }
+
+    /*
+     * The part of `pendingWake` that may wake the parent now. A task of a `team --task` call is held back
+     * until every task of that call settled, so one team is one answer however far apart its roles finish.
+     */
+    readyWake(parentId: string): Task[] {
+        const open = new Set(this.openBatches(parentId));
+        return this.pendingWake(parentId).filter((task) => task.batchId === undefined || !open.has(task.batchId));
+    }
+
+    /* The batches of this parent with a task still open, oldest first. */
+    openBatches(parentId: string): string[] {
+        const ids = this.ofParent(parentId).flatMap((task) => (task.status === 'open' && task.batchId !== undefined ? [task.batchId] : []));
+        return [...new Set(ids)];
     }
 
     /* A parent nobody can wake any more: its settled tasks stop waiting for it. */

@@ -26,6 +26,8 @@ export const TASK_LINES: readonly string[] = [
     'task\tWith --task the prompt is the assignment and T its title; only a chat may give one, since only a chat can be woken with the result',
     'task\tA chat child finishes its task with the last answer of its first turn, or earlier with ruimte-context done; one that gave tasks of its own finishes with the turn after they all woke it; a terminal child has to call done, and one that exits without it fails the task',
     'task\tOnce a task settles you are woken once, as soon as you have no turn running, with the results of every task that settled by then; you never have to poll',
+    'task\tThe tasks of one team --task call wake you together: only once every one of them settled (done, failed or cancelled), so one slow role holds back the results of the others',
+    "task\tA task from agent --task wakes you on its own, also while a team of yours is still out; that wake leaves the team's results out, and they all come in a later wake of their own",
     'task\truimte-context tasks lists them with their status'
 ];
 
@@ -72,7 +74,8 @@ export const taskLine = (task: Task, nodeId: string): string => {
         gave ? task.childId : task.parentId,
         field(task.title),
         task.wake,
-        task.result === null ? '' : firstLine(task.result.text)
+        task.result === null ? '' : firstLine(task.result.text),
+        task.batchId ?? '-'
     ].join('\t');
 };
 
@@ -140,11 +143,12 @@ export const doneVerb = defineVerb({
 export const tasksVerb = defineVerb({
     name: 'tasks',
     usage: '',
-    summary: 'Lists the tasks you gave and the task you were given: id, direction, status, the other node, title, wake, result',
+    summary: 'Lists the tasks you gave and the task you were given: id, direction, status, the other node, title, wake, result, batch',
     detail: [
-        'prints\ttask\tid\tgave|given\tstatus\tnode\ttitle\twake\tresult\tone line per task, oldest first; node is the child for a task you gave and the parent for one you were given',
+        'prints\ttask\tid\tgave|given\tstatus\tnode\ttitle\twake\tresult\tbatch\tone line per task, oldest first; node is the child for a task you gave and the parent for one you were given',
         'status\topen\tdone\tfailed\tcancelled\tcancelled is a child a person removed',
-        'wake\tpending\tsent\tnone\twhether the chat that gave it has been woken with the result yet',
+        'wake\tpending\tsent\tnone\twhether the chat that gave it has been woken with the result yet; a settled task of a team stays pending until the whole team settled',
+        'batch\tThe id shared by the tasks of one team --task call, or - for a task from agent --task',
         'result\tThe first line of the result, at most 200 characters; the whole of it reaches the parent when it is woken',
         ...TASK_LINES
     ],

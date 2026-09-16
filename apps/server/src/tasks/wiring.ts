@@ -47,7 +47,13 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
     });
 
     // Deferred, so a row is never written into a parent from inside the broadcast of the child that settled it.
-    deps.tasks.onChange((task: Task) => queueMicrotask(() => deps.chats.syncTaskRow(task)));
+    deps.tasks.onChange((task: Task) => {
+        queueMicrotask(() => deps.chats.syncTaskRow(task));
+        // A cancelled task owes no wake of its own, but it may be the last of a team whose held results now go out.
+        if (task.status === 'cancelled' && task.batchId !== undefined) {
+            deps.wake(task.parentId);
+        }
+    });
 
     deps.chats.observe((event) => {
         coordinator.chatEvent(event);

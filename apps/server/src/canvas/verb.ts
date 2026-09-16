@@ -73,7 +73,8 @@ export interface CanvasHost {
 }
 
 export interface TaskHost {
-    open(record: { projectId: string; parentId: string; childId: string; title: string; prompt: string }): Promise<Task>;
+    /* `batchId` ties the tasks of one `team --task` call together, which wake the parent as one. */
+    open(record: { projectId: string; parentId: string; childId: string; title: string; prompt: string; batchId?: string }): Promise<Task>;
     /* Ends the open task of this child with the result it reported; null when it has none open. */
     done(childId: string, text: string): Promise<Task | null>;
     /* Every task the node gave or was given, oldest first. */

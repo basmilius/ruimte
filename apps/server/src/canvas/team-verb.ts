@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { NODE_SIZE, type AgentKind, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
 import { z } from 'zod';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
@@ -61,7 +62,7 @@ const TEAM_DETAIL: readonly string[] = [
     'flag\t--view V\toptional\tThe canvas to add to, by view id; ruimte-context views lists them',
     'flag\t--mode M\toptional\tThe permission mode every role runs in: supervised, auto-accept-edits, auto or full-access, never wider than your own',
     'flag\t--worktree\tno value\tStarts every role in a git worktree of its own, on a new branch named after the role; not together with --cwd',
-    `flag\t--task\tno value\tGives every role a task titled after the role, which its prompt describes and whose results wake you; each prompt at most ${MAX_TASK_PROMPT_LENGTH} characters`,
+    `flag\t--task\tno value\tGives every role a task titled after the role, which its prompt describes; you are woken once, with the results of all roles, when the last of them settles; each prompt at most ${MAX_TASK_PROMPT_LENGTH} characters`,
     "flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field of every line is dry-run and the last names the edge it would draw, as <from> -> <the role's title>",
     'edges\tOne edge per role, from you into that agent, so each of them can read you with ruimte-context read',
     'edges\tOne way only: you do not read them through it, and the roles do not read each other',
@@ -270,12 +271,23 @@ export const teamVerb = defineVerb({
 
                 return {
                     landed: async () => {
-                        for (const { id, title, prompt, chat, provider, line, index } of made) {
+                        const batchId = tasked ? `batch-${randomBytes(6).toString('hex')}` : undefined;
+                        // Every task before any agent starts, so a role that is done at once never finds its team complete without the others.
+                        for (const { id, title, prompt, line } of made) {
                             await call.host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: call.caller, depth, agent: true });
-                            if (tasked) {
-                                const task = await call.host.tasks.open({ projectId: place.projectId, parentId: call.caller, childId: id, title, prompt });
+                            if (batchId !== undefined) {
+                                const task = await call.host.tasks.open({
+                                    projectId: place.projectId,
+                                    parentId: call.caller,
+                                    childId: id,
+                                    title,
+                                    prompt,
+                                    batchId
+                                });
                                 lines[line] = `${lines[line]}\t${task.id}`;
                             }
+                        }
+                        for (const { id, prompt, chat, provider, index } of made) {
                             await call.host.holdPrompt(place.projectId, id, tasked ? `${prompt}${taskBrief(chat)}` : prompt);
                             await call.host.startAgent({
                                 projectId: place.projectId,

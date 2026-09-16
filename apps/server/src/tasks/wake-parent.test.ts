@@ -47,9 +47,15 @@ const fixture = (tasks: Task[], chat: { items?: ChatItem[]; busy?: boolean } | n
                       return true;
                   }
               };
+    const openBatches = (): string[] => [
+        ...new Set(tasks.flatMap((candidate) => (candidate.status === 'open' && candidate.batchId !== undefined ? [candidate.batchId] : [])))
+    ];
     const handler = wakeParentHandler({
         tasks: {
             pendingWake: () => tasks.filter((candidate) => candidate.status !== 'open' && candidate.wake === 'pending'),
+            readyWake: () =>
+                tasks.filter((candidate) => candidate.status !== 'open' && candidate.wake === 'pending' && !openBatches().includes(candidate.batchId ?? '')),
+            openBatches: () => openBatches(),
             markWoken: async (ids) => {
                 marked.push(...ids);
                 for (const candidate of tasks) {
@@ -76,6 +82,20 @@ describe('wake-parent', () => {
         // A second entry for the same chat finds nothing left.
         expect(await handler(entry)).toBeUndefined();
         expect(woken).toHaveLength(1);
+    });
+
+    test('holds a team whose other tasks are open and waits, while a single task beside it goes out', async () => {
+        const tasks = [task('a', { batchId: 'batch-1' }), task('b', { batchId: 'batch-1', status: 'open', result: null }), task('c')];
+        const { handler, woken } = fixture(tasks, {});
+        expect(await handler(entry)).toBe('wait');
+        expect(woken).toEqual([['c']]);
+        expect(await handler(entry)).toBe('wait');
+        expect(woken).toHaveLength(1);
+
+        tasks[1]!.status = 'cancelled';
+        tasks[1]!.wake = 'none';
+        expect(await handler(entry)).toBeUndefined();
+        expect(woken).toEqual([['c'], ['a']]);
     });
 
     test('waits for a chat in a turn, without marking anything', async () => {

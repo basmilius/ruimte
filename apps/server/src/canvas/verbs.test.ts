@@ -2384,8 +2384,8 @@ describe('tasks', () => {
             expect((await post('done', ['--result', 'Fixed\\nboth bugs'], 'child')).lines).toEqual([`done\t${taskId}\tchat-1`]);
             expect(tasks.get(taskId!)).toMatchObject({ status: 'done', result: { text: 'Fixed\nboth bugs', source: 'done' } });
             expect((await post('done', ['--result', 'again'], 'child')).lines[0]).toStartWith('refused\tno-open-task\t');
-            expect((await post('tasks', [], 'chat')).lines).toEqual([`task\t${taskId}\tgave\tdone\t${childId}\tLexer\tpending\tFixed`]);
-            expect((await post('tasks', [], 'child')).lines).toEqual([`task\t${taskId}\tgiven\tdone\tchat-1\tLexer\tpending\tFixed`]);
+            expect((await post('tasks', [], 'chat')).lines).toEqual([`task\t${taskId}\tgave\tdone\t${childId}\tLexer\tpending\tFixed\t-`]);
+            expect((await post('tasks', [], 'child')).lines).toEqual([`task\t${taskId}\tgiven\tdone\tchat-1\tLexer\tpending\tFixed\t-`]);
             expect((await post('tasks', [], 'term')).lines).toEqual([
                 'note\tYou have given no task and were given none; ruimte-context agent --task gives one'
             ]);

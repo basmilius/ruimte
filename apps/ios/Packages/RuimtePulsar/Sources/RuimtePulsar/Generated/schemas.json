@@ -24783,6 +24783,10 @@
             "prompt": {
               "type": "string"
             },
+            "batchId": {
+              "type": "string",
+              "minLength": 1
+            },
             "status": {
               "type": "string",
               "enum": [
@@ -31563,6 +31567,10 @@
           },
           "prompt": {
             "type": "string"
+          },
+          "batchId": {
+            "type": "string",
+            "minLength": 1
           },
           "status": {
             "type": "string",

@@ -22,6 +22,8 @@ export const TaskSchema = z.object({
     childId: z.string().min(1),
     title: z.string(),
     prompt: z.string(),
+    // The one `team --task` call it came from: the parent is woken about that call once every task of it settled.
+    batchId: z.string().min(1).optional(),
     status: TaskStatusSchema,
     result: TaskResultSchema.nullable(),
     createdAt: z.number(),

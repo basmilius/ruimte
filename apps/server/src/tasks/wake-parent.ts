@@ -23,7 +23,7 @@ const cutAt = (text: string, bytes: number): { text: string; cut: boolean } => {
  * The prompt a woken chat's CLI gets. Every task is named with its child's id, so the agent can go
  * on with that node (read it, notify it) without asking which one it was.
  */
-export const wakePrompt = (tasks: readonly Task[]): string => {
+export const wakePrompt = (tasks: readonly Task[], teamsOut = 0): string => {
     const head = tasks.length === 1 ? 'A task you gave has settled. Its result:' : `${tasks.length} tasks you gave have settled. Their results:`;
     const sections = tasks.map((task) => {
         const { text, cut } = cutAt(task.result?.text ?? '', RESULT_PREVIEW_BYTES);
@@ -36,7 +36,16 @@ export const wakePrompt = (tasks: readonly Task[]): string => {
         }
         return lines.join('\n');
     });
-    return [head, ...sections].join('\n\n');
+    const together = tasks.some((task) => task.batchId !== undefined)
+        ? ['The tasks of one team call come in together, once every one of them has settled.']
+        : [];
+    const out =
+        teamsOut === 0
+            ? []
+            : [
+                  `${teamsOut === 1 ? 'A team you gave is' : `${teamsOut} teams you gave are`} still out: you are woken with all of a team's results once its last task settles.`
+              ];
+    return [head, ...sections, ...together, ...out].join('\n\n');
 };
 
 /* The label of the turn a wake opens: what a person reads above it in the thread. */
@@ -50,7 +59,7 @@ export interface WakeChat {
 }
 
 export interface WakeParentDeps {
-    tasks: Pick<TaskStore, 'pendingWake' | 'markWoken' | 'dropWake'>;
+    tasks: Pick<TaskStore, 'pendingWake' | 'readyWake' | 'openBatches' | 'markWoken' | 'dropWake'>;
     /* The chat as it is now, loading it from disk when nobody has; null for a chat that has no thread any more. */
     chat(chatId: string): Promise<WakeChat | null>;
 }
@@ -58,15 +67,23 @@ export interface WakeParentDeps {
 /*
  * Wakes a chat once with every task of its that settled and has not woken it yet. A chat still in a
  * turn is waited for rather than retried: the outbox keeps the entry and a turn that ends looks again.
- * The turn goes out before the tasks are marked, and a task a turn of the thread already names is
- * marked without a second turn, so a restart between the two wakes nobody twice.
+ * A task of a team whose other tasks are still open is held, and so is the entry: it waits until the
+ * last task of that team settles, which owes an entry of its own or, cancelled, wakes this one. The
+ * turn goes out before the tasks are marked, and a task a turn of the thread already names is marked
+ * without a second turn, so a restart between the two wakes nobody twice.
  */
 export const wakeParentHandler =
     (deps: WakeParentDeps) =>
     async (entry: WakeParentEntry): Promise<OutboxOutcome> => {
         const parentId = entry.target;
-        if (deps.tasks.pendingWake(parentId).length === 0) {
+        const pending = deps.tasks.pendingWake(parentId);
+        if (pending.length === 0) {
             return;
+        }
+        const held = (): OutboxOutcome => (deps.tasks.readyWake(parentId).length < deps.tasks.pendingWake(parentId).length ? 'wait' : undefined);
+        // Nothing to say yet, so the chat is not loaded from disk for it.
+        if (deps.tasks.readyWake(parentId).length === 0) {
+            return held();
         }
         const chat = await deps.chat(parentId);
         if (chat === null) {
@@ -74,19 +91,20 @@ export const wakeParentHandler =
             return;
         }
         const named = new Set(chat.items().flatMap((item) => (item.kind === 'turn' ? (item.taskIds ?? []) : [])));
-        const pending = deps.tasks.pendingWake(parentId);
-        const already = pending.filter((task) => named.has(task.id));
+        const already = deps.tasks.pendingWake(parentId).filter((task) => named.has(task.id));
         if (already.length > 0) {
             await deps.tasks.markWoken(already.map((task) => task.id));
         }
-        const tasks = pending.filter((task) => !named.has(task.id));
+        const tasks = deps.tasks.readyWake(parentId).filter((task) => !named.has(task.id));
         if (tasks.length === 0) {
-            return;
+            return held();
         }
-        if (!chat.wake({ text: wakePrompt(tasks), label: wakeLabel(tasks), note: wakeNote(tasks), taskIds: tasks.map((task) => task.id) })) {
+        const teamsOut = deps.tasks.openBatches(parentId).length;
+        if (!chat.wake({ text: wakePrompt(tasks, teamsOut), label: wakeLabel(tasks), note: wakeNote(tasks), taskIds: tasks.map((task) => task.id) })) {
             return 'wait';
         }
         await deps.tasks.markWoken(tasks.map((task) => task.id));
+        return held();
     };
 
 export interface OweWakeDeps {

@@ -74,6 +74,31 @@ const delegate = async (daemon: Daemon, title: string, prompt: string, chat = tr
     return { childId: fields[0]!, taskId: fields[5]! };
 };
 
+/* Opens a team of terminal roles with --task, which settle only when each calls done, and answers each role's node and task. */
+const delegateTeam = async (daemon: Daemon, titles: readonly string[]): Promise<Array<{ childId: string; taskId: string }>> => {
+    const roles = titles.map((title) => ({ title, prompt: `work on ${title}`, provider: 'claude' }));
+    const lines = await verb(daemon, 'chat-lead', 'team', ['--label', 'Crew', '--task', '--roles', JSON.stringify(roles)]);
+    expect(lines).toHaveLength(titles.length + 1);
+    return lines.slice(1).map((line) => {
+        const fields = line.split('\t');
+        return { childId: fields[0]!, taskId: fields[6]! };
+    });
+};
+
+/* A terminal child reporting back, and the outbox done with whatever that owed. */
+const report = async (daemon: Daemon, child: { childId: string; taskId: string }, result: string): Promise<void> => {
+    expect(await verb(daemon, child.childId, 'done', ['--result', result])).toEqual([`done\t${child.taskId}\tchat-lead`]);
+    await daemon.until(() => daemon.outbox.list().some((entry) => entry.kind === 'wake-parent' && entry.payload.taskId === child.taskId));
+    await daemon.worker.settled();
+};
+
+/* The lead with a finished turn behind it, idle and stored, so a wake finds it after a restart too. */
+const leadIdle = async (daemon: Daemon): Promise<void> => {
+    await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
+    await daemon.chats.send('chat-lead', 'plan the work');
+    await daemon.until(() => turnsOf(daemon, 'chat-lead').some((turn) => turn.state === 'done'));
+};
+
 const turnsOf = (daemon: Daemon, chatId: string): ChatTurnItem[] =>
     (daemon.chats.get(chatId)?.thread.list() ?? []).filter((item): item is ChatTurnItem => item.kind === 'turn');
 
@@ -259,5 +284,133 @@ describe('a task wakes the chat that gave it', () => {
         expect(leadItems(daemon).find((item) => item.kind === 'subagent')).toMatchObject({ status: 'failed', childId: child.childId });
         expect(wakeTurns(daemon)).toEqual([]);
         expect(daemon.outbox.list()).toEqual([]);
+    });
+});
+
+describe('the tasks of one team call wake the lead together', () => {
+    test('three roles that settle at different moments while the lead is idle give exactly one wake with three results', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const roles = await delegateTeam(daemon, ['Lexer', 'Parser', 'Docs']);
+        await daemon.worker.settled();
+        const batchIds = new Set(roles.map((role) => daemon.tasks.get(role.taskId)?.batchId));
+        expect(batchIds.size).toBe(1);
+        expect([...batchIds][0]).toStartWith('batch-');
+
+        await report(daemon, roles[0]!, 'Lexer fixed');
+        await report(daemon, roles[1]!, 'Parser fixed');
+        // Two results are in and the lead is idle, but the team is not complete, so nobody is woken.
+        expect(wakeTurns(daemon)).toEqual([]);
+        expect(daemon.tasks.ofParent('chat-lead').map((task) => task.wake)).toEqual(['pending', 'pending', 'pending']);
+
+        await report(daemon, roles[2]!, 'Docs written');
+        await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done'));
+        await daemon.worker.settled();
+
+        expect(wakeTurns(daemon).map((turn) => turn.taskIds)).toEqual([roles.map((role) => role.taskId)]);
+        const wake = wakeTurns(daemon)[0]!;
+        const answer = leadItems(daemon).find((item) => item.kind === 'assistant' && item.turnId === wake.id);
+        const text = answer?.kind === 'assistant' ? answer.text : '';
+        expect(text).toStartWith('echo: 3 tasks you gave have settled. Their results:');
+        expect(text).toContain('The tasks of one team call come in together, once every one of them has settled.');
+        expect(text).not.toContain('still out');
+        expect(daemon.tasks.ofParent('chat-lead').map((task) => task.wake)).toEqual(['sent', 'sent', 'sent']);
+        expect(daemon.outbox.list()).toEqual([]);
+        const batchId = [...batchIds][0]!;
+        expect((await verb(daemon, 'chat-lead', 'tasks', [])).map((line) => line.split('\t').at(-1))).toEqual([batchId, batchId, batchId]);
+    });
+
+    test('a role that fails and a role a person removes still complete the team', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const [done, failed, removed] = await delegateTeam(daemon, ['Lexer', 'Parser', 'Docs']);
+        await daemon.worker.settled();
+
+        await report(daemon, done!, 'Lexer fixed');
+        daemon.adapter.forSession(failed!.childId).exit(0);
+        await daemon.until(() => daemon.tasks.get(failed!.taskId)?.status === 'failed');
+        await daemon.worker.settled();
+        expect(wakeTurns(daemon)).toEqual([]);
+
+        // The last role goes last, cancelled, which owes no wake of its own: the held results go out anyway.
+        await store.mutate(projectId, (current) => ({
+            content: {
+                ...current,
+                views: current.views.map((view) =>
+                    view.kind === 'canvas'
+                        ? {
+                              ...view,
+                              nodes: view.nodes.filter((node) => node.id !== removed!.childId),
+                              edges: view.edges.filter((edge) => edge.to !== removed!.childId)
+                          }
+                        : view
+                )
+            },
+            result: null
+        }));
+        await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done'));
+        await daemon.worker.settled();
+
+        expect(daemon.tasks.get(removed!.taskId)).toMatchObject({ status: 'cancelled', wake: 'none' });
+        expect(wakeTurns(daemon).map((turn) => turn.taskIds)).toEqual([[done!.taskId, failed!.taskId]]);
+        expect(daemon.tasks.get(failed!.taskId)?.wake).toBe('sent');
+    });
+
+    test('a single agent task wakes the lead on its own beside an open team, and the team comes later in one wake', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadIdle(daemon);
+        const [first, second] = await delegateTeam(daemon, ['Lexer', 'Parser']);
+        await daemon.worker.settled();
+        await report(daemon, first!, 'Lexer fixed');
+
+        const single = await delegate(daemon, 'Review', 'review the plan', false);
+        await daemon.worker.settled();
+        await report(daemon, single, 'Looks fine');
+        await daemon.until(() => wakeTurns(daemon).some((turn) => turn.state === 'done'));
+        await daemon.worker.settled();
+
+        expect(wakeTurns(daemon).map((turn) => turn.taskIds)).toEqual([[single.taskId]]);
+        const wake = wakeTurns(daemon)[0]!;
+        const answer = leadItems(daemon).find((item) => item.kind === 'assistant' && item.turnId === wake.id);
+        const text = answer?.kind === 'assistant' ? answer.text : '';
+        expect(text).toContain("A team you gave is still out: you are woken with all of a team's results once its last task settles.");
+        expect(text).not.toContain('Lexer fixed');
+        expect(daemon.tasks.get(first!.taskId)?.wake).toBe('pending');
+
+        await report(daemon, second!, 'Parser fixed');
+        await daemon.until(() => wakeTurns(daemon).filter((turn) => turn.state === 'done').length === 2);
+        await daemon.worker.settled();
+
+        expect(wakeTurns(daemon).map((turn) => turn.taskIds)).toEqual([[single.taskId], [first!.taskId, second!.taskId]]);
+        expect(daemon.outbox.list()).toEqual([]);
+    });
+
+    test('a restart in the middle of a team keeps its results together', async () => {
+        const first = await boot();
+        first.worker.start();
+        await leadIdle(first);
+        const roles = await delegateTeam(first, ['Lexer', 'Parser']);
+        await first.worker.settled();
+        await report(first, roles[0]!, 'Lexer fixed');
+        expect(wakeTurns(first)).toEqual([]);
+        running.splice(running.indexOf(first), 1);
+        await first.stop();
+
+        const second = await boot();
+        second.worker.start();
+        await second.worker.settled();
+        expect(second.tasks.get(roles[0]!.taskId)).toMatchObject({ status: 'done', wake: 'pending' });
+        expect(wakeTurns(second)).toEqual([]);
+
+        await report(second, roles[1]!, 'Parser fixed');
+        await second.until(() => wakeTurns(second).some((turn) => turn.state === 'done'));
+        await second.worker.settled();
+
+        // Read back from disk, two tasks made at one moment on the manual clock have no order between them.
+        expect(wakeTurns(second).map((turn) => [...(turn.taskIds ?? [])].sort())).toEqual([roles.map((role) => role.taskId).sort()]);
+        expect(second.outbox.list()).toEqual([]);
     });
 });
