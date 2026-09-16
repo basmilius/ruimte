@@ -18,6 +18,8 @@ import type {
     ChatSubagentPayload,
     ChatSubagentResult,
     ContextSource,
+    ModelSelection,
+    RuntimeMode,
     Task
 } from '@ruimte/contracts';
 import type { CheckpointService } from '../git/checkpoints.ts';
@@ -230,6 +232,18 @@ export class ChatManager {
         if (!this.chats.has(chatId) && !this.creating.has(chatId)) {
             await this.store?.delete(chatId);
         }
+    }
+
+    /* What a chat of this CLI starts with when nobody else says: the model named, else the newest composer pick, in that CLI's catalog. */
+    startingPoint(provider: AgentKind, selection?: ModelSelection): { selection: ModelSelection; runtimeMode?: RuntimeMode; contextWindow: number | null } {
+        const catalog = this.providers.get(provider).catalog;
+        const preference = this.composerPreferences.for(provider);
+        const normalized = catalog.normalize(selection ?? preference.selection);
+        return {
+            selection: normalized,
+            ...(preference.runtimeMode ? { runtimeMode: preference.runtimeMode } : {}),
+            contextWindow: catalog.contextWindowFor(normalized)
+        };
     }
 
     /* The chat a context token belongs to. */

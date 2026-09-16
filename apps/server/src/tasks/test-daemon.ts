@@ -1,4 +1,4 @@
-import type { ServerFrame } from '@ruimte/contracts';
+import type { AgentKind, ServerFrame } from '@ruimte/contracts';
 import { AgentLineageStore } from '../agents/lineage.ts';
 import { PendingPromptStore } from '../agents/pending-prompts.ts';
 import { CANVAS_PATH, handleCanvasRequest } from '../canvas/canvas-route.ts';
@@ -8,6 +8,7 @@ import { ChatManager } from '../chat/chat-manager.ts';
 import { ChatStore } from '../chat/chat-store.ts';
 import { chatForkDeps, forkChat, readForkInfo } from '../chat/fork.ts';
 import { fakeClaude } from '../chat/fake-claude.ts';
+import { fakeCodex } from '../chat/fake-codex.ts';
 import { inProcess, type InProcessCli } from '../chat/fake-cli.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { Checkpoints, type CheckpointService } from '../git/checkpoints.ts';
@@ -40,6 +41,7 @@ export interface TestDaemon {
     chats: ChatManager;
     adapter: FakePtyAdapter;
     claude: InProcessCli;
+    codex: InProcessCli;
     wiring: TaskWiring;
     endChildren: EndChildrenWiring;
     host: CanvasHost;
@@ -60,9 +62,11 @@ export interface TestDaemonOptions {
     checkpoints?: CheckpointService;
     /* Real worktrees for the verbs; without them a project is in no repository. */
     worktrees?: Worktrees;
+    /* The CLIs this machine says it has; Claude Code alone unless a test needs another. */
+    installed?: AgentKind[];
 }
 
-export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktrees }: TestDaemonOptions): Promise<TestDaemon> => {
+export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktrees, installed = ['claude'] }: TestDaemonOptions): Promise<TestDaemon> => {
     const prompts = new PendingPromptStore(home);
     await prompts.load();
     const lineage = new AgentLineageStore(home);
@@ -73,6 +77,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
     await tasks.load();
     const adapter = new FakePtyAdapter();
     const claude = inProcess(fakeClaude);
+    const codex = inProcess(fakeCodex);
     const sessions = new SessionManager({ adapter, env: { HOME: home, PATH: process.env.PATH }, firstPrompt: (id) => prompts.take(id) });
     const attachments = new AttachmentStore(home);
     const box: { worker: OutboxWorker | null } = { worker: null };
@@ -81,7 +86,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         store: new ChatStore(home, attachments),
         attachments,
         ...(checkpoints ? { checkpoints } : {}),
-        spawn: (options) => claude.spawn(options),
+        spawn: (options) => (options.command[0]?.endsWith('codex') ? codex.spawn(options) : claude.spawn(options)),
         env: { PATH: process.env.PATH, HOME: home },
         firstPrompt: (id) => prompts.take(id),
         onInterruptedRun: oweResume({
@@ -193,7 +198,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         read: (id) => store.read(id),
         mutate: (id, apply) => store.mutate(id, apply),
         worktreePaths: async (folder) => (worktrees ? (await worktrees.list(folder).catch(() => [])).map((worktree) => worktree.path) : []),
-        installedAgents: async () => ['claude'],
+        installedAgents: async () => installed,
         holdPrompt: (id, nodeId, prompt) => prompts.put(id, nodeId, prompt),
         startAgent: (start: AgentStart) => worker.enqueue(start.projectId, start.nodeId, startAgentWork(start, modes)),
         modeOf: nodeMode(modes),
@@ -243,6 +248,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         chats,
         adapter,
         claude,
+        codex,
         wiring,
         endChildren,
         host,

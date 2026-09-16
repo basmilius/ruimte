@@ -13,6 +13,7 @@ import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
 import { AttachmentStore } from './attachment-store.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatStore } from './chat-store.ts';
+import { VERBS_NOTE } from '../context/context-note.ts';
 import { claudeProjectSlug } from './claude-transcript.ts';
 import { inProcess } from './fake-cli.ts';
 import { fakeCodex, fakeCodexForks } from './fake-codex.ts';
@@ -56,7 +57,7 @@ describe('forking a Claude chat', () => {
         projectId = opened.summary.projectId;
         await store.save(projectId, opened.document.rev, content());
         store.release(projectId);
-        daemon = await bootTestDaemon({ home, store, clock: new ManualClock() });
+        daemon = await bootTestDaemon({ home, store, clock: new ManualClock(), installed: ['claude', 'codex'] });
         daemon.worker.start();
     });
 
@@ -220,6 +221,47 @@ describe('forking a Claude chat', () => {
         expect(existsSync(spoken.copy)).toBe(true);
     });
 
+    test('a Claude chat of six turns forked to Codex carries every turn, no session, a handoff in front of its first prompt and no wider mode', async () => {
+        await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, runtimeMode: 'supervised' });
+        for (const word of ['one', 'two', 'three', 'four', 'five', 'six']) {
+            await say('chat-lead', word);
+        }
+        const turns = turnsOf(daemon.chats.get('chat-lead')!.thread.list());
+        daemon.chats.composerPreferences.set('client-1', { runtimeMode: 'full-access', selections: { codex: { model: 'gpt-5.5', options: {} } } });
+
+        const answer = await daemon.request('chat.fork', { chatId: 'chat-lead', turnId: turns[5]!.id, provider: 'codex' });
+        expect(answer).toMatchObject({ ok: true });
+        const { nodeId } = (answer as { result: { nodeId: string } }).result;
+        const record = (await new ChatStore(home).read(nodeId))!;
+        expect(record.info).toMatchObject({
+            provider: 'codex',
+            agentSessionId: null,
+            runtimeMode: 'supervised',
+            forkOf: { chatId: 'chat-lead', turnId: turns[5]!.id }
+        });
+        expect(turnsOf(record.items).map((turn) => turn.id)).toEqual(turns.map((turn) => turn.id));
+        expect(record.preambles).toHaveLength(1);
+        expect(record.preambles[0]).toStartWith('Ruimte: you take over a conversation that ran with Claude Code in node chat-lead ("Lexer")');
+        expect(record.preambles[0]).toContain('What follows is all of it, as text.');
+        expect(record.items.at(-1)).toMatchObject({
+            kind: 'note',
+            text: 'Forked from Lexer after its last turn (turn 6) and continued with Codex. Both work in the same folder from here. The agent got the whole conversation as text and can read the rest of Lexer through ruimte-context.'
+        });
+        const canvas = (await store.read(projectId)).views[0] as ProjectCanvasView;
+        expect(canvas.nodes.find((node) => node.id === nodeId)).toMatchObject({ provider: 'codex', providerFixed: true });
+        // No copy of a transcript for a CLI that never had the conversation.
+        expect(daemon.codex.started).toHaveLength(0);
+
+        await daemon.chats.create({ chatId: nodeId });
+        await say(nodeId, 'go on');
+        const reply = assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)!;
+        // The fake takes Codex's own note off the front of a first prompt, so what is left is the handoff before the text.
+        expect(reply).toBe(`echo: ${record.preambles[0]}\n\ngo on (medium)`);
+        await say(nodeId, 'note?');
+        expect(assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)).toBe(VERBS_NOTE);
+        expect(daemon.chats.get(nodeId)!.info.agentSessionId).not.toBeNull();
+    });
+
     test('a running turn is refused, and stopping or deleting the original leaves the fork alone', async () => {
         const { turns } = await fourTurns();
         const answer = await daemon.request('chat.fork', { chatId: 'chat-lead', turnId: turns[0]!.id });
@@ -290,6 +332,11 @@ describe('forkChat', () => {
         const deps: ChatForkDeps = {
             source: async () => source,
             installed: async () => ['claude', 'codex'],
+            startingPoint: (_provider, selection) => ({
+                selection: selection ?? { model: 'picked', options: {} },
+                runtimeMode: 'full-access',
+                contextWindow: 200
+            }),
             locate: () => ({ projectId: 'p1', folder: '/work', canvasId: 'main' }),
             titleFor: () => 'Lexer',
             read: async () => document,
