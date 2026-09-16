@@ -17,6 +17,7 @@ import { SettingsDialog } from '@/shell/SettingsDialog';
 import { UsageDialog } from '@/shell/usage/UsageDialog';
 import { ALL_SETTINGS_SECTIONS } from '@/shell/settings/sections';
 import { Panel } from '@/shell/Panel';
+import { PlanPanel } from '@/shell/PlanPanel';
 import { PreviewPanel } from '@/shell/PreviewPanel';
 import { ProjectBanner } from '@/shell/ProjectBanner';
 import { ProjectSwitchScreen } from '@/shell/ProjectSwitchScreen';
@@ -69,6 +70,7 @@ function Workspace() {
                             </div>
                         </div>
                     </FileToolbarSlotProvider>
+                    <PlanPanel />
                     <PreviewPanel />
                     <Panel />
                 </main>

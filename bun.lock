@@ -29,6 +29,7 @@
         "@ruimte/contracts": "workspace:*",
         "@ruimte/diagram": "workspace:*",
         "@ruimte/drawing": "workspace:*",
+        "@ruimte/plan": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
         "@tanstack/react-virtual": "^3.14.11",
         "@xterm/addon-fit": "^0.11.0",

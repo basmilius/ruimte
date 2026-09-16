@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { isSessionView, isCanvasView } from '@ruimte/contracts';
+import { isSessionView, isCanvasView, type ProjectView, type SplitLayout } from '@ruimte/contracts';
 import { READABLE_ZOOM } from '@/canvas/culling';
 import { intersects, isMeasured, visibleRect, type Camera, type Rect } from '@/canvas/math';
 import { desktop } from '@/desktop/bridge';
@@ -46,6 +46,65 @@ export const readableNodes = (canvas: CanvasSight): string[] => {
     }
     const rect = visibleRect(canvas.camera, canvas.viewport);
     return canvas.nodes.filter((node) => canvas.hidden?.has(node.id) !== true && intersects(node, rect)).map((node) => node.id);
+};
+
+/* One canvas as a question about which chats stand on it. */
+export interface ChatSightCanvas extends CanvasSight {
+    nodes: readonly (Rect & { id: string; kind: string })[];
+}
+
+/* What `chatsInSight` reads of a workspace, handed in so a test builds one without a store. */
+export interface ChatSightWorkspace {
+    views: readonly ProjectView[];
+    layout: SplitLayout | null;
+    canvasOf(viewId: string): ChatSightCanvas | null;
+}
+
+/*
+ * The chats on screen, for the plan panel: a chat view in a cell, or a chat node the camera of a
+ * canvas in a cell touches. Kinder than `readableNodes` on purpose. No zoom threshold, since a panel
+ * that goes away while zooming out reads as a bug, and no window focus, since looking at another
+ * window does not take a panel off this one. The panel's own width counts as canvas while it is
+ * open: otherwise opening it pushes a node at the right edge out of sight, which closes it again.
+ */
+export const chatsInSight = (workspace: ChatSightWorkspace, { planWidth }: { planWidth: number }): Set<string> => {
+    const onScreen = new Set(workspace.layout === null ? [] : viewIdsIn(workspace.layout));
+    const chats = new Set<string>();
+    for (const view of workspace.views) {
+        if (!onScreen.has(view.id)) {
+            continue;
+        }
+        if (view.kind === 'chat') {
+            chats.add(view.id);
+            continue;
+        }
+        const canvas = isCanvasView(view) ? workspace.canvasOf(view.id) : null;
+        if (canvas === null || !isMeasured(canvas.viewport)) {
+            continue;
+        }
+        const rect = visibleRect(canvas.camera, { w: canvas.viewport.w + planWidth, h: canvas.viewport.h });
+        for (const node of canvas.nodes) {
+            if (node.kind === 'chat' && canvas.hidden?.has(node.id) !== true && intersects(node, rect)) {
+                chats.add(node.id);
+            }
+        }
+    }
+    return chats;
+};
+
+/* The workspace that has the focus, as `chatsInSight` reads it. */
+export const liveChatSight = (): ChatSightWorkspace => {
+    const { views, layout } = useDocument.getState();
+    return {
+        views,
+        layout,
+        canvasOf: (viewId) => {
+            const canvas = liveCanvas(viewId);
+            return canvas === null
+                ? null
+                : { camera: canvas.camera, viewport: canvas.viewport, nodes: canvas.order.map((id) => canvas.nodes[id]!), hidden: canvas.hidden };
+        }
+    };
 };
 
 /* What the window has in front of a person: nothing at all while another window has the focus. */

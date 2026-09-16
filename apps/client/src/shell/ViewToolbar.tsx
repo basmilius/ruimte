@@ -2,12 +2,14 @@ import { isCanvasView, type ProjectView, type ProjectViewKind } from '@ruimte/co
 import { RUNTIME_MODES } from '@/chat/runtime-modes';
 import { useHasSubagentControls, useSubagentTrail } from '@/chat/subagent-view';
 import { ForkPill } from '@/chat/ui/ForkPill';
+import { PlanPill } from '@/plan/PlanPill';
 import { SubagentBreadcrumb, SubagentButton } from '@/chat/ui/SubagentControls';
 import { useChatRow } from '@/state/chats';
 import { BrowserToolbar } from '@/nodes/BrowserBody';
 import { useNodeHost, type NodeHost } from '@/nodes/node-host';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { activeViewOf, useDocument } from '@/state/document';
+import { useHasPlans } from '@/state/plans';
 import { BTN_GROUP } from '@/ui/classes';
 import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
@@ -19,16 +21,17 @@ const modeOf = (host: NodeHost | null) => RUNTIME_MODES.find((entry) => entry.id
 
 /* Whether a view has content for the bar, which is what the separators around it wait for. A browser
    always brings its navigation, a file and a diagram their own controls, a terminal only the mode of an agent
-   running in it, a chat only its sub-agents once it has any and where it was forked from; a canvas brings nothing. */
+   running in it, a chat only its sub-agents once it has any, where it was forked from and its plans; a canvas brings nothing. */
 export const useHasViewToolbar = (view: ProjectView | null): boolean => {
     const host = useNodeHost(view && !isCanvasView(view) ? view.id : '');
     const subagents = useHasSubagentControls(view?.kind === 'chat' ? view.id : '');
     const forked = useIsFork(view);
+    const planned = useHasPlans(view?.kind === 'chat' ? view.id : '');
     if (view === null || !KINDS_WITH_TOOLBAR.has(view.kind)) {
         return false;
     }
     if (view.kind === 'chat') {
-        return subagents || forked;
+        return subagents || forked || planned;
     }
     return view.kind === 'browser' || view.kind === 'file' || view.kind === 'diagram' || modeOf(host) !== undefined;
 };
@@ -64,6 +67,7 @@ export function ViewToolbar({
     const { mount } = useFileToolbarSlot();
     const hasSubagents = useHasSubagentControls(view?.kind === 'chat' ? view.id : '');
     const forked = useIsFork(view);
+    const planned = useHasPlans(view?.kind === 'chat' ? view.id : '');
 
     if (!view || !KINDS_WITH_TOOLBAR.has(view.kind)) {
         return null;
@@ -82,13 +86,14 @@ export function ViewToolbar({
         return <div ref={mount} className="flex min-w-0 grow items-center justify-end gap-1" />;
     }
     if (view.kind === 'chat') {
-        if (!hasSubagents && !forked) {
+        if (!hasSubagents && !forked && !planned) {
             return null;
         }
         return (
             <div className="flex min-w-0 grow items-center gap-1.5">
                 {hasSubagents && <SubagentBreadcrumb chatId={view.id} title={chatTitle} className="grow" />}
                 {forked && <ForkPill chatId={view.id} />}
+                {planned && <PlanPill chatId={view.id} />}
                 {hasSubagents && (
                     <div className={`${BTN_GROUP} ml-auto shrink-0`}>
                         <SubagentButton chatId={view.id} />

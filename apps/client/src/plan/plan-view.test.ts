@@ -1,0 +1,93 @@
+import { describe, expect, test } from 'bun:test';
+import type { Plan } from '@ruimte/contracts';
+import { hasFailedStep, planCounter, planRows, toggledState, type PlanViewOptions } from '@/plan/plan-view';
+
+const plan: Plan = {
+    id: 'plan-1',
+    rev: 3,
+    createdAt: '2026-09-16T13:40:00Z',
+    meta: { title: 'Test the split placement', kind: 'test', checks: 'anyone' },
+    items: [
+        {
+            type: 'section',
+            id: 'split',
+            title: 'Splitting a cell',
+            items: [
+                { type: 'text', id: 'prep', title: 'Before you start' },
+                { type: 'step', id: 'new-column', title: 'A new column', state: 'done', by: 'person', at: '2026-09-16T14:02:11Z' },
+                {
+                    type: 'step',
+                    id: 'full-grid',
+                    title: 'A full grid refuses a fourth column',
+                    steps: [
+                        { type: 'step', id: 'no-zone', title: 'No drop zone', state: 'done' },
+                        { type: 'step', id: 'focus', title: 'Focus stays', state: 'failed', note: 'Focus jumped\nto the first column.' },
+                        { type: 'step', id: 'fix', title: 'Fix focus', state: 'active' }
+                    ]
+                }
+            ]
+        },
+        {
+            type: 'section',
+            id: 'closing',
+            title: 'Closing cells',
+            items: [
+                { type: 'step', id: 'close-one', title: 'Close one', state: 'done' },
+                { type: 'step', id: 'close-two', title: 'Close two', state: 'skipped' }
+            ]
+        },
+        { type: 'step', id: 'pixels', title: 'Whole pixels', state: 'blocked', note: 'No display' }
+    ]
+};
+
+const options = (patch: Partial<PlanViewOptions> = {}): PlanViewOptions => ({ filter: 'all', collapseDone: false, collapsed: new Set(), ...patch });
+
+const ids = (rows: ReturnType<typeof planRows>): string[] => rows.map((row) => row.item.id);
+
+describe('the rows of a plan', () => {
+    test('everything in document order, a parent with its count and whether work goes on below it', () => {
+        const rows = planRows(plan, options());
+        expect(ids(rows)).toEqual(['split', 'prep', 'new-column', 'full-grid', 'no-zone', 'focus', 'fix', 'closing', 'close-one', 'close-two', 'pixels']);
+        const parent = rows.find((row) => row.item.id === 'full-grid');
+        expect(parent).toMatchObject({ type: 'step', state: 'failed', activeBelow: true, progress: { finished: 2, total: 3 } });
+        expect(rows.find((row) => row.item.id === 'focus')).toMatchObject({ depth: 1, progress: null });
+    });
+
+    test('a folded parent hides its steps', () => {
+        expect(ids(planRows(plan, options({ collapsed: new Set(['full-grid', 'closing']) })))).toEqual([
+            'split',
+            'prep',
+            'new-column',
+            'full-grid',
+            'closing',
+            'pixels'
+        ]);
+    });
+
+    test('Open keeps the steps still to do, with their parents and sections, and no text', () => {
+        expect(ids(planRows(plan, options({ filter: 'open' })))).toEqual(['split', 'full-grid', 'fix', 'pixels']);
+    });
+
+    test('Failed keeps only what failed', () => {
+        expect(ids(planRows(plan, options({ filter: 'failed' })))).toEqual(['split', 'full-grid', 'focus']);
+    });
+
+    test('Collapse done folds what is all done or skipped and leaves the rest open', () => {
+        const rows = planRows(plan, options({ collapseDone: true }));
+        expect(ids(rows)).toEqual(['split', 'prep', 'new-column', 'full-grid', 'no-zone', 'focus', 'fix', 'closing', 'pixels']);
+        expect(rows.find((row) => row.item.id === 'closing')).toMatchObject({ collapsed: true });
+    });
+});
+
+describe('what the plan says in a line', () => {
+    test('the counter counts steps with an outcome', () => {
+        expect(planCounter(plan)).toBe('5/7');
+        expect(hasFailedStep(plan)).toBe(true);
+    });
+
+    test('a click in a steps plan checks a step off and back', () => {
+        expect(toggledState('open')).toBe('done');
+        expect(toggledState('active')).toBe('done');
+        expect(toggledState('done')).toBe('open');
+    });
+});

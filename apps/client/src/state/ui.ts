@@ -1,4 +1,4 @@
-import type { ProjectPanelKind } from '@ruimte/contracts';
+import type { ProjectPanelKind, ProjectPanels } from '@ruimte/contracts';
 import { create } from 'zustand';
 
 export type SettingsSectionId = 'appearance' | 'keyboard' | 'views' | 'files' | 'agents' | 'usage' | 'machines' | 'about';
@@ -42,6 +42,9 @@ export interface PreviewState {
     open: boolean;
 }
 
+/* The chat and the plan the plan panel shows, and whether a person closed it. */
+export type PlanAnchor = NonNullable<ProjectPanels['plan']>;
+
 const CLOSED_PANEL: PanelState = { open: false, kind: 'files' };
 const CLOSED_PREVIEW: PreviewState = { open: false };
 
@@ -77,6 +80,8 @@ export interface PanelDefaults {
     preview: PreviewState;
     panelWidth: number | null;
     previewWidth: number | null;
+    planAnchor: PlanAnchor | null;
+    planWidth: number | null;
 }
 
 /* What a project whose local file says nothing about the panels opens with. */
@@ -84,7 +89,9 @@ export const PANEL_DEFAULTS: PanelDefaults = {
     panel: parsePanel(readLegacy(LEGACY_PANEL_KEY)),
     preview: parsePreview(readLegacy(LEGACY_PREVIEW_KEY)),
     panelWidth: parseWidth(readLegacy(LEGACY_PANEL_WIDTH_KEY)),
-    previewWidth: parseWidth(readLegacy(LEGACY_PREVIEW_WIDTH_KEY))
+    previewWidth: parseWidth(readLegacy(LEGACY_PREVIEW_WIDTH_KEY)),
+    planAnchor: null,
+    planWidth: null
 };
 
 interface SettingsState {
@@ -144,6 +151,11 @@ interface UiStore {
     /* Null until a drag gives the column a width of the person's own for this project. */
     panelWidth: number | null;
     previewWidth: number | null;
+    /* One per window, since a window shows one project. Open follows from the rules in
+       `plan/panel-rules.ts` and never from the project's file. */
+    planAnchor: PlanAnchor | null;
+    planOpen: boolean;
+    planWidth: number | null;
     /* Whether the columns around the canvas show what was stored rather than what a person did.
        True from startup and again for every project that opens, false from the first change made
        here by hand. A column only slides when it is false, so a restore lands at its width. */
@@ -185,6 +197,8 @@ interface UiStore {
     setPreviewOpen(open: boolean): void;
     setPanelWidth(width: number): void;
     setPreviewWidth(width: number): void;
+    setPlanPanel(state: { anchor: PlanAnchor | null; open: boolean }): void;
+    setPlanWidth(width: number): void;
     /* Puts a project's panels on screen in one go, when it opens; they land without sliding. */
     setPanels(state: PanelDefaults): void;
     setSidebarExpanded(ids: string[] | null): void;
@@ -209,6 +223,9 @@ export const useUi = create<UiStore>((set, get) => ({
     preview: CLOSED_PREVIEW,
     panelWidth: null,
     previewWidth: null,
+    planAnchor: null,
+    planOpen: false,
+    planWidth: null,
     panelsRestoring: true,
     layoutDialogOpen: false,
     worktreeDialogFor: null,
@@ -294,6 +311,15 @@ export const useUi = create<UiStore>((set, get) => ({
     setPreviewWidth(width) {
         set({ previewWidth: width, panelsRestoring: false });
     },
+    setPlanPanel({ anchor, open }) {
+        if (get().planAnchor === anchor && get().planOpen === open) {
+            return;
+        }
+        set({ planAnchor: anchor, planOpen: open, panelsRestoring: false });
+    },
+    setPlanWidth(width) {
+        set({ planWidth: width, panelsRestoring: false });
+    },
     setSidebarExpanded(ids) {
         set({ sidebarExpanded: ids });
     },
@@ -305,6 +331,10 @@ export const useUi = create<UiStore>((set, get) => ({
             preview: state.preview,
             panelWidth: state.panelWidth,
             previewWidth: state.previewWidth,
+            planAnchor: state.planAnchor,
+            // Closed until the chat is on screen: the rules open it, never the file.
+            planOpen: false,
+            planWidth: state.planWidth,
             panelsRestoring: true
         });
     }

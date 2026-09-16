@@ -26,6 +26,8 @@ const read = (): PanelsState => {
         preview: ui.preview,
         panelWidth: ui.panelWidth,
         previewWidth: ui.previewWidth,
+        planAnchor: ui.planAnchor,
+        planWidth: ui.planWidth,
         tabs: files.tabs,
         active: files.active,
         expandedDirs: files.expandedDirs,

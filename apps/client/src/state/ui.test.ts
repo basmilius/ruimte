@@ -82,7 +82,14 @@ describe('ui', () => {
         expect(useUi.getState().panel.open).toBe(false);
         expect(useUi.getState().panelsRestoring).toBe(true);
 
-        useUi.getState().setPanels({ panel: { open: true, kind: 'files' }, preview: { open: false }, panelWidth: 720, previewWidth: null });
+        useUi.getState().setPanels({
+            panel: { open: true, kind: 'files' },
+            preview: { open: false },
+            panelWidth: 720,
+            previewWidth: null,
+            planAnchor: null,
+            planWidth: null
+        });
         expect(useUi.getState().panel).toEqual({ open: true, kind: 'files' });
         expect(useUi.getState().panelWidth).toBe(720);
         expect(useUi.getState().panelsRestoring).toBe(true);
@@ -91,7 +98,14 @@ describe('ui', () => {
         expect(useUi.getState().panelsRestoring).toBe(false);
 
         // A project that opens after that brings its own panels, which land without sliding again.
-        useUi.getState().setPanels({ panel: { open: false, kind: 'git' }, preview: { open: false }, panelWidth: null, previewWidth: null });
+        useUi.getState().setPanels({
+            panel: { open: false, kind: 'git' },
+            preview: { open: false },
+            panelWidth: null,
+            previewWidth: null,
+            planAnchor: null,
+            planWidth: null
+        });
         expect(useUi.getState().panelsRestoring).toBe(true);
     });
 
@@ -116,7 +130,14 @@ describe('ui', () => {
         const unsubscribe = useUi.subscribe(() => {
             notified += 1;
         });
-        useUi.getState().setPanels({ panel: { open: true, kind: 'files' }, preview: { open: true }, panelWidth: 720, previewWidth: 480 });
+        useUi.getState().setPanels({
+            panel: { open: true, kind: 'files' },
+            preview: { open: true },
+            panelWidth: 720,
+            previewWidth: 480,
+            planAnchor: null,
+            planWidth: null
+        });
         unsubscribe();
         expect(notified).toBe(1);
     });
