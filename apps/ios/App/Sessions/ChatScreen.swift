@@ -139,34 +139,6 @@ struct ChatScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityAction(.escape) { composerFocused = false }
         .toolbar {
-            if messageMarks.count >= 3 {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Messages", lucideIcon: "list") {
-                        indexOnScreen = Set(model.presentation.visibleEntryIDs())
-                        showingIndex = true
-                    }
-                    .accessibilityIdentifier("chat.messages")
-                    .popover(isPresented: $showingIndex) {
-                        ChatMessageIndex(
-                            marks: messageMarks, onScreen: indexOnScreen, olderAvailable: model.history.cursor != nil,
-                            loadingOlder: model.loadingHistory, presentation: model.presentation,
-                            loadOlder: { Task { await model.loadOlder() } },
-                            jump: { model.presentation.reveal(entryID: $0) },
-                            fork: { turnID in
-                                forkAfterIndex = turnID
-                                showingIndex = false
-                            }
-                        )
-                        .modifier(MobileSheetSurface())
-                    }
-                }
-            }
-            if hasSubagents {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Sub-agents", lucideIcon: "bot") { subagentList = SubagentListRoute(chatID: model.chatID) }
-                        .accessibilityIdentifier("chat.subagents")
-                }
-            }
             if let plans = machineSession?.plans, let plan = plans.plans(for: model.chatID).first {
                 ToolbarItem(placement: .topBarTrailing) {
                     PlanButton(
@@ -178,17 +150,51 @@ struct ChatScreen: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Picker("Streaming", selection: $streamingMode) {
-                        ForEach(ChatStreamingMode.allCases, id: \.self) { mode in Text(mode.label).tag(mode) }
+                    if messageMarks.count >= 3 || hasSubagents {
+                        Section {
+                            if messageMarks.count >= 3 {
+                                Button("Messages", lucideIcon: "list") {
+                                    indexOnScreen = Set(model.presentation.visibleEntryIDs())
+                                    showingIndex = true
+                                }
+                                .accessibilityIdentifier("chat.messages")
+                            }
+                            if hasSubagents {
+                                Button("Sub-agents", lucideIcon: "bot") {
+                                    subagentList = SubagentListRoute(chatID: model.chatID)
+                                }
+                                .accessibilityIdentifier("chat.subagents")
+                            }
+                        }
                     }
-                    Section { forkItems }
-                    Button("Clear conversation", lucideIcon: "trash", role: .destructive) { showingClear = true }
-                    Button("Reload", lucideIcon: "refresh-cw") { model.attach() }
+                    Group {
+                        Picker("Streaming", selection: $streamingMode) {
+                            ForEach(ChatStreamingMode.allCases, id: \.self) { mode in Text(mode.label).tag(mode) }
+                        }
+                        Section { forkItems }
+                        Button("Clear conversation", lucideIcon: "trash", role: .destructive) { showingClear = true }
+                        Button("Reload", lucideIcon: "refresh-cw") { model.attach() }
+                    }
+                    .disabled(!isPrepared)
                 } label: {
                     Image(lucide: "ellipsis")
                 }
                 .accessibilityLabel("Conversation actions")
-                .disabled(!isPrepared)
+                .disabled(!isPrepared && messageMarks.count < 3 && !hasSubagents)
+                // Anchored on the menu now that Messages lives inside it; a popover on iPad, a sheet on iPhone.
+                .popover(isPresented: $showingIndex) {
+                    ChatMessageIndex(
+                        marks: messageMarks, onScreen: indexOnScreen, olderAvailable: model.history.cursor != nil,
+                        loadingOlder: model.loadingHistory, presentation: model.presentation,
+                        loadOlder: { Task { await model.loadOlder() } },
+                        jump: { model.presentation.reveal(entryID: $0) },
+                        fork: { turnID in
+                            forkAfterIndex = turnID
+                            showingIndex = false
+                        }
+                    )
+                    .modifier(MobileSheetSurface())
+                }
             }
         }
         .onChange(of: showingIndex) { _, showing in
