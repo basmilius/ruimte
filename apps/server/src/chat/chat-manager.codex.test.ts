@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatInfo, ChatItem, ChatSubagentItem } from '@ruimte/contracts';
@@ -18,6 +18,11 @@ let attachments: AttachmentStore;
 let manager: ChatManager;
 let recorder: ChatRecorder;
 let codex: InProcessCli;
+let requests: Array<{ method: string; params: Record<string, unknown> }>;
+let modelPage: ((params: Record<string, unknown>) => unknown) | null;
+
+const png = { name: 'shot.png', mime: 'image/png', data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=' };
+const turnInputs = () => requests.filter((request) => request.method === 'turn/start').map((request) => request.params.input as Array<Record<string, unknown>>);
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
@@ -36,7 +41,24 @@ beforeEach(async () => {
     home = await mkdtemp(join(tmpdir(), 'ruimte-codex-'));
     attachments = new AttachmentStore(home);
     store = new ChatStore(home, attachments);
-    codex = inProcess(fakeCodex);
+    requests = [];
+    modelPage = null;
+    codex = inProcess((io) => {
+        const program = fakeCodex(io);
+        return {
+            onLine: (line) => {
+                const frame = JSON.parse(line);
+                if (frame.method) {
+                    requests.push(frame);
+                }
+                if (frame.method === 'model/list' && modelPage) {
+                    io.out({ id: frame.id, result: modelPage(frame.params) });
+                } else {
+                    program.onLine(line);
+                }
+            }
+        };
+    });
     manager = makeManager();
     recorder = new ChatRecorder();
     manager.subscribe('c1', recorder.sink());
@@ -58,6 +80,106 @@ const open = async (chatId: string, extra: Record<string, unknown> = {}): Promis
 };
 
 describe('ChatManager with Codex', () => {
+    test.each(['Inspect these', ''])('sends actual image inputs with prompt %j and keeps originals in the thread', async (text) => {
+        await open('chat-images');
+        await manager.send('chat-images', text, {}, [png, { ...png, name: 'finder.PNG', mime: 'application/octet-stream' }]);
+        await recorder.until(idle);
+        const saved = recorder.ofKind('user')[0]!.attachments!;
+        expect(saved).toHaveLength(2);
+        expect(saved.map((attachment) => attachment.mime)).toEqual(['image/png', 'image/png']);
+        expect(turnInputs()[0]).toEqual([
+            { type: 'text', text: expect.stringContaining(saved[0]!.path), text_elements: [] },
+            ...saved.map((attachment) => ({ type: 'localImage', path: attachment.path }))
+        ]);
+        expect((await readFile(saved[0]!.path)).toString('base64')).toBe(png.data);
+        expect(recorder.ofKind('user')[0]!.text).toBe(text);
+    });
+
+    test('keeps unsupported images and documents as file references alongside native images', async () => {
+        await open('chat-mixed');
+        await manager.send('chat-mixed', 'Look', {}, [
+            png,
+            { name: 'drawing.svg', mime: 'image/svg+xml', data: btoa('<svg/>') },
+            { name: 'notes.txt', mime: 'text/plain', data: btoa('notes') }
+        ]);
+        await recorder.until(idle);
+        const saved = recorder.ofKind('user')[0]!.attachments!;
+        expect(turnInputs()[0]!.filter((input) => input.type === 'localImage')).toEqual([{ type: 'localImage', path: saved[0]!.path }]);
+        for (const attachment of saved) {
+            expect(turnInputs()[0]![0]!.text).toContain(attachment.path);
+        }
+    });
+
+    test('queued images are sent after the active turn and survive reopening the chat', async () => {
+        await open('chat-queued-image');
+        await manager.send('chat-queued-image', 'slow');
+        await recorder.until(() => recorder.ofKind('assistant').length === 1);
+        expect(await manager.send('chat-queued-image', '', {}, [png])).toEqual({ queued: true });
+        const queued = recorder.info!.queue![0]!.attachments![0]!;
+        manager.cancel('chat-queued-image');
+        await recorder.until(() => turnInputs().length === 2 && recorder.ofKind('turn').at(-1)?.state === 'done' && idle());
+        expect(turnInputs()[1]!.at(-1)).toEqual({ type: 'localImage', path: queued.path });
+        const threadId = recorder.info!.agentSessionId;
+        await retire(manager);
+        manager = makeManager();
+        recorder = new ChatRecorder();
+        manager.subscribe('c1', recorder.sink());
+        await manager.create({ chatId: 'chat-queued-image' });
+        const snapshot = manager.attach('chat-queued-image', 'c1');
+        expect(snapshot.items.find((item) => item.kind === 'user' && item.attachments?.length)).toMatchObject({ attachments: [queued] });
+        expect(await Bun.file(queued.path).exists()).toBe(true);
+        await manager.send('chat-queued-image', 'Another', {}, [png]);
+        await recorder.until(idle);
+        expect(recorder.info!.agentSessionId).toBe(threadId);
+        expect(turnInputs()[2]!.at(-1)?.type).toBe('localImage');
+    });
+
+    test('a queued image removed from disk fails visibly without sending an incomplete prompt', async () => {
+        await open('chat-missing-image');
+        await manager.send('chat-missing-image', 'slow');
+        await recorder.until(() => recorder.ofKind('assistant').length === 1);
+        await manager.send('chat-missing-image', 'Look', {}, [png]);
+        await rm(recorder.info!.queue![0]!.attachments![0]!.path);
+        manager.cancel('chat-missing-image');
+        await recorder.until(() => recorder.ofKind('note').some((note) => note.text.includes('Could not read attached image')));
+        expect(turnInputs()).toHaveLength(1);
+        expect(recorder.ofKind('turn').at(-1)?.state).toBe('error');
+    });
+
+    test('refuses images for a text-only model and can send text afterwards', async () => {
+        await open('chat-text-only', { selection: { model: 'spark' } });
+        await manager.send('chat-text-only', 'Look', {}, [png]);
+        await recorder.until(() => recorder.ofKind('note').some((note) => note.text.includes('does not support image input')));
+        expect(turnInputs()).toHaveLength(0);
+        await manager.send('chat-text-only', 'hello');
+        await recorder.until(idle);
+        expect(turnInputs()).toHaveLength(1);
+    });
+
+    test('finds image support on a later model page and tolerates older metadata without modalities', async () => {
+        modelPage = (params) =>
+            params.cursor === 'next'
+                ? { data: [{ model: 'gpt-6-astra', inputModalities: ['text'] }], nextCursor: null }
+                : { data: [{ model: 'other', inputModalities: ['text', 'image'] }], nextCursor: 'next' };
+        await open('chat-paged');
+        await manager.send('chat-paged', 'Look', {}, [png]);
+        await recorder.until(() => recorder.ofKind('note').some((note) => note.text.includes('does not support image input')));
+        expect(turnInputs()).toHaveLength(0);
+        modelPage = () => ({ data: [{ model: 'gpt-5.6-sol' }], nextCursor: null });
+        manager.configure({ chatId: 'chat-paged', selection: { model: 'sol', options: {} } });
+        await manager.send('chat-paged', 'Look', {}, [png]);
+        await recorder.until(idle);
+        expect(turnInputs()[0]!.at(-1)?.type).toBe('localImage');
+    });
+
+    test('rejects invalid uploads before starting a turn or writing any files', async () => {
+        await open('chat-invalid');
+        await expect(manager.send('chat-invalid', 'Look', {}, [{ ...png, data: 'not base64' }])).rejects.toMatchObject({ code: 'invalid-attachments' });
+        expect(codex.started).toHaveLength(0);
+        expect(await Bun.file(join(home, 'attachments', 'chat-invalid')).exists()).toBe(false);
+        expect(recorder.ofKind('user')).toHaveLength(0);
+    });
+
     test('a codex chat starts the app-server on the first send, handshakes and streams a reply', async () => {
         const info = await open('chat-1');
         expect(info).toMatchObject({

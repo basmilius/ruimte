@@ -11151,7 +11151,7 @@
             "data": {
               "type": "string",
               "minLength": 1,
-              "maxLength": 34952536
+              "maxLength": 13981016
             }
           },
           "required": [

@@ -1,4 +1,11 @@
-import { CHAT_ATTACHMENTS_MAX_COUNT, CHAT_ATTACHMENT_MAX_BYTES, type ChatAttachmentUpload } from '@ruimte/contracts';
+import {
+    attachmentBytes,
+    attachmentImageMime,
+    CHAT_ATTACHMENTS_MAX_BYTES,
+    CHAT_ATTACHMENTS_MAX_COUNT,
+    CHAT_ATTACHMENT_MAX_BYTES,
+    type ChatAttachmentUpload
+} from '@ruimte/contracts';
 
 interface IncomingFile {
     name: string;
@@ -25,16 +32,22 @@ export const formatBytes = (bytes: number): string => {
 };
 
 /* Which of the incoming files fit next to what the composer already holds, and why the rest do not. */
-export const checkAttachmentLimits = <T extends IncomingFile>(current: number, incoming: T[]): AttachmentCheck<T> => {
+export const checkAttachmentLimits = <T extends IncomingFile>(current: number, incoming: T[], currentBytes = 0): AttachmentCheck<T> => {
     const accepted: T[] = [];
     const rejected: Array<{ name: string; reason: string }> = [];
+    let bytes = currentBytes;
     for (const file of incoming) {
-        if (file.bytes > CHAT_ATTACHMENT_MAX_BYTES) {
+        if (file.bytes === 0) {
+            rejected.push({ name: file.name, reason: 'The file is empty' });
+        } else if (file.bytes > CHAT_ATTACHMENT_MAX_BYTES) {
             rejected.push({ name: file.name, reason: `Larger than ${formatBytes(CHAT_ATTACHMENT_MAX_BYTES)}` });
         } else if (current + accepted.length >= CHAT_ATTACHMENTS_MAX_COUNT) {
             rejected.push({ name: file.name, reason: `At most ${CHAT_ATTACHMENTS_MAX_COUNT} files per message` });
+        } else if (bytes + file.bytes > CHAT_ATTACHMENTS_MAX_BYTES) {
+            rejected.push({ name: file.name, reason: `Attachments must total at most ${formatBytes(CHAT_ATTACHMENTS_MAX_BYTES)} per message` });
         } else {
             accepted.push(file);
+            bytes += file.bytes;
         }
     }
     return { accepted, rejected };
@@ -61,7 +74,7 @@ export const readAttachments = async (files: File[]): Promise<ChatAttachmentUplo
     Promise.all(
         files.map(async (file, index) => ({
             name: nameFor(file, index),
-            mime: file.type || 'application/octet-stream',
+            mime: attachmentImageMime({ name: file.name, mime: file.type }) ?? (file.type || 'application/octet-stream'),
             data: await readAsBase64(file)
         }))
     );
@@ -70,4 +83,4 @@ export const readAttachments = async (files: File[]): Promise<ChatAttachmentUplo
 export const uploadPreviewUrl = (upload: ChatAttachmentUpload): string => `data:${upload.mime};base64,${upload.data}`;
 
 /* What the file weighs, from the base64 the composer is holding: three bytes per four characters. */
-export const uploadBytes = (upload: ChatAttachmentUpload): number => Math.floor((upload.data.length * 3) / 4) - (upload.data.match(/=+$/)?.[0].length ?? 0);
+export const uploadBytes = (upload: ChatAttachmentUpload): number => attachmentBytes(upload.data);

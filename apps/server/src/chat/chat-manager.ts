@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { rm } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { ChatAttachmentUploadsSchema } from '@ruimte/contracts';
 import type {
     AgentKind,
     ChatAttachment,
@@ -586,6 +587,10 @@ export class ChatManager {
      */
     async send(chatId: string, text: string, extras: ChatSendExtras = {}, uploads: ChatAttachmentUpload[] = []): Promise<{ queued: boolean }> {
         const session = this.require(chatId);
+        const checked = ChatAttachmentUploadsSchema.safeParse(uploads);
+        if (!checked.success) {
+            throw new ChatError('invalid-attachments', checked.error.issues[0]!.message);
+        }
         const attachments = await Promise.all(uploads.map((upload) => this.attachments.save(chatId, upload)));
         return session.send(text, { ...extras, ...(attachments.length > 0 ? { attachments } : {}) });
     }

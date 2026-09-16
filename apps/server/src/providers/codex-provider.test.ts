@@ -1,8 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import { codexServiceTier, codexThreadOptions } from './codex.ts';
+import { CODEX_CAPABILITIES, codexServiceTier, codexThreadOptions } from './codex.ts';
 import { ProviderRegistry } from './registry.ts';
 
 describe('codex catalog', () => {
+    test('allows the composer to accept attachments', () => {
+        expect(CODEX_CAPABILITIES.attachments).toBe(true);
+    });
     test('lists the app-server models with a reasoning option and one default', () => {
         const registry = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.153.4' }) });
         const codex = registry.catalogFor('codex');

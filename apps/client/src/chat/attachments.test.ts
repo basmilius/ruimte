@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { CHAT_ATTACHMENTS_MAX_COUNT } from '@ruimte/contracts';
+import { CHAT_ATTACHMENTS_MAX_BYTES, CHAT_ATTACHMENTS_MAX_COUNT } from '@ruimte/contracts';
 import { checkAttachmentLimits, formatBytes, isImageAttachment, uploadBytes } from './attachments';
 
 const file = (name: string, mime: string, bytes: number) => ({ name, mime, bytes });
@@ -14,13 +14,28 @@ describe('checkAttachmentLimits', () => {
     test('refuses a file over the cap and says how big the cap is', () => {
         const checked = checkAttachmentLimits(0, [file('huge.mov', 'video/quicktime', 26 * 1024 * 1024)]);
         expect(checked.accepted).toEqual([]);
-        expect(checked.rejected[0]).toEqual({ name: 'huge.mov', reason: 'Larger than 25 MB' });
+        expect(checked.rejected[0]).toEqual({ name: 'huge.mov', reason: 'Larger than 10 MB' });
     });
 
     test('counts what the composer already holds against the per-message limit', () => {
         const checked = checkAttachmentLimits(CHAT_ATTACHMENTS_MAX_COUNT, [file('one.png', 'image/png', 10)]);
         expect(checked.accepted).toEqual([]);
         expect(checked.rejected[0]?.reason).toBe(`At most ${CHAT_ATTACHMENTS_MAX_COUNT} files per message`);
+    });
+
+    test('counts existing files and this batch toward the byte budget without charging rejected files', () => {
+        const checked = checkAttachmentLimits(
+            1,
+            [file('too-big.png', 'image/png', 7), file('fits.txt', 'text/plain', 4), file('last.png', 'image/png', 3)],
+            CHAT_ATTACHMENTS_MAX_BYTES - 6
+        );
+        expect(checked.accepted.map((entry) => entry.name)).toEqual(['fits.txt']);
+        expect(checked.rejected.map((entry) => entry.name)).toEqual(['too-big.png', 'last.png']);
+        expect(checked.rejected[0]?.reason).toBe('Attachments must total at most 10 MB per message');
+    });
+
+    test('rejects empty files before reading them', () => {
+        expect(checkAttachmentLimits(0, [file('empty.png', 'image/png', 0)]).rejected[0]?.reason).toBe('The file is empty');
     });
 });
 

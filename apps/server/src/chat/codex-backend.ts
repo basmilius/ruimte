@@ -1,4 +1,5 @@
-import type { ChatSkill } from '@ruimte/contracts';
+import { accessSync, constants } from 'node:fs';
+import { attachmentImageMime, type ChatSkill } from '@ruimte/contracts';
 import { chatPrompt } from '../context/context-note.ts';
 import { codexServiceTier, codexThreadOptions } from '../providers/codex.ts';
 import type { ApprovalDecision, BackendEvent, BackendHost, BackendLaunch, ChatBackend, TurnInput } from './backend.ts';
@@ -51,6 +52,7 @@ export class CodexBackend implements ChatBackend {
     private exitTimer: ReturnType<typeof setTimeout> | null = null;
     // The note about ruimte-context is told once per process, in front of the first prompt it takes.
     private hintPending = true;
+    private imageInputSupported: boolean | null = null;
 
     constructor(launch: BackendLaunch, host: BackendHost) {
         this.launch = launch;
@@ -101,6 +103,7 @@ export class CodexBackend implements ChatBackend {
         } else {
             result = await transport.request('thread/start', params);
         }
+        this.imageInputSupported = await this.readImageSupport(transport);
         for (const event of this.protocol.threadReady(result)) {
             if (event.type === 'session' && event.agentSessionId) {
                 this.threadId = event.agentSessionId;
@@ -110,6 +113,17 @@ export class CodexBackend implements ChatBackend {
     }
 
     sendTurn(input: TurnInput): void {
+        const images = input.attachments.filter((attachment) => attachmentImageMime(attachment) !== null);
+        if (images.length > 0 && this.imageInputSupported === false) {
+            throw new Error(`${this.launch.selection.model} does not support image input. Choose a model that accepts images.`);
+        }
+        for (const attachment of images) {
+            try {
+                accessSync(attachment.path, constants.R_OK);
+            } catch {
+                throw new Error(`Could not read attached image "${attachment.name}". Attach it again and retry.`);
+            }
+        }
         const parts: string[] = [];
         if (this.hintPending) {
             this.hintPending = false;
@@ -127,11 +141,38 @@ export class CodexBackend implements ChatBackend {
         const tier = codexServiceTier(this.launch.selection);
         this.request('turn/start', {
             threadId: this.threadId,
-            input: textInput(parts.join('')),
+            input: [...textInput(parts.join('')), ...images.map((attachment) => ({ type: 'localImage', path: attachment.path }))],
             model: this.launch.selection.model,
             ...(typeof effort === 'string' ? { effort } : {}),
             ...(tier === null ? {} : { serviceTier: tier })
         });
+    }
+
+    private async readImageSupport(transport: CodexTransport): Promise<boolean | null> {
+        let cursor: string | null = null;
+        const seen = new Set<string>();
+        try {
+            do {
+                const result = await transport.request('model/list', { includeHidden: true, ...(cursor === null ? {} : { cursor }) });
+                if (!isRecord(result) || !Array.isArray(result.data)) {
+                    return null;
+                }
+                const model = result.data.find((entry) => isRecord(entry) && entry.model === this.launch.selection.model);
+                if (isRecord(model)) {
+                    return Array.isArray(model.inputModalities) ? model.inputModalities.includes('image') : null;
+                }
+                cursor = typeof result.nextCursor === 'string' ? result.nextCursor : null;
+                if (cursor !== null) {
+                    if (seen.has(cursor)) {
+                        return null;
+                    }
+                    seen.add(cursor);
+                }
+            } while (cursor !== null);
+        } catch {
+            // Older app-servers may not report modalities; their turn response remains authoritative.
+        }
+        return null;
     }
 
     compact(): void {

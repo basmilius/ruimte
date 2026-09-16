@@ -4,6 +4,7 @@ type ChatErrorCode =
     | 'chat-busy'
     | 'request-not-found'
     | 'chat-unsupported'
+    | 'invalid-attachments'
     | 'subagent-not-found'
     // What a fork is refused with.
     | 'turn-not-found'

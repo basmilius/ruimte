@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
-import type { ChatAttachment, ChatAttachmentUpload } from '@ruimte/contracts';
+import { attachmentImageMime, type ChatAttachment, type ChatAttachmentUpload } from '@ruimte/contracts';
 
 // The extension the file gets on disk when its name does not carry a usable one.
 const EXTENSIONS: Record<string, string> = {
@@ -36,7 +36,7 @@ export const extensionFor = (name: string, mime: string): string => {
 /*
  * The files people attach to a message, under `$RUIMTE_HOME/attachments/<chatId>`. The thread keeps
  * only what a row needs (name, mime, size, path); the bytes stay on disk, so a thread with a video
- * in it is still a small JSON file, and both CLIs read the file by its path like any other.
+ * in it is still a small JSON file.
  */
 export class AttachmentStore {
     readonly dir: string;
@@ -48,12 +48,13 @@ export class AttachmentStore {
     /* Writes one upload and answers the metadata the thread stores. */
     async save(chatId: string, upload: ChatAttachmentUpload): Promise<ChatAttachment> {
         const bytes = Buffer.from(upload.data, 'base64');
+        const mime = attachmentImageMime(upload) ?? upload.mime;
         const id = randomBytes(8).toString('hex');
         const folder = this.folder(chatId);
         await mkdir(folder, { recursive: true, mode: 0o700 });
-        const path = join(folder, `${id}.${extensionFor(upload.name, upload.mime)}`);
+        const path = join(folder, `${id}.${extensionFor(upload.name, mime)}`);
         await writeFile(path, bytes, { mode: 0o600 });
-        return { id, name: upload.name, mime: upload.mime, size: bytes.byteLength, path };
+        return { id, name: upload.name, mime, size: bytes.byteLength, path };
     }
 
     /* Everything a chat attached; used when the chat itself is deleted. */

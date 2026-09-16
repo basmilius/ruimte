@@ -39,7 +39,7 @@ export const CODEX_CAPABILITIES: ProviderCapabilities = {
     hooks: true,
     streamsToolOutput: true,
     diffs: 'unified',
-    attachments: false,
+    attachments: true,
     // Codex has no mention part in its protocol; the picker sends the path as text, which is all
     // the model needs to open the file with its own tools.
     mentions: true,

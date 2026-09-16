@@ -16,22 +16,64 @@ export const ChatUsageSchema = z.object({
 });
 export type ChatUsage = z.infer<typeof ChatUsageSchema>;
 
-// One frame carries the whole file, so the cap is what a WebSocket message may reasonably be.
-export const CHAT_ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
+// Base64 for 10 MiB leaves room for the prompt and envelope inside the 16 MiB transport frame.
+export const CHAT_ATTACHMENTS_MAX_BYTES = 10 * 1024 * 1024;
+export const CHAT_ATTACHMENT_MAX_BYTES = CHAT_ATTACHMENTS_MAX_BYTES;
 export const CHAT_ATTACHMENTS_MAX_COUNT = 8;
 const MAX_BASE64_LENGTH = Math.ceil(CHAT_ATTACHMENT_MAX_BYTES / 3) * 4;
+
+export const attachmentBytes = (data: string): number => Math.floor((data.length * 3) / 4) - (data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0);
+
+const isBase64 = (data: string): boolean => {
+    const padding = data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0;
+    return data.length % 4 === 0 && !/[^A-Za-z0-9+/]/.test(data.slice(0, data.length - padding));
+};
+
+const IMAGE_MIME_BY_EXTENSION = new Map([
+    ['png', 'image/png'],
+    ['jpg', 'image/jpeg'],
+    ['jpeg', 'image/jpeg'],
+    ['webp', 'image/webp'],
+    ['gif', 'image/gif']
+]);
+const IMAGE_MIME_TYPES = new Set(IMAGE_MIME_BY_EXTENSION.values());
+
+// A generic MIME type from Finder may still name a picture; a declared PDF must stay a PDF.
+export const attachmentImageMime = ({ name, mime }: { name: string; mime: string }): string | null => {
+    const type = mime.split(';')[0]!.trim().toLowerCase();
+    if (IMAGE_MIME_TYPES.has(type)) {
+        return type;
+    }
+    if (type !== '' && type !== 'application/octet-stream' && type !== 'binary/octet-stream') {
+        return null;
+    }
+    const dot = name.lastIndexOf('.');
+    return dot < 0 ? null : (IMAGE_MIME_BY_EXTENSION.get(name.slice(dot + 1).toLowerCase()) ?? null);
+};
 
 // What the composer hands the daemon: the bytes, plus what the file is called and what it is.
 export const ChatAttachmentUploadSchema = z.object({
     name: z.string().min(1).max(255),
     mime: z.string().min(1).max(255),
     // Base64 without a data-URL prefix.
-    data: z.string().min(1).max(MAX_BASE64_LENGTH)
+    data: z
+        .string()
+        .min(1)
+        .max(MAX_BASE64_LENGTH)
+        .refine(isBase64, { message: 'Invalid attachment base64' })
+        .refine((data) => attachmentBytes(data) <= CHAT_ATTACHMENT_MAX_BYTES, { message: 'Attachment exceeds 10 MiB' })
 });
 export type ChatAttachmentUpload = z.infer<typeof ChatAttachmentUploadSchema>;
 
+export const ChatAttachmentUploadsSchema = z
+    .array(ChatAttachmentUploadSchema)
+    .max(CHAT_ATTACHMENTS_MAX_COUNT)
+    .refine((uploads) => uploads.reduce((bytes, upload) => bytes + attachmentBytes(upload.data), 0) <= CHAT_ATTACHMENTS_MAX_BYTES, {
+        message: 'Attachments must total at most 10 MiB per message'
+    });
+
 // What the thread keeps. The bytes live under `$RUIMTE_HOME/attachments/<chatId>`, so a thread with
-// a video in it is still a small JSON file and both CLIs read the file by its path like any other.
+// a video in it is still a small JSON file.
 export const ChatAttachmentSchema = z.object({
     id: z.string().min(1),
     name: z.string().min(1),
@@ -498,7 +540,7 @@ export const ChatSendPayloadSchema = z
         text: z.string(),
         mentions: z.array(z.string().min(1)).max(64).optional(),
         skills: z.array(z.string().min(1)).max(16).optional(),
-        attachments: z.array(ChatAttachmentUploadSchema).max(CHAT_ATTACHMENTS_MAX_COUNT).optional()
+        attachments: ChatAttachmentUploadsSchema.optional()
     })
     .refine((payload) => payload.text.trim() !== '' || (payload.attachments?.length ?? 0) > 0, { message: 'A message needs text or an attachment' });
 export type ChatSendPayload = z.infer<typeof ChatSendPayloadSchema>;

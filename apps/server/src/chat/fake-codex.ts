@@ -302,6 +302,12 @@ export const fakeCodex: FakeCli = (io) => {
             case 'initialize':
                 out({ id, result: { userAgent: 'fake-codex/0.0.0', codexHome: io.cwd, platformFamily: 'unix', platformOs: 'test' } });
                 return;
+            case 'model/list':
+                out({
+                    id,
+                    result: { data: [{ model: threadModel, inputModalities: threadModel.includes('spark') ? ['text'] : ['text', 'image'] }], nextCursor: null }
+                });
+                return;
             case 'thread/start':
             case 'thread/resume': {
                 const resumed = method === 'thread/resume' ? String(params.threadId) : null;

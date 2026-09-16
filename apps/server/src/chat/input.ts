@@ -58,10 +58,7 @@ export const splitSkillPrompt = (text: string, skills: string[]): { lead: string
     return { lead: lead.trimEnd(), invocation: rest === '' ? `/${last.name}` : `/${last.name} ${rest}` };
 };
 
-/*
- * Where the files someone attached live on this machine. Both CLIs open a file by path with their
- * own tools, images included, which keeps the bytes out of the thread and off the wire.
- */
+/* Paths stay in the prompt so the agent can also edit or copy the original attachments. */
 export const attachmentNote = (attachments: ChatAttachment[]): string =>
     attachments.length === 0 ? '' : `Attached files:\n${attachments.map((attachment) => `- ${attachment.path} (${attachment.name})`).join('\n')}`;
 

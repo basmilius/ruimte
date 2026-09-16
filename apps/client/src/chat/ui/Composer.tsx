@@ -398,7 +398,8 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
         }
         const checked = checkAttachmentLimits(
             draft.attachments.length,
-            incoming.map((file) => ({ name: file.name, mime: file.type, bytes: file.size, file }))
+            incoming.map((file) => ({ name: file.name, mime: file.type, bytes: file.size, file })),
+            draft.attachments.reduce((bytes, attachment) => bytes + uploadBytes(attachment), 0)
         );
         if (checked.rejected[0]) {
             setNotice(`${checked.rejected[0].name || 'That file'}: ${checked.rejected[0].reason}`);
@@ -418,6 +419,15 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     const submit = (): void => {
         const trimmed = text.trim();
         if (isEmptyDraft(draft) || disabled || guard.tooLong) {
+            return;
+        }
+        // Recheck restored drafts and files that finished reading concurrently.
+        const rejected = checkAttachmentLimits(
+            0,
+            draft.attachments.map((attachment) => ({ ...attachment, bytes: uploadBytes(attachment) }))
+        ).rejected[0];
+        if (rejected) {
+            setNotice(`${rejected.name}: ${rejected.reason}`);
             return;
         }
         const chosen = commands[menuIndex];

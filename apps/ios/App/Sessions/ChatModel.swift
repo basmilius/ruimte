@@ -265,8 +265,10 @@ final class ChatModel {
     }
 
     func addAttachment(data: Data, name: String, mime: String) {
-        guard !data.isEmpty, data.count <= 25 * 1024 * 1024, attachments.count < 8 else {
-            error = "Choose up to 8 files, each between 1 byte and 25 MiB."
+        guard !data.isEmpty, attachments.count < 8,
+            attachments.reduce(data.count, { $0 + $1.data.count }) <= 10 * 1024 * 1024
+        else {
+            error = "Choose up to 8 nonempty files, totaling at most 10 MiB per message."
             return
         }
         attachments.append(ChatUpload(name: String(name.prefix(255)), mime: mime, data: data))
