@@ -24,8 +24,7 @@ import WidgetKit
                     .padding(.horizontal, 8).padding(.bottom, 8)
                 }
             } compactLeading: {
-                Circle().fill(presentation.color).frame(width: 8, height: 8)
-                    .frame(width: 14).accessibilityLabel(presentation.title)
+                ActivityCompactIndicator(presentation: presentation)
             } compactTrailing: {
                 if context.state.phase != .done && !context.isStale {
                     ActivityTimer(startedAt: context.state.startedAt)
@@ -35,12 +34,28 @@ import WidgetKit
                         .frame(width: 44).padding(.trailing, 2)
                 }
             } minimal: {
-                Circle().fill(presentation.color).frame(width: 8, height: 8)
-                    .accessibilityLabel(presentation.title)
+                ActivityCompactIndicator(presentation: presentation)
             }
             .keylineTint(presentation.color)
             .widgetURL(activityURL(context.attributes))
         }
+    }
+}
+
+private struct ActivityCompactIndicator: View {
+    let presentation: ActivityPresentation
+
+    var body: some View {
+        Group {
+            if let agent = presentation.singleAgent {
+                LucideIcon(agent.target == .chat ? .sparkles : .terminal, size: 16)
+                    .foregroundStyle(presentation.color)
+            } else {
+                Circle().fill(presentation.color).frame(width: 8, height: 8)
+            }
+        }
+        .frame(width: 18, height: 18)
+        .accessibilityLabel(presentation.singleAgent?.title ?? presentation.title)
     }
 }
 
@@ -150,6 +165,10 @@ private struct ActivityPresentation {
 
     private var working: Int64 { state.runningCount ?? (state.phase == .needsYou || state.phase == .done ? 0 : 1) }
     private var waiting: Int64 { state.attentionCount ?? (state.phase == .needsYou ? 1 : 0) }
+    var singleAgent: PushActivityAgent? {
+        guard !stale, state.phase != .done, working + waiting == 1, state.agents?.count == 1 else { return nil }
+        return state.agents?.first
+    }
     var color: Color { stale ? .gray : state.phase == .done ? .green : waiting > 0 ? .orange : .activityBlue }
     var title: String {
         if stale { return "Waiting for an update" }
