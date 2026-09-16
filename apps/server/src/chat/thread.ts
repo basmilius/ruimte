@@ -79,6 +79,27 @@ export class ChatThread {
         return { type: 'reset', info: this.info, items: [] };
     }
 
+    /* Applies an event this thread answered before, as a log read back after a restart hands it in. */
+    apply(event: ChatEvent): void {
+        switch (event.type) {
+            case 'item':
+                this.upsert(event.item);
+                break;
+            case 'delta':
+                this.appendText(event.itemId, event.text);
+                break;
+            case 'info':
+                this.info = event.info;
+                break;
+            case 'reset':
+                this.reset(event.info);
+                for (const item of event.items) {
+                    this.upsert(item);
+                }
+                break;
+        }
+    }
+
     setStatus(status: AgentStatus): ChatEvent {
         return this.patchInfo({ status });
     }

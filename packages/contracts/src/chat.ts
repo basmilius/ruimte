@@ -285,7 +285,9 @@ export const ChatTurnItemSchema = z.object({
     // The git tree of the chat's folder when the turn started; absent outside a repository.
     checkpoint: z.string().optional(),
     // What the working tree holds against that checkpoint, taken when the turn settled.
-    checkpointDiff: ChatCheckpointDiffSchema.optional()
+    checkpointDiff: ChatCheckpointDiffSchema.optional(),
+    // How many CLI processes worked on this turn; absent is one, which is every turn before this field.
+    attempt: z.number().int().positive().optional()
 });
 
 export const ChatNoteItemSchema = z.object({
@@ -339,7 +341,9 @@ export type ChatEvent = z.infer<typeof ChatEventSchema>;
 
 export const ChatEventEnvelopeSchema = z.object({
     chatId: ChatIdSchema,
-    event: ChatEventSchema
+    event: ChatEventSchema,
+    // The place of this event in the chat's stream, for `since` on the next attach.
+    seq: z.number().int().positive().optional()
 });
 export type ChatEventEnvelope = z.infer<typeof ChatEventEnvelopeSchema>;
 
@@ -368,7 +372,11 @@ export type ChatTargetPayload = z.infer<typeof ChatTargetPayloadSchema>;
 export const ChatClearPayloadSchema = ChatTargetPayloadSchema.extend({ force: z.boolean().optional() });
 export type ChatClearPayload = z.infer<typeof ChatClearPayloadSchema>;
 
-export const ChatAttachPayloadSchema = ChatTargetPayloadSchema.extend({ historyLimit: z.number().int().min(1).max(100).optional() });
+export const ChatAttachPayloadSchema = ChatTargetPayloadSchema.extend({
+    historyLimit: z.number().int().min(1).max(100).optional(),
+    // The last seq this client saw; honored when the daemon still holds everything after it.
+    since: z.number().int().nonnegative().optional()
+});
 export const ChatHistoryPayloadSchema = ChatTargetPayloadSchema.extend({
     cursor: z.string().min(1).max(128),
     limit: z.number().int().min(1).max(100).optional()
@@ -416,7 +424,10 @@ export const ChatAttachResultSchema = z.object({
     info: ChatInfoSchema,
     items: z.array(ChatItemSchema),
     history: ChatHistoryPageSchema.optional(),
-    pending: z.array(ChatItemSchema).optional()
+    pending: z.array(ChatItemSchema).optional(),
+    seq: z.number().int().nonnegative().optional(),
+    // Only when `since` was honored: what happened after it, in order; `items` is then empty.
+    events: z.array(ChatEventSchema).optional()
 });
 export type ChatAttachResult = z.infer<typeof ChatAttachResultSchema>;
 

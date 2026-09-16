@@ -72,7 +72,7 @@ describe('ChatManager', () => {
         });
         expect(manager.get('chat-1')?.running).toBe(false);
         expect(claude.started).toHaveLength(0);
-        expect(manager.attach('chat-1', 'c1')).toEqual({ info, items: [] });
+        expect(manager.attach('chat-1', 'c1')).toEqual({ info, items: [], seq: 0 });
 
         await manager.send('chat-1', 'hello there');
         expect(manager.get('chat-1')?.running).toBe(true);

@@ -6596,6 +6596,11 @@
                     "files",
                     "truncated"
                   ]
+                },
+                "attempt": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -6731,6 +6736,11 @@
         "type": "integer",
         "minimum": 1,
         "maximum": 100
+      },
+      "since": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
       }
     },
     "required": [
@@ -7685,6 +7695,11 @@
                     "files",
                     "truncated"
                   ]
+                },
+                "attempt": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -8519,6 +8534,11 @@
                     "files",
                     "truncated"
                   ]
+                },
+                "attempt": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -8611,6 +8631,2172 @@
                 "turnId",
                 "kind",
                 "preTokens"
+              ]
+            }
+          ]
+        }
+      },
+      "seq": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "events": {
+        "type": "array",
+        "items": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "item"
+                },
+                "item": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "turnId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "user"
+                        },
+                        "text": {
+                          "type": "string"
+                        },
+                        "mentions": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "skills": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "attachments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "mime": {
+                                "type": "string"
+                              },
+                              "size": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "path": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "name",
+                              "mime",
+                              "size",
+                              "path"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "createdAt",
+                        "turnId",
+                        "kind",
+                        "text"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "turnId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "assistant"
+                        },
+                        "text": {
+                          "type": "string"
+                        },
+                        "streaming": {
+                          "type": "boolean"
+                        },
+                        "parentToolUseId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "createdAt",
+                        "turnId",
+                        "kind",
+                        "text",
+                        "streaming"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "turnId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "thinking"
+                        },
+                        "text": {
+                          "type": "string"
+                        },
+                        "streaming": {
+                          "type": "boolean"
+                        },
+                        "endedAt": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "createdAt",
+                        "turnId",
+                        "kind",
+                        "text",
+                        "streaming",
+                        "endedAt"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "turnId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "tool"
+                        },
+                        "toolUseId": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "input": {},
+                        "output": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "running",
+                            "done",
+                            "error"
+                          ]
+                        },
+                        "parentToolUseId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "progress": {
+                          "type": "object",
+                          "properties": {
+                            "startedAt": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            },
+                            "description": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "output": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "startedAt",
+                            "description",
+                            "output"
+                          ]
+                        },
+                        "changes": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "add",
+                                  "update",
+                                  "delete"
+                                ]
+                              },
+                              "diff": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "kind",
+                              "diff"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "createdAt",
+                        "turnId",
+                        "kind",
+                        "toolUseId",
+                        "name",
+                        "input",
+                        "output",
+                        "state",
+                        "parentToolUseId"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "turnId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "subagent"
+                        },
+                        "toolUseId": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "subagentType": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "prompt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "background": {
+                          "type": "boolean"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "running",
+                            "done",
+                            "failed"
+                          ]
+                        },
+                        "startedAt": {
+                          "type": "number"
+                        },
+                        "finishedAt": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "summary": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "result": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "usage": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "totalTokens": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "toolUses": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "durationMs": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "totalTokens",
+                                "toolUses",
+                                "durationMs"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "lastTool": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "outputFile": {
+                          "type": "string"
+                        },
+                        "itemsTruncated": {
+                          "type": "boolean"
+                        },
+                        "native": {
+                          "type": "object",
+                          "properties": {
+                            "agentId": {
+                              "type": "string"
+                            },
+                            "threadId": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "createdAt",
+                        "turnId",
+                        "kind",
+                        "toolUseId",
+                        "description",
+                        "subagentType",
+                        "prompt",
+                        "background",
+                        "status",
+                        "startedAt",
+                        "finishedAt",
+                        "summary",
+                        "result",
+                        "usage",
+                        "lastTool",
+                        "itemsTruncated"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "turnId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "approval"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "toolUseId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "toolName": {
+                          "type": "string"
+                        },
+                        "input": {},
+                        "description": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "canAllowAlways": {
+                          "type": "boolean"
+                        },
+                        "decision": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "allow",
+                            "allow-always",
+                            "deny",
+                            "cancelled"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "createdAt",
+                        "turnId",
+                        "kind",
+                        "requestId",
+                        "toolUseId",
+                        "toolName",
+                        "input",
+                        "description",
+                        "canAllowAlways",
+                        "decision"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "turnId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "question"
+                        },
+                        "requestId": {
+                          "type": "string"
+                        },
+                        "questions": {
+                          "minItems": 1,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "header": {
+                                "type": "string"
+                              },
+                              "question": {
+                                "type": "string"
+                              },
+                              "choices": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "label": {
+                                      "type": "string"
+                                    },
+                                    "description": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "label",
+                                    "description"
+                                  ]
+                                }
+                              },
+                              "multiSelect": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "header",
+                              "question",
+                              "choices",
+                              "multiSelect"
+                            ]
+                          }
+                        },
+                        "async": {
+                          "type": "boolean"
+                        },
+                        "answers": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {
+                                "type": "string"
+                              }
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "answered",
+                            "cancelled",
+                            "dismissed"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "createdAt",
+                        "turnId",
+                        "kind",
+                        "requestId",
+                        "questions",
+                        "answers",
+                        "state"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "turnId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "turn"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "running",
+                            "done",
+                            "aborted",
+                            "error"
+                          ]
+                        },
+                        "origin": {
+                          "type": "string",
+                          "enum": [
+                            "user",
+                            "agent"
+                          ]
+                        },
+                        "label": {
+                          "type": "string"
+                        },
+                        "taskToolUseId": {
+                          "type": "string"
+                        },
+                        "endedAt": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "costUsd": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "checkpoint": {
+                          "type": "string"
+                        },
+                        "checkpointDiff": {
+                          "type": "object",
+                          "properties": {
+                            "files": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "path": {
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "add",
+                                      "update",
+                                      "delete"
+                                    ]
+                                  },
+                                  "added": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "deleted": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "diff": {
+                                    "type": "string"
+                                  },
+                                  "omitted": {
+                                    "type": "string",
+                                    "enum": [
+                                      "binary",
+                                      "too-large"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "path",
+                                  "kind",
+                                  "added",
+                                  "deleted",
+                                  "diff"
+                                ]
+                              }
+                            },
+                            "truncated": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "files",
+                            "truncated"
+                          ]
+                        },
+                        "attempt": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "createdAt",
+                        "turnId",
+                        "kind",
+                        "state",
+                        "endedAt",
+                        "costUsd"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "turnId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "note"
+                        },
+                        "level": {
+                          "type": "string",
+                          "enum": [
+                            "info",
+                            "warning",
+                            "error"
+                          ]
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "createdAt",
+                        "turnId",
+                        "kind",
+                        "level",
+                        "text"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "createdAt": {
+                          "type": "number"
+                        },
+                        "turnId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "const": "compaction"
+                        },
+                        "preTokens": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "createdAt",
+                        "turnId",
+                        "kind",
+                        "preTokens"
+                      ]
+                    }
+                  ]
+                },
+                "historyIndex": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "type",
+                "item"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "delta"
+                },
+                "itemId": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "itemId",
+                "text"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "info"
+                },
+                "info": {
+                  "type": "object",
+                  "properties": {
+                    "chatId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "provider": {
+                      "type": "string",
+                      "enum": [
+                        "claude",
+                        "codex",
+                        "gemini",
+                        "copilot"
+                      ]
+                    },
+                    "cwd": {
+                      "type": "string"
+                    },
+                    "agentSessionId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "model": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "selection": {
+                      "type": "object",
+                      "properties": {
+                        "model": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "options": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": [
+                              "string",
+                              "boolean"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "model",
+                        "options"
+                      ]
+                    },
+                    "runtimeMode": {
+                      "type": "string",
+                      "enum": [
+                        "supervised",
+                        "auto-accept-edits",
+                        "auto",
+                        "full-access"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "running",
+                        "needs-you",
+                        "idle",
+                        "error",
+                        "exited"
+                      ]
+                    },
+                    "running": {
+                      "type": "boolean"
+                    },
+                    "activeTurnId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "slashCommands": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "skills": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "queue": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "text": {
+                            "type": "string"
+                          },
+                          "mentions": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "skills": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "attachments": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "mime": {
+                                  "type": "string"
+                                },
+                                "size": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "path": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name",
+                                "mime",
+                                "size",
+                                "path"
+                              ]
+                            }
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "text",
+                          "createdAt"
+                        ]
+                      }
+                    },
+                    "usage": {
+                      "type": "object",
+                      "properties": {
+                        "contextTokens": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "contextWindow": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "costUsd": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "turns": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "contextTokens",
+                        "contextWindow",
+                        "costUsd",
+                        "turns"
+                      ]
+                    },
+                    "suggestedTitle": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "chatId",
+                    "provider",
+                    "cwd",
+                    "agentSessionId",
+                    "model",
+                    "selection",
+                    "runtimeMode",
+                    "status",
+                    "running",
+                    "activeTurnId",
+                    "slashCommands",
+                    "usage",
+                    "createdAt"
+                  ]
+                }
+              },
+              "required": [
+                "type",
+                "info"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "reset"
+                },
+                "info": {
+                  "type": "object",
+                  "properties": {
+                    "chatId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "provider": {
+                      "type": "string",
+                      "enum": [
+                        "claude",
+                        "codex",
+                        "gemini",
+                        "copilot"
+                      ]
+                    },
+                    "cwd": {
+                      "type": "string"
+                    },
+                    "agentSessionId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "model": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "selection": {
+                      "type": "object",
+                      "properties": {
+                        "model": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "options": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": [
+                              "string",
+                              "boolean"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "model",
+                        "options"
+                      ]
+                    },
+                    "runtimeMode": {
+                      "type": "string",
+                      "enum": [
+                        "supervised",
+                        "auto-accept-edits",
+                        "auto",
+                        "full-access"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "running",
+                        "needs-you",
+                        "idle",
+                        "error",
+                        "exited"
+                      ]
+                    },
+                    "running": {
+                      "type": "boolean"
+                    },
+                    "activeTurnId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "slashCommands": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "skills": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "queue": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "text": {
+                            "type": "string"
+                          },
+                          "mentions": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "skills": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "attachments": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "mime": {
+                                  "type": "string"
+                                },
+                                "size": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "path": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name",
+                                "mime",
+                                "size",
+                                "path"
+                              ]
+                            }
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "text",
+                          "createdAt"
+                        ]
+                      }
+                    },
+                    "usage": {
+                      "type": "object",
+                      "properties": {
+                        "contextTokens": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "contextWindow": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "costUsd": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "turns": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "contextTokens",
+                        "contextWindow",
+                        "costUsd",
+                        "turns"
+                      ]
+                    },
+                    "suggestedTitle": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    },
+                    "createdAt": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "chatId",
+                    "provider",
+                    "cwd",
+                    "agentSessionId",
+                    "model",
+                    "selection",
+                    "runtimeMode",
+                    "status",
+                    "running",
+                    "activeTurnId",
+                    "slashCommands",
+                    "usage",
+                    "createdAt"
+                  ]
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          },
+                          "turnId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "kind": {
+                            "type": "string",
+                            "const": "user"
+                          },
+                          "text": {
+                            "type": "string"
+                          },
+                          "mentions": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "skills": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "attachments": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "mime": {
+                                  "type": "string"
+                                },
+                                "size": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "path": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name",
+                                "mime",
+                                "size",
+                                "path"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "createdAt",
+                          "turnId",
+                          "kind",
+                          "text"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          },
+                          "turnId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "kind": {
+                            "type": "string",
+                            "const": "assistant"
+                          },
+                          "text": {
+                            "type": "string"
+                          },
+                          "streaming": {
+                            "type": "boolean"
+                          },
+                          "parentToolUseId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "createdAt",
+                          "turnId",
+                          "kind",
+                          "text",
+                          "streaming"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          },
+                          "turnId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "kind": {
+                            "type": "string",
+                            "const": "thinking"
+                          },
+                          "text": {
+                            "type": "string"
+                          },
+                          "streaming": {
+                            "type": "boolean"
+                          },
+                          "endedAt": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "createdAt",
+                          "turnId",
+                          "kind",
+                          "text",
+                          "streaming",
+                          "endedAt"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          },
+                          "turnId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "kind": {
+                            "type": "string",
+                            "const": "tool"
+                          },
+                          "toolUseId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "input": {},
+                          "output": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "running",
+                              "done",
+                              "error"
+                            ]
+                          },
+                          "parentToolUseId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "progress": {
+                            "type": "object",
+                            "properties": {
+                              "startedAt": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
+                              },
+                              "description": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "output": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "startedAt",
+                              "description",
+                              "output"
+                            ]
+                          },
+                          "changes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "path": {
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "add",
+                                    "update",
+                                    "delete"
+                                  ]
+                                },
+                                "diff": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "kind",
+                                "diff"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "createdAt",
+                          "turnId",
+                          "kind",
+                          "toolUseId",
+                          "name",
+                          "input",
+                          "output",
+                          "state",
+                          "parentToolUseId"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          },
+                          "turnId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "kind": {
+                            "type": "string",
+                            "const": "subagent"
+                          },
+                          "toolUseId": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "subagentType": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "prompt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "background": {
+                            "type": "boolean"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "running",
+                              "done",
+                              "failed"
+                            ]
+                          },
+                          "startedAt": {
+                            "type": "number"
+                          },
+                          "finishedAt": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "summary": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "result": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "usage": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "totalTokens": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "toolUses": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "durationMs": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "totalTokens",
+                                  "toolUses",
+                                  "durationMs"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lastTool": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "outputFile": {
+                            "type": "string"
+                          },
+                          "itemsTruncated": {
+                            "type": "boolean"
+                          },
+                          "native": {
+                            "type": "object",
+                            "properties": {
+                              "agentId": {
+                                "type": "string"
+                              },
+                              "threadId": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "createdAt",
+                          "turnId",
+                          "kind",
+                          "toolUseId",
+                          "description",
+                          "subagentType",
+                          "prompt",
+                          "background",
+                          "status",
+                          "startedAt",
+                          "finishedAt",
+                          "summary",
+                          "result",
+                          "usage",
+                          "lastTool",
+                          "itemsTruncated"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          },
+                          "turnId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "kind": {
+                            "type": "string",
+                            "const": "approval"
+                          },
+                          "requestId": {
+                            "type": "string"
+                          },
+                          "toolUseId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "toolName": {
+                            "type": "string"
+                          },
+                          "input": {},
+                          "description": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "canAllowAlways": {
+                            "type": "boolean"
+                          },
+                          "decision": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "allow",
+                              "allow-always",
+                              "deny",
+                              "cancelled"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "createdAt",
+                          "turnId",
+                          "kind",
+                          "requestId",
+                          "toolUseId",
+                          "toolName",
+                          "input",
+                          "description",
+                          "canAllowAlways",
+                          "decision"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          },
+                          "turnId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "kind": {
+                            "type": "string",
+                            "const": "question"
+                          },
+                          "requestId": {
+                            "type": "string"
+                          },
+                          "questions": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "header": {
+                                  "type": "string"
+                                },
+                                "question": {
+                                  "type": "string"
+                                },
+                                "choices": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "label": {
+                                        "type": "string"
+                                      },
+                                      "description": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "label",
+                                      "description"
+                                    ]
+                                  }
+                                },
+                                "multiSelect": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "header",
+                                "question",
+                                "choices",
+                                "multiSelect"
+                              ]
+                            }
+                          },
+                          "async": {
+                            "type": "boolean"
+                          },
+                          "answers": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {
+                                  "type": "string"
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "answered",
+                              "cancelled",
+                              "dismissed"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "createdAt",
+                          "turnId",
+                          "kind",
+                          "requestId",
+                          "questions",
+                          "answers",
+                          "state"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          },
+                          "turnId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "kind": {
+                            "type": "string",
+                            "const": "turn"
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "running",
+                              "done",
+                              "aborted",
+                              "error"
+                            ]
+                          },
+                          "origin": {
+                            "type": "string",
+                            "enum": [
+                              "user",
+                              "agent"
+                            ]
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "taskToolUseId": {
+                            "type": "string"
+                          },
+                          "endedAt": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "costUsd": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "checkpoint": {
+                            "type": "string"
+                          },
+                          "checkpointDiff": {
+                            "type": "object",
+                            "properties": {
+                              "files": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "path": {
+                                      "type": "string"
+                                    },
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "add",
+                                        "update",
+                                        "delete"
+                                      ]
+                                    },
+                                    "added": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "deleted": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "diff": {
+                                      "type": "string"
+                                    },
+                                    "omitted": {
+                                      "type": "string",
+                                      "enum": [
+                                        "binary",
+                                        "too-large"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "path",
+                                    "kind",
+                                    "added",
+                                    "deleted",
+                                    "diff"
+                                  ]
+                                }
+                              },
+                              "truncated": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "files",
+                              "truncated"
+                            ]
+                          },
+                          "attempt": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "createdAt",
+                          "turnId",
+                          "kind",
+                          "state",
+                          "endedAt",
+                          "costUsd"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          },
+                          "turnId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "kind": {
+                            "type": "string",
+                            "const": "note"
+                          },
+                          "level": {
+                            "type": "string",
+                            "enum": [
+                              "info",
+                              "warning",
+                              "error"
+                            ]
+                          },
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "createdAt",
+                          "turnId",
+                          "kind",
+                          "level",
+                          "text"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "createdAt": {
+                            "type": "number"
+                          },
+                          "turnId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "kind": {
+                            "type": "string",
+                            "const": "compaction"
+                          },
+                          "preTokens": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "createdAt",
+                          "turnId",
+                          "kind",
+                          "preTokens"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "type",
+                "info",
+                "items"
               ]
             }
           ]
@@ -10029,6 +12215,11 @@
                     "files",
                     "truncated"
                   ]
+                },
+                "attempt": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -23322,6 +25513,11 @@
                           "files",
                           "truncated"
                         ]
+                      },
+                      "attempt": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
                       }
                     },
                     "required": [
@@ -24640,6 +26836,11 @@
                             "files",
                             "truncated"
                           ]
+                        },
+                        "attempt": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -24745,6 +26946,11 @@
             ]
           }
         ]
+      },
+      "seq": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
       }
     },
     "required": [

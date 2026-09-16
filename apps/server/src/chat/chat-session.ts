@@ -88,6 +88,8 @@ export class ChatSession {
     private titleTimer: ReturnType<typeof setTimeout> | null = null;
     // A name is asked for once per chat this daemon holds; the turn count keeps it once across restarts.
     private naming = false;
+    // Set while the daemon goes down: a CLI dying with it must not end the turn a restart takes up again.
+    private frozen = false;
 
     constructor(options: ChatSessionOptions) {
         this.options = options;
@@ -313,8 +315,35 @@ export class ChatSession {
         ]);
     }
 
-    /* Ends the process; the thread stays as it is. */
-    stop(): void {
+    /*
+     * A thread read from disk cannot still be streaming or waiting, so whatever was open is closed,
+     * except the turn a restart takes up again. Said as events, so a client that comes back with a
+     * seq from before the restart hears it as well.
+     */
+    settleStored(selection: ModelSelection, resumeTurnId: string | null): void {
+        const events: ChatEvent[] = [];
+        for (const item of this.thread.list()) {
+            const settled = settleStoredItem(item, resumeTurnId);
+            if (settled !== item) {
+                events.push(this.thread.upsert(settled));
+            }
+        }
+        const info = this.thread.info;
+        const patch: Partial<ChatInfo> = { selection, running: false, status: resumeTurnId === null ? 'idle' : 'running', activeTurnId: resumeTurnId };
+        if (
+            JSON.stringify(selection) !== JSON.stringify(info.selection) ||
+            info.running ||
+            info.status !== patch.status ||
+            info.activeTurnId !== resumeTurnId
+        ) {
+            events.push(this.thread.patchInfo(patch));
+        }
+        this.emit(events);
+    }
+
+    /* Ends the process and stops listening to it, as the daemon goes down; the thread stays as it is. */
+    freeze(): void {
+        this.frozen = true;
         this.backend?.stop();
     }
 
@@ -529,8 +558,14 @@ export class ChatSession {
         const backend = made.backend;
         this.backend = backend;
         this.emit([this.thread.patchInfo({ running: true })]);
-        this.starting = backend
-            .start()
+        let started: Promise<void>;
+        try {
+            started = backend.start();
+        } catch (error) {
+            // A spawn that throws on the spot (no such executable) is a start that failed like any other.
+            started = Promise.reject(error instanceof Error ? error : new Error(String(error)));
+        }
+        this.starting = started
             .then(() => backend)
             .catch((error: unknown) => {
                 // A CLI that will not start leaves nothing to talk to; the next send tries again.
@@ -544,6 +579,9 @@ export class ChatSession {
     }
 
     private receive(generation: number, event: BackendEvent): void {
+        if (this.frozen) {
+            return;
+        }
         if (event.type === 'limits') {
             this.options.onLimits?.(event.update);
             return;
@@ -676,3 +714,23 @@ export class ChatSession {
         }
     }
 }
+
+// Whatever was open when the daemon went down: nobody is going to answer it now.
+const settleStoredItem = (item: ChatItem, resumeTurnId: string | null): ChatItem => {
+    if (item.kind === 'assistant' && item.streaming) {
+        return { ...item, streaming: false };
+    }
+    if (item.kind === 'approval' && item.decision === 'pending') {
+        return { ...item, decision: 'cancelled' };
+    }
+    if (item.kind === 'question' && item.state === 'pending') {
+        return { ...item, state: 'cancelled' };
+    }
+    if (item.kind === 'tool' && item.state === 'running') {
+        return { ...item, state: 'error' };
+    }
+    if (item.kind === 'turn' && item.state === 'running' && item.id !== resumeTurnId) {
+        return { ...item, state: 'error', endedAt: item.endedAt ?? item.createdAt };
+    }
+    return item;
+};

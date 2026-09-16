@@ -20,7 +20,7 @@ export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManage
 
     dispatcher.register('chat.configure', (payload) => translate(() => manager.configure(payload)));
 
-    dispatcher.register('chat.attach', (payload, client) => translate(() => manager.attach(payload.chatId, client.id, payload.historyLimit)));
+    dispatcher.register('chat.attach', (payload, client) => translate(() => manager.attach(payload.chatId, client.id, payload.historyLimit, payload.since)));
 
     dispatcher.register('chat.history', (payload) => translate(() => manager.history(payload.chatId, payload.cursor, payload.limit)));
 

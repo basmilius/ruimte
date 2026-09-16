@@ -25,13 +25,15 @@ import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import type { AttachmentStore } from './attachment-store.ts';
 import type { SpawnChatProcess } from './chat-process.ts';
 import { ChatSession, type ChatSendExtras } from './chat-session.ts';
+import { ChatLog, COMPACT_ABOVE_BYTES } from './chat-log.ts';
 import type { ChatTitleInput } from './chat-title.ts';
-import type { ChatStore } from './chat-store.ts';
+import type { ChatRecord, ChatStore } from './chat-store.ts';
 import { DeltaCoalescer } from './delta-coalescer.ts';
 import { ChatError } from './errors.ts';
 import { SubagentReader, type SubagentReaderOptions } from './subagent-reader.ts';
 import { errorText } from '../error-text.ts';
 import { usageRoots } from '../usage/roots.ts';
+
 interface ChatManagerOptions {
     providers: ProviderRegistry;
     store?: ChatStore;
@@ -87,6 +89,7 @@ export class ChatManager {
     private readonly sinks = new Map<string, SessionSink>();
     private readonly attached = new Map<string, Set<string>>();
     private readonly coalescers = new Map<string, DeltaCoalescer>();
+    private readonly logs = new Map<string, ChatLog>();
     private readonly tokens = new Map<string, string>();
     // How big each record was the last time it went to disk, and the writes waiting for a big one.
     private readonly sizes = new Map<string, number>();
@@ -205,7 +208,7 @@ export class ChatManager {
         const catalog = provider.catalog;
         const selection = catalog.normalize(stored?.info.selection ?? payload.selection);
         const info: ChatInfo = stored?.info
-            ? { ...stored.info, selection, running: false, status: 'idle', activeTurnId: null }
+            ? stored.info
             : {
                   chatId: payload.chatId,
                   provider: kind,
@@ -221,14 +224,14 @@ export class ChatManager {
                   usage: { contextTokens: 0, contextWindow: catalog.contextWindowFor(selection), costUsd: 0, turns: 0 },
                   createdAt: Date.now()
               };
-        const items = stored?.items.map(settle) ?? [];
         const token = randomBytes(24).toString('base64url');
         this.tokens.set(token, payload.chatId);
         const claudeTitles = this.claudeTitles;
         const nameChat = this.nameChat;
+        this.logs.set(payload.chatId, await this.openLog(payload.chatId, stored ?? null));
         const session = new ChatSession({
             info,
-            items,
+            items: stored?.items ?? [],
             provider,
             command: this.commands[kind] ?? provider.command,
             ...(this.spawn ? { spawn: this.spawn } : {}),
@@ -245,6 +248,9 @@ export class ChatManager {
             ...(kind === 'codex' && nameChat ? { nameThread: (input: ChatTitleInput) => nameChat(kind, input) } : {})
         });
         this.chats.set(session.id, session);
+        if (stored) {
+            session.settleStored(selection, null);
+        }
         // Sent before the info goes back, so the client's attach already carries it: a prompt an
         // agent was made with has to read as the first message of the thread, not as a turn out of
         // nowhere. The send is what spawns the process, which is the CLI's own rule for a chat.
@@ -264,7 +270,11 @@ export class ChatManager {
         return this.require(payload.chatId).configure(payload);
     }
 
-    attach(chatId: string, clientId: string, historyLimit?: number): ChatAttachResult {
+    /*
+     * With `since` a client that was here a moment ago gets only what came after it, when the log still
+     * holds all of that; otherwise the whole thread, or its newest page with `historyLimit`.
+     */
+    attach(chatId: string, clientId: string, historyLimit?: number, since?: number): ChatAttachResult {
         const session = this.require(chatId);
         let clients = this.attached.get(chatId);
         if (!clients) {
@@ -275,9 +285,14 @@ export class ChatManager {
         // client is on the list: the text is either in the snapshot or in the stream, never both.
         this.coalescers.get(chatId)?.flush();
         clients.add(clientId);
+        const log = this.logs.get(chatId)!;
+        const events = since === undefined ? null : log.after(since);
+        if (events !== null) {
+            return { info: session.info, items: [], events, seq: log.seq };
+        }
         return historyLimit === undefined
-            ? session.thread.snapshot()
-            : { info: session.info, ...session.thread.history(historyLimit), pending: session.thread.pending() };
+            ? { ...session.thread.snapshot(), seq: log.seq }
+            : { info: session.info, ...session.thread.history(historyLimit), pending: session.thread.pending(), seq: log.seq };
     }
 
     history(chatId: string, cursor: string, limit?: number): ChatHistoryResult {
@@ -385,7 +400,8 @@ export class ChatManager {
         session.clear(force);
         // A debounced write still waiting holds the old thread and must not land after the empty one.
         this.cancelWaiting(chatId);
-        await Promise.all([this.persistNow(chatId), this.attachments.removeAll(chatId)]);
+        // Folded right away: every line before the reset describes a thread that is gone.
+        await Promise.all([this.persistNow(chatId, true), this.attachments.removeAll(chatId)]);
     }
 
     cancel(chatId: string): void {
@@ -422,6 +438,8 @@ export class ChatManager {
         this.subagents.releaseChat(chatId);
         this.coalescers.get(chatId)?.dispose();
         this.coalescers.delete(chatId);
+        this.logs.get(chatId)?.close();
+        this.logs.delete(chatId);
         this.cancelWaiting(chatId);
         this.sizes.delete(chatId);
         this.writes.delete(chatId);
@@ -459,12 +477,12 @@ export class ChatManager {
     /* Ends every CLI and writes every thread; used when the daemon goes down. */
     async shutdown(): Promise<void> {
         for (const session of this.chats.values()) {
-            session.stop();
+            session.freeze();
         }
         for (const chatId of this.chats.keys()) {
             this.cancelWaiting(chatId);
         }
-        await Promise.all([...this.chats.keys()].map((chatId) => this.persistNow(chatId)));
+        await Promise.all([...this.chats.keys()].map((chatId) => this.persistNow(chatId, true)));
     }
 
     /*
@@ -475,11 +493,17 @@ export class ChatManager {
         if (!this.store) {
             return;
         }
+        for (const session of this.chats.values()) {
+            session.freeze();
+        }
         for (const [chatId, session] of this.chats) {
             this.cancelWaiting(chatId);
+            this.coalescers.get(chatId)?.flush();
             const { info, items } = session.thread.snapshot();
+            const log = this.logs.get(chatId);
+            // Not folded here: an older write still in flight may land after this one, and the log is what covers for it.
             try {
-                this.store.writeSync(chatId, info, items);
+                this.store.writeSync(chatId, info, items, { seq: log?.seq ?? 0, resetSeq: log?.resetSeq ?? 0 });
             } catch (e) {
                 console.error(`Chat record for ${chatId} failed:`, errorText(e));
             }
@@ -521,14 +545,22 @@ export class ChatManager {
      * One write at a time per chat. Two records in flight together rename in whichever order the
      * file system finishes them, so an older snapshot could land last and undo what just happened.
      */
-    private persistNow(chatId: string): Promise<void> {
+    private persistNow(chatId: string, fold = false): Promise<void> {
         const next = (this.writes.get(chatId) ?? Promise.resolve()).then(async () => {
             const session = this.chats.get(chatId);
-            if (!session || !this.store) {
+            const log = this.logs.get(chatId);
+            if (!session || !this.store || !log) {
                 return;
             }
+            // A delta held back is already in the thread, so it gets its seq before the snapshot says where it ends.
+            this.coalescers.get(chatId)?.flush();
             const { info, items } = session.thread.snapshot();
-            this.sizes.set(chatId, await this.store.write(chatId, info, items));
+            const at = { seq: log.seq, resetSeq: log.resetSeq };
+            this.sizes.set(chatId, await this.store.write(chatId, info, items, at));
+            // A chat killed while the write was out has no log left to fold.
+            if (this.logs.get(chatId) === log && (fold || log.size > COMPACT_ABOVE_BYTES)) {
+                log.compact(at.seq);
+            }
         });
         this.writes.set(
             chatId,
@@ -547,17 +579,37 @@ export class ChatManager {
         coalescer.push(event);
     }
 
+    /* Written down before anyone hears it, so no client holds a seq the log does not. */
     private broadcast(chatId: string, event: ChatEvent): void {
+        const seq = this.logs.get(chatId)?.append(event, Date.now());
+        const payload = seq === undefined ? { chatId, event } : { chatId, event, seq };
         for (const sink of this.observers) {
-            sink({ event: 'chat.event', payload: { chatId, event } });
+            sink({ event: 'chat.event', payload });
         }
         const clients = this.attached.get(chatId);
         if (!clients) {
             return;
         }
         for (const clientId of clients) {
-            this.sinks.get(clientId)?.({ event: 'chat.event', payload: { chatId, event } });
+            this.sinks.get(clientId)?.({ event: 'chat.event', payload });
         }
+    }
+
+    /*
+     * The stream of a chat as its files left it. A chat with no record starts its stream over, after
+     * whatever seq a log left behind by a life that never wrote a snapshot handed out, with a reset
+     * marked just past it: a client still holding one of those seqs gets the whole thread.
+     */
+    private async openLog(chatId: string, stored: ChatRecord | null): Promise<ChatLog> {
+        if (!this.store) {
+            return new ChatLog(null);
+        }
+        const path = this.store.logPath(chatId);
+        if (stored) {
+            return new ChatLog(path, stored);
+        }
+        const left = await this.store.discardLog(chatId);
+        return new ChatLog(path, { seq: left, resetSeq: left === 0 ? 0 : left + 1, lines: [] });
     }
 
     private require(chatId: string): ChatSession {
@@ -568,23 +620,3 @@ export class ChatManager {
         return session;
     }
 }
-
-// A thread read from disk cannot still be streaming or waiting; whatever was open is closed.
-const settle = (item: ChatItem): ChatItem => {
-    if (item.kind === 'assistant' && item.streaming) {
-        return { ...item, streaming: false };
-    }
-    if (item.kind === 'approval' && item.decision === 'pending') {
-        return { ...item, decision: 'cancelled' };
-    }
-    if (item.kind === 'question' && item.state === 'pending') {
-        return { ...item, state: 'cancelled' };
-    }
-    if (item.kind === 'tool' && item.state === 'running') {
-        return { ...item, state: 'error' };
-    }
-    if (item.kind === 'turn' && item.state === 'running') {
-        return { ...item, state: 'error', endedAt: item.endedAt ?? item.createdAt };
-    }
-    return item;
-};
