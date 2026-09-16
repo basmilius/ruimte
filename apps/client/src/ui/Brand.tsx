@@ -34,3 +34,16 @@ export function Brand({ size = 24, className }: BrandProps) {
         </span>
     );
 }
+
+/* The start screen's welcome: the icon, the wordmark at the largest size the theme has, and the tagline under it. */
+export function BrandIntro({ className }: { className?: string }) {
+    return (
+        <header className={clsx('flex flex-col items-center gap-4 py-6 text-center', className)}>
+            <BrandSymbol size={88} />
+            <div className="flex flex-col items-center gap-1">
+                <h1 className="font-brand text-4xl font-semibold text-text">Ruimte</h1>
+                <p className="text-base text-text-muted">Space for AI Engineering.</p>
+            </div>
+        </header>
+    );
+}
