@@ -305,16 +305,17 @@ private struct PlanHeader: View {
     }
 }
 
-/// Green for done, passed or info, amber for a warning, red for failed and gray for skipped or blocked, over a sunken
-/// track.
+/// Green for done or passed, amber for a warning, blue for info, red for failed and gray for skipped or blocked, over
+/// a sunken track.
 private struct PlanProgressBar: View {
     let progress: PlanProgress
 
     var body: some View {
         GeometryReader { proxy in
             HStack(spacing: 0) {
-                segment(progress.count(.done) + progress.count(.info), MobileStyle.positive, proxy.size.width)
+                segment(progress.count(.done), MobileStyle.positive, proxy.size.width)
                 segment(progress.count(.warning), MobileStyle.statusNeedsYou, proxy.size.width)
+                segment(progress.count(.info), MobileStyle.statusRunning, proxy.size.width)
                 segment(progress.count(.failed), MobileStyle.statusError, proxy.size.width)
                 segment(progress.count(.skipped) + progress.count(.blocked), MobileStyle.faint, proxy.size.width)
             }
@@ -642,7 +643,7 @@ private struct PlanMark: View {
         case .failed: Image(lucide: Self.icon(state), size: size).foregroundStyle(MobileStyle.statusError)
         case .blocked, .warning:
             Image(lucide: Self.icon(state), size: size).foregroundStyle(MobileStyle.statusNeedsYou)
-        case .info: Image(lucide: Self.icon(state), size: size).foregroundStyle(MobileStyle.accent)
+        case .info: Image(lucide: Self.icon(state), size: size).foregroundStyle(MobileStyle.statusRunning)
         }
     }
 }

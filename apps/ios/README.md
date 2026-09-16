@@ -62,7 +62,7 @@ line, the step in progress and a progress bar. The overflow menu holds the filte
 blocked or warning), Collapse done, Expand all and Collapse all, kept on the phone, and Copy as Markdown. Sections,
 text blocks and steps follow as custom rows with the same Lucide circles, one column per row: a step under a section
 lines up with the section's caret and a child sits under its parent's title. A parent shows "2/3" instead of a circle,
-and a tap anywhere on a section or parent folds it. Warning (amber) and info are outcomes like passed. The step the
+and a tap anywhere on a section or parent folds it. Warning (amber) and info (blue) are outcomes like passed. The step the
 agent works on spins with an accent background while its turn runs; once the agent stopped it shows a pause and
 "<Agent> stopped here". A step a person set shows "you" and the time; who else set a step and a lock's reason sit in
 its long-press menu and its VoiceOver value. In a steps plan the circle toggles open and done; in a test plan the
