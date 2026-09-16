@@ -80,22 +80,64 @@ const status = (value: AgentStatus, nodeId = 'node', destination = service): voi
     });
 
 describe('offline push delivery', () => {
-    test('subscribed turn completion is signed and decrypts, with no plaintext title/node/body', async () => {
+    for (const target of ['terminal', 'chat'] as const) {
+        for (const activityScope of [undefined, 'machine'] as const) {
+            test(`${target} completion updates ${activityScope ?? 'conversation'} activities without an alert or unread entry`, async () => {
+                await auth.setPush(sessionId, { ...subscription, activities: true, activityScope });
+                for (const phase of ['running', 'idle'] as const) {
+                    if (target === 'terminal') {
+                        status(phase);
+                    } else {
+                        service.consume({
+                            event: 'chat.event',
+                            payload: {
+                                chatId: 'node',
+                                event: {
+                                    type: 'info',
+                                    info: {
+                                        chatId: 'node',
+                                        provider: 'codex',
+                                        cwd: home,
+                                        agentSessionId: 'cli',
+                                        model: null,
+                                        selection: { model: 'default', options: {} },
+                                        runtimeMode: 'supervised',
+                                        status: phase,
+                                        running: true,
+                                        activeTurnId: phase === 'running' ? 'turn' : null,
+                                        slashCommands: [],
+                                        usage: { contextTokens: 0, contextWindow: null, costUsd: 0, turns: 0 },
+                                        createdAt: NOW
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    await service.settled();
+                }
+                expect(pushes.map((push) => push.pushType)).toEqual(['liveactivity', 'liveactivity']);
+                expect(pushes.filter((push) => push.pushType === 'liveactivity').map((push) => push.activity.phase)).toEqual(['running', 'done']);
+                expect(service.attention.snapshot()).toEqual([]);
+            });
+        }
+    }
+
+    test('subscribed attention is signed and decrypts, with no plaintext title/node/body', async () => {
         status('running');
-        status('idle');
+        status('needs-you');
         await service.settled();
         expect(pushes.length).toBe(1);
         const push = pushes[0]!;
         expect(verifySignature(machine.publicKey, pushMessage(push), push.signature)).toBe(true);
         expect(JSON.stringify(push)).not.toContain('Secret project');
-        expect(decrypt(push)).toMatchObject({ kind: 'turn', target: 'terminal', nodeId: 'node', title: 'Secret project' });
+        expect(decrypt(push)).toMatchObject({ kind: 'attention', target: 'terminal', nodeId: 'node', title: 'Secret project' });
         expect(() => decrypt({ ...push, handle: 'z'.repeat(43) })).toThrow();
         expect(() => decrypt({ ...push, collapseId: 'z'.repeat(43) })).toThrow();
     });
 
     test('the same node id on another machine gets a different collapse id', async () => {
         status('running');
-        status('idle');
+        status('needs-you');
         await service.settled();
         const other = new PushService({
             auth,
@@ -107,7 +149,7 @@ describe('offline push delivery', () => {
             }
         });
         status('running', 'node', other);
-        status('idle', 'node', other);
+        status('needs-you', 'node', other);
         await other.settled();
         expect(pushes.length).toBe(2);
         expect(pushes[0]!.collapseId).not.toBe(pushes[1]!.collapseId);
@@ -116,10 +158,10 @@ describe('offline push delivery', () => {
     test('only followed nodes notify, repeated status and initial idle do not', async () => {
         status('idle');
         status('running', 'unfollowed');
-        status('idle', 'unfollowed');
+        status('needs-you', 'unfollowed');
         status('running');
-        status('idle');
-        status('idle');
+        status('needs-you');
+        status('needs-you');
         await service.settled();
         expect(pushes.length).toBe(1);
     });
@@ -130,12 +172,12 @@ describe('offline push delivery', () => {
         expect(await service.hasOfflineApprovals()).toBe(false);
         first();
         status('running');
-        status('idle');
+        status('needs-you');
         await service.settled();
         expect(pushes).toEqual([]);
         second();
         status('running');
-        status('idle');
+        status('needs-you');
         await service.settled();
         expect(pushes.length).toBe(1);
         expect(await service.hasOfflineApprovals()).toBe(true);
@@ -143,7 +185,7 @@ describe('offline push delivery', () => {
 
     test('revocation removes persisted subscriptions and wins over queued notifications', async () => {
         status('running');
-        status('idle');
+        status('needs-you');
         await auth.revoke(sessionId);
         await service.settled();
         expect(pushes).toEqual([]);
@@ -218,7 +260,7 @@ describe('offline push delivery', () => {
         status('running');
         await service.settled();
         expect(pushes.length).toBe(0);
-        status('idle');
+        status('needs-you');
         await service.settled();
         expect(pushes.map((push) => push.pushType)).toEqual(['alert']);
         await auth.setPush(sessionId, { ...subscription, activities: true, activityNodeId: null });
@@ -300,7 +342,7 @@ describe('automatic machine activities', () => {
         ]);
         expect(new Set(activities().map((push) => push.collapseId)).size).toBe(1);
         expect(activities().every((push) => verifySignature(machine.publicKey, pushMessage(push), push.signature))).toBe(true);
-        expect(pushes.filter((push) => push.pushType === 'alert').length).toBe(3);
+        expect(pushes.filter((push) => push.pushType === 'alert').length).toBe(1);
     });
 
     test('a terminal exit removes it from the overview and duplicate status does not resend', async () => {
@@ -358,7 +400,7 @@ describe('automatic machine activities', () => {
 test('a read sends a signed encrypted background push only once, after the alert', async () => {
     await auth.setPush(sessionId, { ...subscription, readSync: true });
     status('running');
-    status('idle');
+    status('needs-you');
     await service.settled();
     const issuedAt = service.attention.snapshot()[0]!.issuedAt;
     service.read('node', issuedAt);
@@ -371,10 +413,10 @@ test('a read sends a signed encrypted background push only once, after the alert
     expect(JSON.stringify(clear)).not.toContain('node');
 });
 
-test('a result seen before delivery does not leave an obsolete alert', async () => {
+test('an attention request seen before delivery does not leave an obsolete alert', async () => {
     await auth.setPush(sessionId, { ...subscription, readSync: true });
     status('running');
-    status('idle');
+    status('needs-you');
     service.read('node', service.attention.snapshot()[0]!.issuedAt);
     await service.settled();
     expect(pushes.map((push) => push.pushType)).toEqual(['background']);

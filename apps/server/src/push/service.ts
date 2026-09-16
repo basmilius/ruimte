@@ -211,13 +211,13 @@ export class PushService {
                 this.read(nodeId, entry.issuedAt);
             }
         }
-        if (status === 'needs-you' || (status === 'idle' && previous && previous.status !== 'idle')) {
+        if (status === 'needs-you') {
             this.enqueue({
-                kind: status === 'idle' ? 'turn' : 'attention',
+                kind: 'attention',
                 target,
                 nodeId,
                 title: title.slice(0, 160),
-                body: status === 'idle' ? 'The agent finished its turn.' : 'The agent needs your attention.',
+                body: 'The agent needs your attention.',
                 expiresAt: this.now() + PUSH_MAX_AGE_MS
             });
         }

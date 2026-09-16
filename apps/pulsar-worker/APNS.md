@@ -264,3 +264,12 @@ reload, a read-only D1 check now confirms zero development update-token records 
 start claims after cleanup. There are no active development test terminals or chats. This
 physically verifies the previously missing last-terminal-exit transition. The isolated
 development daemon remains running; production was not restarted.
+
+
+### Attention-only alerts (September 16, 2026)
+
+The daemon now sends alert pushes only for attention and approval requests. Finishing a
+turn no longer sends an alert or creates a notification-read entry. Live Activity updates
+still include completion, for both terminal agents and AI chats. Existing read
+synchronization stays in place for attention and approval notifications. Production
+0.0.17 needs a daemon update to adopt this policy; the Worker needs no change.

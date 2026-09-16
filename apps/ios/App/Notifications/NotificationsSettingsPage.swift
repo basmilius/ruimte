@@ -16,7 +16,7 @@ struct NotificationsSettingsPage: View {
                         })
                 ).disabled(coordinator.busy)
                 Text(
-                    "Receive updates from agents on all your machines and respond to approval requests when Ruimte is in the background."
+                    "Get notified when an agent needs your attention or approval. Turn completion appears in Live Activities without a notification."
                 ).font(.footnote).foregroundStyle(MobileStyle.muted)
             }
             if coordinator.enabled {
