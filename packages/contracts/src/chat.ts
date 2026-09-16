@@ -300,7 +300,9 @@ export const ChatTurnItemSchema = z.object({
     // The CLI's own name for where this turn ended, which is what a fork after this turn is cut at.
     native: z.object({ turnId: z.string().optional(), lastUuid: z.string().optional() }).optional(),
     // The git tree of the chat's folder when the turn settled: what a fork after this turn starts its files from.
-    checkpointAfter: z.string().optional()
+    checkpointAfter: z.string().optional(),
+    // Set on the turn a fork writes a summary in: the chat it is for, which gets the last answer of the turn.
+    summaryFor: ChatIdSchema.optional()
 });
 
 /* What a turn a restart could not take up again ends with, so a client can tell it from a turn a person stopped. */
@@ -320,7 +322,9 @@ export const ChatNoteItemSchema = z.object({
     ...base,
     kind: z.literal('note'),
     level: z.enum(['info', 'warning', 'error']),
-    text: z.string()
+    text: z.string(),
+    // The chat a delivered summary came from, so a client can offer to open it.
+    from: ChatIdSchema.optional()
 });
 
 export const ChatCompactionItemSchema = z.object({
@@ -579,6 +583,13 @@ export const ChatForkResultSchema = z.object({
     worktree: WorktreeSchema.optional()
 });
 export type ChatForkResult = z.infer<typeof ChatForkResultSchema>;
+
+export const ChatSummarizePayloadSchema = z.object({ chatId: ChatIdSchema });
+export type ChatSummarizePayload = z.infer<typeof ChatSummarizePayloadSchema>;
+
+// The turn the fork writes its summary in; its last answer goes to the original once the turn ends.
+export const ChatSummarizeResultSchema = z.object({ turnId: z.string() });
+export type ChatSummarizeResult = z.infer<typeof ChatSummarizeResultSchema>;
 
 export const ChatForkInfoPayloadSchema = z.object({ chatId: ChatIdSchema, turnId: z.string().min(1) });
 export type ChatForkInfoPayload = z.infer<typeof ChatForkInfoPayloadSchema>;

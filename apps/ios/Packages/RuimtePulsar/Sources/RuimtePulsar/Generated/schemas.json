@@ -6657,6 +6657,10 @@
                 },
                 "checkpointAfter": {
                   "type": "string"
+                },
+                "summaryFor": {
+                  "type": "string",
+                  "minLength": 1
                 }
               },
               "required": [
@@ -6699,6 +6703,10 @@
                 },
                 "text": {
                   "type": "string"
+                },
+                "from": {
+                  "type": "string",
+                  "minLength": 1
                 }
               },
               "required": [
@@ -7807,6 +7815,10 @@
                 },
                 "checkpointAfter": {
                   "type": "string"
+                },
+                "summaryFor": {
+                  "type": "string",
+                  "minLength": 1
                 }
               },
               "required": [
@@ -7849,6 +7861,10 @@
                 },
                 "text": {
                   "type": "string"
+                },
+                "from": {
+                  "type": "string",
+                  "minLength": 1
                 }
               },
               "required": [
@@ -8676,6 +8692,10 @@
                 },
                 "checkpointAfter": {
                   "type": "string"
+                },
+                "summaryFor": {
+                  "type": "string",
+                  "minLength": 1
                 }
               },
               "required": [
@@ -8718,6 +8738,10 @@
                 },
                 "text": {
                   "type": "string"
+                },
+                "from": {
+                  "type": "string",
+                  "minLength": 1
                 }
               },
               "required": [
@@ -9539,6 +9563,10 @@
                         },
                         "checkpointAfter": {
                           "type": "string"
+                        },
+                        "summaryFor": {
+                          "type": "string",
+                          "minLength": 1
                         }
                       },
                       "required": [
@@ -9581,6 +9609,10 @@
                         },
                         "text": {
                           "type": "string"
+                        },
+                        "from": {
+                          "type": "string",
+                          "minLength": 1
                         }
                       },
                       "required": [
@@ -10934,6 +10966,10 @@
                           },
                           "checkpointAfter": {
                             "type": "string"
+                          },
+                          "summaryFor": {
+                            "type": "string",
+                            "minLength": 1
                           }
                         },
                         "required": [
@@ -10976,6 +11012,10 @@
                           },
                           "text": {
                             "type": "string"
+                          },
+                          "from": {
+                            "type": "string",
+                            "minLength": 1
                           }
                         },
                         "required": [
@@ -12269,6 +12309,31 @@
       "filesAfterTurn"
     ]
   },
+  "request.chat.summarize.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "chatId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "chatId"
+    ]
+  },
+  "request.chat.summarize.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "turnId": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "turnId"
+    ]
+  },
   "request.chat.subagent.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -13057,6 +13122,10 @@
                 },
                 "checkpointAfter": {
                   "type": "string"
+                },
+                "summaryFor": {
+                  "type": "string",
+                  "minLength": 1
                 }
               },
               "required": [
@@ -13099,6 +13168,10 @@
                 },
                 "text": {
                   "type": "string"
+                },
+                "from": {
+                  "type": "string",
+                  "minLength": 1
                 }
               },
               "required": [
@@ -26867,6 +26940,10 @@
                       },
                       "checkpointAfter": {
                         "type": "string"
+                      },
+                      "summaryFor": {
+                        "type": "string",
+                        "minLength": 1
                       }
                     },
                     "required": [
@@ -26909,6 +26986,10 @@
                       },
                       "text": {
                         "type": "string"
+                      },
+                      "from": {
+                        "type": "string",
+                        "minLength": 1
                       }
                     },
                     "required": [
@@ -28262,6 +28343,10 @@
                         },
                         "checkpointAfter": {
                           "type": "string"
+                        },
+                        "summaryFor": {
+                          "type": "string",
+                          "minLength": 1
                         }
                       },
                       "required": [
@@ -28304,6 +28389,10 @@
                         },
                         "text": {
                           "type": "string"
+                        },
+                        "from": {
+                          "type": "string",
+                          "minLength": 1
                         }
                       },
                       "required": [
