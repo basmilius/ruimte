@@ -43,7 +43,7 @@ const settingsFor = (into: string): string[] =>
 
 /* What the agent verb holds a merge to on top of what a person's merge is held to. */
 export interface MergeLimits {
-    /* Refuses a target checkout with uncommitted or untracked files of its own. */
+    /* Refuses a target checkout with uncommitted changes to tracked files. */
     cleanTarget?: boolean;
     /* Takes a conflicting merge back and refuses, instead of leaving it for a person. */
     abortOnConflict?: boolean;
@@ -194,7 +194,8 @@ export class WorktreeMerge {
         if (busy !== null) {
             throw new GitError('target-busy', `A ${busy} waits halfway in ${target.path}. Finish or abort it there first.`);
         }
-        if (limits.cleanTarget === true && (await git(['status', '--porcelain', '--untracked-files=normal'], target.path))?.trim() !== '') {
+        // Untracked files do not count: git refuses a merge that would overwrite one, and the project's own .ruimte folder is often one.
+        if (limits.cleanTarget === true && (await git(['status', '--porcelain', '--untracked-files=no'], target.path))?.trim() !== '') {
             throw new GitError('target-dirty', `${target.path} has uncommitted changes of its own; a person merges into a checkout like that, not an agent.`);
         }
 

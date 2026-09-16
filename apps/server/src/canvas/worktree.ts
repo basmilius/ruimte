@@ -4,7 +4,7 @@ import { VerbRefusal, type VerbCall } from './verb.ts';
 export const WORKTREE_LINES: readonly string[] = [
     "worktree\tEach agent gets a git worktree of its own under the machine's worktrees folder, on a new branch from HEAD, and starts in it; two agents editing the same file never overwrite each other",
     'worktree\tThe branch is named after the task or the title, with -2, -3 when that name is taken; the turn diff of each agent shows only its own worktree',
-    'worktree\tNothing removes a worktree on its own: merging and removing it is for a person'
+    'worktree\tNothing removes a worktree on its own; ruimte-context worktree merge brings the work of an agent you opened back and removes its worktree once merged'
 ];
 
 /* A branch name out of a title: lower case, only what every ref takes, and never empty. */

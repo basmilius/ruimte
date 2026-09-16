@@ -2,11 +2,14 @@ import {
     isCanvasView,
     type AgentKind,
     type DiagramContent,
+    type GitDiffResult,
     type ProjectCanvasView,
     type ProjectContent,
     type RuntimeMode,
     type Task,
-    type Worktree
+    type Worktree,
+    type WorktreeMergePayload,
+    type WorktreeMergeResult
 } from '@ruimte/contracts';
 import { z } from 'zod';
 import type { NoticeDelivery, Notice } from '../context/notices.ts';
@@ -72,6 +75,20 @@ export interface CanvasHost {
     writeDiagram(projectId: string, viewId: string, content: DiagramContent): Promise<number>;
     /* The tasks a chat gives the nodes it opens with `--task`, kept by the daemon outside the project. */
     tasks: TaskHost;
+    /* Reading and merging the worktrees of the project's repository; a host without git has none. */
+    worktrees?: WorktreeHost;
+}
+
+export interface WorktreeHost {
+    /* Every worktree of the repository a folder is in, with the work each holds. */
+    list(folder: string): Promise<Worktree[]>;
+    /* Everything a worktree holds over where it was made from, uncommitted and untracked files included. */
+    diff(path: string, base: string | undefined): Promise<GitDiffResult>;
+    /*
+     * Merges a worktree under the limits an agent is held to: its loose work committed first, only
+     * into a clean checkout, a conflict taken back and refused, and no agent in a turn stopped.
+     */
+    merge(payload: Omit<WorktreeMergePayload, 'actionId' | 'stopAgent' | 'commitFirst' | 'into'>): Promise<WorktreeMergeResult>;
 }
 
 export interface TaskHost {

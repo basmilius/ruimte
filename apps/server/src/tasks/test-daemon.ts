@@ -12,6 +12,9 @@ import { fakeCodex } from '../chat/fake-codex.ts';
 import { inProcess, type InProcessCli } from '../chat/fake-cli.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { Checkpoints, type CheckpointService } from '../git/checkpoints.ts';
+import { worktreeAgents } from '../git/worktree-agents.ts';
+import { worktreeHost } from '../git/worktree-host.ts';
+import { WorktreeMerge } from '../git/worktree-merge.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import { registerChatHandlers } from '../handlers/chat.ts';
 import { registerSessionHandlers } from '../handlers/session.ts';
@@ -208,6 +211,21 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
             worktrees ? worktrees.add(folder, branch, { madeBy: 'verb', projectId }) : Promise.reject(new Error('no worktrees here')),
         claimWorktree: async (folder, path, nodeId) => worktrees?.claim(folder, path, nodeId),
         removeWorktree: async (folder, path) => worktrees?.remove(folder, path),
+        ...(worktrees
+            ? {
+                  worktrees: worktreeHost(
+                      worktrees,
+                      new WorktreeMerge(
+                          worktrees,
+                          worktreeAgents({
+                              chats: () => chats.list(),
+                              sessions: () => sessions.list(),
+                              stopNode: (nodeId, reason) => endChildren.stopNode(nodeId, reason)
+                          })
+                      )
+                  )
+              }
+            : {}),
         depthOf: (nodeId) => lineage.depthOf(nodeId),
         openedCount: (callerId) => lineage.openedCount(callerId),
         recordMade: (record) => lineage.put(record),

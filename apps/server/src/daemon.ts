@@ -85,6 +85,7 @@ import { registerUsageHandlers } from './handlers/usage.ts';
 import { Checkpoints } from './git/checkpoints.ts';
 import { GitStatusWatcher } from './git/status-watcher.ts';
 import { worktreeAgents } from './git/worktree-agents.ts';
+import { worktreeHost } from './git/worktree-host.ts';
 import { WorktreeMerge } from './git/worktree-merge.ts';
 import { Worktrees } from './git/worktrees.ts';
 import { ProcessMonitor } from './processes/monitor.ts';
@@ -179,6 +180,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         sources: (targetId) =>
             withForkOrigin(targetId, projects.index.sourcesFor(targetId), {
                 forkedFrom: (id) => lineage.forkedFrom(id),
+                forksOf: (id) => lineage.forksOf(id),
                 locate: (id) => projects.index.locate(id),
                 titleFor: (id) => projects.index.titleFor(id)
             }),
@@ -318,6 +320,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     manager.isAgentGone = (sessionId) => processes.isAgentGone(sessionId);
 
     const worktrees = new Worktrees(config.home);
+    const merges = new WorktreeMerge(
+        worktrees,
+        worktreeAgents({ chats: () => chats.list(), sessions: () => manager.list(), stopNode: (nodeId, reason) => endChildren.stopNode(nodeId, reason) })
+    );
     const modes = {
         chatMode: (id: string) => chats.get(id)?.info.runtimeMode,
         launch: (id: string) => manager.get(id)?.launch,
@@ -341,6 +347,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         addWorktree: (folder: string, branch: string, projectId: string) => worktrees.add(folder, branch, { madeBy: 'verb', projectId }),
         claimWorktree: (folder: string, path: string, nodeId: string) => worktrees.claim(folder, path, nodeId),
         removeWorktree: (folder: string, path: string) => worktrees.remove(folder, path),
+        worktrees: worktreeHost(worktrees, merges),
         depthOf: (nodeId: string) => lineage.depthOf(nodeId),
         openedCount: (callerId: string) => lineage.openedCount(callerId),
         recordMade: (record: { projectId: string; nodeId: string; openedBy: string; depth: number; agent: boolean }) => lineage.put(record),
@@ -434,10 +441,6 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     });
     registerUsageHandlers(dispatcher, usage, limits);
     registerProcessHandlers(dispatcher, processes);
-    const merges = new WorktreeMerge(
-        worktrees,
-        worktreeAgents({ chats: () => chats.list(), sessions: () => manager.list(), stopNode: (nodeId, reason) => endChildren.stopNode(nodeId, reason) })
-    );
     registerGitHandlers(dispatcher, worktrees, merges, statuses, providers);
 
     // A TURN server that restarts under an allocation must not take the daemon with it.
