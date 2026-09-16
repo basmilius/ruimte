@@ -298,3 +298,9 @@ a blue dot, while attention remains orange. A new physical screenshot confirms t
 white compact timer, blue dot and corrected right alignment. The expanded screenshot
 shows independent elapsed durations of 0:27 and 1:06, with Review and the machine footer
 fully visible. Temporary test agents and their attention notifications were cleared.
+
+
+The subsequent compact-icon revision shows the terminal or AI-chat icon for exactly
+one active session. With multiple sessions it shows a blue loader icon while running
+or an orange circle-alert icon when any session needs attention. The minimal Island
+uses the same icon selection. The working timer remains white.

@@ -51,7 +51,8 @@ private struct ActivityCompactIndicator: View {
                 LucideIcon(agent.target == .chat ? .sparkles : .terminal, size: 16)
                     .foregroundStyle(presentation.color)
             } else {
-                Circle().fill(presentation.color).frame(width: 8, height: 8)
+                LucideIcon(presentation.statusIcon, size: 16)
+                    .foregroundStyle(presentation.color)
             }
         }
         .frame(width: 18, height: 18)
@@ -170,6 +171,10 @@ private struct ActivityPresentation {
         return state.agents?.first
     }
     var color: Color { stale ? .gray : state.phase == .done ? .green : waiting > 0 ? .orange : .activityBlue }
+    var statusIcon: LucideIconName {
+        if state.phase == .done { return .check }
+        return waiting > 0 ? .circleAlert : .loaderCircle
+    }
     var title: String {
         if stale { return "Waiting for an update" }
         if state.phase == .done { return "Work finished" }
