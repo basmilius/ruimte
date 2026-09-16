@@ -180,7 +180,15 @@ export const bootWindow = async (
     const last = readLastProject(storage);
     const known = last !== null && isRealMachine(last.endpointId) && useEndpoints.getState().endpoints.some((endpoint) => endpoint.id === last.endpointId);
     try {
-        return known ? await open(last.endpointId, last.projectId) : null;
+        if (!known) {
+            return null;
+        }
+        const outcome = await open(last.endpointId, last.projectId);
+        if (outcome === 'failed') {
+            const state = projectSwitch.state;
+            useWindow.getState().setBootFailure({ ...last, reason: state.kind === 'failed' ? state.reason : 'That project could not be opened' });
+        }
+        return outcome;
     } finally {
         useWindow.getState().setBooting(false);
     }

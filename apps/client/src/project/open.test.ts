@@ -189,7 +189,7 @@ describe('opening a project', () => {
 describe('the cold start', () => {
     beforeEach(() => {
         useEndpoints.setState({ endpoints: [endpoint('local'), endpoint('daemon-b')], activeId: 'local' });
-        useWindow.setState({ content: { kind: 'start' }, booting: true });
+        useWindow.setState({ content: { kind: 'start' }, booting: true, bootFailure: null });
     });
 
     test('nothing remembered goes to the start screen at once', async () => {
@@ -222,6 +222,8 @@ describe('the cold start', () => {
         finish('failed');
         expect(await booted).toBe('failed');
         expect(useWindow.getState().booting).toBe(false);
+        // Kept for the start screen, which puts it on top of Recent with a way to try again.
+        expect(useWindow.getState().bootFailure).toMatchObject({ endpointId: 'daemon-b', projectId: 'q1' });
     });
 
     test("the bare project id of the first versions was this machine's", async () => {

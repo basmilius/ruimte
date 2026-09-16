@@ -4,7 +4,7 @@ import type { ProjectSummary } from '@ruimte/contracts';
 import { useEndpoints, type Endpoint } from '../state/endpoints';
 import { useProjectList } from '../state/project-list';
 import { pool } from '../transport';
-import { listProjects, menuProjects, primeCachedLists, readCachedList, watchOpenLists, writeCachedList, type OpenListSource } from './list';
+import { listProjects, menuProjects, primeCachedLists, recentProjects, readCachedList, watchOpenLists, writeCachedList, type OpenListSource } from './list';
 
 const summary = (projectId: string, lastOpenedAt = 0, closedAt: number | null = null): ProjectSummary => ({
     projectId,
@@ -66,6 +66,28 @@ describe('the union of the machines that are known', () => {
         state.setProjects('daemon-b', [summary('q1')]);
         state.forgetProjects('daemon-b');
         expect(useProjectList.getState().projects.map((row) => row.endpointId)).toEqual(['daemon-a']);
+    });
+});
+
+describe('the recent list of the start screen', () => {
+    const endpoints = [endpoint('local', 'This machine'), endpoint('daemon-b', 'Work laptop')];
+
+    test('open and closed projects in one list, on whichever came last: opening or closing', () => {
+        const rows = [
+            { endpointId: 'local', summary: summary('p1', 30) },
+            { endpointId: 'daemon-b', summary: summary('q1', 10, 300) },
+            { endpointId: 'local', summary: summary('p2', 200, 50) },
+            { endpointId: 'daemon-c', summary: summary('r1', 900) }
+        ];
+        expect(recentProjects(rows, endpoints, []).map((row) => row.summary.projectId)).toEqual(['q1', 'p2', 'p1']);
+    });
+
+    test('a project closed a moment ago is on top, one click from coming back', () => {
+        const rows = [
+            { endpointId: 'local', summary: summary('p1', 500) },
+            { endpointId: 'local', summary: summary('p2', 100, 600) }
+        ];
+        expect(recentProjects(rows, endpoints, ['local'])[0]).toMatchObject({ summary: { projectId: 'p2' }, connected: true });
     });
 });
 

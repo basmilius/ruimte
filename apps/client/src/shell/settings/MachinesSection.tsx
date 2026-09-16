@@ -272,7 +272,18 @@ function AccountRows() {
  * per machine and the list is what the pane is for. The dialog is about "a machine" rather than "a
  * pairing link", which leaves room for a second way in (a code for a phone) without renaming anything.
  */
-function AddMachineDialog({ open, onOpenChange, onLinkWithCode }: { open: boolean; onOpenChange(open: boolean): void; onLinkWithCode(): void }) {
+export function AddMachineDialog({
+    open,
+    onOpenChange,
+    onLinkWithCode,
+    nested = true
+}: {
+    open: boolean;
+    onOpenChange(open: boolean): void;
+    onLinkWithCode(): void;
+    /* Over the settings, which is where it usually opens; the start screen opens it on its own. */
+    nested?: boolean;
+}) {
     const [link, setLink] = useState('');
     const [busy, setBusy] = useState(false);
     const [failure, setFailure] = useState<string | null>(null);
@@ -302,8 +313,8 @@ function AddMachineDialog({ open, onOpenChange, onLinkWithCode }: { open: boolea
     return (
         <Dialog.Root open={open} onOpenChange={onOpenChange}>
             <Dialog.Portal>
-                <Dialog.Backdrop className="dialog-backdrop dialog-backdrop-nested" forceRender />
-                <Dialog.Popup className="dialog-popup dialog-popup-nested w-[460px] p-5">
+                <Dialog.Backdrop className={clsx('dialog-backdrop', nested && 'dialog-backdrop-nested')} forceRender />
+                <Dialog.Popup className={clsx('dialog-popup w-[460px] p-5', nested && 'dialog-popup-nested')}>
                     <Dialog.Title className="text-base font-semibold text-text">Add a machine</Dialog.Title>
                     <Dialog.Description className="mt-1 text-xs text-text-muted">Paste a pairing link from the other machine.</Dialog.Description>
                     <input

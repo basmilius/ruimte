@@ -1,6 +1,5 @@
 import type { Machine } from '@ruimte/pulsar';
 import type { AccountStatus } from '@/pulsar/account';
-import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 
 /*
  * The web client at `station.ruimte.app`, built with `vite build --mode station`. Its origin serves
@@ -14,17 +13,17 @@ export type StationBoot = 'loading' | 'sign-in' | 'signing-in' | 'machines';
 
 export interface StationBootInput {
     station: boolean;
-    activeEndpointId: string;
     accountStatus: AccountStatus;
     machines: Machine[] | null;
 }
 
 /*
- * What the main column of the web client shows while none of the person's machines is picked, or null
- * when the ordinary column applies: a machine is picked, or this is not the web client.
+ * What the start screen of the web client leads with, or null for the desktop order. Without a machine
+ * of its own the web client can do nothing before a machine of the account is there, so signing in
+ * and then those machines come first.
  */
 export const stationBoot = (input: StationBootInput): StationBoot | null => {
-    if (!input.station || input.activeEndpointId !== LOCAL_ENDPOINT_ID) {
+    if (!input.station) {
         return null;
     }
     switch (input.accountStatus) {

@@ -6,7 +6,6 @@ const machine: Machine = { id: 'studio', name: 'Studio', icon: null, publicKey: 
 
 const input = (patch: Partial<StationBootInput> = {}): StationBootInput => ({
     station: true,
-    activeEndpointId: 'local',
     accountStatus: 'signed-out',
     machines: null,
     ...patch
@@ -26,8 +25,7 @@ describe('the web boot state', () => {
         expect(stationBoot(input({ accountStatus: 'signed-in', machines: [machine] }))).toBe('machines');
     });
 
-    test('a machine that is picked, or a build that is not the web client, draws the ordinary column', () => {
-        expect(stationBoot(input({ activeEndpointId: 'studio', accountStatus: 'signed-in', machines: [machine] }))).toBeNull();
+    test('a build that is not the web client keeps the desktop order', () => {
         expect(stationBoot(input({ station: false }))).toBeNull();
     });
 });
