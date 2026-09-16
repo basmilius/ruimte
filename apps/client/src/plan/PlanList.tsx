@@ -32,6 +32,7 @@ import {
     planRows,
     stateLabel,
     stepMarkdown,
+    stepSetBy,
     TEST_OUTCOMES,
     toggledState,
     type PlanFilter,
@@ -139,7 +140,7 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
     };
 
     return (
-        <div className="flex h-full flex-col">
+        <div className="flex min-h-0 grow flex-col">
             <div className="flex shrink-0 flex-col gap-1.5 border-b border-border px-4 pt-3 pb-3">
                 <div className="flex min-w-0 items-center gap-2 text-base font-medium text-text">
                     <Icon icon={ListChecks} size={16} className="shrink-0 text-text-muted" />
@@ -274,7 +275,7 @@ function PlanRowView({ row, context }: { row: PlanRow; context: StepContext }) {
     if (row.type === 'text') {
         return (
             <div className="mx-4 my-2 border-l-2 border-border pl-3 select-text">
-                <div className="text-sm font-medium text-text">{row.item.title}</div>
+                <div className="text-sm font-medium wrap-anywhere text-text">{row.item.title}</div>
                 {row.item.description && <Markdown text={row.item.description} fileLinks={false} />}
             </div>
         );
@@ -290,6 +291,7 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
     const finished = row.state === 'done' || row.state === 'skipped';
     const stopped = row.state === 'active' && !parent && !context.working;
     const editing = context.editingNote === step.id;
+    const setBy = stepSetBy(step, row.state, context.agent, step.at ? whenText(step.at) : '');
 
     return (
         <ContextMenu.Root>
@@ -302,10 +304,10 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
                     {parent && <Caret collapsed={row.collapsed} onToggle={() => context.toggle(step.id)} label={row.collapsed ? 'Expand' : 'Collapse'} />}
                 </span>
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center">
-                    <StepMark row={row} context={context} locked={locked} />
+                    <StepMark row={row} context={context} locked={locked} setBy={setBy.tooltip} />
                 </span>
                 <div className="min-w-0 grow">
-                    <div className={clsx('text-sm select-text', finished ? 'text-text-muted' : 'text-text')}>{step.title}</div>
+                    <div className={clsx('text-sm wrap-anywhere select-text', finished ? 'text-text-muted' : 'text-text')}>{step.title}</div>
                     {stopped && <div className="text-xs text-text-muted">{context.agent} stopped here</div>}
                     {step.description && (
                         <div className="text-text-muted select-text">
@@ -327,7 +329,7 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
                             <button
                                 type="button"
                                 className={clsx(
-                                    'block w-full text-left text-xs whitespace-pre-wrap select-text',
+                                    'block w-full text-left text-xs whitespace-pre-wrap wrap-anywhere select-text',
                                     row.state === 'failed' ? 'text-status-error' : 'text-text-muted'
                                 )}
                                 onClick={() => context.setEditingNote(step.id)}
@@ -337,7 +339,7 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
                         )
                     )}
                 </div>
-                <StepAside row={row} context={context} locked={locked} />
+                <StepAside row={row} context={context} locked={locked} setBy={setBy} />
             </ContextMenu.Trigger>
             <ContextMenu.Portal>
                 <ContextMenu.Positioner className="z-(--z-popup)">
@@ -382,8 +384,18 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
     );
 }
 
-/* What stands at the end of a step's row: the count of a parent, who set a step and when, and the lock of one only the agent sets. */
-function StepAside({ row, context, locked }: { row: Extract<PlanRow, { type: 'step' }>; context: StepContext; locked: boolean }) {
+/* What stands at the end of a step's row: the count of a parent, when a person set a step, and the lock of one only the agent sets. */
+function StepAside({
+    row,
+    context,
+    locked,
+    setBy
+}: {
+    row: Extract<PlanRow, { type: 'step' }>;
+    context: StepContext;
+    locked: boolean;
+    setBy: ReturnType<typeof stepSetBy>;
+}) {
     const { agent } = context;
     if (row.progress !== null) {
         return (
@@ -393,16 +405,16 @@ function StepAside({ row, context, locked }: { row: Extract<PlanRow, { type: 'st
             </span>
         );
     }
-    const who = row.item.by === 'person' ? 'you' : row.item.by === 'agent' ? agent : null;
-    const when = row.item.at ? whenText(row.item.at) : '';
+    if (setBy.text === null && !locked) {
+        return null;
+    }
     return (
         <span className="flex h-5 shrink-0 items-center gap-1 text-xs whitespace-nowrap text-text-faint">
-            {who && row.state !== 'open' && <span>{[who, when].filter(Boolean).join(' · ')}</span>}
+            {setBy.text && <span>{setBy.text}</span>}
             {locked && (
-                <Tooltip label={`Only ${agent} checks this step`}>
-                    <span className="inline-flex items-center gap-1">
+                <Tooltip label={[`Only ${agent} checks this step`, setBy.tooltip].filter(Boolean).join('. ')}>
+                    <span className="inline-flex">
                         <Icon icon={Lock} size={12} />
-                        {!who && agent}
                     </span>
                 </Tooltip>
             )}
@@ -410,7 +422,8 @@ function StepAside({ row, context, locked }: { row: Extract<PlanRow, { type: 'st
     );
 }
 
-function StepMark({ row, context, locked }: { row: Extract<PlanRow, { type: 'step' }>; context: StepContext; locked: boolean }) {
+/* `setBy` goes in the mark's tooltip only while nothing else in the row carries it; a locked step says it on its lock. */
+function StepMark({ row, context, locked, setBy }: { row: Extract<PlanRow, { type: 'step' }>; context: StepContext; locked: boolean; setBy: string | null }) {
     const { plan } = context;
     const state = row.state;
     // A parent has no state of its own to set; its count at the end of the row says how far it is.
@@ -435,7 +448,9 @@ function StepMark({ row, context, locked }: { row: Extract<PlanRow, { type: 'ste
     if (plan.meta.kind === 'steps') {
         const next = toggledState(state);
         return (
-            <Tooltip label={stopped ? `${context.agent} stopped here` : `Mark as ${stateLabel('steps', next).toLowerCase()}`}>
+            <Tooltip
+                label={stopped ? `${context.agent} stopped here` : [setBy, `Mark as ${stateLabel('steps', next).toLowerCase()}`].filter(Boolean).join('. ')}
+            >
                 <button
                     type="button"
                     aria-label={label}
@@ -449,7 +464,7 @@ function StepMark({ row, context, locked }: { row: Extract<PlanRow, { type: 'ste
     }
     return (
         <Menu.Root>
-            <Tooltip label={stopped ? `${context.agent} stopped here` : label}>
+            <Tooltip label={stopped ? `${context.agent} stopped here` : [label, setBy].filter(Boolean).join('. ')}>
                 <Menu.Trigger
                     aria-label={label}
                     className="grid h-5 w-5 place-items-center rounded-full hover:bg-surface-hover data-[popup-open]:bg-surface-active"

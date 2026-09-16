@@ -134,6 +134,23 @@ export const agentName = (provider: AgentKind | string | null | undefined): stri
 };
 
 /*
+ * Who set a step and when. A person's short line stays in the row; an agent's name only goes in a
+ * tooltip, so a long title keeps the width of the row. An open step says nothing.
+ */
+export const stepSetBy = (step: Pick<PlanStep, 'by'>, state: PlanStepState, agent: string, when: string): { text: string | null; tooltip: string | null } => {
+    if (state === 'open') {
+        return { text: null, tooltip: null };
+    }
+    if (step.by === 'person') {
+        return { text: when ? `you · ${when}` : 'you', tooltip: null };
+    }
+    if (step.by === 'agent') {
+        return { text: null, tooltip: when ? `${agent} set it at ${when}` : `${agent} set it` };
+    }
+    return { text: null, tooltip: null };
+};
+
+/*
  * What "Send results to chat" puts in the prompt: every failed and blocked step with its note, under
  * the plan's title. Null when there is nothing to report.
  */

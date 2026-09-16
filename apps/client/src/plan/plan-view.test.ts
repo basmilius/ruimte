@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { Plan } from '@ruimte/contracts';
-import { hasFailedStep, planCounter, planRows, resultsText, toggledState, type PlanViewOptions } from '@/plan/plan-view';
+import { hasFailedStep, planCounter, planRows, resultsText, stepSetBy, toggledState, type PlanViewOptions } from '@/plan/plan-view';
 
 const plan: Plan = {
     id: 'plan-1',
@@ -95,6 +95,14 @@ describe('what the plan says in a line', () => {
         expect(resultsText(plan)).toBe(
             'Results of the plan "Test the split placement":\n\nFailed:\n- Focus stays: Focus jumped to the first column.\n\nBlocked:\n- Whole pixels: No display'
         );
+    });
+
+    test('a person keeps a short line in the row, an agent only a tooltip', () => {
+        expect(stepSetBy({ by: 'person' }, 'done', 'Claude', '14:02')).toEqual({ text: 'you · 14:02', tooltip: null });
+        expect(stepSetBy({ by: 'agent' }, 'done', 'Claude', '19:40')).toEqual({ text: null, tooltip: 'Claude set it at 19:40' });
+        expect(stepSetBy({ by: 'agent' }, 'failed', 'Claude', '')).toEqual({ text: null, tooltip: 'Claude set it' });
+        expect(stepSetBy({ by: 'agent' }, 'open', 'Claude', '19:40')).toEqual({ text: null, tooltip: null });
+        expect(stepSetBy({}, 'done', 'Claude', '19:40')).toEqual({ text: null, tooltip: null });
     });
 
     test('no results when nothing failed or is blocked', () => {
