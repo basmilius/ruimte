@@ -1,5 +1,14 @@
 import { beforeEach, expect, test } from 'bun:test';
-import { agentsEndedWith, askBeforeEndingAgents, askBeforeStoppingTask, endsAgentsWarning, stopsTaskWarning, useEndingAgents } from '@/agents/end-children';
+import {
+    agentsEndedWith,
+    askBeforeEndingAgents,
+    askBeforeStoppingSubagents,
+    askBeforeStoppingTask,
+    endsAgentsWarning,
+    stopsSubagentsWarning,
+    stopsTaskWarning,
+    useEndingAgents
+} from '@/agents/end-children';
 
 const machine = (children: Record<string, string[]>, failing = false) => ({
     request: async (_type: string, payload: { nodeId: string }) => {
@@ -53,5 +62,21 @@ test('stopping a task always asks, and counts the agents its node opened', async
     );
     expect(stopsTaskWarning(2)).toBe(
         'Ends the agent working on this task and cancels the task without waking the chat that gave it. Its node stays on the canvas. Also ends the 2 agents it opened. Their nodes stay on the canvas with what they did so far.'
+    );
+});
+
+test('stopping a turn with its sub-agents runs at once when the chat opened no agent, and asks with the count when it did', async () => {
+    const runs: string[] = [];
+    await askBeforeStoppingSubagents(machine({}) as never, 'chat', () => runs.push('now'));
+    expect(runs).toEqual(['now']);
+    expect(useEndingAgents.getState().pending).toBeNull();
+
+    await askBeforeStoppingSubagents(machine({ chat: ['child-a', 'child-b'] }) as never, 'chat', () => runs.push('asked'));
+    expect(runs).toEqual(['now']);
+    expect(useEndingAgents.getState().pending).toMatchObject({ what: 'the turn and its sub-agents', agents: 2, action: 'stop-subagents' });
+    useEndingAgents.getState().pending?.run();
+    expect(runs).toEqual(['now', 'asked']);
+    expect(stopsSubagentsWarning(2)).toBe(
+        "Stops the turn and marks the chat's own sub-agents as stopped. Also ends the 2 agents it opened. Their nodes stay on the canvas with what they did so far."
     );
 });

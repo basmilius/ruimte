@@ -6,7 +6,7 @@ export interface PendingEnd {
     what: string;
     agents: number;
     /* A stop keeps the node where it is; without one the question is about a delete. */
-    action?: 'delete' | 'stop';
+    action?: 'delete' | 'stop' | 'stop-subagents';
     run(): void;
 }
 
@@ -20,6 +20,9 @@ export const endsAgentsWarning = (agents: number): string =>
 /* What stopping a task from the chat that gave it says, with the agents the task's node opened counted after it. */
 export const stopsTaskWarning = (agents: number): string =>
     `Ends the agent working on this task and cancels the task without waking the chat that gave it. Its node stays on the canvas.${agents === 0 ? '' : ` ${endsAgentsWarning(agents)}`}`;
+
+/* What stopping a chat's turn together with its sub-agents says, once it ends agents the chat opened. */
+export const stopsSubagentsWarning = (agents: number): string => `Stops the turn and marks the chat's own sub-agents as stopped. ${endsAgentsWarning(agents)}`;
 
 /*
  * The live agents these nodes opened, counted once however many of them opened the same one. A
@@ -61,4 +64,14 @@ export const askBeforeEndingAgents = async (
 export const askBeforeStoppingTask = async (transport: Pick<Transport, 'request'> | null, childId: string, what: string, run: () => void): Promise<void> => {
     const agents = await agentsEndedWith(transport, [childId]);
     useEndingAgents.setState({ pending: { what, agents, action: 'stop', run } });
+};
+
+/* Stops a chat's turn with its sub-agents at once when that ends no agent the chat opened, and asks first when it does. */
+export const askBeforeStoppingSubagents = async (transport: Pick<Transport, 'request'> | null, chatId: string, run: () => void): Promise<void> => {
+    const agents = await agentsEndedWith(transport, [chatId]);
+    if (agents === 0) {
+        run();
+        return;
+    }
+    useEndingAgents.setState({ pending: { what: 'the turn and its sub-agents', agents, action: 'stop-subagents', run } });
 };

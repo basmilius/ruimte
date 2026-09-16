@@ -171,8 +171,9 @@ export class ChatClient {
         await this.transport.request('chat.clear', { chatId, ...(force ? { force: true } : {}) });
     }
 
-    async cancel(chatId: string): Promise<void> {
-        await this.transport.request('chat.cancel', { chatId });
+    /* Stops the running turn; `subagents` also ends the agents the chat opened and marks its CLI's own sub-agents stopped. */
+    async cancel(chatId: string, subagents = false): Promise<void> {
+        await this.transport.request('chat.cancel', { chatId, ...(subagents ? { subagents: true } : {}) });
     }
 
     /* What a turn changed against its checkpoint, for a card whose turn carries no diff yet. */

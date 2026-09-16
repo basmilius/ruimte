@@ -249,6 +249,96 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
     });
 });
 
+/* A background subagent of the CLI's own that still runs in the lead's thread. */
+const nativeRunning = (daemon: TestDaemon, toolUseId: string): void => {
+    daemon.chats.get('chat-lead')!.thread.upsert({
+        id: `1:${toolUseId}`,
+        kind: 'subagent',
+        createdAt: 1,
+        turnId: null,
+        toolUseId,
+        description: 'Review the branch',
+        subagentType: 'general-purpose',
+        prompt: null,
+        background: true,
+        status: 'running',
+        startedAt: 1,
+        finishedAt: null,
+        summary: null,
+        result: null,
+        usage: null,
+        lastTool: null,
+        itemsTruncated: false
+    });
+};
+
+describe("stopping a chat's turn together with its sub-agents", () => {
+    test('ends every agent it opened without waking it, marks its own subagents stopped and keeps the chat', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadWorking(daemon);
+        const { chat, terminal } = await twoRunningChildren(daemon);
+        nativeRunning(daemon, 'toolu_bg');
+
+        expect(await daemon.request('chat.cancel', { chatId: 'chat-lead', subagents: true })).toMatchObject({ ok: true });
+        await daemon.until(() => daemon.chats.get('chat-lead')?.info.activeTurnId === null);
+        await daemon.worker.settled();
+        await daemon.adapter.forSession(terminal).exited;
+
+        expect(daemon.chats.get(chat)?.running).toBe(false);
+        expect(daemon.sessions.get(terminal)?.exited).toBe(true);
+        expect(daemon.tasks.ofParent('chat-lead').map((task) => [task.status, task.wake])).toEqual([
+            ['cancelled', 'none'],
+            ['cancelled', 'none']
+        ]);
+        const lead = daemon.chats.get('chat-lead')!;
+        expect(lead.thread.get('1:toolu_bg')).toMatchObject({ status: 'failed', finishedAt: expect.any(Number) });
+        expect(notesOf(daemon, 'chat-lead').some((text) => text.startsWith('"Review the branch" was marked as stopped.'))).toBe(true);
+        expect(turnsOf(daemon, 'chat-lead').filter((turn) => turn.taskIds !== undefined)).toEqual([]);
+        expect(daemon.outbox.list()).toEqual([]);
+    });
+
+    test('a plain stop leaves the agents it opened and its own subagents running', async () => {
+        const daemon = await boot();
+        daemon.worker.start();
+        await leadWorking(daemon);
+        const { chat } = await twoRunningChildren(daemon);
+        nativeRunning(daemon, 'toolu_bg');
+
+        expect(await daemon.request('chat.cancel', { chatId: 'chat-lead' })).toMatchObject({ ok: true });
+        await daemon.until(() => daemon.chats.get('chat-lead')?.info.activeTurnId === null);
+        await daemon.worker.settled();
+
+        expect(daemon.outbox.list().some((entry) => entry.kind === 'end-children')).toBe(false);
+        expect(daemon.lineage.endedAt(chat)).toBeNull();
+        expect(daemon.chats.get('chat-lead')?.thread.get('1:toolu_bg')).toMatchObject({ status: 'running' });
+    });
+
+    test('a restart right after the stop still ends the agents it opened', async () => {
+        const before = await boot();
+        before.worker.start();
+        await leadWorking(before);
+        const { chat, terminal } = await twoRunningChildren(before);
+        before.worker.stop();
+
+        expect(await before.request('chat.cancel', { chatId: 'chat-lead', subagents: true })).toMatchObject({ ok: true });
+        expect(before.outbox.list().map((entry) => entry.kind)).toEqual(['end-children']);
+        await before.stop();
+        running = running.filter((daemon) => daemon !== before);
+
+        const after = await boot();
+        after.worker.start();
+        await after.chats.recoverInterrupted();
+        await after.worker.settled();
+
+        expect(after.chats.get(chat)?.running).toBe(false);
+        expect(after.sessions.get(terminal)).toBeUndefined();
+        expect(after.lineage.endedAt(chat)).not.toBeNull();
+        expect(after.lineage.endedAt(terminal)).not.toBeNull();
+        expect(after.outbox.list()).toEqual([]);
+    });
+});
+
 describe('stopping one task from the list of the chat that gave it', () => {
     test('ends the child as a stop of its node would, cancels its task without waking the lead, and leaves the sibling running', async () => {
         const daemon = await boot();

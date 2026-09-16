@@ -222,3 +222,13 @@ export const entryTimeOf = (item: ChatSubagentItem, task: Task | null, now: numb
     }
     return sameDay(finishedAt, now) ? formatClock(finishedAt) : `${formatDate(finishedAt)} ${formatClock(finishedAt)}`;
 };
+
+/*
+ * What the composer's Stop does. A plain click stops the turn alone, as it always has; Shift also ends
+ * every agent the chat opened and marks its CLI's own sub-agents stopped, which a turn alone leaves running.
+ */
+export type ComposerStop = 'turn' | 'turn-and-subagents';
+
+export const composerStopOf = (shiftKey: boolean): ComposerStop => (shiftKey ? 'turn-and-subagents' : 'turn');
+
+export const COMPOSER_STOP_LABEL = 'Stop, Shift-click to also stop its sub-agents';

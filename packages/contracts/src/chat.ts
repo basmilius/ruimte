@@ -412,6 +412,10 @@ export type ChatTargetPayload = z.infer<typeof ChatTargetPayloadSchema>;
 export const ChatClearPayloadSchema = ChatTargetPayloadSchema.extend({ force: z.boolean().optional() });
 export type ChatClearPayload = z.infer<typeof ChatClearPayloadSchema>;
 
+// With `subagents` the stop also ends every agent the chat opened and marks its CLI's own subagents stopped; the chat stays.
+export const ChatCancelPayloadSchema = ChatTargetPayloadSchema.extend({ subagents: z.boolean().optional() });
+export type ChatCancelPayload = z.infer<typeof ChatCancelPayloadSchema>;
+
 export const ChatAttachPayloadSchema = ChatTargetPayloadSchema.extend({
     historyLimit: z.number().int().min(1).max(100).optional(),
     // The last seq this client saw; honored when the daemon still holds everything after it.

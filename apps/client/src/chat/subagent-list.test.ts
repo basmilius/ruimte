@@ -3,6 +3,8 @@ import { CircleCheck, CircleSlash, CircleX, LoaderCircle } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem, ChatToolItem, Task } from '@ruimte/contracts';
 import { formatClock, formatDate } from '@/shell/usage/format';
 import {
+    COMPOSER_STOP_LABEL,
+    composerStopOf,
     entryTimeOf,
     formatRunningFor,
     latestPreview,
@@ -269,5 +271,13 @@ describe('the time on the right of an entry', () => {
         expect(entryTimeOf(row, task, noon)).toBe('1m 5s');
         const settledAt = noon - 30_000;
         expect(entryTimeOf({ ...row, status: 'failed', finishedAt: null }, { ...task, settledAt } as Task, noon)).toBe(formatClock(settledAt));
+    });
+});
+
+describe("the composer's Stop", () => {
+    test('stops the turn alone on a plain click and its sub-agents too with Shift, and says so', () => {
+        expect(composerStopOf(false)).toBe('turn');
+        expect(composerStopOf(true)).toBe('turn-and-subagents');
+        expect(COMPOSER_STOP_LABEL).toBe('Stop, Shift-click to also stop its sub-agents');
     });
 });

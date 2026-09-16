@@ -558,8 +558,13 @@ export class ChatManager {
         await Promise.all([this.persistNow(chatId, true), this.attachments.removeAll(chatId)]);
     }
 
-    cancel(chatId: string): void {
-        this.require(chatId).cancel();
+    /* Stops the running turn; with `subagents` also marks the CLI's own subagents stopped, which that turn no longer waits on. */
+    cancel(chatId: string, subagents = false): void {
+        const session = this.require(chatId);
+        session.cancel();
+        if (subagents) {
+            session.markSubagentsStopped();
+        }
     }
 
     /* What a turn changed against the tree it started from; null when it has no checkpoint. */

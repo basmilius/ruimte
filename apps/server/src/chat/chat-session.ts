@@ -613,18 +613,34 @@ export class ChatSession {
         if (row?.status !== 'running') {
             return;
         }
-        this.orphans.delete(toolUseId);
+        this.markStopped([row]);
+    }
+
+    /* Marks every running subagent of the CLI's own as stopped, for a person stopping the turn together with them. */
+    markSubagentsStopped(): void {
+        this.markStopped(
+            this.thread.list().filter((item): item is ChatSubagentItem => item.kind === 'subagent' && item.status === 'running' && item.origin !== 'ruimte')
+        );
+    }
+
+    private markStopped(rows: readonly ChatSubagentItem[]): void {
+        if (rows.length === 0) {
+            return;
+        }
         const now = Date.now();
-        const name = row.description || row.subagentType || 'Sub-agent';
+        for (const row of rows) {
+            this.orphans.delete(row.toolUseId);
+        }
+        const names = rows.map((row) => `"${row.description || row.subagentType || 'Sub-agent'}"`).join(', ');
         this.emit([
-            this.thread.upsert({ ...row, status: 'failed', finishedAt: now }),
+            ...rows.map((row) => this.thread.upsert({ ...row, status: 'failed', finishedAt: now })),
             this.thread.upsert({
                 id: newId('note'),
                 kind: 'note',
                 createdAt: now,
                 turnId: null,
                 level: 'info',
-                text: `"${name}" was marked as stopped. ${this.options.provider.name} cannot stop one sub-agent on its own, so it may keep working until the chat's process ends.`
+                text: `${names} ${rows.length === 1 ? 'was' : 'were'} marked as stopped. ${this.options.provider.name} cannot stop one sub-agent on its own, so ${rows.length === 1 ? 'it' : 'they'} may keep working until the chat's process ends.`
             })
         ]);
         this.options.persist();

@@ -90,8 +90,12 @@ export const registerChatHandlers = (
     dispatcher.register('chat.turnDiff', (payload) => translate(async () => ({ diff: await manager.turnDiff(payload.chatId, payload.turnId) })));
 
     dispatcher.register('chat.cancel', (payload) =>
-        translate(() => {
-            manager.cancel(payload.chatId);
+        translate(async () => {
+            // Owed on disk before the turn stops, so a restart in between still ends the agents it opened.
+            if (payload.subagents === true && manager.get(payload.chatId)) {
+                await beforeKill?.(payload.chatId);
+            }
+            manager.cancel(payload.chatId, payload.subagents === true);
             return {};
         })
     );

@@ -7,6 +7,7 @@ import { EditorView } from '@codemirror/view';
 import clsx from 'clsx';
 import { ArrowUp, ChevronDown, Clock, FastForward, Paperclip, Square, SquareSlash, X, Zap } from 'lucide-react';
 import type { AgentKind, ChatApprovalItem, ChatInfo, ChatQuestionItem, ChatSkill, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import { askBeforeStoppingSubagents } from '@/agents/end-children';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { checkAttachmentLimits, filesOf, formatBytes, isImageAttachment, readAttachments, uploadBytes } from '@/chat/attachments';
 import { EMPTY_DRAFT, isEmptyDraft, readDraft, writeDraft, type ChatDraft } from '@/chat/drafts';
@@ -21,6 +22,7 @@ import {
     type MentionQuery,
     type TextRange
 } from '@/chat/mentions';
+import { COMPOSER_STOP_LABEL, composerStopOf } from '@/chat/subagent-list';
 import { PROMPT_MAX_CHARS, pasteBecomesAttachment, pastedTextName, promptGuard, usableSlashCommands } from '@/chat/guards';
 import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferences';
 import { STASH_SHORTCUT, stashDraft, type StashedPrompt, useStash } from '@/chat/stash';
@@ -34,9 +36,10 @@ import { ModelPicker, ModePicker, OptionsPicker, StashPicker } from '@/chat/ui/P
 import { UploadThumb } from '@/chat/ui/UploadThumb';
 import { isApplePlatform } from '@/desktop/bridge';
 import { useChatRow } from '@/state/chats';
+import { useEndpointId } from '@/state/keys';
 import { useProviders } from '@/state/providers';
 import { isShellShortcut } from '@/terminal/keymap';
-import { TransportError } from '@/transport';
+import { TransportError, transportFor } from '@/transport';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP, FLOAT, MENU_LABEL } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
@@ -118,6 +121,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     const [dragging, setDragging] = useState(false);
     const [modelPickerOpen, setModelPickerOpen] = useState(false);
     const [confirmClear, setConfirmClear] = useState(false);
+    const endpointId = useEndpointId();
     const inputRef = useRef<ComposerInputHandle>(null);
     // A paste event says nothing about the keys behind it, so the key that asked for text inline is remembered here.
     const pasteInlineRef = useRef(false);
@@ -283,6 +287,14 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
             return;
         }
         configure({ selection });
+    };
+
+    const stop = (shiftKey: boolean): void => {
+        if (composerStopOf(shiftKey) === 'turn') {
+            void chatClient.cancel(chatId).catch(() => undefined);
+            return;
+        }
+        void askBeforeStoppingSubagents(transportFor(endpointId), chatId, () => void chatClient.cancel(chatId, true).catch(() => undefined));
     };
 
     /* The daemon decides whether a turn is in the way; only its refusal asks the person first. */
@@ -859,10 +871,10 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                     <span className="grow" />
                     <ContextMeter usage={info.usage} disabled={busy || disabled} onCompact={() => void chatClient.compact(chatId).catch(() => undefined)} />
                     {busy && (
-                        <Tooltip label="Stop" name>
+                        <Tooltip label={COMPOSER_STOP_LABEL} name>
                             <button
                                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-status-error text-accent-text"
-                                onClick={() => void chatClient.cancel(chatId).catch(() => undefined)}
+                                onClick={(event) => stop(event.shiftKey)}
                             >
                                 <Icon icon={Square} size={16} />
                             </button>
