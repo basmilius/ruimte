@@ -2363,9 +2363,14 @@ code will not say on its own.
   child that fails and a wake that is parked do deserve one, as `attention`.
 - A subagent's conversation opens in the chat's own place, read-only, from a row in the thread or
   from the sub-agents button in the chat's bar (the node's header, the view's toolbar or its cell's),
-  which lists the CLI's own subagents and the tasks the chat gave. The bar then carries a breadcrumb
-  from the main agent down to a grandchild with a close beside it, Escape goes one level up before it
-  leaves the node or the view, and the composer is gone until the main agent is back. Which one is
+  which puts a list of the CLI's own subagents and the tasks the chat gave in that same place: the
+  running ones on top and the rest (done, failed, cancelled) under Done, each with its status word
+  and the latest thing it did (`chat/subagent-list.ts`: the work the parent's thread kept, else the
+  newest page of `chat.subagent` held while the entry is running, else the report). The bar then
+  carries a breadcrumb that opens with the chat's own title (the way back to the main agent), then
+  Sub-agents when the list was the way in, down to a grandchild, with a close beside it; Escape goes
+  one level up before it leaves the node or the view, and the composer is gone until the main agent
+  is back. Which one is
   shown is held per `${endpointId}:${chatId}` for the page's life (`chat/subagent-view.ts`) and never
   kept: a look into a subagent is a moment, not a place. The side panel it started as went, because
   it put the conversation beside a chat other than the one it belonged to. It grows while it is open (a counted `fs.watch` for Claude,
