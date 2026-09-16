@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Worktrees samenvoegen en opruimen</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h4 { font-size: 16px; margin: 20px 0 8px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .ref { fill: var(--panel); stroke: var(--reference); stroke-dasharray: 5 4; }
+.diagram .edge { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .edge.soft { stroke: var(--reference); stroke-dasharray: 5 4; }
+.diagram .arrow { fill: var(--accent); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+.accept { font-size: 15px; color: var(--muted); }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 13px; white-space: pre-wrap; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+.question { padding-top: 20px; border-top: 1px solid var(--line); margin-top: 20px; }
+.question h3 { margin-top: 0; }
+.question .options { padding-left: 0; list-style: none; }
+.question .options li { padding-left: 28px; position: relative; }
+.question .options li::before { content: attr(data-option); position: absolute; left: 0; color: var(--accent); font-weight: 600; }
+.advice { padding: 12px 16px; background: var(--highlight); border-radius: 8px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  .recommendation, .panel, .badge, .advice { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#kort">Naar de samenvatting</a>
+<header>
+  <p class="eyebrow">RUIMTE / ONTWERP / 16 SEPTEMBER 2026</p>
+  <h1>Worktrees samenvoegen en opruimen vanuit de app</h1>
+  <p class="intro">Roadmap-item 10 in <code>docs/NEXT.md</code>. <code>agent --worktree</code> en <code>team --worktree</code> laten per rol een git worktree achter onder <code>$RUIMTE_HOME/worktrees</code>, op een eigen branch, en niets in de app kan die bekijken, samenvoegen of weghalen. Dit ontwerp legt vast wat een persoon ermee kan doen en waar, hoe werk nooit stil verloren gaat, wat een agent ermee mag, welke requests en events erbij komen en in welke fasen het gebouwd wordt. Het bouwt op wat er staat: <code>Worktrees</code>, de git-acties, het git-paneel, de lineage en de outbox.</p>
+  <p class="status">Ontwerp, tegen <code>2c83d790</code>; nog geen code geschreven</p>
+  <p class="caption">Bronnen: <code>CLAUDE.md</code>, <code>docs/NEXT.md</code>, <code>apps/server/README.md</code>, de code van de daemon (<code>src/git</code>, <code>src/canvas</code>, <code>src/outbox</code>, <code>src/agents/lineage.ts</code>), de client (<code>shell/panels</code>, <code>canvas/NodeMenu.tsx</code>, <code>state/git-target.ts</code>) en de iOS-app (<code>GitPage.swift</code>), plus een echte testrun van <code>team --task --worktree</code>. <span class="badge confirmed">geverifieerd</span> staat bij wat vandaag tegen code is gelegd, <span class="badge warning">afgeleid</span> bij wat uit gedrag van git of uit namen volgt en pas in de bouwfase hard wordt.</p>
+  <nav aria-label="Inhoud">
+    <a href="#kort">Kort</a>
+    <a href="#controle">Controle</a>
+    <a href="#persoon">Wat een persoon doet</a>
+    <a href="#veiligheid">Veiligheid</a>
+    <a href="#agent">De agent</a>
+    <a href="#wire">Daemon en wire</a>
+    <a href="#git">Randgevallen in git</a>
+    <a href="#fasen">Fasen</a>
+    <a href="#vragen">Productvragen</a>
+    <a href="#scope">Buiten scope</a>
+  </nav>
+</header>
+<main>
+  <section id="kort" class="recommendation">
+    <h2>Kort</h2>
+    <p>Een worktree krijgt een plek in de app op drie niveaus, en op alle drie zijn het dezelfde vier handelingen: bekijken, samenvoegen, verwijderen en (voor een group) alles tegelijk. De lijst staat in het git-paneel, onder de branch-chip die de worktrees vandaag al ophaalt. Het menu van een agent-node waarvan de <code>cwd</code> een worktree is, en het menu van een group die er een draagt of waarvan de leden er elk een hebben, bieden dezelfde handelingen voor die ene worktree of die hele set.</p>
+    <p>De daemon schrijft bij het maken van een worktree op waar hij van aftakte (branch en commit), voor welke node en in welk project, in een register onder <code>$RUIMTE_HOME/worktrees</code>. Dat is wat "wat heeft deze worktree veranderd" en "waar gaat hij naar terug" mogelijk maakt: <code>resolveBase</code> kent alleen de standaardbranch van de repository, niet de branch waar de persoon op stond toen het team begon.</p>
+    <p>Samenvoegen gebeurt in de checkout die de doelbranch uit heeft, meestal de projectmap, nooit door een ref te verzetten achter een working tree om. Werk dat niet gecommit is wordt eerst in de worktree gecommit met een bericht dat de node en de taak noemt, want dat is wat de testrun achterliet. Een conflict blijft staan in het git-paneel, dat conflicten al tekent, en de daemon doet er niets zelf aan.</p>
+    <p>Verwijderen zonder <code>force</code> weigert een worktree met werk erin en zegt hoeveel: ongecommitte bestanden, onbekende bestanden, commits die de doelbranch niet heeft. De bevestiging noemt die getallen en biedt eerst samenvoegen aan. De branch gaat mee weg, met <code>-d</code> als git hem samengevoegd vindt en anders alleen na de bevestiging met <code>-D</code>. Een node of group die verdwijnt neemt zijn worktree niet mee; de lijst laat hem zien als "zonder node", en de bevestiging van het verwijderen van de node biedt de worktree aan als vinkje, alleen aan wanneer hij geen werk draagt.</p>
+    <p>Op de wire komen er alleen optionele velden, nieuwe requests en één nieuw event bij: geen nieuwe waarde in een bestaande enum, dus de iOS-app blijft werken. Het lezen krijgt een verb (<code>worktree list</code>, <code>worktree diff</code>); of een lead-agent zelf mag samenvoegen is productvraag 3, met als aanbeveling: wel, maar alleen de worktrees van zijn eigen kinderen, alleen zonder conflict en alleen in een schone doel-checkout.</p>
+  </section>
+
+  <section id="controle">
+    <h2>Wat gecontroleerd is</h2>
+    <ul>
+      <li><span class="badge confirmed">geverifieerd</span> <code>Worktrees.add</code> (<code>apps/server/src/git/worktrees.ts</code>) maakt <code>$RUIMTE_HOME/worktrees/&lt;repo&gt;-&lt;hash&gt;/&lt;branch&gt;</code> met <code>git worktree add -b &lt;branch&gt; &lt;path&gt;</code> voor een nieuwe branch, dus vanaf HEAD van de checkout waar het verb draait. Er wordt niets opgeschreven over de branch of de commit waarvan werd afgetakt. <code>Worktrees.remove</code> doet altijd <code>git worktree remove --force</code> en raakt de branch niet aan. Dat is precies waarom de testrun eindigde met <code>git worktree remove --force</code> en <code>git branch -D</code> met de hand.</li>
+      <li><span class="badge confirmed">geverifieerd</span> De branchnaam is <code>branchSlug(taak of titel of CLI)</code> met <code>-2</code>, <code>-3</code> uit <code>freeBranch</code> (<code>apps/server/src/canvas/worktree.ts</code>). Een tweede run van hetzelfde team maakt dus <code>worktree-a-2</code> en <code>worktree-b-2</code> naast de eerste twee; de eerste twee blijven, want "nothing removes a worktree on its own" staat in <code>WORKTREE_LINES</code> en in <code>apps/server/README.md</code> regel 341.</li>
+      <li><span class="badge confirmed">geverifieerd</span> Een worktree leeft alleen als <code>cwd</code> op de node in <code>project.json</code>. De group van een team krijgt bewust geen <code>worktree</code>-veld (README regel 341: "that field means every node made inside the group starts in one checkout, which a team of worktrees is not"). Het veld <code>worktree: { path, branch }</code> op een group (<code>packages/contracts/src/project.ts:107</code>) is de handmatige binding uit <code>shell/WorktreeDialog.tsx</code> ("Bind to a worktree"), die <code>git.worktree-add</code> aanroept en het veld zet; "Unbind worktree" in <code>canvas/NodeMenu.tsx</code> wist alleen het veld ("Keeps the checkout"). <code>git.worktree-remove</code> heeft geen enkele aanroeper in de client.</li>
+      <li><span class="badge confirmed">geverifieerd</span> De lineage (<code>apps/server/src/agents/lineage.ts</code>) kent per node <code>projectId</code>, <code>openedBy</code>, <code>depth</code>, <code>agent</code>, <code>createdAt</code> en <code>endedAt</code>, geen <code>cwd</code>. Welke worktree bij welke node hoort is dus alleen uit het document af te leiden, via <code>ProjectIndex</code>.</li>
+      <li><span class="badge confirmed">geverifieerd</span> Het git-paneel (<code>shell/panels/GitPanel.tsx</code>) haalt <code>git.worktree-list</code> al op wanneer de branch-chip opengaat en toont elke worktree als checkout in <code>BranchMenu.tsx</code>; <code>state/git-target.ts</code> richt het paneel op <code>worktree.path</code> van een geselecteerde gebonden group. Elk request van het paneel neemt een <code>cwd</code>, dus status, log, stage, commit en diff werken vandaag al in een worktree zodra het paneel erop gericht is.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>GitActions</code> (<code>apps/server/src/git/actions.ts</code>) kent <code>merge</code> (<code>git merge --no-edit &lt;ref&gt;</code>), <code>rebase</code>, <code>delete-branch</code> (<code>--force</code> optioneel), <code>stash</code> en <code>commit</code>, als stappen met voortgang over <code>git.progress</code> en een annulering via <code>git.cancel</code>. Er is geen <code>--squash</code>, geen <code>merge --abort</code> en geen vergrendeling per repository: twee clients kunnen tegelijk in één checkout mergen.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>resolveBase</code> (<code>apps/server/src/git/status.ts:147</code>) is <code>origin/HEAD</code>, anders <code>main</code> of <code>master</code>, tien minuten gecachet per root. De diff-scope <code>base</code> en <code>mergeBase</code> in <code>git.status</code> meten daartegen. Een worktree die van <code>feature-x</code> aftakte wordt dus tegen <code>main</code> gelegd, wat te veel laat zien.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>Checkpoints</code> neemt per <code>git rev-parse --show-toplevel</code> een eigen indexbestand onder <code>$RUIMTE_HOME/checkpoints</code>; een worktree is zijn eigen toplevel, dus per worktree komt er een <code>&lt;naam&gt;-&lt;hash&gt;.index</code> bij dat na het verwijderen blijft liggen. De turn-diff van een chat in een worktree bevat alleen die worktree (<code>worktree-roles.test.ts</code>).</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>checkCwd</code> (<code>apps/server/src/canvas/project-paths.ts</code>) laat een <code>--cwd</code> toe in de projectmap of in een worktree van zijn repository, via <code>host.worktreePaths</code>. Een verb kan dus vandaag al een node in een bestaande worktree zetten.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>end-children</code> (<code>apps/server/src/outbox/end-children.ts</code>) markeert nakomelingen, haalt de outbox-entries weg die ze zouden herstarten, annuleert hun taken en stopt ze, bladeren eerst; de nodes blijven op het canvas. <code>agent.children</code> is wat de client telt in <code>agents/EndChildrenDialog.tsx</code>. Daar hangt het verwijderen van een worktree waarvan de agent nog draait aan.</li>
+      <li><span class="badge confirmed">geverifieerd</span> De iOS-app gebruikt <code>git.status</code>, <code>git.watch</code>, <code>git.stage</code>, <code>git.diff</code> en <code>git.action</code> (<code>apps/ios/App/Pages/GitPage.swift</code>) en luistert niet op <code>git.progress</code>. <code>DaemonAPI.swift</code> noemt de drie worktree-requests, maar de app roept ze niet aan. Een onbekend veld valt daar weg, een onbekende enum-waarde in een antwoord of event laat dat antwoord mislukken (rapport van 16 september over orchestratie). Nieuwe requests, nieuwe events en optionele velden zijn veilig; een nieuwe waarde in <code>GitActionKind</code> of <code>GitActionPhase</code> niet, en dit ontwerp voegt er geen toe.</li>
+      <li><span class="badge warning">afgeleid</span> Dat bestanden die in de hoofdcheckout onbekend zijn (niet in HEAD) in een worktree ontbreken is gedrag van git zelf: <code>git worktree add</code> checkt een commit uit, geen working tree. <code>node_modules</code>, <code>.env</code> en een half geschreven bestand komen dus nooit mee. Dat is de "shared paths" uit het roadmap-item.</li>
+      <li><span class="badge warning">afgeleid</span> <code>git merge</code> in een checkout met ongecommit werk gaat door zolang de merge geen van de gewijzigde bestanden raakt en weigert anders met "Your local changes to the following files would be overwritten". Die zin is bruikbaar als reden; het ontwerp gaat er niet omheen.</li>
+      <li><span class="badge warning">afgeleid</span> <code>git worktree list --porcelain</code> markeert een worktree waarvan de map weg is als <code>prunable</code>; de huidige parser in <code>Worktrees.list</code> leest die regel niet. Wordt in fase 1 tegen een echte repository gemeten.</li>
+    </ul>
+  </section>
+
+  <section id="persoon">
+    <h2>Wat een persoon kan doen en waar</h2>
+    <p>Vier handelingen, op drie plekken. De handelingen zijn overal dezelfde en de daemon voert ze uit; de plekken verschillen alleen in welke worktree of welke set ze aanwijzen.</p>
+
+    <h3>De handelingen</h3>
+    <div class="table" role="region" aria-label="De vier handelingen" tabindex="0">
+      <table class="wide">
+        <thead><tr><th>Handeling</th><th>Wat het doet</th><th>Wat het toont</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Bekijken</strong></td><td>Opent een diff-tab in de preview met scope <code>base</code> tegen de branch waarvan de worktree aftakte (een optionele <code>base</code> op <code>git.diff</code>, zie de wire), en richt het git-paneel op de worktree, zodat het log en de bestanden van die checkout te zien zijn. Dat is de bestaande diff-tab en het bestaande paneel; er komt geen nieuw scherm.</td><td>Commits sinds de aftakking, de ongecommitte en onbekende bestanden, elk met zijn diff.</td></tr>
+          <tr><td><strong>Samenvoegen</strong></td><td>Commit wat in de worktree niet gecommit is (aan te zetten in de dialoog, standaard aan wanneer er iets is), voegt de branch samen in de checkout die de doelbranch uit heeft, met de gekozen strategie: merge (een merge-commit), squash (één commit met een bericht) of rebase (de worktree-branch op de doelbranch gezet en dan fast-forward). Daarna, als de persoon dat aanvinkte, de worktree en de branch weg.</td><td>Een toast met voortgang en één regel als het klaar is, zoals elke git-actie; een conflict blijft staan in het paneel.</td></tr>
+          <tr><td><strong>Verwijderen</strong></td><td><code>git worktree remove</code> plus de branch. Zonder werk erin gaat het zonder omhaal; met werk erin komt de bevestiging uit de sectie Veiligheid.</td><td>Een toast; de rij verdwijnt uit de lijst.</td></tr>
+          <tr><td><strong>Alles</strong> (alleen op een group)</td><td>Samenvoegen of verwijderen van elke worktree van de leden, een voor een in de volgorde van de leden, en stoppen bij de eerste die weigert of conflicteert. De rest blijft dan onaangeroerd staan, en de toast zegt bij welke het stopte.</td><td>Eén toast met voortgang per worktree.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>De plekken</h3>
+    <h4>1. Het git-paneel: de lijst per project</h4>
+    <p>De branch-chip haalt vandaag al de worktrees op als checkouts waar het paneel op gericht kan worden. Daar komt een sectie "Worktrees" bij, onder de bestanden en boven het log, alleen getekend wanneer de repository er minstens één heeft. Elke rij: de branch, de node die erin werkt (titel en kind, of "zonder node" voor een verweesde), waar hij van aftakte ("van main, 4 commits geleden"), en het werk erin als kleine tellers: <code>3 gewijzigd</code>, <code>2 nieuw</code>, <code>1 commit</code>. Een rij met een agent die in een beurt is draagt de werkende markering die het paneel al kent. Het menu van de rij is: Bekijken, Samenvoegen..., Verwijderen..., Toon op het canvas (springt naar de node, via het bestaande <code>project.showView</code>-pad in de client).</p>
+    <p>De lijst is per repository, niet per projectmap: een project dat een submap van een repository is ziet dezelfde worktrees als het project op de root. Dat is wat <code>toplevel</code> al doet.</p>
+
+    <h4>2. Het menu van een node</h4>
+    <p>Een chat- of terminal-node waarvan de <code>cwd</code> binnen een worktree ligt krijgt in <code>NodeMenu.tsx</code> een blok "Worktree &lt;branch&gt;" met Bekijken, Samenvoegen... en Verwijderen.... De koptekst van de node krijgt de branch-pill die een gebonden group vandaag al draagt (<code>NodeFrame.tsx:291</code>, <code>Pill mono icon={GitBranch}</code>), met het pad in de tooltip, zodat een persoon aan de node ziet dat hij niet in de projectmap werkt. Beide lezen dezelfde worktree-lijst uit de store; er komt geen tweede request per node.</p>
+
+    <h4>3. Het menu van een group</h4>
+    <p>Twee gevallen. Een gebonden group (met een <code>worktree</code>-veld, de handmatige binding) krijgt dezelfde drie handelingen als een node, plus het bestaande Unbind. Een team-group (geen veld, maar leden met elk een worktree) krijgt "Worktrees samenvoegen..." en "Worktrees verwijderen...", de "alles"-handeling, en een pill in de kop met het aantal: "3 worktrees". Welke worktrees dat zijn is afgeleid uit de leden (<code>membersOf</code> in <code>state/git-target.ts</code> kent de leden al): elke worktree waarin een lid zijn <code>cwd</code> heeft.</p>
+
+    <h3>De dialoog van samenvoegen</h3>
+    <p>Eén dialoog, ook voor "alles", op de <code>GitPrompt</code> uit <code>shell/panels/GitDialogs.tsx</code>. Hij zegt van boven naar beneden:</p>
+    <ul>
+      <li>Wat er samengevoegd wordt: "<code>lexer</code> in <code>main</code>", of "3 worktrees in <code>main</code>". Als de doelbranch niet uitgecheckt is: de zin uit de randgevallen en de keuze daar.</li>
+      <li>Wat erin zit: "2 commits en 3 ongecommitte bestanden". Met werk erin een vinkje "Eerst committen als" met een tekstveld, ingevuld met de taaktitel of de nodetitel ("Lexer: work of the agent"). Uit gevinkt met werk erin is de knop uit, want dan zou het werk in de worktree blijven en de merge alleen de commits meenemen, wat twee helften van één resultaat oplevert.</li>
+      <li>De strategie als drie radioknoppen: Merge, Squash, Rebase, met één zin elk. De keuze wordt onthouden in de instellingen van de client (<code>worktreeMergeStrategy</code>), niet in het project.</li>
+      <li>Een vinkje "Daarna de worktree en de branch verwijderen", standaard aan.</li>
+      <li>De knop: "Samenvoegen". Loopt de agent van de worktree nog in een beurt, dan heet hij "Stoppen en samenvoegen" en staat de waarschuwing uit Veiligheid erboven.</li>
+    </ul>
+
+    <h3>Shared paths: wat het moet betekenen</h3>
+    <p>Wat in de hoofdcheckout onbekend of genegeerd is komt in een worktree niet mee, en <code>node_modules</code> of <code>.env</code> is precies wat een agent nodig heeft om te bouwen of te testen. Het roadmap-item noemt "linked into a new worktree", en dat is de juiste vorm: een lijst paden in de instellingen van het project (<code>.ruimte/settings.json</code>, hetzelfde bestand als de terminal-modus uit item 10) onder <code>worktrees.share</code>, en <code>Worktrees.add</code> legt na <code>git worktree add</code> voor elk pad dat in de hoofdcheckout bestaat een symlink in de worktree naar de hoofdcheckout. Een symlink en geen kopie, want een <code>node_modules</code> kopiëren kost minuten en loopt uit de pas; het gedeelde pad hoort in <code>.gitignore</code> te staan, en de daemon zegt het als dat niet zo is (een gedeelde symlink die getrackt wordt zou als wijziging in elke worktree verschijnen). De lijst geldt voor elke worktree die de daemon maakt: het verb, <code>git.worktree-add</code> en de bind-dialoog. Of <code>.env</code> een link of een kopie moet zijn is productvraag 5; de standaard is een lege lijst, met in het git-paneel een regel "Deel paden met nieuwe worktrees..." zodra de repository er een heeft.</p>
+  </section>
+
+  <section id="veiligheid">
+    <h2>Veiligheid: werk gaat nooit stil verloren</h2>
+    <h3>Wat werk is</h3>
+    <p>Een worktree draagt werk wanneer één van drie getallen niet nul is, en alle drie worden geteld door de daemon in één inspectie per worktree:</p>
+    <ul>
+      <li><strong>Gewijzigd</strong>: bestanden die <code>git status --porcelain</code> meldt als gewijzigd of gestaged, tegen de index en HEAD van de worktree.</li>
+      <li><strong>Nieuw</strong>: onbekende bestanden (<code>?</code>), genegeerde niet meegeteld. Dat is wat de testrun achterliet.</li>
+      <li><strong>Commits</strong>: <code>git rev-list --count &lt;doel&gt;..&lt;branch&gt;</code>, de commits die de doelbranch niet heeft. Nul na een geslaagde merge, ook al bestaat de branch nog.</li>
+    </ul>
+    <p>Een stash in de worktree telt niet mee: <code>git worktree remove</code> laat stashes staan (ze hangen aan de repository), en het paneel toont ze al. Een worktree zonder werk mag zonder bevestiging weg, en dat is ook de enige worktree die een vinkje ergens anders (bij het verwijderen van een node) mag meenemen.</p>
+
+    <h3>De bevestiging</h3>
+    <p>Verwijderen met werk erin is een <code>GitPrompt</code> met <code>danger</code>, in de woorden van de tellers:</p>
+    <blockquote>Worktree <code>lexer</code> verwijderen? Er staan 3 ongecommitte bestanden, 2 nieuwe bestanden en 1 commit in die <code>main</code> niet heeft. Die gaan verloren, de branch ook.</blockquote>
+    <p>Met twee knoppen naast Annuleren: "Eerst samenvoegen..." (opent de merge-dialoog met het vinkje "daarna verwijderen" aan) en "Verwijderen" in de gevaarkleur. De client stuurt <code>force: true</code> alleen vanuit die knop; de daemon weigert zonder <code>force</code> elke worktree met werk met de code <code>worktree-has-work</code> en de drie getallen in het bericht, zodat ook een oudere client, een script of een agent nooit stil iets weggooit. Dat verandert het gedrag van het bestaande <code>git.worktree-remove</code>, dat vandaag altijd <code>--force</code> doet; er is geen aanroeper in de client, dus niemand merkt het behalve wie het expres wil.</p>
+    <p>De branch gaat mee met de worktree, in twee vormen: <code>git branch -d</code> wanneer git hem samengevoegd vindt in de doelbranch, anders <code>-D</code>, en dat laatste alleen onder dezelfde <code>force</code>. Een branch verwijderen die niet van de daemon is (niet in het register, zie de wire) doet de daemon niet; die worktree wordt wel verwijderd en de branch blijft, met dat in de toast.</p>
+
+    <h3>Terwijl de agent nog draait</h3>
+    <p>Een merge of een verwijdering van een worktree waarvan de node in een beurt is (het bestaande <code>agent-work.ts</code> zegt wat "werkend" is) is nooit stil: de dialoog zegt "Lexer werkt nog" en de knop wordt "Stoppen en samenvoegen" of "Stoppen en verwijderen". Stoppen is het bestaande pad: <code>chat.kill</code> of <code>session.kill</code>, dat zelf een <code>end-children</code> schuldig is voor wat de node opende, met de telling uit <code>agent.children</code> in de dialoog erbij ("en de 2 agents die hij opende"). De daemon wacht met de git-stap tot de stop klaar is (het <code>stop</code> in de handler van <code>end-children</code> resolvet wanneer de CLI weg is), en pas dan wordt gecommit, zodat er geen bestand half geschreven in de commit komt. Een agent die niet in een beurt is maar wel een CLI open heeft (een chat tussen twee beurten, een terminal met een shell) hoeft niet gestopt te worden voor een merge; voor een verwijdering wel, want zijn <code>cwd</code> verdwijnt. Een shell waarvan de map weggehaald is blijft anders leven in een map die niet meer bestaat; dat is het bestaande gedrag van <code>session.kill</code> op een levende shell.</p>
+
+    <h3>Een node of group die weg is terwijl de worktree blijft</h3>
+    <p>De regel blijft: niets verwijdert een worktree uit zichzelf. Een node verwijderen (ook via <code>node delete</code> door een agent, ook door een canvas dat weg gaat) laat de worktree staan, en de lijst in het git-paneel toont hem als "zonder node", met het werk erin. De <code>EndChildrenDialog</code> die bij het verwijderen van een agent-node al staat krijgt één regel erbij wanneer de node in een worktree werkt: "Werkt in worktree <code>lexer</code> (2 nieuwe bestanden)" en een vinkje "Ook de worktree en de branch verwijderen", dat alleen aan kan wanneer de worktree geen werk draagt. Met werk erin staat er "blijft staan; samenvoegen of verwijderen kan vanuit het git-paneel". Zo verliest een persoon nooit werk door een node te verwijderen, en ziet hij toch op het moment zelf dat er iets achterblijft.</p>
+    <p>Een project sluiten (<code>project.close</code>, dat de sessies beëindigt) raakt geen worktree. Een project dat van de machine weg is terwijl de worktrees blijven, is een repository die de daemon niet meer kent: die worktrees komen pas weer in beeld wanneer een project op die repository opengaat. Dat is aanvaardbaar, en het register onder <code>$RUIMTE_HOME</code> houdt ze in elk geval vast.</p>
+
+    <h3>Twee clients</h3>
+    <p>Twee clients kunnen dezelfde worktree tegelijk willen samenvoegen. De daemon houdt per repository één slot voor merge en verwijder (zoals <code>Checkpoints</code> per index serialiseert), en de tweede aanroep wacht op de eerste en krijgt dan een frisse inspectie; is de worktree er dan niet meer, dan is dat <code>worktree-not-found</code>, het bestaande foutcode, en de toast zegt het. Het nieuwe event <code>git.worktrees</code> (zie de wire) laat de andere client zijn lijst verversen.</p>
+  </section>
+
+  <section id="agent">
+    <h2>De agent-kant</h2>
+    <p>Een lead die een team met <code>--worktree</code> opende krijgt via <code>wake-parent</code> de resultaten van zijn kinderen, maar kan vandaag hun werk niet zien of samenbrengen anders dan door zelf <code>git</code> te draaien in de projectmap, wat werkt maar buiten elke regel van de app valt. Twee dingen zijn zeker nuttig en veilig, het derde is een productvraag.</p>
+    <h3>Lezen: <code>worktree list</code> en <code>worktree diff</code></h3>
+    <p>Een verb <code>worktree</code> in <code>verbs.ts</code> met subcommando's. <code>list</code> geeft een rij per worktree van de repository van de aanroeper: <code>branch</code>, <code>path</code>, <code>node</code> (de id, of een streep), <code>from</code>, en de drie tellers. <code>diff &lt;branch&gt; [--stat] [--tail N]</code> geeft de diff van de worktree tegen zijn aftakpunt, ongecommit werk inbegrepen, via dezelfde <code>diffTrees</code> als de turn-diff, met <code>--stat</code> voor alleen de bestanden en counts en <code>--tail</code> zoals <code>read</code> het kent. Dat is genoeg voor een lead om te beoordelen wat een kind maakte voordat hij besluit, en het schrijft niets.</p>
+    <h3>Schrijven: <code>worktree merge</code> (productvraag 3)</h3>
+    <p>Als het komt: <code>worktree merge &lt;branch&gt; [--squash | --rebase] [--message M] [--keep]</code>, met drie grenzen die niet uit te zetten zijn. Alleen een worktree van een nakomeling van de aanroeper (lineage, zoals <code>node delete</code> een maker vraagt), want een agent hoort niet het werk van een vreemde node te integreren. Alleen in een schone doel-checkout, geen ongecommit werk van de persoon, want de merge landt in diens map. En alleen zonder conflict: bij een conflict doet de daemon <code>git merge --abort</code> en weigert met <code>merge-conflict</code> en de bestanden, en de lead moet dan een persoon vragen of het kind opnieuw aan het werk zetten. Het kind wordt niet gestopt en de worktree niet verwijderd, tenzij het kind klaar is (geen beurt) en <code>--keep</code> ontbreekt, en dan alleen zonder werk erin. Een persoon houdt de rest: een conflict oplossen, een worktree met werk weggooien, een merge in een vuile checkout.</p>
+    <p>Wat een agent nooit krijgt: <code>worktree remove</code> met kracht. De regel "nothing removes a worktree on its own" blijft voor de verwijdering het hele verhaal.</p>
+  </section>
+
+  <section id="wire">
+    <h2>Daemon en wire</h2>
+    <h3>Waar de staat leeft</h3>
+    <p>Een register per repository: <code>$RUIMTE_HOME/worktrees/&lt;repo&gt;-&lt;hash&gt;/worktrees.json</code>, naast de mappen die er al staan, geschreven met <code>writeAtomic</code> zoals de lineage. Per worktree (sleutel het pad):</p>
+<pre><code>{
+  "branch": "lexer",
+  "from": { "branch": "main", "commit": "8133ce20..." },
+  "projectId": "…",
+  "nodeId": "chat-lexer",         // de node waarvoor hij is gemaakt, weggelaten voor de bind-dialoog
+  "madeBy": "verb" | "client",
+  "madeAt": 1789999999
+}</code></pre>
+    <p>Het is geen veld in <code>project.json</code>, om dezelfde twee redenen als de lineage: een agent met een shell kan het bestand herschrijven, en zod stript wat een client niet kent. De <code>cwd</code> op de node blijft wat hij is; het register legt de omgekeerde relatie en het aftakpunt vast. Git zelf blijft de waarheid over welke worktrees bestaan: de lijst is altijd <code>git worktree list --porcelain</code>, waar het register per pad de extra velden over legt. Een worktree die git kent en het register niet (met de hand gemaakt, of van vóór deze versie) is er wel, zonder <code>from</code>, en valt terug op <code>resolveBase</code>; een registerregel zonder worktree in git is een verweesde branch (zie de randgevallen).</p>
+    <p>Het register wordt geschreven in <code>Worktrees.add</code> (het verb en <code>git.worktree-add</code> gaan er allebei door), waar <code>from</code> is: de branch die HEAD van de checkout uit heeft waar het verb draait (<code>git rev-parse --abbrev-ref HEAD</code>, bij een losse HEAD alleen de commit), en de commit zelf. Verwijderen haalt de regel weg, en het indexbestand onder <code>checkpoints</code> voor dat toplevel erbij.</p>
+
+    <h3>Requests</h3>
+    <div class="table" role="region" aria-label="Requests en events" tabindex="0">
+      <table class="wide">
+        <thead><tr><th>Naam</th><th>Nieuw of gewijzigd</th><th>Payload en antwoord</th></tr></thead>
+        <tbody>
+          <tr><td><code>git.worktree-list</code></td><td>gewijzigd, optionele velden</td><td>Elke <code>Worktree</code> krijgt optioneel <code>from?: { branch, commit }</code>, <code>nodeId?</code>, <code>projectId?</code>, <code>madeAt?</code>, <code>missing?: boolean</code> (map weg), en <code>work?: { changed, untracked, ahead }</code>. <code>work</code> kost drie git-aanroepen per worktree, dus de payload krijgt <code>inspect?: boolean</code>; de branch-chip vraagt zonder, de lijst met. Een oude client ziet de oude vorm.</td></tr>
+          <tr><td><code>git.worktree-remove</code></td><td>gewijzigd, optionele velden en een nieuwe weigering</td><td><code>force?: boolean</code> en <code>keepBranch?: boolean</code>. Zonder <code>force</code> weigert een worktree met werk met <code>worktree-has-work</code> (nieuwe <code>GitErrorCode</code>, een string, geen enum op de wire). Antwoord: <code>{ branchDeleted: boolean }</code> optioneel.</td></tr>
+          <tr><td><code>git.worktree-merge</code></td><td>nieuw</td><td><code>{ repo, path, actionId, strategy: 'merge' | 'squash' | 'rebase', commitFirst?: boolean, subject?, body?, remove?: boolean, stopAgent?: boolean }</code>. Antwoord in de vorm van <code>GitActionResult</code> (eigen schema dat het uitbreidt met <code>removed?: boolean</code> en <code>conflicts?: string[]</code>). Voortgang over het bestaande <code>git.progress</code> met de fasen die er al zijn (<code>commit</code>, <code>rebase</code>, <code>merge</code>, <code>done</code>, <code>failed</code>); annuleren via <code>git.cancel</code>, dat alleen tot aan de merge-stap iets kan afbreken.</td></tr>
+          <tr><td><code>git.worktree-merge-all</code></td><td>niet nodig</td><td>"Alles" is de client die <code>git.worktree-merge</code> per worktree in volgorde aanroept en stopt bij de eerste weigering; de daemon-lock per repository maakt ze vanzelf serieel. Zo blijft de wire klein.</td></tr>
+          <tr><td><code>git.diff</code></td><td>gewijzigd, optioneel veld</td><td><code>base?: string</code>: de ref waar de scope <code>base</code> tegen meet in plaats van <code>resolveBase</code>. De diff-tab van een worktree geeft <code>from.branch</code> mee. <code>ProjectFileTabView</code> krijgt hetzelfde optionele veld, zodat de tab na een herlaad dezelfde vergelijking maakt.</td></tr>
+          <tr><td><code>git.worktrees</code></td><td>nieuw event</td><td><code>{ repo }</code>, na elke add, remove en merge door de daemon, en vanuit de status-watcher wanneer <code>.git/worktrees</code> verandert (met de hand gemaakt of weggehaald). Geen inhoud, alleen "vraag opnieuw", zoals <code>usage.changed</code>. Beide clients laten een onbekend event vallen.</td></tr>
+          <tr><td><code>project.settings</code></td><td>nieuw, item 10</td><td>De lees- en schrijfkant van <code>.ruimte/settings.json</code>; <code>worktrees.share: string[]</code> is het eerste veld van dit ontwerp erin, naast de terminal-modus die het roadmap-item noemt. Buiten dit ontwerp verder.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Geen nieuwe waarde in <code>GitActionKind</code>, <code>GitActionPhase</code>, <code>GitDiffScope</code> of een node-kind. De Swift-modellen worden geregenereerd en gecommit in dezelfde commit als elke wire-wijziging (<code>bun run check</code> faalt anders), en de iOS-app hoeft niets te tekenen om te blijven werken.</p>
+
+    <h3>De merge in de daemon</h3>
+    <p>Eén klasse naast <code>GitActions</code>: <code>WorktreeMerge</code> in <code>apps/server/src/git/worktree-merge.ts</code>, die dezelfde <code>Step</code> en <code>ProgressSink</code> gebruikt, en per repository een slot houdt. De stappen, met de vergrendeling om het geheel:</p>
+    <ol>
+      <li>Inspecteer de worktree (de drie tellers) en lees <code>from</code> uit het register; zonder register <code>resolveBase</code>, en dat staat in het antwoord.</li>
+      <li>Vind de checkout die <code>from.branch</code> uit heeft (<code>parseWorktreeBranches</code> uit <code>refs.ts</code>). Geen enkele: weigering <code>target-not-checked-out</code> met de branch die de projectmap wél uit heeft, zodat de dialoog kan aanbieden daarin samen te voegen of eerst te wisselen.</li>
+      <li>Met <code>stopAgent</code>: stop de node (via de bestaande kill-paden) en wacht tot de CLI weg is; zonder, en de agent in een beurt: weigering <code>agent-working</code>.</li>
+      <li>Met <code>commitFirst</code> en werk erin: <code>git add -A</code> en <code>git commit</code> in de worktree met <code>subject</code>. Zonder <code>commitFirst</code> en werk erin: weigering <code>worktree-has-work</code>, want dan zou de merge een half resultaat opleveren.</li>
+          <li>Rebase-strategie: <code>git rebase &lt;from.branch&gt;</code> in de worktree; een conflict daar is <code>git rebase --abort</code> en weigering <code>merge-conflict</code> met de bestanden, want een halve rebase in een worktree kan een persoon niet in het paneel zien.</li>
+      <li>In de doel-checkout: <code>git merge --no-edit</code> (merge), <code>git merge --squash</code> plus <code>git commit</code> (squash), of <code>git merge --ff-only</code> (rebase). Een conflict bij merge of squash blijft staan, want het git-paneel tekent <code>conflicted</code> bestanden al en een persoon kan ze oplossen en committen; het antwoord is dan <code>failed</code> met <code>conflicts</code>, en de worktree blijft. Een weigering van git door ongecommit werk in de doel-checkout komt met git's eigen zin door.</li>
+      <li>Met <code>remove</code> en een geslaagde merge: <code>git worktree remove</code>, <code>git branch -d</code> (na een merge of rebase is de branch samengevoegd; na een squash niet, dan <code>-D</code>, wat hier veilig is omdat de inhoud net in de squash-commit terechtkwam), het indexbestand van de checkpoints weg, de registerregel weg.</li>
+      <li>Event <code>git.worktrees</code> en <code>git.status</code> voor de doel-checkout, dat de watcher toch al stuurt.</li>
+    </ol>
+  </section>
+
+  <section id="git">
+    <h2>Randgevallen in git</h2>
+    <div class="table" role="region" aria-label="Randgevallen" tabindex="0">
+      <table class="wide">
+        <thead><tr><th>Geval</th><th>Wat de daemon doet</th><th>Wat de persoon ziet</th></tr></thead>
+        <tbody>
+          <tr><td>De doel-checkout heeft ongecommit werk</td><td>De merge loopt; git weigert zelf wanneer een geraakt bestand vuil is. Geen automatische stash: dat verplaatst werk van de persoon zonder dat hij het vroeg.</td><td>Git's zin in de toast, met "Stash en opnieuw" als knop die de bestaande <code>stash</code>-actie draait en de merge herhaalt.</td></tr>
+          <tr><td>De doelbranch is verder gegaan sinds de aftakking</td><td>Merge en squash nemen dat mee; rebase zet de worktree eerst op de nieuwe top. <code>from.commit</code> in het register blijft het oude aftakpunt, en de diff-tab meet tegen de merge-base van <code>from.branch</code> en de worktree, niet tegen die commit, zodat de diff alleen het werk van de agent laat zien.</td><td>"van main, 4 commits geleden" in de rij.</td></tr>
+          <tr><td>De doelbranch is nergens uitgecheckt (de persoon wisselde van branch)</td><td>Weigering <code>target-not-checked-out</code>.</td><td>"<code>main</code> is nergens uitgecheckt; de projectmap staat op <code>feature-x</code>." Twee knoppen: "Samenvoegen in <code>feature-x</code>" en "Eerst naar <code>main</code>" (de bestaande checkout-actie, met stash-vraag).</td></tr>
+          <tr><td>De doelbranch is uitgecheckt in een andere worktree dan de projectmap</td><td>De merge draait daar; de checkout wordt gevonden, niet aangenomen.</td><td>De toast noemt de map.</td></tr>
+          <tr><td>Conflict bij merge of squash</td><td>Blijft staan in de doel-checkout; <code>failed</code> met de bestanden. Geen automatische abort, want het paneel kan het tonen en een persoon kan oplossen en committen. Wel een "Afbreken"-knop, achter een eigen klein request <code>git.worktree-abort { repo, cwd }</code> dat <code>git merge --abort</code> draait; geen strategie die geen strategie is.</td><td>Het paneel met de conflicten, een toast "3 bestanden conflicteren" met "Afbreken".</td></tr>
+          <tr><td>Conflict bij rebase</td><td><code>git rebase --abort</code>, weigering <code>merge-conflict</code>; de worktree is weer wat hij was.</td><td>"Rebase conflicteert in 2 bestanden; probeer merge of los het op in de worktree."</td></tr>
+          <tr><td>De map van de worktree is weg</td><td><code>git worktree list</code> zegt <code>prunable</code>; de rij krijgt <code>missing</code>. Verwijderen is <code>git worktree prune</code> plus de branch-vraag; de tellers kunnen alleen commits tellen.</td><td>"Map ontbreekt" in de rij; alleen Verwijderen in het menu.</td></tr>
+          <tr><td>Verweesde branch (worktree met de hand verwijderd, branch in het register)</td><td>De lijst toont hem met <code>missing</code> en zonder pad, uit het register; Verwijderen is alleen de branch. Branches buiten het register worden niet aangeraakt.</td><td>"Alleen nog een branch" in de rij.</td></tr>
+          <tr><td>Een worktree die git kent en het register niet</td><td>Gewoon in de lijst, <code>from</code> leeg, diff tegen <code>resolveBase</code>. Verwijderen laat de branch staan tenzij <code>keepBranch: false</code> expliciet meekomt.</td><td>"buiten Ruimte gemaakt" als hint.</td></tr>
+          <tr><td>De worktree staat op een losse HEAD</td><td><code>branch</code> is <code>(detached)</code> zoals nu; samenvoegen weigert met <code>no-branch</code>.</td><td>Alleen Bekijken en Verwijderen.</td></tr>
+          <tr><td>Twee nodes in één worktree (<code>agent --branch B</code> op een bestaande branch, of <code>--cwd</code> in een worktree)</td><td>De rij noemt beide nodes; stoppen bij een merge stopt beide, de dialoog telt ze.</td><td>"Lexer en Parser werken hierin".</td></tr>
+          <tr><td>Merge terwijl het project niet open is (een agent-verb, een tweede client)</td><td>Werkt: alles gaat via de repository op schijf en <code>ProjectIndex.locate</code>, zoals <code>DiagramStore.write</code>.</td><td>Niets, tot het project opengaat.</td></tr>
+          <tr><td>De daemon herstart midden in een merge</td><td>Git laat een <code>MERGE_HEAD</code> of een rebase-map achter; de inspectie bij de volgende lijst ziet dat (<code>git rev-parse --verify MERGE_HEAD</code>) en zet <code>work.merging</code> op de rij van de doel-checkout. Geen outbox-entry: een merge is een handeling van een persoon met een dialoog ervoor, geen belofte die de daemon nakomt.</td><td>Het paneel toont de conflicten of "merge onderweg" met Afbreken.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="fasen">
+    <h2>Fasen</h2>
+    <p>Vijf fasen, elk apart te landen en te testen tegen een echte repository met <code>repoTemplate</code> en <code>initRepo</code> uit <code>apps/server/src/git/test-repo.ts</code>. Geen fase voegt een enum-waarde toe; elke fase die de wire raakt regenereert de Swift-modellen.</p>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>Register, inspectie en veilig verwijderen</h3>
+        <p><code>worktrees.json</code> in <code>Worktrees.add</code> en <code>remove</code>; <code>Worktrees.inspect</code> met de drie tellers; <code>git.worktree-list</code> met <code>inspect</code> en de optionele velden; <code>git.worktree-remove</code> met <code>force</code> en de branch; het event <code>git.worktrees</code>; het indexbestand van de checkpoints mee weg. In de client: de sectie Worktrees in het git-paneel met Bekijken (het paneel richten, nog zonder eigen diff-basis) en Verwijderen met de bevestiging; de branch-pill op een node in een worktree; het worktree-blok in het node-menu.</p>
+        <p class="accept">Acceptatie: een worktree van een verb heeft <code>from</code> met de branch en commit van dat moment (test: op <code>feature</code> staan, <code>agent --worktree</code>, register lezen). Verwijderen zonder <code>force</code> van een worktree met een onbekend bestand faalt met <code>worktree-has-work</code> en de tellers 0/1/0, en de map bestaat nog. Met <code>force</code> zijn map en branch weg en de registerregel ook; een branch die git samengevoegd vindt gaat met <code>-d</code>. Een map die met <code>rm -rf</code> weg is levert <code>missing: true</code> en een remove die pruned. Een daemon-herstart houdt het register. In de client: de bevestiging noemt de drie getallen (unit test op de pure tekstfunctie).</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Bekijken tegen het aftakpunt</h3>
+        <p><code>base?</code> op <code>git.diff</code> en op <code>ProjectFileTabView</code>; de diff-tab vanuit de worktree-rij en het node-menu opent met <code>from.branch</code>; de rij toont "van main, N commits geleden". De <code>mergeBase</code> in <code>git.status</code> blijft wat hij is.</p>
+        <p class="accept">Acceptatie: een worktree afgetakt van <code>feature</code> terwijl <code>main</code> ook bestaat difft tegen <code>feature</code> en laat de commits van <code>feature</code> niet als wijziging zien (test met een repository waar <code>feature</code> één commit voor ligt op <code>main</code>). Een herladen tab maakt dezelfde diff.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Samenvoegen</h3>
+        <p><code>WorktreeMerge</code> met het slot per repository, <code>git.worktree-merge</code> en <code>git.worktree-abort</code>, de dialoog met strategie, eerst committen en daarna verwijderen, "Stoppen en samenvoegen" via de bestaande kill-paden en <code>agent.children</code>. De "alles"-handeling op een team-group in de client.</p>
+        <p class="accept">Acceptatie, elk als test op een echte repository: merge van een worktree met één commit en één onbekend bestand met <code>commitFirst</code> levert in <code>main</code> een commit met dat bestand en een merge-commit, en met <code>remove</code> is de worktree weg. Squash levert precies één commit op <code>main</code>. Rebase op een <code>main</code> die verder ging levert een lineaire historie. Een conflict bij merge laat <code>MERGE_HEAD</code> staan en antwoordt <code>conflicts</code> met het bestand; <code>git.worktree-abort</code> maakt de checkout schoon. Een conflict bij rebase laat de worktree onveranderd. Een doelbranch die nergens uit is antwoordt <code>target-not-checked-out</code> met de branch die de projectmap uit heeft. Een vuile doel-checkout op een geraakt bestand antwoordt git's zin en verandert niets. Twee merges tegelijk lopen na elkaar (test met een uitgestelde stap). Een chat in een beurt zonder <code>stopAgent</code> antwoordt <code>agent-working</code>; met <code>stopAgent</code> is de beurt <code>aborted</code> vóór de commit (test met de fake backend van de chats en <code>ManualClock</code>).</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>De agent-kant</h3>
+        <p>Het verb <code>worktree</code> met <code>list</code> en <code>diff</code>; <code>merge</code> als productvraag 3 zo beslist, met de drie grenzen. De hulp rendert uit de schema's zoals elk verb.</p>
+        <p class="accept">Acceptatie: <code>worktree list</code> vanuit een lead noemt de worktrees van zijn team met node-id's en tellers; <code>worktree diff lexer --stat</code> noemt het bestand dat het kind schreef. Met merge: een lead die de worktree van een vreemde node noemt krijgt <code>not-yours</code>; een conflict geeft <code>merge-conflict</code> en laat de doel-checkout schoon; een vuile doel-checkout geeft <code>target-dirty</code>.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Gedeelde paden en de node-delete-dialoog</h3>
+        <p><code>.ruimte/settings.json</code> met <code>worktrees.share</code> (de leeskant van item 10), symlinks in <code>Worktrees.add</code>, de regel in het git-paneel; het vinkje in <code>EndChildrenDialog</code> voor een worktree zonder werk.</p>
+        <p class="accept">Acceptatie: met <code>share: ["node_modules"]</code> en een genegeerde <code>node_modules</code> in de hoofdcheckout heeft de nieuwe worktree een symlink ernaartoe en meldt <code>git status</code> daar niets. Een pad dat niet bestaat wordt overgeslagen; een pad dat getrackt is wordt niet gelinkt en de daemon logt waarom. Een node verwijderen met het vinkje aan verwijdert een schone worktree en zijn branch; met werk erin is het vinkje er niet en staat de worktree daarna als "zonder node" in de lijst.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section id="vragen">
+    <h2>Productvragen</h2>
+    <p>Zes vragen die dit ontwerp niet zelf beslist. Elke vraag heeft twee of drie opties en een aanbeveling met de reden.</p>
+
+    <div class="question">
+      <h3>1. Wat gebeurt er met ongecommit werk bij samenvoegen?</h3>
+      <ul class="options">
+        <li data-option="A">Eerst committen in de worktree, met een bericht dat de node en de taak noemt, aan te passen in de dialoog.</li>
+        <li data-option="B">Weigeren tot de persoon of de agent het zelf gecommit heeft.</li>
+        <li data-option="C">De ongecommitte wijzigingen als patch over de doel-checkout leggen, zonder commit.</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling A.</strong> De testrun liet alleen onbekende bestanden achter, dus B maakt van elk team een tweede handeling in elke worktree. C zet het werk van een agent ongecommit in de map van de persoon, waar het niet meer te onderscheiden is van eigen werk en de turn-diff er niets over zegt. A houdt het werk toewijsbaar aan de node in het log en laat squash er alsnog één commit van maken.</p>
+    </div>
+
+    <div class="question">
+      <h3>2. Wat is de standaardstrategie?</h3>
+      <ul class="options">
+        <li data-option="A">Merge: een merge-commit, de commits van de agent blijven zichtbaar.</li>
+        <li data-option="B">Squash: één commit per worktree op de doelbranch.</li>
+        <li data-option="C">Rebase: lineaire historie, de commits van de agent bovenop de doelbranch.</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling B als standaard, alle drie in de dialoog, onthouden per client.</strong> Een agent commit vaak in kleine, weinig zeggende stappen, en na "eerst committen" komt er nog een automatische bij; één commit per rol met de taaktitel als onderwerp is wat een persoon later terugleest. Merge en rebase blijven voor wie de stappen wil houden. De daemon kiest niets: de client stuurt de strategie mee.</p>
+    </div>
+
+    <div class="question">
+      <h3>3. Mag een agent zelf samenvoegen?</h3>
+      <ul class="options">
+        <li data-option="A">Nee: alleen <code>worktree list</code> en <code>worktree diff</code>; samenvoegen is van de persoon.</li>
+        <li data-option="B">Ja, met de drie vaste grenzen: alleen worktrees van eigen nakomelingen, alleen in een schone doel-checkout, alleen zonder conflict.</li>
+        <li data-option="C">Ja, achter een schakelaar per machine in de Agents-instellingen, zoals <code>agentsDeleteAnyView</code>, standaard uit.</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling B, in fase 4, na de eerste drie fasen.</strong> Het punt van <code>team --task --worktree</code> is dat de lead het werk van zijn kinderen samenbrengt, en zonder verb doet hij dat toch, met <code>git</code> in de projectmap en zonder één van de regels hierboven. De drie grenzen maken het verb enger dan wat een terminal-agent al kan. C is een schakelaar die niemand omzet voordat hij weet wat het verb doet; als de grenzen in de praktijk te ruim blijken, is C er alsnog met één veld op <code>endpoint.json</code>. A laat het echte gat open.</p>
+    </div>
+
+    <div class="question">
+      <h3>4. Wat doet het verwijderen van een node met zijn worktree?</h3>
+      <ul class="options">
+        <li data-option="A">Niets; de worktree blijft en staat als "zonder node" in de lijst.</li>
+        <li data-option="B">Een vinkje in de bestaande delete-dialoog, alleen aan te zetten voor een worktree zonder werk.</li>
+        <li data-option="C">Automatisch mee verwijderen wanneer de worktree geen werk draagt.</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling B.</strong> C is het eerste dat de regel "niets verwijdert een worktree uit zichzelf" breekt, en een worktree zonder werk kan een agent zijn die net begon; een node die weg is terwijl zijn map ook weg is, is later niet meer te herleiden. A laat elke verwijderde node een rij achterlaten die niemand meer wegvinkt. B kost één regel in een dialoog die er al staat en houdt de persoon aan het stuur.</p>
+    </div>
+
+    <div class="question">
+      <h3>5. Gedeelde paden: link of kopie?</h3>
+      <ul class="options">
+        <li data-option="A">Altijd een symlink naar de hoofdcheckout.</li>
+        <li data-option="B">Per pad kiezen in <code>settings.json</code>: <code>{ path, mode: 'link' | 'copy' }</code>.</li>
+        <li data-option="C">Symlink voor mappen, kopie voor bestanden.</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling A, met B als het nodig blijkt.</strong> Een <code>node_modules</code> moet een link zijn; een <code>.env</code> als link betekent dat een agent die hem aanpast de hoofdcheckout aanpast, wat precies is wat een worktree moest voorkomen, maar een agent die <code>.env</code> herschrijft is zeldzaam en een kopie die uit de pas loopt is een stille fout die niemand ziet. Eén regel is uit te leggen in het paneel ("gedeeld met de projectmap"); C is een regel die de persoon moet raden.</p>
+    </div>
+
+    <div class="question">
+      <h3>6. Waar staat de lijst?</h3>
+      <ul class="options">
+        <li data-option="A">Een sectie in het git-paneel, per repository van het project.</li>
+        <li data-option="B">Een eigen paneel-soort "Worktrees" naast bestanden, git en processen.</li>
+        <li data-option="C">Alleen menu's op node en group, geen lijst.</li>
+      </ul>
+      <p class="advice"><strong>Aanbeveling A.</strong> Een nieuwe paneel-soort is een waarde in <code>ProjectPanelKindSchema</code>, en die enum wordt in de iOS-app een gesloten Swift-enum; dat is precies wat dit ontwerp vermijdt. C laat een verweesde worktree nergens zien, en dat is het geval dat de testrun opleverde. Het git-paneel kent de worktrees al als checkouts; een sectie erbij is de kleinste stap die de verweesde ook toont.</p>
+    </div>
+  </section>
+
+  <section id="scope">
+    <h2>Buiten scope</h2>
+    <ul>
+      <li>Conflicten oplossen in de app: het paneel toont ze, een persoon of een agent lost ze op in de checkout. Een merge-editor is een ander item.</li>
+      <li>Een pull request per worktree: <code>create-pr</code> bestaat al in het paneel gericht op de worktree, en dat blijft de weg.</li>
+      <li>Worktrees buiten <code>$RUIMTE_HOME/worktrees</code> (met de hand gemaakt) beheren: ze staan in de lijst en kunnen weg, maar zonder register geen aftakpunt en geen branch-verwijdering.</li>
+      <li>Een repository klonen als project en de terminal-modus per project, de andere helften van item 10; <code>settings.json</code> wordt hier alleen gelezen voor <code>worktrees.share</code>.</li>
+      <li>Weergaven in de iOS-app: alles blijft daar werken, niets wordt getekend.</li>
+    </ul>
+  </section>
+</main>
+<footer>
+  <p>Ruimte, ontwerp voor roadmap-item 10, 16 september 2026. Geen code gewijzigd.</p>
+</footer>
+</body>
+</html>
