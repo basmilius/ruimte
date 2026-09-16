@@ -36,19 +36,44 @@ configuration. Other provider secrets on the shared Worker must be preserved.
 
 ## Activation status, September 16
 
-The code and local keys are ready. The cloud upload was rejected by automatic approval
-review because transferring these private keys to Cloudflare needs explicit user
-permission. Nothing was uploaded or activated. After permission, use a private,
-temporary secrets file with `wrangler versions upload --secrets-file ... --keep-vars`
-to stage code and both pairs together, then remove the temporary file. That command
-creates an inactive version and preserves existing secrets. See
-[Cloudflare's secrets documentation](https://developers.cloudflare.com/workers/configuration/secrets/).
+Bas approved uploading both private keys to Cloudflare. Code and all four APNs secrets
+were uploaded together as inactive version `4644bc8d-2565-44df-a27b-d4449b4a68ec`.
+The temporary upload file was removed. Existing Apple, GitHub and statement-signing
+secrets were verified present in the uploaded version. Other shared Worker variables
+were preserved with `--keep-vars`.
 
-Before activating that version, apply pending Worker migrations, including
-`0008_activity_target.sql`. Broker and TURN do not need these private keys or a restart.
-The running daemon's new iOS functionality still needs a separately coordinated restart.
+Remote migrations `0006_push.sql` and `0008_activity_target.sql` both succeeded.
+A D1 Time Travel bookmark was captured before migration in
+`/tmp/ruimte-apns-d1-before.json`. Both migrations are additive.
 
-29 focused Worker/server push tests and `bun run check` pass. Tests verify key selection,
-JWT signatures, interleaved environment requests, rotation, missing credentials and
-independent device registrations. They use generated fixture keys. Real APNs delivery
-and Live Activity behavior on the iPhone remain unverified.
+Automatic approval review blocked activating the new version for 100% of traffic,
+requiring explicit permission for the production rollout. The active Worker remains
+`30be96f9-baf9-4112-a02b-03c4f2c70882`. After that approval, the exact activation is:
+
+```sh
+bunx wrangler versions deploy 4644bc8d-2565-44df-a27b-d4449b4a68ec@100 --yes
+```
+
+Run it from `apps/pulsar-worker`. The prior version is available for rollback; the
+additive tables can remain in place. See
+[Cloudflare's version documentation](https://developers.cloudflare.com/workers/versions-and-deployments/).
+
+The existing daemon on port 4210 returns `unknown-request` for both `push.subscribe`
+and `chat.history`. It has not been restarted. A fresh daemon compiled from committed
+source is ready at `/tmp/ruimte-push-daemon-build/ruimte`. Its isolated readiness check
+confirmed both handlers on a temporary local port and empty data directory, without
+broker connections or hook installation. That test process and data were removed.
+Do not replace or restart the installed daemon while Bas's sessions need to keep running.
+
+105 Worker/server push tests pass, one optional statement-key test is skipped.
+The suite includes real local Worker runtime tests, environment-specific JWT signatures,
+rotation, missing credentials and independent device registrations. It uses fixture
+keys, not the real APNs keys. Logs are in `/tmp/ruimte-apns-full-tests.log`.
+
+Pulsar health remained healthy after migration with both Apple and GitHub providers
+enabled and the same public statement key. Real APNs delivery and Live Activity
+behavior remain unverified. Once activation and the daemon update are complete, enable
+Notifications on the iPhone, follow a dedicated test chat, then check foreground
+suppression, background turn completion, attention, approval actions and Live Activity
+start/update/end. Production delivery additionally needs a production-signed app/device
+token; a sandbox test does not establish production delivery.

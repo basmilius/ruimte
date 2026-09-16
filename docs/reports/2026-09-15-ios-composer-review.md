@@ -806,3 +806,24 @@ permission to transfer these credentials there. No cloud version or secrets were
 uploaded. Local configuration is ready; external activation, migration 0008, a daemon
 restart and real APNs delivery remain pending. Details are in
 [APNs operations](../../apps/pulsar-worker/APNS.md).
+
+
+## APNs staging and runtime checks, September 16
+
+After Bas approved the upload, both APNs key pairs were stored as Cloudflare secrets
+in inactive Worker version `4644bc8d-2565-44df-a27b-d4449b4a68ec`. Existing Apple,
+GitHub and statement-signing secrets remain present. The private temporary upload file
+was removed. Migrations 0006 and 0008 succeeded after capturing a D1 recovery bookmark.
+Pulsar health and both login providers remained healthy.
+
+Automatic approval review rejected activating this version at 100% of production
+traffic and requested explicit rollout permission. That question is pending. The
+existing Worker version is still active, so actual APNs delivery has not been tested.
+
+The full Worker/server push run passed 105 tests with one optional statement-key test
+skipped, using local runtime servers and fixture keys. The installed daemon was probed
+with invalid payloads and returned `unknown-request` for `push.subscribe` and
+`chat.history`. A new daemon built from committed source passed the same handler
+readiness check on an isolated local port. No existing daemon, broker, TURN process or
+user session was restarted. Runtime update and physical iPhone acceptance remain open.
+See [APNs operations](../../apps/pulsar-worker/APNS.md) for version IDs and next steps.
