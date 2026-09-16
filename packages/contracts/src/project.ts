@@ -484,6 +484,32 @@ export const ProjectDocumentV1Schema = z.object({
 });
 export type ProjectDocumentV1 = z.infer<typeof ProjectDocumentV1Schema>;
 
+/*
+ * What `<folder>/.ruimte/settings.json` says about a project, beside `project.json`. Every field is
+ * optional, and a key this version does not know is kept in the file when another is written.
+ */
+export const ProjectSettingsSchema = z.object({
+    worktrees: z
+        .object({
+            // Paths relative to the project folder, linked into every worktree the daemon makes, such as node_modules.
+            share: z.array(z.string().min(1)).optional()
+        })
+        .optional()
+});
+export type ProjectSettings = z.infer<typeof ProjectSettingsSchema>;
+
+export const ProjectSettingsPayloadSchema = z.object({
+    folder: z.string().min(1)
+});
+export type ProjectSettingsPayload = z.infer<typeof ProjectSettingsPayloadSchema>;
+
+// Writes the fields it names and keeps every other key of the file as it was.
+export const ProjectSettingsUpdatePayloadSchema = z.object({
+    folder: z.string().min(1),
+    settings: ProjectSettingsSchema
+});
+export type ProjectSettingsUpdatePayload = z.infer<typeof ProjectSettingsUpdatePayloadSchema>;
+
 // The surfaces beside the canvas that can be up; the toolbar has a button per kind.
 export const ProjectPanelKindSchema = z.enum(['files', 'git', 'processes']);
 export type ProjectPanelKind = z.infer<typeof ProjectPanelKindSchema>;

@@ -45,3 +45,27 @@ test('a node that opened nothing goes at once', async () => {
     expect(useEndingAgents.getState().pending).toBeNull();
     expect(store.getState().nodes[shell]).toBeUndefined();
 });
+
+test('a node that works in a worktree asks even when it opened nothing, and offers the worktrees nothing that stays works in', async () => {
+    const lexer = { ...node('lexer', 'chat', 0), cwd: '/wt/lexer' };
+    const parser = { ...node('parser', 'terminal', 300), cwd: '/wt/parser' };
+    const watcher = { ...node('watcher', 'terminal', 600), cwd: '/wt/parser/src' };
+    const store = canvasWith(lexer, parser, watcher);
+    store.getState().select(['lexer', 'parser']);
+    const transport = {
+        request: async (type: string) =>
+            type === 'agent.children'
+                ? { nodeIds: [] }
+                : {
+                      worktrees: [
+                          { path: '/wt/lexer', branch: 'lexer', work: { changed: 0, untracked: 0, ahead: 0 } },
+                          { path: '/wt/parser', branch: 'parser', work: { changed: 0, untracked: 0, ahead: 0 } }
+                      ]
+                  }
+    } as never;
+
+    await deleteSelectionAsking(store, transport, '/project');
+
+    expect(useEndingAgents.getState().pending).toMatchObject({ agents: 0, worktrees: { folder: '/project', worktrees: [{ branch: 'lexer' }] } });
+    expect(store.getState().nodes.lexer).toBeDefined();
+});

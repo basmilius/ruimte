@@ -1,14 +1,17 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
 import { Eye, FolderX, GitBranch, GitMerge, LocateFixed, MoreHorizontal, Trash } from 'lucide-react';
 import type { Worktree } from '@ruimte/contracts';
 import { StatusDot } from '@/canvas/NodeFrame';
-import { nodesInWorktree, originLabel, workCounts } from '@/shell/panels/worktree-rows';
+import { GitPrompt } from '@/shell/panels/GitDialogs';
+import { nodesInWorktree, originLabel, sharePathsOf, workCounts } from '@/shell/panels/worktree-rows';
 import { nodeWorking } from '@/state/agent-work';
 import { useChats } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
 import { worktreeLists, type WorktreeNode } from '@/state/worktrees';
+import { useToasts } from '@/state/toasts';
+import { useTransport } from '@/transport/context';
 import { MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
@@ -40,6 +43,43 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
     const chats = useChats((s) => s.byKey);
     const sectionRef = useRef<HTMLElement>(null);
     const shown = worktrees.length > 0;
+    const transport = useTransport();
+    const [share, setShare] = useState<{ folder: string; paths: readonly string[] } | null>(null);
+    const [sharing, setSharing] = useState(false);
+    const shared = share?.folder === folder ? share.paths : [];
+
+    useEffect(() => {
+        if (!shown) {
+            return;
+        }
+        let cancelled = false;
+        transport
+            .request('project.settings', { folder })
+            .then((settings) => {
+                if (!cancelled) {
+                    setShare({ folder, paths: settings.worktrees?.share ?? [] });
+                }
+            })
+            // A machine from before project settings has none to share.
+            .catch(() => undefined);
+        return () => {
+            cancelled = true;
+        };
+    }, [transport, shown, folder]);
+
+    const saveShare = (value: string): void => {
+        const paths = sharePathsOf(value);
+        transport
+            .request('project.settings-update', { folder, settings: { worktrees: { share: paths } } })
+            .then((settings) => {
+                setShare({ folder, paths: settings.worktrees?.share ?? [] });
+                setSharing(false);
+            })
+            .catch((error: unknown) => {
+                const message = error instanceof Error ? error.message : 'That did not work.';
+                useToasts.getState().show({ title: 'Saving the shared paths failed', description: message, kind: 'error', output: message });
+            });
+    };
 
     useEffect(() => {
         const section = sectionRef.current;
@@ -65,7 +105,23 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
             <div className="flex h-8 shrink-0 items-center gap-2 px-3">
                 <span className={SECTION_LABEL}>Worktrees</span>
                 <span className="text-xs text-text-faint tabular-nums">{worktrees.length}</span>
+                <span className="grow" />
+                <Tooltip label="Paths of the project folder linked into every new worktree">
+                    <button className="min-w-0 truncate text-xs text-text-faint hover:text-text" onClick={() => setSharing(true)}>
+                        {shared.length === 0 ? 'Share paths with new worktrees...' : `Shares ${shared.join(', ')}`}
+                    </button>
+                </Tooltip>
             </div>
+            <GitPrompt
+                open={sharing}
+                title="Share paths with new worktrees"
+                description="Each path is linked from the project folder into every worktree made from now on, such as node_modules. Git has to ignore it; a worktree that exists keeps what it has."
+                field={{ label: 'Paths, separated by commas', initial: shared.join(', '), placeholder: 'node_modules, .env' }}
+                allowEmpty
+                confirmLabel="Save"
+                onConfirm={saveShare}
+                onClose={() => setSharing(false)}
+            />
             <ul className="min-h-0 overflow-y-auto pb-1">
                 {worktrees.map((worktree) => {
                     const working = nodesInWorktree(nodes, worktree);

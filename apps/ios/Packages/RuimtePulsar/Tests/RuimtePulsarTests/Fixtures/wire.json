@@ -139,6 +139,8 @@
     "project.close",
     "project.release",
     "project.setIcon",
+    "project.settings",
+    "project.settings-update",
     "project.delete",
     "drawing.paths",
     "drawing.open",

@@ -153,3 +153,26 @@ export const originLabel = (worktree: Worktree): string | null => {
     const behind = worktree.work?.behind ?? 0;
     return behind > 0 ? `from ${branch}, ${count(behind, 'commit', 'commits')} behind` : `from ${branch}`;
 };
+
+/* The shared paths a person typed, split on commas and new lines, without empty entries or repeats. */
+export const sharePathsOf = (value: string): string[] => [
+    ...new Set(
+        value
+            .split(/[,\n]/)
+            .map((path) => path.trim())
+            .filter((path) => path !== '')
+    )
+];
+
+/*
+ * The worktrees nodes that are going work in, leaving out every one a node that stays works in too:
+ * removing that one would pull the folder out from under it.
+ */
+export const worktreesLeftBy = <T extends NodeLike>(worktrees: readonly Worktree[], going: readonly T[], staying: readonly T[]): Worktree[] =>
+    worktrees.filter((worktree) => !worktree.missing && nodesInWorktree(going, worktree).length > 0 && nodesInWorktree(staying, worktree).length === 0);
+
+/* What the delete question says about one worktree a going node leaves behind. */
+export const leftBehindLine = (worktree: Worktree): string =>
+    hasWork(worktree.work)
+        ? `Works in worktree ${worktree.branch}, which holds ${workSentence(worktree, worktree.work!)}. It stays; merge or remove it from the git panel.`
+        : `Works in worktree ${worktree.branch}, which holds no work.`;

@@ -1,22 +1,47 @@
+import { useState } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Square, Trash } from 'lucide-react';
 import { endsAgentsWarning, stopsSubagentsWarning, stopsTaskWarning, useEndingAgents, type PendingEnd } from '@/agents/end-children';
+import { hasWork, leftBehindLine, removedToast } from '@/shell/panels/worktree-rows';
+import { Toggle } from '@/shell/settings/controls';
+import { useEndpointId } from '@/state/keys';
+import { useToasts } from '@/state/toasts';
+import { worktreeLists } from '@/state/worktrees';
+import { useTransport } from '@/transport/context';
+import type { Transport } from '@/transport/transport';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 
-const warningOf = (pending: PendingEnd | null): string => {
+const warningOf = (pending: PendingEnd | null): string | null => {
     const agents = pending?.agents ?? 0;
     if (pending?.action === 'stop') {
         return stopsTaskWarning(agents);
     }
-    return pending?.action === 'stop-subagents' ? stopsSubagentsWarning(agents) : endsAgentsWarning(agents);
+    if (pending?.action === 'stop-subagents') {
+        return stopsSubagentsWarning(agents);
+    }
+    return agents === 0 ? null : endsAgentsWarning(agents);
 };
 
-/* Asked before a delete that also ends the agents the deleted nodes opened, and before a stop that ends agents, with how many. */
+/*
+ * Asked before a delete that also ends the agents the deleted nodes opened, and before a stop that ends
+ * agents, with how many. A delete that leaves a worktree behind says so, and offers to remove the ones
+ * that hold no work along with the nodes; one with work stays, since nothing removes work on its own.
+ */
 export function EndChildrenDialog() {
     const pending = useEndingAgents((s) => s.pending);
+    const transport = useTransport();
+    const endpointId = useEndpointId();
+    // Off for every new question: removing a worktree is only ever what the person ticked this time.
+    const [removal, setRemoval] = useState<{ pending: PendingEnd | null; remove: boolean }>({ pending: null, remove: false });
+    if (removal.pending !== pending) {
+        setRemoval({ pending, remove: false });
+    }
     const close = (): void => useEndingAgents.setState({ pending: null });
     const stop = pending?.action === 'stop' || pending?.action === 'stop-subagents';
+    const warning = warningOf(pending);
+    const offered = pending?.worktrees;
+    const clean = offered?.worktrees.filter((worktree) => !hasWork(worktree.work)) ?? [];
 
     return (
         <Dialog.Root open={pending !== null} onOpenChange={(next) => !next && close()}>
@@ -26,13 +51,31 @@ export function EndChildrenDialog() {
                     <Dialog.Title className="text-base font-semibold text-text">
                         {stop ? 'Stop' : 'Delete'} {pending?.what}?
                     </Dialog.Title>
-                    <p className="mt-1 text-sm text-text-muted">{warningOf(pending)}</p>
+                    {warning !== null && <p className="mt-1 text-sm text-text-muted">{warning}</p>}
+                    {offered?.worktrees.map((worktree) => (
+                        <p key={worktree.path} className="mt-1 text-sm text-text-muted">
+                            {leftBehindLine(worktree)}
+                        </p>
+                    ))}
+                    {clean.length > 0 && (
+                        <label className="mt-3 flex items-center justify-between gap-3">
+                            <span className="text-sm text-text">
+                                {clean.length === 1
+                                    ? 'Also remove the worktree and its branch'
+                                    : `Also remove the ${clean.length} worktrees without work and their branches`}
+                            </span>
+                            <Toggle label="Also remove the worktree" checked={removal.remove} onChange={(remove) => setRemoval({ pending, remove })} />
+                        </label>
+                    )}
                     <div className="mt-4 flex items-center justify-end gap-2">
                         <Button onClick={close}>Cancel</Button>
                         <Button
                             variant="danger"
                             onClick={() => {
                                 pending?.run();
+                                if (offered !== undefined && removal.remove) {
+                                    void removeClean(transport, offered.folder, clean).finally(() => worktreeLists.reload(endpointId, offered.folder));
+                                }
                                 close();
                             }}
                         >
@@ -44,3 +87,18 @@ export function EndChildrenDialog() {
         </Dialog.Root>
     );
 }
+
+/* Without force, so a worktree that gained work since the question was asked is refused by the machine and stays. */
+const removeClean = async (transport: Transport, folder: string, worktrees: readonly PendingEndWorktree[]): Promise<void> => {
+    for (const worktree of worktrees) {
+        try {
+            const result = await transport.request('git.worktree-remove', { repo: folder, path: worktree.path });
+            useToasts.getState().show({ title: `Removed worktree ${worktree.branch}`, ...(removedToast(worktree.branch, result) ?? {}), kind: 'success' });
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'That did not work.';
+            useToasts.getState().show({ title: `Worktree ${worktree.branch} stays`, description: message, kind: 'error', output: message });
+        }
+    }
+};
+
+type PendingEndWorktree = NonNullable<PendingEnd['worktrees']>['worktrees'][number];

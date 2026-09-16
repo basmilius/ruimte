@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { Worktree } from '@ruimte/contracts';
 import type { Transport } from '@/transport/transport';
 
 export interface PendingEnd {
@@ -7,6 +8,8 @@ export interface PendingEnd {
     agents: number;
     /* A stop keeps the node where it is; without one the question is about a delete. */
     action?: 'delete' | 'stop' | 'stop-subagents';
+    /* The worktrees the deleted nodes work in and nothing that stays does, which the question offers to remove with them. */
+    worktrees?: { folder: string; worktrees: readonly Worktree[] };
     run(): void;
 }
 
@@ -45,19 +48,25 @@ export const agentsEndedWith = async (transport: Pick<Transport, 'request'> | nu
     return new Set(answers.flat().filter((id) => !going.has(id))).size;
 };
 
-/* Runs a delete at once when it ends no agent of the machine's, and asks first when it does. */
+/*
+ * Runs a delete at once when it ends no agent of the machine's and leaves no worktree behind, and
+ * asks first when it does either: a worktree is never removed on its own, but the moment its node goes
+ * is when a person sees that it stays.
+ */
 export const askBeforeEndingAgents = async (
     transport: Pick<Transport, 'request'> | null,
     nodeIds: readonly string[],
     what: string,
-    run: () => void
+    run: () => void,
+    worktrees?: () => Promise<PendingEnd['worktrees']>
 ): Promise<void> => {
-    const agents = await agentsEndedWith(transport, nodeIds);
-    if (agents === 0) {
+    const [agents, left] = await Promise.all([agentsEndedWith(transport, nodeIds), worktrees?.().catch(() => undefined)]);
+    const offered = left !== undefined && left.worktrees.length > 0 ? left : undefined;
+    if (agents === 0 && offered === undefined) {
         run();
         return;
     }
-    useEndingAgents.setState({ pending: { what, agents, run } });
+    useEndingAgents.setState({ pending: { what, agents, run, ...(offered === undefined ? {} : { worktrees: offered }) } });
 };
 
 /* A task's node always ends when it is stopped, so this asks every time, counting what goes with it. */

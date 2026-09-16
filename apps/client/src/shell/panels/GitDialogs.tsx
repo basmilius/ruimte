@@ -18,6 +18,8 @@ interface PromptProps {
     confirmLabel: string;
     danger?: boolean;
     busy?: boolean;
+    /* Lets the field be confirmed empty, for a list that may be cleared. */
+    allowEmpty?: boolean;
     /* A second way out next to the confirm, such as merging before removing. */
     secondary?: { label: string; onClick(): void };
     onConfirm(value: string, body: string): void;
@@ -28,7 +30,20 @@ interface PromptProps {
  * The one dialog every git action asks its question in: a name to type, or a warning to agree with.
  * They share it so a confirm and a rename read the same and neither grows a layout of its own.
  */
-export function GitPrompt({ open, title, description, field, area, confirmLabel, danger = false, busy = false, secondary, onConfirm, onClose }: PromptProps) {
+export function GitPrompt({
+    open,
+    title,
+    description,
+    field,
+    area,
+    confirmLabel,
+    danger = false,
+    busy = false,
+    allowEmpty = false,
+    secondary,
+    onConfirm,
+    onClose
+}: PromptProps) {
     /* The dialog stays mounted between questions, so every opening starts from what it was handed.
        The token is what it was handed, so a new question resets the fields in the same render that
        shows it and not in a second one after. */
@@ -43,7 +58,7 @@ export function GitPrompt({ open, title, description, field, area, confirmLabel,
     const setBody = (next: string): void => setDraft({ ...draft, body: next });
 
     const submit = (): void => {
-        if (!busy && (field === undefined || value.trim() !== '')) {
+        if (!busy && (field === undefined || allowEmpty || value.trim() !== '')) {
             onConfirm(value.trim(), body.trim());
         }
     };
@@ -94,7 +109,11 @@ export function GitPrompt({ open, title, description, field, area, confirmLabel,
                                 {secondary.label}
                             </Button>
                         )}
-                        <Button variant={danger ? 'danger' : 'primary'} disabled={busy || (field !== undefined && value.trim() === '')} onClick={submit}>
+                        <Button
+                            variant={danger ? 'danger' : 'primary'}
+                            disabled={busy || (field !== undefined && !allowEmpty && value.trim() === '')}
+                            onClick={submit}
+                        >
                             {confirmLabel}
                         </Button>
                     </div>

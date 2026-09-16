@@ -18042,6 +18042,86 @@
       "summary"
     ]
   },
+  "request.project.settings.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "folder": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "folder"
+    ]
+  },
+  "request.project.settings.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "worktrees": {
+        "type": "object",
+        "properties": {
+          "share": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    }
+  },
+  "request.project.settings-update.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "folder": {
+        "type": "string",
+        "minLength": 1
+      },
+      "settings": {
+        "type": "object",
+        "properties": {
+          "worktrees": {
+            "type": "object",
+            "properties": {
+              "share": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "required": [
+      "folder",
+      "settings"
+    ]
+  },
+  "request.project.settings-update.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "worktrees": {
+        "type": "object",
+        "properties": {
+          "share": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    }
+  },
   "request.project.delete.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

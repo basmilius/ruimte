@@ -2,7 +2,19 @@ import { describe, expect, test } from 'bun:test';
 import type { Worktree } from '@ruimte/contracts';
 import { ProjectFileTabSchema } from '@ruimte/contracts';
 import { tabKey } from '@/state/files';
-import { nodesInWorktree, originLabel, removedToast, removeQuestion, workCounts, worktreeDiffTab, worktreeOfPath, workSentence } from './worktree-rows.ts';
+import {
+    leftBehindLine,
+    nodesInWorktree,
+    originLabel,
+    removedToast,
+    removeQuestion,
+    sharePathsOf,
+    workCounts,
+    worktreeDiffTab,
+    worktreeOfPath,
+    worktreesLeftBy,
+    workSentence
+} from './worktree-rows.ts';
 
 const lexer: Worktree = { path: '/home/worktrees/repo-1/lexer', branch: 'lexer', from: { branch: 'main', commit: 'abc' }, nodeId: 'chat-lexer' };
 
@@ -106,5 +118,26 @@ describe('viewing a worktree against where it came from', () => {
         expect(originLabel({ ...lexer, work: { changed: 0, untracked: 0, ahead: 0, behind: 4 } })).toBe('from main, 4 commits behind');
         expect(originLabel({ ...lexer, work: { changed: 0, untracked: 0, ahead: 0, behind: 1 } })).toBe('from main, 1 commit behind');
         expect(originLabel({ path: '/x', branch: 'x' })).toBeNull();
+    });
+});
+
+describe('what deleting a node says about its worktree', () => {
+    test('offers the worktrees only going nodes work in', () => {
+        const parser: Worktree = { path: '/home/worktrees/repo-1/parser', branch: 'parser' };
+        const going = [{ id: 'chat-lexer', kind: 'chat', title: 'Lexer' }];
+        const staying = [{ id: 'term', kind: 'terminal', title: 'Shell', cwd: parser.path }];
+        expect(worktreesLeftBy([lexer, parser], [...going, { id: 'p', kind: 'chat', title: 'P', cwd: parser.path }], staying)).toEqual([lexer]);
+    });
+
+    test('names the work of one that holds some and says it stays', () => {
+        expect(leftBehindLine({ ...lexer, work: { changed: 0, untracked: 2, ahead: 0 } })).toBe(
+            'Works in worktree lexer, which holds 2 new files. It stays; merge or remove it from the git panel.'
+        );
+        expect(leftBehindLine({ ...lexer, work: { changed: 0, untracked: 0, ahead: 0 } })).toBe('Works in worktree lexer, which holds no work.');
+    });
+
+    test('reads shared paths typed with commas or on lines of their own', () => {
+        expect(sharePathsOf('node_modules, .env\nnode_modules,, ')).toEqual(['node_modules', '.env']);
+        expect(sharePathsOf('')).toEqual([]);
     });
 });

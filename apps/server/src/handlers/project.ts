@@ -1,4 +1,5 @@
 import { RequestError, type Dispatcher } from '../dispatcher.ts';
+import { readProjectSettings, sharedPathOf, updateProjectSettings } from '../projects/project-settings.ts';
 import { ProjectError, type ProjectStore } from '../projects/project-store.ts';
 
 const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
@@ -48,6 +49,18 @@ export const registerProjectHandlers = (dispatcher: Dispatcher, store: ProjectSt
             store.removeViewer(client.id, payload.projectId);
             store.release(payload.projectId);
             return {};
+        })
+    );
+
+    dispatcher.register('project.settings', (payload) => translate(() => readProjectSettings(payload.folder)));
+
+    dispatcher.register('project.settings-update', (payload) =>
+        translate(() => {
+            const bad = (payload.settings.worktrees?.share ?? []).filter((path) => sharedPathOf(path) === null);
+            if (bad.length > 0) {
+                throw new RequestError('bad-share-path', `A shared path is relative to the project folder and stays inside it: ${bad.join(', ')}`);
+            }
+            return updateProjectSettings(payload.folder, payload.settings);
         })
     );
 
