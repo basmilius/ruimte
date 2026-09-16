@@ -233,7 +233,7 @@ export class PushService {
             kind: 'attention',
             target,
             nodeId,
-            title: (this.options.titleFor?.(nodeId) || title).slice(0, 160),
+            title: title.slice(0, 160),
             body: body.slice(0, 500),
             expiresAt: this.now() + PUSH_MAX_AGE_MS
         });
