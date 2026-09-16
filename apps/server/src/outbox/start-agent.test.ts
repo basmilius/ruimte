@@ -117,6 +117,7 @@ const boot = async (): Promise<Daemon> => {
         store: outbox,
         clock: stillClock,
         handlers: {
+            'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
             'resume-run': () => Promise.reject(new Error('no resume in these tests')),
             'wake-parent': () => Promise.reject(new Error('no wake in these tests')),
             'end-children': () => Promise.reject(new Error('no ending in these tests')),

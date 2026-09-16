@@ -163,6 +163,11 @@ export class AgentLineageStore {
         return entry?.relation === 'fork' ? entry.openedBy : null;
     }
 
+    /* The forks made from a chat. */
+    forksOf(nodeId: string): string[] {
+        return [...this.opened.values()].filter((entry) => entry.relation === 'fork' && entry.openedBy === nodeId).map((entry) => entry.nodeId);
+    }
+
     /* The forks of this project whose node is gone, read before `prune` forgets them. */
     forksLeaving(projectId: string, ids: ReadonlySet<string>): string[] {
         return [...this.opened.values()]

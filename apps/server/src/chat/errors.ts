@@ -17,7 +17,10 @@ type ChatErrorCode =
     | 'not-a-repository'
     | 'branch-exists'
     | 'worktree-failed'
-    | 'checkpoint-missing';
+    | 'checkpoint-missing'
+    // What a summary is refused with.
+    | 'not-a-fork'
+    | 'original-gone';
 
 export class ChatError extends Error {
     readonly code: ChatErrorCode;

@@ -89,7 +89,7 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
                 return session
                     ? {
                           items: () => session.thread.list(),
-                          wake: (wake) => session.wake(wake)
+                          wake: (wake) => session.wake(wake) !== null
                       }
                     : null;
             }

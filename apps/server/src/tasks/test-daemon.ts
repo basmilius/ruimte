@@ -7,6 +7,7 @@ import { AttachmentStore } from '../chat/attachment-store.ts';
 import { ChatManager } from '../chat/chat-manager.ts';
 import { ChatStore } from '../chat/chat-store.ts';
 import { chatForkDeps, forkChat, readForkInfo } from '../chat/fork.ts';
+import { wireSummaries } from '../chat/summary.ts';
 import { fakeClaude } from '../chat/fake-claude.ts';
 import { fakeCodex } from '../chat/fake-codex.ts';
 import { inProcess, type InProcessCli } from '../chat/fake-cli.ts';
@@ -142,6 +143,15 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         log: () => undefined
     });
     endChildren.start();
+    const summaries = wireSummaries({
+        chats,
+        host: { locate: (id) => store.index.locate(id), mutate: (projectId, apply) => store.mutate(projectId, apply) },
+        titleFor: (id) => store.index.titleFor(id),
+        enqueue: async (id, target, work) => {
+            await box.worker!.enqueue(id, target, work);
+            recheck();
+        }
+    });
     const worker = new OutboxWorker({
         store: outbox,
         clock,
@@ -160,9 +170,11 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
             }),
             'resume-run': resumeRunHandler(chats),
             'wake-parent': wiring.wakeParent,
-            'end-children': endChildren.handler
+            'end-children': endChildren.handler,
+            'deliver-summary': summaries.handler
         },
         onParked: (entry, error) => {
+            summaries.onParked(entry, error);
             resumeRunParked(chats)(entry, error);
             wiring.onParked(entry, error);
         }
@@ -253,7 +265,8 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
     });
     registerChatHandlers(dispatcher, chats, providers, endChildren.owe, endChildren.stopNode, {
         fork: (payload) => forkChat(forkDeps, payload),
-        info: (payload) => readForkInfo(forkDeps, payload)
+        info: (payload) => readForkInfo(forkDeps, payload),
+        summarize: (chatId) => summaries.summarize(chatId)
     });
     registerTaskHandlers(dispatcher, tasks, endChildren.children);
 
@@ -284,6 +297,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
             // The order the daemon's own shutdown takes: nothing that dies with it settles a task.
             worker.stop();
             wiring.coordinator.stop();
+            summaries.coordinator.stop();
             chats.persistAllSync();
             await chats.shutdown();
             sessions.killAll();

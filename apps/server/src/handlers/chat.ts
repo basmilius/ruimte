@@ -1,4 +1,4 @@
-import type { ChatForkInfoPayload, ChatForkInfoResult, ChatForkPayload, ChatForkResult } from '@ruimte/contracts';
+import type { ChatForkInfoPayload, ChatForkInfoResult, ChatForkPayload, ChatForkResult, ChatSummarizeResult } from '@ruimte/contracts';
 import { RequestError, type Dispatcher } from '../dispatcher.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { ChatError } from '../chat/errors.ts';
@@ -9,6 +9,7 @@ import type { BeforeKill } from './session.ts';
 export interface ChatForkHandlers {
     fork(payload: ChatForkPayload): Promise<ChatForkResult>;
     info(payload: ChatForkInfoPayload): Promise<ChatForkInfoResult>;
+    summarize(chatId: string): Promise<ChatSummarizeResult>;
 }
 
 const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
@@ -107,6 +108,8 @@ export const registerChatHandlers = (
     dispatcher.register('chat.fork', (payload) => translate(() => forking().fork(payload)));
 
     dispatcher.register('chat.forkInfo', (payload) => translate(() => forking().info(payload)));
+
+    dispatcher.register('chat.summarize', (payload) => translate(() => forking().summarize(payload.chatId)));
 
     dispatcher.register('chat.cancel', (payload) =>
         translate(async () => {

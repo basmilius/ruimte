@@ -131,6 +131,10 @@ export interface ParkedNoteDeps {
 export const parkedNote =
     (deps: ParkedNoteDeps) =>
     (entry: OutboxEntry, error: unknown): void => {
+        // A summary that was not delivered is said in its fork, by its own handler.
+        if (entry.kind === 'deliver-summary') {
+            return;
+        }
         const chatId = entry.kind === 'wake-parent' ? entry.target : deps.madeBy(entry.target);
         if (chatId === null) {
             return;

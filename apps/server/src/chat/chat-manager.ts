@@ -497,6 +497,27 @@ export class ChatManager {
         this.chats.get(chatId)?.addNote(level, text);
     }
 
+    /* Opens the turn a fork writes its summary in, loading the fork when nobody has; null while a turn is in the way. */
+    async openSummaryTurn(chatId: string, wake: { text: string; label: string; note: string; summaryFor: string }): Promise<string | null> {
+        await this.creating.get(chatId)?.catch(() => undefined);
+        if (!this.chats.has(chatId)) {
+            if (!(await this.hasStored(chatId))) {
+                throw new ChatError('chat-not-found', `No chat ${chatId}`);
+            }
+            await this.create({ chatId });
+        }
+        return this.require(chatId).wake({ ...wake, taskIds: [] });
+    }
+
+    /* Leaves a fork's summary in the chat it is for, loading that chat when nobody has; false when it was there already. */
+    async deliverSummary(chatId: string, summary: { noteId: string; note: string; from: string; preamble: string }): Promise<boolean> {
+        await this.creating.get(chatId)?.catch(() => undefined);
+        if (!this.chats.has(chatId)) {
+            await this.create({ chatId });
+        }
+        return this.require(chatId).deliverSummary(summary);
+    }
+
     /* The node a row of this chat stands for when a task opened it, or null for a subagent of the CLI's own. */
     private taskChildOf(chatId: string, toolUseId: string): string | null {
         const row = this.chats.get(chatId)?.thread.find('subagent', (item) => item.toolUseId === toolUseId);

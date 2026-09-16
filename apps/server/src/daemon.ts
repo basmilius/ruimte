@@ -67,6 +67,7 @@ import { BUILD, COMPILED as compiled, VERSION } from './version.ts';
 import { registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
 import { chatForkDeps, forkChat, readForkInfo } from './chat/fork.ts';
+import { wireSummaries } from './chat/summary.ts';
 import { withForkOrigin } from './context/fork-origin.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from './fs/file-route.ts';
 import { FolderWatcher } from './fs/watch.ts';
@@ -180,6 +181,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         sources: (targetId) =>
             withForkOrigin(targetId, projects.index.sourcesFor(targetId), {
                 forkedFrom: (id) => lineage.forkedFrom(id),
+                forksOf: (id) => lineage.forksOf(id),
                 locate: (id) => projects.index.locate(id),
                 titleFor: (id) => projects.index.titleFor(id)
             }),
@@ -250,6 +252,12 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     projects.attachDiagrams(diagrams);
     // Before the socket answers, so an agent whose project nobody opened since the restart still reads its links.
     await projects.warmIndex();
+    const summaries = wireSummaries({
+        chats,
+        host: { locate: (id) => projects.index.locate(id), mutate: (projectId, apply) => projects.mutate(projectId, apply) },
+        titleFor: (id) => projects.index.titleFor(id),
+        enqueue: (...args) => outboxWorker.enqueue(...args)
+    });
     // Started once hooks have an address, and without waiting for any client: that is the whole point.
     const outboxWorker = new OutboxWorker({
         store: outbox,
@@ -267,11 +275,13 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }),
             'resume-run': resumeRunHandler(chats),
             'wake-parent': taskWiring.wakeParent,
-            'end-children': endChildren.handler
+            'end-children': endChildren.handler,
+            'deliver-summary': summaries.handler
         },
         onParked: (entry, error) => {
             resumeRunParked(chats)(entry, error);
             taskWiring.onParked(entry, error);
+            summaries.onParked(entry, error);
         }
     });
     const folders = new FolderWatcher();
@@ -412,7 +422,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const forkDeps = chatForkDeps({ chats, host: canvasHost, titleFor: (id) => projects.index.titleFor(id), lineage, worktrees, checkpoints });
     registerChatHandlers(dispatcher, chats, providers, endChildren.owe, endChildren.stopNode, {
         fork: (payload) => forkChat(forkDeps, payload),
-        info: (payload) => readForkInfo(forkDeps, payload)
+        info: (payload) => readForkInfo(forkDeps, payload),
+        summarize: (chatId) => summaries.summarize(chatId)
     });
     registerTaskHandlers(dispatcher, tasks, endChildren.children);
     registerProjectHandlers(dispatcher, projects);
@@ -789,6 +800,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         selfUpdate.stop();
         outboxWorker.stop();
         taskWiring.coordinator.stop();
+        summaries.coordinator.stop();
         snapshotSchedule.stop();
         usage.stop();
         limits.stop();

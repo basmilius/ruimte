@@ -37,7 +37,13 @@ const EndChildrenSchema = z.object({
     payload: z.object({ nodeIds: z.array(z.string().min(1)) })
 });
 
-const OutboxWorkSchema = z.discriminatedUnion('kind', [StartAgentSchema, ResumeRunSchema, WakeParentSchema, EndChildrenSchema]);
+const DeliverSummarySchema = z.object({
+    kind: z.literal('deliver-summary'),
+    // The target is the chat the summary is for; the fork wrote it in this turn.
+    payload: z.object({ forkId: z.string().min(1), turnId: z.string().min(1), text: z.string() })
+});
+
+const OutboxWorkSchema = z.discriminatedUnion('kind', [StartAgentSchema, ResumeRunSchema, WakeParentSchema, EndChildrenSchema, DeliverSummarySchema]);
 
 const OutboxEntrySchema = z.intersection(
     OutboxWorkSchema,
@@ -58,6 +64,7 @@ export type StartAgentEntry = Extract<OutboxEntry, { kind: 'start-agent' }>;
 export type ResumeRunEntry = Extract<OutboxEntry, { kind: 'resume-run' }>;
 export type WakeParentEntry = Extract<OutboxEntry, { kind: 'wake-parent' }>;
 export type EndChildrenEntry = Extract<OutboxEntry, { kind: 'end-children' }>;
+export type DeliverSummaryEntry = Extract<OutboxEntry, { kind: 'deliver-summary' }>;
 
 /* The nodes an entry is about: work on any of them waits while it runs. Ending children holds their lanes too, so no start or resume of one runs beside it. */
 export const lanesOf = (entry: OutboxEntry): string[] => (entry.kind === 'end-children' ? [entry.target, ...entry.payload.nodeIds] : [entry.target]);

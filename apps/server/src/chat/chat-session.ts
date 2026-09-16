@@ -434,9 +434,9 @@ export class ChatSession {
      * means a turn is in the way (or the daemon is going down) and nothing happened. Never through
      * `send`: that steps on a turn with `origin: 'agent'`, so a second wake would close the first.
      */
-    wake(wake: { text: string; label: string; note: string; taskIds: string[] }): boolean {
+    wake(wake: { text: string; label: string; note: string; taskIds: string[]; summaryFor?: string }): string | null {
         if (this.frozen || this.thread.info.activeTurnId !== null) {
-            return false;
+            return null;
         }
         const preamble = this.contextNote(wake.text);
         const turnId = newId('turn');
@@ -450,7 +450,8 @@ export class ChatSession {
                 state: 'running',
                 origin: 'agent',
                 label: wake.label,
-                taskIds: wake.taskIds,
+                ...(wake.taskIds.length === 0 ? {} : { taskIds: wake.taskIds }),
+                ...(wake.summaryFor === undefined ? {} : { summaryFor: wake.summaryFor }),
                 endedAt: null,
                 costUsd: 0
             }),
@@ -461,6 +462,23 @@ export class ChatSession {
         this.options.persist();
         this.turnReady = this.checkpoint(turnId);
         this.run((backend) => backend.sendTurn({ text: wake.text, preamble, attachments: [], mentions: [], skills: [] }));
+        return turnId;
+    }
+
+    /*
+     * A summary a fork wrote, as a note a person reads and a preamble the CLI hears in front of the
+     * next real prompt, whether or not a turn runs now. Written under the id the delivery names, so
+     * a delivery that runs twice leaves one of each; false when it was here already.
+     */
+    deliverSummary(summary: { noteId: string; note: string; from: string; preamble: string }): boolean {
+        if (this.thread.get(summary.noteId) !== undefined) {
+            return false;
+        }
+        this.pendingPreambles = [...this.pendingPreambles, summary.preamble];
+        this.emit([
+            this.thread.upsert({ id: summary.noteId, kind: 'note', createdAt: Date.now(), turnId: null, level: 'info', text: summary.note, from: summary.from })
+        ]);
+        this.options.persist();
         return true;
     }
 
