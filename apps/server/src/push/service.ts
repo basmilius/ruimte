@@ -238,7 +238,8 @@ export class PushService {
                 nodeId: node.nodeId,
                 target: node.target,
                 title: (this.options.titleFor?.(node.nodeId) || node.title).slice(0, 80),
-                phase: node.status === 'needs-you' ? 'needs-you' : 'running'
+                phase: node.status === 'needs-you' ? 'needs-you' : 'running',
+                startedAt: this.nodes.get(node.nodeId)?.startedAt
             }));
         const runningCount = states.filter((state) => state === 'running').length;
         const attentionCount = states.filter((state) => state === 'needs-you').length;

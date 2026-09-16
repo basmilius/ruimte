@@ -3697,6 +3697,11 @@
           "running",
           "needs-you"
         ]
+      },
+      "startedAt": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
       }
     },
     "required": [
@@ -3766,6 +3771,11 @@
                 "running",
                 "needs-you"
               ]
+            },
+            "startedAt": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
             }
           },
           "required": [
@@ -4136,6 +4146,11 @@
                         "running",
                         "needs-you"
                       ]
+                    },
+                    "startedAt": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
                     }
                   },
                   "required": [

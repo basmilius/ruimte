@@ -49,7 +49,8 @@ export const PushActivityAgentSchema = z.object({
     nodeId: z.string().min(1).max(256),
     target: z.enum(['terminal', 'chat']),
     title: z.string().max(80),
-    phase: z.enum(['running', 'needs-you'])
+    phase: z.enum(['running', 'needs-you']),
+    startedAt: z.number().int().nonnegative().optional()
 });
 
 export const PushActivityContentSchema = z.object({
@@ -125,6 +126,9 @@ export const pushMessage = (push: PushEnvelope): string => {
         body.push(push.activity.agents.length);
         for (const agent of push.activity.agents) {
             body.push(agent.nodeId, agent.target, agent.title, agent.phase);
+            if (agent.startedAt !== undefined) {
+                body.push(agent.startedAt);
+            }
         }
     }
     return `pulsar-push-v1\n${JSON.stringify([push.machineId, push.handle, push.id, push.issuedAt, push.expiresAt, push.collapseId, push.pushType, ...body])}`;

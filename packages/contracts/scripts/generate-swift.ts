@@ -464,7 +464,7 @@ const pushReadEncryption = { ...pushEncryption, content: readContent,
 const activityPush: push.PushEnvelope = { ...pushRouting, pushType: 'liveactivity', signature: '',
     activity: { title: 'Mac', phase: 'needs-you', startedAt: 1000, runningCount: 1, attentionCount: 1,
         agents: [
-            { nodeId: 'review-1', target: 'chat', title: 'Review café 🚀', phase: 'needs-you' },
+            { nodeId: 'review-1', target: 'chat', title: 'Review café 🚀', phase: 'needs-you', startedAt: 900 },
             { nodeId: 'build-2', target: 'terminal', title: 'Build app', phase: 'running' }
         ]
     }

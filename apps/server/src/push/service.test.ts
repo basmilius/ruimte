@@ -325,6 +325,41 @@ describe('automatic machine activities', () => {
     const activities = () => pushes.filter((push) => push.pushType === 'liveactivity');
     const automatic = async () => auth.setPush(sessionId, { ...subscription, follow: [], followAll: true, activities: true, activityScope: 'machine' });
 
+    test('each row keeps its own turn start through attention and resets on the next turn', async () => {
+        await automatic();
+        let now = NOW;
+        const target = new PushService({
+            auth,
+            identity: { id: 'machine', sign: (text) => signMessage(machine.privateKey, text) },
+            now: () => now,
+            send: async (push) => {
+                pushes.push(push);
+                return 204;
+            }
+        });
+        const rowTimes = () =>
+            Object.fromEntries(
+                activities()
+                    .at(-1)!
+                    .activity.agents!.map((agent) => [agent.nodeId, agent.startedAt])
+            );
+        status('running', 'first', target);
+        now += 60_000;
+        status('running', 'second', target);
+        now += 60_000;
+        status('needs-you', 'first', target);
+        await target.settled();
+        expect(rowTimes()).toEqual({ first: NOW, second: NOW + 60_000 });
+        status('running', 'first', target);
+        await target.settled();
+        expect(rowTimes()).toEqual({ first: NOW, second: NOW + 60_000 });
+        status('idle', 'first', target);
+        now += 60_000;
+        status('running', 'first', target);
+        await target.settled();
+        expect(rowTimes()).toEqual({ first: NOW + 180_000, second: NOW + 60_000 });
+    });
+
     test('combines agents, prioritizes attention, and ends only when everyone has finished', async () => {
         await automatic();
         status('running', 'first');

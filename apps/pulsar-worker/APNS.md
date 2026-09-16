@@ -273,3 +273,28 @@ turn no longer sends an alert or creates a notification-read entry. Live Activit
 still include completion, for both terminal agents and AI chats. Existing read
 synchronization stays in place for attention and approval notifications. Production
 0.0.17 needs a daemon update to adopt this policy; the Worker needs no change.
+
+
+### Quieter Live Activity (September 16, 2026)
+
+The compact Island shows a status dot and the elapsed duration of the machine work
+round; the minimal Island shows just the dot. The dot is blue while working and orange
+when attention is needed. The expanded and Lock Screen cards omit the Ruimte heading,
+place the machine name in the footer, and show each agent's own elapsed turn duration in its
+row. Timers use SwiftUI's system timer rendering and need no extra pushes. Unknown start times are omitted for older payloads instead of reusing the machine's
+start time. Attention and resuming the same turn preserve its start; a new turn resets it.
+
+Optional row timestamps are included in the signed push bytes, with matching Swift
+verification. Validation: 56 daemon/Worker tests, 44 Swift tests, formatting, typecheck
+and the physical-device build passed. The build is installed on Bas' iPhone. Worker
+`3e117185-2d04-4d22-b71e-9abb84c5d948` is deployed; the isolated development daemon was
+reloaded after confirming it had no active agents. Production was not restarted.
+Physical screenshots verified the expanded card with two running agents and with one
+attention request: both rows, Review and the machine footer fit without clipping. Bas subsequently asked
+for elapsed timers instead of start times, including a compact timer. A physical
+screenshot confirmed the compact timer counts up. Its reserved width was reduced and
+its digits aligned right after Bas noted extra space; working uses a white timer with
+a blue dot, while attention remains orange. A new physical screenshot confirms the
+white compact timer, blue dot and corrected right alignment. The expanded screenshot
+shows independent elapsed durations of 0:27 and 1:06, with Review and the machine footer
+fully visible. Temporary test agents and their attention notifications were cleared.

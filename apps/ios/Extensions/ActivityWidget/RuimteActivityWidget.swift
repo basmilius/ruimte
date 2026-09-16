@@ -8,7 +8,7 @@ import WidgetKit
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: RuimteActivityAttributes.self) { context in
             ActivityCard(
-                state: context.state, attributes: context.attributes, stale: context.isStale, showsHeader: true
+                state: context.state, attributes: context.attributes, stale: context.isStale
             )
             .padding(.horizontal, 16).padding(.vertical, 12)
             .activityBackgroundTint(Color(red: 0.105, green: 0.105, blue: 0.13))
@@ -17,27 +17,26 @@ import WidgetKit
         } dynamicIsland: { context in
             let presentation = ActivityPresentation(state: context.state, stale: context.isStale)
             return DynamicIsland {
-                DynamicIslandExpandedRegion(.leading) {
-                    Text("Ruimte").font(.system(size: 16, weight: .semibold)).padding(.leading, 8)
-                }
-                DynamicIslandExpandedRegion(.trailing) {
-                    Text(context.state.title).font(.system(size: 12)).foregroundStyle(.white.opacity(0.5))
-                        .lineLimit(1).truncationMode(.middle).padding(.trailing, 8)
-                }
                 DynamicIslandExpandedRegion(.bottom) {
                     ActivityCard(
-                        state: context.state, attributes: context.attributes, stale: context.isStale, showsHeader: false
+                        state: context.state, attributes: context.attributes, stale: context.isStale
                     )
                     .padding(.horizontal, 8).padding(.bottom, 8)
                 }
             } compactLeading: {
-                ActivityGlyph(phase: context.state.phase, size: 18)
-                    .padding(.leading, 2)
+                Circle().fill(presentation.color).frame(width: 8, height: 8)
+                    .frame(width: 14).accessibilityLabel(presentation.title)
             } compactTrailing: {
-                ActivityStatus(text: presentation.compactTitle, color: presentation.color, size: 12)
-                    .padding(.trailing, 2)
+                if context.state.phase != .done && !context.isStale {
+                    ActivityTimer(startedAt: context.state.startedAt)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(context.state.phase == .needsYou ? Color.orange : .white)
+                        .multilineTextAlignment(.trailing).minimumScaleFactor(0.85)
+                        .frame(width: 44).padding(.trailing, 2)
+                }
             } minimal: {
-                ActivityGlyph(phase: context.state.phase, size: 18)
+                Circle().fill(presentation.color).frame(width: 8, height: 8)
+                    .accessibilityLabel(presentation.title)
             }
             .keylineTint(presentation.color)
             .widgetURL(activityURL(context.attributes))
@@ -49,27 +48,18 @@ private struct ActivityCard: View {
     let state: PushActivityContent
     let attributes: RuimteActivityAttributes
     let stale: Bool
-    let showsHeader: Bool
 
     private var presentation: ActivityPresentation { .init(state: state, stale: stale) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            if showsHeader {
-                HStack(alignment: .firstTextBaseline, spacing: 20) {
-                    Text("Ruimte").font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
-                    Spacer(minLength: 0)
-                    Text(state.title).font(.system(size: 12)).foregroundStyle(.white.opacity(0.5))
-                        .lineLimit(1).truncationMode(.middle)
-                }
-            }
             if !stale, state.phase != .done, let agents = state.agents, !agents.isEmpty {
                 VStack(spacing: 4) {
                     ForEach(agents, id: \.nodeId) { agent in
                         if let url = activityURL(attributes, agent: agent) {
                             // Bound link labels so the rows and footer fit inside WidgetKit's clipped presentation.
                             Link(destination: url) { ActivityAgentRow(agent: agent) }.buttonStyle(.plain).frame(
-                                height: showsHeader ? 40 : 36)
+                                height: 40)
                         }
                     }
                 }
@@ -86,14 +76,7 @@ private struct ActivityCard: View {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Text(presentation.footer).lineLimit(1)
                 Spacer(minLength: 0)
-                if state.phase != .done && !stale {
-                    HStack(spacing: 4) {
-                        Text("Started")
-                        Text(
-                            Date(timeIntervalSince1970: Double(state.startedAt) / 1000),
-                            format: .dateTime.hour().minute())
-                    }.lineLimit(1).frame(width: 100, alignment: .trailing)
-                }
+                Text(state.title).lineLimit(1).truncationMode(.middle)
             }
             .font(.system(size: 11)).foregroundStyle(.white.opacity(0.45))
         }.frame(maxWidth: .infinity, alignment: .leading)
@@ -113,8 +96,14 @@ private struct ActivityAgentRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(agent.title).font(.system(size: 15, weight: .medium)).foregroundStyle(.white)
                     .lineLimit(1).truncationMode(.tail)
-                Text(needsYou ? "Waiting for your input" : (agent.target == .chat ? "AI chat" : "Terminal agent"))
-                    .font(.system(size: 12)).foregroundStyle(.white.opacity(0.5)).lineLimit(1)
+                HStack(spacing: 5) {
+                    Text(needsYou ? "Waiting for your input" : (agent.target == .chat ? "AI chat" : "Terminal agent"))
+                        .lineLimit(1)
+                    if let startedAt = agent.startedAt {
+                        Text("·")
+                        ActivityTimer(startedAt: startedAt).frame(width: 56, alignment: .leading)
+                    }
+                }.font(.system(size: 12)).foregroundStyle(.white.opacity(0.5))
             }
             Spacer(minLength: 4)
             if needsYou {
@@ -128,7 +117,17 @@ private struct ActivityAgentRow: View {
         .frame(minHeight: 35)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(agent.title), \(needsYou ? "needs your attention, review" : "running, open session")")
+        .accessibilityHint(needsYou ? "Review this session" : "Open this session")
+    }
+}
+
+private struct ActivityTimer: View {
+    let startedAt: Int64
+
+    var body: some View {
+        let start = Date(timeIntervalSince1970: Double(startedAt) / 1000)
+        Text(timerInterval: start...Date.distantFuture, countsDown: false)
+            .monospacedDigit().lineLimit(1)
     }
 }
 
@@ -152,12 +151,6 @@ private struct ActivityPresentation {
     private var working: Int64 { state.runningCount ?? (state.phase == .needsYou || state.phase == .done ? 0 : 1) }
     private var waiting: Int64 { state.attentionCount ?? (state.phase == .needsYou ? 1 : 0) }
     var color: Color { stale ? .gray : state.phase == .done ? .green : waiting > 0 ? .orange : .activityBlue }
-    var compactTitle: String {
-        if stale { return "Updating" }
-        if state.phase == .done { return "Done" }
-        if waiting > 0 { return "Needs you" }
-        return "\(working) running"
-    }
     var title: String {
         if stale { return "Waiting for an update" }
         if state.phase == .done { return "Work finished" }

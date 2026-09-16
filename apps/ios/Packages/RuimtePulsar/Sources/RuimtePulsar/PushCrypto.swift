@@ -137,6 +137,12 @@ public enum PushSigning {
                     guard let value = agent[key]?.stringValue else { throw PushCryptoError.invalid }
                     fields.append(.string(value))
                 }
+                if let started = agent["startedAt"]?.numberValue {
+                    guard started >= 0, started < Double(Int64.max), started.rounded() == started else {
+                        throw PushCryptoError.invalid
+                    }
+                    fields.append(.integer(Int64(started)))
+                }
             }
         }
         return try SigningBytes.message("pulsar-push-v1", fields: fields)

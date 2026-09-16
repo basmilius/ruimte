@@ -651,7 +651,7 @@ test('activity cards deliver signed agent rows and reject a substituted session 
             runningCount: 1,
             attentionCount: 1,
             agents: [
-                { nodeId: 'review', title: 'Write tests', target: 'chat', phase: 'needs-you' },
+                { nodeId: 'review', title: 'Write tests', target: 'chat', phase: 'needs-you', startedAt: NOW - 1000 },
                 { nodeId: 'build', title: 'Refactor transport', target: 'terminal', phase: 'running' }
             ]
         }
@@ -663,6 +663,9 @@ test('activity cards deliver signed agent rows and reject a substituted session 
     if (push.pushType !== 'liveactivity') {
         throw new Error('Expected activity fixture');
     }
+    push.activity.agents![0]!.startedAt = NOW;
+    expect((await sendPush(request(push), env, seams)).status).toBe(403);
+    push.activity.agents![0]!.startedAt = NOW - 1000;
     push.activity.agents![0]!.nodeId = 'other-session';
     expect((await sendPush(request(push), env, seams)).status).toBe(403);
 });

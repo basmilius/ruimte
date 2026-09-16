@@ -13,6 +13,8 @@ struct PushCryptoTests {
             PushActivityContent.self, from: #require(sample["push"]?["activity"]).encoded())
         #expect(state.agents?.count == 2)
         #expect(state.agents?.first?.title == "Review café 🚀")
+        #expect(state.agents?.first?.startedAt == 900)
+        #expect(state.agents?.last?.startedAt == nil)
     }
 
     @Test func readWatermarksPreserveNewerNotificationsAndIgnoreLateClaims() throws {

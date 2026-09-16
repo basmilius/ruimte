@@ -2148,12 +2148,14 @@ public struct PushActivityAgent: Codable, Sendable, Equatable {
     public let `target`: PushActivityAgentTarget
     public let `title`: String
     public let `phase`: PushActivityAgentPhase
+    public let `startedAt`: Int64?
 
-    public init(`nodeId`: String, `target`: PushActivityAgentTarget, `title`: String, `phase`: PushActivityAgentPhase) {
+    public init(`nodeId`: String, `target`: PushActivityAgentTarget, `title`: String, `phase`: PushActivityAgentPhase, `startedAt`: Int64? = nil) {
         self.`nodeId` = `nodeId`
         self.`target` = `target`
         self.`title` = `title`
         self.`phase` = `phase`
+        self.`startedAt` = `startedAt`
     }
 
     public init(from decoder: Decoder) throws {
@@ -2163,6 +2165,7 @@ public struct PushActivityAgent: Codable, Sendable, Equatable {
         `target` = try container.decode(PushActivityAgentTarget.self, forKey: .`target`)
         `title` = try container.decode(String.self, forKey: .`title`)
         `phase` = try container.decode(PushActivityAgentPhase.self, forKey: .`phase`)
+        `startedAt` = try container.decodeIfPresent(Int64.self, forKey: .`startedAt`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -2171,6 +2174,7 @@ public struct PushActivityAgent: Codable, Sendable, Equatable {
         try container.encode(`target`, forKey: .`target`)
         try container.encode(`title`, forKey: .`title`)
         try container.encode(`phase`, forKey: .`phase`)
+        try container.encodeIfPresent(`startedAt`, forKey: .`startedAt`)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -2178,6 +2182,7 @@ public struct PushActivityAgent: Codable, Sendable, Equatable {
         case `target` = "target"
         case `title` = "title"
         case `phase` = "phase"
+        case `startedAt` = "startedAt"
     }
 }
 
