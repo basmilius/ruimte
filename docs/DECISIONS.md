@@ -2419,7 +2419,8 @@ code will not say on its own.
   with a kill.
 - A terminal the daemon starts is 120 columns by 40 rows and the first client that attaches sizes
   it to itself, like every attach. A chat opened by a chat takes that chat's permission mode, and a
-  terminal node carries no mode, so its launch has none. Phase 5 puts the ceiling on the mode.
+  terminal node carried no mode, so its launch had none, until phase 5 wrote one onto the node under
+  the ceiling (below).
 - Any other chat the daemon starts takes the composer preference a mounting client would have sent
   (decided by Bas after phase 3): the mode, and the model with its options for the chat's CLI, with
   the parent's mode beating the preference's. A client tells every machine it has a socket to with
@@ -2432,7 +2433,8 @@ code will not say on its own.
   connected the chat gets what it got before, `full-access` and the CLI's own default model; a machine
   never remembers a person's pick after that person's client is gone, since on a shared machine it
   would start someone else's agents with it. The iPhone app sends nothing, so with only the phone
-  connected the defaults apply as well. No ceiling: that is phase 5, with the one on the verb.
+  connected the defaults apply as well. Phase 5 narrows all of it to the mode of the node that opened
+  the chat (below).
 - Nothing about approvals changed: a terminal agent with nobody attached has no client that wants
   a request held, so its CLI's own prompt asks (or an offline device through a push), and a client
   that mounts the node later sees the prompt on the screen.
@@ -2523,6 +2525,39 @@ code will not say on its own.
   question. Such a task stays open until the question is answered and the turn ends. Marking a wake
   about a question apart from the wake about the result needs a second wake per task, which the rule
   "a task named in a turn has woken its parent" cannot express yet.
+- The marks a client takes from the machine's attention entries start at the moment the machine first
+  ran a version that hands them out (`marksFrom` in `push-attention.json` and on `push.attention`,
+  decided by Bas after phase 4). Up to 30 days of entries written only for notifications would
+  otherwise all turn into marks after the update. A machine that does not say gives no marks at all,
+  rather than every old entry.
+- Phase 5 closes the orchestration. The mode ceiling is one order for every CLI, `supervised <
+  auto-accept-edits < auto < full-access`: every CLI's flags widen in that order, and where two modes
+  map to the same flags (Codex in a terminal, Gemini's `auto`) narrowing grants the same, never more.
+  A terminal caller counts as the mode the daemon started its CLI with, and one it cannot know (a
+  resume without a mode, a CLI a person typed into a plain shell) as `supervised`: strict rather than
+  precise, as the design said. The ceiling is read when the verb runs and carried on the entry, since
+  the caller may be gone when the agent starts, and it binds what the daemon starts, the composer
+  preference included; a person may still widen a child's mode from its composer afterwards. Terminal
+  agents take a terminal mode the clients tell the daemon (`terminalRuntimeMode`, beside the composer
+  preference), written onto the node so a reload starts the same line.
+- A worktree per role is made before the project is written, on a new branch named after the task or
+  the title with a number when that branch exists, so parallel roles never share a checkout. The group
+  of a team gets no `worktree` field, because that field means every node made inside it starts in one
+  checkout. Nothing removes a worktree on its own, not when its task settles and not when its node is
+  deleted: a branch with commits is a person's work, and merging and removing is still roadmap item
+  11. The turn diff needed no change for a worktree (its toplevel is the worktree); it is now also
+  narrowed to the chat's own subfolder of a repository.
+- Stopping or deleting a node ends its agents through one entry, `end-children`, owed by every trigger
+  there is: the kill requests, the verbs that end a session, and the node leaving the document by any
+  way (an agent rewriting `project.json` kills nothing), deduplicated per node. `session.kill` on a
+  shell that already exited owes nothing, which is what keeps Restart from ending the children of a
+  lead whose shell had ended. The children are marked `endedAt` in their lineage first, so a restart
+  halfway finishes the same way and a node is never ended twice; their open tasks are cancelled before
+  any turn is aborted, so no parent is woken by a child that was stopped; and the entry holds its
+  children's lanes while it runs, so a start or a resume already running finishes first and one only
+  owed is taken away. A chat child keeps its thread and a terminal child its exited screen, since
+  removing the node is a person's call. A turn that started before `endedAt` is never resumed, however
+  late the chat is loaded, but a person who carries on in an ended chat is not held back by the mark.
 
 ### Skipped on purpose
 
@@ -2724,8 +2759,8 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
    and waits for a packaged release to be tried, updates included (see "A protocol version on the
    wire"). Accepting a window of previous protocol versions (the last three, say) instead of only the
    same one is for later, once a bump is in sight. The ruimte.app landing page comes later and gets
-   an issue when it starts. A known gap in the checkpoints: the turn diff is of the whole folder,
-   so an edit the person made during a turn lands in the card too.
+   an issue when it starts. A known gap in the checkpoints: the turn diff is of the chat's own folder
+   (or its worktree), so an edit the person made there during a turn lands in the card too.
 4. **A third chat provider** (Gemini, Copilot or opencode) as the proof that the backend seam
    holds: a provider value, a backend and a protocol mapper, plus one literal in `AgentKind`.
    Hooks for Gemini and Copilot are a day per CLI on top.
@@ -2763,7 +2798,8 @@ a day, several days. Each of the larger ones becomes a GitHub issue when it star
     labels and reset. A "restore defaults" action, a canvas font size for chat and text elements,
     and settings search that the palette reads.
 11. **Per-project settings** in `.ruimte/settings.json` (the terminal agent mode first), worktree
-    merge and removal from the group menu, shared paths (`node_modules`, `.env`) linked into a new
+    merge and removal from the group menu (more pressing now that `agent` and `team --worktree` leave a
+    worktree per role behind), shared paths (`node_modules`, `.env`) linked into a new
     worktree, clone a repository as a project.
 12. **The editor and the diff node**, the half of this the file node does not cover. Saving is the
     whole of it: there is no `fs.write` on the wire, and adding one is a decision about what a
