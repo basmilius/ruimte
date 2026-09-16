@@ -119,6 +119,7 @@ const boot = async (): Promise<Daemon> => {
         handlers: {
             'resume-run': () => Promise.reject(new Error('no resume in these tests')),
             'wake-parent': () => Promise.reject(new Error('no wake in these tests')),
+            'end-children': () => Promise.reject(new Error('no ending in these tests')),
             'start-agent': startAgentHandler({
                 placed: (nodeId) => store.index.locate(nodeId) !== null,
                 hasChat: (chatId) => chats.get(chatId) !== undefined,

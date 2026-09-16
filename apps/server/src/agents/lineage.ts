@@ -12,7 +12,9 @@ const LineageSchema = z.object({
     /* Whether this is an agent node, which is what the depth and the per-caller cap are about. A
        record written before a plain node was written down at all is one of those, hence the default. */
     agent: z.boolean().default(true),
-    createdAt: z.number()
+    createdAt: z.number(),
+    /* When stopping or deleting the node that opened it ended this one too; a cascade never ends a node twice. */
+    endedAt: z.number().optional()
 });
 
 type Lineage = z.infer<typeof LineageSchema>;
@@ -68,11 +70,58 @@ export class AgentLineageStore {
         }
     }
 
-    async put(record: Omit<Lineage, 'createdAt'>): Promise<void> {
-        const entry: Lineage = { ...record, createdAt: Date.now() };
+    async put(record: Omit<Lineage, 'createdAt' | 'endedAt'>): Promise<void> {
+        await this.write({ ...record, createdAt: Date.now() });
+    }
+
+    /*
+     * The agent nodes this one opened and the ones those opened in turn that no cascade ended yet,
+     * nearest first, so whoever ends them can go from the leaves back up.
+     */
+    descendants(nodeId: string): string[] {
+        const found: string[] = [];
+        const seen = new Set([nodeId]);
+        for (let i = -1; i < found.length; i++) {
+            const parent = i === -1 ? nodeId : found[i]!;
+            for (const entry of this.opened.values()) {
+                if (entry.openedBy === parent && entry.agent && entry.endedAt === undefined && !seen.has(entry.nodeId)) {
+                    seen.add(entry.nodeId);
+                    found.push(entry.nodeId);
+                }
+            }
+        }
+        return found;
+    }
+
+    /* The project a node was made in, for work owed about it after the node that opened it is gone. */
+    projectOf(nodeId: string): string | null {
+        return this.opened.get(nodeId)?.projectId ?? null;
+    }
+
+    endedAt(nodeId: string): number | null {
+        return this.opened.get(nodeId)?.endedAt ?? null;
+    }
+
+    async markEnded(nodeIds: readonly string[], at: number): Promise<void> {
+        for (const nodeId of nodeIds) {
+            const entry = this.opened.get(nodeId);
+            if (entry && entry.endedAt === undefined) {
+                await this.write({ ...entry, endedAt: at });
+            }
+        }
+    }
+
+    /* The nodes of this project whose opener it no longer places, and that no cascade ended yet. */
+    orphans(projectId: string, ids: ReadonlySet<string>): Array<{ nodeId: string; openedBy: string }> {
+        return [...this.opened.values()]
+            .filter((entry) => entry.projectId === projectId && entry.agent && entry.endedAt === undefined && ids.has(entry.nodeId) && !ids.has(entry.openedBy))
+            .map((entry) => ({ nodeId: entry.nodeId, openedBy: entry.openedBy }));
+    }
+
+    private async write(entry: Lineage): Promise<void> {
         await mkdir(this.dir, { recursive: true, mode: 0o700 });
-        await writeAtomic(join(this.dir, fileName(record.nodeId)), JSON.stringify(entry));
-        this.opened.set(record.nodeId, entry);
+        await writeAtomic(join(this.dir, fileName(entry.nodeId)), JSON.stringify(entry));
+        this.opened.set(entry.nodeId, entry);
     }
 
     /* How deep a node sits. A node nobody wrote down is one a person made, which is where a chain starts. */

@@ -2,6 +2,7 @@ import { RequestError, type Dispatcher } from '../dispatcher.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import { ChatError } from '../chat/errors.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
+import type { BeforeKill } from './session.ts';
 
 const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
     Promise.resolve()
@@ -13,7 +14,7 @@ const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
             throw e;
         });
 
-export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManager, providers: ProviderRegistry): void => {
+export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManager, providers: ProviderRegistry, beforeKill?: BeforeKill): void => {
     dispatcher.register('provider.list', async () => ({ providers: await providers.list() }));
 
     dispatcher.register('chat.create', (payload) => translate(() => manager.create(payload)));
@@ -105,6 +106,7 @@ export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManage
 
     dispatcher.register('chat.kill', (payload) =>
         translate(async () => {
+            await beforeKill?.(payload.chatId);
             await manager.kill(payload.chatId);
             return {};
         })

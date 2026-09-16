@@ -5,7 +5,7 @@
  * reports a compaction, `write: <path> <text>` writes a file and reports it as an edit,
  * `background: <summary>` launches a subagent and, once the work it put off with `later` runs, wakes
  * the main agent the way the CLI does that on its own, `delegate: <description>` runs one in the
- * foreground and answers the call with its report, `slow` waits for an interrupt, `crash` exits
+ * foreground and answers the call with its report, `slow` (on a line of its own at the top) waits for an interrupt, `crash` exits
  * with 1. The init frame carries the argument list as `argv`, so a test can see which flags a
  * session started with, and `system?` answers with the `--append-system-prompt` it was started with.
  */
@@ -118,7 +118,8 @@ export const fakeClaude: FakeCli = (io) => {
             io.exit(1);
             return;
         }
-        if (text === 'slow') {
+        // The first line alone, so a prompt a task brief was added under still waits.
+        if (text.split('\n')[0] === 'slow') {
             slow = true;
             out({ type: 'stream_event', event: { type: 'message_start', message: { id: `msg_${++messageCounter}`, model } }, session_id: sessionId });
             return;

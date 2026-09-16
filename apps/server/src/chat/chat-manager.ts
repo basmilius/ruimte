@@ -86,6 +86,8 @@ interface ChatManagerOptions {
      * the turn ends aborted with a note that says why.
      */
     onInterruptedRun?: (run: InterruptedRun) => Promise<boolean>;
+    // When stopping the agent that opened a chat ended it too; a turn from before that is never resumed.
+    endedAt?: (chatId: string) => number | null;
     // The tasks a chat gave, so a chat loaded from disk shows a row for each even when a crash lost the write of one.
     taskRows?: (chatId: string) => Task[];
 }
@@ -127,12 +129,14 @@ export class ChatManager {
     private readonly nameChat: ChatManagerOptions['nameChat'] | null;
     private readonly subagents: SubagentReader;
     private readonly onInterruptedRun: ChatManagerOptions['onInterruptedRun'] | null;
+    private readonly endedAt: (chatId: string) => number | null;
     private readonly taskRows: (chatId: string) => Task[];
     // Clients following the conversation of a node a task opened, per row of the chat that gave it.
     private readonly childHolds = new Map<string, { parentId: string; toolUseId: string; childId: string; clients: Set<string> }>();
 
     constructor(options: ChatManagerOptions) {
         this.onInterruptedRun = options.onInterruptedRun ?? null;
+        this.endedAt = options.endedAt ?? (() => null);
         this.taskRows = options.taskRows ?? (() => []);
         this.providers = options.providers;
         this.claudeTitles = options.claudeTitles ?? null;
@@ -574,6 +578,15 @@ export class ChatManager {
         await Promise.all([this.store?.delete(chatId), this.attachments.removeAll(chatId)]);
     }
 
+    /*
+     * Ends the CLI of a chat and keeps its thread, for a child whose parent was stopped. A chat nobody
+     * loaded has no CLI to end; `endedAt` keeps a restart from resuming its turn when it is loaded.
+     */
+    async stop(chatId: string, reason: string): Promise<void> {
+        await this.creating.get(chatId)?.catch(() => undefined);
+        this.chats.get(chatId)?.end(reason);
+    }
+
     /* The chats with a CLI process, for the process monitor. */
     processTargets(): { id: string; pid: number; provider: AgentKind; status: ChatInfo['status']; updatedAt: number }[] {
         const targets = [];
@@ -795,6 +808,10 @@ export class ChatManager {
         }
         if (stored.info.agentSessionId === null) {
             return skip('the agent had not started a session to resume yet');
+        }
+        const ended = this.endedAt(chatId);
+        if (ended !== null && ended >= turn.createdAt) {
+            return skip('the agent that opened it was stopped');
         }
         if ((turn.attempt ?? 1) >= MAX_ATTEMPTS) {
             return skip('it was already resumed after an earlier restart');

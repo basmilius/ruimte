@@ -450,6 +450,20 @@ export class SessionManager {
         session.kill();
     }
 
+    /*
+     * Ends the shell and keeps the session, listed as exited with its last screen, for a child whose
+     * parent was stopped: removing it is a person's call, as deleting the node is.
+     */
+    async end(sessionId: string): Promise<void> {
+        await this.creating.get(sessionId)?.catch(() => undefined);
+        const session = this.sessions.get(sessionId);
+        if (!session || session.exited) {
+            return;
+        }
+        this.onProcessChange?.(sessionId, 'before-kill');
+        session.kill();
+    }
+
     async snapshotAll(): Promise<Array<{ sessionId: string; screen: string }>> {
         const result: Array<{ sessionId: string; screen: string }> = [];
         for (const session of this.sessions.values()) {

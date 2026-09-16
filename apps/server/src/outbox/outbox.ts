@@ -31,8 +31,13 @@ const WakeParentSchema = z.object({
     payload: z.object({ taskId: z.string().min(1) })
 });
 
-/* The next phase adds its kind (end-children) as a member of this union. */
-const OutboxWorkSchema = z.discriminatedUnion('kind', [StartAgentSchema, ResumeRunSchema, WakeParentSchema]);
+const EndChildrenSchema = z.object({
+    kind: z.literal('end-children'),
+    // The target is the node that was stopped or deleted; these are the agents it had opened when that was owed.
+    payload: z.object({ nodeIds: z.array(z.string().min(1)) })
+});
+
+const OutboxWorkSchema = z.discriminatedUnion('kind', [StartAgentSchema, ResumeRunSchema, WakeParentSchema, EndChildrenSchema]);
 
 const OutboxEntrySchema = z.intersection(
     OutboxWorkSchema,
@@ -52,6 +57,10 @@ export type OutboxEntry = z.infer<typeof OutboxEntrySchema>;
 export type StartAgentEntry = Extract<OutboxEntry, { kind: 'start-agent' }>;
 export type ResumeRunEntry = Extract<OutboxEntry, { kind: 'resume-run' }>;
 export type WakeParentEntry = Extract<OutboxEntry, { kind: 'wake-parent' }>;
+export type EndChildrenEntry = Extract<OutboxEntry, { kind: 'end-children' }>;
+
+/* The nodes an entry is about: work on any of them waits while it runs. Ending children holds their lanes too, so no start or resume of one runs beside it. */
+export const lanesOf = (entry: OutboxEntry): string[] => (entry.kind === 'end-children' ? [entry.target, ...entry.payload.nodeIds] : [entry.target]);
 
 const fileName = (id: string): string => `${encodeURIComponent(id)}.json`;
 
@@ -137,10 +146,13 @@ export class OutboxStore {
         return this.entries.has(id);
     }
 
-    /* Drops what this project owed for ids it no longer has: nothing is started for a node that was deleted. */
+    /*
+     * Drops what this project owed for ids it no longer has: nothing is started for a node that was
+     * deleted. Ending the children of a deleted node is owed exactly because it is gone, so that stays.
+     */
     async prune(projectId: string, ids: ReadonlySet<string>): Promise<void> {
         for (const entry of [...this.entries.values()]) {
-            if (entry.projectId === projectId && !ids.has(entry.target)) {
+            if (entry.projectId === projectId && entry.kind !== 'end-children' && !ids.has(entry.target)) {
                 await this.remove(entry.id);
             }
         }

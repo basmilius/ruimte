@@ -1,5 +1,5 @@
 import { errorText } from '../error-text.ts';
-import type { OutboxEntry, OutboxStore } from './outbox.ts';
+import { lanesOf, type OutboxEntry, type OutboxStore } from './outbox.ts';
 
 /* How long a failed entry waits before each next attempt; one more failure than there are delays parks it. */
 export const RETRY_DELAYS_MS: readonly number[] = [1_000, 5_000, 30_000];
@@ -118,8 +118,15 @@ export class OutboxWorker {
             if (busy.has(entry.target) || this.waiting.has(entry.id)) {
                 continue;
             }
+            const lanes = lanesOf(entry);
             // Oldest first per target: a younger entry never overtakes one that waits out a retry.
-            busy.add(entry.target);
+            for (const lane of lanes) {
+                busy.add(lane);
+            }
+            // The other lanes only wait for work that is running; work that is merely owed there is what ending takes away.
+            if (lanes.some((lane) => lane !== entry.target && this.running.has(lane))) {
+                continue;
+            }
             if (entry.notBefore > now) {
                 nextDue = nextDue === null ? entry.notBefore : Math.min(nextDue, entry.notBefore);
                 continue;
@@ -131,7 +138,10 @@ export class OutboxWorker {
     }
 
     private async run(entry: OutboxEntry): Promise<void> {
-        this.running.add(entry.target);
+        const lanes = lanesOf(entry);
+        for (const lane of lanes) {
+            this.running.add(lane);
+        }
         const woken = this.wakes.get(entry.target) ?? 0;
         try {
             const outcome = await (this.handlers[entry.kind] as (entry: OutboxEntry) => Promise<OutboxOutcome>)(entry);
@@ -145,7 +155,9 @@ export class OutboxWorker {
         } catch (e) {
             await this.failed(entry, e).catch((error: unknown) => console.error(`The outbox could not record a failed ${entry.kind}:`, errorText(error)));
         } finally {
-            this.running.delete(entry.target);
+            for (const lane of lanes) {
+                this.running.delete(lane);
+            }
             this.drain();
         }
     }

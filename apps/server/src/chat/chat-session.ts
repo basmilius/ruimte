@@ -489,7 +489,7 @@ export class ChatSession {
                     createdAt: task.settledAt ?? task.createdAt,
                     turnId: null,
                     level: 'warning',
-                    text: `The task "${task.title}" was cancelled: its node was removed`
+                    text: `The task "${task.title}" was cancelled: ${task.result?.text ?? 'its node was removed'}`
                 })
             );
         }
@@ -502,6 +502,35 @@ export class ChatSession {
     /* A line in the thread outside any turn, for something the daemon has to say about work it gave up on. */
     addNote(level: 'info' | 'warning' | 'error', text: string): void {
         this.emit([this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: Date.now(), turnId: null, level, text })]);
+        this.options.persist();
+    }
+
+    /*
+     * Ends the CLI because the agent that opened this chat was stopped: whatever ran or waited is
+     * closed with the reason in the thread, the queue goes, and the thread stays for a person to read
+     * or to carry on in, which starts the CLI again like any send.
+     */
+    end(reason: string): void {
+        const backend = this.backend;
+        this.backend = null;
+        this.starting = null;
+        this.restartPending = false;
+        backend?.dispose();
+        const now = Date.now();
+        const turnId = this.thread.info.activeTurnId;
+        const events: ChatEvent[] = [];
+        for (const item of this.thread.list()) {
+            const settled =
+                item.kind === 'turn' && item.state === 'running' ? { ...item, state: 'aborted' as const, endedAt: now } : settleStoredItem(item, null);
+            if (settled !== item) {
+                events.push(this.thread.upsert(settled));
+            }
+        }
+        if (turnId !== null) {
+            events.push(this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'warning', text: reason }));
+        }
+        events.push(this.thread.patchInfo({ running: false, status: 'idle', activeTurnId: null, ...(this.queue.length > 0 ? { queue: [] } : {}) }));
+        this.emit(events);
         this.options.persist();
     }
 

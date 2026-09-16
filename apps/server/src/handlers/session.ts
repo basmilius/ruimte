@@ -12,7 +12,10 @@ const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
             throw e;
         });
 
-export const registerSessionHandlers = (dispatcher: Dispatcher, manager: SessionManager): void => {
+/* Owes ending the agents a session's node opened, before that session goes; a shell that already exited ends nothing, so a restart does not. */
+export type BeforeKill = (nodeId: string) => Promise<unknown>;
+
+export const registerSessionHandlers = (dispatcher: Dispatcher, manager: SessionManager, beforeKill?: BeforeKill): void => {
     dispatcher.register('session.create', (payload) => translate(() => manager.create(payload)));
 
     dispatcher.register('session.attach', (payload, client) =>
@@ -42,6 +45,9 @@ export const registerSessionHandlers = (dispatcher: Dispatcher, manager: Session
 
     dispatcher.register('session.kill', (payload) =>
         translate(async () => {
+            if (manager.get(payload.sessionId)?.exited === false) {
+                await beforeKill?.(payload.sessionId);
+            }
             await manager.kill(payload.sessionId);
             return {};
         })

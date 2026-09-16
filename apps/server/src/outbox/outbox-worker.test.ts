@@ -37,6 +37,7 @@ test('an entry is on disk until its work is done, and then it is gone', async ()
         handlers: {
             'resume-run': unused,
             'wake-parent': unused,
+            'end-children': unused,
             'start-agent': (entry) => {
                 seen.push(entry.target);
                 return new Promise((resolve) => {
@@ -69,6 +70,7 @@ test('what an earlier run owed is started once after a restart, and not again af
             handlers: {
                 'resume-run': unused,
                 'wake-parent': unused,
+                'end-children': unused,
                 'start-agent': async (entry) => {
                     runs.push(entry.target);
                 }
@@ -98,6 +100,7 @@ test('entries for one target run one after the other, oldest first, while other 
         handlers: {
             'resume-run': unused,
             'wake-parent': unused,
+            'end-children': unused,
             'start-agent': (entry) => {
                 const key = `${entry.target}:${entry.payload.node}`;
                 order.push(key);
@@ -136,6 +139,7 @@ test('a failure waits 1, 5 and 30 seconds on the clock and is then given up on',
         handlers: {
             'resume-run': unused,
             'wake-parent': unused,
+            'end-children': unused,
             'start-agent': async () => {
                 attempts += 1;
                 throw new Error('no');
@@ -168,6 +172,7 @@ test('a retry that was waiting survives a restart with its attempts', async () =
         handlers: {
             'resume-run': unused,
             'wake-parent': unused,
+            'end-children': unused,
             'start-agent': async () => {
                 throw new Error('no');
             }
@@ -204,6 +209,7 @@ test('an entry that waits keeps its file, costs no attempt, holds no lane and ru
         store,
         clock,
         handlers: {
+            'end-children': unused,
             'start-agent': unused,
             'wake-parent': async (entry) => {
                 runs.push(entry.payload.taskId);
@@ -244,6 +250,7 @@ test('a wake that lands while the entry is still deciding to wait runs it again 
         clock,
         handlers: {
             'start-agent': unused,
+            'end-children': unused,
             'resume-run': unused,
             'wake-parent': () => {
                 calls += 1;
@@ -264,4 +271,63 @@ test('a wake that lands while the entry is still deciding to wait runs it again 
     await worker.settled();
     expect(calls).toBe(2);
     expect(store.list()).toEqual([]);
+});
+
+test('ending children waits for a start of one of them that runs, and holds back one that is only owed', async () => {
+    const order: string[] = [];
+    const calls = new Map<string, { started: Promise<void>; begin(): void; release(): void; done: Promise<void> }>();
+    const call = (key: string) => {
+        let entry = calls.get(key);
+        if (!entry) {
+            let begin: () => void = () => undefined;
+            let release: () => void = () => undefined;
+            const started = new Promise<void>((resolve) => {
+                begin = resolve;
+            });
+            const done = new Promise<void>((resolve) => {
+                release = resolve;
+            });
+            entry = { started, begin, release, done };
+            calls.set(key, entry);
+        }
+        return entry;
+    };
+    const hold = (key: string): Promise<void> => {
+        order.push(key);
+        call(key).begin();
+        return call(key).done;
+    };
+    const worker = new OutboxWorker({
+        store,
+        clock,
+        handlers: {
+            'resume-run': unused,
+            'wake-parent': unused,
+            'start-agent': (entry) => hold(`start ${entry.target}`),
+            'end-children': (entry) => hold(`end ${entry.payload.nodeIds.join(',')}`)
+        }
+    });
+    worker.start();
+    await worker.enqueue('project', 'child-a', work());
+    clock.advance(1);
+    await worker.enqueue('project', 'lead', { kind: 'end-children', payload: { nodeIds: ['child-a', 'child-b'] } });
+    clock.advance(1);
+    await worker.enqueue('project', 'child-b', work());
+    // The start of child-a was running first; the ending waits for it, and child-b's start waits behind the ending.
+    expect(order).toEqual(['start child-a']);
+    call('start child-a').release();
+    await call('end child-a,child-b').started;
+    expect(order).toEqual(['start child-a', 'end child-a,child-b']);
+    call('end child-a,child-b').release();
+    await call('start child-b').started;
+    call('start child-b').release();
+    await worker.settled();
+    expect(order).toEqual(['start child-a', 'end child-a,child-b', 'start child-b']);
+});
+
+test('an entry that ends children is kept when the node it is about leaves the project', async () => {
+    await store.put('project', 'lead', { kind: 'end-children', payload: { nodeIds: ['child'] } }, clock.now());
+    await store.put('project', 'gone', work(), clock.now());
+    await store.prune('project', new Set(['child']));
+    expect(store.list().map((entry) => entry.kind)).toEqual(['end-children']);
 });

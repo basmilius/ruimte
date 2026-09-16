@@ -21,6 +21,7 @@ import { PendingPromptStore } from './agents/pending-prompts.ts';
 import { OutboxStore } from './outbox/outbox.ts';
 import { OutboxWorker } from './outbox/outbox-worker.ts';
 import { nodeMode, startAgentHandler, startAgentWork } from './outbox/start-agent.ts';
+import { wireEndChildren } from './outbox/end-children.ts';
 import { oweResume, resumeRunHandler, resumeRunParked } from './outbox/resume-run.ts';
 import { TaskStore } from './tasks/task-store.ts';
 import { wireTasks } from './tasks/wiring.ts';
@@ -204,7 +205,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             entries: () => outbox.list(),
             enqueue: (...args) => outboxWorker.enqueue(...args)
         }),
-        taskRows: (chatId) => tasks.ofParent(chatId)
+        taskRows: (chatId) => tasks.ofParent(chatId),
+        endedAt: (chatId) => lineage.endedAt(chatId)
     });
     const projects = new ProjectStore(config.home);
     const taskWiring = wireTasks({
@@ -217,8 +219,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         alert: (target, nodeId, title, body) => push.alert(target, nodeId, title, body),
         wake: (chatId) => outboxWorker.wake(chatId)
     });
+    // Stopping or deleting a node ends the agents it opened, through the outbox so a restart in between still does.
+    const endChildren = wireEndChildren({ lineage, outbox, tasks, chats, sessions: manager, enqueue: (...args) => outboxWorker.enqueue(...args) });
     // A node deleted before anyone ran it takes its prompt with it, and a node that is gone frees the count its opener is held to.
     projects.index.onPlaces = (projectId, ids) => {
+        endChildren.places(projectId, ids);
         void prompts.prune(projectId, ids).catch((e) => console.error('Pruning pending prompts failed:', errorText(e)));
         void lineage.prune(projectId, ids).catch((e) => console.error('Pruning agent lineage failed:', errorText(e)));
         void notices.prune(projectId, ids).catch((e) => console.error('Pruning waiting messages failed:', errorText(e)));
@@ -247,7 +252,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 onGaveUp: taskWiring.onStartGaveUp
             }),
             'resume-run': resumeRunHandler(chats),
-            'wake-parent': taskWiring.wakeParent
+            'wake-parent': taskWiring.wakeParent,
+            'end-children': endChildren.handler
         },
         onParked: (entry, error) => {
             resumeRunParked(chats)(entry, error);
@@ -328,6 +334,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         /* A node that has never been shown has no session, and a canvas going down is not the place
            to fail over one, so an id neither manager knows is already ended as far as the verb goes. */
         endSession: async (kind: 'terminal' | 'chat', nodeId: string) => {
+            await endChildren.owe(nodeId);
             await (kind === 'terminal' ? manager.kill(nodeId) : chats.kill(nodeId)).catch(() => undefined);
         },
         notify: (notice: Omit<Notice, 'createdAt'>) =>
@@ -377,9 +384,9 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const dispatcher = new Dispatcher();
     registerPushHandlers(dispatcher, auth, () => push.synchronizeActivities(), push);
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
-    registerSessionHandlers(dispatcher, manager);
-    registerChatHandlers(dispatcher, chats, providers);
-    registerTaskHandlers(dispatcher, tasks);
+    registerSessionHandlers(dispatcher, manager, endChildren.owe);
+    registerChatHandlers(dispatcher, chats, providers, endChildren.owe);
+    registerTaskHandlers(dispatcher, tasks, endChildren.children);
     registerProjectHandlers(dispatcher, projects);
     registerDrawingHandlers(dispatcher, drawings);
     registerDiagramHandlers(dispatcher, diagrams);

@@ -126,6 +126,20 @@ export class TaskStore {
         return settled;
     }
 
+    /* Cancels the open tasks of these children, with the reason as the result; a cancelled task wakes nobody. */
+    async cancelOpen(childIds: ReadonlySet<string>, reason: string, now: number): Promise<Task[]> {
+        const cancelled: Task[] = [];
+        for (const task of this.sorted()) {
+            if (task.status === 'open' && childIds.has(task.childId)) {
+                const settled = await this.settle(task.id, 'cancelled', { text: reason, source: 'exit', at: now }, now);
+                if (settled) {
+                    cancelled.push(settled);
+                }
+            }
+        }
+        return cancelled;
+    }
+
     async markWoken(ids: readonly string[]): Promise<void> {
         for (const id of ids) {
             const task = this.tasks.get(id);
