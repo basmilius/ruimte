@@ -12,18 +12,21 @@ interface TileProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'title
     shortcut?: Shortcut;
     /* The one tile a screen leads with. */
     primary?: boolean;
+    /* `sm` for a narrow column like the sidebar. */
+    size?: 'md' | 'sm';
 }
 
 /*
  * One thing to start with, as a card that is a button: the start screen, an empty canvas and the other
  * empty places use it, so a place to begin looks the same wherever it is offered.
  */
-export function Tile({ icon, title, description, shortcut, primary = false, className, type = 'button', ...rest }: TileProps) {
+export function Tile({ icon, title, description, shortcut, primary = false, size = 'md', className, type = 'button', ...rest }: TileProps) {
     return (
         <button
             type={type}
             className={clsx(
-                'flex min-w-0 items-center gap-3 rounded-xl border bg-surface px-4 py-3 text-left hover:bg-surface-hover disabled:opacity-50 disabled:hover:bg-surface',
+                'flex min-w-0 items-center border bg-surface text-left hover:bg-surface-hover disabled:opacity-50 disabled:hover:bg-surface',
+                size === 'md' ? 'gap-3 rounded-xl px-4 py-3' : 'gap-2 rounded-lg px-2 py-1.5',
                 primary ? 'border-accent' : 'border-border',
                 className
             )}

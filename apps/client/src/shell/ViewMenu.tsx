@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
 import { Check, ChevronDown, FileText, Frame, Globe, Minus, PanelBottom, PanelRight, Pencil, PenTool, Workflow, Smile, Terminal, Trash, X } from 'lucide-react';
 import { isDiagramView, isDrawingView, isFileView, isOpenableView, isSessionView, viewIconOf } from '@ruimte/contracts';
+import { AgentIcon } from '@/agents/AgentIcon';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentView } from '@/agents/nodes';
 import {
@@ -22,11 +24,44 @@ import { ViewGlyph } from '@/project/ViewGlyph';
 import { canSplit, cellCount, type SplitDirection } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
+import { useProviders } from '@/state/providers';
+import { Tile } from '@/ui/Tile';
 import { useUi } from '@/state/ui';
 import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { CANVAS_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
 import { Kbd } from '@/ui/Kbd';
+
+/*
+ * The same choices as tiles, for a project without any view: an empty sidebar with nothing to click
+ * reads as broken. A separator is left out, since a line between no rows separates nothing.
+ */
+export function NewViewTiles() {
+    const hasFolder = useProject((s) => s.current?.folder != null);
+    const providers = useProviders((s) => s.providers);
+    const agents = useMemo(() => providers.filter((provider) => provider.installed && provider.capabilities.chat), [providers]);
+    return (
+        <div className="grid grid-cols-2 gap-1.5">
+            <Tile size="sm" icon={<Icon icon={Frame} size={14} />} title="Canvas" onClick={() => newCanvasView()} />
+            <Tile size="sm" icon={<Icon icon={PenTool} size={14} />} title="Drawing" onClick={() => void newDrawingView()} />
+            <Tile size="sm" icon={<Icon icon={Workflow} size={14} />} title="Diagram" onClick={() => void newDiagramView()} />
+            <Tile size="sm" icon={<Icon icon={Terminal} size={14} />} title="Terminal" onClick={() => void newTerminalView()} />
+            {agents.map((provider) => (
+                <Tile
+                    key={provider.kind}
+                    size="sm"
+                    icon={<AgentIcon kind={provider.kind} size={14} />}
+                    title={provider.name}
+                    onClick={() => void addAgentView('chat', provider)}
+                />
+            ))}
+            <Tile size="sm" icon={<Icon icon={Globe} size={14} />} title="Browser" onClick={() => useUi.getState().setViewDialog({ kind: 'new-browser' })} />
+            {hasFolder && (
+                <Tile size="sm" icon={<Icon icon={FileText} size={14} />} title="File" onClick={() => useUi.getState().openFilePicker({ kind: 'view' })} />
+            )}
+        </div>
+    );
+}
 
 /*
  * What "New view" offers: a canvas, or one session with no canvas around it. The agent submenus are

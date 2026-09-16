@@ -20,6 +20,7 @@ import { Panel } from '@/shell/Panel';
 import { PlanPanel } from '@/shell/PlanPanel';
 import { PreviewPanel } from '@/shell/PreviewPanel';
 import { ProjectBanner } from '@/shell/ProjectBanner';
+import { MachineLostScreen } from '@/shell/MachineLostScreen';
 import { ProjectSwitchScreen } from '@/shell/ProjectSwitchScreen';
 import { StartScreen } from '@/shell/StartScreen';
 import { MachineUpdateDialog } from '@/shell/MachineUpdateDialog';
@@ -63,6 +64,7 @@ function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                                 <ViewHost />
                                 <WebviewParking />
                                 {/* After the parked pages, which carry no z-index of their own and would otherwise draw over it. */}
+                                <MachineLostScreen />
                                 <ProjectSwitchScreen />
                                 <ProjectBanner />
                             </div>

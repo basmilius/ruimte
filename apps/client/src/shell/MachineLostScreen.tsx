@@ -1,0 +1,59 @@
+import { leaveWorkspace, showStart } from '@/transport/connections';
+import { MachineGlyph } from '@/endpoint/MachineGlyph';
+import { useProjectSwitch } from '@/project/open';
+import { describeLastSeen } from '@/shell/connection-info';
+import { machineLost } from '@/shell/machine-lost';
+import { StatusCard, useMachineEntry } from '@/shell/ProjectSwitchScreen';
+import { useMachineIcon } from '@/shell/settings/machine-icon';
+import { nameOf } from '@/shell/settings/machine-list';
+import { useMinute } from '@/shell/usage/limits';
+import { useEndpointId } from '@/state/keys';
+import { pool } from '@/transport';
+import { useEndpointConnection, useLastSeenAt } from '@/transport/status';
+import { Button } from '@/ui/Button';
+
+/*
+ * Stands over the cells while the machine of the open project does not answer. Nothing of the
+ * workspace goes: the nodes keep their sessions and threads, and the screen goes the moment the link
+ * is back. Opening another project is a choice a person makes here, never something that happens.
+ */
+export function MachineLostScreen() {
+    const endpointId = useEndpointId();
+    const connection = useEndpointConnection(endpointId);
+    const switching = useProjectSwitch((s) => s.kind !== 'idle');
+    const entry = useMachineEntry(endpointId);
+    const icon = useMachineIcon(entry);
+    const lastSeen = useLastSeenAt(endpointId);
+    const now = useMinute();
+
+    // A switch has a screen of its own, which says more about the same wait.
+    if (switching || !machineLost(connection)) {
+        return null;
+    }
+    const seen = describeLastSeen(lastSeen, now);
+    const retrying = connection.status === 'connecting';
+    return (
+        <div className="absolute inset-0 z-10 grid place-items-center bg-surface-sunken" role="status" aria-live="polite">
+            <StatusCard
+                glyph={<MachineGlyph icon={icon} size={24} className="text-text-faint" />}
+                title={nameOf(entry)}
+                meta={seen && <span className="text-xs text-text-muted">{seen}</span>}
+                line={retrying ? 'Trying to reach the machine again...' : (connection.failure ?? 'This machine is not answering.')}
+                failed={!retrying}
+            >
+                <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                        void leaveWorkspace().then(showStart);
+                    }}
+                >
+                    Open another project
+                </Button>
+                <Button size="sm" variant="primary" disabled={retrying} onClick={() => pool.reconnect(endpointId)}>
+                    Try again
+                </Button>
+            </StatusCard>
+        </div>
+    );
+}

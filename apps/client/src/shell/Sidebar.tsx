@@ -60,10 +60,9 @@ import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { Brand } from '@/ui/Brand';
 import { SECTION_LABEL } from '@/ui/classes';
-import { EmptyState } from '@/ui/EmptyState';
 import { Tooltip } from '@/ui/Tooltip';
 import { SidebarToggle } from '@/shell/SidebarToggle';
-import { NewViewItems } from '@/shell/ViewMenu';
+import { NewViewItems, NewViewTiles } from '@/shell/ViewMenu';
 import { setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { UsageLimitsCard } from '@/shell/usage/UsageLimitsCard';
@@ -622,7 +621,10 @@ export function Sidebar() {
 
                 <div ref={listRef} className="mt-2 min-h-0 grow overflow-auto px-2">
                     {empty ? (
-                        <EmptyState>This project has no views yet.</EmptyState>
+                        <div className="flex flex-col gap-2 px-1 pt-2">
+                            <p className="px-1 text-xs text-text-muted">This project has no views yet. Start with one of these.</p>
+                            <NewViewTiles />
+                        </div>
                     ) : (
                         sections.map((section) => {
                             // Only the list of views takes a drop, and only the one the row came out of; the

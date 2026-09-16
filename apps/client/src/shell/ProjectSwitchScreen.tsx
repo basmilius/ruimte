@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { CircleAlert, LoaderCircle } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { projectSwitch, useProjectSwitch } from '@/project/open';
@@ -13,8 +13,8 @@ import { useEndpointConnection } from '@/transport/status';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 
-/* The machine a switch is going to, as the Machines pane knows it: a paired row, or only the account's record. */
-const useMachineEntry = (endpointId: string): MachineEntry => {
+/* A machine as the Machines pane knows it: a paired row, or only the account's record. */
+export const useMachineEntry = (endpointId: string): MachineEntry => {
     const endpoints = useEndpoints((s) => s.endpoints);
     const machines = usePulsarMachines((s) => s.machines);
     return useMemo(
@@ -50,6 +50,38 @@ const lineOf = (state: Exclude<SwitchState, { kind: 'idle' }>, title: string, ma
     }
 };
 
+interface StatusCardProps {
+    glyph: ReactNode;
+    title: string;
+    /* The line under the title: the machine a project is on, or when a machine was last seen. */
+    meta?: ReactNode;
+    line: string;
+    failed: boolean;
+    children?: ReactNode;
+}
+
+/* The card the window shows while it waits on a machine or after one failed it: what, where, why, and what to do. */
+export function StatusCard({ glyph, title, meta, line, failed, children }: StatusCardProps) {
+    return (
+        <div className="flex w-80 max-w-full flex-col items-center gap-3 px-6 text-center">
+            {glyph}
+            <div className="flex max-w-full flex-col items-center gap-1">
+                <span className="max-w-full truncate text-sm font-medium text-text">{title}</span>
+                {meta}
+            </div>
+            <p className="flex items-start gap-2 text-xs leading-snug text-text-muted">
+                <Icon
+                    icon={failed ? CircleAlert : LoaderCircle}
+                    size={14}
+                    className={failed ? 'mt-px shrink-0 text-status-error' : 'mt-px shrink-0 animate-spin'}
+                />
+                <span>{line}</span>
+            </p>
+            {children && <div className="mt-2 flex items-center gap-2">{children}</div>}
+        </div>
+    );
+}
+
 function SwitchCard({ state }: { state: Exclude<SwitchState, { kind: 'idle' }> }) {
     const { target } = state;
     const entry = useMachineEntry(target.endpointId);
@@ -62,53 +94,50 @@ function SwitchCard({ state }: { state: Exclude<SwitchState, { kind: 'idle' }> }
     const failed = state.kind === 'failed';
 
     return (
-        <div className="flex w-80 max-w-full flex-col items-center gap-3 px-6 text-center">
-            {target.summary ? (
-                <ProjectGlyph
-                    projectId={target.summary.projectId}
-                    endpointId={target.endpointId}
-                    icon={target.summary.icon}
-                    color={target.summary.color}
-                    size={24}
-                />
-            ) : (
-                <MachineGlyph icon={aboutMachine ? machineIcon : null} size={24} className="text-text-faint" />
-            )}
-            <div className="flex max-w-full flex-col items-center gap-1">
-                <span className="max-w-full truncate text-sm font-medium text-text">{title}</span>
-                {!aboutMachine && (
+        <StatusCard
+            glyph={
+                target.summary ? (
+                    <ProjectGlyph
+                        projectId={target.summary.projectId}
+                        endpointId={target.endpointId}
+                        icon={target.summary.icon}
+                        color={target.summary.color}
+                        size={24}
+                    />
+                ) : (
+                    <MachineGlyph icon={aboutMachine ? machineIcon : null} size={24} className="text-text-faint" />
+                )
+            }
+            title={title}
+            meta={
+                !aboutMachine && (
                     <span className="flex max-w-full items-center gap-1.5 text-xs text-text-muted">
                         <MachineGlyph icon={machineIcon} size={12} />
                         <span className="truncate">{machine}</span>
                         {/* Known only once the link is open, which is exactly when the project step runs. */}
                         {state.kind === 'opening' && connection.relayed && <span className="shrink-0 text-text-faint">via relay</span>}
                     </span>
-                )}
-            </div>
-            <p className="flex items-start gap-2 text-xs leading-snug text-text-muted">
-                <Icon
-                    icon={failed ? CircleAlert : LoaderCircle}
-                    size={14}
-                    className={failed ? 'mt-px shrink-0 text-status-error' : 'mt-px shrink-0 animate-spin'}
-                />
-                <span>{lineOf(state, title, machine)}</span>
-            </p>
+                )
+            }
+            line={lineOf(state, title, machine)}
+            failed={failed}
+        >
             {(state.kind === 'connecting' || state.kind === 'opening') && (
-                <Button size="sm" variant="secondary" className="mt-2" onClick={() => projectSwitch.cancel()}>
+                <Button size="sm" variant="secondary" onClick={() => projectSwitch.cancel()}>
                     Cancel
                 </Button>
             )}
             {failed && (
-                <div className="mt-2 flex items-center gap-2">
+                <>
                     <Button size="sm" variant="secondary" onClick={() => void projectSwitch.back()}>
                         Go back
                     </Button>
                     <Button size="sm" variant="primary" onClick={() => void projectSwitch.retry()}>
                         Try again
                     </Button>
-                </div>
+                </>
             )}
-        </div>
+        </StatusCard>
     );
 }
 
