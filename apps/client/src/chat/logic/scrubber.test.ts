@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatItem } from '@ruimte/contracts';
-import { layoutTicks, messageAt, messageInView, slotOf, stepMessage, stripLeft, tickWidth, ticksOf, type TickKind } from './scrubber';
+import { layoutTicks, messageAt, messagesInView, slotInView, slotOf, stepMessage, threadPaddingLeft, tickWidth, ticksOf, type TickKind } from './scrubber';
 import { deriveTimelineRows } from './timeline';
 
 const options = { expandedGroups: new Set<string>(), expandedTurns: new Set<string>(), expandedSubagents: new Set<string>(), activeTurnId: null };
@@ -112,31 +112,50 @@ describe('messageAt and slotOf', () => {
         expect(slotOf(layout, 1000)).toBeNull();
     });
 
-    test('ticks grow toward the message being read, one step out', () => {
+    test('without a pointer every tick of a kind has one length', () => {
+        expect(tickWidth('person', null)).toBe(8);
+        expect(tickWidth('wake', null)).toBe(5);
+    });
+
+    test('under a pointer the hovered tick is longest and its neighbors grow a step', () => {
         expect(tickWidth('person', 0)).toBe(16);
         expect(tickWidth('wake', 0)).toBe(16);
-        expect(tickWidth('person', 1)).toBeGreaterThan(tickWidth('person', 2));
+        expect(tickWidth('person', 1)).toBeGreaterThan(tickWidth('person', null));
+        expect(tickWidth('wake', 1)).toBeGreaterThan(tickWidth('wake', null));
         expect(tickWidth('person', 2)).toBe(tickWidth('person', null));
-        expect(tickWidth('wake', 5)).toBeLessThan(tickWidth('person', 5));
+        expect(tickWidth('wake', 5)).toBe(tickWidth('wake', null));
     });
 });
 
-describe('messageInView', () => {
+describe('messagesInView', () => {
     const starts = [0, 400, 1200, 1300, 2600];
 
-    test('the message being read is the last to start above a quarter down the thread', () => {
-        expect(messageInView({ starts, scrollTop: 0, visibleHeight: 800, atEnd: false })).toBe(0);
-        expect(messageInView({ starts, scrollTop: 250, visibleHeight: 800, atEnd: false })).toBe(1);
-        expect(messageInView({ starts, scrollTop: 1150, visibleHeight: 800, atEnd: false })).toBe(3);
+    test('every message with part of its stretch on screen is in view', () => {
+        expect(messagesInView({ starts, scrollTop: 0, visibleHeight: 800 })).toEqual({ first: 0, last: 1 });
+        expect(messagesInView({ starts, scrollTop: 1100, visibleHeight: 800 })).toEqual({ first: 1, last: 3 });
     });
 
-    test('at the end a last message low on screen is the one being read', () => {
-        expect(messageInView({ starts, scrollTop: 2000, visibleHeight: 800, atEnd: false })).toBe(3);
-        expect(messageInView({ starts, scrollTop: 2000, visibleHeight: 800, atEnd: true })).toBe(4);
+    test('a question whose answer fills the screen stays in view after it scrolled out', () => {
+        expect(messagesInView({ starts, scrollTop: 1500, visibleHeight: 800 })).toEqual({ first: 3, last: 3 });
     });
 
-    test('no messages, nothing in view', () => {
-        expect(messageInView({ starts: [], scrollTop: 0, visibleHeight: 800, atEnd: true })).toBeNull();
+    test('a message that starts on the last line is not in view yet', () => {
+        expect(messagesInView({ starts, scrollTop: 400, visibleHeight: 800 })).toEqual({ first: 1, last: 1 });
+        expect(messagesInView({ starts, scrollTop: 401, visibleHeight: 800 })).toEqual({ first: 1, last: 2 });
+    });
+
+    test('no messages, or none reached yet, nothing in view', () => {
+        expect(messagesInView({ starts: [], scrollTop: 0, visibleHeight: 800 })).toBeNull();
+        expect(messagesInView({ starts: [900], scrollTop: 0, visibleHeight: 800 })).toBeNull();
+        expect(messagesInView({ starts, scrollTop: 0, visibleHeight: 0 })).toBeNull();
+    });
+
+    test('a merged tick is in view when any of its messages is', () => {
+        const slot = { first: 20, last: 39, kind: 'person' as const, y: 0 };
+        expect(slotInView(slot, { first: 39, last: 41 })).toBe(true);
+        expect(slotInView(slot, { first: 10, last: 20 })).toBe(true);
+        expect(slotInView(slot, { first: 40, last: 45 })).toBe(false);
+        expect(slotInView(slot, null)).toBe(false);
     });
 });
 
@@ -164,18 +183,26 @@ describe('stepMessage', () => {
     });
 });
 
-describe('stripLeft', () => {
-    test('a node never gets a strip, however wide', () => {
-        expect(stripLeft(1600, false)).toBeNull();
+describe('threadPaddingLeft', () => {
+    test('a thread without the strip keeps its usual padding', () => {
+        expect(threadPaddingLeft(600, false)).toBe(16);
     });
 
-    test('a view puts the strip in the free space left of the column', () => {
-        expect(stripLeft(1216, true)).toBe(192);
-        expect(stripLeft(848, true)).toBe(8);
+    test('a wide view keeps the usual padding, its centered column already clears the strip', () => {
+        expect(threadPaddingLeft(1600, true)).toBe(16);
+        expect(threadPaddingLeft(848, true)).toBe(16);
     });
 
-    test('a view without room for the strip left of the column gets none', () => {
-        expect(stripLeft(847, true)).toBeNull();
-        expect(stripLeft(700, true)).toBeNull();
+    test('a narrower view pads until the text starts 40 pixels in', () => {
+        const textLeft = (width: number): number => {
+            const padding = threadPaddingLeft(width, true);
+            return padding + Math.max(0, (width - padding - 16 - 768) / 2);
+        };
+        expect(threadPaddingLeft(600, true)).toBe(40);
+        expect(threadPaddingLeft(840, true)).toBe(24);
+        for (const width of [500, 824, 830, 841, 843, 847, 850]) {
+            expect(textLeft(width)).toBeGreaterThanOrEqual(40);
+            expect(Number.isInteger(threadPaddingLeft(width, true))).toBe(true);
+        }
     });
 });

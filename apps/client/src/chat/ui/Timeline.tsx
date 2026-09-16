@@ -6,7 +6,7 @@ import type { ChatSubagentItem } from '@ruimte/contracts';
 import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
 import { crumbOf, openFromMain, useSubagentTrail } from '@/chat/subagent-view';
 import { registerMessageStepper, registerTimeline, setTimelineAtEnd } from '@/chat/timeline-scroll';
-import { SCRUBBER_MIN_TICKS, STRIP_WIDTH_PX, messageInView, stepMessage, stripLeft, ticksOf } from '@/chat/logic/scrubber';
+import { SCRUBBER_MIN_TICKS, STRIP_INSET_PX, STRIP_WIDTH_PX, messagesInView, stepMessage, threadPaddingLeft, ticksOf } from '@/chat/logic/scrubber';
 import { EMPTY_TARGET, readTimelineTarget, withCurrentText, type TimelineTarget } from '@/chat/logic/timeline-target';
 import { Scrubber } from '@/chat/ui/Scrubber';
 import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
@@ -66,7 +66,7 @@ export function Timeline({ chatId }: { chatId: string }) {
     const empty = rows.length === 0;
     const ticks = useMemo(() => ticksOf(rows), [rows]);
 
-    // The strip's room is the free space beside a view's column, which only the thread's own width tells.
+    // Whether the thread's text clears the strip depends on the width of the view, which only the thread's own frame tells.
     useEffect(() => {
         const element = frameRef.current;
         if (element === null || typeof ResizeObserver === 'undefined') {
@@ -122,8 +122,9 @@ export function Timeline({ chatId }: { chatId: string }) {
 
     // A sub-agent in the thread's place hides the thread, and the strip and the keyboard go with it.
     const onMainAgent = trail.length === 0;
-    const scrubberLeft = stripLeft(frame.width, frame.column);
-    const showsScrubber = onMainAgent && ticks.length >= SCRUBBER_MIN_TICKS && scrubberLeft !== null;
+    // A node on a canvas has no strip: it is too narrow to give up a column of its width.
+    const showsScrubber = frame.column && onMainAgent && ticks.length >= SCRUBBER_MIN_TICKS;
+    const paddingLeft = threadPaddingLeft(frame.width, showsScrubber);
 
     /*
      * Where each message starts, from the virtualizer's measurements (an estimate for a row it never
@@ -135,8 +136,7 @@ export function Timeline({ chatId }: { chatId: string }) {
     const scrollTop = virtualizer.scrollOffset ?? 0;
     const viewport = virtualizer.scrollRect?.height ?? 0;
     const visibleHeight = Math.max(0, viewport - COMPOSER_CLEARANCE_PX);
-    const atEnd = totalSize - scrollTop - viewport < FOLLOW_THRESHOLD_PX + COMPOSER_CLEARANCE_PX;
-    const activeIndex = showsScrubber ? messageInView({ starts, scrollTop, visibleHeight, atEnd }) : null;
+    const inView = showsScrubber ? messagesInView({ starts, scrollTop, visibleHeight }) : null;
 
     const jumpTo = (index: number): void => {
         const tick = ticks[index];
@@ -215,6 +215,7 @@ export function Timeline({ chatId }: { chatId: string }) {
                     <ContextMenu.Trigger
                         ref={scrollRef}
                         className="chat-thread min-h-0 grow overflow-auto px-4 pt-4"
+                        style={{ paddingLeft }}
                         onScroll={(e) => {
                             const el = e.currentTarget;
                             followRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < FOLLOW_THRESHOLD_PX + COMPOSER_CLEARANCE_PX;
@@ -263,9 +264,9 @@ export function Timeline({ chatId }: { chatId: string }) {
                     <TimelineMenuPopup target={target} scroller={scrollRef} />
                 </ContextMenu.Root>
                 {showsScrubber && (
-                    <div className="absolute top-4" style={{ left: scrubberLeft, width: STRIP_WIDTH_PX, bottom: COMPOSER_CLEARANCE_PX }}>
+                    <div className="absolute top-4" style={{ left: STRIP_INSET_PX, width: STRIP_WIDTH_PX, bottom: COMPOSER_CLEARANCE_PX }}>
                         <ErrorBoundary label="The message strip failed to render" resetKeys={[ticks.length]}>
-                            <Scrubber ticks={ticks} activeIndex={activeIndex} onPick={pick} />
+                            <Scrubber ticks={ticks} firstInView={inView?.first ?? null} lastInView={inView?.last ?? null} onPick={pick} />
                         </ErrorBoundary>
                     </div>
                 )}

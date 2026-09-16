@@ -1,9 +1,9 @@
 import type { TimelineRow } from '@/chat/logic/timeline';
 
 /*
- * The strip beside a thread with a tick per message a person sent, as numbers: which rows get a
- * tick, where the ticks go in the height the strip has, which message is being read, and which one
- * a pointer means. The component only draws what comes out of here.
+ * The strip at the left edge of a chat view with a tick per message a person sent, as numbers: which
+ * rows get a tick, where the ticks go in the height the strip has, which messages are on screen, and
+ * which one a pointer means. The component only draws what comes out of here.
  */
 
 /* A message the person sent, or a turn the machine opened with the results of tasks. */
@@ -30,13 +30,13 @@ const MIN_PITCH_PX = 4;
 const CONTENT_MAX_WIDTH_PX = 768;
 const THREAD_PADDING_PX = 16;
 export const STRIP_WIDTH_PX = 24;
-/* Kept clear between the strip and the column, and between the strip and the view's edge. */
-const STRIP_GAP_PX = 8;
-/* The free space left of the column a view needs before the strip fits: 40 pixels, so a view of at least 848. */
-const SCRUBBER_MIN_ROOM_PX = STRIP_GAP_PX + STRIP_WIDTH_PX + STRIP_GAP_PX;
+/* The strip's distance from the view's left edge, and the air it keeps between itself and the thread's text. */
+export const STRIP_INSET_PX = 8;
+const STRIP_CLEARANCE_PX = STRIP_INSET_PX + STRIP_WIDTH_PX + STRIP_INSET_PX;
 
-const WIDTH_ACTIVE_PX = 16;
-const WIDTH_NEAR_PX = 11;
+const WIDTH_HOVERED_PX = 16;
+const WIDTH_NEAR_PERSON_PX = 12;
+const WIDTH_NEAR_WAKE_PX = 8;
 const WIDTH_PERSON_PX = 8;
 const WIDTH_WAKE_PX = 5;
 
@@ -122,13 +122,16 @@ export const slotOf = (layout: ScrubberLayout, message: number): number | null =
     return null;
 };
 
-/* Longer the closer a tick is to the message being read, the way a dock magnifies, but only one step out. */
-export const tickWidth = (kind: TickKind, distance: number | null): number => {
-    if (distance === 0) {
-        return WIDTH_ACTIVE_PX;
+/*
+ * At rest every tick of a kind is as long as the next, so length never competes with the brightness
+ * that says what is on screen. Only a pointer on the strip magnifies, the way a dock does, one step out.
+ */
+export const tickWidth = (kind: TickKind, distanceFromPointer: number | null): number => {
+    if (distanceFromPointer === 0) {
+        return WIDTH_HOVERED_PX;
     }
-    if (distance === 1) {
-        return kind === 'person' ? WIDTH_NEAR_PX : WIDTH_PERSON_PX;
+    if (distanceFromPointer === 1) {
+        return kind === 'person' ? WIDTH_NEAR_PERSON_PX : WIDTH_NEAR_WAKE_PX;
     }
     return kind === 'person' ? WIDTH_PERSON_PX : WIDTH_WAKE_PX;
 };
@@ -156,21 +159,33 @@ export interface ReadingPosition {
     scrollTop: number;
     /* The height of the thread a person can read, without what the composer covers. */
     visibleHeight: number;
-    atEnd: boolean;
+}
+
+export interface MessageRange {
+    first: number;
+    last: number;
 }
 
 /*
- * The message being read is the last one that starts above a line a quarter down the thread: a
- * question that just scrolled out at the top is still what the answer on screen belongs to. At the
- * end the line drops to the bottom, or a short last exchange would never light its own tick.
+ * The messages on screen. A message counts from its own start to the start of the next one, so the
+ * question whose answer fills the screen is in view even after it scrolled out at the top.
  */
-export const messageInView = ({ starts, scrollTop, visibleHeight, atEnd }: ReadingPosition): number | null => {
-    if (starts.length === 0) {
+export const messagesInView = ({ starts, scrollTop, visibleHeight }: ReadingPosition): MessageRange | null => {
+    const bottom = scrollTop + visibleHeight;
+    if (starts.length === 0 || visibleHeight <= 0 || starts[0]! >= bottom) {
         return null;
     }
-    const line = scrollTop + (atEnd ? visibleHeight : Math.floor(visibleHeight / 4));
-    return Math.max(0, lastAtOrAbove(starts, line));
+    const first = Math.max(0, lastAtOrAbove(starts, scrollTop));
+    let last = lastAtOrAbove(starts, bottom);
+    // A row that starts on the very last line has not a pixel on screen yet.
+    if (starts[last]! >= bottom) {
+        last--;
+    }
+    return { first, last: Math.max(first, last) };
 };
+
+/* Whether a drawn tick covers any of the messages on screen. */
+export const slotInView = (slot: TickSlot, range: MessageRange | null): boolean => range !== null && slot.last >= range.first && slot.first <= range.last;
 
 /*
  * The message a step back or forward lands on, among the ones `eligible` allows. A jump puts a
@@ -195,17 +210,15 @@ export const stepMessage = (starts: readonly number[], eligible: (index: number)
 };
 
 /*
- * Where the strip stands in the free space left of a view's centered column, or null where it does
- * not fit. A node on a canvas has no such space and no strip: the strip never takes width from the
- * thread, so nothing shifts when it appears.
+ * The left padding of the thread in a view that draws the strip at its left edge. A wide view keeps
+ * the usual padding, since its centered column already clears the strip; a narrower one pads until
+ * the column's text starts clear of it, so nothing is ever drawn under the strip.
  */
-export const stripLeft = (width: number, column: boolean): number | null => {
-    if (!column) {
-        return null;
+export const threadPaddingLeft = (width: number, strip: boolean): number => {
+    if (!strip) {
+        return THREAD_PADDING_PX;
     }
-    const room = THREAD_PADDING_PX + Math.floor((width - 2 * THREAD_PADDING_PX - CONTENT_MAX_WIDTH_PX) / 2);
-    if (room < SCRUBBER_MIN_ROOM_PX) {
-        return null;
-    }
-    return room - STRIP_GAP_PX - STRIP_WIDTH_PX;
+    // The column's margin is half of what the padding leaves, so the padding counts the clearance twice.
+    const padding = 2 * STRIP_CLEARANCE_PX + CONTENT_MAX_WIDTH_PX + THREAD_PADDING_PX - Math.floor(width);
+    return Math.min(STRIP_CLEARANCE_PX, Math.max(THREAD_PADDING_PX, padding));
 };

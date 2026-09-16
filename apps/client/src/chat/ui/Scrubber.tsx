@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent 
 import { PreviewCard } from '@base-ui-components/react/preview-card';
 import clsx from 'clsx';
 import { Copy, type LucideIcon } from 'lucide-react';
-import { layoutTicks, messageAt, slotOf, tickWidth, TICK_HEIGHT_PX, type ScrubberTick } from '@/chat/logic/scrubber';
+import { layoutTicks, messageAt, slotInView, slotOf, tickWidth, TICK_HEIGHT_PX, type ScrubberTick } from '@/chat/logic/scrubber';
 import { MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
@@ -43,23 +43,25 @@ const CARD_ACTIONS: Record<CardActionId, CardAction> = {
 
 interface ScrubberProps {
     ticks: readonly ScrubberTick[];
-    /* The index in `ticks` of the message being read. */
-    activeIndex: number | null;
+    /* The indexes in `ticks` of the first and last message on screen; two numbers, so the memo holds while scrolling within them. */
+    firstInView: number | null;
+    lastInView: number | null;
     onPick(index: number): void;
 }
 
 /*
- * The strip beside a thread: a tick per message of the person and per wake by tasks, the one being
- * read lit and longer. A single hover card follows the pointer along the strip, anchored at the tick
+ * The strip at the left edge of a chat view: a tick per message of the person and per wake by tasks,
+ * the ones on screen bright and the rest dimmed, growing only under the pointer. A single hover card follows the pointer along the strip, anchored at the tick
  * it points at, so a thousand ticks are a thousand spans and not a thousand popups.
  */
-export const Scrubber = memo(function Scrubber({ ticks, activeIndex, onPick }: ScrubberProps) {
+export const Scrubber = memo(function Scrubber({ ticks, firstInView, lastInView, onPick }: ScrubberProps) {
     // State rather than a ref: the card's anchor is built during render and has to change when the strip does.
     const [strip, setStrip] = useState<HTMLDivElement | null>(null);
     const [height, setHeight] = useState(0);
     // The message the card is about; it stays while the card closes, so the card never empties as it fades.
     const [hovered, setHovered] = useState<number | null>(null);
-    const [open, setOpen] = useState(false);
+    // Apart from `hovered`, which outlives the pointer for the card's sake: the ticks shrink back the moment it leaves.
+    const [pointing, setPointing] = useState(false);
 
     useEffect(() => {
         if (strip === null || typeof ResizeObserver === 'undefined') {
@@ -72,7 +74,7 @@ export const Scrubber = memo(function Scrubber({ ticks, activeIndex, onPick }: S
 
     const kinds = useMemo(() => ticks.map((tick) => tick.kind), [ticks]);
     const layout = useMemo(() => layoutTicks(kinds, height), [kinds, height]);
-    const activeSlot = activeIndex === null ? null : slotOf(layout, activeIndex);
+    const inView = firstInView === null || lastInView === null ? null : { first: firstInView, last: lastInView };
     const hoveredTick = hovered === null ? null : (ticks[hovered] ?? null);
     const hoveredSlot = hovered === null ? null : slotOf(layout, hovered);
     const anchorY = hoveredSlot === null ? null : layout.slots[hoveredSlot]!.y;
@@ -96,7 +98,7 @@ export const Scrubber = memo(function Scrubber({ ticks, activeIndex, onPick }: S
     const actions = hoveredTick === null ? [] : Object.values(CARD_ACTIONS).filter((action) => action.offers(hoveredTick));
 
     return (
-        <PreviewCard.Root onOpenChange={setOpen}>
+        <PreviewCard.Root>
             <PreviewCard.Trigger
                 delay={150}
                 closeDelay={150}
@@ -107,11 +109,13 @@ export const Scrubber = memo(function Scrubber({ ticks, activeIndex, onPick }: S
                         aria-label="Messages in this thread"
                         className="relative h-full w-full cursor-pointer select-none"
                         onPointerMove={(e) => {
+                            setPointing(true);
                             const index = pointAt(e);
                             if (index !== hovered) {
                                 setHovered(index);
                             }
                         }}
+                        onPointerLeave={() => setPointing(false)}
                         onClick={(e) => {
                             const index = pointAt(e);
                             if (index !== null) {
@@ -122,20 +126,16 @@ export const Scrubber = memo(function Scrubber({ ticks, activeIndex, onPick }: S
                 }
             >
                 {layout.slots.map((slot, index) => {
-                    const distance = activeSlot === null ? null : Math.abs(index - activeSlot);
+                    const distance = pointing && hoveredSlot !== null ? Math.abs(index - hoveredSlot) : null;
+                    const bright = slotInView(slot, inView) || distance === 0;
                     return (
                         <span
                             key={slot.first}
                             aria-hidden
                             className={clsx(
-                                'absolute left-1 rounded-full transition-[width,background-color] duration-150',
-                                distance === 0
-                                    ? 'bg-text'
-                                    : open && index === hoveredSlot
-                                      ? 'bg-text-muted'
-                                      : slot.kind === 'wake'
-                                        ? 'bg-text-faint/50'
-                                        : 'bg-text-faint'
+                                'absolute left-1 rounded-full transition-[width,opacity] duration-100 ease-out motion-reduce:transition-none',
+                                slot.kind === 'wake' ? 'bg-text-muted' : 'bg-text',
+                                bright ? 'opacity-100' : 'opacity-30'
                             )}
                             style={{ top: slot.y, height: TICK_HEIGHT_PX, width: tickWidth(slot.kind, distance) }}
                         />
