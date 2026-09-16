@@ -1,21 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, ChevronDown, LockOpen, MoreHorizontal, X } from 'lucide-react';
+import { Check, ChevronDown, Copy, LockOpen, MoreHorizontal, Send, X } from 'lucide-react';
 import type { Plan } from '@ruimte/contracts';
 import { allSteps, effectiveChecks } from '@ruimte/plan';
 import { forkOriginIn } from '@/chat/logic/fork';
 import { hasOverlayControls } from '@/desktop/bridge';
-import { focusChat, planClient } from '@/plan/plan-actions';
+import { copyPlanMarkdown, focusChat, planClient, sendResultsToChat } from '@/plan/plan-actions';
 import { closePlanPanel, pickPlan, PLAN_DEFAULT_WIDTH, PLAN_MIN_WIDTH } from '@/plan/plan-panel-watch';
 import { PlanList } from '@/plan/PlanList';
+import { resultsText } from '@/plan/plan-view';
 import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useDocument } from '@/state/document';
 import { useEndpointId } from '@/state/keys';
 import { useChatPlans } from '@/state/plans';
 import { useUi } from '@/state/ui';
-import { BTN_GROUP } from '@/ui/classes';
+import { BTN_GROUP, MENU_SEPARATOR } from '@/ui/classes';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
@@ -115,6 +116,7 @@ export function PlanPanel() {
 function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: string; chatId: string; plans: readonly Plan[]; plan: Plan; inset: boolean }) {
     const title = useDocument((s) => forkOriginIn(s.views, chatId)?.title ?? null);
     const index = plans.findIndex((entry) => entry.id === plan.id);
+    const results = resultsText(plan);
 
     return (
         <header className={clsx('app-drag flex h-12 shrink-0 items-center gap-1 border-b border-border pr-2 pl-3', inset && 'toolbar-overlay-inset')}>
@@ -159,6 +161,13 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
                     <Menu.Portal>
                         <Menu.Positioner className="z-(--z-popup)" side="bottom" sideOffset={6} align="end">
                             <Menu.Popup className="menu-popup min-w-56">
+                                <Menu.Item className="menu-item" onClick={() => copyPlanMarkdown(plan)}>
+                                    <Icon icon={Copy} size={14} /> Copy as Markdown
+                                </Menu.Item>
+                                <Menu.Item className="menu-item" disabled={results === null} onClick={() => sendResultsToChat(chatId, plan)}>
+                                    <Icon icon={Send} size={14} /> Send results to chat
+                                </Menu.Item>
+                                <Menu.Separator className={MENU_SEPARATOR} />
                                 <Menu.Item
                                     className="menu-item"
                                     disabled={!hasLockedStep(plan)}

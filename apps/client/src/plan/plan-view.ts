@@ -133,6 +133,30 @@ export const agentName = (provider: AgentKind | string | null | undefined): stri
     return AGENT_NAMES[provider] ?? provider.charAt(0).toUpperCase() + provider.slice(1);
 };
 
+/*
+ * What "Send results to chat" puts in the prompt: every failed and blocked step with its note, under
+ * the plan's title. Null when there is nothing to report.
+ */
+export const resultsText = (plan: Plan): string | null => {
+    const lines = (state: PlanStepState): string[] =>
+        leavesOf(plan.items)
+            .filter((step) => step.state === state)
+            .map((step) => `- ${step.title}${step.note ? `: ${step.note.replace(/\s*\n\s*/g, ' ')}` : ''}`);
+    const failed = lines('failed');
+    const blocked = lines('blocked');
+    if (failed.length === 0 && blocked.length === 0) {
+        return null;
+    }
+    const parts = [`Results of the plan "${plan.meta.title}":`];
+    if (failed.length > 0) {
+        parts.push(['Failed:', ...failed].join('\n'));
+    }
+    if (blocked.length > 0) {
+        parts.push(['Blocked:', ...blocked].join('\n'));
+    }
+    return parts.join('\n\n');
+};
+
 /* One step as a line of Markdown, for Copy in its menu. */
 export const stepMarkdown = (kind: Plan['meta']['kind'], step: PlanStep): string => {
     const state = stepState(step);

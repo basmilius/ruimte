@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { Plan } from '@ruimte/contracts';
-import { hasFailedStep, planCounter, planRows, toggledState, type PlanViewOptions } from '@/plan/plan-view';
+import { hasFailedStep, planCounter, planRows, resultsText, toggledState, type PlanViewOptions } from '@/plan/plan-view';
 
 const plan: Plan = {
     id: 'plan-1',
@@ -89,5 +89,15 @@ describe('what the plan says in a line', () => {
         expect(toggledState('open')).toBe('done');
         expect(toggledState('active')).toBe('done');
         expect(toggledState('done')).toBe('open');
+    });
+
+    test('the results for the chat name every failed and blocked step with its note', () => {
+        expect(resultsText(plan)).toBe(
+            'Results of the plan "Test the split placement":\n\nFailed:\n- Focus stays: Focus jumped to the first column.\n\nBlocked:\n- Whole pixels: No display'
+        );
+    });
+
+    test('no results when nothing failed or is blocked', () => {
+        expect(resultsText({ ...plan, items: [{ type: 'step', id: 'one', title: 'One', state: 'done' }] })).toBeNull();
     });
 });

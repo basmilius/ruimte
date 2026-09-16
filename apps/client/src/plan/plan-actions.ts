@@ -1,11 +1,15 @@
 import { create } from 'zustand';
-import { isCanvasView } from '@ruimte/contracts';
+import { isCanvasView, type Plan } from '@ruimte/contracts';
+import { planToMarkdown } from '@ruimte/plan';
+import { offerDraft } from '@/chat/drafts';
 import { PlanClient } from '@/plan/plan-client';
-import type { PlanFilter } from '@/plan/plan-view';
+import { resultsText, type PlanFilter } from '@/plan/plan-view';
 import { revealNode, showView } from '@/project/views';
 import { liveCanvas } from '@/state/canvas';
 import { useDocument } from '@/state/document';
+import { useToasts } from '@/state/toasts';
 import { machineFor } from '@/transport/connections';
+import { copyText } from '@/ui/clipboard';
 
 export const planClient = new PlanClient((endpointId) => machineFor(endpointId)?.transport ?? null);
 
@@ -56,4 +60,22 @@ export const focusChat = (chatId: string): void => {
         return;
     }
     revealNode(chatId);
+};
+
+export const copyPlanMarkdown = (plan: Plan): void => {
+    copyText(planToMarkdown(plan));
+    useToasts.getState().show({ kind: 'success', title: 'Copied the plan as Markdown' });
+};
+
+/*
+ * Puts the failed and blocked steps in the chat's prompt, and never sends it: the person does. The
+ * chat comes into focus as well, so the text is in front of them.
+ */
+export const sendResultsToChat = (chatId: string, plan: Plan): void => {
+    const text = resultsText(plan);
+    if (text === null) {
+        return;
+    }
+    offerDraft(chatId, text);
+    focusChat(chatId);
 };

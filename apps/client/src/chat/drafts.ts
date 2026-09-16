@@ -73,3 +73,34 @@ export const writeDraft = (chatId: string, draft: ChatDraft): void => {
     drafts[chatId] = { text: draft.text, mentions: draft.mentions, skills: draft.skills };
     store(drafts);
 };
+
+/* Text handed to a draft from outside the composer goes under what was already typed, never over it. */
+export const joinDraftText = (current: string, added: string): string => (current.trim() === '' ? added : `${current.replace(/\s+$/, '')}\n\n${added}`);
+
+type DraftTaker = (text: string) => void;
+
+/* The composers on screen, by chat. One that is not mounted reads what was offered from storage when it is. */
+const takers = new Map<string, DraftTaker>();
+
+export const takeDraftOffers = (chatId: string, take: DraftTaker): (() => void) => {
+    takers.set(chatId, take);
+    return () => {
+        if (takers.get(chatId) === take) {
+            takers.delete(chatId);
+        }
+    };
+};
+
+/*
+ * Puts text in a chat's prompt without sending it: the person reads it and presses Enter. A mounted
+ * composer owns its draft and writes it back to storage itself, so it has to be the one to take it.
+ */
+export const offerDraft = (chatId: string, text: string): void => {
+    const take = takers.get(chatId);
+    if (take) {
+        take(text);
+        return;
+    }
+    const current = readDraft(chatId);
+    writeDraft(chatId, { ...current, text: joinDraftText(current.text, text) });
+};

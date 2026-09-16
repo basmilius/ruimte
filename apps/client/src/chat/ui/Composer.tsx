@@ -10,7 +10,7 @@ import type { AgentKind, ChatApprovalItem, ChatInfo, ChatQuestionItem, ChatSkill
 import { askBeforeStoppingSubagents } from '@/agents/end-children';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { checkAttachmentLimits, filesOf, formatBytes, isImageAttachment, readAttachments, uploadBytes } from '@/chat/attachments';
-import { EMPTY_DRAFT, isEmptyDraft, readDraft, writeDraft, type ChatDraft } from '@/chat/drafts';
+import { EMPTY_DRAFT, isEmptyDraft, joinDraftText, readDraft, takeDraftOffers, writeDraft, type ChatDraft } from '@/chat/drafts';
 import {
     MENTION_DRAG_TYPE,
     findMentionQuery,
@@ -164,6 +164,15 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     useEffect(() => {
         writeDraft(chatId, draft);
     }, [chatId, draft]);
+
+    useEffect(
+        () =>
+            takeDraftOffers(chatId, (offered) => {
+                setDraft((current) => ({ ...current, text: joinDraftText(current.text, offered) }));
+                inputRef.current?.focus();
+            }),
+        [chatId]
+    );
 
     useEffect(() => {
         if (!notice) {
