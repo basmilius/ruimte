@@ -2358,13 +2358,17 @@ code will not say on its own.
 - No budget per task in these phases. The caps on depth, count and (from phase 5) mode are the
   limit. A cap on turns is the first thing to add if children turn out to give themselves turns.
 - The iPhone app stays compatible in every phase (regenerated models, no new kinds) and gets the
-  subagent panel and the task status in one round after phase 4. A finished task gets no push of its
+  subagent view and the task status in one round after phase 4. A finished task gets no push of its
   own: the parent is woken and says so itself when its turn ends, which is when a person can act. A
   child that fails and a wake that is parked do deserve one, as `attention`.
-- A subagent's conversation opens in one side panel, read-only, which a click on another row
-  replaces, with a breadcrumb back from a grandchild to its parent. It has no toolbar button and is
-  not in `ProjectPanelKindSchema`, so nothing of it is kept: a subagent's conversation is laid beside
-  the parent for a moment, not left open. It grows while it is open (a counted `fs.watch` for Claude,
+- A subagent's conversation opens in the chat's own place, read-only, from a row in the thread or
+  from the sub-agents button in the chat's bar (the node's header, the view's toolbar or its cell's),
+  which lists the CLI's own subagents and the tasks the chat gave. The bar then carries a breadcrumb
+  from the main agent down to a grandchild with a close beside it, Escape goes one level up before it
+  leaves the node or the view, and the composer is gone until the main agent is back. Which one is
+  shown is held per `${endpointId}:${chatId}` for the page's life (`chat/subagent-view.ts`) and never
+  kept: a look into a subagent is a moment, not a place. The side panel it started as went, because
+  it put the conversation beside a chat other than the one it belonged to. It grows while it is open (a counted `fs.watch` for Claude,
   a poll for Codex) for as long as a client holds it, and the event says only that there is more.
 - A canvas is still not a scheduler, and the rule is made sharper rather than stretched. Nothing
   starts on a clock (no cron, loop or trigger), there is no queue of tasks handed out over nodes, no
@@ -2394,8 +2398,8 @@ code will not say on its own.
 - A Claude transcript is projected once and read on from where the last read stopped, with the
   cursors of an ordinary `ChatThread` history, so a rewritten transcript expires them the way a
   cleared chat does. Every Codex item is projected on its own: two reasoning items merged into one
-  thinking row would carry an id that depends on where a page began, and the panel merges by id.
-- The panel lays the newest page over what it holds by id, and a page that shares nothing with it
+  thinking row would carry an id that depends on where a page began, and the view merges by id.
+- The view lays the newest page over what it holds by id, and a page that shares nothing with it
   replaces it, since more happened than a page holds. Items read back have no turn, so the timeline
   draws them flat with the same rows as the thread (`chat/ui/rows/Rows.tsx`).
 - `renderTranscript` gives a subagent one line with its tool use id in it, because that id is what
