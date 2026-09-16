@@ -59,8 +59,8 @@ and history replies apply before the next stream event. Older daemons still retu
 full snapshot; the app accepts it and does not issue unsupported history requests.
 Pagination becomes live only after the daemon is updated.
 
-The implementation and targeted state/parser/scroll tests are recorded in
-[`2026-09-16-ios-chat-parity.md`](../../docs/reports/2026-09-16-ios-chat-parity.md).
+The current implementation summary and remaining checks are recorded in the
+[iOS report](../../docs/reports/2026-09-15-ios-app.html).
 Physical iPhone builds were installed at milestones. Visual timing, selection during
 streaming, VoiceOver, larger text and iPad multitasking still require hands-on acceptance.
 
