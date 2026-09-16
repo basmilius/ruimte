@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { ListChecks, LoaderCircle } from 'lucide-react';
+import { CheckCheck, LoaderCircle } from 'lucide-react';
 import { activeStepIds } from '@ruimte/plan';
 import { openPlanFromPill } from '@/plan/plan-panel-watch';
 import { hasFailedStep, planCounter } from '@/plan/plan-view';
@@ -13,7 +13,7 @@ import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
 
 /*
- * "Plan 6/11" in a chat's header, only while the chat has a plan. A red dot for a failed step, an
+ * "6/11" in a chat's header, only while the chat has a plan. A red dot for a failed step, an
  * accent dot for a plan nobody has opened yet, and a small ring while the agent works on a step.
  * Pressing it puts the plan in the panel, even after the panel was closed.
  */
@@ -36,11 +36,12 @@ export function PlanPill({ chatId }: { chatId: string }) {
     return (
         <Tooltip label={label}>
             <Pill
+                raised
                 className="tabular-nums"
-                icon={<Icon icon={busy ? LoaderCircle : ListChecks} size={12} className={clsx(busy && 'animate-spin text-accent')} />}
+                icon={<Icon icon={busy ? LoaderCircle : CheckCheck} size={12} className={clsx(busy && 'animate-spin text-accent')} />}
                 onClick={() => openPlanFromPill(chatId, plan.id)}
             >
-                Plan {planCounter(plan)}
+                {planCounter(plan)}
                 {(failed || unseen) && (
                     <span className="flex items-center gap-0.5" aria-hidden>
                         {failed && <span className="h-1.5 w-1.5 rounded-full bg-status-error" />}
