@@ -1,7 +1,41 @@
-import type { ChatCreatePayload } from '@ruimte/contracts';
+import type { AgentLaunch, ChatCreatePayload, RuntimeMode } from '@ruimte/contracts';
+import type { AgentStart } from '../canvas/verb.ts';
 import { errorText } from '../error-text.ts';
 import type { ComposerPreference } from '../chat/composer-preferences.ts';
-import type { StartAgentEntry } from './outbox.ts';
+import { narrowerMode } from '../canvas/mode.ts';
+import { DEFAULT_RUNTIME_MODE, launchedMode } from '../providers/launch.ts';
+import type { OutboxWork, StartAgentEntry } from './outbox.ts';
+
+export interface NodeModeDeps {
+    chatMode(nodeId: string): RuntimeMode | undefined;
+    /* The launch a terminal session was started with: null for a plain shell, undefined for no session at all. */
+    launch(nodeId: string): AgentLaunch | null | undefined;
+}
+
+/* The mode a node runs in as far as the daemon knows it, which is what an agent it opens may get at most. */
+export const nodeMode =
+    (deps: NodeModeDeps) =>
+    (nodeId: string): RuntimeMode =>
+        deps.chatMode(nodeId) ?? launchedMode(deps.launch(nodeId) ?? null);
+
+/*
+ * The entry a verb owes for a node it made. A chat opened by a chat takes that chat's mode unless
+ * `--mode` said otherwise, and every start carries the opener's mode as the ceiling, read now, since
+ * the opener may be gone by the time the entry runs.
+ */
+export const startAgentWork = (start: AgentStart, deps: NodeModeDeps): OutboxWork => {
+    const runtimeMode = start.runtimeMode ?? (start.node === 'chat' ? deps.chatMode(start.openedBy) : undefined);
+    return {
+        kind: 'start-agent',
+        payload: {
+            node: start.node,
+            provider: start.provider,
+            cwd: start.cwd,
+            ...(runtimeMode ? { runtimeMode } : {}),
+            ceiling: nodeMode(deps)(start.openedBy)
+        }
+    };
+};
 
 /*
  * The size a terminal agent starts at with nobody looking. Wide enough that a CLI does not wrap its
@@ -23,7 +57,7 @@ export interface StartAgentDeps {
         cols: number;
         rows: number;
         cwd?: string;
-        agent: { kind: StartAgentEntry['payload']['provider'] };
+        agent: { kind: StartAgentEntry['payload']['provider']; runtimeMode?: RuntimeMode };
     }): Promise<unknown>;
     killSession(sessionId: string): Promise<void>;
     log?: (line: string) => void;
@@ -41,7 +75,7 @@ export interface StartAgentDeps {
 export const startAgentHandler =
     (deps: StartAgentDeps) =>
     async (entry: StartAgentEntry): Promise<void> => {
-        const { node, provider, cwd, runtimeMode } = entry.payload;
+        const { node, provider, cwd, runtimeMode, ceiling } = entry.payload;
         const nodeId = entry.target;
         const log = deps.log ?? ((line: string) => console.error(line));
         if (!deps.placed(nodeId)) {
@@ -52,9 +86,10 @@ export const startAgentHandler =
                 if (deps.hasChat(nodeId)) {
                     return;
                 }
-                // The mode of the chat that opened it beats the person's pick, which fills in the rest.
+                // The mode of the chat that opened it beats the person's pick, which fills in the rest; neither is wider than the opener.
                 const preference = deps.composerPreference(provider);
-                const mode = runtimeMode ?? preference.runtimeMode;
+                const picked = runtimeMode ?? preference.runtimeMode;
+                const mode = ceiling === undefined ? picked : narrowerMode(picked ?? DEFAULT_RUNTIME_MODE, ceiling);
                 await deps.createChat({
                     chatId: nodeId,
                     provider,
@@ -70,8 +105,11 @@ export const startAgentHandler =
                     sessionId: nodeId,
                     ...HEADLESS_TERMINAL,
                     ...(cwd === null ? {} : { cwd }),
-                    // The node carries no mode, so neither does its launch: a reload would start it without one.
-                    agent: { kind: provider }
+                    // The node carries the same mode, so a reload starts the CLI the way this did.
+                    agent: {
+                        kind: provider,
+                        ...(runtimeMode === undefined ? {} : { runtimeMode: ceiling === undefined ? runtimeMode : narrowerMode(runtimeMode, ceiling) })
+                    }
                 });
             }
         } catch (e) {

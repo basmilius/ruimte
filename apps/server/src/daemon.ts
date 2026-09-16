@@ -20,7 +20,7 @@ import { AgentLineageStore } from './agents/lineage.ts';
 import { PendingPromptStore } from './agents/pending-prompts.ts';
 import { OutboxStore } from './outbox/outbox.ts';
 import { OutboxWorker } from './outbox/outbox-worker.ts';
-import { startAgentHandler } from './outbox/start-agent.ts';
+import { nodeMode, startAgentHandler, startAgentWork } from './outbox/start-agent.ts';
 import { oweResume, resumeRunHandler, resumeRunParked } from './outbox/resume-run.ts';
 import { TaskStore } from './tasks/task-store.ts';
 import { wireTasks } from './tasks/wiring.ts';
@@ -299,6 +299,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     manager.isAgentGone = (sessionId) => processes.isAgentGone(sessionId);
 
     const worktrees = new Worktrees(config.home);
+    const modes = { chatMode: (id: string) => chats.get(id)?.info.runtimeMode, launch: (id: string) => manager.get(id)?.launch };
     const canvasHost = {
         locate: (id: string) => projects.index.locate(id),
         read: (projectId: string) => projects.read(projectId),
@@ -310,10 +311,12 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 .catch(() => []),
         installedAgents: async () => (await providers.list()).filter((provider) => provider.installed).map((provider) => provider.kind),
         holdPrompt: (projectId: string, nodeId: string, prompt: string) => prompts.put(projectId, nodeId, prompt),
-        startAgent: ({ projectId, nodeId, openedBy, node, provider, cwd }: AgentStart) => {
-            const runtimeMode = node === 'chat' ? chats.get(openedBy)?.info.runtimeMode : undefined;
-            return outboxWorker.enqueue(projectId, nodeId, { kind: 'start-agent', payload: { node, provider, cwd, ...(runtimeMode ? { runtimeMode } : {}) } });
-        },
+        startAgent: (start: AgentStart) => outboxWorker.enqueue(start.projectId, start.nodeId, startAgentWork(start, modes)),
+        modeOf: nodeMode(modes),
+        terminalModePreference: () => chats.composerPreferences.terminalMode(),
+        branchesOf: (folder: string) => worktrees.branches(folder).catch(() => null),
+        addWorktree: (folder: string, branch: string) => worktrees.add(folder, branch),
+        removeWorktree: (folder: string, path: string) => worktrees.remove(folder, path),
         depthOf: (nodeId: string) => lineage.depthOf(nodeId),
         openedCount: (callerId: string) => lineage.openedCount(callerId),
         recordMade: (record: { projectId: string; nodeId: string; openedBy: string; depth: number; agent: boolean }) => lineage.put(record),

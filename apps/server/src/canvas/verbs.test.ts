@@ -23,7 +23,9 @@ import {
     type ProjectContent,
     type ProjectDocument,
     type ProjectNode,
-    type ProjectView
+    type ProjectView,
+    type RuntimeMode,
+    type Worktree
 } from '@ruimte/contracts';
 import { SESSION_VARIABLES } from '../config.ts';
 import { MAX_SCREEN_LINES } from '../context/context-store.ts';
@@ -71,6 +73,11 @@ let notified: Array<Omit<Notice, 'createdAt'>>;
 let delivery: NoticeDelivery;
 let breakWrites: boolean;
 let tasks: TaskStore;
+let modes: Record<string, RuntimeMode>;
+let terminalPreference: RuntimeMode | undefined;
+let branches: string[] | null;
+let madeWorktrees: Worktree[];
+let removedWorktrees: string[];
 
 /* A change the store's own check refuses after the verb had its say: `note-1` a second time, on the board. */
 const withRepeatedId = (current: ProjectContent): ProjectContent => ({
@@ -118,6 +125,11 @@ beforeEach(async () => {
     await writeFile(join(folder, 'src', 'main.ts'), 'export {};\n');
     await writeFile(join(outside, 'notes.md'), '# notes\n');
     worktrees = [];
+    modes = {};
+    terminalPreference = undefined;
+    branches = null;
+    madeWorktrees = [];
+    removedWorktrees = [];
     breakWrites = false;
     installed = ['claude', 'codex', 'gemini', 'copilot'];
     held = [];
@@ -163,6 +175,17 @@ const host = (): CanvasHost => ({
             return breakWrites && mutation.content ? { ...mutation, content: withRepeatedId(mutation.content) } : mutation;
         }),
     worktreePaths: async () => worktrees,
+    branchesOf: async () => branches,
+    addWorktree: async (_folder, branch) => {
+        const made = { path: join(worktree, branch), branch };
+        madeWorktrees.push(made);
+        return { worktree: made, created: true };
+    },
+    removeWorktree: async (_folder, path) => {
+        removedWorktrees.push(path);
+    },
+    modeOf: (nodeId) => modes[nodeId] ?? 'full-access',
+    terminalModePreference: () => terminalPreference,
     installedAgents: async () => installed,
     holdPrompt: async (projectId, nodeId, prompt) => {
         held.push({ projectId, nodeId, prompt });
@@ -882,7 +905,11 @@ describe('agent', () => {
         expect(canvas.edges).toEqual([{ id: edgeId!, from: 'term-1', to: id!, label: 'context' }]);
         expect(held).toEqual([{ projectId, nodeId: id!, prompt: 'say hello' }]);
         // Started by the daemon, not by whichever client shows it first, where a client would start it.
-        expect(started).toEqual([{ projectId, nodeId: id!, openedBy: 'term-1', node: 'terminal', provider: 'claude', cwd: folder }]);
+        expect(started).toEqual([
+            { projectId, nodeId: id!, openedBy: 'term-1', node: 'terminal', provider: 'claude', cwd: folder, runtimeMode: 'full-access' }
+        ]);
+        // The mode is on the node, so a client that starts it again after a reload starts the same line.
+        expect(node.runtimeMode).toBe('full-access');
     });
 
     test('--chat makes a chat node fixed to its CLI', async () => {
@@ -987,6 +1014,107 @@ describe('agent', () => {
         expect(held).toEqual([]);
         expect(started).toEqual([]);
         expect(lineage.openedCount('term-1')).toBe(0);
+    });
+});
+
+describe('the mode ceiling', () => {
+    test("--mode wider than the caller is refused with a code and the caller's mode", async () => {
+        modes = { 'chat-1': 'supervised' };
+        const { status, lines } = await post('agent', ['claude', '--chat', '--mode', 'full-access', '--view', 'board'], 'chat');
+        expect(status).toBe(422);
+        expect(lines[0]).toBe(
+            'refused\tmode-above-parent\tYou run in supervised and --mode full-access is wider; an agent you open runs in your mode or a narrower one'
+        );
+        expect(lines.slice(1)).toEqual(['mode\tyou\tsupervised', 'mode\tsupervised\tallowed']);
+        const team = await post(
+            'team',
+            ['--label', 'Crew', '--mode', 'auto', '--view', 'board', '--roles', JSON.stringify([{ provider: 'claude', title: 'One', prompt: 'a' }])],
+            'chat'
+        );
+        expect(team.lines[0]).toStartWith('refused\tmode-above-parent\t');
+        expect((await onDisk()).rev).toBe(1);
+        expect((await post('agent', ['claude', '--mode', 'everything'])).lines[0]).toStartWith('refused\tbad-arguments\t--mode is one of supervised');
+    });
+
+    test('--mode at or under the caller is what the agent starts in', async () => {
+        modes = { 'term-1': 'auto' };
+        const chat = await post('agent', ['claude', '--chat', '--mode', 'auto-accept-edits']);
+        const terminal = await post('agent', ['codex', '--mode', 'auto']);
+        expect(started.map((start) => [start.node, start.runtimeMode])).toEqual([
+            ['chat', 'auto-accept-edits'],
+            ['terminal', 'auto']
+        ]);
+        const nodes = (await canvasOnDisk()).nodes;
+        expect(nodes.find((node) => node.id === terminal.lines[0]!.split('\t')[0])?.runtimeMode).toBe('auto');
+        // A chat keeps its mode in its own thread, not on the node.
+        expect(nodes.find((node) => node.id === chat.lines[0]!.split('\t')[0])?.runtimeMode).toBeUndefined();
+    });
+
+    test("a terminal agent takes the person's terminal mode narrowed to the caller, and a chat is left to the daemon", async () => {
+        modes = { 'term-1': 'auto-accept-edits' };
+        terminalPreference = 'full-access';
+        await post('agent', ['claude']);
+        terminalPreference = 'supervised';
+        await post('agent', ['claude']);
+        await post('agent', ['claude', '--chat']);
+        expect(started.map((start) => start.runtimeMode)).toEqual(['auto-accept-edits', 'supervised', undefined]);
+        const roles = JSON.stringify([
+            { provider: 'claude', title: 'One', prompt: 'a' },
+            { provider: 'claude', title: 'Two', prompt: 'b', chat: true }
+        ]);
+        started = [];
+        await post('team', ['--label', 'Crew', '--mode', 'supervised', '--roles', roles]);
+        expect(started.map((start) => [start.node, start.runtimeMode])).toEqual([
+            ['terminal', 'supervised'],
+            ['chat', 'supervised']
+        ]);
+    });
+});
+
+describe('--worktree', () => {
+    test('outside a repository is refused, and so is --worktree beside --cwd or --branch without it', async () => {
+        expect((await post('agent', ['claude', '--worktree'])).lines[0]).toStartWith('refused\tnot-a-repository\t');
+        expect((await post('agent', ['claude', '--worktree', '--cwd', 'src'])).lines[0]).toStartWith('refused\tworktree-and-cwd\t');
+        expect((await post('agent', ['claude', '--branch', 'x'])).lines[0]).toStartWith('refused\tbranch-needs-worktree\t');
+        expect(
+            (await post('team', ['--label', 'Crew', '--worktree', '--roles', JSON.stringify([{ provider: 'claude', title: 'One', prompt: 'a' }])])).lines[0]
+        ).toStartWith('refused\tnot-a-repository\t');
+        expect(madeWorktrees).toEqual([]);
+    });
+
+    test('every role gets a branch of its own named after it, clear of the branches there are', async () => {
+        branches = ['main', 'lexer'];
+        const roles = JSON.stringify([
+            { provider: 'claude', title: 'Lexer', prompt: 'a' },
+            { provider: 'claude', title: 'Lexer', prompt: 'b', chat: true },
+            { provider: 'codex', title: 'Parser!', prompt: 'c' }
+        ]);
+        const { lines } = await post('team', ['--label', 'Crew', '--worktree', '--roles', roles]);
+        expect(madeWorktrees.map((made) => made.branch)).toEqual(['lexer-2', 'lexer-3', 'parser']);
+        const nodes = (await canvasOnDisk()).nodes;
+        const ids = lines.slice(1).map((line) => line.split('\t')[0]);
+        expect(ids.map((id) => nodes.find((node) => node.id === id)?.cwd)).toEqual(madeWorktrees.map((made) => made.path));
+        expect(started.map((start) => start.cwd)).toEqual(madeWorktrees.map((made) => made.path));
+        // The group means "every node made inside it starts here", which a team of worktrees is not.
+        expect(nodes.find((node) => node.kind === 'group')?.worktree).toBeUndefined();
+    });
+
+    test('a single agent is named after its task, or takes the branch it is given', async () => {
+        branches = ['main'];
+        modes = { 'chat-1': 'full-access' };
+        await post('agent', ['claude', '--chat', '--worktree', '--task', 'Fix the lexer', '--prompt', 'go', '--view', 'board'], 'chat');
+        await post('agent', ['claude', '--worktree', '--branch', 'feature/own']);
+        expect(madeWorktrees.map((made) => made.branch)).toEqual(['fix-the-lexer', 'feature/own']);
+    });
+
+    test('a dry run makes no worktree, and a write the store refuses takes back the ones it made', async () => {
+        branches = ['main'];
+        expect((await post('agent', ['claude', '--worktree', '--dry-run'])).status).toBe(200);
+        expect(madeWorktrees).toEqual([]);
+        breakWrites = true;
+        expect((await post('agent', ['claude', '--worktree'])).status).toBe(422);
+        expect(removedWorktrees).toEqual(madeWorktrees.map((made) => made.path));
+        expect(removedWorktrees).toHaveLength(1);
     });
 });
 

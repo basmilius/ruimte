@@ -1,4 +1,13 @@
-import { isCanvasView, type AgentKind, type DiagramContent, type ProjectCanvasView, type ProjectContent, type Task } from '@ruimte/contracts';
+import {
+    isCanvasView,
+    type AgentKind,
+    type DiagramContent,
+    type ProjectCanvasView,
+    type ProjectContent,
+    type RuntimeMode,
+    type Task,
+    type Worktree
+} from '@ruimte/contracts';
 import { z } from 'zod';
 import type { NoticeDelivery, Notice } from '../context/notices.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
@@ -25,6 +34,16 @@ export interface CanvasHost {
     mutate<T>(projectId: string, apply: (content: ProjectContent) => ProjectMutation<T> | Promise<ProjectMutation<T>>): Promise<T>;
     /* The worktrees of the repository the folder is in; empty when it is not in one. */
     worktreePaths(folder: string): Promise<string[]>;
+    /* The local branches of the repository the folder is in; null when it is in none. */
+    branchesOf(folder: string): Promise<string[] | null>;
+    /* The worktree of a branch under the machine's worktrees folder, made from HEAD when the branch is new. */
+    addWorktree(folder: string, branch: string): Promise<{ worktree: Worktree; created: boolean }>;
+    /* Takes back a worktree this call made, when the write it was made for is refused. */
+    removeWorktree(folder: string, path: string): Promise<void>;
+    /* The widest mode an agent this node opens may run in: its own, as far as the daemon knows it. */
+    modeOf(nodeId: string): RuntimeMode;
+    /* The mode a person picked for terminal agents, from the clients connected now; undefined with none. */
+    terminalModePreference(): RuntimeMode | undefined;
     /* The agent CLIs this machine has; a verb that starts one refuses the rest by name. */
     installedAgents(): Promise<AgentKind[]>;
     /* Holds the first prompt of a node against its id until the session or the chat for it is made. */
@@ -70,6 +89,8 @@ export interface AgentStart {
     provider: AgentKind;
     /* Where a client mounting the node would start it: its own directory, else the project folder. */
     cwd: string | null;
+    /* The mode `--mode` asked for, and for a terminal the mode it was written down with; absent leaves a chat to the daemon. */
+    runtimeMode?: RuntimeMode;
 }
 
 export interface VerbCall {

@@ -16,7 +16,7 @@ import { ManualClock } from '../outbox/manual-clock.ts';
 import { OutboxStore } from '../outbox/outbox.ts';
 import { OutboxWorker } from '../outbox/outbox-worker.ts';
 import { oweResume, resumeRunHandler, resumeRunParked } from '../outbox/resume-run.ts';
-import { startAgentHandler } from '../outbox/start-agent.ts';
+import { nodeMode, startAgentHandler, startAgentWork } from '../outbox/start-agent.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
@@ -191,6 +191,7 @@ const boot = async (): Promise<Daemon> => {
     // A task is written after the event that settled it, so the wait looks again once it is on disk.
     tasks.onChange(() => queueMicrotask(recheck));
 
+    const modes = { chatMode: (id: string) => chats.get(id)?.info.runtimeMode, launch: (id: string) => sessions.get(id)?.launch };
     const host: CanvasHost = {
         locate: (id) => store.index.locate(id),
         read: (id) => store.read(id),
@@ -198,8 +199,12 @@ const boot = async (): Promise<Daemon> => {
         worktreePaths: async () => [],
         installedAgents: async () => ['claude'],
         holdPrompt: (id, nodeId, prompt) => prompts.put(id, nodeId, prompt),
-        startAgent: ({ projectId: id, nodeId, node, provider, cwd }: AgentStart) =>
-            worker.enqueue(id, nodeId, { kind: 'start-agent', payload: { node, provider, cwd } }),
+        startAgent: (start: AgentStart) => worker.enqueue(start.projectId, start.nodeId, startAgentWork(start, modes)),
+        modeOf: nodeMode(modes),
+        terminalModePreference: () => chats.composerPreferences.terminalMode(),
+        branchesOf: async () => null,
+        addWorktree: () => Promise.reject(new Error('not used here')),
+        removeWorktree: async () => undefined,
         depthOf: (nodeId) => lineage.depthOf(nodeId),
         openedCount: (callerId) => lineage.openedCount(callerId),
         recordMade: (record) => lineage.put(record),

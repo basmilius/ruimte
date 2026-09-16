@@ -19,7 +19,7 @@ import { FakePtyAdapter } from '../pty/fake-pty.ts';
 import { SessionManager } from '../sessions/manager.ts';
 import { OutboxStore, type StartAgentEntry } from './outbox.ts';
 import { OutboxWorker, type OutboxClock } from './outbox-worker.ts';
-import { HEADLESS_TERMINAL, startAgentHandler, type StartAgentDeps } from './start-agent.ts';
+import { HEADLESS_TERMINAL, nodeMode, startAgentHandler, startAgentWork, type StartAgentDeps } from './start-agent.ts';
 
 /* Nothing here fails, so no retry is ever timed; the clock only has to say one moment. */
 const stillClock: OutboxClock = { now: () => 1, setTimeout: () => null, clearTimeout: () => undefined };
@@ -154,6 +154,7 @@ const boot = async (): Promise<Daemon> => {
     const unused = (): never => {
         throw new Error('not used by agent and team');
     };
+    const modes = { chatMode: (id: string) => chats.get(id)?.info.runtimeMode, launch: (id: string) => sessions.get(id)?.launch };
     const host: CanvasHost = {
         locate: (id) => store.index.locate(id),
         read: (id) => store.read(id),
@@ -161,10 +162,12 @@ const boot = async (): Promise<Daemon> => {
         worktreePaths: async () => [],
         installedAgents: async () => ['claude', 'codex'],
         holdPrompt: (id, nodeId, prompt) => prompts.put(id, nodeId, prompt),
-        startAgent: ({ projectId: id, nodeId, openedBy, node, provider, cwd }: AgentStart) => {
-            const runtimeMode = node === 'chat' ? chats.get(openedBy)?.info.runtimeMode : undefined;
-            return worker.enqueue(id, nodeId, { kind: 'start-agent', payload: { node, provider, cwd, ...(runtimeMode ? { runtimeMode } : {}) } });
-        },
+        startAgent: (start: AgentStart) => worker.enqueue(start.projectId, start.nodeId, startAgentWork(start, modes)),
+        modeOf: nodeMode(modes),
+        terminalModePreference: () => chats.composerPreferences.terminalMode(),
+        branchesOf: async () => null,
+        addWorktree: () => Promise.reject(new Error('not used here')),
+        removeWorktree: async () => undefined,
         depthOf: (nodeId) => lineage.depthOf(nodeId),
         openedCount: (callerId) => lineage.openedCount(callerId),
         recordMade: (record) => lineage.put(record),
@@ -369,8 +372,55 @@ describe('the start of one agent node', () => {
         await startAgentHandler(deps)(entry('terminal'));
         expect(calls).toEqual([
             'create chat {"chatId":"chat-1","provider":"claude","cwd":"/work","runtimeMode":"supervised"}',
-            'create session {"sessionId":"terminal-1","cols":120,"rows":40,"cwd":"/work","agent":{"kind":"claude"}}'
+            'create session {"sessionId":"terminal-1","cols":120,"rows":40,"cwd":"/work","agent":{"kind":"claude","runtimeMode":"supervised"}}'
         ]);
+    });
+
+    test('nothing a chat starts with is wider than the node that opened it, the composer preference included', async () => {
+        const { calls, deps } = fakeDeps({ composerPreference: () => ({ runtimeMode: 'full-access' }) });
+        const opened = entry('chat');
+        // Opened by a terminal agent in auto-accept-edits: the person's full access is narrowed to it.
+        await startAgentHandler(deps)({ ...opened, payload: { node: 'chat', provider: 'claude', cwd: '/work', ceiling: 'auto-accept-edits' } });
+        // With no preference at all the default, full access, is narrowed the same way.
+        const bare = fakeDeps();
+        await startAgentHandler(bare.deps)({ ...opened, payload: { node: 'chat', provider: 'claude', cwd: '/work', ceiling: 'supervised' } });
+        // A terminal entry that somehow asks for more than its opener has is narrowed as well.
+        await startAgentHandler(bare.deps)({
+            ...entry('terminal'),
+            payload: { node: 'terminal', provider: 'claude', cwd: '/work', runtimeMode: 'full-access', ceiling: 'auto' }
+        });
+        expect([...calls, ...bare.calls]).toEqual([
+            'create chat {"chatId":"chat-1","provider":"claude","cwd":"/work","runtimeMode":"auto-accept-edits"}',
+            'create chat {"chatId":"chat-1","provider":"claude","cwd":"/work","runtimeMode":"supervised"}',
+            'create session {"sessionId":"terminal-1","cols":120,"rows":40,"cwd":"/work","agent":{"kind":"claude","runtimeMode":"auto"}}'
+        ]);
+    });
+
+    test('the entry a verb owes carries the opener as the ceiling, a chat its mode and a terminal what it runs', () => {
+        const modes = {
+            chatMode: (id: string) => (id === 'lead' ? ('auto' as const) : undefined),
+            launch: (id: string) =>
+                id === 'shell' ? { kind: 'claude' as const, runtimeMode: 'auto-accept-edits' as const } : id === 'plain' ? null : undefined
+        };
+        const start = { projectId: 'p', nodeId: 'n', node: 'chat' as const, provider: 'claude' as const, cwd: null };
+        expect(startAgentWork({ ...start, openedBy: 'lead' }, modes).payload).toEqual({
+            node: 'chat',
+            provider: 'claude',
+            cwd: null,
+            runtimeMode: 'auto',
+            ceiling: 'auto'
+        });
+        expect(startAgentWork({ ...start, openedBy: 'shell' }, modes).payload).toEqual({
+            node: 'chat',
+            provider: 'claude',
+            cwd: null,
+            ceiling: 'auto-accept-edits'
+        });
+        // A CLI typed into a plain shell, or a node the daemon runs nothing for, counts as the strictest.
+        expect(nodeMode(modes)('plain')).toBe('supervised');
+        expect(nodeMode(modes)('nobody')).toBe('supervised');
+        expect(nodeMode({ chatMode: () => undefined, launch: () => ({ kind: 'codex' }) })('x')).toBe('full-access');
+        expect(nodeMode({ chatMode: () => undefined, launch: () => ({ kind: 'codex', resume: 'abc' }) })('x')).toBe('supervised');
     });
 
     test('a chat takes the model and mode of the composer preference, and the mode of the chat that opened it beats it', async () => {

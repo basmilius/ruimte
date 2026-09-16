@@ -1,13 +1,16 @@
-import { AgentKindSchema, NODE_SIZE, type AgentKind, type ProjectCanvasView, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
+import { AgentKindSchema, NODE_SIZE, type AgentKind, type ProjectCanvasView, type ProjectEdge, type ProjectNode, type RuntimeMode } from '@ruimte/contracts';
 import { z } from 'zod';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
+import { DEFAULT_RUNTIME_MODE } from '../providers/launch.ts';
 import { providerFor } from '../providers/registry.ts';
 import { DEPTH_LIMIT_LINES, depthForOpening } from './depth.ts';
+import { MODE_LINES, modeFlag, modeForOpening, narrowerMode } from './mode.ts';
 import { MAX_CANVAS_NODES, canvasFull, newId, nodeLines } from './node-verb.ts';
 import { groupMembers, placeBeside, placeFree, placeInGroup, type Rect } from './placement.ts';
 import { checkCwd, readPromptFile } from './project-paths.ts';
 import { MAX_TASK_PROMPT_LENGTH, TASK_LINES, requireChatParent, taskBrief } from './task-verbs.ts';
 import { unescapeText } from './text-escapes.ts';
+import { WORKTREE_LINES, branchSlug, branchesForWorktrees, freeBranch, makeWorktrees } from './worktree.ts';
 import { MAX_TITLE_LENGTH, TITLE_LINE, VerbRefusal, canvasFor, defineVerb, field, orNote, placeOf, titleField, type VerbCall } from './verb.ts';
 
 export const AGENT_KINDS = AgentKindSchema.options;
@@ -37,6 +40,9 @@ const AGENT_DETAIL: readonly string[] = [
     'flag\t--group G\toptional\tPuts the node inside group node G of that canvas; not together with --beside',
     `flag\t--title T\toptional\tThe title, at most ${MAX_TITLE_LENGTH} characters; without one the node is called after the CLI, and the session may rename it`,
     `flag\t--task T\toptional\tGives the new agent a task titled T, which the prompt describes and whose result wakes you; needs a prompt of at most ${MAX_TASK_PROMPT_LENGTH} characters, and the title of the node is T unless --title says otherwise`,
+    'flag\t--mode M\toptional\tThe permission mode the agent runs in: supervised, auto-accept-edits, auto or full-access, never wider than your own',
+    'flag\t--worktree\tno value\tStarts the agent in a git worktree of its own on a new branch; not together with --cwd',
+    'flag\t--branch B\toptional\tWith --worktree: the branch to use instead of one named after the task or the title; an existing branch is checked out as it is',
     'flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field is dry-run and the last names the edge it would draw, as <from> -> <new node>',
     'kinds\tterminal\tThat CLI running in a shell, which is what the person sees and can type in',
     'kinds\tchat\tThe CLI as a thread in the node, fixed to that CLI, with no model picker on the composer',
@@ -56,6 +62,8 @@ const AGENT_DETAIL: readonly string[] = [
     TITLE_LINE,
     ...TASK_LINES,
     ...DEPTH_LIMIT_LINES,
+    ...MODE_LINES,
+    ...WORKTREE_LINES,
     'note\tThe machine starts the node right away, whether or not anyone has its canvas open; a client that shows it later joins what runs'
 ];
 
@@ -66,6 +74,8 @@ export interface AgentNodeSpec {
     title: string | undefined;
     rect: Rect;
     cwd: string | undefined;
+    /* Terminal only: the mode its CLI starts in, kept on the node so a reload starts it the same way. */
+    runtimeMode?: RuntimeMode;
 }
 
 /* The node a person's own click would have made: titled after the CLI, and a chat fixed to it, so
@@ -79,8 +89,13 @@ export const agentNode = (spec: AgentNodeSpec): ProjectNode => ({
     ...spec.rect,
     provider: spec.kind,
     ...(spec.chat ? { providerFixed: true } : {}),
-    ...(spec.cwd === undefined ? {} : { cwd: spec.cwd })
+    ...(spec.cwd === undefined ? {} : { cwd: spec.cwd }),
+    ...(spec.chat || spec.runtimeMode === undefined ? {} : { runtimeMode: spec.runtimeMode })
 });
+
+/* The mode a terminal agent is written down with: the one asked for, else the person's default narrowed to the caller's. */
+export const terminalMode = (call: VerbCall, requested: RuntimeMode | undefined, ceiling: RuntimeMode): RuntimeMode =>
+    requested ?? narrowerMode(call.host.terminalModePreference() ?? DEFAULT_RUNTIME_MODE, ceiling);
 
 const groupLines = (canvas: ProjectCanvasView): string[] =>
     orNote(
@@ -117,14 +132,14 @@ const promptOf = async (flags: { prompt?: string; 'prompt-file'?: string }, call
 
 export const agentVerb = defineVerb({
     name: 'agent',
-    usage: `<${AGENT_KINDS.join('|')}> [--chat] [--prompt T | --prompt-file F] [--cwd P] [--view V] [--beside N] [--group G] [--title T] [--task T] [--dry-run]`,
+    usage: `<${AGENT_KINDS.join('|')}> [--chat] [--prompt T | --prompt-file F] [--cwd P] [--view V] [--beside N] [--group G] [--title T] [--task T] [--mode M] [--worktree [--branch B]] [--dry-run]`,
     summary: 'Opens an agent node that starts working, with an edge from you into it so it can read what you have',
     detail: AGENT_DETAIL,
     dryRun: true,
     positionals: z.tuple([z.enum(AGENT_KINDS, { error: KIND_MESSAGE })], {
         error: (issue) => (issue.code === 'too_big' ? 'agent takes one CLI and nothing else; what it should do goes in --prompt' : KIND_MESSAGE)
     }),
-    switches: ['chat'],
+    switches: ['chat', 'worktree'],
     flags: z.object({
         prompt: z.string().optional(),
         'prompt-file': z.string().min(1, '--prompt-file needs the path of a file').optional(),
@@ -133,12 +148,22 @@ export const agentVerb = defineVerb({
         beside: z.string().min(1, '--beside needs the id of a node on that canvas').optional(),
         group: z.string().min(1, '--group needs the id of a group node on that canvas').optional(),
         title: titleField('--title', '--title needs a title').optional(),
-        task: titleField('--task', '--task needs the title of the task').optional()
+        task: titleField('--task', '--task needs the title of the task').optional(),
+        mode: modeFlag,
+        branch: z.string().min(1, '--branch needs the name of a branch').optional()
     }),
     async run({ positionals: [kind], flags, switches, dryRun }, call) {
         const place = placeOf(call);
         const depth = depthForOpening(call, 'agent', 1);
+        const ceiling = modeForOpening(call, flags.mode);
         const chat = switches.has('chat');
+        const inWorktree = switches.has('worktree');
+        if (flags.branch !== undefined && !inWorktree) {
+            throw new VerbRefusal('branch-needs-worktree', '--branch names the branch of a worktree; add --worktree');
+        }
+        if (inWorktree && flags.cwd !== undefined) {
+            throw new VerbRefusal('worktree-and-cwd', '--worktree and --cwd both say where the agent starts; give one of them');
+        }
         if (chat && !providerFor(kind).capabilities.chat) {
             throw new VerbRefusal(
                 'no-chat-backend',
@@ -172,74 +197,97 @@ export const agentVerb = defineVerb({
                 `The prompt is ${prompt.length} characters and a task takes at most ${MAX_TASK_PROMPT_LENGTH}, since the child is also told how to report back; put the rest in a file and tell the agent to read it`
             );
         }
-        const cwd = flags.cwd === undefined ? undefined : await checkCwd(place.folder, flags.cwd, (folder) => call.host.worktreePaths(folder));
+        let cwd = flags.cwd === undefined ? undefined : await checkCwd(place.folder, flags.cwd, (folder) => call.host.worktreePaths(folder));
+        const runtimeMode = chat ? flags.mode : terminalMode(call, flags.mode, ceiling);
+        let undoWorktrees = async (): Promise<void> => undefined;
+        if (inWorktree) {
+            const branches = await branchesForWorktrees(call, place.folder);
+            const branch = flags.branch ?? freeBranch(branchSlug(flags.task ?? flags.title ?? kind), branches);
+            if (!dryRun) {
+                const made = await makeWorktrees(call, place.folder!, [branch]);
+                cwd = made.worktrees[0]!.path;
+                undoWorktrees = made.undo;
+            }
+        }
 
-        return call.host.mutate(place.projectId, async (content) => {
-            if (flags.task !== undefined) {
-                requireChatParent(content, call.caller);
-            }
-            const canvas = canvasFor(content, place, flags.view);
-            if (canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
-                throw canvasFull(canvas, 1);
-            }
-            const anchor = flags.beside === undefined ? undefined : canvas.nodes.find((node) => node.id === flags.beside);
-            if (flags.beside !== undefined && !anchor) {
-                throw new VerbRefusal('unknown-node', `${flags.beside} is not a node on ${canvas.id}`, nodeLines(canvas));
-            }
-            const group = flags.group === undefined ? undefined : canvas.nodes.find((node) => node.id === flags.group && node.kind === 'group');
-            if (flags.group !== undefined && !group) {
-                throw new VerbRefusal('unknown-group', `${flags.group} is not a group on ${canvas.id}`, groupLines(canvas));
-            }
+        return call.host
+            .mutate(place.projectId, async (content) => {
+                if (flags.task !== undefined) {
+                    requireChatParent(content, call.caller);
+                }
+                const canvas = canvasFor(content, place, flags.view);
+                if (canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
+                    throw canvasFull(canvas, 1);
+                }
+                const anchor = flags.beside === undefined ? undefined : canvas.nodes.find((node) => node.id === flags.beside);
+                if (flags.beside !== undefined && !anchor) {
+                    throw new VerbRefusal('unknown-node', `${flags.beside} is not a node on ${canvas.id}`, nodeLines(canvas));
+                }
+                const group = flags.group === undefined ? undefined : canvas.nodes.find((node) => node.id === flags.group && node.kind === 'group');
+                if (flags.group !== undefined && !group) {
+                    throw new VerbRefusal('unknown-group', `${flags.group} is not a group on ${canvas.id}`, groupLines(canvas));
+                }
 
-            const size = NODE_SIZE[chat ? 'chat' : 'terminal'];
-            const caller = canvas.nodes.find((node) => node.id === call.caller) ?? null;
-            const inGroup = group ? placeInGroup(group, groupMembers(group, canvas.nodes), size) : null;
-            const rect = inGroup?.rect ?? (anchor ? placeBeside(anchor, size) : placeFree(canvas.nodes, size, caller));
+                const size = NODE_SIZE[chat ? 'chat' : 'terminal'];
+                const caller = canvas.nodes.find((node) => node.id === call.caller) ?? null;
+                const inGroup = group ? placeInGroup(group, groupMembers(group, canvas.nodes), size) : null;
+                const rect = inGroup?.rect ?? (anchor ? placeBeside(anchor, size) : placeFree(canvas.nodes, size, caller));
 
-            if (dryRun) {
-                // The ends rather than the word "edge": the direction is the thing to check before anything is made.
-                const edge = caller ? `${caller.id} -> ${NEW_NODE}` : '-';
+                if (dryRun) {
+                    // The ends rather than the word "edge": the direction is the thing to check before anything is made.
+                    const edge = caller ? `${caller.id} -> ${NEW_NODE}` : '-';
+                    return {
+                        content: null,
+                        result: [['dry-run', chat ? 'chat' : 'terminal', canvas.id, kind, edge, ...(flags.task === undefined ? [] : ['<new task>'])].join('\t')]
+                    };
+                }
+
+                const id = newId(chat ? 'chat' : 'terminal', content);
+                const node = agentNode({ id, chat, kind, title: flags.title ?? flags.task, rect, cwd, ...(runtimeMode === undefined ? {} : { runtimeMode }) });
+                const edge: ProjectEdge | null = caller ? { id: newId('edge', content, [id]), from: caller.id, to: id, label: 'context' } : null;
+                const nodes = [...canvas.nodes.map((candidate) => (group && candidate.id === group.id ? grownGroup(candidate, inGroup, id) : candidate)), node];
+                const result = [[id, node.kind, canvas.id, kind, edge?.id ?? '-'].join('\t')];
+
                 return {
-                    content: null,
-                    result: [['dry-run', chat ? 'chat' : 'terminal', canvas.id, kind, edge, ...(flags.task === undefined ? [] : ['<new task>'])].join('\t')]
+                    landed: async () => {
+                        await call.host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: call.caller, depth, agent: true });
+                        // Before the agent starts, so a child that is done at once finds its task open.
+                        if (flags.task !== undefined && prompt !== null) {
+                            const task = await call.host.tasks.open({
+                                projectId: place.projectId,
+                                parentId: call.caller,
+                                childId: id,
+                                title: flags.task,
+                                prompt
+                            });
+                            result[0] = `${result[0]}\t${task.id}`;
+                        }
+                        if (prompt !== null) {
+                            await call.host.holdPrompt(place.projectId, id, flags.task === undefined ? prompt : `${prompt}${taskBrief(chat)}`);
+                        }
+                        await call.host.startAgent({
+                            projectId: place.projectId,
+                            nodeId: id,
+                            openedBy: call.caller,
+                            node: chat ? 'chat' : 'terminal',
+                            provider: kind,
+                            cwd: cwd ?? place.folder,
+                            ...(runtimeMode === undefined ? {} : { runtimeMode })
+                        });
+                    },
+                    content: {
+                        ...content,
+                        views: content.views.map((view) =>
+                            view.id === canvas.id ? { ...canvas, nodes, edges: edge ? [...canvas.edges, edge] : canvas.edges } : view
+                        )
+                    },
+                    result
                 };
-            }
-
-            const id = newId(chat ? 'chat' : 'terminal', content);
-            const node = agentNode({ id, chat, kind, title: flags.title ?? flags.task, rect, cwd });
-            const edge: ProjectEdge | null = caller ? { id: newId('edge', content, [id]), from: caller.id, to: id, label: 'context' } : null;
-            const nodes = [...canvas.nodes.map((candidate) => (group && candidate.id === group.id ? grownGroup(candidate, inGroup, id) : candidate)), node];
-            const result = [[id, node.kind, canvas.id, kind, edge?.id ?? '-'].join('\t')];
-
-            return {
-                landed: async () => {
-                    await call.host.recordMade({ projectId: place.projectId, nodeId: id, openedBy: call.caller, depth, agent: true });
-                    // Before the agent starts, so a child that is done at once finds its task open.
-                    if (flags.task !== undefined && prompt !== null) {
-                        const task = await call.host.tasks.open({ projectId: place.projectId, parentId: call.caller, childId: id, title: flags.task, prompt });
-                        result[0] = `${result[0]}\t${task.id}`;
-                    }
-                    if (prompt !== null) {
-                        await call.host.holdPrompt(place.projectId, id, flags.task === undefined ? prompt : `${prompt}${taskBrief(chat)}`);
-                    }
-                    await call.host.startAgent({
-                        projectId: place.projectId,
-                        nodeId: id,
-                        openedBy: call.caller,
-                        node: chat ? 'chat' : 'terminal',
-                        provider: kind,
-                        cwd: cwd ?? place.folder
-                    });
-                },
-                content: {
-                    ...content,
-                    views: content.views.map((view) =>
-                        view.id === canvas.id ? { ...canvas, nodes, edges: edge ? [...canvas.edges, edge] : canvas.edges } : view
-                    )
-                },
-                result
-            };
-        });
+            })
+            .catch(async (e: unknown) => {
+                await undoWorktrees();
+                throw e;
+            });
     }
 });
 

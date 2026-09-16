@@ -36,6 +36,13 @@ export class Worktrees {
         return worktrees.map((entry) => ({ path: entry.path, branch: entry.branch ?? '(detached)' })).filter((entry) => entry.path !== top);
     }
 
+    /* The local branches, so a new one can be named clear of them. */
+    async branches(repo: string): Promise<string[]> {
+        const top = await this.toplevel(repo);
+        const output = await run(['branch', '--list', '--format=%(refname:short)'], top);
+        return output.split('\n').filter((line) => line !== '');
+    }
+
     /* The worktree for a branch, made when missing; a branch that does not exist yet is created from HEAD. */
     async add(repo: string, branch: string): Promise<{ worktree: Worktree; created: boolean }> {
         const top = await this.toplevel(repo);

@@ -30,20 +30,30 @@ export class ComposerPreferences {
         this.byClient.delete(clientId);
     }
 
+    /* The mode the newest pick gives a terminal agent; undefined with no client or none said. */
+    terminalMode(): RuntimeMode | undefined {
+        return this.newest()?.preference.terminalRuntimeMode;
+    }
+
     /* The newest pick among the connected clients, narrowed to this provider; empty with none. */
     for(provider: AgentKind): ComposerPreference {
-        let newest: Held | null = null;
-        for (const held of this.byClient.values()) {
-            if (newest === null || isNewer(held, newest)) {
-                newest = held;
-            }
-        }
+        const newest = this.newest();
         if (newest === null) {
             return {};
         }
         const { runtimeMode, selections } = newest.preference;
         const selection = selections?.[provider];
         return { ...(runtimeMode ? { runtimeMode } : {}), ...(selection ? { selection } : {}) };
+    }
+
+    private newest(): Held | null {
+        let newest: Held | null = null;
+        for (const held of this.byClient.values()) {
+            if (newest === null || isNewer(held, newest)) {
+                newest = held;
+            }
+        }
+        return newest;
     }
 }
 

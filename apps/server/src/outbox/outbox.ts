@@ -12,8 +12,10 @@ const StartAgentSchema = z.object({
         provider: AgentKindSchema,
         // Null starts where a session without a directory starts, which is the machine's home.
         cwd: z.string().nullable(),
-        // A chat node only: the mode of the chat that opened it; absent leaves the default a new chat gets.
-        runtimeMode: RuntimeModeSchema.optional()
+        // The mode `--mode` asked for, the mode of the chat that opened a chat, or the mode a terminal was written down with.
+        runtimeMode: RuntimeModeSchema.optional(),
+        // The mode of the node that opened it, which nothing the agent starts with may be wider than; absent on an older entry.
+        ceiling: RuntimeModeSchema.optional()
     })
 });
 

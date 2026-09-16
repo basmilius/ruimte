@@ -44,4 +44,15 @@ describe('ComposerPreferences', () => {
         preferences.forget('mac');
         expect(preferences.for('claude')).toEqual({});
     });
+
+    test('the terminal mode comes from the newest pick, and nothing with no client', () => {
+        const preferences = new ComposerPreferences();
+        expect(preferences.terminalMode()).toBeUndefined();
+        preferences.set('mac', { runtimeMode: 'full-access', terminalRuntimeMode: 'supervised', changedAt: 10 });
+        preferences.set('ipad', { runtimeMode: 'auto', changedAt: 20 });
+        // The newest client said nothing about terminals, so a terminal gets the daemon's own default.
+        expect(preferences.terminalMode()).toBeUndefined();
+        preferences.forget('ipad');
+        expect(preferences.terminalMode()).toBe('supervised');
+    });
 });

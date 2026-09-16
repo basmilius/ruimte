@@ -43,7 +43,19 @@ const MODEL_FLAG: Partial<Record<AgentKind, string>> = {
 };
 
 // What a terminal agent starts in when nobody said otherwise; the same default a new chat has.
-const DEFAULT_RUNTIME_MODE: RuntimeMode = 'full-access';
+export const DEFAULT_RUNTIME_MODE: RuntimeMode = 'full-access';
+
+/*
+ * The widest mode a terminal agent can be running in, as far as the daemon started it: a fresh launch
+ * without a mode got the default, while a resume without one and a CLI a person typed into a plain
+ * shell run with whatever that CLI decides, which the daemon cannot know and so takes as the strictest.
+ */
+export const launchedMode = (launch: AgentLaunch | null): RuntimeMode => {
+    if (launch === null) {
+        return 'supervised';
+    }
+    return launch.runtimeMode ?? (launch.resume ? 'supervised' : DEFAULT_RUNTIME_MODE);
+};
 
 const quote = (value: string): string => `'${value.replaceAll("'", `'\\''`)}'`;
 
