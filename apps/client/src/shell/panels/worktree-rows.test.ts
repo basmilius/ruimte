@@ -10,7 +10,8 @@ describe('removeQuestion', () => {
             title: 'Remove worktree lexer?',
             description: 'It holds 3 uncommitted files, 2 new files and 1 commit that main lacks. They are lost, and so is the branch.',
             confirmLabel: 'Remove anyway',
-            force: true
+            force: true,
+            note: 'Files git ignores in it, such as .env or a local database, go too and are not counted above.'
         });
     });
 
@@ -22,6 +23,7 @@ describe('removeQuestion', () => {
 
     test('a clean worktree is a plain confirm without force', () => {
         expect(removeQuestion({ ...lexer, work: { changed: 0, untracked: 0, ahead: 0 } })).toMatchObject({ confirmLabel: 'Remove', force: false });
+        expect(removeQuestion({ ...lexer, work: { changed: 0, untracked: 0, ahead: 0 } }).note).toBeUndefined();
     });
 
     test('a worktree whose folder is gone only has commits to lose', () => {
@@ -30,6 +32,7 @@ describe('removeQuestion', () => {
             'Its folder is already gone, and the branch holds 2 commits that main lacks. Those commits are lost with the branch.'
         );
         expect(question.force).toBe(true);
+        expect(question.note).toBeUndefined();
     });
 
     test('without a register the commits are counted against the base branch', () => {

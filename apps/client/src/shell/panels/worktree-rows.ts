@@ -29,6 +29,8 @@ export interface RemoveQuestion {
     confirmLabel: string;
     /* Whether the answer has to go out with `force`, which is only when something would be lost. */
     force: boolean;
+    /* A line under the description, for what the counts leave out. */
+    note?: string;
 }
 
 /*
@@ -53,7 +55,9 @@ export const removeQuestion = (worktree: Worktree): RemoveQuestion => {
         title,
         description: `${holds} ${workSentence(worktree, work)}. ${lost}`,
         confirmLabel: 'Remove anyway',
-        force: true
+        force: true,
+        // The counts come from `git status`, which never sees ignored files, and `--force` takes them all the same.
+        ...(worktree.missing ? {} : { note: 'Files git ignores in it, such as .env or a local database, go too and are not counted above.' })
     };
 };
 

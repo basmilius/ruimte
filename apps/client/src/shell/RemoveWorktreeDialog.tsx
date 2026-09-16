@@ -93,7 +93,18 @@ export function RemoveWorktreeDialog() {
         <GitPrompt
             open={removal !== null}
             title={question?.title ?? 'Remove this worktree?'}
-            description={shown === null ? 'Counting what is in it...' : (shown.failure ?? question?.description)}
+            description={
+                shown === null ? (
+                    'Counting what is in it...'
+                ) : shown.failure !== null ? (
+                    shown.failure
+                ) : (
+                    <>
+                        {question?.description}
+                        {question?.note !== undefined && <span className="mt-1 block">{question.note}</span>}
+                    </>
+                )
+            }
             confirmLabel={question?.confirmLabel ?? 'Remove'}
             danger
             busy={busy || question === null}
