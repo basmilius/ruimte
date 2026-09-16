@@ -95,10 +95,10 @@ function Entry({ chatId, item, work }: { chatId: string; item: ChatSubagentItem;
     const word = statusWordOf(item, task);
     // The stop is a button of its own beside the entry, since a button cannot hold another.
     return (
-        <div className="-mx-1 flex w-[calc(100%+8px)] items-start gap-1 rounded-md hover:bg-surface-hover">
+        <div className="-mx-2 flex w-[calc(100%+16px)] items-start gap-1 rounded-md hover:bg-surface-hover">
             <button
                 type="button"
-                className="flex min-w-0 flex-1 flex-col gap-0.5 rounded-md px-1 py-1.5 text-left text-xs focus-visible:ring-1 focus-visible:ring-accent focus-visible:outline-none"
+                className="flex min-w-0 flex-1 flex-col gap-1 rounded-md px-2 py-2 text-left text-xs focus-visible:ring-1 focus-visible:ring-accent focus-visible:outline-none"
                 onClick={() => show(openFromList(crumbOf(item)))}
             >
                 <span className="flex min-w-0 items-center gap-2">
@@ -115,7 +115,7 @@ function Entry({ chatId, item, work }: { chatId: string; item: ChatSubagentItem;
                     </span>
                 )}
             </button>
-            <SubagentStopButton chatId={chatId} item={item} className="mt-0.5 mr-0.5" />
+            <SubagentStopButton chatId={chatId} item={item} className="mt-1.5 mr-1.5" />
         </div>
     );
 }
@@ -125,8 +125,8 @@ function Section({ label, chatId, items, work }: { label: string; chatId: string
         return null;
     }
     return (
-        <section aria-label={label} className="flex flex-col">
-            <div className={`${SECTION_LABEL} flex items-center gap-1.5 py-1`}>
+        <section aria-label={label} className="flex flex-col gap-1">
+            <div className={`${SECTION_LABEL} flex items-center gap-1.5 pt-2 pb-1`}>
                 {label}
                 <span className="ml-auto tabular-nums">{items.length}</span>
             </div>
@@ -151,8 +151,8 @@ export function SubagentList({ chatId }: { chatId: string }) {
         return <EmptyState icon={<Icon icon={Bot} size={16} />}>This chat has no sub-agents to open.</EmptyState>;
     }
     return (
-        <div className="chat-thread h-full min-h-0 overflow-auto px-4 pt-3 pb-3">
-            <div className="chat-column-content flex flex-col gap-3">
+        <div className="chat-thread h-full min-h-0 overflow-auto px-4 pt-1 pb-3">
+            <div className="chat-column-content flex flex-col gap-4">
                 <Section label="Active" chatId={chatId} items={sections.active} work={work} />
                 <Section label="Done" chatId={chatId} items={sections.done} work={work} />
             </div>
