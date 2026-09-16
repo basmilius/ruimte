@@ -1,4 +1,4 @@
-import { ContextSourceSchema } from '@ruimte/contracts';
+import { ChatSubagentSourceSchema, ContextSourceSchema } from '@ruimte/contracts';
 import { z } from 'zod';
 import { MAX_SCREEN_LINES } from '../context/context-store.ts';
 import { agentVerb } from './agent-verb.ts';
@@ -82,15 +82,16 @@ const listVerb: ContextVerb = {
 const readVerb: ContextVerb = {
     served: 'context',
     name: 'read',
-    usage: '<id> [--tail N]',
+    usage: '<id> [--tail N] [--subagent T]',
     summary: 'Prints one linked source, whole or its last N lines',
     detail: [
         'argument\t<id>\trequired\tThe id of a source, from ruimte-context list; a drawing or diagram also takes the id of the linked node that shows it',
         'flag\t--tail N\toptional\tOnly the last N lines, N a positive whole number; without it the whole source',
+        `flag\t--subagent T\toptional\tThe whole conversation of one subagent of a linked chat instead of the chat, T the id in its > Subagent line; read from ${ChatSubagentSourceSchema.options.join(' or ')}; --tail counts lines of that conversation`,
         'prints\tThe source itself, as text, not as tab-separated lines',
         'kind\ttext\tThe text the person wrote: a note, a text on the canvas or a browser address\t--tail counts its lines',
         `kind\tterminal\tThe screen of that session, its last ${MAX_SCREEN_LINES} lines, read the moment you ask\t--tail counts screen lines and cannot reach past those ${MAX_SCREEN_LINES}`,
-        'kind\tchat\tThe whole thread as markdown: who said what, and what every tool ran\t--tail counts lines of that markdown, so it ends on the latest turn',
+        'kind\tchat\tThe whole thread as markdown: who said what, what every tool ran, and one line per subagent with the id --subagent takes\t--tail counts lines of that markdown, so it ends on the latest turn',
         'kind\tdrawing\tThe text of the drawing in reading order, and the picture itself as SVG under it\t--tail counts lines of the reading order and leaves the SVG out',
         'kind\tdiagram\tIts title, every node layer by layer (sub in brackets), every edge with its label, what each group wraps, and the SVG under it\t--tail counts lines of that list and leaves the SVG out',
         'kind\tfile\tIts path and a line telling you to read it yourself, since your own tools see a fresher copy\t--tail does nothing here',

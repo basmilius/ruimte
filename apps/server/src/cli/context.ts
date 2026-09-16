@@ -8,6 +8,7 @@ import { escapeText } from '../canvas/text-escapes.ts';
  *   ruimte-context                      lists the linked sources
  *   ruimte-context read <id>            prints one of them
  *   ruimte-context read <id> --tail N   prints its last N lines
+ *   ruimte-context read <id> --subagent T   prints the whole conversation of one subagent of a linked chat
  *   ruimte-context help                 lists all of the above and every canvas verb
  *   ruimte-context help <verb>          everything that one verb takes
  *   ruimte-context <verb> ...           runs one; the daemon parses the arguments
@@ -60,9 +61,20 @@ export const runContext = async (
         if (tail === 'bad') {
             return refuse('bad-arguments', '--tail needs a positive whole number of lines', [READ_USAGE, 'detail\truimte-context help read']);
         }
+        const subagent = flagValue(args.slice(2), 'subagent');
+        if (subagent === '') {
+            return refuse('bad-arguments', '--subagent needs the id from a > Subagent line of the chat', [READ_USAGE, 'detail\truimte-context help read']);
+        }
+        const query = new URLSearchParams();
+        if (tail !== null) {
+            query.set('tail', String(tail));
+        }
+        if (subagent !== null) {
+            query.set('subagent', subagent);
+        }
         let response: Response;
         try {
-            response = await fetch(`${url}/${encodeURIComponent(id)}${tail === null ? '' : `?tail=${tail}`}`, { headers });
+            response = await fetch(`${url}/${encodeURIComponent(id)}${query.size === 0 ? '' : `?${query}`}`, { headers });
         } catch (e) {
             console.error(unreachable(e));
             return 1;
@@ -73,6 +85,9 @@ export const runContext = async (
         }
         if (response.status === 404) {
             return refuse('unknown-source', `${id} is not linked to this session`, await linkedLines(url, headers));
+        }
+        if (response.status === 422) {
+            return refuse('unknown-subagent', await response.text(), [READ_USAGE, 'detail\truimte-context help read']);
         }
         if (!response.ok) {
             console.error(`The daemon answered ${response.status}`);
@@ -104,7 +119,17 @@ interface ContextRow {
     title: string;
 }
 
-const READ_USAGE = 'usage\tread\t<id> [--tail N]';
+const READ_USAGE = 'usage\tread\t<id> [--tail N] [--subagent T]';
+
+/* What follows `--name` or `--name=`: null when the flag is not there, empty when it has no value. */
+const flagValue = (argv: readonly string[], name: string): string | null => {
+    const index = argv.findIndex((word) => word === `--${name}` || word.startsWith(`--${name}=`));
+    if (index === -1) {
+        return null;
+    }
+    const word = argv[index]!;
+    return (word === `--${name}` ? argv[index + 1] : word.slice(`--${name}=`.length)) ?? '';
+};
 
 /*
  * The `--tail N` of a read: the number, null when it was not asked for, and 'bad' for anything that
@@ -112,14 +137,12 @@ const READ_USAGE = 'usage\tread\t<id> [--tail N]';
  * sending a number at all rather than letting `--tail two` arrive as a query nobody can read.
  */
 const tailOf = (argv: readonly string[]): number | null | 'bad' => {
-    const index = argv.findIndex((word) => word === '--tail' || word.startsWith('--tail='));
-    if (index === -1) {
+    const value = flagValue(argv, 'tail');
+    if (value === null) {
         return null;
     }
-    const word = argv[index]!;
-    const value = word === '--tail' ? argv[index + 1] : word.slice('--tail='.length);
     const count = Number(value);
-    if (value === undefined || value === '' || !Number.isInteger(count) || count < 1) {
+    if (value === '' || !Number.isInteger(count) || count < 1) {
         return 'bad';
     }
     return count;

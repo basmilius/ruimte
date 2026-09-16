@@ -348,6 +348,22 @@ export class ChatSession {
      * (Codex) is the authority; otherwise the daemon's own scan is, narrowed to what the CLI's init
      * frame said it has, so a skill turned off in its settings drops out after the first message.
      */
+    /* A page of a thread the CLI keeps, through the process that runs now; null when none runs that can answer. */
+    listThreadItems(params: { threadId: string; cursor?: string; limit: number; sortDirection: 'asc' | 'desc' }): Promise<unknown> | null {
+        const backend = this.backend;
+        return backend?.running === true && backend.listThreadItems ? backend.listThreadItems(params) : null;
+    }
+
+    /* Writes down where a subagent's conversation was found, so the next question about it reads no folder. */
+    noteSubagentNative(toolUseId: string, native: { agentId?: string; threadId?: string }): void {
+        const item = this.thread.find('subagent', (candidate) => candidate.toolUseId === toolUseId);
+        if (!item || (item.native?.agentId === native.agentId && item.native?.threadId === native.threadId)) {
+            return;
+        }
+        this.emit([this.thread.upsert({ ...item, native: { ...item.native, ...native } })]);
+        this.options.persistSoon();
+    }
+
     async skills(scan: () => Promise<ChatSkill[]>): Promise<ChatSkill[]> {
         const backend = this.backend;
         if (backend?.running === true && backend.listSkills) {

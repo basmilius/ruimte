@@ -29,6 +29,13 @@ const daemon = {
             tails.push(tail);
             return new Response('the last lines');
         }
+        if (url.pathname === '/context/c1') {
+            const subagent = url.searchParams.get('subagent');
+            if (subagent !== 'toolu_1') {
+                return new Response('Claude has not written a transcript for this subagent', { status: 422 });
+            }
+            return new Response(`subagent ${subagent}${url.searchParams.has('tail') ? ` tail ${url.searchParams.get('tail')}` : ''}`);
+        }
         if (url.pathname === '/context/boom') {
             return new Response('no', { status: 500 });
         }
@@ -114,7 +121,7 @@ describe('runContext', () => {
         expect(stderr).toBe(
             [
                 'refused\tbad-arguments\tread takes the id of a linked source',
-                'usage\tread\t<id> [--tail N]',
+                'usage\tread\t<id> [--tail N] [--subagent T]',
                 'detail\truimte-context help read',
                 'n1\ttext\tPlan'
             ].join('\n') + '\n'
@@ -128,6 +135,17 @@ describe('runContext', () => {
         expect(await runContext(['read', 'n1', '--tail=15'], env)).toBe(0);
         expect(tails).toEqual(['15', '15']);
         expect(stdout).toBe('the last lines\nthe last lines\n');
+    });
+
+    test('--subagent rides along beside --tail, and a subagent the daemon cannot find is a refusal', async () => {
+        expect(await runContext(['read', 'c1', '--subagent', 'toolu_1'], env)).toBe(0);
+        expect(await runContext(['read', 'c1', '--subagent=toolu_1', '--tail', '5'], env)).toBe(0);
+        expect(stdout).toBe('subagent toolu_1\nsubagent toolu_1 tail 5\n');
+        expect(await runContext(['read', 'c1', '--subagent', 'toolu_2'], env)).toBe(3);
+        expect(stderr).toStartWith('refused\tunknown-subagent\tClaude has not written a transcript for this subagent\nusage\tread\t');
+        stderr = '';
+        expect(await runContext(['read', 'c1', '--subagent'], env)).toBe(3);
+        expect(stderr).toStartWith('refused\tbad-arguments\t--subagent needs');
     });
 
     test('a --tail that is not a positive whole number is refused before anything is asked', async () => {

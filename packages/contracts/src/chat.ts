@@ -209,7 +209,9 @@ export const ChatSubagentItemSchema = z.object({
     // The CLI's own transcript of the run, when it wrote one.
     outputFile: z.string().optional(),
     // Set when it did more than the thread keeps; what is there is the beginning of its work.
-    itemsTruncated: z.boolean()
+    itemsTruncated: z.boolean(),
+    // Where the CLI keeps this subagent's own conversation; set once the daemon found it.
+    native: z.object({ agentId: z.string().optional(), threadId: z.string().optional() }).optional()
 });
 
 export const ChatApprovalDecisionSchema = z.enum(['pending', 'allow', 'allow-always', 'deny', 'cancelled']);
@@ -377,6 +379,38 @@ export const ChatHistoryPageSchema = z.object({
 });
 export const ChatHistoryResultSchema = z.object({ items: z.array(ChatItemSchema), history: ChatHistoryPageSchema });
 export type ChatHistoryResult = z.infer<typeof ChatHistoryResultSchema>;
+
+export const ChatSubagentPayloadSchema = ChatTargetPayloadSchema.extend({
+    // The call that spawned it: a row of the chat's own thread, or of a subagent's conversation.
+    toolUseId: z.string().min(1).max(256),
+    cursor: z.string().min(1).max(256).optional(),
+    limit: z.number().int().min(1).max(100).optional(),
+    // True keeps this client told while the conversation grows, false lets go; absent leaves it as it was.
+    watch: z.boolean().optional()
+});
+export type ChatSubagentPayload = z.infer<typeof ChatSubagentPayloadSchema>;
+
+// `start` is the place in the conversation for a source that numbers it; a Codex thread pages by its own cursor only.
+export const ChatSubagentPageSchema = z.object({
+    start: z.number().int().nonnegative().optional(),
+    cursor: z.string().nullable()
+});
+
+export const ChatSubagentSourceSchema = z.enum(['claude-transcript', 'codex-thread']);
+export type ChatSubagentSource = z.infer<typeof ChatSubagentSourceSchema>;
+
+export const ChatSubagentResultSchema = z.object({
+    items: z.array(ChatItemSchema),
+    history: ChatSubagentPageSchema,
+    source: ChatSubagentSourceSchema,
+    // Whether the subagent is still writing, so a client knows to keep reading.
+    live: z.boolean()
+});
+export type ChatSubagentResult = z.infer<typeof ChatSubagentResultSchema>;
+
+// Carries nothing of the conversation: a client that holds it asks for the newest page again.
+export const ChatSubagentChangedEventSchema = z.object({ chatId: ChatIdSchema, toolUseId: z.string() });
+export type ChatSubagentChangedEvent = z.infer<typeof ChatSubagentChangedEventSchema>;
 
 export const ChatAttachResultSchema = z.object({
     info: ChatInfoSchema,

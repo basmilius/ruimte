@@ -24,6 +24,8 @@ export const registerChatHandlers = (dispatcher: Dispatcher, manager: ChatManage
 
     dispatcher.register('chat.history', (payload) => translate(() => manager.history(payload.chatId, payload.cursor, payload.limit)));
 
+    dispatcher.register('chat.subagent', (payload, client) => translate(() => manager.subagent(client.id, payload)));
+
     dispatcher.register('chat.detach', (payload, client) =>
         translate(() => {
             manager.detach(payload.chatId, client.id);

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ChatInfo } from '@ruimte/contracts';
+import type { ChatInfo, ChatItem, ChatSubagentItem } from '@ruimte/contracts';
 import { VERBS_NOTE } from '../context/context-note.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { AttachmentStore } from './attachment-store.ts';
@@ -10,7 +10,7 @@ import { ChatManager } from './chat-manager.ts';
 import { ChatStore } from './chat-store.ts';
 import { ChatRecorder } from './chat-test-helpers.ts';
 import { inProcess, type InProcessCli } from './fake-cli.ts';
-import { fakeCodex } from './fake-codex.ts';
+import { FAKE_CHILD_STEPS, fakeCodex } from './fake-codex.ts';
 
 let home: string;
 let store: ChatStore;
@@ -376,6 +376,61 @@ describe('ChatManager with Codex', () => {
             await recorder.until(idle);
             expect(recorder.info?.suggestedTitle).toBe('Named before');
             expect(asked).toEqual([]);
+        });
+    });
+
+    describe('the conversation of a spawned agent', () => {
+        const spawned = async (chatId: string): Promise<ChatSubagentItem> => {
+            await open(chatId);
+            await manager.send(chatId, 'spawn: survey the docs');
+            await recorder.until(() => idle() && recorder.ofKind('subagent')[0]?.native?.threadId !== undefined);
+            return recorder.ofKind('subagent')[0]!;
+        };
+
+        const readAll = async (target: ChatManager, chatId: string, toolUseId: string): Promise<ChatItem[]> => {
+            const pages: ChatItem[][] = [];
+            let cursor: string | undefined;
+            do {
+                const page = await target.subagent('c1', { chatId, toolUseId, limit: 100, ...(cursor ? { cursor } : {}) });
+                expect(page.source).toBe('codex-thread');
+                pages.unshift(page.items);
+                cursor = page.history.cursor ?? undefined;
+            } while (cursor !== undefined);
+            return pages.flat();
+        };
+
+        test('keeps the thread the spawn opened on the row, and reads every step of it through the running app-server', async () => {
+            const row = await spawned('chat-spawn');
+            expect(row.native?.threadId?.startsWith('child-')).toBe(true);
+            expect(codex.started).toHaveLength(1);
+
+            const items = await readAll(manager, 'chat-spawn', row.toolUseId);
+            expect(items[0]).toMatchObject({ kind: 'user', text: 'survey the docs', turnId: null });
+            const steps = items.filter((item) => item.kind === 'tool');
+            expect(steps).toHaveLength(FAKE_CHILD_STEPS);
+            expect(steps[0]).toMatchObject({ name: 'Bash', input: { command: 'echo 1' }, state: 'done' });
+            expect(steps.at(-1)).toMatchObject({ output: `${FAKE_CHILD_STEPS}\n` });
+            // No second process: the chat's own answered every page.
+            expect(codex.started).toHaveLength(1);
+        });
+
+        test('reads the same conversation with the CLI gone, from a process started for the question, after a restart', async () => {
+            const row = await spawned('chat-dead');
+            await retire(manager);
+            manager = makeManager();
+            await manager.create({ chatId: 'chat-dead', provider: 'codex', cwd: home });
+            expect(manager.get('chat-dead')?.running).toBe(false);
+
+            const first = await manager.subagent('c1', { chatId: 'chat-dead', toolUseId: row.toolUseId, limit: 100 });
+            expect(first.live).toBe(false);
+            expect(codex.started).toHaveLength(2);
+            const items = await readAll(manager, 'chat-dead', row.toolUseId);
+            expect(items.filter((item) => item.kind === 'tool')).toHaveLength(FAKE_CHILD_STEPS);
+        });
+
+        test('a row without a thread is refused by name', async () => {
+            await open('chat-none');
+            await expect(manager.subagent('c1', { chatId: 'chat-none', toolUseId: 'nope' })).rejects.toMatchObject({ code: 'subagent-not-found' });
         });
     });
 });

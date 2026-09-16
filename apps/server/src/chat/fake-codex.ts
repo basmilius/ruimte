@@ -5,7 +5,8 @@
  * `slow` waits for an interrupt, `fail` ends the turn failed, `crash` exits with 1, `note?` answers with
  * what Ruimte put in front of the first prompt. Resuming a thread whose id starts with `named-` finds
  * it named, `thread/name/set` renames it and says so, and `name?` answers with that name. The thread echoes the
- * model and the sandbox it was started with, so a test can see what a session asked for.
+ * model and the sandbox it was started with, so a test can see what a session asked for. `spawn: <prompt>` spawns an
+ * agent whose thread holds more steps than a thread row keeps, and `thread/items/list` pages through it.
  */
 import { VERBS_NOTE } from '../context/context-note.ts';
 import { runOverStdio, type FakeCli } from './fake-cli.ts';
@@ -13,6 +14,12 @@ import { runOverStdio, type FakeCli } from './fake-cli.ts';
 type Frame = Record<string, unknown>;
 
 type PendingApproval = { rpcId: number; entry: Frame; kind: 'command' | 'fileChange' };
+
+// How many steps a spawned agent takes: more than a thread row keeps, so only its own thread has them all.
+export const FAKE_CHILD_STEPS = 250;
+
+// The threads of spawned agents, outside any one process: the real ones are on disk, so a process that never ran them reads them too.
+const childThreads = new Map<string, Frame[]>();
 
 export const fakeCodex: FakeCli = (io) => {
     const out = io.out;
@@ -176,6 +183,37 @@ export const fakeCodex: FakeCli = (io) => {
             askApproval('fileChange', entry, { reason: 'Write outside the sandbox' });
             return;
         }
+        if (text.startsWith('spawn:')) {
+            const prompt = text.slice(6).trim();
+            const childId = `child-${nonce}-${++itemCounter}`;
+            const steps: Frame[] = [{ type: 'userMessage', id: `${childId}-prompt`, content: [{ type: 'text', text: prompt, text_elements: [] }] }];
+            for (let step = 1; step <= FAKE_CHILD_STEPS; step++) {
+                steps.push({
+                    type: 'commandExecution',
+                    id: `${childId}-step-${step}`,
+                    command: `/bin/zsh -lc 'echo ${step}'`,
+                    cwd: io.cwd,
+                    status: 'completed',
+                    aggregatedOutput: `${step}\n`,
+                    exitCode: 0
+                });
+            }
+            childThreads.set(childId, steps);
+            const spawn = item('collabAgentToolCall', {
+                tool: 'spawnAgent',
+                prompt,
+                model: 'fake-model',
+                senderThreadId: threadId,
+                receiverThreadIds: [],
+                agentsStates: {},
+                status: 'inProgress'
+            });
+            started(spawn);
+            completed({ ...spawn, receiverThreadIds: [childId], agentsStates: { [childId]: { status: 'running', message: null } } });
+            agentMessage('spawned');
+            turnCompleted('completed');
+            return;
+        }
         if (text.startsWith('ask:')) {
             const question = text.slice(4).trim();
             pendingQuestion = { rpcId: serverRequestId, questionId: 'color' };
@@ -280,6 +318,21 @@ export const fakeCodex: FakeCli = (io) => {
                     }
                 });
                 notify('thread/started', { thread });
+                return;
+            }
+            case 'thread/items/list': {
+                const steps = childThreads.get(String(params.threadId));
+                if (!steps) {
+                    out({ id, error: { code: -32600, message: `no rollout found for thread id ${String(params.threadId)}` } });
+                    return;
+                }
+                // The cursor is where the next page starts, counted from the end the list is sorted from.
+                const ordered = params.sortDirection === 'asc' ? steps : [...steps].reverse();
+                const start = typeof params.cursor === 'string' ? Number(params.cursor) : 0;
+                const limit = typeof params.limit === 'number' ? params.limit : 50;
+                const page = ordered.slice(start, start + limit);
+                const next = start + limit < ordered.length ? String(start + limit) : null;
+                out({ id, result: { data: page.map((entry) => ({ item: entry, turnId: 'child-turn' })), nextCursor: next, backwardsCursor: null } });
                 return;
             }
             case 'thread/name/set':

@@ -492,6 +492,8 @@ export class CodexProtocol {
     private spawnedAgent(ref: string, item: Frame, input: unknown, events: BackendEvent[]): void {
         const status = str(item.status);
         const summary = collabAgentOutput(item.agentsStates);
+        // One spawn opens one thread; Codex only knows its id once the call went through.
+        const threadId = Array.isArray(item.receiverThreadIds) ? str(item.receiverThreadIds[0]) : null;
         events.push({ type: 'tool.started', ref, name: 'Agent', input, parentRef: null });
         events.push({
             type: 'task.started',
@@ -500,7 +502,8 @@ export class CodexProtocol {
             subagentType: null,
             prompt: str(item.prompt),
             // A spawned agent never blocks the turn that spawned it.
-            background: true
+            background: true,
+            ...(threadId ? { threadId } : {})
         });
         if (status === 'inProgress' || status === null) {
             events.push({ type: 'task.progress', ref, summary: summary || null, lastTool: null, usage: null });

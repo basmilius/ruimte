@@ -74,7 +74,16 @@ export type BackendEvent =
     | { type: 'request.withdrawn'; requestId: string }
     // An agent the agent delegated to, keyed by the call that spawned it. `background` says whether
     // it runs beside the turn; a foreground one settles with the call's own result instead.
-    | { type: 'task.started'; ref: string; description: string | null; subagentType: string | null; prompt: string | null; background: boolean }
+    | {
+          type: 'task.started';
+          ref: string;
+          description: string | null;
+          subagentType: string | null;
+          prompt: string | null;
+          background: boolean;
+          // The thread a CLI that keeps one per agent opened for it, which is where its whole conversation is read.
+          threadId?: string | null;
+      }
     | { type: 'task.progress'; ref: string; summary: string | null; lastTool: string | null; usage: ChatSubagentUsage | null }
     // A task the CLI runs beside the turn (a background subagent, a backgrounded command) settled.
     // Its summary is what the CLI says came of it, and what a turn the CLI opens on its own is about.
@@ -112,6 +121,8 @@ export interface ChatBackend {
     setTitle?(title: string): void;
     // What this CLI would run right now, for a protocol that answers the question itself.
     listSkills?(): Promise<ChatSkill[]>;
+    // One page of a thread the CLI keeps, asked of this running process rather than of a new one.
+    listThreadItems?(params: { threadId: string; cursor?: string; limit: number; sortDirection: 'asc' | 'desc' }): Promise<unknown>;
     // Closes the input and lets the CLI leave on its own; `dispose` kills it.
     stop(): void;
     dispose(): void;

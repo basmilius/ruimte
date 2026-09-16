@@ -14,6 +14,9 @@ const lastLines = (text: string, count: number): string => {
     return lines.slice(Math.max(0, lines.length - count)).join('\n');
 };
 
+/* A `--subagent` read that cannot be answered, with the sentence that says why. */
+export class SubagentUnreadable extends Error {}
+
 interface ContextReaders {
     /* What the agent under this id may read, derived from the project documents the daemon knows. */
     sources(targetId: string): ContextSource[];
@@ -25,15 +28,36 @@ interface ContextReaders {
     terminalText(sessionId: string): Promise<string | null>;
     /* A chat's thread, or null when there is none. */
     chatItems(chatId: string): ChatItem[] | null;
+    /* The whole conversation of one subagent of a chat; throws when the CLI kept none for it. */
+    subagentItems?(chatId: string, toolUseId: string): Promise<ChatItem[]>;
     /* The target a bearer token speaks for: a terminal session or a chat. */
     targetForToken(token: string): string | null;
 }
 
-/* A chat thread as an agent should read it: who said what, and what tools ran. */
+/* The first line of a subagent's report that says something, which is all a line about it has room for. */
+const firstLine = (text: string | null): string =>
+    (text ?? '')
+        .split('\n')
+        .find((line) => line.trim() !== '')
+        ?.trim() ?? '';
+
+/*
+ * A chat thread as an agent should read it: who said what, and what tools ran. A subagent is one line:
+ * the work it did inside its row is its own, and printed between the parent's lines it would read as
+ * if the parent had done it. Its whole conversation is `read <id> --subagent <toolUseId>`.
+ */
 export const renderTranscript = (items: ChatItem[]): string => {
     const lines: string[] = [];
     for (const item of items) {
+        if ((item.kind === 'tool' || item.kind === 'assistant') && item.parentToolUseId) {
+            continue;
+        }
         switch (item.kind) {
+            case 'subagent': {
+                const report = firstLine(item.result ?? item.summary);
+                lines.push(`> Subagent "${item.description}" (${item.status}, ${item.toolUseId})${report ? `: ${report}` : ''}`, '');
+                break;
+            }
             case 'user':
                 lines.push('## User', '', item.text, '');
                 break;
@@ -105,11 +129,14 @@ export class ContextStore {
      * in the CLI, because only this side knows what a line of each kind is (a chat and a drawing
      * are rendered here) and because the wire then carries fifteen lines instead of two thousand.
      */
-    async read(targetId: string, sourceId: string, tail: number | null = null): Promise<string | null> {
+    async read(targetId: string, sourceId: string, tail: number | null = null, subagent: string | null = null): Promise<string | null> {
         // Only what is linked into the asker matches, so a node id opens nothing an edge did not.
         const source = this.readers.sources(targetId).find((entry) => entry.id === sourceId || entry.nodeId === sourceId);
         if (!source) {
             return null;
+        }
+        if (subagent !== null) {
+            return this.readSubagent(source, subagent, tail);
         }
         switch (source.kind) {
             case 'text':
@@ -150,7 +177,25 @@ export class ContextStore {
         }
     }
 
-    /* `GET /context` lists, `GET /context/<id>[?tail=N]` reads; the bearer token names the agent asking. */
+    /* A subagent is only ever reached through the chat it belongs to, so a link to that chat is what lets it be read. */
+    private async readSubagent(source: ContextSource, toolUseId: string, tail: number | null): Promise<string> {
+        if (source.kind !== 'chat') {
+            throw new SubagentUnreadable(`${source.id} is a ${source.kind}, and only a chat has subagents`);
+        }
+        if (!this.readers.subagentItems) {
+            throw new SubagentUnreadable('This machine cannot read the conversation of a subagent');
+        }
+        let items: ChatItem[];
+        try {
+            items = await this.readers.subagentItems(source.id, toolUseId);
+        } catch (e) {
+            throw new SubagentUnreadable(e instanceof Error ? e.message : `No conversation for subagent ${toolUseId}`);
+        }
+        const transcript = renderTranscript(items);
+        return tail === null ? transcript : lastLines(transcript, tail);
+    }
+
+    /* `GET /context` lists, `GET /context/<id>[?tail=N][&subagent=T]` reads; the bearer token names the agent asking. */
     async handle(request: Request, pathname: string): Promise<Response> {
         if (request.method !== 'GET') {
             return new Response('Method not allowed', { status: 405 });
@@ -165,12 +210,22 @@ export class ContextStore {
         if (rest === '') {
             return Response.json({ sources: this.list(targetId) });
         }
-        const asked = new URL(request.url).searchParams.get('tail');
+        const query = new URL(request.url).searchParams;
+        const asked = query.get('tail');
         const tail = asked === null ? null : Number(asked);
         if (tail !== null && (!Number.isInteger(tail) || tail < 1)) {
             return new Response('tail takes a positive whole number of lines', { status: 400 });
         }
-        const text = await this.read(targetId, decodeURIComponent(rest), tail);
+        let text: string | null;
+        try {
+            text = await this.read(targetId, decodeURIComponent(rest), tail, query.get('subagent') || null);
+        } catch (e) {
+            if (e instanceof SubagentUnreadable) {
+                // 422 rather than 404: the source is linked, what is missing is the subagent inside it.
+                return new Response(e.message, { status: 422 });
+            }
+            throw e;
+        }
         if (text === null) {
             return new Response('No such source', { status: 404 });
         }

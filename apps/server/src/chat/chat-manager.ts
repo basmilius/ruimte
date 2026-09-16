@@ -13,6 +13,8 @@ import type {
     ChatInfo,
     ChatItem,
     ChatSkill,
+    ChatSubagentPayload,
+    ChatSubagentResult,
     ContextSource
 } from '@ruimte/contracts';
 import type { CheckpointService } from '../git/checkpoints.ts';
@@ -27,7 +29,9 @@ import type { ChatTitleInput } from './chat-title.ts';
 import type { ChatStore } from './chat-store.ts';
 import { DeltaCoalescer } from './delta-coalescer.ts';
 import { ChatError } from './errors.ts';
+import { SubagentReader, type SubagentReaderOptions } from './subagent-reader.ts';
 import { errorText } from '../error-text.ts';
+import { usageRoots } from '../usage/roots.ts';
 interface ChatManagerOptions {
     providers: ProviderRegistry;
     store?: ChatStore;
@@ -60,6 +64,8 @@ interface ChatManagerOptions {
     claudeTitles?: { forSession(agentSessionId: string): Promise<string | null> };
     // A name for a Codex chat, asked of a one-shot CLI: its app-server names no thread on its own.
     nameChat?: (provider: AgentKind, input: ChatTitleInput) => Promise<string | null>;
+    // Where a subagent's whole conversation is read and how its growth is noticed; a test hands in fakes.
+    subagents?: Partial<Pick<SubagentReaderOptions, 'claudeProjectsDir' | 'seams' | 'now' | 'listOnce'>>;
 }
 
 // Above this the record is big enough that rewriting it on every tool call costs more than it saves.
@@ -95,6 +101,7 @@ export class ChatManager {
     private readonly firstPrompt: (chatId: string) => Promise<string | null>;
     private readonly claudeTitles: ChatManagerOptions['claudeTitles'] | null;
     private readonly nameChat: ChatManagerOptions['nameChat'] | null;
+    private readonly subagents: SubagentReader;
 
     constructor(options: ChatManagerOptions) {
         this.providers = options.providers;
@@ -125,6 +132,29 @@ export class ChatManager {
         if (options.binDir) {
             this.env.PATH = this.env.PATH ? `${options.binDir}:${this.env.PATH}` : options.binDir;
         }
+        this.subagents = new SubagentReader({
+            claudeProjectsDir: usageRoots(options.env ?? process.env).find((root) => root.provider === 'claude')?.path ?? '',
+            ...options.subagents,
+            chat: (chatId) => {
+                const session = this.chats.get(chatId);
+                return session
+                    ? {
+                          info: session.info,
+                          running: session.running,
+                          items: () => session.thread.list(),
+                          listThreadItems: (params) => session.listThreadItems(params),
+                          noteNative: (toolUseId, native) => session.noteSubagentNative(toolUseId, native)
+                      }
+                    : null;
+            },
+            codexProcess: (info) => ({
+                command: this.commands.codex ?? this.providers.get('codex').command,
+                cwd: info.cwd,
+                env: this.env,
+                ...(this.spawn ? { spawn: this.spawn } : {})
+            }),
+            notify: (clientId, event) => this.sinks.get(clientId)?.({ event: 'chat.subagentChanged', payload: event })
+        });
     }
 
     /* The chat a context token belongs to. */
@@ -256,6 +286,28 @@ export class ChatManager {
                 clients.delete(clientId);
             }
         }
+        this.subagents.releaseClient(clientId);
+    }
+
+    /*
+     * A page of a subagent's own conversation. Letting go comes before the read, so a panel that closes
+     * on a conversation that is gone still lets go; holding comes after it, so a hold is only ever on
+     * something that was found.
+     */
+    async subagent(clientId: string, payload: ChatSubagentPayload): Promise<ChatSubagentResult> {
+        if (payload.watch === false) {
+            this.subagents.release(clientId, payload.chatId, payload.toolUseId);
+        }
+        const result = await this.subagents.read(payload.chatId, payload.toolUseId, payload.cursor, payload.limit);
+        if (payload.watch === true) {
+            this.subagents.hold(clientId, payload.chatId, payload.toolUseId);
+        }
+        return result;
+    }
+
+    /* The whole conversation of a subagent, for an agent that reads it as text. */
+    subagentItems(chatId: string, toolUseId: string): Promise<ChatItem[]> {
+        return this.subagents.readAll(chatId, toolUseId);
     }
 
     /*
@@ -354,6 +406,7 @@ export class ChatManager {
     async kill(chatId: string): Promise<void> {
         const session = this.require(chatId);
         session.dispose();
+        this.subagents.releaseChat(chatId);
         this.coalescers.get(chatId)?.dispose();
         this.coalescers.delete(chatId);
         this.cancelWaiting(chatId);

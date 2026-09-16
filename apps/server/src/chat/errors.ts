@@ -1,4 +1,4 @@
-type ChatErrorCode = 'history-expired' | 'chat-not-found' | 'chat-busy' | 'request-not-found' | 'chat-unsupported';
+type ChatErrorCode = 'history-expired' | 'chat-not-found' | 'chat-busy' | 'request-not-found' | 'chat-unsupported' | 'subagent-not-found';
 
 export class ChatError extends Error {
     readonly code: ChatErrorCode;

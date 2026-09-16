@@ -177,7 +177,15 @@ describe('CodexProtocol', () => {
                 input: { tool: 'spawnAgent', prompt: 'Read the docs', model: 'gpt-6-astra', threads: ['child-1'] },
                 parentRef: null
             },
-            { type: 'task.started', ref: 'collab_1', description: 'Read the docs', subagentType: null, prompt: 'Read the docs', background: true },
+            {
+                type: 'task.started',
+                ref: 'collab_1',
+                description: 'Read the docs',
+                subagentType: null,
+                prompt: 'Read the docs',
+                background: true,
+                threadId: 'child-1'
+            },
             { type: 'task.progress', ref: 'collab_1', summary: null, lastTool: null, usage: null }
         ]);
 

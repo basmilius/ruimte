@@ -10,6 +10,7 @@ import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder, FakeCheckpoints, RecordingStore } from './chat-test-helpers.ts';
 import { fakeClaude } from './fake-claude.ts';
 import { inProcess, type InProcessCli } from './fake-cli.ts';
+import { FakeWatch } from '../fs/watch-test-helpers.ts';
 
 let home: string;
 let store: RecordingStore;
@@ -624,5 +625,56 @@ describe('the first prompt of an agent node', () => {
         await manager.create({ chatId: 'chat-q', cwd: home });
         expect(manager.get('chat-q')?.running).toBe(false);
         expect(claude.started).toHaveLength(0);
+    });
+});
+
+describe('the conversation of a Claude subagent', () => {
+    const SESSION = '5f1c2a9e-0b7d-4c1e-9a53-3e2f8d6b7a10';
+    const FIXTURE = join(import.meta.dir, 'fixtures', 'claude-projects');
+
+    test('is read beside the session with no CLI running, notes its agent on the row, and lets go with the socket', async () => {
+        await retire(manager);
+        const watch = new FakeWatch();
+        manager = makeManager({ subagents: { claudeProjectsDir: FIXTURE, seams: watch } });
+        manager.subscribe('c1', recorder.sink());
+        await manager.create({ chatId: 'chat-sub', cwd: '/work/demo', resume: SESSION });
+        manager.attach('chat-sub', 'c1');
+        const session = manager.get('chat-sub')!;
+        session.thread.upsert({
+            id: '1:toolu_01ParentAgentCall',
+            kind: 'subagent',
+            createdAt: 1,
+            turnId: null,
+            toolUseId: 'toolu_01ParentAgentCall',
+            description: 'Survey the docs',
+            subagentType: 'general-purpose',
+            prompt: null,
+            background: false,
+            status: 'done',
+            startedAt: 1,
+            finishedAt: 2,
+            summary: null,
+            result: null,
+            usage: null,
+            lastTool: null,
+            itemsTruncated: false
+        });
+
+        const page = await manager.subagent('c1', { chatId: 'chat-sub', toolUseId: 'toolu_01ParentAgentCall', watch: true });
+        expect(page).toMatchObject({ source: 'claude-transcript', live: false });
+        expect(page.items.at(-1)).toMatchObject({ kind: 'assistant' });
+        expect(claude.started).toHaveLength(0);
+        await recorder.until(() => recorder.ofKind('subagent')[0]?.native?.agentId === 'a4c2e8f10b3d5a7e9');
+
+        const dir = join(FIXTURE, '-work-demo', SESSION, 'subagents');
+        const watcher = watch.on(dir);
+        watcher.emit('agent-a4c2e8f10b3d5a7e9.jsonl');
+        const told: unknown[] = [];
+        manager.subscribe('c1', (event) => told.push(event));
+        await watch.settle();
+        expect(told).toEqual([{ event: 'chat.subagentChanged', payload: { chatId: 'chat-sub', toolUseId: 'toolu_01ParentAgentCall' } }]);
+
+        manager.detachAll('c1');
+        expect(watcher.closed).toBe(true);
     });
 });

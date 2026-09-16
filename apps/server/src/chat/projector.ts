@@ -532,7 +532,8 @@ export class ThreadProjector {
             usage: previous?.usage ?? null,
             lastTool: previous?.lastTool ?? null,
             itemsTruncated: previous?.itemsTruncated ?? false,
-            ...(previous?.outputFile ? { outputFile: previous.outputFile } : {})
+            ...(previous?.outputFile ? { outputFile: previous.outputFile } : {}),
+            ...(previous?.native ? { native: previous.native } : {})
         };
         events.push(this.thread.upsert(item));
     }
@@ -556,7 +557,8 @@ export class ThreadProjector {
                 description: item.description || event.description || '',
                 subagentType: item.subagentType ?? event.subagentType,
                 prompt: item.prompt ?? event.prompt,
-                background: event.background
+                background: event.background,
+                ...(event.threadId ? { native: { ...item.native, threadId: event.threadId } } : {})
             })
         );
     }

@@ -155,6 +155,14 @@ export class CodexBackend implements ChatBackend {
         return parseSkillsList(await transport.request('skills/list', { cwds: [this.launch.cwd] }));
     }
 
+    listThreadItems(params: { threadId: string; cursor?: string; limit: number; sortDirection: 'asc' | 'desc' }): Promise<unknown> {
+        const transport = this.transport;
+        if (!transport) {
+            return Promise.reject(new Error('thread/items/list failed: Codex is not running'));
+        }
+        return transport.request('thread/items/list', params);
+    }
+
     interrupt(): void {
         const turnId = this.protocol.turnId;
         if (!this.transport || !turnId) {

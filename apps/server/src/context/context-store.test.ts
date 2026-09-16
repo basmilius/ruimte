@@ -173,6 +173,91 @@ describe('renderTranscript', () => {
         expect(text).toContain('a.ts');
         expect(text.endsWith('Done.')).toBe(true);
     });
+
+    test('a subagent is one line, and nothing it did reads as if the parent did it', () => {
+        const text = renderTranscript([
+            { id: 'u', kind: 'user', createdAt: 1, turnId: 't', text: 'look around' },
+            {
+                id: 'sub',
+                kind: 'subagent',
+                createdAt: 2,
+                turnId: 't',
+                toolUseId: 'toolu_1',
+                description: 'Survey the docs',
+                subagentType: null,
+                prompt: 'Survey',
+                background: false,
+                status: 'done',
+                startedAt: 2,
+                finishedAt: 3,
+                summary: null,
+                result: '\nA guide is missing.\nAnd more.',
+                usage: null,
+                lastTool: null,
+                itemsTruncated: false
+            },
+            {
+                id: 'child-tool',
+                kind: 'tool',
+                createdAt: 2,
+                turnId: 't',
+                toolUseId: 'child-tool',
+                name: 'Glob',
+                input: { pattern: 'docs/**' },
+                output: 'docs/README.md',
+                state: 'done',
+                parentToolUseId: 'toolu_1'
+            },
+            { id: 'child-text', kind: 'assistant', createdAt: 2, turnId: 't', text: 'A guide is missing.', streaming: false, parentToolUseId: 'toolu_1' },
+            { id: 'a', kind: 'assistant', createdAt: 3, turnId: 't', text: 'The docs need a guide.', streaming: false }
+        ]);
+        expect(text.split('\n').filter((line) => line.startsWith('> '))).toEqual(['> Subagent "Survey the docs" (done, toolu_1): A guide is missing.']);
+        expect(text).not.toContain('Glob');
+        expect(text.match(/A guide is missing\./g)).toHaveLength(1);
+    });
+});
+
+describe('a subagent of a linked chat', () => {
+    const subagentStore = new ContextStore({
+        sources: () => [
+            { id: 'chat', kind: 'chat', title: 'planner' },
+            { id: 'note', kind: 'text', title: 'Sprint', text: 'ship it' }
+        ],
+        terminalText: async () => null,
+        chatItems: (id) => (id === 'chat' ? items : null),
+        subagentItems: async (chatId, toolUseId) => {
+            if (chatId !== 'chat' || toolUseId !== 'toolu_1') {
+                throw new Error('Claude has not written a transcript for this subagent');
+            }
+            return [
+                { id: 'p', kind: 'user', createdAt: 1, turnId: null, text: 'Survey the docs' },
+                { id: 'r', kind: 'assistant', createdAt: 2, turnId: null, text: 'A guide is missing.', streaming: false }
+            ];
+        },
+        drawingElements: async () => null,
+        diagramDocument: async () => null,
+        targetForToken: (token) => (token === 'tok' ? 'agent' : null)
+    });
+
+    const ask = (path: string) => {
+        const url = new URL(`http://127.0.0.1${path}`);
+        return subagentStore.handle(new Request(url, { headers: { authorization: 'Bearer tok' } }), url.pathname);
+    };
+
+    test('--subagent prints that conversation through the chat it belongs to, and --tail counts its lines', async () => {
+        expect(await (await ask('/context/chat?subagent=toolu_1')).text()).toBe('## User\n\nSurvey the docs\n\n## Assistant\n\nA guide is missing.');
+        expect(await (await ask('/context/chat?subagent=toolu_1&tail=1')).text()).toBe('A guide is missing.');
+    });
+
+    test('a subagent that is not there, or asked of something that is no chat, is a 422 that says why', async () => {
+        const missing = await ask('/context/chat?subagent=toolu_2');
+        expect(missing.status).toBe(422);
+        expect(await missing.text()).toBe('Claude has not written a transcript for this subagent');
+        const note = await ask('/context/note?subagent=toolu_1');
+        expect(note.status).toBe(422);
+        expect(await note.text()).toBe('note is a text, and only a chat has subagents');
+        expect((await ask('/context/nope?subagent=toolu_1')).status).toBe(404);
+    });
 });
 
 describe('a drawing as context', () => {
