@@ -203,7 +203,7 @@ function StartContent() {
     return (
         <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col gap-10 px-8 pt-6 pb-8">
             <header className="flex flex-col items-center gap-2 text-center">
-                <BrandSymbol size={40} />
+                <BrandSymbol size={32} />
                 <h1 className="font-brand text-lg font-semibold text-text">Ruimte</h1>
                 <p className="text-sm text-text-muted">Space for AI Engineering.</p>
             </header>

@@ -90,7 +90,7 @@ export function AboutPane() {
     return (
         <>
             <header className="flex flex-col items-center gap-1 pt-2 pb-1 text-center">
-                <BrandSymbol size={48} />
+                <BrandSymbol size={64} />
                 <h3 className="mt-2 text-lg font-semibold text-text">Ruimte</h3>
                 <p className="text-sm text-text-muted">{TAGLINE}</p>
                 <p className="mt-2 text-sm text-text">

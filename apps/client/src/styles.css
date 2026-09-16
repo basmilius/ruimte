@@ -56,8 +56,6 @@
     /* Skills read as a second kind of token next to a file mention, so they get their own hue. */
     --skill: #9333ea;
     --skill-soft: #f7eeff;
-    --brand-front: var(--color-iron-300);
-    --brand-back: var(--color-iron-900);
     --canvas-bg: #eeeef1;
     --canvas-dot: #cfcfd6;
     --selection: rgb(var(--accent-rgb) / 0.55);
@@ -192,9 +190,6 @@
     --text-faint: #5f5f6b;
     --skill: #c084fc;
     --skill-soft: #2f2350;
-    /* The symbol's own iron-900 back is darker than the dark surface it sits on, which loses the
-       shape; iron-700 keeps the same relation to the surface that iron-900 has in the light theme. */
-    --brand-back: var(--color-iron-700);
     --canvas-bg: #0d0d10;
     --canvas-dot: #202024;
     --selection: rgb(var(--accent-rgb) / 0.6);
@@ -348,8 +343,6 @@
     --color-accent-text: var(--accent-text);
     --color-skill: var(--skill);
     --color-skill-soft: var(--skill-soft);
-    --color-brand-front: var(--brand-front);
-    --color-brand-back: var(--brand-back);
     --color-canvas-bg: var(--canvas-bg);
     --color-status-running: var(--status-running);
     --color-status-needs-you: var(--status-needs-you);
