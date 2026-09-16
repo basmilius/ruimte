@@ -3,16 +3,20 @@ import RuimtePulsar
 
 /// The six states of a step are final on the wire, so a switch over them needs no default.
 enum PlanStepState: String, CaseIterable, Sendable {
-    case open, active, done, failed, skipped, blocked
+    case open, active, done, failed, skipped, blocked, warning, info
 }
 
 extension PlanStepState {
     /// The states a person picks from; active is the agent's word for where it works.
     static let personStates: [PlanStepState] = [.open, .done, .failed, .skipped, .blocked]
     /// The outcomes the mark of a test step offers.
-    static let testOutcomes: [PlanStepState] = [.done, .failed, .skipped, .blocked]
+    static let testOutcomes: [PlanStepState] = [.done, .warning, .info, .failed, .skipped, .blocked]
 
-    var isFinished: Bool { self == .done || self == .skipped }
+    /// Outcomes that close a step without a failure, as `isFinishedOutcome` in `@ruimte/plan`.
+    var isFinished: Bool { self == .done || self == .skipped || self == .warning || self == .info }
+
+    /// A note says what went wrong or what to read, so these ask for one before the state is sent.
+    var asksForNote: Bool { self == .failed || self == .warning || self == .info }
 }
 
 /// Which steps the sheet lists; local to this phone, never part of the plan.
@@ -21,9 +25,9 @@ enum PlanFilter: String, CaseIterable, Sendable {
 
     var label: String {
         switch self {
-        case .all: "All"
-        case .open: "Open"
-        case .failed: "Failed"
+        case .all: "All steps"
+        case .open: "Open steps"
+        case .failed: "Failed steps"
         }
     }
 
@@ -77,10 +81,11 @@ struct PlanStep: Identifiable, Equatable, Sendable {
     var state: PlanStepState {
         guard isParent else { return storedState ?? .open }
         let states = steps.map(\.state)
-        if states.allSatisfy({ $0 == .done || $0 == .skipped }) { return .done }
         if states.contains(.failed) { return .failed }
         if states.contains(.blocked) { return .blocked }
-        if states.contains(.active) || states.contains(.done) { return .active }
+        // A warning bubbles up so a parent does not look clean; info is only worth reading on the step itself.
+        if states.allSatisfy(\.isFinished) { return states.contains(.warning) ? .warning : .done }
+        if states.contains(where: { [.active, .done, .warning, .info].contains($0) }) { return .active }
         return .open
     }
 
@@ -171,7 +176,7 @@ struct PlanProgress: Equatable, Sendable {
     func count(_ state: PlanStepState) -> Int { counts[state] ?? 0 }
 
     /// Steps with an outcome.
-    var finished: Int { count(.done) + count(.failed) + count(.skipped) }
+    var finished: Int { count(.done) + count(.failed) + count(.skipped) + count(.warning) + count(.info) }
 
     var fraction: Double { total == 0 ? 0 : Double(finished) / Double(total) }
 
@@ -239,12 +244,20 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
     /// "6 of 11 run, 5 passed, 1 failed" for a test plan, "6 of 11 done" for a steps plan.
     var progressSummary: String {
         let progress = progress
-        guard kind == .test else { return "\(progress.count(.done)) of \(progress.total) done" }
-        var parts = ["\(progress.finished) of \(progress.total) run"]
-        let outcomes: [(PlanStepState, String)] = [
-            (.done, "passed"), (.failed, "failed"), (.skipped, "skipped"), (.blocked, "blocked"),
-        ]
-        for (state, word) in outcomes where progress.count(state) > 0 {
+        let warnings = progress.count(.warning)
+        var parts: [String]
+        var extras: [(PlanStepState, String)]
+        if kind == .test {
+            parts = ["\(progress.finished) of \(progress.total) run", "\(progress.count(.done)) passed"]
+            extras = [(.warning, warnings == 1 ? "warning" : "warnings"), (.info, "info")]
+        } else {
+            // In a steps plan a warning or info is still done; the extras say which of the done steps to read.
+            let done = progress.count(.done) + warnings + progress.count(.info)
+            parts = ["\(done) of \(progress.total) done"]
+            extras = [(.warning, warnings == 1 ? "with a warning" : "with warnings"), (.info, "with info")]
+        }
+        extras += [(.failed, "failed"), (.skipped, "skipped"), (.blocked, "blocked")]
+        for (state, word) in extras where progress.count(state) > 0 {
             parts.append("\(progress.count(state)) \(word)")
         }
         return parts.joined(separator: ", ")
@@ -259,7 +272,20 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
         case .failed: "Failed"
         case .skipped: "Skipped"
         case .blocked: "Blocked"
+        case .warning: "Warning"
+        case .info: "Info"
         }
+    }
+
+    /// What a long press offers: a test step also takes a warning or info.
+    var stateChoices: [PlanStepState] {
+        kind == .test ? PlanStepState.personStates + [.warning, .info] : PlanStepState.personStates
+    }
+
+    /// Every section and parent step, what Collapse all folds.
+    var foldableIDs: Set<String> {
+        func parents(_ step: PlanStep) -> [String] { step.isParent ? [step.id] + step.steps.flatMap(parents) : [] }
+        return Set(groups.filter { $0.title != nil }.map(\.id) + steps.flatMap(parents))
     }
 
     /// The plan as the rows the sheet draws, in document order, with folds and the filter applied, as `planRows` in

@@ -51,15 +51,20 @@ struct PlanSheet: View {
             .modifier(PlanPicker(plans: plans, selection: Binding(get: { plan?.id ?? "" }, set: { selectedID = $0 })))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                if let plan {
+                    ToolbarItem(placement: .topBarTrailing) { viewMenu(plan) }
+                }
             }
             .alert(
-                noteRequest?.failing == true ? "What happened?" : "Note",
+                noteRequest?.state == nil ? "Note" : "What happened?",
                 isPresented: Binding(get: { noteRequest != nil }, set: { if !$0 { noteRequest = nil } }),
                 presenting: noteRequest
             ) { request in
                 TextField("Note", text: $noteText, axis: .vertical)
                 Button("Cancel", role: .cancel) { noteRequest = nil }
-                Button(request.failing ? "Mark failed" : "Save") { saveNote(request) }
+                Button(request.state.map { "Mark as \(plan?.word(for: $0).lowercased() ?? $0.rawValue)" } ?? "Save") {
+                    saveNote(request)
+                }
             } message: { request in
                 Text(request.title)
             }
@@ -89,21 +94,17 @@ struct PlanSheet: View {
                 if collapsed.contains(id) { collapsed.remove(id) } else { collapsed.insert(id) }
             },
             set: { step, state in
-                if state == .failed {
-                    ask(step, failing: true)
+                if state.asksForNote {
+                    ask(step, state: state)
                 } else {
                     apply(plan, step: step, [PlanOps.set([step.id], state)])
                 }
             },
-            note: { ask($0, failing: false) },
+            note: { ask($0, state: nil) },
             unlock: { apply(plan, step: $0, [PlanOps.unlock([$0.id])]) })
         let rows = plan.rows(filter: filter, collapseDone: collapseDone, collapsed: collapsed)
         return List {
-            PlanHeader(
-                plan: plan, working: context.working, agentName: agentName, filter: $filter,
-                collapseDone: $collapseDone
-            )
-            .planRowChrome()
+            PlanHeader(plan: plan, working: context.working, agentName: agentName).planRowChrome()
             if rows.isEmpty {
                 Text(emptyText)
                     .font(.footnote)
@@ -130,6 +131,28 @@ struct PlanSheet: View {
         .environment(\.defaultMinListRowHeight, 0)
     }
 
+    /// The view choices the desktop keeps in its overflow menu: which steps show and how much is folded.
+    private func viewMenu(_ plan: PlanDocument) -> some View {
+        Menu {
+            Picker("Show", selection: $filter) {
+                ForEach(PlanFilter.allCases, id: \.self) { Text($0.label).tag($0) }
+            }
+            .pickerStyle(.inline)
+            Section {
+                Toggle("Collapse done", isOn: $collapseDone)
+                Button("Expand all", lucideIcon: "chevrons-up-down") {
+                    collapsed = []
+                    // Collapse done would keep finished groups folded, and all has to mean all.
+                    collapseDone = false
+                }
+                Button("Collapse all", lucideIcon: "chevrons-down-up") { collapsed = plan.foldableIDs }
+            }
+        } label: {
+            Image(lucide: "ellipsis")
+        }
+        .accessibilityLabel("Plan view options")
+    }
+
     private var emptyText: String {
         switch filter {
         case .failed: "Nothing failed."
@@ -138,17 +161,17 @@ struct PlanSheet: View {
         }
     }
 
-    private func ask(_ step: PlanStep, failing: Bool) {
+    private func ask(_ step: PlanStep, state: PlanStepState?) {
         noteText = step.note ?? ""
-        noteRequest = PlanNoteRequest(step: step, failing: failing)
+        noteRequest = PlanNoteRequest(step: step, state: state)
     }
 
     private func saveNote(_ request: PlanNoteRequest) {
         guard let plan else { return }
         let text = String(noteText.trimmingCharacters(in: .whitespacesAndNewlines).prefix(PlanOps.noteLimit))
         noteRequest = nil
-        if request.failing {
-            apply(plan, step: request.step, [PlanOps.set([request.step.id], .failed, note: text)])
+        if let state = request.state {
+            apply(plan, step: request.step, [PlanOps.set([request.step.id], state, note: text)])
         } else {
             apply(plan, step: request.step, [PlanOps.note(request.step.id, text)])
         }
@@ -169,8 +192,8 @@ struct PlanSheet: View {
 
 private struct PlanNoteRequest: Identifiable {
     let step: PlanStep
-    /// A failed step asks for its note before the state is sent, so both land in one rev.
-    let failing: Bool
+    /// A failed, warning or info step asks for its note before the state is sent, so both land in one rev.
+    let state: PlanStepState?
     var id: String { step.id }
     var title: String { step.title }
 }
@@ -193,6 +216,15 @@ private struct PlanPicker: ViewModifier {
             content
         }
     }
+}
+
+/// One column per row, a caret for a group and a mark for a step, so a step right under a section lines up with the
+/// section's caret and a child's column sits under its parent's title.
+private enum PlanTree {
+    static let leading: CGFloat = 12
+    static let column: CGFloat = 20
+    static let gap: CGFloat = 6
+    static let indent: CGFloat = column + gap
 }
 
 extension View {
@@ -220,8 +252,6 @@ private struct PlanHeader: View {
     let plan: PlanDocument
     let working: Bool
     let agentName: String
-    @Binding var filter: PlanFilter
-    @Binding var collapseDone: Bool
     @ScaledMetric(relativeTo: .body) private var titleIcon: CGFloat = 16
     @ScaledMetric(relativeTo: .caption) private var smallIcon: CGFloat = 13
 
@@ -259,29 +289,6 @@ private struct PlanHeader: View {
             .accessibilityElement(children: .combine)
             PlanProgressBar(progress: progress)
                 .padding(.top, 4)
-            HStack(spacing: 8) {
-                Picker("Show steps", selection: $filter) {
-                    ForEach(PlanFilter.allCases, id: \.self) { Text($0.label).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .fixedSize()
-                Spacer(minLength: 0)
-                Button {
-                    collapseDone.toggle()
-                } label: {
-                    Image(lucide: "chevrons-down-up", size: smallIcon + 2)
-                        .foregroundStyle(collapseDone ? MobileStyle.text : MobileStyle.muted)
-                        .frame(width: 36, height: 32)
-                        .background(
-                            collapseDone ? MobileStyle.active : Color.clear, in: RoundedRectangle(cornerRadius: 8)
-                        )
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Collapse done")
-                .accessibilityAddTraits(collapseDone ? [.isToggle, .isSelected] : .isToggle)
-            }
-            .padding(.top, 6)
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
@@ -297,14 +304,16 @@ private struct PlanHeader: View {
     }
 }
 
-/// Green for done or passed, red for failed and gray for skipped or blocked, over a sunken track.
+/// Green for done, passed or info, amber for a warning, red for failed and gray for skipped or blocked, over a sunken
+/// track.
 private struct PlanProgressBar: View {
     let progress: PlanProgress
 
     var body: some View {
         GeometryReader { proxy in
             HStack(spacing: 0) {
-                segment(progress.count(.done), MobileStyle.positive, proxy.size.width)
+                segment(progress.count(.done) + progress.count(.info), MobileStyle.positive, proxy.size.width)
+                segment(progress.count(.warning), MobileStyle.statusNeedsYou, proxy.size.width)
                 segment(progress.count(.failed), MobileStyle.statusError, proxy.size.width)
                 segment(progress.count(.skipped) + progress.count(.blocked), MobileStyle.faint, proxy.size.width)
             }
@@ -329,10 +338,10 @@ private struct PlanSectionRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .top, spacing: 6) {
+            HStack(alignment: .top, spacing: PlanTree.gap) {
                 Image(lucide: collapsed ? "chevron-right" : "chevron-down", size: caretSize)
                     .foregroundStyle(MobileStyle.faint)
-                    .frame(width: 16, height: lineHeight)
+                    .frame(width: PlanTree.column, height: lineHeight)
                 Text(group.title ?? "")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(MobileStyle.text)
@@ -350,10 +359,11 @@ private struct PlanSectionRow: View {
                 Text(PlanMarkdown.inline(description))
                     .font(.footnote)
                     .foregroundStyle(MobileStyle.muted)
-                    .padding(.leading, 22)
+                    .padding(.leading, PlanTree.indent)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.leading, PlanTree.leading)
+        .padding(.trailing, 16)
         .padding(.top, 16)
         .padding(.bottom, 6)
         .contentShape(Rectangle())
@@ -401,15 +411,16 @@ private struct PlanStepRow: View {
     private var working: Bool { !step.isParent && step.state == .active && context.working }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 6) {
+        HStack(alignment: .top, spacing: PlanTree.gap) {
             Group {
                 if step.isParent {
                     Image(lucide: collapsed ? "chevron-right" : "chevron-down", size: caretSize)
                         .foregroundStyle(MobileStyle.faint)
+                } else {
+                    mark
                 }
             }
-            .frame(width: 16, height: lineHeight)
-            mark.frame(width: 24, height: lineHeight)
+            .frame(width: PlanTree.column, height: lineHeight)
             VStack(alignment: .leading, spacing: 2) {
                 Text(step.title)
                     .font(.subheadline)
@@ -430,7 +441,7 @@ private struct PlanStepRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             aside.frame(minHeight: lineHeight).fixedSize()
         }
-        .padding(.leading, 12 + CGFloat(depth) * 20)
+        .padding(.leading, PlanTree.leading + CGFloat(depth) * PlanTree.indent)
         .padding(.trailing, 16)
         .padding(.vertical, 8)
         .contentShape(Rectangle())
@@ -447,11 +458,14 @@ private struct PlanStepRow: View {
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             if plan.kind == .test && maySet {
                 Button("Passed", lucideIcon: "circle-check") { context.set(step, .done) }.tint(MobileStyle.positive)
+                Button("Info", lucideIcon: "info") { context.set(step, .info) }.tint(MobileStyle.muted)
             }
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             if plan.kind == .test && maySet {
                 Button("Failed", lucideIcon: "circle-x") { context.set(step, .failed) }.tint(MobileStyle.statusError)
+                Button("Warning", lucideIcon: "triangle-alert") { context.set(step, .warning) }
+                    .tint(MobileStyle.statusNeedsYou)
                 Button("Skipped", lucideIcon: "circle-minus") { context.set(step, .skipped) }.tint(.gray)
             }
         }
@@ -459,10 +473,7 @@ private struct PlanStepRow: View {
     }
 
     @ViewBuilder private var mark: some View {
-        if step.isParent {
-            // A parent has no state of its own to set; its count at the end of the row says how far it is.
-            Color.clear
-        } else if maySet && plan.kind == .steps {
+        if maySet && plan.kind == .steps {
             Button {
                 context.set(step, step.toggled)
             } label: {
@@ -533,7 +544,7 @@ private struct PlanStepRow: View {
     @ViewBuilder private var statusPicker: some View {
         if maySet {
             Picker("Status", selection: stateBinding) {
-                ForEach(PlanStepState.personStates, id: \.self) { state in
+                ForEach(plan.stateChoices, id: \.self) { state in
                     Label(plan.word(for: state), lucideIcon: PlanMark.icon(state)).tag(state)
                 }
             }
@@ -590,7 +601,7 @@ private struct PlanStepAccessibilityActions: ViewModifier {
                     Button(collapsed ? "Expand" : "Collapse") { context.toggle(step.id) }
                 }
                 if maySet {
-                    let choices = plan.kind == .steps ? [step.toggled] : PlanStepState.personStates
+                    let choices = plan.kind == .steps ? [step.toggled] : plan.stateChoices
                     ForEach(choices.filter { $0 != step.state }, id: \.self) { state in
                         Button("Mark as \(plan.word(for: state).lowercased())") { context.set(step, state) }
                     }
@@ -617,6 +628,8 @@ private struct PlanMark: View {
         case .failed: "circle-x"
         case .skipped: "circle-minus"
         case .blocked: "circle-alert"
+        case .warning: "triangle-alert"
+        case .info: "info"
         }
     }
 
@@ -626,7 +639,9 @@ private struct PlanMark: View {
         case .open, .skipped: Image(lucide: Self.icon(state), size: size).foregroundStyle(MobileStyle.faint)
         case .done: Image(lucide: Self.icon(state), size: size).foregroundStyle(MobileStyle.positive)
         case .failed: Image(lucide: Self.icon(state), size: size).foregroundStyle(MobileStyle.statusError)
-        case .blocked: Image(lucide: Self.icon(state), size: size).foregroundStyle(MobileStyle.statusNeedsYou)
+        case .blocked, .warning:
+            Image(lucide: Self.icon(state), size: size).foregroundStyle(MobileStyle.statusNeedsYou)
+        case .info: Image(lucide: Self.icon(state), size: size).foregroundStyle(MobileStyle.accent)
         }
     }
 }

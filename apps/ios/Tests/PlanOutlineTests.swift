@@ -77,8 +77,24 @@ final class PlanOutlineTests: XCTestCase {
 
     func testStepsPlanSummaryCountsDone() throws {
         let document = try document(plan(items: [step("a", state: "done"), step("b", state: "skipped"), step("c")]))
-        XCTAssertEqual(document.progressSummary, "1 of 3 done")
+        XCTAssertEqual(document.progressSummary, "1 of 3 done, 1 skipped")
         XCTAssertEqual(document.word(for: .done), "Done")
+    }
+
+    func testWarningAndInfoAreFinishedOutcomes() throws {
+        XCTAssertEqual(try parent(["done", "warning", "info"]).state, .warning)
+        XCTAssertEqual(try parent(["done", "info", "skipped"]).state, .done)
+        XCTAssertEqual(try parent(["warning", "failed"]).state, .failed)
+        XCTAssertEqual(try parent(["warning", "blocked"]).state, .blocked)
+        XCTAssertEqual(try parent(["open", "info"]).state, .active)
+        let leaves = ["done", "warning", "warning", "info", "failed", "open"].enumerated().map {
+            step("s\($0.offset)", state: $0.element)
+        }
+        XCTAssertEqual(
+            try document(plan(kind: "test", items: leaves)).progressSummary,
+            "5 of 6 run, 1 passed, 2 warnings, 1 info, 1 failed")
+        XCTAssertEqual(
+            try document(plan(items: leaves)).progressSummary, "4 of 6 done, 2 with warnings, 1 with info, 1 failed")
     }
 
     func testAgentStepsAreReadOnlyForAPersonUntilUnlocked() throws {

@@ -54,19 +54,21 @@ tasks woke them, and a failed task or a wake the machine gave up on leaves an un
 Model and permission picks are remembered and sent to every connected machine for the chats it
 starts on its own. Older machines keep working: requests they do not know are ignored.
 
-A chat whose agent keeps a plan shows its progress beside Sub-agents as the desktop pill: "6/11" with a double
-check on a raised capsule, a red dot for a failed step and an accent dot for a plan made since the chat was last
-opened; the phone never opens a plan on its own. While the agent works on a step the check turns into a spinning ring.
-The sheet is drawn after the desktop plan panel: the chat as its title, a header with the plan's title, kind,
-counters, status line, the step in progress and a green and red progress bar, then All, Open and Failed and Collapse
-done (both kept on the phone). Sections, text blocks and steps follow as custom rows with the same Lucide circles;
-a parent shows "2/3" instead of a circle, and a tap on a section or parent folds it. The step the agent works on
-spins with an accent background while its turn runs; once the agent stopped it shows a pause and "<Agent> stopped
-here". A step a person set shows "you" and the time; who else set a step and a lock's reason sit in its long-press
-menu and its VoiceOver value. In a steps plan the circle toggles open and done; in a test plan the circle opens the
-outcomes and a swipe gives Passed, Failed or Skipped, and Failed asks for a note. Long-press a step for every state,
-Add note, Unlock and Copy. A chat with several plans switches in the title menu, newest first. Changes go through
-`plan.apply`, and a refusal from the machine is shown.
+A chat whose agent keeps a plan shows its progress beside Sub-agents as the desktop pill: "6/11" with a double check
+on a raised capsule, a red dot for a failed step and an accent dot for a plan made since the chat was last opened; the
+phone never opens a plan on its own. While the agent works on a step the check turns into a spinning ring. The sheet
+is drawn after the desktop plan panel: the chat as its title, a header with the plan's title, kind, counters, status
+line, the step in progress and a progress bar. The overflow menu holds the filter (all, open or failed steps),
+Collapse done, Expand all and Collapse all, kept on the phone. Sections, text blocks and steps follow as custom rows
+with the same Lucide circles, one column per row: a step under a section lines up with the section's caret and a child
+sits under its parent's title. A parent shows "2/3" instead of a circle, and a tap anywhere on a section or parent
+folds it. Warning (amber) and info are outcomes like passed. The step the agent works on spins with an accent
+background while its turn runs; once the agent stopped it shows a pause and "<Agent> stopped here". A step a person
+set shows "you" and the time; who else set a step and a lock's reason sit in its long-press menu and its VoiceOver
+value. In a steps plan the circle toggles open and done; in a test plan the circle opens the outcomes and a swipe
+gives Passed, Info, Failed, Warning or Skipped; Failed, Warning and Info ask for a note. Long-press a step for every
+state, Add note, Unlock and Copy. A chat with several plans switches in the title menu, newest first. Changes go
+through `plan.apply`, and a refusal from the machine is shown.
 One `plan.list` per connection fills the pills, and `plan.changed` and `plan.removed` keep them current.
 
 Long-press a message you sent, an answer or a turn's duration label for Fork from here. A sheet
