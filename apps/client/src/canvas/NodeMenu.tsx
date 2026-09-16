@@ -35,6 +35,7 @@ import { useProviders } from '@/state/providers';
 import { fileManagerName, useServer } from '@/state/server';
 import { useSessionRow } from '@/state/sessions';
 import { useUi } from '@/state/ui';
+import { useWorktreeOf } from '@/state/worktrees';
 import { useTransport } from '@/transport/context';
 import { ACCENT_SWATCH, ACCENT_SWATCH_PICKED, MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
@@ -54,6 +55,7 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
     const providers = useProviders((s) => s.providers);
     const projectFolder = useProject((s) => s.current?.folder ?? null);
     const transport = useTransport();
+    const nodeWorktree = useWorktreeOf(node?.kind === 'terminal' || node?.kind === 'chat' ? node.cwd : undefined);
 
     if (!node) {
         return null;
@@ -137,6 +139,29 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
                                     <Icon icon={GitBranch} size={14} /> Bind to worktree
                                 </ContextMenu.Item>
                             )}
+                        </>
+                    )}
+                    {nodeWorktree && projectFolder !== null && (
+                        <>
+                            <ContextMenu.Separator className={MENU_SEPARATOR} />
+                            <ContextMenu.Item
+                                className="menu-item"
+                                onClick={() => {
+                                    // Selecting the node is what points the git panel at the worktree it works in.
+                                    canvasStore.getState().select([id]);
+                                    useUi.getState().setPanel({ open: true, kind: 'git' });
+                                }}
+                            >
+                                <Icon icon={GitBranch} size={14} /> View worktree
+                                <span className={`${MENU_HINT} font-mono`}>{nodeWorktree.branch}</span>
+                            </ContextMenu.Item>
+                            <ContextMenu.Item
+                                className="menu-item"
+                                onClick={() => useUi.getState().setWorktreeRemoval({ folder: projectFolder, path: nodeWorktree.path })}
+                            >
+                                <Icon icon={Trash} size={14} /> Remove worktree...
+                            </ContextMenu.Item>
+                            <ContextMenu.Separator className={MENU_SEPARATOR} />
                         </>
                     )}
                     {node.kind === 'terminal' && canOpenInChat && (

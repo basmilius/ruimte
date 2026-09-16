@@ -1,0 +1,81 @@
+import { describe, expect, test } from 'bun:test';
+import type { Worktree } from '@ruimte/contracts';
+import { nodesInWorktree, removedToast, removeQuestion, workCounts, worktreeOfPath, workSentence } from './worktree-rows.ts';
+
+const lexer: Worktree = { path: '/home/worktrees/repo-1/lexer', branch: 'lexer', from: { branch: 'main', commit: 'abc' }, nodeId: 'chat-lexer' };
+
+describe('removeQuestion', () => {
+    test('with work in it, the question names the three numbers and asks for force', () => {
+        expect(removeQuestion({ ...lexer, work: { changed: 3, untracked: 2, ahead: 1 } })).toEqual({
+            title: 'Remove worktree lexer?',
+            description: 'It holds 3 uncommitted files, 2 new files and 1 commit that main lacks. They are lost, and so is the branch.',
+            confirmLabel: 'Remove anyway',
+            force: true
+        });
+    });
+
+    test('only what is not zero is named, in the singular where it is one', () => {
+        expect(removeQuestion({ ...lexer, work: { changed: 0, untracked: 1, ahead: 0 } }).description).toBe(
+            'It holds 1 new file. They are lost, and so is the branch.'
+        );
+    });
+
+    test('a clean worktree is a plain confirm without force', () => {
+        expect(removeQuestion({ ...lexer, work: { changed: 0, untracked: 0, ahead: 0 } })).toMatchObject({ confirmLabel: 'Remove', force: false });
+    });
+
+    test('a worktree whose folder is gone only has commits to lose', () => {
+        const question = removeQuestion({ ...lexer, missing: true, work: { changed: 0, untracked: 0, ahead: 2 } });
+        expect(question.description).toBe(
+            'Its folder is already gone, and the branch holds 2 commits that main lacks. Those commits are lost with the branch.'
+        );
+        expect(question.force).toBe(true);
+    });
+
+    test('without a register the commits are counted against the base branch', () => {
+        expect(workSentence({ path: '/wt', branch: 'x' }, { changed: 1, untracked: 0, ahead: 4 })).toBe(
+            '1 uncommitted file and 4 commits that the base branch lacks'
+        );
+    });
+
+    test('a merge that stopped halfway is work too', () => {
+        expect(removeQuestion({ ...lexer, work: { changed: 0, untracked: 0, ahead: 0, operation: 'merge' } })).toMatchObject({
+            description: 'It holds a merge that stopped halfway. They are lost, and so is the branch.',
+            force: true
+        });
+    });
+});
+
+describe('removedToast', () => {
+    test('says the branch stayed, or how to bring back the one that went', () => {
+        expect(removedToast('lexer', { branchDeleted: false })).toEqual({ description: 'The branch lexer stays.' });
+        expect(removedToast('lexer', { branchDeleted: true, branchCommit: '18e2698a0b1c2d3e4f' })).toEqual({
+            description: 'Deleted the branch too. "git branch lexer 18e2698a0b1c" brings it back.'
+        });
+        expect(removedToast('lexer', {})).toBeNull();
+    });
+});
+
+describe('rows', () => {
+    test('the counts leave out what is zero', () => {
+        expect(workCounts({ changed: 3, untracked: 0, ahead: 1 })).toEqual(['3 changed', '1 commit']);
+    });
+
+    test('a folder is in the worktree it equals or sits under, and never in one whose folder is gone', () => {
+        expect(worktreeOfPath([lexer], '/home/worktrees/repo-1/lexer/')).toBe(lexer);
+        expect(worktreeOfPath([lexer], '/home/worktrees/repo-1/lexer/src')).toBe(lexer);
+        expect(worktreeOfPath([lexer], '/home/worktrees/repo-1/lexer-2')).toBeNull();
+        expect(worktreeOfPath([{ ...lexer, missing: true }], '/home/worktrees/repo-1/lexer')).toBeNull();
+        expect(worktreeOfPath([lexer], undefined)).toBeNull();
+    });
+
+    test('the nodes of a worktree are the one it was made for and every agent working inside it', () => {
+        const nodes = [
+            { id: 'chat-lexer', kind: 'chat', title: 'Lexer' },
+            { id: 'terminal-2', kind: 'terminal', title: 'Helper', cwd: '/home/worktrees/repo-1/lexer' },
+            { id: 'note-1', kind: 'note', title: 'Note', cwd: '/home/worktrees/repo-1/lexer' },
+            { id: 'chat-other', kind: 'chat', title: 'Other', cwd: '/repo' }
+        ];
+        expect(nodesInWorktree(nodes, lexer).map((node) => node.id)).toEqual(['chat-lexer', 'terminal-2']);
+    });
+});

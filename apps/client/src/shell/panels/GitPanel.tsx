@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
 import { ArrowDown, ArrowUp, ChevronsDownUp, ChevronsUpDown, Folder, GitPullRequest, MoreHorizontal, RefreshCw } from 'lucide-react';
-import type { GitActionKind, GitCapabilitiesResult, GitCommit, GitFile, GitRef, GitStash, GitStatus, Worktree } from '@ruimte/contracts';
+import {
+    isCanvasView,
+    type GitActionKind,
+    type GitCapabilitiesResult,
+    type GitCommit,
+    type GitFile,
+    type GitRef,
+    type GitStash,
+    type GitStatus
+} from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
 import { BranchMenu } from '@/shell/panels/BranchMenu';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
@@ -14,16 +23,21 @@ import { isUnmergedRefusal, pushButton } from '@/shell/panels/git-actions';
 import { activeDiffPath, allDirs } from '@/shell/panels/git-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
 import { useGitActions } from '@/shell/panels/use-git-actions';
+import { WorktreeSection, type WorktreeNode } from '@/shell/panels/WorktreeSection';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
+import { revealNode } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
+import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
 import { watchGit } from '@/state/git-watch';
 import { gitTarget, gitTargets, type GitTarget } from '@/state/git-target';
+import { useEndpointId } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
 import { useToasts } from '@/state/toasts';
+import { useWorktrees, worktreeLists } from '@/state/worktrees';
 import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP, MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
@@ -68,14 +82,27 @@ export function GitPanel() {
     const collapsedDirs = useGit((s) => s.collapsedDirs);
     const logHeight = useGit((s) => s.logHeight);
     const tabLimit = useSettings((s) => s.filesTabLimit);
-    const derived = useMemo(() => gitTarget(nodes, selection, folder), [nodes, selection, folder]);
+    const endpointId = useEndpointId();
+    const transport = useTransport();
+    const views = useDocument((s) => s.views);
+    const worktrees = useWorktrees(transport, endpointId, folder, true);
+    const derived = useMemo(() => gitTarget(nodes, selection, folder, worktrees), [nodes, selection, folder, worktrees]);
     /* A checkout picked by hand outranks the selection, until the selection points somewhere else
        of its own: `from` is the target it was picked over, so a click on the canvas takes over again. */
     const [picked, setPicked] = useState<{ target: GitTarget; from: string | null } | null>(null);
-    const target = picked !== null && picked.from === derived.cwd ? picked.target : derived;
-    const cwd = target.cwd;
-    const [worktrees, setWorktrees] = useState<readonly Worktree[]>([]);
+    /* The nodes of every canvas of the project, with the canvas on screen as it is now rather than as last saved. */
+    const projectNodes = useMemo<WorktreeNode[]>(() => {
+        const live = Object.values(nodes);
+        const liveIds = new Set(live.map((node) => node.id));
+        const saved = views.flatMap((view) => (isCanvasView(view) ? view.nodes.filter((node) => !liveIds.has(node.id)) : []));
+        return [...live, ...saved];
+    }, [nodes, views]);
     const targets = useMemo(() => gitTargets(nodes, worktrees, folder), [nodes, worktrees, folder]);
+    // A worktree picked by hand that has since been removed hands the panel back to the selection.
+    const pickedStands =
+        picked !== null && picked.from === derived.cwd && (picked.target.kind !== 'worktree' || targets.some((entry) => entry.cwd === picked.target.cwd));
+    const target = pickedStands ? picked.target : derived;
+    const cwd = target.cwd;
 
     /* What was read, and which checkout it was read from: a target that just changed shows nothing
        until its own status lands, without an effect that empties the state first. */
@@ -97,7 +124,6 @@ export function GitPanel() {
     const bodyRef = useRef<HTMLDivElement>(null);
     const roomForPills = (useUi((s) => s.panelWidth) ?? 540) >= PILLS_FROM_WIDTH;
     const run = useGitActions();
-    const transport = useTransport();
 
     const refresh = useCallback(async (): Promise<void> => {
         if (cwd === null) {
@@ -249,10 +275,15 @@ export function GitPanel() {
     const openBranchMenu = (): void => {
         loadRefs();
         if (folder !== null) {
-            void transport
-                .request('git.worktree-list', { repo: folder })
-                .then((answer) => setWorktrees(answer.worktrees))
-                .catch(() => setWorktrees([]));
+            worktreeLists.reload(endpointId, folder);
+        }
+    };
+
+    /* Viewing a worktree points the panel at it, the way picking it from the chip does. */
+    const viewWorktree = (path: string): void => {
+        const next = targets.find((candidate) => candidate.cwd === path);
+        if (next) {
+            setPicked({ target: next, from: derived.cwd });
         }
     };
 
@@ -359,7 +390,16 @@ export function GitPanel() {
                     )}
                     <span className="grow" />
                     <Tooltip label="Refresh" name>
-                        <button className="icon-btn h-7 w-7" disabled={busy} onClick={() => void refresh()}>
+                        <button
+                            className="icon-btn h-7 w-7"
+                            disabled={busy}
+                            onClick={() => {
+                                void refresh();
+                                if (folder !== null) {
+                                    worktreeLists.reload(endpointId, folder);
+                                }
+                            }}
+                        >
                             <Icon icon={RefreshCw} size={14} />
                         </button>
                     </Tooltip>
@@ -405,6 +445,17 @@ export function GitPanel() {
                                 }
                             });
                         }}
+                    />
+                )}
+                {folder !== null && (
+                    <WorktreeSection
+                        worktrees={worktrees}
+                        nodes={projectNodes}
+                        current={cwd}
+                        busy={busy}
+                        onView={(worktree) => viewWorktree(worktree.path)}
+                        onRemove={(worktree) => useUi.getState().setWorktreeRemoval({ folder, path: worktree.path })}
+                        onReveal={revealNode}
                     />
                 )}
                 {status?.repo && (

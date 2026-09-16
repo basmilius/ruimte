@@ -35,6 +35,7 @@ import { ApprovalStrip } from '@/canvas/ApprovalStrip';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { useCellHasFocus } from '@/state/document';
 import { useProject } from '@/state/project';
+import { useWorktreeOf } from '@/state/worktrees';
 import { BTN_GROUP } from '@/ui/classes';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Pill } from '@/ui/Pill';
@@ -192,6 +193,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const processAlerts = useNodeAlerts(id);
     const task = useChildTask(id);
     const hasContext = useHasContextLinks(id);
+    const nodeWorktree = useWorktreeOf(node?.kind === 'terminal' || node?.kind === 'chat' ? node.cwd : undefined);
     const hidden = useCanvas((s) => s.hidden.has(id));
 
     if (!node || hidden) {
@@ -288,6 +290,13 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     </span>
                     {node.kind === 'chat' && !renaming && <SubagentBreadcrumb chatId={id} className="grow" />}
                     {collapsed && <Pill className="tabular-nums">{node.memberIds?.length ?? 0} inside</Pill>}
+                    {nodeWorktree && !renaming && (
+                        <Tooltip label={nodeWorktree.path}>
+                            <Pill mono icon={<Icon icon={GitBranch} size={12} />}>
+                                {nodeWorktree.branch}
+                            </Pill>
+                        </Tooltip>
+                    )}
                     {isGroup && node.worktree && (
                         <Tooltip label={node.worktree.path}>
                             <Pill mono icon={<Icon icon={GitBranch} size={12} />}>

@@ -21,6 +21,7 @@ export function WorktreeDialog() {
     const close = useUi((s) => s.setWorktreeDialogFor);
     const group = useCanvas((s) => (groupId ? s.nodes[groupId] : undefined));
     const folder = useProject((s) => s.current?.folder ?? null);
+    const projectId = useProject((s) => s.current?.projectId ?? null);
     const [branch, setBranch] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
     const [failure, setFailure] = useState<string | null>(null);
@@ -35,7 +36,7 @@ export function WorktreeDialog() {
         setBusy(true);
         setFailure(null);
         try {
-            const result = await transport.request('git.worktree-add', { repo: folder, branch: value.trim() });
+            const result = await transport.request('git.worktree-add', { repo: folder, branch: value.trim(), ...(projectId === null ? {} : { projectId }) });
             focusedCanvas().getState().setGroupWorktree(groupId, result.worktree);
             setBranch(null);
             close(null);

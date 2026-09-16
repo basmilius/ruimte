@@ -142,10 +142,13 @@ interface UiStore {
     layoutDialogOpen: boolean;
     /* The group a worktree is being bound to, while its dialog is up. */
     worktreeDialogFor: string | null;
+    /* The worktree a person is removing, by the project folder whose repository holds it, while its question is up. */
+    worktreeRemoval: { folder: string; path: string } | null;
     /* What a view is being asked about, from the sidebar, the breadcrumb or the palette alike. */
     viewDialog: ViewDialog;
     setUsageOpen(open: boolean): void;
     setWorktreeDialogFor(groupId: string | null): void;
+    setWorktreeRemoval(removal: { folder: string; path: string } | null): void;
     setViewDialog(dialog: ViewDialog): void;
     setSidebarOpen(open: boolean): void;
     toggleSidebar(): void;
@@ -194,12 +197,16 @@ export const useUi = create<UiStore>((set, get) => ({
     panelsRestoring: true,
     layoutDialogOpen: false,
     worktreeDialogFor: null,
+    worktreeRemoval: null,
     viewDialog: null,
     setUsageOpen(open) {
         set({ usageOpen: open });
     },
     setWorktreeDialogFor(groupId) {
         set({ worktreeDialogFor: groupId });
+    },
+    setWorktreeRemoval(removal) {
+        set({ worktreeRemoval: removal });
     },
     setViewDialog(dialog) {
         set({ viewDialog: dialog });

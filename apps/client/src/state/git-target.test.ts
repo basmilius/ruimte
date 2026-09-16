@@ -37,6 +37,18 @@ describe('gitTarget', () => {
         expect(gitTarget(nodes(group, inside), ['n1'], '/repo').cwd).toBe('/wt/feature');
     });
 
+    test('a terminal whose own folder is a worktree the repository lists points the panel there', () => {
+        const agent = node('t1', { cwd: '/home/worktrees/repo-1/lexer/src' });
+        const worktrees = [{ path: '/home/worktrees/repo-1/lexer', branch: 'lexer' }];
+        expect(gitTarget(nodes(agent), ['t1'], '/repo', worktrees)).toEqual({
+            cwd: '/home/worktrees/repo-1/lexer',
+            label: 'lexer',
+            branch: 'lexer',
+            kind: 'worktree'
+        });
+        expect(gitTarget(nodes(agent), ['t1'], '/repo', [{ ...worktrees[0]!, missing: true }]).cwd).toBe('/repo');
+    });
+
     test('a collapsed group carries the members it remembers', () => {
         const collapsed = { ...group, collapsed: true, memberIds: ['n2'] };
         expect(gitTarget(nodes(collapsed, outside), ['n2'], '/repo').cwd).toBe('/wt/feature');
@@ -56,6 +68,10 @@ describe('gitTarget', () => {
 });
 
 describe('gitTargets', () => {
+    test('a worktree whose folder is gone is no checkout to point at', () => {
+        expect(gitTargets({}, [{ path: '/wt/gone', branch: 'gone', missing: true }], '/repo').map((target) => target.cwd)).toEqual(['/repo']);
+    });
+
     test('the project folder comes first, then every worktree the daemon knows', () => {
         const worktrees = [
             { path: '/wt/feature', branch: 'feature/x' },

@@ -1,6 +1,7 @@
 import type { Worktree } from '@ruimte/contracts';
 import { membersOf, type CanvasNode } from '@/state/canvas';
 import { basenameOf } from '@/shell/panels/files-tree';
+import { worktreeOfPath } from '@/shell/panels/worktree-rows';
 
 export interface GitTarget {
     /* The checkout every request of the panel acts on; null for a canvas without a folder. */
@@ -30,16 +31,21 @@ const boundGroupOf = (nodes: Record<string, CanvasNode>, id: string): CanvasNode
 };
 
 /*
- * Which checkout the git panel is looking at. A selected group with a worktree, or a selected node
- * that sits in one, points the panel at that checkout; everything else points it at the project
+ * Which checkout the git panel is looking at. A selected group with a worktree, a selected node
+ * that sits in one, or a terminal or chat whose own folder is a worktree, points the panel at that checkout; everything else points it at the project
  * folder. It is the same rule that decides where a node made inside such a group starts, so what
  * the panel shows and what an agent in the group works on are never two different trees.
  */
-export const gitTarget = (nodes: Record<string, CanvasNode>, selection: string[], folder: string | null): GitTarget => {
+export const gitTarget = (nodes: Record<string, CanvasNode>, selection: string[], folder: string | null, worktrees: readonly Worktree[] = []): GitTarget => {
     for (const id of selection) {
         const worktree = boundGroupOf(nodes, id)?.worktree;
         if (worktree) {
             return { cwd: worktree.path, label: worktree.branch, branch: worktree.branch, kind: 'worktree' };
+        }
+        const node = nodes[id];
+        const own = node?.kind === 'terminal' || node?.kind === 'chat' ? worktreeOfPath(worktrees, node.cwd) : null;
+        if (own) {
+            return { cwd: own.path, label: own.branch, branch: own.branch, kind: 'worktree' };
         }
     }
     return { cwd: folder, label: folder === null ? '' : basenameOf(folder), branch: null, kind: 'project' };
@@ -53,6 +59,9 @@ export const gitTarget = (nodes: Record<string, CanvasNode>, selection: string[]
 export const gitTargets = (nodes: Record<string, CanvasNode>, worktrees: readonly Worktree[], folder: string | null): GitTarget[] => {
     const targets: GitTarget[] = folder === null ? [] : [{ cwd: folder, label: basenameOf(folder), branch: null, kind: 'project' }];
     for (const worktree of worktrees) {
+        if (worktree.missing) {
+            continue;
+        }
         const group = Object.values(nodes).find((node) => node.kind === 'group' && node.worktree?.path === worktree.path);
         targets.push({
             cwd: worktree.path,
