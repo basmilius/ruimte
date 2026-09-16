@@ -186,6 +186,7 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
     <a href="#fasen">Fasen</a>
     <a href="#scheduler">Geen scheduler</a>
     <a href="#vragen">Productvragen</a>
+    <a href="#besluiten">Besluiten</a>
     <a href="#scope">Buiten scope</a>
   </nav>
 </header>
@@ -586,6 +587,21 @@ ChatTurnItemSchema: taskIds: z.array(z.string()).optional()</code></pre>
       </ul>
       <p class="advice"><strong>Aanbeveling A.</strong> Een terminal-agent heeft een shell en dus <code>ruimte-context</code>, en sommige CLIs bestaan alleen als terminal. De regel "geen <code>done</code>, dan <code>failed</code> bij exit" is eenvoudig uit te leggen in <code>help agent</code>. De ouder moet wel een chat zijn; dat staat vast.</p>
     </div>
+  </section>
+
+  <section id="besluiten" class="recommendation">
+    <h2>Besluiten van Bas (16 september)</h2>
+    <p>Bas koos bij alle acht productvragen de aanbeveling. Het ontwerp hierboven geldt daarmee zoals het er staat, en de beslissingen die niet uit de code blijken staan in <code>docs/DECISIONS.md</code> onder "Orchestration".</p>
+    <ol>
+      <li>Een taak staat in een eigen store onder <code>$RUIMTE_HOME/tasks</code> (A).</li>
+      <li>Een taak is zichtbaar op de edge en op de kop van het kind, in die volgorde gebouwd (C).</li>
+      <li>Het resultaat is <code>done</code> of het laatste antwoord van de eerste beurt; een terminalkind heeft <code>done</code> nodig (B).</li>
+      <li>Geen budget in deze fasen (A).</li>
+      <li>iOS blijft per fase compatibel en krijgt de nieuwe weergaven na fase 4, zonder aparte push voor een afgeronde taak (C).</li>
+      <li>Het open paneel groeit mee: een geteld <code>fs.watch</code> voor Claude, een poll voor Codex (A).</li>
+      <li>Eén paneel met een broodkruimel (A).</li>
+      <li>Een terminal-agent mag een kind met een taak zijn, alleen via <code>done</code> (A).</li>
+    </ol>
   </section>
 
   <section id="scope">

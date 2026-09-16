@@ -2315,6 +2315,69 @@ parked `<webview>` answered `Invalid guestInstanceId` from then on.
   (the app's own spawn never had them either), and the process panel still looks for the app around the
   daemon, which is launchd now.
 
+### Orchestration
+
+The design is `docs/reports/2026-09-16-orchestration-design.html`, approved on 2026-09-16 with the
+recommended answer on all eight product questions. It is built in five phases; this is what the
+code will not say on its own.
+
+- The model adds as few words as it can. A **run** is the `turn` item that is already there, since
+  that word is on the wire and cannot go; a person reads it as a turn. An **attempt** is one CLI
+  process working on a run, which `ChatSession.generation` already counts, so it gets no record of
+  its own, only an optional `attempt` on the turn once a run can outlive a process. A **step** is
+  every item carrying that `turnId`; no item kind is added for it. A **subagent** is the `subagent`
+  item, with an origin: `native` when the CLI opened it with its own tool, `ruimte` when a verb
+  opened a node for it, and absent meaning `native`, which is what every older item was. A native
+  subagent carries the pointer to its whole conversation (`native.agentId` for Claude,
+  `native.threadId` for Codex), because the thread keeps only what fits under its cap of 200 items
+  and 64 KiB and that cap stays where it is: the thread file is rewritten on every tool call. A
+  **task** is what a parent asked of a child node, with a status and a result, in a record of its
+  own under `$RUIMTE_HOME/tasks` beside the lineage.
+- The wire only ever gains optional fields, new requests and new events, through every phase, and
+  `PROTOCOL_VERSION` stays where it is. Never a new member of `ChatItemSchema` and never a new value
+  in an enum a chat or a push already carries (`turn.state`, `turn.origin`, `subagent.status`, the
+  kind of a push alert). The iPhone app in the store validates the answer of `chat.attach` and
+  `chat.history` as a whole, so one item of a kind it does not know rejects the entire conversation,
+  where an unknown event only falls away. A cancelled child is therefore a `failed` subagent row with
+  a note, and a finished task pushes as a `turn` alert.
+- A task is a record the daemon keeps, not a field in `project.json`: waking the parent is a promise
+  the daemon makes, and a field an agent with a shell in the project folder can rewrite is no
+  promise, the argument that already put the depth of a node under `$RUIMTE_HOME/lineage`. A copy of
+  its status on the edge would be a second truth the merge has to learn.
+- A task shows on the edge from parent to child and on the child's header and sidebar row, the edge
+  first. The edge is where the relation is drawn; below `READABLE_ZOOM` a label on it is unreadable,
+  so the child carries the mark as well.
+- A task ends with `ruimte-context done`, or else with the last answer of the child's first turn; a
+  `done` during that turn wins. A child asking a question does not end it: the parent is woken with
+  "asks a question". A terminal child has no first answer to take, so it needs `done`, and a
+  terminal that exits without one fails its task. A terminal agent may be a child with a task only
+  that way; the parent always has to be a chat, since nothing else can be woken.
+- No budget per task in these phases. The caps on depth, count and (from phase 5) mode are the
+  limit. A cap on turns is the first thing to add if children turn out to give themselves turns.
+- The iPhone app stays compatible in every phase (regenerated models, no new kinds) and gets the
+  subagent panel and the task status in one round after phase 4. A finished task gets no push of its
+  own: the parent is woken and says so itself when its turn ends, which is when a person can act. A
+  child that fails and a wake that is parked do deserve one, as `attention`.
+- A subagent's conversation opens in one side panel, read-only, which a click on another row
+  replaces, with a breadcrumb back from a grandchild to its parent. It has no toolbar button and is
+  not in `ProjectPanelKindSchema`, so nothing of it is kept: a subagent's conversation is laid beside
+  the parent for a moment, not left open. It grows while it is open (a counted `fs.watch` for Claude,
+  a poll for Codex) for as long as a client holds it, and the event says only that there is more.
+- A canvas is still not a scheduler, and the rule is made sharper rather than stretched. Nothing
+  starts on a clock (no cron, loop or trigger), there is no queue of tasks handed out over nodes, no
+  worker looking for an idle agent, no retry of a failed task, no blocking wait in a verb, no
+  dependencies between tasks and no moving a task to another node. What does come, in one sentence:
+  a finished task wakes the chat that delegated it, once, with the result, as soon as that chat has no
+  turn running. That is a reaction to something the parent set in motion, like a hook that ends a
+  turn, not a plan. The limits that keep it so: only a chat can be woken, only the parent of the task
+  is, tasks that settle together wake together, a wake that fails is tried three times and then
+  parked with a note, and the outbox holds only work a verb or a restart created, never something
+  planned for a time. `notify` stays a message that waits until its receiver starts a turn anyway and
+  wakes nobody.
+- An observer on `ChatManager.observe()` only notes things: it may write a task record or a file in
+  the outbox, never act. A handler that sent a turn to another chat from inside an event would run
+  in the call stack of the first chat and be gone in a crash; only the outbox worker executes.
+
 ### Skipped on purpose
 
 Skipped: kanban, loop and trigger nodes, minimap, dictation, notch HUD, agent-to-agent
@@ -2322,7 +2385,8 @@ messages through the PTY, mobile app, managed accounts, terminal color schemes, 
 settings panes. Also left out: a pull request client, a hosted cloud account and relay, SSH and WSL environments, MCP
 browser automation, cookie and theme import, usage scanning, the mobile app. Neither has fork,
 retry or edit-and-resend in a shape worth building yet.
-Also decided against for now: a scheduler, checkpoint restore and telemetry.
+Also decided against for now: a scheduler (see "Orchestration" for the one thing a finished task
+may start), checkpoint restore and telemetry.
 
 ## Gotchas already paid for
 
