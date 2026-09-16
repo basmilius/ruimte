@@ -2364,8 +2364,11 @@ code will not say on its own.
 - A subagent's conversation opens in the chat's own place, read-only, from a row in the thread or
   from the sub-agents button in the chat's bar (the node's header, the view's toolbar or its cell's),
   which puts a list of the CLI's own subagents and the tasks the chat gave in that same place: the
-  running ones on top and the rest (done, failed, cancelled) under Done, each with its status word
-  and the latest thing it did (`chat/subagent-list.ts`: the work the parent's thread kept, else the
+  running ones on top and the rest (done, failed, cancelled) under Done, the most recently updated
+  first in each (a running one by its latest step the thread kept, else its start; a settled one by
+  its end; one without a time below, in thread order), each with its state as the icon in front (the
+  word in its tooltip and for a screen reader), how long it has run or when it ended on the right
+  (one clock for the list, ticking only while something runs) and the latest thing it did (`chat/subagent-list.ts`: the work the parent's thread kept, else the
   newest page of `chat.subagent` held while the entry is running, else the report). The bar then
   carries a breadcrumb that opens with the chat's own title (the way back to the main agent), then
   Sub-agents when the list was the way in, down to a grandchild, with a close beside it; Escape goes

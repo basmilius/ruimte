@@ -1,7 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import { CircleCheck, CircleSlash, CircleX, LoaderCircle } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem, ChatToolItem, Task } from '@ruimte/contracts';
+import { formatClock, formatDate } from '@/shell/usage/format';
 import {
+    entryTimeOf,
+    formatRunningFor,
     latestPreview,
     needsTail,
     previewFor,
@@ -76,13 +79,30 @@ const task = (status: Task['status']): Task => ({
 });
 
 describe('subagent list', () => {
-    test('running ones are active and everything that settled is done, each in thread order', () => {
+    test('running ones are active and everything that settled is done, in thread order while none has a time', () => {
         const a = subagent('a', { status: 'done' });
         const b = subagent('b');
         const c = subagent('c', { status: 'failed' });
         const d = subagent('d');
         expect(sectionSubagents([a, b, c, d])).toEqual({ active: [b, d], done: [a, c] });
         expect(sectionSubagents([b])).toEqual({ active: [b], done: [] });
+    });
+
+    test('each section puts the most recently updated entry on top, and entries without a time below in thread order', () => {
+        const early = subagent('early', { status: 'done', finishedAt: 100 });
+        const late = subagent('late', { status: 'failed', finishedAt: 300 });
+        const unknown = subagent('unknown', { status: 'done', finishedAt: null });
+        const alsoUnknown = subagent('also', { status: 'done', finishedAt: null });
+        const quiet = subagent('quiet', { startedAt: 50 });
+        const busy = subagent('busy', { startedAt: 10 });
+        const fresh = subagent('fresh', { startedAt: 200 });
+        const unstarted = subagent('unstarted', { startedAt: 0 });
+        // The latest step the thread kept of `busy` is newer than every start.
+        const work = new Map([['toolu_busy', [tool('1', 'Bash', { command: 'ls' }, 'toolu_busy')].map((step) => ({ ...step, createdAt: 400 }))]]);
+        expect(sectionSubagents([unknown, early, unstarted, quiet, late, alsoUnknown, busy, fresh], work)).toEqual({
+            active: [busy, fresh, quiet, unstarted],
+            done: [late, early, unknown, alsoUnknown]
+        });
     });
 
     test('a cancelled task says so, where the row itself only knows it failed', () => {
@@ -220,4 +240,34 @@ test('each state has the icon and tone it has elsewhere, and only running spins'
     expect(statusLookOf('done')).toEqual({ icon: CircleCheck, tone: 'text-status-idle', spins: false });
     expect(statusLookOf('failed')).toEqual({ icon: CircleX, tone: 'text-status-error', spins: false });
     expect(statusLookOf('cancelled')).toEqual({ icon: CircleSlash, tone: 'text-text-faint', spins: false });
+});
+
+describe('the time on the right of an entry', () => {
+    // Local noon, so a day boundary in the test's own time zone is hours away.
+    const noon = new Date(2026, 8, 16, 12, 0, 0).getTime();
+
+    test('a running entry counts from its start, in seconds, minutes and hours', () => {
+        expect(entryTimeOf(subagent('a', { startedAt: noon - 12_000 }), null, noon)).toBe('12s');
+        expect(entryTimeOf(subagent('a', { startedAt: noon - 134_000 }), null, noon)).toBe('2m 14s');
+        expect(entryTimeOf(subagent('a', { startedAt: noon - 3_780_000 }), null, noon)).toBe('1h 3m');
+        expect(formatRunningFor(7_200_000)).toBe('2h');
+        expect(entryTimeOf(subagent('a', { startedAt: 0 }), null, noon)).toBeNull();
+    });
+
+    test('a settled entry says when it ended, with the date once that was not today, and nothing without an end', () => {
+        const ended = new Date(2026, 8, 16, 11, 2).getTime();
+        expect(entryTimeOf(subagent('a', { status: 'done', finishedAt: ended }), null, noon)).toBe(formatClock(ended));
+        const yesterday = new Date(2026, 8, 15, 23, 40).getTime();
+        expect(entryTimeOf(subagent('a', { status: 'failed', finishedAt: yesterday }), null, noon)).toBe(`${formatDate(yesterday)} ${formatClock(yesterday)}`);
+        expect(entryTimeOf(subagent('a', { status: 'done', finishedAt: null }), null, noon)).toBeNull();
+    });
+
+    test("a task's own record gives its times", () => {
+        const given = noon - 65_000;
+        const task = { createdAt: given, settledAt: null } as unknown as Task;
+        const row = subagent('t', { origin: 'ruimte', childId: 'node-1', startedAt: noon - 1_000 });
+        expect(entryTimeOf(row, task, noon)).toBe('1m 5s');
+        const settledAt = noon - 30_000;
+        expect(entryTimeOf({ ...row, status: 'failed', finishedAt: null }, { ...task, settledAt } as Task, noon)).toBe(formatClock(settledAt));
+    });
 });

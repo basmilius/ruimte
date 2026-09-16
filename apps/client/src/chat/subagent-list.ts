@@ -1,9 +1,11 @@
 import { CircleCheck, CircleSlash, CircleX, LoaderCircle, type LucideIcon } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem, Task } from '@ruimte/contracts';
 import { isHandbackNotice, lastHandbackReport } from '@/chat/logic/handback';
+import { formatElapsed } from '@/chat/logic/tools';
 import { stripMarkdown } from '@/chat/logic/timeline-copy';
 import { toolSummary } from '@/chat/logic/tools';
 import { canOpenSubagent } from '@/chat/subagent-view';
+import { formatClock, formatDate } from '@/shell/usage/format';
 
 /* The latest thing a sub-agent did, as its entry in the list says it: a tool call, or text it wrote. */
 export type SubagentPreview = { kind: 'tool'; name: string; detail: string } | { kind: 'text'; text: string };
@@ -23,10 +25,38 @@ const oneLine = (text: string): string => text.slice(0, PREVIEW_CHARS).replace(/
 /* A reply is markdown, and the entry draws it as the plain text the thread would render it to. */
 const prose = (text: string): string => oneLine(stripMarkdown(text.slice(0, PREVIEW_CHARS)));
 
-/* Running on top and everything that settled below it, each in the order the thread has them. */
-export const sectionSubagents = (items: readonly ChatSubagentItem[]): SubagentSections => ({
-    active: items.filter((item) => item.status === 'running'),
-    done: items.filter((item) => item.status !== 'running')
+/* When an entry last moved: the latest step the thread kept of a running one, else its start; the end of a settled one. */
+const updatedAt = (item: ChatSubagentItem, work: readonly ChatItem[]): number | null => {
+    if (item.status !== 'running') {
+        return item.finishedAt !== null && item.finishedAt > 0 ? item.finishedAt : null;
+    }
+    const latest = work.reduce((newest, step) => Math.max(newest, step.createdAt), 0);
+    const at = Math.max(latest, item.startedAt);
+    return at > 0 ? at : null;
+};
+
+/* Newest first; an entry that knows no time goes below the rest, in the order the thread has them. */
+const newestFirst = (items: ChatSubagentItem[], work: ReadonlyMap<string, readonly ChatItem[]>): ChatSubagentItem[] => {
+    const timed = items.map((item, index) => ({ item, index, at: updatedAt(item, work.get(item.toolUseId) ?? []) }));
+    timed.sort((left, right) => {
+        if (left.at === null || right.at === null) {
+            return left.at === right.at ? left.index - right.index : left.at === null ? 1 : -1;
+        }
+        return right.at - left.at || left.index - right.index;
+    });
+    return timed.map((entry) => entry.item);
+};
+
+/* Running on top and everything that settled below it, the most recently updated first in each. */
+export const sectionSubagents = (items: readonly ChatSubagentItem[], work: ReadonlyMap<string, readonly ChatItem[]> = new Map()): SubagentSections => ({
+    active: newestFirst(
+        items.filter((item) => item.status === 'running'),
+        work
+    ),
+    done: newestFirst(
+        items.filter((item) => item.status !== 'running'),
+        work
+    )
 });
 
 export const subagentTitle = (item: ChatSubagentItem): string => item.description || item.summary || item.subagentType || 'Sub-agent';
@@ -160,3 +190,35 @@ export const stopOf = (item: ChatSubagentItem, turnRunning: boolean): SubagentSt
 
 export const stopLabel = (stop: SubagentStop): string =>
     stop === 'task' ? 'Stop this task' : "Mark as stopped. The CLI cannot stop one sub-agent, so it may keep working until the chat's process ends.";
+
+const HOUR_MS = 3_600_000;
+
+/* How long an entry has run: the same seconds and minutes a running tool call shows, and hours past one. */
+export const formatRunningFor = (ms: number): string => {
+    if (ms < HOUR_MS) {
+        return formatElapsed(ms);
+    }
+    const hours = Math.floor(ms / HOUR_MS);
+    const minutes = Math.floor((ms % HOUR_MS) / 60_000);
+    return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
+};
+
+const sameDay = (a: number, b: number): boolean => {
+    const left = new Date(a);
+    const right = new Date(b);
+    return left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth() && left.getDate() === right.getDate();
+};
+
+/* The time on the right of an entry: how long it has run so far, or when it ended, with the date once that was not today. */
+export const entryTimeOf = (item: ChatSubagentItem, task: Task | null, now: number): string | null => {
+    // A task's own record says when it was given and settled; the row copies those, but may lag behind it.
+    const startedAt = task?.createdAt ?? item.startedAt;
+    const finishedAt = task === null ? item.finishedAt : (task.settledAt ?? item.finishedAt);
+    if (item.status === 'running') {
+        return startedAt > 0 ? formatRunningFor(now - startedAt) : null;
+    }
+    if (finishedAt === null || finishedAt <= 0) {
+        return null;
+    }
+    return sameDay(finishedAt, now) ? formatClock(finishedAt) : `${formatDate(finishedAt)} ${formatClock(finishedAt)}`;
+};
