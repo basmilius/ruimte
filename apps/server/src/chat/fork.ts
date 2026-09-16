@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {
     isCanvasView,
     NODE_SIZE,
+    withView,
     type AgentKind,
     type ChatForkPayload,
     type ChatForkResult,
@@ -9,6 +10,7 @@ import {
     type ChatItem,
     type ChatTurnItem,
     type ProjectCanvasView,
+    type ProjectChatView,
     type ProjectContent,
     type ProjectEdge
 } from '@ruimte/contracts';
@@ -74,7 +76,7 @@ interface Cut {
 }
 
 /* What the person reads under the copied history, and what the agent is told in front of its first prompt. */
-export const forkNotes = (cut: Cut, original: { id: string; title: string }): { note: string; preamble: string } => {
+export const forkNotes = (cut: Cut, original: { id: string; title: string; view: boolean }): { note: string; preamble: string } => {
     const where = cut.last ? `its last turn (turn ${cut.number})` : `turn ${cut.number} of ${cut.total}`;
     const counted = cut.exact || cut.last ? '' : ' The cut was made by counting turns, since this turn is older than the names the CLI gives them.';
     const note = cut.last
@@ -84,7 +86,7 @@ export const forkNotes = (cut: Cut, original: { id: string; title: string }): { 
         ? 'You work in the same folder as the original, which may go on working there, so check the files before you assume.'
         : 'You work in the same folder as the original; its files may be newer than that turn, so check before you assume.';
     const preamble = [
-        `Ruimte: this conversation was forked from node ${original.id} ("${original.title}") after ${where}; what follows that turn there did not happen here.`,
+        `Ruimte: this conversation was forked from ${original.view ? 'view' : 'node'} ${original.id} ("${original.title}") after ${where}; what follows that turn there did not happen here.`,
         folder,
         ...(cut.exact || cut.last ? [] : ['The cut was made by counting turns; if the last message you remember does not match, say so.'])
     ].join(' ');
@@ -95,7 +97,7 @@ const cliRefusal = (error: unknown): ChatError =>
     error instanceof ChatError ? error : new ChatError('fork-failed', error instanceof Error ? error.message : String(error));
 
 /*
- * A chat node beside the original that goes on after one of its turns. The CLI's side is a copy made
+ * A chat node beside the original, or a chat view listed after it, that goes on after one of its turns. The CLI's side is a copy made
  * now (a cut transcript, a Codex thread fork), so a fork is what the conversation was at the click and
  * not whatever the original says by the time a person types into the fork. The record is written
  * before the node, so a client that mounts the node finds the thread; no CLI starts until the first
@@ -134,9 +136,8 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
     if (place === null) {
         throw new ChatError('chat-not-found', `${payload.chatId} is in no project this machine knows`);
     }
-    if (place.canvasId === null && payload.viewId === undefined) {
-        throw new ChatError('not-on-a-canvas', 'This chat is a view of its own; name the canvas the fork lands on');
-    }
+    // A view forks into a view unless a canvas is named; a node forks into a node unless a view is asked for.
+    const intoView = payload.asView === true || (place.canvasId === null && payload.viewId === undefined);
 
     const last = index === turns.length - 1;
     const native = info.provider === 'codex' ? turn.native?.turnId : turn.native?.lastUuid;
@@ -167,7 +168,7 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
     }
 
     const now = deps.now();
-    const notes = forkNotes(cut, { id: payload.chatId, title: originalTitle });
+    const notes = forkNotes(cut, { id: payload.chatId, title: originalTitle, view: place.canvasId === null });
     const { queue: _queue, suggestedTitle: _suggestedTitle, ...kept } = info;
     const forkInfo: ChatInfo = {
         ...kept,
@@ -198,16 +199,32 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
 
     return deps
         .mutate(place.projectId, (content) => {
+            if (content.views.some((view) => view.id === forkId || (isCanvasView(view) && view.nodes.some((node) => node.id === forkId)))) {
+                throw new ChatError('fork-failed', `The id ${forkId} was taken while the fork was made; try again`);
+            }
+            const cwd = info.cwd === place.folder ? undefined : info.cwd;
+            const landed = () => deps.recordFork({ projectId: place.projectId, nodeId: forkId, openedBy: payload.chatId, depth: deps.depthOf(payload.chatId) });
+            if (intoView) {
+                const view: ProjectChatView = {
+                    kind: 'chat',
+                    id: forkId,
+                    name: title,
+                    titleSource: 'user',
+                    node: { provider: info.provider, providerFixed: true, ...(cwd === undefined ? {} : { cwd }) }
+                };
+                return {
+                    content: { ...content, views: withView(content.views, view, originViewOf(content, place, payload.chatId)) },
+                    result: { info: forkInfo, nodeId: forkId, viewId: forkId, edgeId: null },
+                    landed
+                };
+            }
             const canvas = forkCanvas(content, place, payload);
             if (canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
                 throw new ChatError('canvas-full', `${canvas.name} already holds the ${MAX_CANVAS_NODES} nodes a canvas may hold`);
             }
-            if (content.views.some((view) => view.id === forkId || (isCanvasView(view) && view.nodes.some((node) => node.id === forkId)))) {
-                throw new ChatError('fork-failed', `The id ${forkId} was taken while the fork was made; try again`);
-            }
             const anchor = place.canvasId === null ? null : (canvas.nodes.find((node) => node.id === payload.chatId) ?? null);
             const rect = placeFree(canvas.nodes, NODE_SIZE.chat, anchor);
-            const node = agentNode({ id: forkId, chat: true, kind: info.provider, title, rect, cwd: info.cwd === place.folder ? undefined : info.cwd });
+            const node = agentNode({ id: forkId, chat: true, kind: info.provider, title, rect, cwd });
             const edge: ProjectEdge | null = anchor ? { id: newId('edge', content, [forkId]), from: anchor.id, to: forkId, label: 'context' } : null;
             return {
                 content: {
@@ -217,13 +234,24 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
                     )
                 },
                 result: { info: forkInfo, nodeId: forkId, viewId: canvas.id, edgeId: edge?.id ?? null },
-                landed: () => deps.recordFork({ projectId: place.projectId, nodeId: forkId, openedBy: payload.chatId, depth: deps.depthOf(payload.chatId) })
+                landed
             };
         })
         .catch(async (error: unknown) => {
             await undo();
             throw error;
         });
+};
+
+/* The view a fork that is a view is listed after: the original itself, or the canvas the original stands on. */
+const originViewOf = (content: ProjectContent, place: IndexedPlace, chatId: string): string => {
+    const id = place.canvasId ?? chatId;
+    const view = content.views.find((candidate) => candidate.id === id);
+    const stands = place.canvasId === null ? view?.kind === 'chat' : view !== undefined && isCanvasView(view) && view.nodes.some((node) => node.id === chatId);
+    if (!stands) {
+        throw new ChatError('chat-not-found', `${chatId} left the project while the fork was made`);
+    }
+    return id;
 };
 
 /* The canvas the fork lands on: the one the original stands on, else the one the payload names for a chat that is a view. */

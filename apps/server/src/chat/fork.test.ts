@@ -135,6 +135,38 @@ describe('forking a Claude chat', () => {
         expect([daemon.lineage.madeBy(nodeId), daemon.lineage.projectOf(nodeId)]).toEqual([null, projectId]);
     });
 
+    test('a chat view forks into a chat view listed right after it, with the items through the turn and its original to read', async () => {
+        const { turns } = await fourTurns();
+        const leadItems = daemon.chats.get('chat-lead')!.thread.list();
+        await store.mutate(projectId, (current) => ({
+            content: {
+                ...current,
+                views: [
+                    { ...(current.views[0] as ProjectCanvasView), nodes: [] },
+                    { kind: 'chat', id: 'chat-lead', name: 'Lexer', node: { provider: 'claude', providerFixed: true } },
+                    { kind: 'drawing', id: 'sketch', name: 'Sketch' }
+                ]
+            },
+            result: null
+        }));
+
+        const answer = await daemon.request('chat.fork', { chatId: 'chat-lead', turnId: turns[1]!.id });
+        expect(answer).toMatchObject({ ok: true, result: { edgeId: null } });
+        const { nodeId, viewId } = (answer as { result: { nodeId: string; viewId: string } }).result;
+        expect(viewId).toBe(nodeId);
+
+        const views = (await store.read(projectId)).views;
+        expect(views.map((view) => view.id)).toEqual(['main', 'chat-lead', nodeId, 'sketch']);
+        expect(views[2]).toMatchObject({ kind: 'chat', name: 'Lexer (fork)', node: { provider: 'claude', providerFixed: true } });
+        expect((views[0] as ProjectCanvasView).nodes).toEqual([]);
+
+        const record = (await new ChatStore(home).read(nodeId))!;
+        expect(record.info.forkOf).toMatchObject({ chatId: 'chat-lead', turnId: turns[1]!.id });
+        expect(record.items.slice(0, -1).map((item) => item.id)).toEqual(itemsThrough(leadItems, turns[1]!.id).map((item) => item.id));
+        expect(record.preambles).toEqual([expect.stringContaining('forked from view chat-lead ("Lexer") after turn 2 of 4')]);
+        expect(daemon.lineage.forkedFrom(nodeId)).toBe('chat-lead');
+    });
+
     test('the first message in the fork carries its note and the next one does not', async () => {
         const { turns } = await fourTurns();
         const answer = await daemon.request('chat.fork', { chatId: 'chat-lead', turnId: turns[3]!.id });
@@ -275,22 +307,39 @@ describe('forkChat', () => {
         expect(asked.codex).toEqual([{ turnId: 'codex-2' }, null, { turns: 1 }]);
     });
 
-    test('a chat that is a view of its own needs a canvas, and a refused CLI step writes nothing', async () => {
+    test('a node asked to fork into a view gets a view after its canvas, and a chat view still takes a named canvas', async () => {
         const { deps, asked } = stub({ info: info('claude'), items: [turn('turn-1', { lastUuid: 'u-1' })] });
-        await expect(
-            forkChat({ ...deps, locate: () => ({ projectId: 'p1', folder: '/work', canvasId: null }) }, { chatId: 'chat-lead', turnId: 'turn-1' })
-        ).rejects.toMatchObject({
-            code: 'not-on-a-canvas'
-        });
-        const landed = await forkChat(
-            { ...deps, locate: () => ({ projectId: 'p1', folder: '/work', canvasId: null }) },
+        let document: ProjectContent = { ...content(), views: [...content().views, { kind: 'drawing', id: 'sketch', name: 'Sketch' }] };
+        const onDocument: ChatForkDeps = {
+            ...deps,
+            read: async () => document,
+            mutate: async (_projectId, apply) => {
+                const mutation = await apply(document);
+                document = mutation.content ?? document;
+                await mutation.landed?.();
+                return mutation.result;
+            }
+        };
+        const asView = await forkChat(onDocument, { chatId: 'chat-lead', turnId: 'turn-1', asView: true });
+        expect(asView).toMatchObject({ viewId: asView.nodeId, edgeId: null });
+        expect(document.views.map((view) => view.id)).toEqual(['main', asView.nodeId, 'sketch']);
+        expect((document.views[0] as ProjectCanvasView).nodes).toHaveLength(1);
+        expect(asked.written[0]!.preambles[0]).toContain('forked from node chat-lead');
+
+        const onCanvas = await forkChat(
+            { ...onDocument, locate: (id) => ({ projectId: 'p1', folder: '/work', canvasId: id === 'chat-lead' ? null : 'main' }) },
             { chatId: 'chat-lead', turnId: 'turn-1', viewId: 'main' }
         );
-        expect(landed.edgeId).toBeNull();
+        expect(onCanvas).toMatchObject({ viewId: 'main', edgeId: null });
+        expect((document.views[0] as ProjectCanvasView).nodes.map((node) => node.id)).toContain(onCanvas.nodeId);
+    });
+
+    test('a refused CLI step writes nothing', async () => {
+        const { deps, asked } = stub({ info: info('claude'), items: [turn('turn-1', { lastUuid: 'u-1' })] });
         await expect(
             forkChat({ ...deps, forkClaude: () => Promise.reject(new Error('disk full')) }, { chatId: 'chat-lead', turnId: 'turn-1' })
         ).rejects.toMatchObject({ code: 'fork-failed', message: 'disk full' });
-        expect(asked.written).toHaveLength(1);
+        expect(asked.written).toHaveLength(0);
     });
 });
 

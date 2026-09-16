@@ -67,6 +67,7 @@ import { BUILD, COMPILED as compiled, VERSION } from './version.ts';
 import { registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
 import { chatForkDeps, forkChat } from './chat/fork.ts';
+import { withForkOrigin } from './context/fork-origin.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from './fs/file-route.ts';
 import { FolderWatcher } from './fs/watch.ts';
 import { registerBytesHandlers } from './handlers/bytes.ts';
@@ -173,7 +174,12 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     // A bearer token speaks for a terminal session or a chat, for reading context and for canvas verbs alike.
     const targetForToken = (token: string): string | null => manager.sessionIdForToken(token) ?? chats.chatIdForToken(token);
     const context: ContextStore = new ContextStore({
-        sources: (targetId) => projects.index.sourcesFor(targetId),
+        sources: (targetId) =>
+            withForkOrigin(targetId, projects.index.sourcesFor(targetId), {
+                forkedFrom: (id) => lineage.forkedFrom(id),
+                locate: (id) => projects.index.locate(id),
+                titleFor: (id) => projects.index.titleFor(id)
+            }),
         terminalText: (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null),
         chatItems: (chatId) => chats.get(chatId)?.thread.list() ?? null,
         subagentItems: (chatId, toolUseId) => chats.subagentItems(chatId, toolUseId),

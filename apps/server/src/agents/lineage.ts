@@ -157,6 +157,12 @@ export class AgentLineageStore {
         return entry === undefined || entry.relation === 'fork' ? null : entry.openedBy;
     }
 
+    /* The chat a fork was made from, or null for a node that is no fork. */
+    forkedFrom(nodeId: string): string | null {
+        const entry = this.opened.get(nodeId);
+        return entry?.relation === 'fork' ? entry.openedBy : null;
+    }
+
     /* Drops what this project wrote down for ids it no longer has: the node was deleted. */
     async prune(projectId: string, ids: ReadonlySet<string>): Promise<void> {
         for (const entry of [...this.opened.values()]) {
