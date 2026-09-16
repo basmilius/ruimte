@@ -13,6 +13,7 @@ struct ChatScreen: View {
     @State private var showingFiles = false
     @State private var showingClear = false
     @State private var subagentList: SubagentListRoute?
+    @State private var endingAgents: EndingAgents?
     @State private var pickerKind: String?
     @State private var photo: PhotosPickerItem?
     @State private var question: JSONValue?
@@ -169,6 +170,7 @@ struct ChatScreen: View {
                 if let machineSession { machineSession.releaseChat(model) } else { model.stop() }
             }
         }
+        .endingAgentsConfirmation($endingAgents)
         .alert("Clear this conversation?", isPresented: $showingClear) {
             Button("Cancel", role: .cancel) {}
             Button("Clear conversation", role: .destructive) {
@@ -374,6 +376,29 @@ struct ChatScreen: View {
                 .foregroundStyle(MobileStyle.text).frame(width: 32, height: 32)
                 .background(MobileStyle.inset, in: Circle()).frame(width: 44, height: 44)
         }.buttonStyle(.plain).accessibilityLabel("Stop turn")
+            // A touch has no Shift-click, so stopping the sub-agents as well is the long press.
+            .contextMenu {
+                Button("Stop turn", lucideIcon: "square") { Task { await model.perform("chat.cancel") } }
+                Button("Stop with sub-agents", lucideIcon: "square", role: .destructive) { stopWithSubagents() }
+            }
+            .accessibilityAction(named: "Stop with sub-agents") { stopWithSubagents() }
+    }
+
+    /// Stops the turn, ends every agent the chat opened and marks its CLI's own sub-agents stopped; asks first only
+    /// when that ends agents. An older machine ignores the flag and stops the turn alone.
+    private func stopWithSubagents() {
+        let model = model
+        Task {
+            let agents = await ChatSubagents.agentsEnded(with: [model.chatID], client: model.client)
+            let run = { _ = await model.perform("chat.cancel", ["subagents": .bool(true)]) }
+            if agents == 0 {
+                await run()
+            } else {
+                endingAgents = EndingAgents(
+                    title: "Stop the turn and its sub-agents?", message: ChatSubagents.stopsSubagentsWarning(agents),
+                    run: run)
+            }
+        }
     }
 
     private var modelMenu: some View {
