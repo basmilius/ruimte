@@ -165,12 +165,17 @@ describe('stepMessage', () => {
 });
 
 describe('stripLeft', () => {
-    test('a node keeps the strip at its edge', () => {
-        expect(stripLeft(1600, false)).toBe(4);
+    test('a node never gets a strip, however wide', () => {
+        expect(stripLeft(1600, false)).toBeNull();
     });
 
-    test('a wide view puts the strip beside the centered column, a narrow one at its edge', () => {
-        expect(stripLeft(1216, true)).toBe(204);
-        expect(stripLeft(700, true)).toBe(4);
+    test('a view puts the strip in the free space left of the column', () => {
+        expect(stripLeft(1216, true)).toBe(192);
+        expect(stripLeft(848, true)).toBe(8);
+    });
+
+    test('a view without room for the strip left of the column gets none', () => {
+        expect(stripLeft(847, true)).toBeNull();
+        expect(stripLeft(700, true)).toBeNull();
     });
 });

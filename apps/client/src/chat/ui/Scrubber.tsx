@@ -77,7 +77,6 @@ export const Scrubber = memo(function Scrubber({ ticks, activeIndex, onPick }: S
     const hoveredSlot = hovered === null ? null : slotOf(layout, hovered);
     const anchorY = hoveredSlot === null ? null : layout.slots[hoveredSlot]!.y;
 
-    // A node on a canvas is scaled, so the strip's box on screen is converted back to its own pixels.
     const anchor = useMemo(() => {
         const element = strip;
         if (anchorY === null || element === null) {
@@ -87,18 +86,12 @@ export const Scrubber = memo(function Scrubber({ ticks, activeIndex, onPick }: S
             contextElement: element,
             getBoundingClientRect: () => {
                 const rect = element.getBoundingClientRect();
-                const scale = element.offsetHeight > 0 ? rect.height / element.offsetHeight : 1;
-                return DOMRect.fromRect({ x: rect.left, y: rect.top + (anchorY + TICK_HEIGHT_PX / 2) * scale, width: rect.width, height: 0 });
+                return DOMRect.fromRect({ x: rect.left, y: rect.top + anchorY + TICK_HEIGHT_PX / 2, width: rect.width, height: 0 });
             }
         };
     }, [anchorY, strip]);
 
-    const pointAt = (e: ReactMouseEvent<HTMLDivElement>): number | null => {
-        const element = e.currentTarget;
-        const rect = element.getBoundingClientRect();
-        const scale = rect.height > 0 ? element.offsetHeight / rect.height : 1;
-        return messageAt(layout, (e.clientY - rect.top) * scale);
-    };
+    const pointAt = (e: ReactMouseEvent<HTMLDivElement>): number | null => messageAt(layout, e.clientY - e.currentTarget.getBoundingClientRect().top);
 
     const actions = hoveredTick === null ? [] : Object.values(CARD_ACTIONS).filter((action) => action.offers(hoveredTick));
 
@@ -141,7 +134,7 @@ export const Scrubber = memo(function Scrubber({ ticks, activeIndex, onPick }: S
                                     : open && index === hoveredSlot
                                       ? 'bg-text-muted'
                                       : slot.kind === 'wake'
-                                        ? 'bg-accent'
+                                        ? 'bg-text-faint/50'
                                         : 'bg-text-faint'
                             )}
                             style={{ top: slot.y, height: TICK_HEIGHT_PX, width: tickWidth(slot.kind, distance) }}

@@ -21,21 +21,19 @@ export interface ScrubberTick {
 /* With fewer messages than this the thread is short enough to scroll through, and the strip is noise. */
 export const SCRUBBER_MIN_TICKS = 3;
 
-/* Below this width a node needs every pixel for the thread itself. */
-export const SCRUBBER_MIN_WIDTH_PX = 420;
-
 export const TICK_HEIGHT_PX = 2;
 
 const PITCH_PX = 8;
 const MIN_PITCH_PX = 4;
 
-/* The thread's content column in a view of its own (`.chat-column-content`). */
+/* The thread's content column in a view of its own (`.chat-column-content`) and the scroller's padding around it (`px-4`). */
 const CONTENT_MAX_WIDTH_PX = 768;
-export const STRIP_WIDTH_PX = 24;
-/* The padding the thread takes on its left while the strip stands there, `pl-8` in the timeline. */
-const STRIP_GUTTER_PX = 32;
 const THREAD_PADDING_PX = 16;
-const STRIP_MARGIN_PX = 4;
+export const STRIP_WIDTH_PX = 24;
+/* Kept clear between the strip and the column, and between the strip and the view's edge. */
+const STRIP_GAP_PX = 8;
+/* The free space left of the column a view needs before the strip fits: 40 pixels, so a view of at least 848. */
+const SCRUBBER_MIN_ROOM_PX = STRIP_GAP_PX + STRIP_WIDTH_PX + STRIP_GAP_PX;
 
 const WIDTH_ACTIVE_PX = 16;
 const WIDTH_NEAR_PX = 11;
@@ -196,11 +194,18 @@ export const stepMessage = (starts: readonly number[], eligible: (index: number)
     return null;
 };
 
-/* Where the strip stands: at the thread's edge in a node, beside the centered column in a view of its own. */
-export const stripLeft = (width: number, column: boolean): number => {
+/*
+ * Where the strip stands in the free space left of a view's centered column, or null where it does
+ * not fit. A node on a canvas has no such space and no strip: the strip never takes width from the
+ * thread, so nothing shifts when it appears.
+ */
+export const stripLeft = (width: number, column: boolean): number | null => {
     if (!column) {
-        return STRIP_MARGIN_PX;
+        return null;
     }
-    const free = Math.floor((width - STRIP_GUTTER_PX - THREAD_PADDING_PX - CONTENT_MAX_WIDTH_PX) / 2);
-    return Math.max(STRIP_MARGIN_PX, STRIP_GUTTER_PX + free - STRIP_WIDTH_PX - STRIP_MARGIN_PX);
+    const room = THREAD_PADDING_PX + Math.floor((width - 2 * THREAD_PADDING_PX - CONTENT_MAX_WIDTH_PX) / 2);
+    if (room < SCRUBBER_MIN_ROOM_PX) {
+        return null;
+    }
+    return room - STRIP_GAP_PX - STRIP_WIDTH_PX;
 };

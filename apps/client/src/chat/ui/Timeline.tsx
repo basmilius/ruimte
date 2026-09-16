@@ -6,7 +6,7 @@ import type { ChatSubagentItem } from '@ruimte/contracts';
 import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
 import { crumbOf, openFromMain, useSubagentTrail } from '@/chat/subagent-view';
 import { registerMessageStepper, registerTimeline, setTimelineAtEnd } from '@/chat/timeline-scroll';
-import { SCRUBBER_MIN_TICKS, SCRUBBER_MIN_WIDTH_PX, STRIP_WIDTH_PX, messageInView, stepMessage, stripLeft, ticksOf } from '@/chat/logic/scrubber';
+import { SCRUBBER_MIN_TICKS, STRIP_WIDTH_PX, messageInView, stepMessage, stripLeft, ticksOf } from '@/chat/logic/scrubber';
 import { EMPTY_TARGET, readTimelineTarget, withCurrentText, type TimelineTarget } from '@/chat/logic/timeline-target';
 import { Scrubber } from '@/chat/ui/Scrubber';
 import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
@@ -66,7 +66,7 @@ export function Timeline({ chatId }: { chatId: string }) {
     const empty = rows.length === 0;
     const ticks = useMemo(() => ticksOf(rows), [rows]);
 
-    // The strip's room is the thread's own width, which a node on a canvas has before any zoom.
+    // The strip's room is the free space beside a view's column, which only the thread's own width tells.
     useEffect(() => {
         const element = frameRef.current;
         if (element === null || typeof ResizeObserver === 'undefined') {
@@ -122,7 +122,8 @@ export function Timeline({ chatId }: { chatId: string }) {
 
     // A sub-agent in the thread's place hides the thread, and the strip and the keyboard go with it.
     const onMainAgent = trail.length === 0;
-    const showsScrubber = onMainAgent && ticks.length >= SCRUBBER_MIN_TICKS && frame.width >= SCRUBBER_MIN_WIDTH_PX;
+    const scrubberLeft = stripLeft(frame.width, frame.column);
+    const showsScrubber = onMainAgent && ticks.length >= SCRUBBER_MIN_TICKS && scrubberLeft !== null;
 
     /*
      * Where each message starts, from the virtualizer's measurements (an estimate for a row it never
@@ -213,7 +214,7 @@ export function Timeline({ chatId }: { chatId: string }) {
                 <ContextMenu.Root>
                     <ContextMenu.Trigger
                         ref={scrollRef}
-                        className={clsx('chat-thread min-h-0 grow overflow-auto pt-4 pr-4', showsScrubber ? 'pl-8' : 'pl-4')}
+                        className="chat-thread min-h-0 grow overflow-auto px-4 pt-4"
                         onScroll={(e) => {
                             const el = e.currentTarget;
                             followRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < FOLLOW_THRESHOLD_PX + COMPOSER_CLEARANCE_PX;
@@ -262,10 +263,7 @@ export function Timeline({ chatId }: { chatId: string }) {
                     <TimelineMenuPopup target={target} scroller={scrollRef} />
                 </ContextMenu.Root>
                 {showsScrubber && (
-                    <div
-                        className="absolute top-4"
-                        style={{ left: stripLeft(frame.width, frame.column), width: STRIP_WIDTH_PX, bottom: COMPOSER_CLEARANCE_PX }}
-                    >
+                    <div className="absolute top-4" style={{ left: scrubberLeft, width: STRIP_WIDTH_PX, bottom: COMPOSER_CLEARANCE_PX }}>
                         <ErrorBoundary label="The message strip failed to render" resetKeys={[ticks.length]}>
                             <Scrubber ticks={ticks} activeIndex={activeIndex} onPick={pick} />
                         </ErrorBoundary>
