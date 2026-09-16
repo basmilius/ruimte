@@ -96,9 +96,7 @@ struct SidebarBrand: View {
         HStack(spacing: 10) {
             Image("RuimteLogo").renderingMode(.original)
                 .resizable().scaledToFit()
-                .padding(4)
-                .frame(width: 32, height: 32)
-                .background(.white, in: RoundedRectangle(cornerRadius: 8))
+                .frame(width: 42, height: 42)
             Text("Ruimte").font(.title3.weight(.semibold)).foregroundStyle(MobileStyle.text)
         }
         .padding(.leading, 8)
