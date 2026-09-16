@@ -13,6 +13,7 @@ struct ChatScreen: View {
     @State private var showingFiles = false
     @State private var showingClear = false
     @State private var subagentList: SubagentListRoute?
+    @State private var showingPlans = false
     @State private var endingAgents: EndingAgents?
     @State private var pickerKind: String?
     @State private var photo: PhotosPickerItem?
@@ -163,6 +164,11 @@ struct ChatScreen: View {
                         .accessibilityIdentifier("chat.subagents")
                 }
             }
+            if let plans = machineSession?.plans, let plan = plans.plans(for: model.chatID).first {
+                ToolbarItem(placement: .topBarTrailing) {
+                    PlanButton(plan: plan, unseen: plans.unseen.contains(model.chatID)) { showingPlans = true }
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Picker("Streaming", selection: $streamingMode) {
@@ -201,6 +207,11 @@ struct ChatScreen: View {
                 ProjectItemPage(workspace: workspace, item: item)
             } else {
                 ContentUnavailableView("This chat is no longer in the project", lucideIcon: "square-x")
+            }
+        }
+        .mobileSheet(isPresented: $showingPlans) {
+            if let plans = machineSession?.plans {
+                PlanSheet(store: plans, chatID: model.chatID, model: model)
             }
         }
         .navigationDestination(item: $subagentList) { _ in

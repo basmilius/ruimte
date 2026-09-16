@@ -54,6 +54,16 @@ tasks woke them, and a failed task or a wake the machine gave up on leaves an un
 Model and permission picks are remembered and sent to every connected machine for the chats it
 starts on its own. Older machines keep working: requests they do not know are ignored.
 
+A chat whose agent keeps a plan shows a Plan button with its progress, such as "Plan 6/11", beside
+Sub-agents. A dot marks a plan made since the chat was last opened, or a failed step; the phone never
+opens a plan on its own. The sheet lists a section per category, text blocks and steps, with sub-steps
+in disclosure groups that show "2/3". The step the agent works on turns only while its turn runs.
+In a steps plan the circle toggles open and done; in a test plan swipe for Passed, Failed or Skipped,
+and Failed asks for a note. Long-press a step for every state, Add note and Unlock. A step only the
+agent checks shows a lock and stays read-only until Unlock. A chat with several plans switches in
+the title menu, newest first. Changes go through `plan.apply`, and a refusal from the machine is shown.
+One `plan.list` per connection fills the buttons, and `plan.changed` and `plan.removed` keep them current.
+
 Long-press a message you sent, an answer or a turn's duration label for Fork from here. A sheet
 asks what the desktop dialog asks: the title, the CLI and model to continue with, a node beside the
 original or a view of its own (a chat view always forks into a view), and in a repository a git
