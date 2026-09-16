@@ -3,6 +3,7 @@ import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from '../fs/watc
 import { findSubagentsDir, readSubagentMetas, TranscriptProjection } from './claude-transcript.ts';
 import { listThreadItemsOnce, parseThreadItemsPage, projectCodexItems, type CodexProcessSpec, type ThreadItemsParams } from './codex-thread.ts';
 import { ChatError } from './errors.ts';
+import { readSubagentSettlement, type SubagentSettlement } from './subagent-settlement.ts';
 
 const DEFAULT_PAGE = 60;
 // How often an open panel asks a running Codex for the newest items of the thread it follows.
@@ -108,6 +109,22 @@ export class SubagentReader {
             cursor = page.history.cursor ?? undefined;
         } while (cursor !== undefined);
         return pages.flat();
+    }
+
+    /*
+     * What a Claude subagent's own transcript says about how it ended, for a row whose CLI is gone and
+     * so will never send the notification; null when there is no transcript or it does not show an end.
+     */
+    async claudeSettlement(chatId: string, toolUseId: string): Promise<SubagentSettlement | null> {
+        const chat = this.options.chat(chatId);
+        if (!chat || chat.info.provider !== 'claude') {
+            return null;
+        }
+        try {
+            return await readSubagentSettlement((await this.claudeFile(chat, toolUseId)).path);
+        } catch {
+            return null;
+        }
     }
 
     /* Keeps `clientId` told about this conversation until it lets go, closes its socket or the chat goes. */

@@ -2647,6 +2647,18 @@ may start), checkpoint restore and telemetry.
   tolerant regex: when the CLI rewords it the row shows a stray line and nothing breaks. Because a
   background agent outlives the turn that launched it, the end of a turn may not settle its row;
   only a process that is gone marks it failed.
+- The notification only comes from the CLI that launched the agent, so a row whose CLI is gone reads
+  the agent's own transcript instead (`chat/subagent-settlement.ts`). A row stood `running` for hours
+  after a `bun --watch` restart of the dev daemon: the CLI outlived the daemon long enough to finish
+  the agent and write its `task_notification` to nobody, and a load never touched subagent rows. The
+  rule is kept narrow: the last line that is a message is the assistant's, with `stop_reason:
+  end_turn` and no `tool_use`, the file ends on a newline, and its size and mtime are the same after
+  the read as before. Then the row is `done` with that line's time and text. Anything else (a tool
+  call out, a tool result not answered yet, a half-written line) leaves the row alone. It is asked on
+  a load (a row it leaves running is asked again when somebody opens it, since the CLI may still be
+  finishing), and after an exit, where the row the exit marked failed turns done when the transcript
+  shows the end. A Codex agent works inside its parent's app-server and Codex keeps no end marker in
+  its thread items, so a load settles a running Codex row as `failed`, as an exit already did.
 - `@pierre/diffs` marks itself side-effect free, so `import '@pierre/diffs/worker/worker.js'`
   in a worker entry is tree-shaken to nothing. The pool uses Vite's `?worker` import instead.
 - **Dev runs beside the installed app, never on top of it.** Both used to take port 4210,

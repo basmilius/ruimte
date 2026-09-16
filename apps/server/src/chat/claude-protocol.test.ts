@@ -195,6 +195,19 @@ describe('ClaudeProtocol', () => {
         expect(protocol.handle({ type: 'system', subtype: 'task_notification', task_id: 't', status: 'failed', summary: 'no luck' })).toEqual([
             { type: 'task.done', ref: null, summary: 'no luck', ok: false, usage: null, outputFile: null }
         ]);
+        // Claude Code 2.1.273 says `stopped` for a task that was killed, with its own id and nothing it wrote.
+        expect(
+            protocol.handle({
+                type: 'system',
+                subtype: 'task_notification',
+                task_id: 'a91114f36f4c6b0ef',
+                tool_use_id: 'toolu_01GNbHkKfS9B2cD6q6SRC9cQ',
+                status: 'stopped',
+                output_file: '',
+                summary: 'Merge-readiness review',
+                skip_transcript: false
+            })
+        ).toEqual([{ type: 'task.done', ref: 'toolu_01GNbHkKfS9B2cD6q6SRC9cQ', summary: 'Merge-readiness review', ok: false, usage: null, outputFile: null }]);
     });
 
     test('a permission request waits for an answer and its response carries the suggested rule', () => {

@@ -22,6 +22,7 @@ import type { SpawnChatProcess } from './chat-process.ts';
 import type { ChatTitleInput } from './chat-title.ts';
 import { ChatError } from './errors.ts';
 import { ThreadProjector } from './projector.ts';
+import type { SubagentSettlement } from './subagent-settlement.ts';
 import { ChatThread } from './thread.ts';
 
 interface ChatSessionOptions {
@@ -50,6 +51,8 @@ interface ChatSessionOptions {
     readTitle?(agentSessionId: string): Promise<string | null>;
     // A name asked of a one-shot CLI, for a CLI that names nothing itself; null when none came.
     nameThread?(input: ChatTitleInput): Promise<string | null>;
+    // How a subagent's own transcript says it ended, for a row whose CLI is gone; absent for a CLI that keeps none.
+    subagentSettlement?(toolUseId: string): Promise<SubagentSettlement | null>;
 }
 
 // Claude Code names a session about six seconds after its first prompt, and a first turn can run for minutes.
@@ -96,6 +99,8 @@ export class ChatSession {
     private naming = false;
     // Set while the daemon goes down: a CLI dying with it must not end the turn a restart takes up again.
     private frozen = false;
+    // Background subagents a load found running whose transcript did not show an end yet; no CLI here will report them.
+    private readonly orphans = new Set<string>();
 
     constructor(options: ChatSessionOptions) {
         this.options = options;
@@ -576,6 +581,33 @@ export class ChatSession {
         return backend?.running === true && backend.listThreadItems ? backend.listThreadItems(params) : null;
     }
 
+    /*
+     * The background subagents of the CLI's own that were running when the chat was stored. Whatever
+     * ran them went with the daemon, so no notification will come: a Claude row settles as done when
+     * its transcript shows the end, and stays running otherwise (a CLI can outlive the daemon for a
+     * moment and still finish); a Codex agent works inside its parent's app-server, so it is gone too.
+     */
+    async settleOrphanedSubagents(): Promise<void> {
+        const rows = this.runningBackgroundRows();
+        if (this.info.provider === 'codex') {
+            const now = Date.now();
+            this.settleRows(rows.map((row) => ({ ...row, status: 'failed', finishedAt: now })));
+            return;
+        }
+        for (const row of rows) {
+            this.orphans.add(row.toolUseId);
+        }
+        await this.settleFromTranscripts(rows);
+    }
+
+    /* Asks the transcript again for a row a load left running, when somebody looks at it. */
+    async recheckOrphan(toolUseId: string): Promise<void> {
+        const row = this.thread.find('subagent', (item) => item.toolUseId === toolUseId);
+        if (this.orphans.has(toolUseId) && row?.status === 'running') {
+            await this.settleFromTranscripts([row]);
+        }
+    }
+
     /* Writes down where a subagent's conversation was found, so the next question about it reads no folder. */
     noteSubagentNative(toolUseId: string, native: { agentId?: string; threadId?: string }): void {
         const item = this.thread.find('subagent', (candidate) => candidate.toolUseId === toolUseId);
@@ -805,7 +837,12 @@ export class ChatSession {
             this.staleResults = 0;
         }
         const openTurnId = this.thread.info.activeTurnId;
+        // Settled as failed by the exit below; the transcript may still show that they finished first.
+        const orphaned = event.type === 'exit' && this.info.provider === 'claude' ? this.runningBackgroundRows() : [];
         this.emit(this.projector.project(generation, event));
+        if (orphaned.length > 0) {
+            void this.settleFromTranscripts(orphaned.flatMap((row) => this.thread.get(row.id) ?? []).filter((item) => item.kind === 'subagent'));
+        }
         const activeTurnId = this.thread.info.activeTurnId;
         if (openTurnId === null && activeTurnId !== null) {
             // The CLI opened this turn itself; it takes a checkpoint like any other, so the card can
@@ -904,6 +941,44 @@ export class ChatSession {
                 this.backend?.setTitle?.(title);
             })
             .catch(() => undefined);
+    }
+
+    private runningBackgroundRows(): ChatSubagentItem[] {
+        return this.thread
+            .list()
+            .filter((item): item is ChatSubagentItem => item.kind === 'subagent' && item.status === 'running' && item.background && item.origin !== 'ruimte');
+    }
+
+    /* Done for every row whose transcript shows the end, unless something else settled the row while it was read. */
+    private async settleFromTranscripts(rows: ChatSubagentItem[]): Promise<void> {
+        const lookup = this.options.subagentSettlement;
+        if (!lookup || rows.length === 0) {
+            return;
+        }
+        const settled: ChatSubagentItem[] = [];
+        for (const row of rows) {
+            const settlement = await lookup(row.toolUseId);
+            const current = this.thread.get(row.id);
+            if (settlement === null || current?.kind !== 'subagent' || current.status !== row.status || current.finishedAt !== row.finishedAt) {
+                continue;
+            }
+            this.orphans.delete(row.toolUseId);
+            settled.push({
+                ...current,
+                status: 'done',
+                finishedAt: settlement.finishedAt ?? current.finishedAt ?? Date.now(),
+                result: settlement.report ?? current.result
+            });
+        }
+        this.settleRows(settled);
+    }
+
+    private settleRows(rows: ChatSubagentItem[]): void {
+        if (this.frozen || rows.length === 0) {
+            return;
+        }
+        this.emit(rows.map((row) => this.thread.upsert(row)));
+        this.options.persist();
     }
 
     private emit(events: ChatEvent[]): void {

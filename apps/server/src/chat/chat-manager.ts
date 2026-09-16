@@ -278,11 +278,13 @@ export class ChatManager {
             persist: () => this.persist(payload.chatId),
             persistSoon: () => this.persistSoon(payload.chatId),
             ...(kind === 'claude' && claudeTitles ? { readTitle: (agentSessionId: string) => claudeTitles.forSession(agentSessionId) } : {}),
-            ...(kind === 'codex' && nameChat ? { nameThread: (input: ChatTitleInput) => nameChat(kind, input) } : {})
+            ...(kind === 'codex' && nameChat ? { nameThread: (input: ChatTitleInput) => nameChat(kind, input) } : {}),
+            ...(kind === 'claude' ? { subagentSettlement: (toolUseId: string) => this.subagents.claudeSettlement(payload.chatId, toolUseId) } : {})
         });
         this.chats.set(session.id, session);
         if (stored) {
             session.settleStored(selection, resume);
+            await session.settleOrphanedSubagents();
         }
         for (const task of this.taskRows(payload.chatId)) {
             session.upsertTaskRow(task);
@@ -372,6 +374,7 @@ export class ChatManager {
             this.subagents.release(clientId, payload.chatId, payload.toolUseId);
         }
         const result = await this.subagents.read(payload.chatId, payload.toolUseId, payload.cursor, payload.limit);
+        await this.chats.get(payload.chatId)?.recheckOrphan(payload.toolUseId);
         if (payload.watch === true) {
             this.subagents.hold(clientId, payload.chatId, payload.toolUseId);
         }
