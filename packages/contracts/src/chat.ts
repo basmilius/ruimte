@@ -322,6 +322,11 @@ export const ChatCompactionItemSchema = z.object({
     preTokens: z.number().int().nonnegative().nullable()
 });
 
+/*
+ * Never a new member here, and never a new value in an enum a chat or a push already carries: the
+ * iPhone app validates `chat.attach` and `chat.history` whole, so one item it does not know rejects
+ * the entire conversation. Add optional fields instead.
+ */
 export const ChatItemSchema = z.discriminatedUnion('kind', [
     ChatUserItemSchema,
     ChatAssistantItemSchema,

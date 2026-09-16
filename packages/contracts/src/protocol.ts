@@ -13,7 +13,11 @@ export const ProtocolVersionSchema = z.number().int().nonnegative();
 /* The query parameter a socket carries its client's version in. */
 export const PROTOCOL_PARAM = 'protocol';
 
-/* The close code of a socket the daemon refused for its version; the reason carries the daemon's own. */
+/*
+ * The close code of a socket the daemon refused for its version; the reason carries the daemon's own.
+ * Upgraded and then closed, because a browser reads the code and reason of a close but never the
+ * status of a refused upgrade.
+ */
 export const PROTOCOL_REFUSED_CLOSE_CODE = 4406;
 
 /* Which side is behind. A daemon that says no version is from before versions existed, so it is the older one. */

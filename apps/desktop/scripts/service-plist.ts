@@ -7,8 +7,8 @@ import { launchAgentPlist } from '@ruimte/service';
 /*
  * Prints the LaunchAgent the packaged app writes, pointed at a daemon compiled in this checkout, so
  * launchd can be tried without packaging. The defaults stay clear of an installed Ruimte: another
- * label, port and home. Installing and removing it is by hand; see "The machine as a background
- * service" in docs/DECISIONS.md.
+ * label, port and home. Installing and removing it is by hand: `launchctl bootstrap gui/$(id -u)`
+ * with the file, and `launchctl bootout` of the label before deleting it.
  *
  *   bun scripts/service-plist.ts > ~/Library/LaunchAgents/app.ruimte.daemon.try.plist
  */

@@ -1,6 +1,6 @@
 # @ruimte/pulsar-broker
 
-The broker from remote access (see "The broker" in `docs/DECISIONS.md`): a Bun WebSocket
+The broker from remote access: a Bun WebSocket
 server that brings a client and a machine together without either reaching the other's address. A peer
 announces its ed25519 public key, signs the broker's nonce over `brokerHelloMessage` from
 `@ruimte/pulsar`, and is then held in a `Map` from key to socket. A signal for another key is written to

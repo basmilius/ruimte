@@ -31,6 +31,8 @@ const plistString = (value: string, indent: string): string => `${indent}<string
  * app quits: a service started while the app's own daemon still holds the port exits, and launchd
  * starts it again once the port is free. `ProcessType` is Interactive because launchd throttles the
  * CPU and I/O of a job that leaves it out, and an agent's turn is anything but background work.
+ * Not SMAppService: that takes a plist sealed inside the bundle, where the login shell's `PATH` and a
+ * log path in the home cannot be written.
  */
 export const launchAgentPlist = (spec: ServiceSpec): string => {
     const lines = [

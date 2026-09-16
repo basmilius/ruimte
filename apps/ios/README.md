@@ -164,6 +164,21 @@ the native token exchange described above. HTTPS pairing links are accepted from
 welcome screen and Projects page; redirects are refused to keep a token on its intended
 origin. This app contains no local daemon.
 
+## Constraints
+
+- One ed25519 key serves the account session and machine access. There is no separate trusted
+  shell process, so no second key as in the desktop app.
+- A visible iPad scene keeps held links alive when another scene backgrounds. Once every scene is
+  in the background, connections close. No background audio, VoIP or other workaround keeps them.
+- `NWPathMonitor` reports path changes only; it does not observe libwebrtc's own sockets.
+- Push alerts use AES-256-GCM because the Bun runtime offers no ChaCha20-Poly1305 through
+  `node:crypto`.
+- The app validates `chat.attach` and `chat.history` whole, so one chat item kind or enum value it
+  does not know rejects the conversation. The daemon wire only gains optional fields.
+- Simulator Keychain tests need local signing: unsigned, they fail with -34018 (missing entitlement).
+- CryptoKit's ed25519 signatures differ per call, so fixtures compare message bytes and verify
+  signatures rather than comparing them.
+
 ## Device checks for Bas
 
 Use a current installed Ruimte on the MacBook, already registered on your Pulsar account.

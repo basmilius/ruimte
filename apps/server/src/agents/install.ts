@@ -36,6 +36,8 @@ export const hookCommand = (kind: AgentKind, event?: string): string => {
     return `if [ -n "$RUIMTE_HOOK_URL" ]; then curl -sf -m ${maxTime} -X POST "$RUIMTE_HOOK_URL/${kind}" -H "Authorization: Bearer $RUIMTE_HOOK_TOKEN" -H "Content-Type: application/json" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0`;
 };
 
+// A `command` hook with curl, never Claude Code's `http` kind: that one cannot read the port from the
+// environment and reports an error whenever Ruimte is not running.
 interface HookEntry {
     type: 'command';
     command: string;

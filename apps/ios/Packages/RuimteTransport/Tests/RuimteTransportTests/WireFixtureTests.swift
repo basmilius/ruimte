@@ -32,6 +32,8 @@ final class WireFixtureTests: XCTestCase {
         }
     }
 
+    // Verifies rather than compares: CryptoKit's ed25519 signs the same message differently every time,
+    // so interoperability is identical message bytes plus signatures each side accepts.
     func testTypeScriptEd25519Signatures() throws {
         for vector in try fixtures()["crypto"]!.arrayValue! {
             let message = try string(vector, "message")

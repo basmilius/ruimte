@@ -51,6 +51,8 @@ final class PhaseZeroTests: XCTestCase {
         XCTAssertNil(account.login)
     }
 
+    // Needs local signing on the Simulator: unsigned, every Keychain call fails with -34018 (missing
+    // entitlement), which is not a malformed query.
     func testKeychainUsesDeviceOnlyAfterFirstUnlockWithoutSync() throws {
         let service = "app.ruimte.mobile.tests.\(UUID().uuidString)"
         let store = KeychainStore(service: service)

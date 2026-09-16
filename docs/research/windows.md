@@ -584,7 +584,7 @@ are in the shared `persist:ruimte` session, not in the element.
 An xterm instance and its WebGL context are the page's too (`terminal/registry.ts:10-11`,
 `terminal/webgl-budget.ts`). The daemon holds the real screen, so nothing is lost, and the budget is
 per renderer process, which means two windows each get their own ten contexts. That doubles the GPU
-cost of a person with two busy windows. It is correct behavior and worth a line in `docs/DECISIONS.md`.
+cost of a person with two busy windows. It is correct behavior and worth a comment beside `DEFAULT_WEBGL_CONTEXTS`.
 
 ## 5. How you open a window
 
@@ -1007,8 +1007,8 @@ window last recorded, whatever it was asked to open. That is the change in 5.2.
 pushes to `mainWindow`.
 
 **The WebGL budget.** `DEFAULT_WEBGL_CONTEXTS` is per page and each window is its own renderer
-process, so two windows get ten contexts each. Correct, and twice the GPU cost. A line in
-`docs/DECISIONS.md` under the existing note about the fixed budget.
+process, so two windows get ten contexts each. Correct, and twice the GPU cost. A comment
+beside `DEFAULT_WEBGL_CONTEXTS`.
 
 **The smoke test.** `runSmoke` (main.ts:554-594) drives `mainWindow` through `window.ruimte` test
 hooks. It keeps working if it is handed the first window of the set. Update the one reference.
@@ -1113,7 +1113,7 @@ the wire protocol, which nothing before it does.
   it work" and it is still only about refusing across machines.
 - **The daemon as a background service.** `before-quit` still kills the daemon
   (`apps/desktop/src/main.ts:653-656`). Windows do not change that, and the service is already on the
-  list in `docs/DECISIONS.md` under Next.
+  list in `docs/NEXT.md`.
 - **A second daemon per window.** A window is a page on one origin, and the origin's daemon is the
   one that served it. Which machine a window works on is the endpoint it opened a project from,
   exactly as today.
@@ -1154,7 +1154,7 @@ Changed, per phase:
   257, 370-381); `apps/server/src/daemon.ts` (343-355);
   `apps/client/src/project/project-client.ts`
 
-Docs to update at the end: `docs/DECISIONS.md` (the decisions section: a window is a page, one project
+Docs to update at the end: code comments where each decision lands (a window is a page, one project
 one workspace, closing a window is not closing a project, the WebGL budget per window),
 `README.md` and `apps/desktop`'s part of the root `CLAUDE.md` ("One window" is no longer true).
 

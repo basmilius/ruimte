@@ -202,6 +202,10 @@ export class ChatManager {
     private readonly observers = new Set<SessionSink>();
     readonly composerPreferences = new ComposerPreferences();
 
+    /*
+     * An observer only notes things (a task record, an outbox file) and never acts: a turn sent from
+     * inside an event runs in the first chat's call stack and is gone in a crash. The outbox executes.
+     */
     observe(sink: SessionSink): () => void {
         this.observers.add(sink);
         return () => {

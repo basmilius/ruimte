@@ -2,8 +2,7 @@
 
 The Cloudflare Worker behind `https://pulsar.ruimte.app`. It knows which machines belong to an account
 and signs access statements a daemon believes because the public half of the statement key is pinned
-in `packages/pulsar/src/statement-key.ts`. The wire shapes live in `packages/pulsar`; the decisions
-are under "The address book" in `docs/DECISIONS.md`.
+in `packages/pulsar/src/statement-key.ts`. The wire shapes live in `packages/pulsar`.
 
 - Worker `ruimte-pulsar`, account `5e565cf9fa55b0eae1f8131903da2ca9`, also on `https://ruimte-pulsar.bas.workers.dev`
 - D1 database `ruimte-pulsar`, migrations in `migrations/`

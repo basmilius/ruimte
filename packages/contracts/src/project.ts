@@ -13,7 +13,8 @@ export type NodeKind = z.infer<typeof NodeKindSchema>;
  * What a node or a view of a kind this version does not know is called in memory. A newer Ruimte
  * wrote it, so it is carried along and written back exactly as it came: the entry as it was read
  * rides in `raw`, and only the file holds it in that shape again (`storedContentOf`). The name is
- * reserved: no real kind may ever be called this.
+ * reserved: no real kind may ever be called this. A real discriminant rather than `kind` as a branded
+ * string, which stops TypeScript from narrowing the view union on `kind` everywhere.
  */
 export const UNKNOWN_KIND = 'unknown';
 

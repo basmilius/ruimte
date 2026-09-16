@@ -1,6 +1,10 @@
 import type { ContextSource } from '@ruimte/contracts';
 
-/* Said once to every agent, linked or not, so it knows the verbs exist before anyone links a thing. */
+/*
+ * Said once to every agent, linked or not, so it knows the verbs exist before anyone links a thing.
+ * Never a skill file or instruction block in anyone's `$HOME`: a copy per CLI and per SSH host goes
+ * stale unnoticed, while this sentence travels with the daemon and `help` renders from the registry.
+ */
 export const VERBS_NOTE =
     'Ruimte: `ruimte-context` reads context linked to you and places nodes on the canvas; `ruimte-context help` lists what it does and `ruimte-context help <verb>` details one.';
 

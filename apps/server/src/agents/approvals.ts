@@ -12,6 +12,8 @@ import type { ApprovalChoice, ApprovalRequest } from '@ruimte/contracts';
 export const APPROVAL_HOLD_MS = 110_000;
 
 // What each answer becomes on the wire back to the CLI; `null` is the daemon saying nothing at all.
+// `hookSpecificOutput.decision` is this object, not the string the published docs show: the CLI rejects a string.
+// `PreToolUse` is the hook with a string decision, and its `defer` is print-mode only, so it cannot hold a request.
 export type ApprovalDecision = { behavior: 'allow'; updatedPermissions?: unknown[] } | { behavior: 'deny'; message: string };
 
 interface PermissionAsk {

@@ -67,6 +67,7 @@ export const shortcut = (text: string): Shortcut => {
     return result;
 };
 
+// Letters and digits match on `code`: with Shift held `key` says `!` for 1, and Option's dead keys change it on macOS.
 const matchesKey = (key: string, event: KeyLike): boolean => {
     if (/^[A-Z]$/.test(key)) {
         return event.code === `Key${key}`;

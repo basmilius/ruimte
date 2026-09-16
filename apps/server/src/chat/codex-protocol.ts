@@ -530,7 +530,10 @@ export class CodexProtocol {
     }
 }
 
-/* The decision the app-server takes for one of ours; "always" becomes its own policy amendment when it offered one. */
+/*
+ * The decision the app-server takes for one of ours; "always" becomes its own policy amendment when it offered one.
+ * `decline` is accepted even when `availableDecisions` lists only accept, the amendment and cancel.
+ */
 const codexDecision = (decision: ApprovalDecision, pending: Extract<Pending, { type: 'approval' }>): unknown => {
     if (decision === 'deny') {
         return 'decline';

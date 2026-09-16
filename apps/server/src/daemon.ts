@@ -729,6 +729,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     // Hooks and context always go over loopback, whatever interface the socket listens on.
     manager.hookUrl = `http://127.0.0.1:${server.port}${HOOKS_PATH}`;
     manager.contextUrl = `http://127.0.0.1:${server.port}${CONTEXT_PATH}`;
+    // Only once `hookUrl` is set: a terminal the worker starts before that runs without hooks for good.
     outboxWorker.start();
     endChildren.start();
     // Beside the daemon answering: a turn a restart interrupted is taken up again without waiting for a client.

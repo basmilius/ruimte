@@ -1,4 +1,4 @@
-<!-- Research note, written 2026-09-09 by a research agent on request. Not a decision; see docs/DECISIONS.md for what is planned. -->
+<!-- Research note, written 2026-09-09 by a research agent on request. Not a decision; see docs/NEXT.md for what is planned. -->
 
 # Live browserpagina in een browser-node zonder `<webview>`
 

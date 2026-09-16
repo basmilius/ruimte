@@ -319,6 +319,7 @@ export class ClaudeProtocol {
     /*
      * `tool_progress` carries how long the call has run (once per 30 s for a Bash under the CLI's
      * remote gate, or a heartbeat for a slow MCP tool); the start is kept so the client can count on.
+     * That gate is `CLAUDE_CODE_REMOTE` or `CLAUDE_CODE_CONTAINER_ID`, never set here: both change other behavior.
      */
     private handleToolProgress(frame: Frame, events: BackendEvent[]): void {
         const elapsed = frame.elapsed_time_seconds;
