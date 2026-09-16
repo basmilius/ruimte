@@ -293,6 +293,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         collection.accessibilityIdentifier = "chat.timeline"
         collection.delegate = self
         collection.viewportChanged = { [weak self] in self?.reportMessagesBelow() }
+        answerVisibleEntries()
         let tap = UITapGestureRecognizer(target: self, action: #selector(dismissComposerKeyboard))
         tap.cancelsTouchesInView = false
         tap.delegate = self
@@ -361,6 +362,23 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         requestedItem = nil
         lastRevision = -1
         items = [:]
+        answerVisibleEntries()
+    }
+
+    private func answerVisibleEntries() {
+        presentation.visibleEntryIDs = { [weak self] in
+            guard let self, self.collection != nil else { return [] }
+            let top = self.collection.contentOffset.y + self.collection.adjustedContentInset.top
+            let bottom =
+                self.collection.contentOffset.y + self.collection.bounds.height
+                - self.collection.adjustedContentInset.bottom
+            return self.collection.indexPathsForVisibleItems.sorted().compactMap { index in
+                guard let frame = self.collection.layoutAttributesForItem(at: index)?.frame,
+                    frame.maxY > top, frame.minY < bottom
+                else { return nil }
+                return self.source.itemIdentifier(for: index)
+            }
+        }
     }
 
     func setViewportInsets(top: CGFloat, bottom: CGFloat) {

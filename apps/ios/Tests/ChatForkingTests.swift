@@ -129,6 +129,31 @@ final class ChatForkingTests: XCTestCase {
         XCTAssertFalse(ChatForking.isUnknownRequest(MachineClientError.server(code: "chat-busy", message: "Busy")))
     }
 
+    @MainActor func testMessageIndexListsPersonMessagesAndWakeTurns() {
+        let presentation = ChatPresentation()
+        presentation.replace(
+            [
+                turn("t1", state: "done"), user("u1", turn: "t1", text: "Hello"),
+                turn("t2", state: "done").setting("origin", .string("agent")).setting(
+                    "taskIds", .array([.string("task")])),
+                turn("t3", state: "done").setting("origin", .string("agent")),
+                turn("t4", state: "done"),
+                user("u4", turn: "t4", text: "").setting("attachments", .array([.object(["name": .string("a.png")])])),
+            ], info: info)
+        let marks = ChatForking.marks(entries: presentation.entries)
+        XCTAssertEqual(marks.map(\.id), ["u1", "start-t2", "u4"])
+        XCTAssertEqual(marks.map(\.kind), [.person, .wake, .person])
+        XCTAssertEqual(marks.map(\.turnID), ["t1", "t2", "t4"])
+        XCTAssertEqual(marks.last?.text, "a.png")
+        XCTAssertEqual(marks[1].text, "Woken by a task")
+
+        let request = presentation.scrollRequest
+        presentation.reveal(entryID: "u1")
+        XCTAssertEqual(presentation.requestedItemID, "u1")
+        XCTAssertEqual(presentation.scrollRequest, request + 1)
+        XCTAssertNil(presentation.forkRefusal(turnID: "t1"))
+    }
+
     @MainActor func testChatModelMarksTurnsWithTheForksItFinds() async {
         let machine = ForkListMachine()
         let model = ChatModel(client: machine, chatID: "chat")

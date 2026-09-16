@@ -1,6 +1,6 @@
 import SwiftUI
 
-private struct MobileSheetSurface: ViewModifier {
+struct MobileSheetSurface: ViewModifier {
     func body(content: Content) -> some View {
         content
             .modifier(MobilePageSurface())

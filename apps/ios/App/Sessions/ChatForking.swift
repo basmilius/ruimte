@@ -27,6 +27,18 @@ struct ChatForkPoint: Equatable {
     }
 }
 
+/// A message the person sent, or a turn the machine opened with the results of tasks: the places the message
+/// index jumps to.
+struct ChatMessageMark: Identifiable, Equatable {
+    enum Kind: Equatable { case person, wake }
+    /// The timeline entry the index scrolls to.
+    let id: String
+    let kind: Kind
+    let text: String
+    let createdAt: Double
+    let turnID: String?
+}
+
 /// The fork rules of the desktop client, kept apart from the views so they can be tested.
 enum ChatForking {
     /// The CLIs whose conversation a machine can fork, and go on with in a fork.
@@ -132,6 +144,28 @@ enum ChatForking {
     }
 
     static func forkedLabel(_ count: Int) -> String { count == 1 ? "Forked" : "Forked \(count)x" }
+
+    /// The places the message index lists, in thread order.
+    @MainActor static func marks(entries: [ChatTimelineEntry]) -> [ChatMessageMark] {
+        entries.compactMap { entry in
+            guard let value = entry.items.first?.value else { return nil }
+            if entry.kind == .message && value.text("kind") == "user" {
+                // A message of only attachments still has a place; its names stand in for the text.
+                let text =
+                    value.text("text").isEmpty
+                    ? value.list("attachments").map { $0.text("name") }.joined(separator: ", ") : value.text("text")
+                return ChatMessageMark(
+                    id: entry.id, kind: .person, text: text, createdAt: value.number("createdAt"),
+                    turnID: value["turnId"]?.stringValue)
+            }
+            if entry.kind == .turnStart && !value.list("taskIds").isEmpty {
+                return ChatMessageMark(
+                    id: entry.id, kind: .wake, text: ChatPresentation.agentTurnLabel(value),
+                    createdAt: value.number("createdAt"), turnID: value.stableID)
+            }
+            return nil
+        }
+    }
 
     /// A note that came as a summary, or any note of more than one line, shows its first line and folds the rest.
     static func noteParts(_ text: String) -> (head: String, rest: String) {

@@ -52,6 +52,8 @@ final class ChatPresentation {
     /// How many forks this device knows of per turn, for the mark on the turn.
     private(set) var forkCounts: [String: Int] = [:]
     var places: ChatPlaces?
+    /// The timeline entries on screen, answered by the timeline while it is there.
+    @ObservationIgnored var visibleEntryIDs: () -> [String] = { [] }
     private(set) var scrollRequest = 0
     @ObservationIgnored private var activeID: String?
     @ObservationIgnored private var historyBoundaries = Set<String>()
@@ -158,6 +160,12 @@ final class ChatPresentation {
 
     func forkRefusal(turnID: String) -> String? {
         ChatForking.refusal(info: info, turn: records[turnID]?.value)
+    }
+
+    /// Scrolls the timeline to an entry, as the message index asks.
+    func reveal(entryID: String) {
+        requestedItemID = entryID
+        scrollRequest += 1
     }
 
     func toggleTurn(_ id: String) {

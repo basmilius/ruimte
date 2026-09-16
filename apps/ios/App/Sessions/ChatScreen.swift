@@ -26,6 +26,10 @@ struct ChatScreen: View {
     @State private var messagesBelow = false
     @State private var scrollToLatest = 0
     @State private var viewportWidth: CGFloat = 0
+    @State private var showingIndex = false
+    @State private var indexOnScreen: Set<String> = []
+    /// A fork asked for from the message index, shown once the index has gone.
+    @State private var forkAfterIndex: String?
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.colorScheme) private var colorScheme
@@ -131,6 +135,28 @@ struct ChatScreen: View {
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityAction(.escape) { composerFocused = false }
         .toolbar {
+            if messageMarks.count >= 3 {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Messages", lucideIcon: "list") {
+                        indexOnScreen = Set(model.presentation.visibleEntryIDs())
+                        showingIndex = true
+                    }
+                    .accessibilityIdentifier("chat.messages")
+                    .popover(isPresented: $showingIndex) {
+                        ChatMessageIndex(
+                            marks: messageMarks, onScreen: indexOnScreen, olderAvailable: model.history.cursor != nil,
+                            loadingOlder: model.loadingHistory, presentation: model.presentation,
+                            loadOlder: { Task { await model.loadOlder() } },
+                            jump: { model.presentation.reveal(entryID: $0) },
+                            fork: { turnID in
+                                forkAfterIndex = turnID
+                                showingIndex = false
+                            }
+                        )
+                        .modifier(MobileSheetSurface())
+                    }
+                }
+            }
             if hasSubagents {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Sub-agents", lucideIcon: "bot") { subagentList = SubagentListRoute(chatID: model.chatID) }
@@ -151,6 +177,11 @@ struct ChatScreen: View {
                 .accessibilityLabel("Conversation actions")
                 .disabled(!isPrepared)
             }
+        }
+        .onChange(of: showingIndex) { _, showing in
+            guard !showing, let turnID = forkAfterIndex else { return }
+            forkAfterIndex = nil
+            model.presentation.forkRequest = ChatForkRequest(turnID: turnID)
         }
         .mobileSheet(
             item: Binding(
@@ -267,6 +298,8 @@ struct ChatScreen: View {
                 arrival: { await workspace.arrival(of: $0) })
         }
     }
+
+    private var messageMarks: [ChatMessageMark] { ChatForking.marks(entries: model.presentation.entries) }
 
     private var forkOf: String? { model.info["forkOf"]?["chatId"]?.stringValue }
     private var originalTitle: String? { forkOf.flatMap { model.presentation.places?.title($0) } }
