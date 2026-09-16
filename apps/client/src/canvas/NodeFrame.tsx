@@ -24,6 +24,8 @@ import { UnseenMark } from '@/attention/UnseenMark';
 import { TaskMark } from '@/tasks/TaskMark';
 import { useChildTask } from '@/state/tasks';
 import { useUnseen } from '@/state/attention';
+import { deleteSelectionAsking } from '@/canvas/delete-selection';
+import { useOptionalConnection } from '@/transport/context';
 import { isNodeFocused, useCanvas, useCanvasStore, type AgentStatus } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
 import { ProcessAlertMark, useNodeAlerts } from '@/processes/ProcessAlertMark';
@@ -163,6 +165,7 @@ function NodeBodyBoundary({ kind, children }: { kind: CanvasNodeKind; children: 
 
 export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const canvasStore = useCanvasStore();
+    const transport = useOptionalConnection()?.transport ?? null;
     const node = useCanvas((s) => s.nodes[id]);
     const selected = useCanvas((s) => s.selection.includes(id));
     const focused = useCanvas((s) => isNodeFocused(s.mode, id));
@@ -198,9 +201,8 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const isUnknown = node.kind === 'unknown';
     const collapsed = isGroup && node.collapsed === true;
     const remove = (): void => {
-        const s = canvasStore.getState();
-        s.select([id]);
-        s.deleteSelected();
+        canvasStore.getState().select([id]);
+        void deleteSelectionAsking(canvasStore, transport);
     };
     return (
         <ContextMenu.Root>

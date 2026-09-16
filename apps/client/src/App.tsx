@@ -6,6 +6,7 @@ import { useAppShortcuts } from '@/shell/app-shortcuts';
 import { CommandPalette } from '@/shell/CommandPalette';
 import { LayoutDialog } from '@/shell/LayoutDialog';
 import { ViewDialogs } from '@/shell/ViewDialogs';
+import { EndChildrenDialog } from '@/agents/EndChildrenDialog';
 import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { ViewHost } from '@/shell/ViewHost';
 import { WorktreeDialog } from '@/shell/WorktreeDialog';
@@ -72,6 +73,7 @@ function Workspace() {
             {/* About the project that is open, so they belong to its workspace and not to the shell. */}
             <LayoutDialog />
             <ViewDialogs />
+            <EndChildrenDialog />
             <WorktreeDialog />
         </WorkspaceProvider>
     );

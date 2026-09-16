@@ -1,4 +1,15 @@
-import { isCanvasView, isDiagramView, isDrawingView, isFileView, isOpenableView, isSessionView, MAIN_VIEW_NAME, type ProjectView } from '@ruimte/contracts';
+import {
+    isCanvasView,
+    isDiagramView,
+    isDrawingView,
+    isFileView,
+    isOpenableView,
+    isSessionView,
+    MAIN_VIEW_NAME,
+    sessionNodesOfView,
+    type ProjectView
+} from '@ruimte/contracts';
+import { askBeforeEndingAgents } from '@/agents/end-children';
 import { toWorld, type Point } from '@/canvas/math';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
 import { viewIdsIn, type SplitDirection } from '@/shell/split';
@@ -9,6 +20,7 @@ import { useDocument, viewOfNode, type DocumentState } from '@/state/document';
 import { useProject } from '@/state/project';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
 import { useUi } from '@/state/ui';
+import { transportFor } from '@/transport';
 
 /* Puts a view on screen. A node that lives on another canvas is reached by switching there first. */
 export const showView = (id: string): void => {
@@ -250,12 +262,29 @@ export const putOnCanvas = (viewId: string): boolean => {
     return target ? useDocument.getState().putOnCanvas(viewId, target.id) : false;
 };
 
-/* Deleting takes a question only when something in the view is still running, like a node does. */
+/*
+ * Deleting takes a question when something in the view is still running, and a question of its own
+ * when its chats and terminals opened agents that would end with it.
+ */
 export const askDeleteView = (id: string): void => {
     const view = useDocument.getState().views.find((each) => each.id === id);
     if (!view) {
         return;
     }
+    // The exported copy, so a canvas on screen is counted with what its editor holds now.
+    const exported =
+        useDocument
+            .getState()
+            .exportViews()
+            .find((each) => each.id === id) ?? view;
+    const sessions = sessionNodesOfView(exported).map((node) => node.id);
+    void askBeforeEndingAgents(transportFor(currentEndpointId()), sessions, ('name' in view ? view.name : undefined) ?? 'this view', () =>
+        deleteViewAsking(view)
+    );
+};
+
+const deleteViewAsking = (view: ProjectView): void => {
+    const id = view.id;
     if (viewIsBusy(view)) {
         useUi.getState().setViewDialog({ kind: 'delete', viewId: id });
         return;

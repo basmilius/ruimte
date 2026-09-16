@@ -5,7 +5,9 @@ import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, VIEW_SHORTCUTS }
 import { isApplePlatform } from '@/desktop/bridge';
 import { addNodeAtCenter } from '@/shell/commands';
 import { newCanvasView, showView, splitFocusedCell, stepView, viewAtIndex } from '@/project/views';
+import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { focusedCanvas } from '@/state/canvas';
+import { transportFor } from '@/transport';
 import { focusedDiagram } from '@/state/diagram';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
@@ -215,7 +217,8 @@ export const useCanvasShortcuts = (stores: WorkspaceStores | null): void => {
                 s.select([...s.order, ...Object.keys(s.texts)]);
             } else if ((e.key === 'Delete' || e.key === 'Backspace') && s.selection.length > 0) {
                 e.preventDefault();
-                s.deleteSelected();
+                const endpointId = currentWorkspaceEndpointId();
+                void deleteSelectionAsking(focusedCanvas(), endpointId === null ? null : transportFor(endpointId));
             } else if (e.key === '=' || e.key === '+') {
                 s.zoomTo(Math.round(s.camera.zoom * 100 + 10) / 100);
             } else if (e.key === '-') {

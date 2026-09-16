@@ -27,6 +27,7 @@ import { DEFAULT_NOTE_COLOR, NOTE_COLORS } from '@/canvas/note-colors';
 import { EMPTY_DRAFT, writeDraft } from '@/chat/drafts';
 import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
+import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { useChatRow } from '@/state/chats';
 import { useProject } from '@/state/project';
@@ -59,9 +60,8 @@ export function NodeMenuPopup({ id, onRename }: { id: string; onRename(): void }
     }
 
     const remove = (): void => {
-        const s = canvasStore.getState();
-        s.select([id]);
-        s.deleteSelected();
+        canvasStore.getState().select([id]);
+        void deleteSelectionAsking(canvasStore, transport);
     };
     if (node.kind === 'unknown') {
         return <UnknownNodeMenuPopup id={id} onDelete={remove} />;
