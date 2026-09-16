@@ -114,6 +114,13 @@ and the app asks again. The draft itself stays out of the app, but not out of th
 whose release is still a draft already appears in `releases.atom`, with the last commit message as
 its content.
 
+Try the daemon in the draft before publishing, since `bun dev` and the tests never run the compiled
+bundle. Download the arm64 zip, start `Contents/Resources/bin/ruimte` with a temporary `RUIMTE_HOME`
+and another port, and wait for `/health` to answer. Then open a socket with
+`?protocol=N&token=<local.key>` and check that `endpoint.info` carries `protocol`. v0.0.12 shipped a
+daemon that crashed on start (tsyringe loaded before reflect-metadata in the bundle), and v0.0.12 and
+v0.0.13 left `protocol` out of `endpoint.info`, so every client refused every machine as older.
+
 ## The secrets in CI
 
 `.github/workflows/release.yml` notarizes when `APPLE_API_KEY_P8` is set, and only signs when it is

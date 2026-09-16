@@ -65,7 +65,32 @@ larger ones becomes a GitHub issue when it starts.
     layout is not. `docs/research/windows.md` is the design: a project opens in a window of its own
     rather than in a split pane.
 15. **Smaller ones**: a color or an arrowhead per plain line; a note's title as the first heading
-    of its body.
+    of its body; "Clear" in a chat node's menu (`chat.clear` exists, only the composer offers it);
+    what happens to a chat's background subagents when its backend goes away on a clear; lazy
+    loading the composer's CodeMirror (~98 kB gzip), only if a measurement shows startup gains.
+16. **Remote access leftovers**: a production broker on a server of its own, after which the test
+    droplet goes; TURN for phones behind carrier-grade NAT, measured on real networks; a window of
+    accepted protocol versions (`docs/reports/2026-09-15-protocol-versions.html`, not decided);
+    the desktop app overwriting a service `ruimte service install` set up; an expired login on
+    station showing an error on the welcome screen; a cold start still flashing "No project is
+    open"; the daemon installing hooks before its port check.
+17. **Devices** (`docs/reports/2026-09-13-devices.html`, nothing built): the iOS Simulator, and
+    Android right after, as a panel, a view and a node. Decided: no UDID in `project.json` (the
+    shared file names platform, device type and runtime, the binding lives per machine in the local
+    file with matching); no keyboard input in the first version; installing in two steps (device
+    support, then agent tools), both after consent; order spike iOS and Android, MVP iOS, MVP
+    Android, node, agents, apps, with a platform field in contracts from the start. First step is
+    the spike of the simulator addon under Bun.
+18. **Plugins** (`docs/reports/2026-09-14-plugins.html`, nothing built, decisions pending): internal
+    registries first, then a compatibility release in contracts, then declarative plugins from
+    `$RUIMTE_HOME/plugins`, isolated code last. The report's alternative, plugins that only feed
+    context to agents, is still to be weighed. Unproven: whether a compiled binary can `import()`
+    plugin code; ad-hoc compiled binaries get SIGKILL on this Mac, so test it in the signed app and
+    never as an agent experiment (one hung for four hours).
+19. **Several accounts per CLI** (`docs/reports/2026-09-10-accounts.html`, not decided): one config
+    folder per login passed as `CLAUDE_CONFIG_DIR` or `CODEX_HOME` at spawn, the CLI logs in
+    itself and Ruimte never writes credentials. The account choice belongs in the local file, not
+    in `project.json`.
 
 Known gaps to keep in mind: the WebGL budget is a fixed 10 contexts, not a setting and not
 measured against what a given machine really keeps alive; the 30-node performance target is
