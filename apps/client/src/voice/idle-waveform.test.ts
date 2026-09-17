@@ -7,7 +7,7 @@ describe('idle voice waveform', () => {
             const bands = idleVoiceBands(at, 32);
             expect(bands.input).toHaveLength(32);
             expect(bands.output).toHaveLength(32);
-            expect([...bands.input, ...bands.output].every((value) => Number.isFinite(value) && value >= 0.04 && value <= 0.4)).toBe(true);
+            expect([...bands.input, ...bands.output].every((value) => Number.isFinite(value) && value >= 0.04 && value <= 0.58)).toBe(true);
         }
     });
 

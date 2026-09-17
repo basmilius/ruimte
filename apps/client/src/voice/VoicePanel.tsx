@@ -102,7 +102,7 @@ function VoiceWaveform({ elapsed, phase }: { elapsed: number; phase: VoicePhase 
                 role="img"
                 aria-label="Your voice above the line and Voice below it"
             >
-                <span className="absolute inset-x-0 top-1/2 h-px bg-border" />
+                <span className="absolute inset-x-0 top-1/2 z-10 h-px bg-surface" />
                 {displayedInput.map((input, index) => {
                     const output = displayedOutput[index] ?? 0;
                     return (

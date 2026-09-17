@@ -8,7 +8,8 @@ const PATTERN_SECONDS = 8;
 const TRANSITION_SECONDS = 2.4;
 const PATTERN_COUNT = 4;
 
-const clamp = (value: number): number => Math.max(0.04, Math.min(0.4, value));
+const clamp = (value: number): number => Math.max(0.04, Math.min(0.58, value));
+const amplify = (value: number): number => 0.04 + (value - 0.04) * 1.45;
 const wave = (turns: number): number => 0.5 + 0.5 * Math.sin(turns * TAU);
 const pulse = (distance: number, width: number): number => Math.exp(-(distance * distance) / width);
 const smooth = (value: number): number => value * value * (3 - 2 * value);
@@ -47,8 +48,8 @@ export const idleVoiceBands = (atMs: number, count: number): IdleVoiceBands => {
         const x = count <= 1 ? 0.5 : index / (count - 1);
         const from = pattern(current, x, seconds);
         const to = pattern((current + 1) % PATTERN_COUNT, x, seconds);
-        input.push(clamp(mix(from[0], to[0], transition)));
-        output.push(clamp(mix(from[1], to[1], transition)));
+        input.push(clamp(amplify(mix(from[0], to[0], transition))));
+        output.push(clamp(amplify(mix(from[1], to[1], transition))));
     }
     return { input, output };
 };
