@@ -1,6 +1,7 @@
 import { isCanvasView, isDiagramView, isDrawingView, isSessionView, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
 import { addAgentNode, addAgentView, type AgentTarget } from '@/agents/nodes';
 import { toWorld } from '@/canvas/math';
+import { nearestFreeNodeRect } from '@/canvas/place-node';
 import {
     askDeleteView,
     askOpenAsView,
@@ -16,7 +17,7 @@ import {
 } from '@/project/views';
 import { copyDiagramJson, copyDiagramPng, copyDiagramSvg, openDiagramJson, saveDiagramPng, saveDiagramSvg } from '@/diagram/export';
 import { copyDrawingPng, copyDrawingSvg, saveDrawingPng, saveDrawingSvg } from '@/drawing/export';
-import { focusedCanvas, type AddNodeOptions, type CanvasState, type NodeKind } from '@/state/canvas';
+import { focusedCanvas, NODE_SIZE, type AddNodeOptions, type CanvasState, type NodeKind } from '@/state/canvas';
 import { focusedDiagram } from '@/state/diagram';
 import { focusedDrawing } from '@/state/drawing';
 import { activeViewOf, useDocument } from '@/state/document';
@@ -57,7 +58,11 @@ const centerWorld = () => {
     return toWorld(s.camera, { x: s.viewport.w / 2, y: s.viewport.h / 2 });
 };
 
-export const addNodeAtCenter = (kind: NodeKind, options?: AddNodeOptions): string | null => focusedCanvas().getState().addNode(kind, centerWorld(), options);
+export const addNodeAtCenter = (kind: NodeKind, options?: AddNodeOptions): string | null => {
+    const canvas = focusedCanvas().getState();
+    const placed = nearestFreeNodeRect(Object.values(canvas.nodes), NODE_SIZE[kind], centerWorld());
+    return canvas.addNode(kind, { x: placed.x + placed.w / 2, y: placed.y + placed.h / 2 }, options);
+};
 
 export const addAgentNodeAtCenter = (target: AgentTarget, provider: ProviderInfo): string | null => addAgentNode(target, provider, centerWorld());
 

@@ -22,6 +22,8 @@ import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { VoiceButton } from '@/voice/VoiceButton';
+import { useVoice } from '@/voice/state';
 
 /* The band above the canvas: which project is open, and the panels that sit next to it. It is as
    tall as the sidebar's own strip, so the two read as one title bar across the window. The
@@ -36,6 +38,7 @@ export function Toolbar() {
     const switching = useProject((s) => s.switching);
     const panel = useUi((s) => s.panel);
     const previewOpen = useUi((s) => s.preview.open);
+    const voiceOpen = useVoice((s) => s.open);
     const sidebarOpen = useUi((s) => s.sidebarOpen);
     const bodyFocused = useDocument((s) => s.bodyFocused);
     const hasView = useDocument((s) => s.activeViewId !== null);
@@ -89,8 +92,9 @@ export function Toolbar() {
             {/* The palette keeps the toolbar's right end, so with no panel beside it the search icon
                 is what sits under the window controls on Windows and Linux and the inset lands here.
                 An open panel reaches the window's edge instead and its header takes the inset over. */}
-            <div className={clsx(BTN_GROUP, !panel.open && !previewOpen && hasOverlayControls() && 'toolbar-overlay-inset')}>
+            <div className={clsx(BTN_GROUP, !panel.open && !previewOpen && !voiceOpen && hasOverlayControls() && 'toolbar-overlay-inset')}>
                 <UpdateButton />
+                <VoiceButton />
                 <Tooltip label="Search" kbd={APP_SHORTCUTS.palette} name>
                     <button className="icon-btn" onClick={() => useUi.getState().setPaletteOpen(true)}>
                         <Icon icon={Search} size={16} />

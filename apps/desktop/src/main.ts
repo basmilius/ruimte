@@ -21,9 +21,11 @@ import {
     type ServiceSpec
 } from '@ruimte/service';
 import { keepRunningSetting, serviceSupport } from './service/settings';
+import { fileSecretStore, type SecretStore } from './secret-store';
+import { createOpenAiLiveSession, parseOpenAiLivePreferences } from './openai-live';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
-const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, powerSaveBlocker, safeStorage, screen, session, shell, webContents } =
+const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, powerSaveBlocker, safeStorage, screen, session, shell, systemPreferences, webContents } =
     require('electron') as typeof import('electron');
 
 /*
@@ -454,6 +456,21 @@ const createWindow = (): Electron.BrowserWindow => {
             webviewTag: true
         }
     });
+    const contents = window.webContents;
+    contents.session.setPermissionCheckHandler((requester, permission, _origin, details) => {
+        if (permission !== 'media') {
+            return true;
+        }
+        return requester === contents && details.isMainFrame && details.mediaType === 'audio';
+    });
+    contents.session.setPermissionRequestHandler((requester, permission, callback, details) => {
+        if (permission !== 'media') {
+            callback(true);
+            return;
+        }
+        const mediaTypes = 'mediaTypes' in details ? details.mediaTypes : undefined;
+        callback(requester === contents && details.isMainFrame && mediaTypes?.length === 1 && mediaTypes[0] === 'audio');
+    });
     window.once('ready-to-show', () => window.show());
     window.on('closed', () => {
         mainWindow = null;
@@ -727,6 +744,79 @@ const fromAppWindow = (event: Electron.IpcMainInvokeEvent): boolean => event.sen
 const refuseOtherPages = (): never => {
     throw new Error('Only the app window signs in');
 };
+
+type OpenAiCredentialStatus = {
+    configured: boolean;
+    persistent: boolean;
+};
+
+let openAiKeyStore: SecretStore | null = null;
+
+const openAiKeys = (): SecretStore => {
+    openAiKeyStore ??= fileSecretStore(join(app.getPath('userData'), 'openai-api-key.bin'), safeStorage);
+    return openAiKeyStore;
+};
+
+const openAiCredentialStatus = async (): Promise<OpenAiCredentialStatus> => {
+    const store = openAiKeys();
+    if ((await store.read()) !== null) {
+        return { configured: true, persistent: store.persistent() };
+    }
+    return { configured: false, persistent: false };
+};
+
+ipcMain.handle('openai:credential-status', (event) => (fromAppWindow(event) ? openAiCredentialStatus() : refuseOtherPages()));
+
+ipcMain.handle('openai:save-api-key', async (event, apiKey: unknown) => {
+    if (!fromAppWindow(event)) {
+        return refuseOtherPages();
+    }
+    if (typeof apiKey !== 'string' || apiKey.trim() === '') {
+        throw new Error('Enter an API key');
+    }
+    await openAiKeys().write(apiKey.trim());
+    return openAiCredentialStatus();
+});
+
+ipcMain.handle('openai:clear-api-key', async (event) => {
+    if (!fromAppWindow(event)) {
+        return refuseOtherPages();
+    }
+    await openAiKeys().write(null);
+    return openAiCredentialStatus();
+});
+
+ipcMain.handle('openai:create-live-session', async (event, sdp: unknown, preferences: unknown) => {
+    if (!fromAppWindow(event)) {
+        return refuseOtherPages();
+    }
+    if (typeof sdp !== 'string') {
+        throw new Error('The microphone session offer is invalid');
+    }
+    const requested = parseOpenAiLivePreferences(preferences);
+    if (!requested) {
+        throw new Error('The GPT-Live voice settings are invalid');
+    }
+    const apiKey = await openAiKeys().read();
+    if (apiKey === null) {
+        throw new Error('Add an OpenAI API key in Settings first');
+    }
+    return createOpenAiLiveSession((input, init) => net.fetch(input, init), apiKey, sdp, requested);
+});
+
+ipcMain.handle('media:request-microphone', async (event) => {
+    if (!fromAppWindow(event)) {
+        return refuseOtherPages();
+    }
+    if (process.platform !== 'darwin') {
+        return true;
+    }
+    const status = systemPreferences.getMediaAccessStatus('microphone');
+    if (status === 'granted') {
+        return true;
+    }
+    return status === 'not-determined' ? systemPreferences.askForMediaAccess('microphone') : false;
+});
 
 ipcMain.handle('pulsar:address-book', (event) => (fromAppWindow(event) ? addressBookUrl : refuseOtherPages()));
 

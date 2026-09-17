@@ -27,9 +27,11 @@ describe('contextHint', () => {
 describe('verbsNote', () => {
     test('offers team and agent at depth 0, only agent at depth 1 and neither below', () => {
         expect(VERBS_NOTE).toContain('`agent` for one, `team` for several in parallel');
+        expect(VERBS_NOTE).toContain('answer yourself whatever you can');
         expect(VERBS_NOTE).toContain('end your turn instead of polling');
         const helper = verbsNote({ depth: 1 });
         expect(helper).toContain('opens a helper agent with `agent`');
+        expect(helper).toContain('answer yourself whatever you can');
         expect(helper).not.toContain('`team`');
         expect(helper).toContain('--task');
         const deepest = verbsNote({ depth: 2 });

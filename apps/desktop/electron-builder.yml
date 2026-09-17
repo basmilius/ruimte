@@ -44,6 +44,7 @@ mac:
       to: Assets.car
   extendInfo:
     CFBundleIconName: AppIcon
+    NSMicrophoneUsageDescription: Ruimte uses the microphone only while you test it or run a GPT-Live conversation.
   # Set to true by the release workflow once Apple credentials are in the secrets.
   notarize: false
 dmg:

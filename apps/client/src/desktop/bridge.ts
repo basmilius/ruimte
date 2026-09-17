@@ -1,4 +1,5 @@
 import type { SessionLoginCode } from '@ruimte/pulsar';
+import type { LiveVoice, VoiceLanguage } from '@/voice/preferences';
 
 /*
  * What the shell forwards when a page asks for a context menu: Electron's own params, trimmed to
@@ -117,6 +118,23 @@ export interface BackgroundServiceBridge {
     stopMachine(): void;
 }
 
+export interface OpenAiCredentialStatus {
+    configured: boolean;
+    persistent: boolean;
+}
+
+export interface OpenAiLivePreferences {
+    language: VoiceLanguage;
+    voice: LiveVoice;
+}
+
+export interface OpenAiBridge {
+    credentialStatus(): Promise<OpenAiCredentialStatus>;
+    saveApiKey(apiKey: string): Promise<OpenAiCredentialStatus>;
+    clearApiKey(): Promise<OpenAiCredentialStatus>;
+    createLiveSession(sdp: string, preferences: OpenAiLivePreferences): Promise<{ session: { id: string }; transport: { type: 'webrtc'; sdp: string } }>;
+}
+
 /* The shell's API, present only inside the desktop app. Mirrors `apps/desktop/src/preload.ts`. */
 export interface DesktopBridge {
     platform: string;
@@ -178,6 +196,12 @@ export interface DesktopBridge {
        pairing: a loopback address is no proof of anything. Null while the daemon has not written it.
        Optional for the same reason `onBrowserContextMenu` is; without it the local row has to pair. */
     localSecret?(): Promise<string | null>;
+    /* macOS owns the application-level microphone grant; the shell asks while the renderer only
+       receives the result. Other platforms let Chromium handle the same request. */
+    requestMicrophoneAccess?(): Promise<boolean>;
+    /* The API key stays in the shell; the page can replace it and learn whether one exists, but it
+       can never read the value back. Optional until the running shell has restarted onto this API. */
+    openAi?: OpenAiBridge;
     /* The background service. Optional for the same reason `onBrowserContextMenu` is; without it
        This machine offers no switch, which is also what a browser and the web client get. */
     backgroundService?: BackgroundServiceBridge;

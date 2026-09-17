@@ -10,6 +10,7 @@ import { KeyboardPane } from '@/shell/settings/panes/KeyboardPane';
 import { MachinesPane } from '@/shell/settings/panes/MachinesPane';
 import { UsagePane } from '@/shell/settings/panes/UsagePane';
 import { ViewsPane } from '@/shell/settings/panes/ViewsPane';
+import { VoicePane } from '@/shell/settings/panes/VoicePane';
 import { ALL_SETTINGS_SECTIONS } from '@/shell/settings/sections';
 import { useUi, type SettingsSectionId } from '@/state/ui';
 import { Icon } from '@/ui/Icon';
@@ -21,6 +22,7 @@ const PANES: Record<SettingsSectionId, () => React.JSX.Element> = {
     appearance: AppearancePane,
     views: ViewsPane,
     files: FilesPane,
+    voice: VoicePane,
     usage: UsagePane,
     agents: AgentsPane,
     machines: MachinesPane,

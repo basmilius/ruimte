@@ -1,4 +1,4 @@
-import { Bot, ChartNoAxesColumn, Folder, Info, Keyboard, Palette, PanelsTopLeft, Server, type LucideIcon } from 'lucide-react';
+import { AudioLines, Bot, ChartNoAxesColumn, Folder, Info, Keyboard, Palette, PanelsTopLeft, Server, type LucideIcon } from 'lucide-react';
 import type { SettingsSectionId } from '@/state/ui';
 
 export interface SettingsSectionMeta {
@@ -24,6 +24,7 @@ export const SETTINGS_SECTIONS: readonly (readonly SettingsSectionMeta[])[] = [
         { id: 'files', label: 'Files and Git', description: 'What the Files and Git panels show, and where browsing for a folder starts.', icon: Folder }
     ],
     [
+        { id: 'voice', label: 'Voice', description: 'GPT-Live access and speech settings.', icon: AudioLines },
         { id: 'agents', label: 'Agents', description: 'Defaults, permissions and notifications for agents.', icon: Bot },
         { id: 'usage', label: 'Usage', description: 'The currency of the usage page.', icon: ChartNoAxesColumn }
     ],

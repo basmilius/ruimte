@@ -39,6 +39,8 @@ import type { Workspace } from '@/transport/connections';
 import { ConnectionProvider } from '@/transport/context';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { TooltipProvider } from '@/ui/Tooltip';
+import { VoicePanel } from '@/voice/VoicePanel';
+import { stopVoice } from '@/voice/controller';
 
 /*
  * The project on screen, with the daemon it lives on under it. Everything inside reads its machine
@@ -50,6 +52,7 @@ function WorkspaceShell({ workspace }: { workspace: Workspace }) {
     /* The window's toolbar is where a file view puts its controls, and the body that draws them sits
        under the same column, so the element they portal into is held here. */
     const [fileToolbarHost, setFileToolbarHost] = useState<HTMLElement | null>(null);
+    useEffect(() => () => stopVoice(), []);
     return (
         <ConnectionProvider connection={workspace.connection}>
             <div className="flex h-full w-full bg-bg">
@@ -73,6 +76,7 @@ function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                     <PlanPanel />
                     <PreviewPanel />
                     <Panel />
+                    <VoicePanel />
                 </main>
             </div>
             {/* About the project that is open, so they belong to its workspace and not to the shell. */}

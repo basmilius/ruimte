@@ -72,7 +72,10 @@ codesign -dv --entitlements - apps/desktop/release/mac-arm64/Ruimte.app/Contents
 spctl -a -vvv -t exec apps/desktop/release/mac-arm64/Ruimte.app
 ```
 
-The daemon should report `flags=0x10000(runtime)`, a `Timestamp` and the four entitlements. `spctl`
+The daemon should report `flags=0x10000(runtime)`, a `Timestamp` and the five entitlements, including
+`com.apple.security.device.audio-input`. macOS attributes a microphone request made by an app
+started in a Ruimte terminal to this bundled daemon, so the entitlement has to be present there as
+well as on the Electron shell. `spctl`
 answers `rejected / source=Unnotarized Developer ID` until the app has been through notarization,
 which is the expected answer for a local build.
 

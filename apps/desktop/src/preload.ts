@@ -50,6 +50,13 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
     installUpdate: (): void => ipcRenderer.send('update:install'),
     releaseNotes: (refresh?: boolean): Promise<unknown> => ipcRenderer.invoke('releases:list', refresh === true),
     localSecret: (): Promise<string | null> => ipcRenderer.invoke('daemon:local-secret'),
+    requestMicrophoneAccess: (): Promise<boolean> => ipcRenderer.invoke('media:request-microphone'),
+    openAi: {
+        credentialStatus: (): Promise<unknown> => ipcRenderer.invoke('openai:credential-status'),
+        saveApiKey: (apiKey: string): Promise<unknown> => ipcRenderer.invoke('openai:save-api-key', apiKey),
+        clearApiKey: (): Promise<unknown> => ipcRenderer.invoke('openai:clear-api-key'),
+        createLiveSession: (sdp: string, preferences: unknown): Promise<unknown> => ipcRenderer.invoke('openai:create-live-session', sdp, preferences)
+    },
     backgroundService: {
         state: (): Promise<unknown> => ipcRenderer.invoke('service:state'),
         onState: (listener: (state: unknown) => void): (() => void) => {

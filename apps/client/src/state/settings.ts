@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { WorktreeMergeStrategySchema, type WorktreeMergeStrategy } from '@ruimte/contracts';
 import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
+import { isLiveVoice, isVoiceLanguage, type LiveVoice, type VoiceLanguage } from '@/voice/preferences';
 
 const STORAGE_KEY = 'ruimte.settings';
 
@@ -68,6 +69,8 @@ export interface Settings {
     /* How a reply in a chat appears while it is written. Only how this client draws it: the daemon
        sends the deltas either way. */
     chatStreaming: ChatStreamingMode;
+    voiceLanguage: VoiceLanguage;
+    liveVoice: LiveVoice;
     /* Whether the desktop shell downloads an update as soon as it finds one, or waits to be asked. */
     updatesAutoDownload: boolean;
     /* Whether a view an agent asks for takes the place of the one you are working in. Off, which is
@@ -130,6 +133,8 @@ const DEFAULT_SETTINGS: Settings = {
     drawingSnap: false,
     dockAutoHide: false,
     chatStreaming: 'words',
+    voiceLanguage: 'nl',
+    liveVoice: 'marin',
     updatesAutoDownload: true,
     agentsShowViews: false,
     agentsApprovals: true,
@@ -167,6 +172,12 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     agentsApprovals: stored.agentsApprovals !== false,
     agentsTurnNotify: stored.agentsTurnNotify !== false,
     chatStreaming: chatStreamingFrom(stored.chatStreaming),
+    voiceLanguage: isVoiceLanguage(stored.voiceLanguage) ? stored.voiceLanguage : 'nl',
+    liveVoice: isLiveVoice(stored.liveVoice)
+        ? stored.liveVoice
+        : (stored as Partial<Settings> & { voiceGender?: unknown }).voiceGender === 'male'
+          ? 'cedar'
+          : 'marin',
     // Same rule as the block: nothing makes a sound unless a stored `true` asked for it.
     agentsTurnSound: stored.agentsTurnSound === true,
     browserSwipe: stored.browserSwipe !== false,
@@ -237,6 +248,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 drawingSnap,
                 dockAutoHide,
                 chatStreaming,
+                voiceLanguage,
+                liveVoice,
                 updatesAutoDownload,
                 agentsShowViews,
                 agentsApprovals,
@@ -261,6 +274,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 drawingSnap,
                 dockAutoHide,
                 chatStreaming,
+                voiceLanguage,
+                liveVoice,
                 updatesAutoDownload,
                 agentsShowViews,
                 agentsApprovals,

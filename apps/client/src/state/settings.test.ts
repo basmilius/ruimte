@@ -72,6 +72,26 @@ describe('streaming replies', () => {
     });
 });
 
+describe('GPT-Live speech', () => {
+    test('starts in Dutch with Marin and keeps supported choices', () => {
+        expect(settingsFrom({})).toMatchObject({ voiceLanguage: 'nl', liveVoice: 'marin' });
+        expect(settingsFrom({ voiceLanguage: 'ja', liveVoice: 'cedar' })).toMatchObject({ voiceLanguage: 'ja', liveVoice: 'cedar' });
+    });
+
+    test('does not pass unknown stored values to a Live session', () => {
+        expect(settingsFrom({ voiceLanguage: 'klingon' as 'nl', liveVoice: 'robot' as 'marin' })).toMatchObject({
+            voiceLanguage: 'nl',
+            liveVoice: 'marin'
+        });
+        expect(settingsFrom({ liveVoice: 'willow' as 'marin' }).liveVoice).toBe('marin');
+    });
+
+    test('moves the earlier male and female choices to their named voices', () => {
+        expect(settingsFrom({ voiceGender: 'male' } as never).liveVoice).toBe('cedar');
+        expect(settingsFrom({ voiceGender: 'female' } as never).liveVoice).toBe('marin');
+    });
+});
+
 describe('swiping between pages', () => {
     test('starts on, the way every browser on macOS does it', () => {
         expect(settingsFrom({}).browserSwipe).toBe(true);
