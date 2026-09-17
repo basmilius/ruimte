@@ -31,7 +31,7 @@ import { chipDecorations } from '@/chat/ui/composer/chips';
 import { enterAction, inCode, inFenceBody, inOpenFence, listItemAt, recallDirection, tabSpaces } from '@/chat/ui/composer/keys';
 import { ComposerInput, type ComposerInputHandle } from '@/chat/ui/ComposerInput';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
-import { ApprovalDock, QuestionDock } from '@/chat/ui/PendingDock';
+import { PromptComposer } from '@/chat/ui/PromptComposer';
 import { ModelPicker, ModePicker, OptionsPicker, StashPicker } from '@/chat/ui/Pickers';
 import { UploadThumb } from '@/chat/ui/UploadThumb';
 import { isApplePlatform } from '@/desktop/bridge';
@@ -103,12 +103,7 @@ const splitPath = (path: string): { name: string; dir: string } => {
     return slash < 0 ? { name: path, dir: '' } : { name: path.slice(slash + 1), dir: path.slice(0, slash) };
 };
 
-/*
- * The floating card at the bottom of a chat: what the agent is waiting on docks above it, the
- * prompt sits in the middle, and the footer holds the model, its options, the permission mode,
- * the context meter and the send or stop button. `/` opens the command menu, `@` a file picker
- * over the chat's folder; images arrive by paste or drop.
- */
+// Keep the editor mounted while a pending request takes over, so its selection and draft survive.
 export function Composer({ chatId, info, focused, disabled, providerFixed, onSend, onRetarget }: ComposerProps) {
     const [draft, setDraft] = useState<ChatDraft>(() => readDraft(chatId));
     const [historyIndex, setHistoryIndex] = useState<number | null>(null);
@@ -131,9 +126,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     // The structure, which a delta leaves alone: the prompts and the requests are items of their own.
     const items = useChatRow(chatId, (row) => row?.structure);
 
-    // The dock shows one request at a time and says how many others are behind it.
-    const question = questions[0] ?? null;
-    const waiting = approvals.length + questions.length;
+    const pending = useMemo(() => [...approvals, ...questions], [approvals, questions]);
     const provider = providers.find((entry) => entry.kind === info.provider);
     // Absent until the daemon answered `provider.list`, so only an explicit false hides anything.
     const capabilities = provider?.capabilities;
@@ -665,11 +658,11 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
     const placeholder = disabled ? 'Not connected to the machine' : 'Ask anything, / for commands, @ for files, $ for skills';
 
     return (
-        <div className="chat-column-content pointer-events-none absolute inset-x-3 bottom-3 z-10">
+        <div className="chat-column-content pointer-events-none relative z-10 w-full">
             {/* Only while there is something below the fold. It sits over the composer rather than
                 in the thread, because the composer is the one thing whose height it always clears. */}
             {!atEnd && (
-                <div className="mb-2 flex justify-center">
+                <div className="absolute inset-x-0 bottom-full mb-2 flex justify-center">
                     <Tooltip label="Jump to the end" name>
                         <button
                             className={`${FLOAT} pointer-events-auto grid h-8 w-8 place-items-center rounded-full text-text-muted hover:text-text`}
@@ -708,210 +701,217 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                     inputRef.current?.focus();
                 }}
             >
-                {question && <QuestionDock chatId={chatId} item={question} more={waiting - 1} focused={focused} />}
-                {!question && approvals[0] && (
-                    <ApprovalDock chatId={chatId} item={approvals[0]} more={waiting - 1} denyReason={capabilities?.denyReason === true} focused={focused} />
-                )}
-                {commandMenuOpen && (
-                    <div className="border-b border-border px-1.5 py-1.5">
-                        {commands.map((command, index) => (
-                            <button
-                                key={command.name}
-                                data-active={index === menuIndex}
-                                className="cursor-row flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-text-muted"
-                                onMouseEnter={() => setMenuIndex(index)}
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => {
-                                    setMenuIndex(index);
-                                    if (command.skill) {
-                                        chooseSkill(command.name);
-                                        return;
-                                    }
-                                    setText(`/${command.name}`);
-                                    inputRef.current?.focus();
-                                }}
-                            >
-                                <Icon
-                                    icon={command.skill ? Zap : SquareSlash}
-                                    size={12}
-                                    className={clsx('shrink-0', command.skill ? 'text-skill' : 'text-text-faint')}
-                                />
-                                <span className="font-mono text-text">/{command.name}</span>
-                                <span className="text-text-faint">{command.hint}</span>
-                            </button>
-                        ))}
-                    </div>
-                )}
-                {skillMenuOpen && (
-                    <div className="border-b border-border px-1.5 py-1.5">
-                        {skillMatches.map((skill, index) => (
-                            <button
-                                key={skill.name}
-                                data-active={index === menuIndex}
-                                className="cursor-row flex w-full items-start gap-2 rounded-md px-2 py-1 text-left text-xs text-text-muted"
-                                onMouseEnter={() => setMenuIndex(index)}
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => chooseSkill(skill.name)}
-                            >
-                                <Icon icon={Zap} size={12} className="mt-0.5 shrink-0 text-skill" />
-                                <span className="flex min-w-0 flex-col">
-                                    <span className="truncate font-mono text-text">${skill.name}</span>
-                                    {skill.description !== '' && <span className="line-clamp-1 text-text-faint">{skill.description}</span>}
-                                </span>
-                            </button>
-                        ))}
-                    </div>
-                )}
-                {mentionMenuOpen && (
-                    <div className="border-b border-border px-1.5 py-1.5">
-                        {mention.query === '' && files.length > 0 && <div className={MENU_LABEL}>Files in this folder</div>}
-                        {files.length === 0 && <div className="px-2 py-1 text-xs text-text-faint">{mention.query ? 'No files match' : 'No files here'}</div>}
-                        {files.map((path, index) => {
-                            const { name, dir } = splitPath(path);
-                            return (
+                <PromptComposer
+                    chatId={chatId}
+                    pending={pending}
+                    focused={focused}
+                    disabled={disabled}
+                    hasDraft={!isEmptyDraft(draft)}
+                    denyReason={capabilities?.denyReason === true}
+                >
+                    {commandMenuOpen && (
+                        <div className="border-b border-border px-1.5 py-1.5">
+                            {commands.map((command, index) => (
                                 <button
-                                    key={path}
+                                    key={command.name}
                                     data-active={index === menuIndex}
                                     className="cursor-row flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-text-muted"
                                     onMouseEnter={() => setMenuIndex(index)}
                                     onMouseDown={(e) => e.preventDefault()}
-                                    onClick={() => chooseMention(path)}
+                                    onClick={() => {
+                                        setMenuIndex(index);
+                                        if (command.skill) {
+                                            chooseSkill(command.name);
+                                            return;
+                                        }
+                                        setText(`/${command.name}`);
+                                        inputRef.current?.focus();
+                                    }}
                                 >
-                                    <FileIcon path={path} size={14} />
-                                    <span className="truncate font-mono text-text">{name}</span>
-                                    {dir && <span className="min-w-0 truncate text-text-faint">{dir}</span>}
+                                    <Icon
+                                        icon={command.skill ? Zap : SquareSlash}
+                                        size={12}
+                                        className={clsx('shrink-0', command.skill ? 'text-skill' : 'text-text-faint')}
+                                    />
+                                    <span className="font-mono text-text">/{command.name}</span>
+                                    <span className="text-text-faint">{command.hint}</span>
                                 </button>
-                            );
-                        })}
-                    </div>
-                )}
-                {queue.length > 0 && (
-                    <div className="flex flex-col gap-1 border-b border-border px-2 py-1.5">
-                        {queue.map((message) => (
-                            <div key={message.id} className="group/queued flex items-center gap-2 rounded-md px-1.5 py-1 text-xs text-text-muted">
-                                <Icon icon={Clock} size={12} className="shrink-0 text-text-faint" />
-                                <span className="min-w-0 grow truncate">{message.text || `${message.attachments?.length ?? 0} attachments`}</span>
-                                <span className={`${BTN_GROUP} opacity-0 transition-opacity group-hover/queued:opacity-100 focus-within:opacity-100`}>
-                                    <Tooltip label="Send now" name>
+                            ))}
+                        </div>
+                    )}
+                    {skillMenuOpen && (
+                        <div className="border-b border-border px-1.5 py-1.5">
+                            {skillMatches.map((skill, index) => (
+                                <button
+                                    key={skill.name}
+                                    data-active={index === menuIndex}
+                                    className="cursor-row flex w-full items-start gap-2 rounded-md px-2 py-1 text-left text-xs text-text-muted"
+                                    onMouseEnter={() => setMenuIndex(index)}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => chooseSkill(skill.name)}
+                                >
+                                    <Icon icon={Zap} size={12} className="mt-0.5 shrink-0 text-skill" />
+                                    <span className="flex min-w-0 flex-col">
+                                        <span className="truncate font-mono text-text">${skill.name}</span>
+                                        {skill.description !== '' && <span className="line-clamp-1 text-text-faint">{skill.description}</span>}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    {mentionMenuOpen && (
+                        <div className="border-b border-border px-1.5 py-1.5">
+                            {mention.query === '' && files.length > 0 && <div className={MENU_LABEL}>Files in this folder</div>}
+                            {files.length === 0 && (
+                                <div className="px-2 py-1 text-xs text-text-faint">{mention.query ? 'No files match' : 'No files here'}</div>
+                            )}
+                            {files.map((path, index) => {
+                                const { name, dir } = splitPath(path);
+                                return (
+                                    <button
+                                        key={path}
+                                        data-active={index === menuIndex}
+                                        className="cursor-row flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-text-muted"
+                                        onMouseEnter={() => setMenuIndex(index)}
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => chooseMention(path)}
+                                    >
+                                        <FileIcon path={path} size={14} />
+                                        <span className="truncate font-mono text-text">{name}</span>
+                                        {dir && <span className="min-w-0 truncate text-text-faint">{dir}</span>}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                    {queue.length > 0 && (
+                        <div className="flex flex-col gap-1 border-b border-border px-2 py-1.5">
+                            {queue.map((message) => (
+                                <div key={message.id} className="group/queued flex items-center gap-2 rounded-md px-1.5 py-1 text-xs text-text-muted">
+                                    <Icon icon={Clock} size={12} className="shrink-0 text-text-faint" />
+                                    <span className="min-w-0 grow truncate">{message.text || `${message.attachments?.length ?? 0} attachments`}</span>
+                                    <span className={`${BTN_GROUP} opacity-0 transition-opacity group-hover/queued:opacity-100 focus-within:opacity-100`}>
+                                        <Tooltip label="Send now" name>
+                                            <button
+                                                className="icon-btn h-5 w-5 rounded"
+                                                onClick={() => void chatClient.sendNow(chatId, message.id).catch(() => undefined)}
+                                            >
+                                                <Icon icon={FastForward} size={12} />
+                                            </button>
+                                        </Tooltip>
+                                        <Tooltip label="Remove" name>
+                                            <button
+                                                className="icon-btn h-5 w-5 rounded"
+                                                onClick={() => void chatClient.unqueue(chatId, message.id).catch(() => undefined)}
+                                            >
+                                                <Icon icon={X} size={12} />
+                                            </button>
+                                        </Tooltip>
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {draft.attachments.length > 0 && (
+                        <div className="flex flex-wrap gap-2 px-3 pt-3">
+                            {draft.attachments.map((attachment, index) => (
+                                <div key={`${attachment.name}-${index}`} className="group/thumb relative">
+                                    {isImageAttachment(attachment.mime) ? (
+                                        <UploadThumb upload={attachment} />
+                                    ) : (
+                                        <span className="flex h-14 w-36 flex-col justify-center gap-0.5 rounded-lg border border-border bg-surface-sunken px-2.5">
+                                            <span className="flex items-center gap-1.5 text-xs text-text">
+                                                <Icon icon={Paperclip} size={12} className="shrink-0 text-text-faint" />
+                                                <span className="truncate">{attachment.name}</span>
+                                            </span>
+                                            <span className="pl-5 text-xs text-text-faint">{formatBytes(uploadBytes(attachment))}</span>
+                                        </span>
+                                    )}
+                                    <Tooltip label={`Remove ${attachment.name}`}>
                                         <button
-                                            className="icon-btn h-5 w-5 rounded"
-                                            onClick={() => void chatClient.sendNow(chatId, message.id).catch(() => undefined)}
-                                        >
-                                            <Icon icon={FastForward} size={12} />
-                                        </button>
-                                    </Tooltip>
-                                    <Tooltip label="Remove" name>
-                                        <button
-                                            className="icon-btn h-5 w-5 rounded"
-                                            onClick={() => void chatClient.unqueue(chatId, message.id).catch(() => undefined)}
+                                            className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-surface-raised text-text-muted opacity-0 transition-opacity hover:text-text group-hover/thumb:opacity-100 focus-visible:opacity-100"
+                                            onClick={() => removeAttachment(index)}
                                         >
                                             <Icon icon={X} size={12} />
                                         </button>
                                     </Tooltip>
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-                {draft.attachments.length > 0 && (
-                    <div className="flex flex-wrap gap-2 px-3 pt-3">
-                        {draft.attachments.map((attachment, index) => (
-                            <div key={`${attachment.name}-${index}`} className="group/thumb relative">
-                                {isImageAttachment(attachment.mime) ? (
-                                    <UploadThumb upload={attachment} />
-                                ) : (
-                                    <span className="flex h-14 w-36 flex-col justify-center gap-0.5 rounded-lg border border-border bg-surface-sunken px-2.5">
-                                        <span className="flex items-center gap-1.5 text-xs text-text">
-                                            <Icon icon={Paperclip} size={12} className="shrink-0 text-text-faint" />
-                                            <span className="truncate">{attachment.name}</span>
-                                        </span>
-                                        <span className="pl-5 text-xs text-text-faint">{formatBytes(uploadBytes(attachment))}</span>
-                                    </span>
-                                )}
-                                <Tooltip label={`Remove ${attachment.name}`}>
-                                    <button
-                                        className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-surface-raised text-text-muted opacity-0 transition-opacity hover:text-text group-hover/thumb:opacity-100 focus-visible:opacity-100"
-                                        onClick={() => removeAttachment(index)}
-                                    >
-                                        <Icon icon={X} size={12} />
-                                    </button>
-                                </Tooltip>
-                            </div>
-                        ))}
-                    </div>
-                )}
-                <ComposerInput
-                    ref={inputRef}
-                    className="composer-input select-text text-sm leading-normal text-text"
-                    value={text}
-                    placeholder={placeholder}
-                    disabled={disabled}
-                    tabbable={focused}
-                    extensions={editorExtensions}
-                    onChange={(value, selection, state) => {
-                        setText(value);
-                        setMenuIndex(0);
-                        trackTriggers(value, selection, state);
-                        if (historyIndex !== null && value !== history[historyIndex]?.text) {
-                            setHistoryIndex(null);
-                        }
-                    }}
-                    onSelectionChange={trackTriggers}
-                    onBlur={() => {
-                        setMention(null);
-                        setSkillQuery(null);
-                    }}
-                    onKeyDown={onKeyDown}
-                    onPaste={onPaste}
-                />
-                {notice && <div className="px-3.5 pb-1 text-xs text-status-error">{notice}</div>}
-                {guard.visible && (
-                    <div className={clsx('px-3.5 pb-1 text-right text-xs tabular-nums', guard.tooLong ? 'text-status-error' : 'text-text-faint')}>
-                        {guard.count.toLocaleString('en-US')} / {PROMPT_MAX_CHARS.toLocaleString('en-US')}
-                        {guard.tooLong && ' characters, too long to send'}
-                    </div>
-                )}
-                <div className="flex items-center gap-1 px-2 pb-2">
-                    <ModelPicker
-                        providers={pickable}
-                        provider={info.provider}
-                        selection={info.selection}
-                        open={modelPickerOpen}
-                        onOpenChange={setModelPickerOpen}
-                        onChange={chooseModel}
-                    />
-                    <OptionsPicker
-                        model={model}
-                        selection={info.selection}
-                        onChange={(id, value) => configure({ selection: { ...info.selection, options: { ...info.selection.options, [id]: value } } })}
-                    />
-                    <ModePicker runtimeMode={info.runtimeMode} onChange={(runtimeMode) => configure({ runtimeMode })} />
-                    <StashPicker onRestore={restoreStashed} />
-                    <span className="grow" />
-                    <ContextMeter usage={info.usage} disabled={busy || disabled} onCompact={() => void chatClient.compact(chatId).catch(() => undefined)} />
-                    {busy && (
-                        <Tooltip label={COMPOSER_STOP_LABEL} name>
-                            <button
-                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-status-error text-accent-text"
-                                onClick={(event) => stop(event.shiftKey)}
-                            >
-                                <Icon icon={Square} size={16} />
-                            </button>
-                        </Tooltip>
+                                </div>
+                            ))}
+                        </div>
                     )}
-                    {/* While a turn runs the same button queues the message instead of sending it. */}
-                    {(!busy || !isEmptyDraft(draft)) && (
-                        <Tooltip label={busy ? 'Queue' : 'Send'} kbd={KEY_SHORTCUTS.modEnter} name>
-                            <button
-                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-accent-text hover:brightness-90 disabled:opacity-40 disabled:hover:brightness-100"
-                                disabled={isEmptyDraft(draft) || disabled || guard.tooLong}
-                                onClick={submit}
-                            >
-                                <Icon icon={ArrowUp} size={16} />
-                            </button>
-                        </Tooltip>
+                    <ComposerInput
+                        ref={inputRef}
+                        className="composer-input select-text text-sm leading-normal text-text"
+                        value={text}
+                        placeholder={placeholder}
+                        disabled={disabled}
+                        tabbable={focused}
+                        extensions={editorExtensions}
+                        onChange={(value, selection, state) => {
+                            setText(value);
+                            setMenuIndex(0);
+                            trackTriggers(value, selection, state);
+                            if (historyIndex !== null && value !== history[historyIndex]?.text) {
+                                setHistoryIndex(null);
+                            }
+                        }}
+                        onSelectionChange={trackTriggers}
+                        onBlur={() => {
+                            setMention(null);
+                            setSkillQuery(null);
+                        }}
+                        onKeyDown={onKeyDown}
+                        onPaste={onPaste}
+                    />
+                    {notice && <div className="px-3.5 pb-1 text-xs text-status-error">{notice}</div>}
+                    {guard.visible && (
+                        <div className={clsx('px-3.5 pb-1 text-right text-xs tabular-nums', guard.tooLong ? 'text-status-error' : 'text-text-faint')}>
+                            {guard.count.toLocaleString('en-US')} / {PROMPT_MAX_CHARS.toLocaleString('en-US')}
+                            {guard.tooLong && ' characters, too long to send'}
+                        </div>
                     )}
-                </div>
+                    <div className="flex items-center gap-1 px-2 pb-2">
+                        <ModelPicker
+                            providers={pickable}
+                            provider={info.provider}
+                            selection={info.selection}
+                            open={modelPickerOpen}
+                            onOpenChange={setModelPickerOpen}
+                            onChange={chooseModel}
+                        />
+                        <OptionsPicker
+                            model={model}
+                            selection={info.selection}
+                            onChange={(id, value) => configure({ selection: { ...info.selection, options: { ...info.selection.options, [id]: value } } })}
+                        />
+                        <ModePicker runtimeMode={info.runtimeMode} onChange={(runtimeMode) => configure({ runtimeMode })} />
+                        <StashPicker onRestore={restoreStashed} />
+                        <span className="grow" />
+                        <ContextMeter usage={info.usage} disabled={busy || disabled} onCompact={() => void chatClient.compact(chatId).catch(() => undefined)} />
+                        {busy && (
+                            <Tooltip label={COMPOSER_STOP_LABEL} name>
+                                <button
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-status-error text-accent-text"
+                                    onClick={(event) => stop(event.shiftKey)}
+                                >
+                                    <Icon icon={Square} size={16} />
+                                </button>
+                            </Tooltip>
+                        )}
+                        {/* While a turn runs the same button queues the message instead of sending it. */}
+                        {(!busy || !isEmptyDraft(draft)) && (
+                            <Tooltip label={busy ? 'Queue' : 'Send'} kbd={KEY_SHORTCUTS.modEnter} name>
+                                <button
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-accent-text hover:brightness-90 disabled:opacity-40 disabled:hover:brightness-100"
+                                    disabled={isEmptyDraft(draft) || disabled || guard.tooLong}
+                                    onClick={submit}
+                                >
+                                    <Icon icon={ArrowUp} size={16} />
+                                </button>
+                            </Tooltip>
+                        )}
+                    </div>
+                </PromptComposer>
             </div>
             <Dialog.Root open={confirmClear} onOpenChange={(next) => !next && setConfirmClear(false)}>
                 <Dialog.Portal>

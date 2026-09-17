@@ -276,6 +276,7 @@ export const ChatApprovalItemSchema = z.object({
     description: z.string().nullable(),
     // Whether the CLI offered a rule that would let this pass next time.
     canAllowAlways: z.boolean(),
+    allowAlways: z.object({ label: z.string(), description: z.string() }).optional(),
     decision: ChatApprovalDecisionSchema
 });
 

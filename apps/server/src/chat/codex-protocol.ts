@@ -362,7 +362,17 @@ export class CodexProtocol {
             toolName: kind === 'command' ? 'Bash' : 'ApplyPatch',
             input,
             description: str(params.reason),
-            canAllowAlways: (amendment !== null && amendment.length > 0) || decisions.includes('acceptForSession')
+            canAllowAlways: (amendment !== null && amendment.length > 0) || decisions.includes('acceptForSession'),
+            ...(amendment && amendment.length > 0
+                ? {
+                      allowAlways: {
+                          label: 'Allow this command prefix',
+                          description: `Allow future commands matching this prefix: ${JSON.stringify(amendment)}`
+                      }
+                  }
+                : decisions.includes('acceptForSession')
+                  ? { allowAlways: { label: 'Allow for this session', description: 'Allow this provider permission for the rest of the session.' } }
+                  : {})
         });
     }
 

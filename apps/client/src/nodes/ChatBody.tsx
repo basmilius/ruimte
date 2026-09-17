@@ -89,8 +89,24 @@ export function ChatBody({ id, focused }: { id: string; focused: boolean }) {
             <Suspense fallback={<div className="grow" />}>
                 <DiffPool>
                     {/* Hidden rather than unmounted, so coming back finds the thread where it was left. */}
-                    <div className={clsx('flex min-h-0 grow flex-col', shown && 'invisible')} aria-hidden={shown ? true : undefined}>
-                        <Timeline chatId={id} />
+                    <div className={clsx('relative flex min-h-0 grow flex-col', shown && 'invisible')} aria-hidden={shown ? true : undefined}>
+                        <Timeline
+                            chatId={id}
+                            composer={
+                                info &&
+                                showsComposer(trail) && (
+                                    <Composer
+                                        chatId={id}
+                                        info={info}
+                                        focused={focused}
+                                        disabled={status !== 'open'}
+                                        providerFixed={providerFixed}
+                                        onSend={send}
+                                        onRetarget={retarget}
+                                    />
+                                )
+                            }
+                        />
                     </div>
                     {shown && (
                         <div className="absolute inset-0 flex flex-col bg-surface">
@@ -107,17 +123,6 @@ export function ChatBody({ id, focused }: { id: string; focused: boolean }) {
                     )}
                 </DiffPool>
             </Suspense>
-            {info && showsComposer(trail) && (
-                <Composer
-                    chatId={id}
-                    info={info}
-                    focused={focused}
-                    disabled={status !== 'open'}
-                    providerFixed={providerFixed}
-                    onSend={send}
-                    onRetarget={retarget}
-                />
-            )}
         </div>
     );
 }

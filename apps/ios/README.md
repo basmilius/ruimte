@@ -141,9 +141,18 @@ are cached in the app. Live Activities also use Lucide. System-provided controls
 their native icons, and provider logos and custom project SVGs remain separate.
 The package and upstream ISC notices are in `App/Design/Lucide-LICENSE.txt`.
 
-The chat composer always shows its context, photo and model controls. Its glass shape
-uses concentric corners to follow the screen or window, with a minimum 24-point radius
-where it is away from those corners.
+In writing mode the chat composer shows its context, photo and model controls. A pending
+permission or question takes over the same glass shape, growing upward from the composer.
+The request stays in place until it is handled; answering the last request restores the draft,
+attachments and selection. Questions show
+choices and free text inline, with Previous and Next for a sequence. Only optional questions
+can be dismissed. Failed submissions retain their input, and sending disables repeat actions.
+The glass container interpolates between measured composer and prompt heights, anchored at
+its bottom edge. The editor stays mounted while its content fades and blurs; a shared action
+shape grows from the send circle into the prompt button. The send button remains mounted and
+disabled for an empty draft; a running turn puts Stop beside it. Prompt actions sit in a bottom
+safe-area bar with a soft scroll-edge blur. Reduce Motion switches states directly.
+The shape uses concentric corners with a minimum 24-point radius away from screen edges.
 
 Current iteration agreement: build and install only on Bas's physical iPhone,
 `00008130-001C7D411E20001C`. No simulator, UI tests or iPad installation. Targeted

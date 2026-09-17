@@ -6386,6 +6386,21 @@
                 "canAllowAlways": {
                   "type": "boolean"
                 },
+                "allowAlways": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "description"
+                  ]
+                },
                 "decision": {
                   "type": "string",
                   "enum": [
@@ -7544,6 +7559,21 @@
                 "canAllowAlways": {
                   "type": "boolean"
                 },
+                "allowAlways": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "description"
+                  ]
+                },
                 "decision": {
                   "type": "string",
                   "enum": [
@@ -8421,6 +8451,21 @@
                 "canAllowAlways": {
                   "type": "boolean"
                 },
+                "allowAlways": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "description"
+                  ]
+                },
                 "decision": {
                   "type": "string",
                   "enum": [
@@ -9291,6 +9336,21 @@
                         },
                         "canAllowAlways": {
                           "type": "boolean"
+                        },
+                        "allowAlways": {
+                          "type": "object",
+                          "properties": {
+                            "label": {
+                              "type": "string"
+                            },
+                            "description": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "label",
+                            "description"
+                          ]
                         },
                         "decision": {
                           "type": "string",
@@ -10694,6 +10754,21 @@
                           },
                           "canAllowAlways": {
                             "type": "boolean"
+                          },
+                          "allowAlways": {
+                            "type": "object",
+                            "properties": {
+                              "label": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "label",
+                              "description"
+                            ]
                           },
                           "decision": {
                             "type": "string",
@@ -12850,6 +12925,21 @@
                 },
                 "canAllowAlways": {
                   "type": "boolean"
+                },
+                "allowAlways": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "description"
+                  ]
                 },
                 "decision": {
                   "type": "string",
@@ -27473,6 +27563,21 @@
                       "canAllowAlways": {
                         "type": "boolean"
                       },
+                      "allowAlways": {
+                        "type": "object",
+                        "properties": {
+                          "label": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "label",
+                          "description"
+                        ]
+                      },
                       "decision": {
                         "type": "string",
                         "enum": [
@@ -28875,6 +28980,21 @@
                         },
                         "canAllowAlways": {
                           "type": "boolean"
+                        },
+                        "allowAlways": {
+                          "type": "object",
+                          "properties": {
+                            "label": {
+                              "type": "string"
+                            },
+                            "description": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "label",
+                            "description"
+                          ]
                         },
                         "decision": {
                           "type": "string",

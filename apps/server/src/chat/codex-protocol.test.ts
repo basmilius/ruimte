@@ -106,7 +106,8 @@ describe('CodexProtocol', () => {
                 toolName: 'Bash',
                 input: { command: 'git status', cwd: '/w' },
                 description: 'Needs the repo',
-                canAllowAlways: true
+                canAllowAlways: true,
+                allowAlways: { label: 'Allow this command prefix', description: 'Allow future commands matching this prefix: ["git"]' }
             }
         ]);
         expect(protocol.approvalDecision('3-0', 'allow-always')).toEqual({

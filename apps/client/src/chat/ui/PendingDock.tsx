@@ -1,287 +1,277 @@
-import { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useState, type ButtonHTMLAttributes } from 'react';
 import clsx from 'clsx';
-import { Check, ChevronLeft, ChevronRight, MessageCircleQuestionMark, X } from 'lucide-react';
-import type { ChatApprovalItem, ChatQuestionItem } from '@ruimte/contracts';
-import { chatClient } from '@/chat';
-import { type PickedAnswers, answersToWire, toggleChoice } from '@/chat/logic/answers';
+import { ArrowUp, Circle, CircleCheck, Hand, MessageCircleQuestionMark, Square } from 'lucide-react';
+import type { ChatApprovalItem } from '@ruimte/contracts';
+import { answerValue, pickPromptChoice, promptAnswers, questionAnswer, type PendingPrompt, type PromptDraft } from '@/chat/logic/prompts';
 import { approvalChanges, fileChanges, toolSummary } from '@/chat/logic/tools';
-import { DOCK_ICON_SIZE, toolIcon } from '@/chat/ui/icons';
 import { Button } from '@/ui/Button';
-import { TOOLTIP_KBD } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
-import { KEY_SHORTCUTS } from '@/ui/shortcut';
-import { Kbd } from '@/ui/Kbd';
 
 const EditDiff = lazy(() => import('@/chat/ui/EditDiff'));
 const UnifiedDiff = lazy(() => import('@/chat/ui/UnifiedDiff'));
 
-/* Enter answers and Escape refuses while the dock has focus. A field inside it types instead: a
-   written answer must be able to hold both keys. */
-const isTypingTarget = (target: EventTarget | null): boolean =>
-    target instanceof HTMLElement && (target.isContentEditable || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
+export type PromptAction =
+    | { kind: 'approve'; decision: 'allow' | 'allow-always' | 'deny'; message?: string }
+    | { kind: 'answer'; answers: Record<string, string> }
+    | { kind: 'dismiss' };
 
-/* One permission request, fused to the top of the composer; the buttons answer it in place. */
-export function ApprovalDock({
-    chatId,
-    item,
-    more,
-    denyReason,
-    focused
-}: {
-    chatId: string;
-    item: ChatApprovalItem;
-    /* How many other approvals and questions wait behind this one. */
-    more: number;
-    /* Whether this CLI hands a declined tool the reason along with the refusal. */
-    denyReason: boolean;
-    focused: boolean;
-}) {
-    const [open, setOpen] = useState(false);
-    const [note, setNote] = useState<string | null>(null);
-    const patches = approvalChanges(item.input);
-    const changes = patches.length > 0 ? [] : fileChanges(item.toolName, item.input);
-    const command = item.toolName === 'Bash' ? ((item.input as { command?: string })?.command ?? '') : '';
-    const ref = useRef<HTMLDivElement>(null);
-    const decide = (decision: 'allow' | 'allow-always' | 'deny', message?: string): void => {
-        void chatClient.approve(chatId, item.requestId, decision, message).catch(() => undefined);
-    };
-
-    // A request that arrives inside the node you are working in becomes answerable by keyboard on
-    // the spot. A node you are not in, or a field you are typing in, keeps what it has.
-    useEffect(() => {
-        if (focused && !isTypingTarget(document.activeElement)) {
-            ref.current?.focus({ preventScroll: true });
-        }
-    }, [focused, item.requestId]);
-
+function PromptPrimary(props: ButtonHTMLAttributes<HTMLButtonElement>) {
     return (
-        <div
-            ref={ref}
-            className="border-b border-border outline-none"
-            role="group"
-            aria-label={`${item.toolName} wants permission`}
-            tabIndex={-1}
-            onKeyDown={(e) => {
-                if (isTypingTarget(e.target)) {
-                    return;
-                }
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    decide('allow');
-                }
-                if (e.key === 'Escape') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    decide('deny');
-                }
-            }}
-        >
-            <div className="flex items-center gap-2 px-3 py-2 text-xs">
-                <span className="grid h-6 w-6 shrink-0 place-items-center text-status-needs-you">{toolIcon(item.toolName, DOCK_ICON_SIZE)}</span>
-                <span className="text-sm font-medium text-text">{item.toolName}</span>
-                <button className="min-w-0 truncate text-left font-mono text-text-muted hover:text-text" onClick={() => setOpen((o) => !o)}>
-                    {toolSummary(item.toolName, item.input) || 'wants to run'}
-                </button>
-                <span className="grow" />
-                {more > 0 && <span className="shrink-0 tabular-nums text-text-faint">{more} more</span>}
-                <Button size="sm" onClick={() => decide('deny')}>
-                    <Icon icon={X} size={12} /> Decline <kbd className={TOOLTIP_KBD}>esc</kbd>
-                </Button>
-                {item.canAllowAlways && (
-                    <Button size="sm" className="text-text hover:bg-surface-hover" onClick={() => decide('allow-always')}>
-                        Always allow
-                    </Button>
-                )}
-                <Button size="sm" variant="primary" onClick={() => decide('allow')}>
-                    <Icon icon={Check} size={12} /> Approve <Kbd shortcut={KEY_SHORTCUTS.enter} className={TOOLTIP_KBD} />
-                </Button>
-            </div>
-            {item.description && <p className="px-3 pb-2 text-xs text-text-muted">{item.description}</p>}
-            {denyReason && note === null && (
-                <button className="px-3 pb-2 text-left text-xs text-text-muted hover:text-text" onClick={() => setNote('')}>
-                    Decline with a note
-                </button>
-            )}
-            {note !== null && (
-                <div className="flex items-center gap-2 px-3 pb-2">
-                    <input
-                        autoFocus
-                        className="field text-xs"
-                        aria-label="Reason for declining"
-                        placeholder="Tell the agent why not, and what to do instead"
-                        value={note}
-                        onChange={(e) => setNote(e.target.value)}
-                        onKeyDown={(e) => {
-                            e.stopPropagation();
-                            if (e.key === 'Enter') {
-                                decide('deny', note.trim() || undefined);
-                            }
-                            if (e.key === 'Escape') {
-                                setNote(null);
-                            }
-                        }}
-                    />
-                    <Button size="sm" onClick={() => decide('deny', note.trim() || undefined)}>
-                        <Icon icon={X} size={12} /> Decline
-                    </Button>
-                </div>
-            )}
-            {(open || changes.length > 0 || patches.length > 0) && (
-                <div className="max-h-64 overflow-auto border-t border-border">
-                    {patches.length > 0 ? (
-                        <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">Loading diff</div>}>
-                            {patches.map((change, i) => (
-                                <UnifiedDiff key={i} change={change} />
-                            ))}
-                        </Suspense>
-                    ) : changes.length > 0 ? (
-                        <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">Loading diff</div>}>
-                            {changes.map((change, i) => (
-                                <EditDiff key={i} change={change} />
-                            ))}
-                        </Suspense>
-                    ) : (
-                        <pre className="whitespace-pre-wrap px-3 py-2 font-mono text-code text-term-fg select-text">
-                            {command || JSON.stringify(item.input, null, 2)}
-                        </pre>
-                    )}
-                </div>
-            )}
-        </div>
+        <button
+            type="button"
+            className="inline-flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-full bg-text px-2.5 text-xs font-medium text-bg hover:opacity-90 disabled:opacity-50"
+            {...props}
+        />
     );
 }
 
-/* The agent's questions, one at a time, with the choices as buttons and room for a written answer. */
-export function QuestionDock({ chatId, item, more, focused }: { chatId: string; item: ChatQuestionItem; more: number; focused: boolean }) {
-    const [index, setIndex] = useState(0);
-    const [answers, setAnswers] = useState<PickedAnswers>({});
-    const [custom, setCustom] = useState('');
-    const ref = useRef<HTMLDivElement>(null);
-    const question = item.questions[Math.min(index, item.questions.length - 1)]!;
-    const last = index >= item.questions.length - 1;
-    const answer = answers[question.id] ?? [];
+interface Props {
+    item: PendingPrompt;
+    draft: PromptDraft;
+    onDraft(draft: PromptDraft): void;
+    onAction(action: PromptAction): void;
+    more: number;
+    hasDraft: boolean;
+    denyReason: boolean;
+    disabled: boolean;
+    sending: boolean;
+    error: string | null;
+}
 
-    const pick = (label: string): void => {
-        if (!question.multiSelect) {
-            setAnswers((current) => ({ ...current, [question.id]: [label] }));
+function ApprovalDetails({ item }: { item: ChatApprovalItem }) {
+    const [expanded, setExpanded] = useState(false);
+    const patches = approvalChanges(item.input);
+    const edits = patches.length ? [] : fileChanges(item.toolName, item.input);
+    const input = typeof item.input === 'object' && item.input !== null ? (item.input as Record<string, unknown>) : {};
+    return (
+        <>
+            {item.description && <p className="text-sm text-text-muted">{item.description}</p>}
+            {patches.length + edits.length > 1 && (
+                <p className="text-xs text-text-muted">Allow applies to all {patches.length + edits.length} changes in this request.</p>
+            )}
+            {patches.length + edits.length > 0 ? (
+                <div className="overflow-hidden rounded-xl bg-surface-sunken">
+                    <div className={clsx('overflow-auto', !expanded && 'max-h-44')}>
+                        <Suspense fallback={<p className="p-3 text-xs text-text-muted">Loading diff…</p>}>
+                            {patches.map((change, i) => (
+                                <UnifiedDiff key={i} change={change} />
+                            ))}
+                            {edits.map((change, i) => (
+                                <EditDiff key={i} change={change} />
+                            ))}
+                        </Suspense>
+                    </div>
+                    <div className="flex items-center border-t border-border p-1">
+                        <Button size="sm" className="rounded-full!" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
+                            {expanded ? 'Collapse diff' : 'View full diff'}
+                        </Button>
+                    </div>
+                </div>
+            ) : typeof input.command === 'string' ? (
+                <div className="rounded-xl bg-surface-sunken p-3">
+                    {typeof input.cwd === 'string' && <p className="mb-2 break-all font-mono text-xs text-text-muted">{input.cwd}</p>}
+                    <pre className="whitespace-pre-wrap break-words font-mono text-code text-text select-text">{input.command}</pre>
+                </div>
+            ) : (
+                <details>
+                    <summary className="flex h-7 cursor-pointer items-center text-xs text-text-muted">Details</summary>
+                    <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-surface-sunken p-3 font-mono text-code text-text select-text">
+                        {JSON.stringify(item.input, null, 2)}
+                    </pre>
+                </details>
+            )}
+        </>
+    );
+}
+
+export function PendingDock({ item, draft, onDraft, onAction, more, hasDraft, denyReason, disabled, sending, error }: Props) {
+    const question = item.kind === 'question' ? item.questions[Math.min(draft.index, item.questions.length - 1)]! : null;
+    const answer = question ? questionAnswer(draft, question) : null;
+    const locked = sending || disabled;
+    const last = item.kind === 'question' && draft.index === item.questions.length - 1;
+    const approve = (decision: 'allow' | 'allow-always' | 'deny') =>
+        onAction({ kind: 'approve', decision, ...(decision === 'deny' && draft.reason.trim() ? { message: draft.reason.trim() } : {}) });
+    const updateAnswer = (next: NonNullable<typeof answer>) => {
+        if (question) {
+            onDraft({ ...draft, answers: { ...draft.answers, [question.id]: next } });
+        }
+    };
+    const commit = () => {
+        if (item.kind !== 'question') {
             return;
         }
-        setAnswers((current) => ({ ...current, [question.id]: toggleChoice(current[question.id] ?? [], label) }));
-    };
-
-    const commit = (): void => {
-        const written = custom.trim();
-        const next = { ...answers, [question.id]: written ? [written] : answer };
-        setAnswers(next);
-        setCustom('');
-        if (last) {
-            void chatClient.answer(chatId, item.requestId, answersToWire(next)).catch(() => undefined);
+        if (!last) {
+            onDraft({ ...draft, index: draft.index + 1 });
         } else {
-            setIndex(index + 1);
+            const answers = promptAnswers(item, draft);
+            if (answers) {
+                onAction({ kind: 'answer', answers });
+            }
         }
     };
-
-    useEffect(() => {
-        if (focused && !isTypingTarget(document.activeElement)) {
-            ref.current?.focus({ preventScroll: true });
-        }
-    }, [focused, item.requestId]);
-
-    /* Escape hands an empty answer back: the agent gets a reply either way, and the dock goes. */
-    const dismiss = (): void => {
-        void chatClient.answer(chatId, item.requestId, answersToWire({ ...answers, [question.id]: answers[question.id] ?? [] })).catch(() => undefined);
-    };
-
-    const selected = new Set(answer);
-    const canCommit = custom.trim() !== '' || answer.length > 0;
     return (
         <div
-            ref={ref}
-            className="border-b border-border outline-none"
+            className="prompt-card flex min-h-0 flex-col gap-2 p-3"
             role="group"
-            aria-label={question.header || 'Question'}
-            tabIndex={-1}
-            onKeyDown={(e) => {
-                if (isTypingTarget(e.target)) {
-                    return;
-                }
-                if (e.key === 'Enter' && canCommit) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    commit();
-                }
-                if (e.key === 'Escape') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    dismiss();
-                }
-            }}
+            aria-label={item.kind === 'approval' ? 'Permission request' : 'Question'}
+            aria-busy={sending}
         >
-            <div className="flex items-center gap-2 px-3 py-2 text-xs">
-                <Icon icon={MessageCircleQuestionMark} size={DOCK_ICON_SIZE} className="shrink-0 text-status-needs-you" />
-                <span className="text-sm font-medium text-text">{question.header || 'Question'}</span>
-                <span className="grow" />
-                {item.questions.length > 1 && (
-                    <span className="tabular-nums text-text-faint">
-                        {index + 1}/{item.questions.length}
-                    </span>
-                )}
-                {more > 0 && <span className="shrink-0 tabular-nums text-text-faint">{more} more</span>}
-                {/* Only the agent that keeps working while it waits can be left without an answer. */}
-                {item.async === true && (
-                    <Button size="sm" onClick={() => void chatClient.dismiss(chatId, item.id).catch(() => undefined)}>
-                        <Icon icon={X} size={12} /> Dismiss
-                    </Button>
-                )}
+            <div className="max-h-[min(50dvh,480px)] overflow-auto overscroll-contain">
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-start gap-2">
+                        <Icon icon={item.kind === 'approval' ? Hand : MessageCircleQuestionMark} size={18} className="mt-0.5 shrink-0 text-status-needs-you" />
+                        <h3 tabIndex={-1} className="prompt-heading min-w-0 break-words text-sm font-semibold text-text outline-offset-4">
+                            {item.kind === 'approval'
+                                ? `${item.toolName === 'Bash' ? 'Run command' : item.toolName} ${item.toolName === 'Bash' ? '' : toolSummary(item.toolName, item.input)}`
+                                : question?.question}
+                        </h3>
+                    </div>
+                    {(more > 0 || hasDraft || (item.kind === 'question' && item.questions.length > 1)) && (
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-muted">
+                            {more > 0 && <span className="tabular-nums">{more + 1} requests waiting</span>}
+                            {item.kind === 'question' && item.questions.length > 1 && (
+                                <span className="tabular-nums">
+                                    Question {draft.index + 1} of {item.questions.length}
+                                </span>
+                            )}
+                            {hasDraft && <span>Draft saved</span>}
+                        </div>
+                    )}
+                    {item.kind === 'approval' ? (
+                        <>
+                            <ApprovalDetails item={item} />
+                            {denyReason && draft.showReason && (
+                                <textarea
+                                    className="field min-h-16 text-sm"
+                                    autoFocus
+                                    aria-label="Reason for declining"
+                                    placeholder="Reason for declining, optional"
+                                    disabled={locked}
+                                    value={draft.reason}
+                                    onChange={(e) => onDraft({ ...draft, reason: e.target.value })}
+                                />
+                            )}
+                        </>
+                    ) : (
+                        question &&
+                        answer && (
+                            <div className="flex flex-col gap-2">
+                                {question.multiSelect && <p className="text-xs text-text-muted">Choose one or more</p>}
+                                {question.choices.map((choice) => {
+                                    const selected = !answer.custom && answer.choices.includes(choice.label);
+                                    return (
+                                        <button
+                                            key={choice.label}
+                                            disabled={locked}
+                                            aria-pressed={selected}
+                                            className={clsx(
+                                                'flex min-h-9 items-start gap-2 rounded-lg border px-3 py-2 text-left disabled:opacity-50',
+                                                selected ? 'border-accent bg-accent-soft' : 'border-border bg-surface-hover hover:bg-surface-active'
+                                            )}
+                                            onClick={() => updateAnswer(pickPromptChoice(answer, question, choice.label))}
+                                        >
+                                            <Icon
+                                                icon={selected ? CircleCheck : question.multiSelect ? Square : Circle}
+                                                size={16}
+                                                className="mt-0.5 shrink-0 text-text-muted"
+                                            />
+                                            <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+                                                <span className="text-xs text-text">{choice.label}</span>
+                                                {choice.description && <span className="text-xs text-text-muted">{choice.description}</span>}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                                {question.choices.length > 0 && (
+                                    <label
+                                        className={clsx(
+                                            'flex min-h-9 items-start gap-2 rounded-lg border px-3 py-2 text-left text-xs text-text',
+                                            answer.custom ? 'border-accent bg-accent-soft' : 'border-border bg-surface-hover',
+                                            locked && 'opacity-50'
+                                        )}
+                                    >
+                                        <Icon icon={answer.custom ? CircleCheck : Circle} size={16} className="mt-0.5 shrink-0" />
+                                        <textarea
+                                            rows={1}
+                                            className="max-h-40 min-w-0 flex-1 resize-none field-sizing-content bg-transparent outline-none placeholder:text-text-muted"
+                                            aria-label="Your answer"
+                                            placeholder="Something else…"
+                                            value={answer.text}
+                                            disabled={locked}
+                                            onFocus={() => updateAnswer({ ...answer, custom: true })}
+                                            onChange={(e) => updateAnswer({ ...answer, custom: true, text: e.target.value })}
+                                        />
+                                    </label>
+                                )}
+                                {question.choices.length === 0 && (
+                                    <textarea
+                                        className="field min-h-20 text-sm"
+                                        aria-label="Your answer"
+                                        placeholder="Your answer"
+                                        value={answer.text}
+                                        disabled={locked}
+                                        onChange={(e) => updateAnswer({ ...answer, text: e.target.value })}
+                                    />
+                                )}
+                            </div>
+                        )
+                    )}
+                    {disabled && <p className="text-xs text-text-muted">Not connected to the machine</p>}
+                    {error && (
+                        <p role="alert" className="text-xs text-status-error">
+                            {error}
+                        </p>
+                    )}
+                </div>
             </div>
-            <p className="px-3 pb-3 text-sm text-text select-text">{question.question}</p>
-            <div className="flex flex-col gap-1.5 px-3 pb-3">
-                {question.choices.map((choice) => (
-                    <button
-                        key={choice.label}
-                        /* The label answers the question and the line under it says what that means,
-                           so they stack: side by side the second one reads as part of the first. */
-                        className={clsx(
-                            'flex flex-col items-start gap-0.5 rounded-md border px-3 py-2 text-left text-xs',
-                            /* The outline is the hover color and the fill under the pointer sits
-                               between that and the surface, so a choice lights up without its edge
-                               dissolving into it. */
-                            selected.has(choice.label)
-                                ? 'border-accent bg-accent-soft'
-                                : 'border-surface-hover hover:bg-[color-mix(in_srgb,var(--surface-hover)_50%,var(--surface-raised))]'
+            <div className="flex flex-wrap items-center gap-1.5">
+                {item.kind === 'approval' ? (
+                    <>
+                        {denyReason && !draft.showReason && (
+                            <Button size="sm" className="rounded-full!" disabled={locked} onClick={() => onDraft({ ...draft, showReason: true })}>
+                                Add a reason
+                            </Button>
                         )}
-                        onClick={() => pick(choice.label)}
-                    >
-                        <span className="font-medium text-text">{choice.label}</span>
-                        {choice.description && <span className="text-text-muted">{choice.description}</span>}
-                    </button>
-                ))}
-                <input
-                    className="field text-xs"
-                    aria-label="Write your own answer"
-                    placeholder="Or write your own answer"
-                    value={custom}
-                    onChange={(e) => setCustom(e.target.value)}
-                    onKeyDown={(e) => {
-                        e.stopPropagation();
-                        if (e.key === 'Enter' && canCommit) {
-                            commit();
-                        }
-                    }}
-                />
-            </div>
-            <div className="flex items-center gap-2 border-t border-border px-3 py-2">
-                {index > 0 && (
-                    <Button size="sm" onClick={() => setIndex(index - 1)}>
-                        <Icon icon={ChevronLeft} size={12} /> Previous
-                    </Button>
+                        <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+                            {item.canAllowAlways && item.allowAlways && (
+                                <Button
+                                    size="sm"
+                                    className="rounded-full!"
+                                    disabled={locked}
+                                    aria-description={item.allowAlways.description}
+                                    onClick={() => approve('allow-always')}
+                                >
+                                    {item.allowAlways.label}
+                                </Button>
+                            )}
+                            <Button size="sm" className="rounded-full!" disabled={locked} onClick={() => approve('deny')}>
+                                Deny
+                            </Button>
+                            <PromptPrimary disabled={locked} onClick={() => approve('allow')}>
+                                <Icon icon={CircleCheck} size={16} />
+                                {sending ? 'Sending…' : 'Allow'}
+                            </PromptPrimary>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        {draft.index > 0 && (
+                            <Button size="sm" className="rounded-full!" disabled={sending} onClick={() => onDraft({ ...draft, index: draft.index - 1 })}>
+                                Previous
+                            </Button>
+                        )}
+                        {item.async && draft.index === 0 && (
+                            <Button size="sm" className="rounded-full!" disabled={locked} onClick={() => onAction({ kind: 'dismiss' })}>
+                                Dismiss
+                            </Button>
+                        )}
+                        <span className="grow" />
+                        <PromptPrimary disabled={locked || !answer || !answerValue(answer) || (last && !promptAnswers(item, draft))} onClick={commit}>
+                            {sending ? 'Sending…' : last ? 'Answer' : 'Next'}
+                            <Icon icon={ArrowUp} size={16} />
+                        </PromptPrimary>
+                    </>
                 )}
-                <span className="grow" />
-                <Button size="sm" variant="primary" disabled={!canCommit} onClick={commit}>
-                    {last ? 'Submit' : 'Next'} {last ? <Icon icon={Check} size={12} /> : <Icon icon={ChevronRight} size={12} />}
-                    <Kbd shortcut={KEY_SHORTCUTS.enter} className={TOOLTIP_KBD} />
-                </Button>
             </div>
         </div>
     );

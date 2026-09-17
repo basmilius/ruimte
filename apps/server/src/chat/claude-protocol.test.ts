@@ -234,7 +234,8 @@ describe('ClaudeProtocol', () => {
                 toolName: 'Bash',
                 input: { command: 'date' },
                 description: 'Run a command',
-                canAllowAlways: true
+                canAllowAlways: true,
+                allowAlways: { label: 'Allow with these rules', description: JSON.stringify(suggestions, null, 2) }
             }
         ]);
 

@@ -67,6 +67,7 @@ export type BackendEvent =
           input: unknown;
           description: string | null;
           canAllowAlways: boolean;
+          allowAlways?: { label: string; description: string };
       }
     // `async` marks a question the CLI goes on past, which is the only kind the person may dismiss.
     | { type: 'question.requested'; requestId: string; questions: ChatQuestion[]; async?: boolean }

@@ -16,9 +16,8 @@ struct ChatScreen: View {
     @State private var endingAgents: EndingAgents?
     @State private var pickerKind: String?
     @State private var photo: PhotosPickerItem?
-    @State private var question: JSONValue?
-    @State private var expandedRequest: String?
-    @State private var denialReason = ""
+    @State private var prompts = ChatPromptState()
+    @State private var viewportHeight: CGFloat = 700
     @State private var composerFocused = false
     @GestureState private var composerPressed = false
     @State private var composerSelection = NSRange(location: 0, length: 0)
@@ -96,10 +95,7 @@ struct ChatScreen: View {
             .overlay(alignment: .bottom) {
                 HStack(alignment: .bottom, spacing: 16) {
                     GlassEffectContainer(spacing: 8) {
-                        VStack(spacing: 8) {
-                            if let pending = model.pending.first { pendingDock(pending) }
-                            composer
-                        }
+                        promptComposer
                     }
                     .frame(maxWidth: 760)
                     if scrollButtonBesideComposer {
@@ -126,10 +122,15 @@ struct ChatScreen: View {
                 }
             }
         }
-        .onGeometryChange(for: CGFloat.self) {
-            $0.size.width
+        .onGeometryChange(for: CGSize.self) {
+            $0.size
         } action: {
-            viewportWidth = $0
+            viewportWidth = $0.width
+            viewportHeight = $0.height
+        }
+        .onChange(of: model.pending, initial: true) { _, requests in
+            prompts.update(requests)
+            if prompts.active != nil { composerFocused = false }
         }
         .ignoresSafeArea(.container, edges: .bottom)
         .background(MobileStyle.surface.ignoresSafeArea())
@@ -306,9 +307,6 @@ struct ChatScreen: View {
                 }
             ) { pickerKind = nil }
         }
-        .mobileSheet(isPresented: Binding(get: { question != nil }, set: { if !$0 { question = nil } })) {
-            if let question { ChatQuestionSheet(model: model, item: question) }
-        }
     }
 
     private func start() {
@@ -422,6 +420,23 @@ struct ChatScreen: View {
         ConcentricRectangle(corners: .concentric(minimum: 24))
     }
 
+    private var promptComposer: some View {
+        ChatComposerMorph(request: prompts.active) {
+            composer
+        } prompt: { pending in
+            ChatPromptCard(
+                prompts: prompts, item: pending, connected: model.connected && !model.loading,
+                hasDraft: hasDraft,
+                denyReason: model.providers.first(where: {
+                    $0["kind"] == model.info["provider"]
+                })?["capabilities"]?["denyReason"]?.boolValue == true,
+                availableHeight: viewportHeight
+            ) { action, values in
+                _ = try await model.client.request(action, payload: model.target(values))
+            }
+        }
+    }
+
     private var composer: some View {
         let photoIcon = Image(lucide: "image")
         return VStack(alignment: .leading, spacing: 0) {
@@ -472,7 +487,7 @@ struct ChatScreen: View {
                 }.accessibilityLabel("Attach photo")
                 modelMenu.frame(maxWidth: 200, alignment: .leading)
                 Spacer(minLength: 0)
-                if isWorking && hasDraft { stopAction }
+                if isWorking { stopAction }
                 primaryAction
             }
             .font(.system(.subheadline, weight: .medium))
@@ -485,7 +500,6 @@ struct ChatScreen: View {
                 .onTapGesture { composerFocused = true }
         }
         .contentShape(composerShape)
-        .glassEffect(.regular, in: composerShape)
         .overlay {
             composerShape.fill(.primary.opacity(composerPressed ? 0.07 : 0))
                 .allowsHitTesting(false)
@@ -496,30 +510,26 @@ struct ChatScreen: View {
         .disabled(!model.connected || model.loading)
     }
 
-    @ViewBuilder private var primaryAction: some View {
-        if isWorking && !hasDraft {
-            stopAction
-        } else {
-            Button {
-                send()
-            } label: {
-                Group {
-                    if model.sending {
-                        ProgressView()
-                    } else {
-                        Image(lucide: "arrow-up", size: 15)
-                    }
+    private var primaryAction: some View {
+        Button {
+            send()
+        } label: {
+            Group {
+                if model.sending {
+                    ProgressView()
+                } else {
+                    Image(lucide: "arrow-up", size: 15)
                 }
-                .foregroundStyle(colorScheme == .dark ? Color.black : Color.white)
-                .frame(width: 32, height: 32)
-                .background(hasDraft ? MobileStyle.accent : MobileStyle.accent.opacity(0.25), in: Circle())
-                .frame(width: 44, height: 44)
             }
-            .buttonStyle(.plain)
-            .disabled(!model.connected || model.loading || model.sending || !hasDraft)
-            .accessibilityLabel("Send message")
-            .keyboardShortcut(.return, modifiers: .command)
+            .foregroundStyle(colorScheme == .dark ? Color.black : Color.white)
+            .frame(width: 32, height: 32)
+            .modifier(ChatComposerAction(prompt: false, loading: model.sending, opacity: hasDraft ? 1 : 0.25))
+            .frame(width: 44, height: 44)
         }
+        .buttonStyle(.plain)
+        .disabled(!model.connected || model.loading || model.sending || !hasDraft)
+        .accessibilityLabel("Send message")
+        .keyboardShortcut(.return, modifiers: .command)
     }
 
     private var stopAction: some View {
@@ -627,119 +637,6 @@ struct ChatScreen: View {
         }
     }
 
-    private func pendingDock(_ item: JSONValue) -> some View {
-        let requestID = item["requestId"]?.stringValue ?? ""
-        let expanded = expandedRequest == requestID
-        let isApproval = item["kind"]?.stringValue == "approval"
-        let layout =
-            dynamicTypeSize >= .xxxLarge
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
-            : AnyLayout(HStackLayout(spacing: 8))
-        return VStack(alignment: .leading, spacing: 10) {
-            layout {
-                Button {
-                    expandedRequest = expanded ? nil : requestID
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(lucide: isApproval ? "hand" : "message-circle-question-mark")
-                            .foregroundStyle(.orange)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(item["toolName"]?.stringValue ?? "Answer needed")
-                                .font(.subheadline.weight(.semibold)).lineLimit(1)
-                            Text(
-                                isApproval
-                                    ? item["description"]?.stringValue ?? "The agent needs permission to continue."
-                                    : "The agent has a question"
-                            )
-                            .font(.caption).foregroundStyle(MobileStyle.muted).lineLimit(2)
-                        }
-                        Image(lucide: expanded ? "chevron-up" : "chevron-down", size: 12).foregroundStyle(
-                            MobileStyle.muted)
-                    }.frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                        .contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityLabel("Request details")
-                    .accessibilityValue(expanded ? "Expanded" : "Collapsed")
-                HStack(spacing: 8) {
-                    if isApproval {
-                        approvalButton("Deny", decision: "deny", item: item)
-                            .buttonStyle(.borderless).font(.subheadline)
-                        approvalButton("Allow", decision: "allow", item: item)
-                            .buttonStyle(.plain).font(.subheadline.weight(.semibold))
-                            .foregroundStyle(colorScheme == .dark ? Color.black : Color.white)
-                            .padding(.horizontal, 8)
-                            .background(MobileStyle.accent, in: Capsule())
-                    } else {
-                        Button("Answer") { question = item }
-                            .buttonStyle(.borderedProminent).controlSize(.small)
-                            .foregroundStyle(colorScheme == .dark ? Color.black : Color.white)
-                            .font(.subheadline.weight(.semibold))
-                            .frame(minHeight: 44)
-                    }
-                }
-            }
-            if expanded {
-                if isApproval {
-                    Text(item["description"]?.stringValue ?? "The agent needs permission to continue.")
-                        .font(.subheadline).foregroundStyle(MobileStyle.muted)
-                    let changes = ChatFileChanges.grouped(
-                        ChatFileChanges.fromTool(
-                            .object([
-                                "name": item["toolName"] ?? .null, "input": item["input"] ?? .null,
-                                "changes": item["input"]?["changes"] ?? .array([]),
-                            ])))
-                    if !changes.isEmpty {
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 8) {
-                                ForEach(changes) { change in ChatFileChangeView(change: change) }
-                            }
-                        }.frame(maxHeight: 240)
-                    } else if let input = item["input"], let data = try? input.encoded(),
-                        let text = String(data: data, encoding: .utf8)
-                    {
-                        ScrollView { CodeMessage(text: text, language: "json") }.frame(maxHeight: 180)
-                    }
-                    if model.providers.first(where: { $0["kind"] == model.info["provider"] })?["capabilities"]?[
-                        "denyReason"]?.boolValue == true
-                    {
-                        TextField("Reason for declining, optional", text: $denialReason, axis: .vertical)
-                            .font(.subheadline).textFieldStyle(.roundedBorder)
-                            .onChange(of: requestID) { _, _ in denialReason = "" }
-                    }
-                    if item["canAllowAlways"]?.boolValue == true {
-                        approvalButton("Always allow this tool", decision: "allow-always", item: item)
-                            .font(.subheadline)
-                    }
-                }
-                if model.pending.count > 1 {
-                    Text("\(model.pending.count - 1) more requests waiting")
-                        .font(.caption).foregroundStyle(MobileStyle.muted).monospacedDigit()
-                }
-            }
-        }
-        .padding(.horizontal, 12).padding(.vertical, 8)
-        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 18))
-        .disabled(!model.connected)
-    }
-
-    private func approvalValues(_ item: JSONValue, decision: String) -> [String: JSONValue] {
-        var values: [String: JSONValue] = ["requestId": item["requestId"] ?? .null, "decision": .string(decision)]
-        let reason = denialReason.trimmingCharacters(in: .whitespacesAndNewlines)
-        if decision == "deny" && expandedRequest == item.text("requestId") && !reason.isEmpty {
-            values["message"] = .string(reason)
-        }
-        return values
-    }
-
-    private func approvalButton(_ label: String, decision: String, item: JSONValue) -> some View {
-        Button {
-            Task {
-                await model.perform(
-                    "chat.approve", approvalValues(item, decision: decision))
-            }
-        } label: {
-            Text(label).frame(minWidth: 44, minHeight: 44)
-        }
-    }
 }
 
 struct SessionErrorBanner: View {
@@ -772,98 +669,6 @@ private struct ChatSuggestionPicker: View {
             .task(id: query) { await model.search(kind, query: query) }
             .navigationTitle(kind == "@" ? "Files" : kind == "$" ? "Skills" : "Commands")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done", action: close) } }
-        }
-    }
-}
-
-private struct ChatQuestionSheet: View {
-    @Bindable var model: ChatModel
-    let item: JSONValue
-    @Environment(\.dismiss) private var dismiss
-    @State private var answers: [String: String] = [:]
-    @State private var selected: [String: Set<String>] = [:]
-    @State private var submitting = false
-    private var questions: [JSONValue] { item["questions"]?.arrayValue ?? [] }
-    var body: some View {
-        NavigationStack {
-            MobileForm {
-                ForEach(Array(questions.enumerated()), id: \.offset) { _, question in
-                    let id = question["id"]?.stringValue ?? ""
-                    Section(question["header"]?.stringValue ?? "Question") {
-                        Text(question["question"]?.stringValue ?? "")
-                        ForEach(Array((question["choices"]?.arrayValue ?? []).enumerated()), id: \.offset) {
-                            _, choice in
-                            let label = choice["label"]?.stringValue ?? ""
-                            Button {
-                                if question["multiSelect"]?.boolValue == true {
-                                    var values = selected[id] ?? []
-                                    if values.contains(label) { values.remove(label) } else { values.insert(label) }
-                                    selected[id] = values
-                                    answers[id] = values.sorted().joined(separator: ", ")
-                                } else {
-                                    answers[id] = label
-                                }
-                            } label: {
-                                HStack {
-                                    VStack(alignment: .leading) {
-                                        Text(label)
-                                        Text(choice["description"]?.stringValue ?? "").font(.caption).foregroundStyle(
-                                            .secondary)
-                                    }
-                                    Spacer()
-                                    if answers[id] == label || selected[id]?.contains(label) == true {
-                                        Image(lucide: "check")
-                                    }
-                                }
-                            }
-                        }
-                        TextField(
-                            "Your answer",
-                            text: Binding(
-                                get: { answers[id] ?? "" },
-                                set: {
-                                    answers[id] = $0
-                                    selected[id] = []
-                                }), axis: .vertical)
-                    }
-                }
-                if let error = model.error { Text(error).foregroundStyle(.red) }
-                if item["async"]?.boolValue == true {
-                    Button("Dismiss question") {
-                        Task { if await model.perform("chat.dismiss", ["itemId": item["id"] ?? .null]) { dismiss() } }
-                    }
-                }
-            }
-            .navigationTitle("Answer questions")
-            .onChange(of: model.pending) { _, _ in
-                if !model.pending.contains(where: { $0["requestId"] == item["requestId"] }) { dismiss() }
-            }
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Send") {
-                        submitting = true
-                        Task {
-                            if await model.perform(
-                                "chat.answer",
-                                [
-                                    "requestId": item["requestId"] ?? .null,
-                                    "answers": .object(answers.mapValues(JSONValue.string)),
-                                ])
-                            {
-                                dismiss()
-                            }
-                            submitting = false
-                        }
-                    }.disabled(
-                        submitting
-                            || questions.contains {
-                                (answers[$0["id"]?.stringValue ?? ""] ?? "").trimmingCharacters(
-                                    in: .whitespacesAndNewlines
-                                ).isEmpty
-                            })
-                }
-            }
         }
     }
 }

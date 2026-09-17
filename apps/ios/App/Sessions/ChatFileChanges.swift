@@ -82,6 +82,7 @@ struct ChatDiffView: View {
                     ForEach(Array((showAll ? lines : Array(lines.prefix(400))).enumerated()), id: \.offset) { _, line in
                         Text(line.isEmpty ? " " : line)
                             .font(.system(.caption, design: .monospaced)).textSelection(.enabled)
+                            .fixedSize(horizontal: true, vertical: false)
                             .foregroundStyle(
                                 line.hasPrefix("+") ? Color.green : line.hasPrefix("-") ? Color.red : MobileStyle.muted
                             )

@@ -1,26 +1,23 @@
 // A page is a screen minus a little, so the line you were reading is still on it after the jump.
 const PAGE_OVERLAP = 0.9;
 
-const scrollers = new Map<string, HTMLElement>();
+const scrollers = new Map<string, { element: HTMLElement; follow: (enabled: boolean) => void }>();
 
 /* The timeline hands its scroller over so the composer, which never sees it, can page through it. */
-export const registerTimeline = (chatId: string, element: HTMLElement | null): (() => void) => {
+export const registerTimeline = (chatId: string, element: HTMLElement | null, follow: (enabled: boolean) => void): (() => void) => {
     if (element === null) {
         return () => undefined;
     }
-    scrollers.set(chatId, element);
+    scrollers.set(chatId, { element, follow });
     return () => {
-        if (scrollers.get(chatId) === element) {
+        if (scrollers.get(chatId)?.element === element) {
             scrollers.delete(chatId);
             ends.delete(chatId);
         }
     };
 };
 
-/*
- * Whether the thread sits at its end. The timeline knows (it follows the tail while it is there),
- * the composer draws the button that goes back, and the two never meet: this is where they agree.
- */
+/* The timeline owns following; the composer subscribes here to show its jump-to-end button. */
 const ends = new Map<string, boolean>();
 const listeners = new Set<() => void>();
 
@@ -45,17 +42,23 @@ export const subscribeTimelineEnd = (listener: () => void): (() => void) => {
 export const timelineAtEnd = (chatId: string): boolean => ends.get(chatId) ?? true;
 
 export const scrollTimelineToEnd = (chatId: string): void => {
-    const element = scrollers.get(chatId);
-    element?.scrollTo({ top: element.scrollHeight, behavior: 'smooth' });
+    const scroller = scrollers.get(chatId);
+    if (scroller) {
+        scroller.follow(true);
+        scroller.element.scrollTo({ top: scroller.element.scrollHeight, behavior: 'smooth' });
+    }
 };
 
 /* Pages the thread of this chat up or down; false when it has no timeline on screen. */
 export const pageTimeline = (chatId: string, direction: -1 | 1): boolean => {
-    const element = scrollers.get(chatId);
-    if (!element) {
+    const scroller = scrollers.get(chatId);
+    if (!scroller) {
         return false;
     }
-    element.scrollBy({ top: direction * element.clientHeight * PAGE_OVERLAP, behavior: 'smooth' });
+    scroller.follow(false);
+    const { element } = scroller;
+    const coveredHeight = Number.parseFloat(getComputedStyle(element).scrollPaddingBottom) || 0;
+    element.scrollBy({ top: direction * Math.max(0, element.clientHeight - coveredHeight) * PAGE_OVERLAP, behavior: 'smooth' });
     return true;
 };
 

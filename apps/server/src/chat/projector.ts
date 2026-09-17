@@ -213,6 +213,7 @@ export class ThreadProjector {
                         input: event.input ?? {},
                         description: event.description,
                         canAllowAlways: event.canAllowAlways,
+                        ...(event.allowAlways ? { allowAlways: event.allowAlways } : {}),
                         decision: 'pending'
                     })
                 );

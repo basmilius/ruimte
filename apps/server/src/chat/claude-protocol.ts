@@ -395,7 +395,8 @@ export class ClaudeProtocol {
             toolName,
             input: request.input ?? {},
             description: str(request.description),
-            canAllowAlways: suggestions.length > 0
+            canAllowAlways: suggestions.length > 0,
+            ...(suggestions.length > 0 ? { allowAlways: { label: 'Allow with these rules', description: JSON.stringify(suggestions, null, 2) } } : {})
         });
     }
 

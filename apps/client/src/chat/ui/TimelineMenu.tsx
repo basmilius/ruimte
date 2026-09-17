@@ -23,11 +23,11 @@ import { Kbd } from '@/ui/Kbd';
  */
 export function TimelineMenuPopup({
     target,
-    scroller,
+    thread,
     chatId = null
 }: {
     target: TimelineTarget;
-    scroller: RefObject<HTMLDivElement | null>;
+    thread: RefObject<HTMLDivElement | null>;
     /* The chat whose own thread this is; a thread in its place (a sub-agent's) has nothing to fork. */
     chatId?: string | null;
 }) {
@@ -77,7 +77,7 @@ export function TimelineMenuPopup({
                         </ContextMenu.Item>
                     )}
                     <ContextMenu.Separator className={MENU_SEPARATOR} />
-                    <ContextMenu.Item className="menu-item" onClick={() => selectAllWithin(scroller.current)}>
+                    <ContextMenu.Item className="menu-item" onClick={() => selectAllWithin(thread.current)}>
                         <Icon icon={Scan} size={14} /> Select all
                     </ContextMenu.Item>
                     {target.path !== null && (
