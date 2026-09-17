@@ -262,6 +262,25 @@ export const ACTION_DEFINITIONS = {
             chat: z.string(),
             queued: z.boolean()
         })
+    },
+    'chat.read': {
+        title: 'Read recent AI Chat messages',
+        description: 'Reads a limited recent excerpt of a loaded AI Chat without including reasoning or tool output.',
+        effect: 'read',
+        actors: ACTION_ACTOR_KINDS,
+        input: z.object({ chatId: z.string().min(1), limit: z.number().int().min(1).max(20) }),
+        output: z.object({
+            chatId: z.string().min(1),
+            chat: z.string(),
+            messages: z.array(
+                z.object({
+                    role: z.enum(['user', 'assistant']),
+                    text: z.string(),
+                    createdAt: z.number()
+                })
+            ),
+            truncated: z.boolean()
+        })
     }
 } as const;
 

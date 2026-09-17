@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { VOICE_TOOL_DEFINITIONS, type ProjectCanvasView, type ProjectDocument, type ProjectNode } from '@ruimte/contracts';
 import { defaultCanvases } from '@/state/canvas';
+import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
+import { currentEndpointId, endpointKey } from '@/state/keys';
 import { executeVoiceTool } from '@/voice/tools';
 
 const main: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [], texts: [], edges: [], layouts: [] };
@@ -47,6 +49,7 @@ beforeEach(() => {
 
 afterEach(() => {
     useDocument.getState().load(null, null);
+    useChats.setState({ byKey: {} });
     defaultCanvases.release('main');
     defaultCanvases.focus(null);
 });
@@ -183,5 +186,39 @@ describe('Voice domain tools', () => {
         );
         expect(confirmed.output).toMatchObject({ ok: true, viewId: 'release' });
         expect(useDocument.getState().views.some((view) => view.id === 'release')).toBe(false);
+    });
+
+    test('reads only a limited recent excerpt from a loaded AI Chat', async () => {
+        useDocument
+            .getState()
+            .load(
+                { ...document, views: [...document.views, { kind: 'chat', id: 'chat-test', name: 'Chat Test', node: {} }] },
+                { activeViewId: 'main', views: {} }
+            );
+        const items = [
+            { id: '1', kind: 'user' as const, text: 'First question', createdAt: 1, turnId: null },
+            { id: '2', kind: 'assistant' as const, text: 'First answer', streaming: false, createdAt: 2, turnId: null },
+            { id: '3', kind: 'user' as const, text: 'Latest question', createdAt: 3, turnId: null }
+        ];
+        const byId = Object.fromEntries(items.map((item) => [item.id, item]));
+        useChats.setState({
+            byKey: {
+                [endpointKey(currentEndpointId(), 'chat-test')]: {
+                    info: {} as never,
+                    items: byId,
+                    structure: byId,
+                    order: ['1', '2', '3']
+                }
+            }
+        });
+        const result = await executeVoiceTool('communicate', JSON.stringify({ action: 'read_ai_chat', chat: 'Chat Test', prompt: null, limit: 2 }));
+        expect(result.output).toMatchObject({
+            ok: true,
+            messages: [
+                { role: 'assistant', text: 'First answer' },
+                { role: 'user', text: 'Latest question' }
+            ],
+            truncated: true
+        });
     });
 });

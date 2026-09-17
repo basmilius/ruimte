@@ -116,21 +116,28 @@ export const VOICE_TOOL_DEFINITIONS = [
     {
         type: 'function',
         name: 'communicate',
-        description: 'Submit a direct prompt to an AI Chat. Do not include meta-language such as ask the chat; send the request itself.',
+        description:
+            'Submit a direct prompt to an AI Chat, or read a limited recent excerpt when the user explicitly asks. Reading never includes reasoning or tool output.',
         parameters: {
             type: 'object',
             properties: {
-                action: { type: 'string', enum: ['send_ai_chat'] },
+                action: { type: 'string', enum: ['send_ai_chat', 'read_ai_chat'] },
                 chat: {
                     type: ['string', 'null'],
                     description: 'AI Chat view or node name. Use null for the active or single selected chat.'
                 },
                 prompt: {
-                    type: 'string',
-                    description: 'The direct prompt to submit.'
+                    type: ['string', 'null'],
+                    description: 'The direct prompt to submit, or null when reading.'
+                },
+                limit: {
+                    type: ['integer', 'null'],
+                    minimum: 1,
+                    maximum: 20,
+                    description: 'Recent message count when reading. Use null for the default of 20.'
                 }
             },
-            required: ['action', 'chat', 'prompt'],
+            required: ['action', 'chat', 'prompt', 'limit'],
             additionalProperties: false
         },
         strict: true

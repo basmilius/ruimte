@@ -94,7 +94,8 @@ describe('client actions', () => {
             'canvas.fit',
             'history.undo',
             'history.redo',
-            'chat.send'
+            'chat.send',
+            'chat.read'
         ]);
     });
 

@@ -82,6 +82,9 @@ const nullableStringsArgument = (args: Record<string, unknown>, name: string): s
     return (args[name] as string[]).map((value) => value.trim());
 };
 
+const nullableIntegerArgument = (args: Record<string, unknown>, name: string): number | null | undefined =>
+    args[name] === null ? null : typeof args[name] === 'number' && Number.isInteger(args[name]) ? args[name] : undefined;
+
 const activeCanvas = () => {
     const active = activeViewOf(useDocument.getState());
     return active && isCanvasView(active) ? { view: active, canvas: focusedCanvas().getState() } : null;
@@ -459,9 +462,10 @@ const manageCanvas = async (args: Record<string, unknown>): Promise<VoiceToolExe
 const communicate = async (args: Record<string, unknown>): Promise<VoiceToolExecution> => {
     const action = stringArgument(args, 'action');
     const target = nullableStringArgument(args, 'chat');
-    const prompt = stringArgument(args, 'prompt');
-    if (action !== 'send_ai_chat' || target === undefined || !prompt) {
-        return failed('The AI Chat target or prompt was invalid.');
+    const prompt = nullableStringArgument(args, 'prompt');
+    const limit = nullableIntegerArgument(args, 'limit');
+    if (!action || target === undefined || prompt === undefined || limit === undefined) {
+        return failed('The AI Chat action arguments were invalid.');
     }
     const matched = findChat(target);
     if (matched.status === 'ambiguous') {
@@ -473,6 +477,19 @@ const communicate = async (args: Record<string, unknown>): Promise<VoiceToolExec
         return failed(target === null ? 'Open an AI Chat view or select exactly one AI Chat node.' : `No AI Chat matched “${target}”.`);
     }
     const chat = matched.value;
+    if (action === 'read_ai_chat') {
+        const count = limit ?? 20;
+        if (count < 1 || count > 20) {
+            return failed('Read between 1 and 20 recent AI Chat messages.');
+        }
+        const result = await clientActions.execute('chat.read', { chatId: chat.id, limit: count }, VOICE_ACTION_CALL);
+        return result.status === 'completed'
+            ? ok(`Read ${result.output.messages.length} recent messages from “${result.output.chat}”.`, result.output)
+            : failureOf(result);
+    }
+    if (action !== 'send_ai_chat' || !prompt) {
+        return failed('Provide a direct prompt when sending to AI Chat.');
+    }
     const result = await clientActions.execute('chat.send', { chatId: chat.id, prompt }, VOICE_ACTION_CALL);
     if (result.status !== 'completed') {
         return failureOf(result);

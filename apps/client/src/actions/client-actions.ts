@@ -3,8 +3,11 @@ import { isCanvasView, isOpenableView, isUnknownNode, isUnknownView, type NodeTi
 import type { StoreApi } from 'zustand';
 import { intersects, toWorld, visibleRect } from '@/canvas/math';
 import { nearestFreeNodeRect } from '@/canvas/place-node';
+import { recentChatMessages } from '@/chat/recent-messages';
 import { focusedCanvas, NODE_SIZE, type CanvasState, type NodeKind } from '@/state/canvas';
+import { useChats } from '@/state/chats';
 import { activeViewOf, useDocument, type DocumentState } from '@/state/document';
+import { currentEndpointId, endpointKey } from '@/state/keys';
 import { useProject } from '@/state/project';
 import { chatClient } from '@/transport/connections';
 
@@ -433,6 +436,17 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>): A
             }
             const queued = await chatClient.send(chatId, prompt);
             return { output: { chatId, chat, queued } };
+        },
+        'chat.read': ({ chatId, limit }) => {
+            const chat = chatTitle(document, chatId);
+            if (!chat) {
+                throw new ActionRefusal('unknown-chat', `No AI Chat with id “${chatId}” exists in this project.`);
+            }
+            const state = useChats.getState().byKey[endpointKey(currentEndpointId(), chatId)];
+            if (!state) {
+                throw new ActionRefusal('chat-not-loaded', `Open “${chat}” before asking Voice to read it.`);
+            }
+            return { output: { chatId, chat, ...recentChatMessages(state.items, state.order, limit) } };
         }
     });
 
