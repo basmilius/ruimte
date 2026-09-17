@@ -55,7 +55,7 @@ const nameSources = (sources: ContextSource[]): string => {
 
 /*
  * One line that tells an agent the linked context exists and how to read it. Shown above a
- * shell's first prompt and returned to Claude Code's prompt hooks, where the agent has no
+ * shell's first prompt and returned to the agent CLIs' prompt hooks, where the agent has no
  * system prompt of ours. Null without links, so a plain shell stays quiet.
  */
 export const contextHint = (sources: ContextSource[]): string | null => {
@@ -66,21 +66,22 @@ export const contextHint = (sources: ContextSource[]): string | null => {
 };
 
 /*
- * What Claude Code's hooks fold into the model's context. `SessionStart` always carries the verbs,
- * once per CLI life; a prompt only hears about links, so a turn is never nagged. `turn` is what
- * only this turn has to hear: a line drawn while the agent was running, and any message another
- * node left for it. A SessionStart is handed the whole list of links anyway, so a change note has
- * nothing to add there; a message does, since it may have been waiting since before the CLI started.
+ * What an agent CLI's hooks fold into the model's context. `SessionStart` carries the verbs once per
+ * CLI life, unless `verbs` is false because the launch line already did; a prompt only hears about
+ * links, so a turn is never nagged. `turn` is what only this turn has to hear: a line drawn while the
+ * agent was running, and any message another node left for it. A SessionStart is handed the whole
+ * list of links anyway, so a change note has nothing to add there; a message does, since it may have
+ * been waiting since before the CLI started.
  */
 export const hookContext = (
     event: string,
     sources: ContextSource[],
-    turn: { changed?: string | null; messages?: readonly string[]; depth?: number } = {}
+    turn: { changed?: string | null; messages?: readonly string[]; depth?: number; verbs?: boolean } = {}
 ): string | null => {
     const start = event === 'SessionStart';
     const hint = contextHint(sources);
     const parts = [
-        ...(start ? [verbsNote({ depth: turn.depth ?? 0 })] : []),
+        ...(start && turn.verbs !== false ? [verbsNote({ depth: turn.depth ?? 0 })] : []),
         ...(hint === null ? [] : [hint]),
         ...(start || !turn.changed ? [] : [turn.changed]),
         ...(turn.messages ?? [])

@@ -59,6 +59,13 @@ describe('hookContext', () => {
         expect(hookContext('UserPromptSubmit', [text])).toBe(contextHint([text]));
     });
 
+    test('a CLI whose launch line carried the verbs hears only its links and messages at a start', () => {
+        const message = 'Ruimte: node term-2 ("builder") sent you a message: the build is green.';
+        expect(hookContext('SessionStart', [], { verbs: false })).toBeNull();
+        expect(hookContext('SessionStart', [text], { verbs: false, messages: [message] })).toBe(`${contextHint([text])} ${message}`);
+        expect(hookContext('UserPromptSubmit', [text], { verbs: false })).toBe(contextHint([text]));
+    });
+
     test('SessionStart names the verbs for the depth the agent sits at', () => {
         expect(hookContext('SessionStart', [], { depth: 2 })).toBe(verbsNote({ depth: 2 }));
     });

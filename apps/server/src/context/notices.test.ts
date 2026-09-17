@@ -111,10 +111,10 @@ describe('deliverNotice', () => {
 
     test('a CLI that takes nothing between turns gets the screen, and the answer says so', async () => {
         const printed: string[] = [];
-        const deps = targets({ terminal: () => ({ agent: agent('codex'), notice: (text) => printed.push(text) }) });
+        const deps = targets({ terminal: () => ({ agent: agent('gemini'), notice: (text) => printed.push(text) }) });
         const delivery = await deliverNotice(store, deps, left('the build is green'));
         expect(delivery.at).toBe('now');
-        expect(delivery.detail).toContain('codex takes nothing between its turns');
+        expect(delivery.detail).toContain('gemini takes nothing between its turns');
         expect(printed).toHaveLength(1);
     });
 

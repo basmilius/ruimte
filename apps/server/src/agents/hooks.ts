@@ -69,11 +69,12 @@ export const HOOK_EVENTS: Partial<Record<AgentKind, string[]>> = {
 export const hasHooks = (kind: AgentKind): boolean => HOOK_EVENTS[kind] !== undefined;
 
 /*
- * Whether a hook's answer reaches this CLI's model. Only Claude Code folds one back into the turn
- * (`hookSpecificOutput.additionalContext`); every other CLI's hooks are one way, so anything meant
+ * Whether a hook's answer reaches this CLI's model. Claude Code and Codex 0.154 both fold
+ * `hookSpecificOutput.additionalContext` on `SessionStart` and `UserPromptSubmit` into the turn
+ * (Codex as a developer message, measured); any other CLI's hooks are one way, so anything meant
  * for the agent itself has to go on the screen instead of waiting for a turn that cannot carry it.
  */
-export const takesHookContext = (kind: AgentKind): boolean => kind === 'claude';
+export const takesHookContext = (kind: AgentKind): boolean => kind === 'claude' || kind === 'codex';
 
 /* Turns one hook payload into a status; null when the payload says nothing about status or is not a hook at all. */
 export const normalizeHook = (body: unknown): HookOutcome | null => {

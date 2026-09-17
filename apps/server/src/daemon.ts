@@ -97,6 +97,7 @@ import { handleProjectRequest, PROJECTS_PATH } from './projects/icon-route.ts';
 import { DiagramStore } from './projects/diagram-store.ts';
 import { DrawingStore } from './projects/drawing-store.ts';
 import { ProjectStore } from './projects/project-store.ts';
+import { takesNoteOnLine } from './providers/launch.ts';
 import { ProviderRegistry } from './providers/registry.ts';
 import { BunPtyAdapter } from './pty/bun-pty.ts';
 import { SessionManager } from './sessions/manager.ts';
@@ -721,7 +722,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                     request,
                     url.pathname,
                     manager,
-                    (token, event) => {
+                    (token, event, kind) => {
                         const sessionId = manager.sessionIdForToken(token);
                         if (!sessionId) {
                             return null;
@@ -729,7 +730,14 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                         // Asked on every event that can carry an answer, so the memory of what this
                         // agent was told keeps up with its turns even where nothing is printed.
                         const changed = context.changeSince(sessionId);
-                        return hookContext(event, context.list(sessionId), { changed, messages: messagesFor(sessionId), depth: lineage.depthOf(sessionId) });
+                        // A CLI the node launched got the verbs on its line; one typed by hand in the shell did not.
+                        const verbs = !(takesNoteOnLine(kind) && manager.get(sessionId)?.launch?.kind === kind);
+                        return hookContext(event, context.list(sessionId), {
+                            changed,
+                            messages: messagesFor(sessionId),
+                            depth: lineage.depthOf(sessionId),
+                            verbs
+                        });
                     },
                     (token, body, signal) => manager.holdApproval(token, body, signal)
                 );

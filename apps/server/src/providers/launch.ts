@@ -66,13 +66,17 @@ const ALWAYS_FLAGS: Partial<Record<AgentKind, string[]>> = {
 };
 
 /*
- * How a CLI without a hook that folds context in is told about `ruimte-context` at launch. Codex parses a
+ * How a CLI is told about `ruimte-context` on its launch line, where it takes one: a note there sits with the
+ * session's instructions rather than in the conversation, and its `SessionStart` hook leaves it out. Codex parses a
  * `-c` value as TOML, and a JSON string is a valid TOML basic string. Only a fresh launch carries it:
  * Codex 0.154 ignores developer instructions on a resume (measured) and keeps those the session started with.
  */
 const NOTE_FLAGS: Partial<Record<AgentKind, (note: string) => string[]>> = {
     codex: (note) => ['-c', quote(`developer_instructions=${JSON.stringify(note)}`)]
 };
+
+/* Whether a launch line of this kind carries the verbs note, so a hook must not say it a second time. */
+export const takesNoteOnLine = (kind: AgentKind): boolean => NOTE_FLAGS[kind] !== undefined;
 
 /*
  * What a launch puts on a CLI's line beside the command itself: the permission mode and, where the

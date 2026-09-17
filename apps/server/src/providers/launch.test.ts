@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { CLAUDE_ALLOW_CONTEXT } from './claude.ts';
-import { freshCommand, resumeCommand, resumeOrFreshCommand, terminalCommand } from './launch.ts';
+import { freshCommand, resumeCommand, resumeOrFreshCommand, takesNoteOnLine, terminalCommand } from './launch.ts';
 
 // How the launch line quotes the flag that lets ruimte-context through.
 const ALLOW = `'${CLAUDE_ALLOW_CONTEXT}'`;
@@ -55,6 +55,11 @@ describe('terminalCommand', () => {
         expect(resumeOrFreshCommand({ kind: 'codex', runtimeMode: 'supervised' }, 'abc-123', 'note')).toBe(
             `codex resume --ask-for-approval on-request --sandbox workspace-write 'abc-123' || codex --ask-for-approval on-request --sandbox workspace-write -c 'developer_instructions="note"'`
         );
+    });
+
+    test('says which kinds carry the note, so their start hook leaves it out', () => {
+        expect(takesNoteOnLine('codex')).toBe(true);
+        expect(takesNoteOnLine('claude')).toBe(false);
     });
 
     test('a resume never carries a first prompt: the session it picks up has its own history', () => {

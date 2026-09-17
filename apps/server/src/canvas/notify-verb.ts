@@ -15,7 +15,7 @@ const NOTIFY_DETAIL: readonly string[] = [
     'who\tOnly a node a line runs from you into, which is the same direction that makes you readable to it; ruimte-context link draws that line',
     'who\tA link --to that names a terminal or a chat draws both ways at once, two edges and two rows, so one call is enough to be able to notify it and be notified back',
     'terminal\tA shell with no agent in it gets the line on its screen at once, dimmed, the way the linked context is announced',
-    'terminal\tAn agent that answers a context hook (Claude Code today) hears it at the start of its next turn; another CLI gets the line on its screen instead',
+    'terminal\tAn agent that answers a context hook (Claude Code or Codex) hears it at the start of its next turn; another CLI gets the line on its screen instead',
     'terminal\tA screen is as wide as the node is, so a long message is wrapped across lines there; it reaches an agent whole either way',
     'chat\tA chat hears it in front of its next prompt, beside what it is told about links that changed',
     'waiting\tA node that runs nothing yet keeps the message until it starts',

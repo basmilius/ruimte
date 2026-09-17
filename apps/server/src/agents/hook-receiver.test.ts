@@ -72,7 +72,7 @@ describe('handleHookRequest', () => {
         expect(seen).toEqual(['SessionStart', 'UserPromptSubmit']);
     });
 
-    test('stays empty without links, on other events, and for Codex', async () => {
+    test('stays empty without links and on other events', async () => {
         const hint = () => 'hint';
         const none = () => null;
         const prompt = '{"hook_event_name":"UserPromptSubmit"}';
@@ -81,7 +81,20 @@ describe('handleHookRequest', () => {
         expect((await handleHookRequest(post('/hooks/claude', '{"hook_event_name":"Stop"}', 'tok'), '/hooks/claude', target('applied'), hint)).status).toBe(
             204
         );
-        expect((await handleHookRequest(post('/hooks/codex', prompt, 'tok'), '/hooks/codex', target('applied'), hint)).status).toBe(204);
+    });
+
+    test('answers a Codex prompt hook the way it answers Claude Code, and names the kind', async () => {
+        const kinds: string[] = [];
+        const hint = (_token: string, event: string, kind: string) => {
+            kinds.push(kind);
+            return `${kind} ${event}`;
+        };
+        const prompt = await handleHookRequest(post('/hooks/codex', '{"hook_event_name":"UserPromptSubmit"}', 'tok'), '/hooks/codex', target('applied'), hint);
+        expect(await prompt.json()).toEqual({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: 'codex UserPromptSubmit' } });
+        const start = await handleHookRequest(post('/hooks/codex', '{"hook_event_name":"SessionStart"}', 'tok'), '/hooks/codex', target('applied'), hint);
+        expect(await start.json()).toEqual({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: 'codex SessionStart' } });
+        expect((await handleHookRequest(post('/hooks/codex', '{"hook_event_name":"Stop"}', 'tok'), '/hooks/codex', target('applied'), hint)).status).toBe(204);
+        expect(kinds).toEqual(['codex', 'codex']);
     });
 
     test('only POST', async () => {
