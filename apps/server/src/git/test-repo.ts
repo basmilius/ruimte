@@ -4,9 +4,22 @@ import { join } from 'node:path';
 
 const IDENTITY = { GIT_AUTHOR_NAME: 'Ada', GIT_AUTHOR_EMAIL: 'a@a', GIT_COMMITTER_NAME: 'Ada', GIT_COMMITTER_EMAIL: 'a@a' };
 
+/*
+ * A commit may start auto maintenance in the background, which takes and drops
+ * `.git/objects/maintenance.lock` while a template is being copied, and the copy then fails on a file
+ * that is gone (seen on CI).
+ */
+const NO_MAINTENANCE = {
+    GIT_CONFIG_COUNT: '2',
+    GIT_CONFIG_KEY_0: 'maintenance.auto',
+    GIT_CONFIG_VALUE_0: 'false',
+    GIT_CONFIG_KEY_1: 'gc.auto',
+    GIT_CONFIG_VALUE_1: '0'
+};
+
 /* Runs git in a test repository and answers what it wrote to stdout; a failure throws with its stderr. */
 export const gitIn = async (cwd: string, args: string[]): Promise<string> => {
-    const proc = Bun.spawn(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ...IDENTITY } });
+    const proc = Bun.spawn(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe', env: { ...process.env, ...IDENTITY, ...NO_MAINTENANCE } });
     const [stdout, stderr, code] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
     if (code !== 0) {
         throw new Error(`git ${args.join(' ')}: ${stderr}`);
