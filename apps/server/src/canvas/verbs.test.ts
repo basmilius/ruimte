@@ -2403,12 +2403,28 @@ describe('tasks', () => {
             expect(tasks.get(taskId!)).toMatchObject({ status: 'done', result: { text: 'Fixed\nboth bugs', source: 'done' } });
             expect((await post('done', ['--result', 'again'], 'child')).lines[0]).toStartWith('refused\tno-open-task\t');
             expect((await post('tasks', [], 'chat')).lines).toEqual([`task\t${taskId}\tgave\tdone\t${childId}\tLexer\tpending\tFixed\t-`]);
-            expect((await post('tasks', [], 'child')).lines).toEqual([`task\t${taskId}\tgiven\tdone\tchat-1\tLexer\tpending\tFixed\t-`]);
+            // The child is done with a task that settled, while the parent still waits for the wake.
+            expect((await post('tasks', [], 'child')).lines).toEqual([
+                'note\tNo task is open or waiting to wake you; 1 older task is hidden, settled and already reported; ruimte-context tasks --all lists them'
+            ]);
+            expect((await post('tasks', ['--all'], 'child')).lines).toEqual([`task\t${taskId}\tgiven\tdone\tchat-1\tLexer\tpending\tFixed\t-`]);
             expect((await post('tasks', [], 'term')).lines).toEqual([
                 'note\tYou have given no task and were given none; ruimte-context agent --task gives one'
             ]);
         } finally {
             delete TOKENS.child;
         }
+    });
+    test('tasks leaves out what settled and already woke the parent, and --all brings the history back', async () => {
+        const [, , , , , earlier] = (await give(['--task', 'Lexer', '--prompt', 'fix it'])).lines[0]!.split('\t');
+        await tasks.settle(earlier!, 'done', { text: 'Fixed', source: 'done', at: 1 }, 1);
+        await tasks.markWoken([earlier!]);
+        const [laterChild, , , , , later] = (await give(['--task', 'Lexer', '--prompt', 'fix it again'])).lines[0]!.split('\t');
+
+        expect((await post('tasks', [], 'chat')).lines).toEqual([
+            `task\t${later}\tgave\topen\t${laterChild}\tLexer\tpending\t\t-`,
+            'note\t1 older task is hidden, settled and already reported; ruimte-context tasks --all lists them'
+        ]);
+        expect((await post('tasks', ['--all'], 'chat')).lines.map((line) => line.split('\t')[1])).toEqual([earlier, later]);
     });
 });

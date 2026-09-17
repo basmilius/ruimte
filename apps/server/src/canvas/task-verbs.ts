@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
 import { readResultFile } from './project-paths.ts';
 import { unescapeText } from './text-escapes.ts';
-import { VerbRefusal, defineVerb, field, orNote, placeOf } from './verb.ts';
+import { VerbRefusal, defineVerb, field, placeOf } from './verb.ts';
 
 /* A result past this is a document, not an answer; the wake shows at most the first 8 KiB of it anyway. */
 export const MAX_RESULT_LENGTH = 32_000;
@@ -28,7 +28,7 @@ export const TASK_LINES: readonly string[] = [
     'task\tOnce a task settles you are woken once, as soon as you have no turn running, with the results of every task that settled by then; you never have to poll',
     'task\tThe tasks of one team --task call wake you together: only once every one of them settled (done, failed or cancelled), so one slow role holds back the results of the others',
     "task\tA task from agent --task wakes you on its own, also while a team of yours is still out; that wake leaves the team's results out, and they all come in a later wake of their own",
-    'task\truimte-context tasks lists them with their status'
+    'task\truimte-context tasks lists the ones still open or yet to wake you, with their status; --all adds the history'
 ];
 
 /*
@@ -149,12 +149,22 @@ export const doneVerb = defineVerb({
     }
 });
 
+/*
+ * Whether a task still asks anything of the node listing it. A task it gave is history once it settled
+ * and its wake went out or never will (cancelled, or a parent nobody can wake); a task it was given is
+ * history once it settled. An earlier run with the same titles otherwise reads as work still out.
+ */
+const isCurrentTask = (task: Task, nodeId: string): boolean => task.status === 'open' || (task.parentId === nodeId && task.wake === 'pending');
+
 export const tasksVerb = defineVerb({
     name: 'tasks',
-    usage: '',
-    summary: 'Lists the tasks you gave and the task you were given: id, direction, status, the other node, title, wake, result, batch',
+    usage: '[--all]',
+    summary:
+        'Lists the tasks you gave and the task you were given that are still open or have yet to wake you: id, direction, status, the other node, title, wake, result, batch',
     detail: [
+        'flag\t--all\tno value\tAlso lists the history: tasks that settled and already woke their chat, and a task you were given that settled',
         'prints\ttask\tid\tgave|given\tstatus\tnode\ttitle\twake\tresult\tbatch\tone line per task, oldest first; node is the child for a task you gave and the parent for one you were given',
+        'current\tWithout --all only what is current: a task still open, or one you gave that settled and has yet to wake you; a note under the list counts what it left out',
         'status\topen\tdone\tfailed\tcancelled\tcancelled is a child a person removed',
         'wake\tpending\tsent\tnone\twhether the chat that gave it has been woken with the result yet; a settled task of a team stays pending until the whole team settled',
         'batch\tThe id shared by the tasks of one team --task call, or - for a task from agent --task',
@@ -162,13 +172,24 @@ export const tasksVerb = defineVerb({
         ...TASK_LINES
     ],
     positionals: z.tuple([], { error: 'tasks takes no arguments' }),
+    switches: ['all'],
     flags: z.object({}),
-    async run(_input, call) {
+    async run({ switches }, call) {
         placeOf(call);
         const tasks = call.host.tasks.involving(call.caller);
-        return orNote(
-            tasks.map((task) => taskLine(task, call.caller)),
-            'You have given no task and were given none; ruimte-context agent --task gives one'
-        );
+        if (tasks.length === 0) {
+            return ['note\tYou have given no task and were given none; ruimte-context agent --task gives one'];
+        }
+        if (switches.has('all')) {
+            return tasks.map((task) => taskLine(task, call.caller));
+        }
+        const current = tasks.filter((task) => isCurrentTask(task, call.caller));
+        const older = tasks.length - current.length;
+        const lines = current.map((task) => taskLine(task, call.caller));
+        if (older === 0) {
+            return lines;
+        }
+        const hidden = `${older === 1 ? '1 older task is' : `${older} older tasks are`} hidden, settled and already reported; ruimte-context tasks --all lists them`;
+        return [...lines, current.length === 0 ? `note\tNo task is open or waiting to wake you; ${hidden}` : `note\t${hidden}`];
     }
 });
