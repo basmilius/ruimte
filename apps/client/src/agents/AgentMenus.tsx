@@ -10,7 +10,6 @@ import { useProviders } from '@/state/providers';
 import { MENU_HINT } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 
-/* A nested menu, in the popup of the dock as well as in the canvas's context menu: the parts are the same. */
 function Submenu({ label, icon, children }: { label: string; icon: ReactNode; children: ReactNode }) {
     return (
         <Menu.SubmenuRoot>
@@ -59,7 +58,6 @@ function AgentRows({ target, onPick }: { target: AgentTarget; onPick(target: Age
     );
 }
 
-/* The chat CLIs under a label of a menu's own, for a menu that starts a chat from something else. */
 export function ChatAgentSubmenu({ label, icon, onPick }: { label: string; icon: ReactNode; onPick(provider: ProviderInfo): void }) {
     return (
         <Submenu label={label} icon={icon}>
@@ -68,7 +66,6 @@ export function ChatAgentSubmenu({ label, icon, onPick }: { label: string; icon:
     );
 }
 
-/* The two agent submenus, "Agent (Chat)" and "Agent (Terminal)", for every menu that adds nodes. */
 export function AgentSubmenus({ onPick }: { onPick(target: AgentTarget, provider: ProviderInfo): void }) {
     return (
         <>

@@ -35,13 +35,8 @@ interface Entry {
 const NOTHING: BlobState = { url: null, failure: null };
 
 /*
- * Blob URLs for bytes that came over a direct connection, one per key. A URL lives exactly as long as
- * someone draws it: the first user creates it and the last one revokes it. The blob behind it stays a
- * while longer, so a row that scrolls out of a list and back does not fetch its picture again, but
- * only as long as the blobs nobody draws fit in `maxIdleBytes`. What is on screen is never evicted.
- *
- * The key names a version of the bytes (an attachment id, an icon version, a file's mtime and size),
- * the way the HTTP URL does, so a file that changed is a new key and the old one just goes idle.
+ * Revoke a blob URL when its last lease ends, but retain idle bytes within `maxIdleBytes` to avoid
+ * refetching scrolled content. Versioned keys keep changed files separate from stale entries.
  */
 export class BlobCache {
     private readonly options: BlobCacheOptions;

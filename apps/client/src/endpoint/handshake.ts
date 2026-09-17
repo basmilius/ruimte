@@ -39,11 +39,8 @@ const post = async (httpBaseUrl: string, path: string, body: unknown): Promise<u
 };
 
 /*
- * Signs in with the daemon's own key pair and this client's, and answers with the ticket that comes
- * out. Null means "this connection cannot be made with a key", which is the honest answer for a
- * daemon from before the handshake existed and for a browser without ed25519; the caller then falls
- * back to whatever the row still holds. It throws only when the machine on the other end is not the
- * one this client pinned, because connecting anyway is the thing pinning exists to prevent.
+ * Return null when legacy peers cannot use key authentication, allowing token fallback. A pinned-key
+ * mismatch throws because connecting would defeat the pin.
  */
 export const signIn = async (endpoint: Endpoint, key: ClientKey): Promise<string | null> => {
     const pinned = endpoint.daemonPublicKey;

@@ -7,7 +7,6 @@ const PACKAGES: PackageToPublish[] = [
     { name: '@ruimte/linux-x64', dir: '/out/linux-x64' }
 ];
 
-/* A registry that holds the listed `name@version` entries. */
 const registry = (...entries: string[]) => {
     const asked: string[] = [];
     const lookup = async (name: string, version: string): Promise<boolean> => {

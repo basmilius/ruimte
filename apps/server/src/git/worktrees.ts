@@ -365,12 +365,8 @@ export class Worktrees {
     }
 
     /*
-     * Links what the project shares into a new worktree: each path of `worktrees.share` in the project's
-     * settings that exists in the project folder, as a symlink at the same place in the worktree. A path
-     * git tracks is never linked, since the link would show as a change in every worktree, and neither
-     * is one git does not ignore. A directory pattern such as `node_modules/` does not match a symlink,
-     * so the link's own path goes into the repository's `info/exclude`; the project folder already
-     * ignored it, so nothing changes there.
+     * Share only untracked, ignored paths; otherwise the symlink would appear as a worktree change.
+     * Add the link itself to `info/exclude` because directory-only ignore patterns do not match it.
      */
     private async linkShared(folder: string, worktree: string): Promise<void> {
         const share = (await readProjectSettings(folder)).worktrees?.share ?? [];

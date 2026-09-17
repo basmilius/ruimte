@@ -122,13 +122,8 @@ export const identifyNativeApple = async (env: Env, input: { identityToken: stri
 };
 
 /*
- * Sign in with Apple on the web. No scope is asked: the subject is all an account needs, an email would
- * be an address that changes hands (and often a relay), and Apple sends a name only on the very first
- * authorization, which a second device or a link would never see. The answer comes as a form post
- * anyway, since that keeps the code out of the address bar, the history and any log of URLs.
- *
- * Apple offers no PKCE for a web client. The verifier's hash rides as the nonce instead, and the
- * `id_token` has to carry it back, which ties the code to the login that stored the verifier.
+ * Apple web login uses a form post to keep the code out of URL logs. Apple has no web PKCE, so the
+ * verifier hash travels as the nonce and must return in the identity token.
  */
 export const apple: OAuthProvider = {
     id: 'apple',

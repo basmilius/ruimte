@@ -4,7 +4,6 @@
  * is pinned in `swipe.test.ts` without a trackpad.
  */
 
-/* One wheel event as the guest preload reports it (`apps/desktop/src/guest.ts`). */
 export interface WheelSample {
     deltaX: number;
     deltaY: number;
@@ -61,7 +60,6 @@ const sideOf = (dx: number): SwipeSide => (dx < 0 ? 'back' : 'forward');
 
 const allowed = (side: SwipeSide, history: SwipeHistory): boolean => (side === 'back' ? history.canGoBack : history.canGoForward);
 
-/* What the gesture adds up to now, before anyone lifts a finger. */
 const measure = (state: SwipeState, history: SwipeHistory): { side: SwipeSide; progress: number } | null => {
     if (state.phase !== 'tracking' || state.dx === 0 || Math.abs(state.dx) <= SWIPE_DOMINANCE * Math.abs(state.dy)) {
         return null;
@@ -73,7 +71,6 @@ const measure = (state: SwipeState, history: SwipeHistory): { side: SwipeSide; p
     return { side, progress: Math.min(1, Math.abs(state.dx) / SWIPE_THRESHOLD_PX) };
 };
 
-/* Ends the gesture: navigates when it got past the threshold, and goes deaf for a moment if it did. */
 const finish = (state: SwipeState, history: SwipeHistory, now: number): { state: SwipeState; outcome: SwipeOutcome } => {
     const measured = measure(state, history);
     if (measured && measured.progress >= 1) {

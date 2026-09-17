@@ -9,7 +9,6 @@ import { MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
 
-/* The guest the menu that is open belongs to, and where in its page the click landed. */
 interface MenuTarget {
     webContentsId: number;
     /* The page's node, keyed on the machine its project is on (`state/keys.ts`). */
@@ -20,13 +19,7 @@ interface MenuTarget {
 /* Flip while working on the mapping itself; a build logs nothing. */
 const DEBUG: boolean = false;
 
-/*
- * The menu behind a right-click inside a browser page, drawn in the app's own style. Electron ships
- * none for web content, and a native one would read as another program's; the shell only says what
- * the click landed on and carries out the rows that reach into the guest, the downloads or the
- * system. An editable field is the shell's own, native, and never arrives here. One of these is
- * mounted for every page there is, because a page is never the React tree the click came from.
- */
+// A browser page lives outside React, so the shell reports the click and this component owns the menu.
 export function BrowserContextMenu() {
     const [groups, setGroups] = useState<BrowserMenuItem[][] | null>(null);
     const target = useRef<MenuTarget | null>(null);
@@ -62,9 +55,7 @@ export function BrowserContextMenu() {
         []
     );
 
-    // Base UI anchors a context menu to the pointer of the event that opened it, and this one
-    // happened inside a page, where the window never saw it. Handing the trigger that same event at
-    // the mapped point is what puts the popup under the cursor.
+    // Synthesize the window event that Base UI needs to anchor a guest-page menu under the cursor.
     useEffect(() => {
         const point = at.current;
         if (groups === null || point === null) {

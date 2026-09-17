@@ -1,9 +1,6 @@
 /*
- * How a peer on a direct connection finds out the other end is gone before ICE does. Chromium only
- * calls a path failed once consent freshness runs out (RFC 7675: 30 seconds without an answer), and a
- * daemon that was killed or a laptop that lost its network sends no close. So a connection that has
- * been quiet for `idleMs` sends one request, and a request with nothing heard back within `timeoutMs`
- * ends it. Anything that arrives counts as heard, so a busy connection never pings at all.
+ * ICE consent freshness can take 30 seconds to detect a dead peer. Ping only idle channels and end
+ * them when no traffic of any kind arrives within the timeout.
  */
 export const DIRECT_PING_IDLE_MS = 2_000;
 

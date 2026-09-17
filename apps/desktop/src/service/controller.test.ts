@@ -9,7 +9,6 @@ import { keepRunningSetting, serviceSupport, type KeepRunningSetting, type Servi
 
 const EXPECTED: BuildIdentity = { version: '0.1.0', build: 'new' };
 
-/* A service manager that keeps its state in memory and says what was asked of it. */
 const fakeManager = (options: { installed?: boolean; running?: BuildIdentity | null; refuseStart?: string } = {}) => {
     const calls: string[] = [];
     const service = { installed: options.installed ?? false, running: options.running ?? null };

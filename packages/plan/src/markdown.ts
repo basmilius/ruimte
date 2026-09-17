@@ -48,7 +48,6 @@ export const planToMarkdown = (plan: Plan): string => {
         const [first = '', ...rest] = item.description?.split('\n') ?? [];
         return [`> **${item.title}**${first ? ` ${first}` : ''}`, ...rest.map((line) => `> ${line}`)].join('\n');
     };
-    /* Consecutive steps form one list; anything else stands as its own block. */
     const itemBlocks = (items: readonly PlanItem[]): string[] => {
         const result: string[] = [];
         let list: string[] = [];

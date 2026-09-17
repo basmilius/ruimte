@@ -39,15 +39,6 @@ const prefixOf = (target: GitTarget): string | null => {
     return target.group ?? basenameOf(target.cwd);
 };
 
-/*
- * One chip for the checkout and the branch, because they are one question: which working tree is on
- * screen, and where is it. The menu answers it in two sections, the checkouts the panel can be
- * pointed at and the branches this one can be put on. Both are radio groups, so the row that is
- * already picked is a row like the others, with the same hover and the same check.
- *
- * Local branches first, then the remote ones, newest tip first the way the daemon sorted them; a
- * branch another worktree has out cannot be checked out here, so the row says so instead of failing.
- */
 export function BranchMenu({ target, targets, branch, detached, refs, loading, onOpen, onPickTarget, onCheckout, onCreate }: BranchMenuProps) {
     const [query, setQuery] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);

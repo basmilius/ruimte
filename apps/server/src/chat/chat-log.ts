@@ -46,11 +46,8 @@ export interface ChatLogState {
 }
 
 /*
- * The stream of one chat, numbered: every event a client saw gets the next seq and a line in
- * `<id>.log`, and the lines since the log was last folded into the snapshot stay in memory as well,
- * so an attach with `since` is answered in the same tick the client is put on the list. Appends are
- * synchronous: an append is one small write per coalesced event, and a log whose order depends on
- * which asynchronous write finished first could not be trusted by a snapshot that says where it ends.
+ * Number and synchronously append each broadcast event so disk, memory and snapshot boundaries keep
+ * one order. Recent lines stay in memory for immediate `since` attachment.
  */
 export class ChatLog {
     private readonly path: string | null;

@@ -1,15 +1,6 @@
 /*
- * Stands in for `codex app-server` in tests: the same JSON-RPC methods and notifications, no
- * network. `tool: <cmd>` asks approval for a command, `edit: <path>` for a file change, `ask: <q>`
- * asks a blocking question, `async: <q>` asks through an agent message and waits for a steer,
- * `slow` waits for an interrupt, `fail` ends the turn failed, `crash` exits with 1, `note?` answers with
- * the developer instructions the thread was started with (a resume or a fork keeps them, as Codex does), and
- * `pasted?` with what Ruimte put in front of the first prompt of a process. Resuming a thread whose id starts with `named-` finds
- * it named, `thread/name/set` renames it and says so, and `name?` answers with that name. The thread echoes the
- * model and the sandbox it was started with, so a test can see what a session asked for. `spawn: <prompt>` spawns an
- * agent whose thread holds more steps than a thread row keeps, and `thread/items/list` pages through it.
- * `thread/fork` copies a thread's turns up to `lastTurnId` under a new id and keeps the request in
- * `fakeCodexForks`, and `thread/turns/list` lists the turns a thread ran in any process.
+ * Network-free `codex app-server` fake. Prompt commands exercise approvals, edits, questions,
+ * interrupts, failures, names, subagents, pagination and forks through the real JSON-RPC shapes.
  */
 import { CONTEXT_PROMPT } from '../context/context-note.ts';
 import { runOverStdio, type FakeCli } from './fake-cli.ts';

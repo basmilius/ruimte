@@ -74,11 +74,8 @@ const gitPathExists = async (cwd: string, name: string): Promise<boolean> => {
 const plural = (count: number, one: string, many: string): string => `${count} ${count === 1 ? one : many}`;
 
 /*
- * Lands a worktree's branch on the branch it was made from, in the checkout that has that branch
- * out; never by moving a ref behind a working tree. One merge or removal at a time per repository,
- * through the same lock `Worktrees.remove` takes, so a second client finds the outcome of the first.
- * Uncommitted work is committed in the worktree first when asked and refused otherwise, a conflict in
- * the target stays for a person to resolve or abort, and nothing is stashed on anyone's behalf.
+ * Merge through the target checkout under the repository lock, never by moving its ref. Dirty work
+ * must be committed explicitly, conflicts remain for the person, and nothing is stashed implicitly.
  */
 export class WorktreeMerge {
     private readonly running = new Map<string, Job>();

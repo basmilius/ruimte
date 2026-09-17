@@ -64,9 +64,7 @@ export const usePage = (id: string): { url: string; available: boolean } => {
     }, [id, state?.url, savedUrl]);
 
     useEffect(() => {
-        // The page names the node, the way a chat names itself from its first prompt: only while
-        // nobody has named it, and never again after a person does. A load that failed keeps the
-        // name it had, because the title on offer is then Chromium's error page.
+        // A page may auto-name an unnamed node, but Chromium's error-page title may not.
         const next = state?.title ? deriveNodeTitle(state.title) : null;
         if (!named && !state?.error && next && next !== title) {
             renameHost(id, next, 'auto');

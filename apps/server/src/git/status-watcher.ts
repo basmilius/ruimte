@@ -35,14 +35,8 @@ interface Watch {
 }
 
 /*
- * The git status of a checkout, kept fresh for as long as a client looks at it. A watch is per
- * client and per directory, like a folder watch: the working tree and the git dir are both watched,
- * a burst settles into one status run, and only a status that differs from the last one is sent.
- *
- * Watching a repository is not free, so it gives up rather than slow the machine down: a repository
- * with more tracked files than the cap never gets a watcher, and one whose status run takes longer
- * than a second loses the one it had. The status then says `live: false` and the client goes back to
- * refreshing on focus and after every change it makes itself.
+ * Watches the working tree and git directory while a client needs live status. Large repositories
+ * or slow status runs degrade to `live: false`, letting the client refresh only when needed.
  */
 export class GitStatusWatcher {
     private readonly sinks = new Map<string, SessionSink>();

@@ -12,14 +12,7 @@ import { useDocument, viewOfNode } from '@/state/document';
 // The browser toolbar sits under the frame's header, both above the page.
 const TOOLBAR_PX = 37;
 
-/*
- * Where every browser page lives, one host per node, for as long as the app runs. Chromium throws
- * a <webview> away the moment it leaves the DOM, so a host is never moved: the layer sits outside
- * the canvas transform and places each host in screen coordinates instead, scaled by the camera.
- * A node whose view is not on screen keeps its page, its scroll position and its session behind
- * `visibility: hidden`, and gets it back when its view comes up again. A browser view is the same
- * host over its whole cell, which is why moving a page between the two costs it nothing.
- */
+// Chromium discards a <webview> removed from the DOM, so hosts stay mounted and move in screen coordinates.
 export function WebviewParking() {
     // Selecting the object and deriving the keys: a selector that builds an array loops forever.
     const byKey = useBrowser((s) => s.byKey);

@@ -233,19 +233,7 @@ export const MessageMarkdown = memo(function MessageMarkdown({ text, mentions, s
     );
 });
 
-/*
- * Assistant text as the model wrote it: GitHub-flavored markdown, code highlighted off the main
- * path. Tailwind Typography sets the rhythm and `.chat-markdown` paints it in the theme's tokens.
- * `text-sm` is the size, which a node, a view and the file preview each move for themselves, and it
- * has to be a utility to outrank the one `prose-sm` brings; prose scales its own air off it in
- * `em`. `max-w-none` leaves the column width to whoever renders this.
- *
- * `breaks` makes a single newline a line break, which is what a person typing a note means by
- * Enter. A thread never asks for it: a CLI writes proper markdown there, and folding its lines
- * would change the layout it wrote.
- *
- * `fileLinks` off keeps inline code as code and opens every link outside the app.
- */
+/* `breaks` is for person-authored notes; applying it to CLI markdown would change its layout. */
 export const Markdown = memo(function Markdown({ text, breaks = false, fileLinks = true }: { text: string; breaks?: boolean; fileLinks?: boolean }) {
     return (
         <div className="chat-markdown prose prose-sm max-w-none text-sm">

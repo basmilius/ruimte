@@ -17,14 +17,8 @@ import type { PulsarPlatform } from './desktop';
 import { LoginError, codeFromCallback, createLoginState, createPkce, loginStartUrl } from './pkce';
 
 /*
- * Signing in from a page without the desktop shell: the web client at `station.ruimte.app`, or the
- * client in Vite. The page leaves for the address book and comes back to `/pulsar/callback` on its own
- * origin, which is one of the redirects the address book allows.
- *
- * The refresh token sits in IndexedDB, where script on this origin can read it. What makes that
- * bearable is the key the session is bound to: the client's own ed25519 key, non-extractable, in the
- * same IndexedDB. A token read out of the page and carried elsewhere refreshes nothing, and the access
- * tokens live in memory only.
+ * Web refresh tokens live in IndexedDB but are bound to this origin's non-extractable Ed25519 key;
+ * copied tokens cannot refresh elsewhere. Access tokens remain in memory.
  */
 
 const PENDING_LOGIN_KEY = 'ruimte.pulsar.pendingLogin';

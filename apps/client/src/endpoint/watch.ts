@@ -3,15 +3,7 @@ import { useServers } from '@/state/server';
 import { pool } from '@/transport';
 import { adoptMachineName } from '@/transport/server-info';
 
-/*
- * A machine's name and its icon belong to the machine, not to the client that typed them: the daemon
- * keeps both and tells every client that is connected. Watching each socket is what makes the
- * switcher and the Machines pane redraw when someone renames a machine from another client, without
- * anything here having to ask again.
- *
- * The set of sockets is the pool's, so the subscriptions follow it: a machine that is paired starts
- * being watched the moment it has a socket, and a forgotten one stops.
- */
+// Follow the pool's live sockets so machine identity changes propagate across clients without polling.
 export const startEndpointWatch = (): (() => void) => {
     const watching = new Map<string, () => void>();
 

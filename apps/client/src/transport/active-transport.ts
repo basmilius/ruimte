@@ -23,14 +23,8 @@ interface Registration {
 }
 
 /*
- * One `Transport` that always means "the machine I am working on". Everything that is cwd-shaped
- * or node-shaped (`fs.*`, `git.*`, `usage.*`) talks through this and never names a daemon.
- *
- * On a switch every registered handler moves to the new socket in the same tick the active endpoint
- * changes, so nothing has to re-register and nothing keeps hearing the machine it was left on. A
- * request is the exception: it goes to the socket that was active when it was made and resolves
- * (or rejects) there, so an answer can arrive after a switch and the caller has to check that it is
- * still wanted, which every caller already does with a generation counter.
+ * Event handlers follow the active machine immediately. In-flight requests remain bound to the
+ * socket that sent them, so callers must reject stale answers after a machine switch.
  */
 export class ActiveTransport implements Transport {
     private readonly source: ActiveSource;

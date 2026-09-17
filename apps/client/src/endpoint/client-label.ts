@@ -1,14 +1,6 @@
 /*
- * What a daemon lists this client as, once, at the moment it pairs: "Safari on macOS", "Ruimte on
- * macOS", later "Ruimte on iPhone". One shape, `<app> on <system>`, so a phone reads like a laptop
- * and nothing here has to change to make room for one.
- *
- * User agent parsing invites growth, and growth here buys nothing: the label is a line in a list of
- * a handful of rows, not a feature switch. So it stays deliberately shallow. `navigator.userAgentData`
- * is asked first because Chromium hands over the brand and the system as fields rather than as prose;
- * Safari and Firefox do not have it, and for those one careful look at the user agent is the whole
- * fallback. Anything this does not recognize is "Browser", never a guessed brand: a wrong name is
- * worse than a plain one, because the list exists to tell clients apart.
+ * Keep user-agent parsing shallow because this label never controls behavior. Prefer structured
+ * Chromium data and call anything uncertain "Browser" rather than guessing the wrong brand.
  */
 
 export interface ClientEnvironment {

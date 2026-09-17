@@ -22,16 +22,8 @@ import { currentClientLabel } from './client-label';
 import { forgetTicket } from './credentials';
 
 /*
- * Pairs with a daemon on another machine: the pasted URL names the daemon and carries the one-time
- * token. This client registers its public key in the same request and signs for a ticket per
- * connection after that, so nothing long lived is written down on either side. A daemon from before
- * key pairs (and a browser without ed25519) falls back to the session token it answers with.
- *
- * Pinning the daemon's own key happens here too, over the one exchange nobody can be in the middle
- * of without the pairing token: from now on that machine has to sign to be believed.
- *
- * A daemon lands in the list once. Pairing with one that is already there is that machine on a
- * second address, and its row takes the address and the credential the pairing just handed out.
+ * Pairing exchanges the one-time token for pinned keys and per-connection tickets. Legacy daemons
+ * fall back to a session token; pairing an existing daemon updates its address instead of adding it.
  */
 export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
     const parsed = parsePairingUrl(pairingUrl);

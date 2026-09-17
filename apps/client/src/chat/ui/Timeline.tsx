@@ -308,9 +308,7 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                                     <div className="chat-column-content relative w-full shrink-0" style={{ height: virtualizer.getTotalSize() }}>
                                         {virtualizer.getVirtualItems().map((virtualRow) => {
                                             const row = rows[virtualRow.index]!;
-                                            // A question and its answer are one step apart, one turn and the next question a
-                                            // wider one; the rows inside a turn keep their own tight rhythm. The gap is
-                                            // padding on the measured element, so the virtualizer counts it in the height.
+                                            // Put turn gaps inside the measured row so the virtualizer includes them.
                                             const question = row.kind === 'user';
                                             const previous = virtualRow.index > 0 ? rows[virtualRow.index - 1]! : null;
                                             // A question already carries the turn gap, and the row after one the answer gap.

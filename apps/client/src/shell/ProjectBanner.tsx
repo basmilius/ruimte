@@ -7,13 +7,7 @@ import { focusedDrawing, useDrawing } from '@/state/drawing';
 import { useProject } from '@/state/project';
 import { Button } from '@/ui/Button';
 
-/*
- * Floats at the top of the canvas, under the toolbar: the file that changed under unsaved edits, the
- * save that failed, and whatever an agent's `view open` has to say, which is one line in either setting.
- * One slot, and the order is what it costs to miss it: work that may be lost comes before a view that
- * can be shown again, so the agent's line waits until the file is settled rather than stacking under
- * it. The two agent lines can never be up at once, since one is the setting on and the other off.
- */
+// One banner slot: possible data loss outranks an agent's repeatable view request.
 export function ProjectBanner() {
     const projectConflict = useProject((s) => s.conflict);
     const drawingConflict = useDrawing((s) => s.conflict);

@@ -3,9 +3,7 @@ import Observation
 import RuimtePulsar
 import RuimteTransport
 
-/// The mode and the model per CLI a person last picked in a composer on this device. A machine starts the chats it
-/// opens on its own with the newest pick among its connected clients, so this is told to every machine on connect
-/// and on every change.
+/// Stores this device's last mode and model per CLI and shares changes with connected machines.
 @MainActor @Observable
 final class ChatPreferences {
     static let shared = ChatPreferences()

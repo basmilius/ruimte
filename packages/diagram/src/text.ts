@@ -1,6 +1,5 @@
 export const LABEL_SIZE = 14;
 export const SUB_SIZE = 12;
-/* The height of one line of a node's label and of the line under it. */
 export const LABEL_LINE = 18;
 export const SUB_LINE = 16;
 
@@ -40,7 +39,6 @@ const ratioOf = (char: string): number => {
     return char.codePointAt(0)! >= 0x2e80 ? 1 : 0.64;
 };
 
-/* Regular text is about this much narrower than the semibold the ratios were measured at. */
 const REGULAR = 0.94;
 
 /* No DOM in this package, so text is estimated rather than measured, the same way on every machine. */
@@ -52,7 +50,6 @@ export const estimateTextWidth = (text: string, size: number, bold = false): num
     return Math.ceil(units * size * (bold ? 1 : REGULAR));
 };
 
-/* A word too wide for a line on its own, cut where it runs out of room. */
 const breakWord = (word: string, size: number, bold: boolean, maxWidth: number): string[] => {
     const pieces: string[] = [];
     let piece = '';
@@ -67,7 +64,6 @@ const breakWord = (word: string, size: number, bold: boolean, maxWidth: number):
     return pieces;
 };
 
-/* Greedy wrapping on word boundaries; always at least one line, even for an empty text. */
 export const wrapText = (text: string, size: number, bold: boolean, maxWidth: number): string[] => {
     const words = text
         .trim()

@@ -19,12 +19,10 @@ export type WorktreeWork = z.infer<typeof WorktreeWorkSchema>;
 export const WorktreeSchema = z.object({
     path: z.string(),
     branch: z.string(),
-    // Everything below comes from the daemon's register and from inspecting the checkout, so a worktree
-    // made by hand or by an older daemon has none of it.
+    // Hand-made and legacy worktrees may lack all registered metadata below.
     // Where the worktree was made from; `branch` is absent when HEAD was detached then.
     from: z.object({ branch: z.string().optional(), commit: z.string() }).optional(),
     projectId: z.string().optional(),
-    // The node it was made for.
     nodeId: z.string().optional(),
     madeAt: z.number().optional(),
     // The folder is gone while git or the register still knows the worktree; only commits can be counted then.
@@ -40,7 +38,6 @@ export type Worktree = z.infer<typeof WorktreeSchema>;
 export const WorktreeAddPayloadSchema = z.object({
     repo: z.string().min(1),
     branch: z.string().min(1),
-    // The project the person made it in, kept in the register.
     projectId: z.string().optional()
 });
 export type WorktreeAddPayload = z.infer<typeof WorktreeAddPayloadSchema>;
@@ -141,9 +138,7 @@ export const GitStatusEventSchema = z.object({
 });
 export type GitStatusEvent = z.infer<typeof GitStatusEventSchema>;
 
-// `worktree` is HEAD (or the index, with `staged`) against the file on disk, `base` is everything
-// this branch holds over the base branch, uncommitted work included, and `commit` is one commit
-// against the one before it.
+// Scopes compare the working tree, all work over a base branch, or one commit with its parent.
 export const GitDiffScopeSchema = z.enum(['worktree', 'base', 'commit']);
 export type GitDiffScope = z.infer<typeof GitDiffScopeSchema>;
 
@@ -159,9 +154,7 @@ export const GitDiffPayloadSchema = z.object({
     staged: z.boolean().optional(),
     // Leaves changes that are whitespace alone out of the diff, counts included.
     ignoreWhitespace: z.boolean().optional(),
-    // Base scope only: the ref the diff starts from, through its merge base with HEAD, instead of the
-    // repository's base branch; a worktree passes the branch it was made from. Without a path the
-    // base scope answers every file of the checkout in `files`, untracked ones included.
+    // Base scope starts at this ref's merge base with HEAD; omitting a path includes every file.
     base: z.string().min(1).optional()
 });
 export type GitDiffPayload = z.infer<typeof GitDiffPayloadSchema>;
@@ -321,7 +314,6 @@ export const GitActionResultSchema = z.object({
     summary: z.string(),
     // Everything git wrote, so a failure can be copied whole.
     output: z.string(),
-    // The commit a commit action wrote.
     commit: z.object({ hash: z.string(), subject: z.string() }).optional(),
     // The pull request a `create-pr` opened, for the button that opens it.
     url: z.string().optional()
@@ -401,7 +393,6 @@ export type WorktreeMergePayload = z.infer<typeof WorktreeMergePayloadSchema>;
 export const WorktreeMergeResultSchema = GitActionResultSchema.extend({
     // The checkout the merge ran in, where a conflict waits and `git.worktree-abort` acts.
     cwd: z.string().optional(),
-    // The branch it merged into.
     into: z.string().optional(),
     // Files that conflict; the merge waits in `cwd` for a person to resolve or abort it.
     conflicts: z.array(z.string()).optional(),

@@ -86,11 +86,8 @@ const parseChunk = (text: string, provider: 'claude' | 'codex', from: number, st
 };
 
 /*
- * Every transcript both CLIs leave behind, read once and then only where they grew. A file is known
- * by its size and modification time: the same two means nothing was appended and the file is never
- * opened; a bigger size means the bytes past the offset are read on top of what is already there;
- * anything else (a rewrite, a truncation) is read again from the start. A file that has gone is
- * kept as it was, because Claude Code removes old transcripts and what it counted still happened.
+ * Read appended transcript bytes incrementally, but restart after rewrites or truncation. Preserve
+ * totals for deleted transcripts because their usage still happened.
  */
 export class UsageScanner {
     private readonly home: string;

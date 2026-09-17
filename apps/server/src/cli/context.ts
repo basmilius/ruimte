@@ -1,24 +1,6 @@
 import { escapeText } from '../canvas/text-escapes.ts';
 
-/*
- * `ruimte context`, reached through the `ruimte-context` script on every session's PATH. Reads
- * what the person linked to this agent on the canvas, and changes the canvas through the verbs the
- * daemon knows, with the address and the token from the environment the daemon gave the session.
- *
- *   ruimte-context                      lists the linked sources
- *   ruimte-context read <id>            prints one of them
- *   ruimte-context read <id> --tail N   prints its last N lines
- *   ruimte-context read <id> --subagent T   prints the whole conversation of one subagent of a linked chat
- *   ruimte-context help                 lists all of the above and every canvas verb and noun
- *   ruimte-context help <noun> [action] the actions of a noun, or everything one action takes
- *   ruimte-context help <verb>          everything that one verb takes
- *   ruimte-context <verb> ...           runs one; the daemon parses the arguments
- *   ruimte-context <noun> <action> ...  the same for an action, such as node new or link delete
- *
- * Exit codes: 0 done, 1 the daemon could not be reached or failed, 2 not inside a live session (no
- * token, or a 401 for one the daemon does not know, such as the token of a session that ended), 3 a
- * refusal (an unknown verb, bad arguments, a rule of the project, or a `read` of nothing linked).
- */
+// Exit codes distinguish daemon failures, stale sessions and command refusals for callers that script this CLI.
 export const runContext = async (args: string[], env: Environment = process.env, stdin: () => Promise<string> = () => Bun.stdin.text()): Promise<number> => {
     const url = env.RUIMTE_CONTEXT_URL;
     const token = env.RUIMTE_CONTEXT_TOKEN ?? env.RUIMTE_HOOK_TOKEN;

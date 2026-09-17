@@ -68,13 +68,8 @@ const recordKeyOf = (record: MachineRecord): string => {
 };
 
 /*
- * Puts the machines this client reaches on the account it is signed in to, without a button, and keeps
- * their records current. A machine that is not listed is registered once per account for as long as the
- * page lives; one that is listed is registered again only when its name, icon, broker or key differs from
- * the record, and once per state it is in, since the list the address book answers may lag a moment behind
- * the write. A machine a person removed is left alone, whether the list said so or the address book
- * answered `removed`, and a failure waits longer every time, so a machine that cannot sign or an address
- * book that is down costs a request now and then.
+ * Registers each changed machine state once per account. Explicit removals stay removed, and failures
+ * back off so an unavailable machine or address book does not cause a request loop.
  */
 export class AutoRegistrar {
     private readonly deps: AutoRegistrarDeps;

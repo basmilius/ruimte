@@ -1,22 +1,6 @@
 /*
- * Does a DataChannel come up between two machines on different networks, and does it stay up?
- * werift on both ends, so it tests the half the daemon runs, with nothing but a STUN server and the
- * two terminals between them. The signaling is copy and paste: there is no broker yet.
- *
- *   machine A (the daemon's side):  bun apps/server/scripts/webrtc-probe.ts answer
- *   machine B (the client's side):  bun apps/server/scripts/webrtc-probe.ts offer
- *
- * B prints an offer line; paste it into A. A prints an answer line; paste it into B. From then on B
- * sends a ping every second and a burst every minute, and both sides print a line every ten seconds
- * until `--minutes` is up (default 60) or the connection drops.
- *
- * Flags: --stun <url> (repeatable, default stun:turn.ruimte.app:3478), --no-stun, --minutes <n>,
- * --burst-mb <n> (default 4), --ports <first-last> (the UDP range to bind, for a firewall).
- *
- * TURN: --turn <url> --turn-user <username> --turn-pass <password> adds a relay (werift takes the first
- * TURN URL only), and --relay-only gathers and checks relay candidates alone, which proves the TURN
- * client works rather than a direct path that happened to be there. A credential from the broker's
- * `ice` frame fits as it is.
+ * Run `answer` on the daemon machine and `offer` on the client machine, then paste each printed SDP
+ * into the other terminal. `--relay-only` verifies TURN without a direct path hiding a relay failure.
  */
 import { createInterface } from 'node:readline';
 import { parseArgs } from 'node:util';

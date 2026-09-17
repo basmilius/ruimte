@@ -370,9 +370,7 @@ export class ChatManager {
         for (const task of this.taskRows(payload.chatId)) {
             session.upsertTaskRow(task);
         }
-        // Sent before the info goes back, so the client's attach already carries it: a prompt an
-        // agent was made with has to read as the first message of the thread, not as a turn out of
-        // nowhere. The send is what spawns the process, which is the CLI's own rule for a chat.
+        // Send before returning info so attach includes the initial prompt as the thread's first message.
         const prompt = await this.firstPrompt(payload.chatId);
         if (prompt !== null) {
             try {

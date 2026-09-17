@@ -1,17 +1,6 @@
 /*
- * The policy the web client runs under at `station.ruimte.app`. Stricter than the one the daemon sends
- * with the client it serves, because this origin is public and holds a session:
- *
- * - `script-src` has no inline script at all. `'wasm-unsafe-eval'` is Shiki's grammar engine, which is
- *   WebAssembly; nothing evaluates JavaScript from a string.
- * - `style-src` keeps `'unsafe-inline'`: xterm, CodeMirror and the markdown renderer put `<style>`
- *   elements in the page, and a style cannot run anything.
- * - `connect-src` is the page itself, the address book, any `wss:` (a broker, a machine's socket) and any
- *   `https:` (a machine behind a tunnel answers its challenge over HTTPS). Plain `ws:` and `http:` are
- *   out, which a browser refuses from an https page anyway. With `wss:` open to every host, closing
- *   `https:` would not stop a script that got in from sending anything anywhere, and it would break
- *   pairing with a machine behind a tunnel.
- * - Nothing may frame the page, and nothing is framed: a page from a machine is drawn by the desktop app.
+ * The public web client forbids inline scripts and framing. Shiki needs WebAssembly, UI libraries
+ * inject styles, and remote machines require arbitrary secure WebSocket and HTTPS endpoints.
  */
 export const CONTENT_SECURITY_POLICY = [
     "default-src 'self'",

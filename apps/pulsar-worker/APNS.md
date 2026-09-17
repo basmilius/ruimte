@@ -74,7 +74,7 @@ Pulsar health remained healthy after migration with both Apple and GitHub provid
 enabled and the same public statement key. Real APNs delivery and Live Activity
 behavior remain unverified. Enable Notifications on the iPhone and connect an updated development daemon, then
 check foreground suppression, background turn completion, attention, approval actions
-and automatic Live Activity start/update/end across multiple agents. Production delivery additionally needs a production-signed app/device
+and automatic Live Activity start/update/end across multiple agents. Production delivery also needs a production-signed app/device
 token; a sandbox test does not establish production delivery.
 
 ## Automatic machine activities, September 16

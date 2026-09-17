@@ -47,11 +47,8 @@ export const parseByteRange = (header: string | null, size: number): ByteRange |
 };
 
 /*
- * `GET /fs/file?path=<absolute>&v=<mtime>-<size>`: the bytes of an image or a video the viewer is
- * drawing. Behind the same access rules as the socket, so a paired client sends the token it already
- * has. Only those two are served: everything else the viewer can draw travels as `fs.read` over the
- * socket, and a route that hands out arbitrary bytes to an `<img>` tag is a worse deal than one that
- * does not. A video answers ranges, without which a player can start a file and never seek in it.
+ * Serve only authenticated image and video bytes; other readable files stay on the socket. Video
+ * supports ranges so media elements can seek.
  */
 export const handleFsFileRequest = async (request: Request, url: URL, remoteAddress: string, auth: AuthStore, options: AccessOptions): Promise<Response> => {
     if (url.pathname !== FS_FILE_PATH) {

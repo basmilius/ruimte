@@ -328,9 +328,7 @@ enum SubagentWatches {
     }
 }
 
-/// One sub-agent's conversation as a page follows it: opening asks for the newest page and holds the conversation on
-/// the machine, which then says whenever it grew, and each time the newest page is asked again and laid over what is
-/// held. A connection that comes back holds it again.
+/// Keeps a paged subagent conversation current across updates and reconnects.
 @MainActor @Observable
 final class SubagentConversation {
     enum Status { case loading, ready, failed }

@@ -2,9 +2,7 @@ import RuimtePulsar
 import RuimteTransport
 import SwiftUI
 
-/// Forks a chat after one of its turns, with the history up to and including that turn. The questions are the
-/// desktop dialog's: the CLI and model to go on with, the fork's title, a node or a view, and a git worktree of
-/// its own with the files as the turn left them.
+/// Forks a chat after a turn with the same choices as the desktop dialog.
 struct ChatForkSheet: View {
     let model: ChatModel
     let turnID: String

@@ -237,14 +237,8 @@ export const MachineListResultSchema = z.object({
 export type MachineListResult = z.infer<typeof MachineListResultSchema>;
 
 /*
- * `POST /v1/machines`, sent by the client that sits on the machine, with the daemon's signature over
- * `machineRegistrationMessage`. The client cannot sign for the daemon's key, so a machine lands in
- * an account only when the daemon itself agreed to that account. Registering again with the same key
- * replaces the name, the icon and the broker; another key for a listed machine is refused with
- * `bad-signature`. The icon and the broker are not signed: the icon is decoration a
- * signed-in client may set anyway, and a wrong broker only fails to find a machine whose answers are
- * believed from its key alone. `DELETE /v1/machines/<id>` takes a machine off the list and leaves its
- * pairings alone.
+ * The daemon signs the account binding. Re-registration may update display data but cannot replace
+ * the machine key; deleting an account entry leaves direct pairings intact.
  */
 export const RegisterMachinePayloadSchema = z.object({
     id: MachineIdSchema,

@@ -56,7 +56,7 @@ const optionsOf = (element: DrawingElement): Options => ({
         : {})
 });
 
-/* A rectangle with rounded corners, which rough draws as a path rather than a shape of its own. */
+// Rough has no rounded-rectangle primitive.
 const roundedRectPath = (w: number, h: number, radius: number): string => {
     const r = Math.min(radius, w / 2, h / 2);
     return `M ${r} 0 L ${w - r} 0 Q ${w} 0 ${w} ${r} L ${w} ${h - r} Q ${w} ${h} ${w - r} ${h} L ${r} ${h} Q 0 ${h} 0 ${h - r} L 0 ${r} Q 0 0 ${r} 0 Z`;
@@ -70,7 +70,6 @@ export const outlineToPath = (outline: readonly (readonly number[])[]): string =
     return `M ${first![0]} ${first![1]} ${rest.map((point) => `L ${point[0]} ${point[1]}`).join(' ')} Z`;
 };
 
-/* The stroke of a freehand element as a filled outline, the way perfect-freehand draws one. */
 export const freehandOutline = (element: DrawingElement & { kind: 'freehand' }): string => {
     const points = element.points.map(([x, y, pressure]) => [x, y, pressure ?? 0.5] as [number, number, number]);
     const outline = getStroke(points, {

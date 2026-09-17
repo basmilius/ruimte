@@ -62,13 +62,7 @@ const same = (a: unknown, b: unknown): boolean => {
     return [...new Set([...Object.keys(left), ...Object.keys(right)])].every((key) => same(left[key], right[key]));
 };
 
-/*
- * Keys that only mean something together, merged as one field. A move sets both coordinates and a
- * resize from a corner sets all four, so taking `x` from one side and `y` from the other would put a
- * node where nobody put it. A rename sets its source beside the title, and folding a group sets its
- * members beside the height it opens to again. Its folded height is part of the frame, so a fold there
- * and a move here still meet, while a node an agent put into a folded group merges beside a move.
- */
+// Merge coupled values together so coordinates, title source and folded-group state cannot form hybrids.
 type FieldGroups = Readonly<Record<string, readonly string[]>>;
 
 const NODE_FIELDS: FieldGroups = {
@@ -121,13 +115,7 @@ const mergeFields = <T extends object>(base: T, mine: T, theirs: T, groups: Fiel
     return merged === null ? { ok: true, merged: mine, took: false } : { ok: true, merged: merged as T, took: true };
 };
 
-/*
- * The three-way rule for one kind of entry, by id and then per field. What `theirs` added comes
- * over, what it deleted goes when this client left it alone, and a field it changed lands when this
- * client did not change that field. An entry this client has under an id `base` does not know is one
- * it made and has not written out, so it stays where it is. Maps throughout, since a canvas can hold
- * a few thousand entries and this runs for every save another client makes.
- */
+// Merge entries by id and field with maps because this runs over every canvas on each remote save.
 const mergeElements = <T extends { id: string }>(
     kind: string,
     base: readonly T[],
@@ -358,18 +346,8 @@ const interleave = (primary: readonly string[], secondary: readonly string[], pr
 };
 
 /*
- * Three documents: what the daemon's file held at the rev this client holds (`base`), what is on
- * screen with the person's unsaved edits on top of it (`mine`), and what the daemon has just
- * written (`theirs`). Views, nodes, texts and edges merge by id and then per field: whatever
- * `theirs` added comes over, whatever it deleted goes where this client left it alone, and a field it
- * changed (a frame, a title, what a node carries, the name of a view, the order of the list) lands
- * where this client left that field as `base` had it. Everything this client changed itself stays as
- * the person left it, so a second client writing to the same project costs nothing on this screen.
- *
- * A conflict is the same field changed to different values on both sides, an entry deleted on one
- * side and changed on the other, an edge left without an end, or the project's own name, color or
- * icon changed there. It goes to the person, and the reason names the id that made it one. `handled` are
- * the nodes under the person's hand right now, whose frame stays this client's either way.
+ * Three-way merge by id and field. Local edits win unless both sides changed the same field,
+ * deleted a changed entry or orphaned an edge. Nodes in `handled` keep their local frame.
  */
 export const mergeProject = (base: ProjectContent, mine: ProjectContent, theirs: ProjectContent, handled: ReadonlySet<string> = new Set()): ProjectMerge => {
     if (base.name !== theirs.name) {

@@ -23,15 +23,9 @@ interface Mounted extends OpenOptions {
 
 const isConnectionError = (e: unknown): boolean => e instanceof TransportError && (e.code === 'not-connected' || e.code === 'disconnected');
 
-/**
- * One daemon session per node id, on top of the socket of one daemon.
- *
- * A node calls `ensure` and `attach` when it mounts and `detach` when it unmounts. Everything
- * in between (a lost socket, the daemon restarting) is this class's problem: every session that
- * is still mounted is created again and re-attached when the transport comes back, and the fresh
- * screen is handed to `onScreen` subscribers so the node can repaint from scratch. The transport
- * it is given never changes machines, so a reattach can only ever reach the daemon these sessions
- * run on (`transport/connections.ts`).
+/*
+ * Recreates and reattaches mounted sessions after a lost socket or daemon restart, then supplies a
+ * fresh screen. The injected transport is permanently bound to one machine.
  */
 export class SessionClient {
     private readonly transport: Transport;

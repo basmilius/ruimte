@@ -12,7 +12,7 @@ A project is a sidebar of views, not a folder of tabs. A view is usually a canva
 
 Ruimte is for anyone running several Claude Code or Codex sessions at once and losing track of which one needs attention. A chat shows the moment an agent stops and waits for input, so there's no tailing a log to catch it. Close the window mid-session and open it again later. The terminal is exactly where you left it, scrollback included, because the session itself keeps running on your machine, not inside the window you closed.
 
-Around that: pair with another machine on your network once, and its projects open the same way your own do, so a build box or a home server is as reachable as your laptop. A processes panel shows what a session actually costs in CPU and memory, and a usage page adds up what those sessions have cost across models and providers.
+Pair another machine on your network once and its projects open like local projects. A processes panel shows each session's CPU and memory use. The usage page adds up costs across models and providers.
 
 ## Principles
 
@@ -32,7 +32,9 @@ bun install
 bun dev
 ```
 
-`bun dev` starts the daemon on `localhost:4211` with its state in `~/.ruimte-dev` (set `RUIMTE_DEV_HOME` to pick another) the Vite client, which proxies `/ws` to it, and the Electron shell. An installed Ruimte keeps `4210` and `~/.ruimte`, so both run on one machine. `bun run dev:client` and `bun run dev:server` start one side. `bun run dev:desktop` opens the Electron shell against the running dev server as "Ruimte Dev", with a profile of its own; browser nodes only work there. `bun run check` typechecks every package and lints, `bun run build` builds the client, `bun test` runs the tests of all packages.
+`bun dev` starts the daemon on `localhost:4211`, the Vite client and the Electron shell. The daemon keeps its state in `~/.ruimte-dev`; set `RUIMTE_DEV_HOME` to choose another folder. The Vite client proxies `/ws` to it. An installed Ruimte keeps `4210` and `~/.ruimte`, so both versions can run on one machine.
+
+`bun run dev:client` and `bun run dev:server` start one side. `bun run dev:desktop` opens the Electron shell against the running development server as "Ruimte Dev", with a profile of its own. Browser nodes only work there. `bun run check` typechecks and lints every package. `bun run build` builds the client, and `bun test` runs all package tests.
 
 The repo is a Bun workspace: `apps/client` (React UI), `apps/server` (the daemon), `apps/desktop` (the Electron shell), `packages/contracts` (zod 4 schemas for the wire, the only place a message shape is defined) and `packages/drawing` (the geometry, the SVG painter and the reading order of a drawing, without a DOM).
 

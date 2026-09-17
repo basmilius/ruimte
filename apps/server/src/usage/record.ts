@@ -40,13 +40,7 @@ const maxTotals = (into: UsageTotals, from: UsageTotals): void => {
 
 export const totalTokensOf = (totals: UsageTotals): number => totals.input + totals.cacheRead + totals.cacheWrite + totals.output;
 
-/*
- * Claude Code writes one line per content block and rewrites the line while a message streams, and
- * it copies finished messages forward into the transcript of a resumed or forked session. Every one
- * of those lines repeats the same usage object, sometimes half filled. Keeping the largest value per
- * field per message covers both: the growing copy and the repeated one. Records without a key are a
- * call of their own and pass through untouched, in the order they were read.
- */
+// Claude repeats growing usage per message and across resumed transcripts; keep each field's maximum.
 export const foldByKey = (records: readonly UsageRecord[]): UsageRecord[] => {
     const folded: UsageRecord[] = [];
     const at = new Map<string, number>();

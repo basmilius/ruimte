@@ -3,7 +3,6 @@ import { launchdManager, systemdManager, type CommandResult, type ServiceFiles }
 
 const ok = (stdout = ''): CommandResult => ({ code: 0, stdout, stderr: '' });
 
-/* A runner that records every command and answers from a table keyed on the command line. */
 const fakeRunner = (answers: Record<string, CommandResult | CommandResult[]> = {}) => {
     const calls: string[] = [];
     const run = (command: string, args: string[]): CommandResult => {

@@ -31,15 +31,9 @@ const outputSessionId = (frame: ServerFrame): string | null => {
     return (frame.payload as SessionOutputEvent).sessionId;
 };
 
-/**
- * Everything one socket sends, with terminal output gated on how far behind the socket is.
- *
- * Requests, replies, status and the other events are small and always go out. `session.output` is
- * not: a client that cannot keep up would otherwise grow an unbounded queue in the daemon. So once
- * the socket is over the high-water mark its output is dropped and every session that lost bytes is
- * marked. When the socket drains, each marked session gets a fresh screen (`session.resync`) and its
- * stream continues from there. The mark is cleared in the same tick the serialize resolves, exactly
- * like `Session.attach` does, so a byte is either in that screen or in the stream that follows it.
+/*
+ * Drops terminal output above the socket's high-water mark to bound memory. Once drained, each
+ * affected session receives a fresh screen before streaming resumes.
  */
 export class OutputGate {
     private readonly socket: BackpressuredSocket;

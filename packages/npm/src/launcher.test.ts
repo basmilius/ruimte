@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { binaryPathOf, exitCodeOf, LauncherError, platformPackageOf, WINDOWS_REFUSAL, type Resolve } from './launcher';
 
-/* A resolver over the packages npm installed, by name. */
 const installed =
     (...names: string[]): Resolve =>
     (request) => {

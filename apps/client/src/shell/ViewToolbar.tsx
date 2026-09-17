@@ -44,15 +44,7 @@ export const useShowsSubagents = (view: ProjectView | null): boolean => useSubag
 /* The view the window's toolbar speaks for: the one in the focused cell. */
 export const useToolbarView = (): ProjectView | null => useDocument((s) => activeViewOf(s));
 
-/*
- * What a view of its own puts in a toolbar, where a node would have its header: the permission mode
- * of a terminal, the navigation bar of a browser, the controls of a file, the sub-agents of a chat. A
- * canvas view has nothing here; its nodes carry their own headers. It takes the room it is given,
- * which is what lets a browser's address field run the width of the bar.
- *
- * Which bar that is depends on the grid: with one cell the window's toolbar speaks for the view, and
- * with the views side by side every cell carries its own (`shell/CellToolbar.tsx`).
- */
+// A single view uses the window toolbar; split views render the same controls in each cell toolbar.
 export function ViewToolbar({
     view,
     focused,
@@ -80,9 +72,7 @@ export function ViewToolbar({
         );
     }
     if (view.kind === 'file' || view.kind === 'diagram') {
-        // Empty until the body has rendered, which is what fills it: the controls belong to the
-        // renderer that draws the file or the diagram, and only that one knows which it has. The box
-        // grows over the slack of the bar, so it drags the window and only its controls opt out.
+        // The active renderer portals its controls here after the body mounts.
         return <div ref={mount} className="flex min-w-0 grow items-center justify-end gap-1" />;
     }
     if (view.kind === 'chat') {

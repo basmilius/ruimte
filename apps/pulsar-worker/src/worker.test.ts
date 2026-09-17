@@ -108,7 +108,6 @@ const appleClientKey = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
 const appleSigningKey = generateKeyPairSync('rsa', { modulusLength: 2048 });
 const APPLE_SIGNING_KID = 'apple-test-key';
 
-// What one Apple code turns into; a test bends a claim or the signer to see the Worker refuse it.
 interface AppleCode {
     sub: string;
     nonce: string;
@@ -253,7 +252,6 @@ const AUTHORIZE_URLS: Record<ProviderId, string> = {
     apple: `${APPLE_ISSUER}/auth/authorize`
 };
 
-// The app's side of a start: the query it opens, answered with the provider's authorize URL.
 const startLogin = async (provider: ProviderId = 'github', options: { link?: string; on?: Miniflare } = {}): Promise<LoginStart> => {
     const verifier = base64url(randomBytes(32));
     const appState = base64url(randomBytes(16));
@@ -279,14 +277,12 @@ const startLogin = async (provider: ProviderId = 'github', options: { link?: str
     };
 };
 
-// GitHub sending the browser back; answers the redirect to the app.
 const githubCallback = async (start: LoginStart, userId: number, cookie = start.cookie): Promise<Response> => {
     const code = randomBytes(8).toString('hex');
     githubCodes.set(code, { userId, challenge: start.providerChallenge });
     return dispatch(`/auth/github/callback?${new URLSearchParams({ code, state: start.providerState })}`, { headers: { cookie }, ip: start.ip, on: start.on });
 };
 
-// Apple posting the browser back with a form, the way `response_mode=form_post` does.
 const appleCallback = async (start: LoginStart, sub: string, options: { cookie?: string; code?: Partial<AppleCode> } = {}): Promise<Response> => {
     const code = randomBytes(8).toString('hex');
     appleCodes.set(code, { sub, nonce: start.providerChallenge, ...options.code });
@@ -299,7 +295,6 @@ const appleCallback = async (start: LoginStart, sub: string, options: { cookie?:
     });
 };
 
-// The code the app gets back from a callback that went well.
 const codeOf = (callback: Response): string => {
     expect(callback.status).toBe(302);
     return new URL(callback.headers.get('location') ?? '').searchParams.get('code') ?? '';
@@ -308,7 +303,6 @@ const codeOf = (callback: Response): string => {
 const callbackFor = (provider: ProviderId, start: LoginStart, subject: string): Promise<Response> =>
     provider === 'apple' ? appleCallback(start, subject) : githubCallback(start, Number(subject));
 
-// What `/v1/session` takes besides the code: the key the session is bound to, proven over that code.
 const bindKey = (code: string, key: KeyPair, signer = key) => ({
     sessionKey: key.publicKey,
     sessionKeySignature: signWith(signer, sessionKeyMessage(code, key.publicKey))
@@ -339,7 +333,6 @@ const signIn = (userId: number, key = newKeyPair(), on?: Miniflare): Promise<Sig
 
 const signInWithApple = (sub: string): Promise<SignedIn> => signInWith('apple', sub);
 
-// A link token for the provider, asked with the session's access token.
 const requestLink = async (session: SessionResult, provider: ProviderId): Promise<string> => {
     const response = await dispatch('/v1/account/link', { method: 'POST', body: { provider }, headers: bearer(session) });
     expect(response.status).toBe(200);
@@ -351,7 +344,6 @@ interface LinkLogin {
     code: string;
 }
 
-// A link token, the provider's login started with it, and the code the callback hands the app.
 const linkLogin = async (session: SessionResult, provider: ProviderId, subject: string): Promise<LinkLogin> => {
     const start = await startLogin(provider, { link: await requestLink(session, provider) });
     return { start, code: codeOf(await callbackFor(provider, start, subject)) };
@@ -370,7 +362,6 @@ const accountOf = async (session: SessionResult): Promise<AccountResult> => {
     return (await response.json()) as AccountResult;
 };
 
-// A refresh signed with the given key, the session's own by default.
 const refreshBody = (refreshToken: string, key: KeyPair, issuedAt = Date.now()) => ({
     refreshToken,
     issuedAt,

@@ -28,13 +28,8 @@ const openedByAgent = (entry: Lineage): boolean => entry.agent && entry.relation
 const fileName = (nodeId: string): string => `${encodeURIComponent(nodeId)}.json`;
 
 /*
- * Who opened an agent node and how deep in the chain of agents it sits, held per node id. It is not
- * a field on the node in `project.json` for two reasons. A node field would be a number the limited
- * party can edit: an agent in a terminal has a shell in the project folder and could rewrite
- * `.ruimte/project.json` to call itself depth 0. And the document is stripped by zod on every hop
- * (`ProjectNodeSchema`), so a client save would erase a field the client does not know. On disk
- * under `$RUIMTE_HOME`, because a restart is exactly when a loop of agents would otherwise start
- * counting from zero again.
+ * Lineage lives under `$RUIMTE_HOME`, outside the agent-writable project, so agents cannot reset
+ * their own depth. Persisting it also prevents a daemon restart from resetting recursion limits.
  */
 export class AgentLineageStore {
     readonly dir: string;

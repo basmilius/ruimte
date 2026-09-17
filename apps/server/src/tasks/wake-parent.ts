@@ -65,12 +65,8 @@ export interface WakeParentDeps {
 }
 
 /*
- * Wakes a chat once with every task of its that settled and has not woken it yet. A chat still in a
- * turn is waited for rather than retried: the outbox keeps the entry and a turn that ends looks again.
- * A task of a team whose other tasks are still open is held, and so is the entry: it waits until the
- * last task of that team settles, which owes an entry of its own or, cancelled, wakes this one. The
- * turn goes out before the tasks are marked, and a task a turn of the thread already names is marked
- * without a second turn, so a restart between the two wakes nobody twice.
+ * Wake once after all ready tasks in a team settle. The thread records task ids before the store
+ * marks them woken, making a restart between those writes idempotent.
  */
 export const wakeParentHandler =
     (deps: WakeParentDeps) =>

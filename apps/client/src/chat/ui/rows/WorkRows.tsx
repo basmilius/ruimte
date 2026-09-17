@@ -44,9 +44,7 @@ export function ToggleLine({
     return (
         <button
             className={clsx(
-                // A button sizes itself to its content whatever its display is, so a long command
-                // would push the row past the column it sits in and never reach the truncation
-                // below. The width is the row's own plus the 4px it bleeds into either margin.
+                // Fix the width so long commands reach the truncation inside the negative margins.
                 '-mx-1 mb-0.5 flex h-7 w-[calc(100%+8px)] items-center gap-2 rounded-md px-1 text-left text-xs text-text-muted hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
                 failed && 'text-status-error',
                 className

@@ -49,14 +49,8 @@ export const createSession = async (db: D1Database, account: AccountRow, label: 
 };
 
 /*
- * A refresh token is spent the moment it is used. One that was already spent means two holders of the
- * same token, so the whole session ends: the device signs in again, and so does whoever copied it. A
- * client that lost the answer to a refresh ends up there too, which is the price of noticing a copy.
- *
- * Every refresh is signed with the key the session was opened with, and nothing happens to a session
- * before that signature holds: a token copied without the key refreshes nothing, and cannot end the
- * session of the device it was copied from either. A session without a key is from before the binding
- * and is refused, so it signs in again rather than staying unbound.
+ * Refresh tokens rotate once. Reuse revokes the session, but only after the session key verifies, so
+ * a stolen token without its private key cannot refresh or revoke the legitimate device.
  */
 export const rotateSession = async (db: D1Database, payload: SessionRefreshPayload): Promise<SessionResult | null> => {
     const now = Date.now();

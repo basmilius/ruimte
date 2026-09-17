@@ -6,15 +6,10 @@ import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from './watch-se
 // A save, a formatter and a build all touch the same folder in a burst; one event per burst is enough.
 const SETTLE_MS = 250;
 
-// Recursive watching is one call to the platform on macOS and Windows. Elsewhere it costs a
-// descriptor per directory in the tree, so a watch there covers only the directory it names and the
-// client watches the folders it has open.
+// Recursive watching costs one descriptor per directory outside macOS and Windows.
 const supportsRecursive = (platform: NodeJS.Platform): boolean => platform === 'darwin' || platform === 'win32';
 
-// On macOS `fs.watch` returns before its FSEvents stream runs, and a write in between is never
-// reported: with a dozen watchers starting at once about one write in eight right after the call went
-// missing, and none 100 ms later. The client reads a folder once its watch is answered, so the answer
-// waits this long.
+// FSEvents can miss writes immediately after `fs.watch`; delay readiness until its stream is running.
 const STREAM_START_MS = 200;
 
 const isUnder = (path: string, ancestor: string): boolean => path === ancestor || path.startsWith(ancestor.endsWith(sep) ? ancestor : `${ancestor}${sep}`);

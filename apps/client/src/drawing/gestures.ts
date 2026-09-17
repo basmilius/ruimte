@@ -3,10 +3,8 @@ import type { Point, Rect } from '@ruimte/drawing';
 import { snapToGrid } from '@/canvas/math';
 import type { DrawingStyle, DrawingTool } from '@/state/drawing';
 
-/* A click without a drag still makes a shape, in the size a shape usually starts at. */
 export const DEFAULT_SHAPE = { w: 160, h: 96 };
 
-/* The same for a sticky note, which starts as a square sheet the way a pad of them does. */
 export const DEFAULT_NOTE = { w: 180, h: 180 };
 
 /* Under this many world units a drag is a click, whatever the hand did. */
@@ -17,7 +15,6 @@ const ANGLE_STEP = Math.PI / 12;
 
 export const snapPoint = (point: Point, snap: boolean): Point => (snap ? { x: snapToGrid(point.x), y: snapToGrid(point.y) } : point);
 
-/* The box of a shape being dragged: Shift makes it square, Alt grows it from where it started. */
 export const shapeRect = (start: Point, current: Point, options: { square?: boolean; fromCenter?: boolean } = {}): Rect => {
     let dx = current.x - start.x;
     let dy = current.y - start.y;
@@ -32,7 +29,6 @@ export const shapeRect = (start: Point, current: Point, options: { square?: bool
     return { x: Math.min(start.x, start.x + dx), y: Math.min(start.y, start.y + dy), w: Math.abs(dx), h: Math.abs(dy) };
 };
 
-/* The end of a line held to whole steps of 15 degrees, which is what Shift asks of it. */
 export const constrainAngle = (start: Point, current: Point): Point => {
     const dx = current.x - start.x;
     const dy = current.y - start.y;
@@ -50,7 +46,6 @@ const styleFields = (style: DrawingStyle): Pick<DrawingElement, 'stroke' | 'stro
     roughness: style.roughness
 });
 
-/* A shape with the style that is up: what every drawing tool but freehand and text makes. */
 export const shapeElement = (tool: DrawingTool, rect: Rect, style: DrawingStyle, id: string, seed: number): DrawingElement | null => {
     const base = { id, seed, ...rect, ...styleFields(style) };
     switch (tool) {
@@ -67,7 +62,6 @@ export const shapeElement = (tool: DrawingTool, rect: Rect, style: DrawingStyle,
     }
 };
 
-/* A sheet of paper with nothing on it yet: the paper is the note's own color, never the shape fill. */
 export const noteElement = (rect: Rect, style: DrawingStyle, id: string, seed: number): DrawingElement => ({
     kind: 'note',
     id,
@@ -85,7 +79,6 @@ export const noteElement = (rect: Rect, style: DrawingStyle, id: string, seed: n
     align: style.align
 });
 
-/* A line between two points, with a head at the end when the arrow tool drew it. */
 export const lineElement = (tool: 'line' | 'arrow', from: Point, to: Point, style: DrawingStyle, id: string, seed: number): DrawingElement => ({
     kind: 'line',
     id,
@@ -126,7 +119,6 @@ export const textElement = (at: Point, style: DrawingStyle, id: string, seed: nu
 export const scaledTextSize = (size: number, factor: number): number =>
     Math.min(DRAWING_TEXT_SIZE_MAX, Math.max(DRAWING_TEXT_SIZE_MIN, Math.round(size * factor)));
 
-/* Points rounded to a tenth of a unit and moved into the element's own frame, once a stroke ends. */
 export const settleStroke = (element: DrawingElement & { kind: 'freehand' }): DrawingElement => {
     const xs = element.points.map(([x]) => x);
     const ys = element.points.map(([, y]) => y);

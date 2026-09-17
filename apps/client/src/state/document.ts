@@ -172,13 +172,8 @@ const canvasOf = (viewId: string | null | undefined, peers: DocumentPeers): Canv
     (viewId === null || viewId === undefined ? null : peers.canvases.peek(viewId)?.getState()) ?? null;
 
 /*
- * Opens the editors of the views on screen and lets go of the rest. An editor is filled the moment
- * it is made, so nothing ever reads one that is empty while its view has nodes; a view that is not a
- * canvas simply gets none, which is what the single store stood for when a chat was up.
- *
- * Only the canvases are let go of here. A drawing or a diagram is a file of its own, and its editor
- * is its client's (`DrawingClient`, `DiagramClient`): releasing one it has not written out yet would hand it an empty store to save.
- * The focus is mirrored onto both, since that is what a reader outside the grid resolves through.
+ * Canvas editors follow the visible views. Drawing and diagram clients own their editors and may
+ * still have unsaved file state, so this function only updates their shared focus.
  */
 const openEditors = (views: ProjectView[], viewLocal: Record<string, ProjectViewLocal>, open: string[], focus: string | null, peers: DocumentPeers): void => {
     peers.canvases.keep(open);
@@ -270,12 +265,8 @@ const keptNotice = (notice: ViewNotice | null, views: ProjectView[]): ViewNotice
 };
 
 /*
- * What a grid that just moved does to the banner standing over it. A way back describes the grid as
- * it was, so the moment a person moves the grid themselves they have answered the question and the
- * offer is stale; a request to look somewhere survives that, unless the move is the person arriving
- * there, which is the request answered by doing it. That is the whole of when a banner goes by
- * itself: no timer, because four seconds of a view you did not ask for is exactly when you would
- * reach for the way back.
+ * A manual grid move makes an undo offer stale. A navigation offer survives until the requested
+ * view becomes active; neither expires on a timer because the person may still need the action.
  */
 const afterMove = (notice: ViewNotice | null, activeViewId: string | null): ViewNotice | null => {
     if (notice === null || notice.action === null) {
@@ -403,9 +394,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             },
 
             showNotice(notice) {
-                // The one that was up is replaced rather than queued: an agent that opens twice means
-                // the second one, and a line of old requests is a list nobody would work through. The
-                // way back goes with it, since it is the second move that is now the one to undo.
+                // Only the newest agent request matters, and its move is the one an undo must reverse.
                 set({ viewNotice: notice });
             },
 

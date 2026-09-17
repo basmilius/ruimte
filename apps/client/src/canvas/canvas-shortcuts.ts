@@ -76,16 +76,7 @@ let spaceDown = false;
 
 export const isSpaceDown = (): boolean => spaceDown;
 
-/*
- * Every shortcut that acts on a project: the views it switches between, the nodes it adds and deletes,
- * the panel beside it. Bound on the window once, by the workspace, because a view has to answer with the
- * keyboard in the sidebar as well; the start screen has no workspace and so none of these. The shortcuts of the window itself (the palette, find in files, the settings, the
- * sidebar) are not here at all: `shell/app-shortcuts.ts` has them.
- *
- * It hangs on the workspace and not on a canvas because a grid draws up to nine of them: nine
- * listeners would each act on the focused cell, so one shortcut would land nine times. What "the canvas
- * in front of me" means is `useCanvas` on its own, which is the focused cell by definition.
- */
+/* Bind once per workspace so a split grid does not run the same project shortcut in every canvas. */
 export const useCanvasShortcuts = (): void => {
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent): void => {

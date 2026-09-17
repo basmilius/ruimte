@@ -42,11 +42,8 @@ const isSpokenPrompt = (line: Line): boolean => {
 };
 
 /*
- * The transcript of a fork: the lines of the original up to the cut, every line moved to the new
- * session id. That is what the CLI writes itself for `--fork-session`, only shorter, and a `--resume`
- * of it reads nothing past the cut (measured on 2.1.273, from the same folder and from another one).
- * What trails the cut until the next prompt (attachments, the turn's duration, the last-prompt line)
- * belongs to the turn and stays; the queue lines of the next prompt go, since they carry its text.
+ * Claude Code 2.1.273 resumes a copied transcript cut after the chosen answer. Keep that turn's
+ * trailing metadata, drop the next prompt's queued lines, and rewrite every retained session id.
  */
 export const cutTranscript = (text: string, at: TranscriptCutPoint, sessionId: string, newSessionId: string): string => {
     const lines: Line[] = [];

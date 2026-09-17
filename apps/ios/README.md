@@ -193,7 +193,7 @@ GitHub sign-in is unchanged. See the Worker README for the Apple configuration.
   response before gathering, and refreshes expired credentials. One held connection per
   machine serves all scenes. The last release leaves a 30-second grace period; background
   closes links and foreground reconnects those still held. `NWPathMonitor` detects path
-  changes. Liveness reads libwebrtc transport packets, not just ping replies.
+  changes. Liveness reads libwebrtc transport packets rather than ping replies.
 - Normal ICE selection prefers a usable direct route, as in the existing clients. TURN
   supplies a fallback when direct candidates cannot connect. Relay-only is off by default
   and is available solely through the test app's diagnostic switch.

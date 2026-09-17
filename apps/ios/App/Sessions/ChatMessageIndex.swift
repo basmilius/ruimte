@@ -1,9 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// The messages a person sent in a long conversation, to jump back to one. A phone has no width to spare for a
-/// strip beside the thread and a finger cannot hover one, so this is a list the toolbar opens: a popover on iPad
-/// and a sheet on iPhone, searchable, scrolled to what is on screen and marking it.
+/// Searchable message index shown as a popover on iPad and a sheet on iPhone.
 struct ChatMessageIndex: View {
     let marks: [ChatMessageMark]
     /// The timeline entries on screen when the index opened.

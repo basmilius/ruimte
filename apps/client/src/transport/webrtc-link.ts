@@ -68,12 +68,8 @@ const connectionIdOf = (): string => {
 const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
 /*
- * A daemon's wire over a WebRTC DataChannel. The offer and the answer travel however `signaling`
- * says (a socket to the machine, or the broker), and that route is closed the moment the channel is
- * in. The channel then runs its own handshake as its first frames, bound to its DTLS fingerprints,
- * and only after the daemon's verdict does the link report open. Every way this can fail ends the
- * link with a sentence for the machine's row, because a direct connection that silently turned into
- * a socket would test nothing.
+ * Close signaling once the DataChannel opens, then authenticate against its DTLS fingerprints
+ * before reporting the link ready. Direct failures stay visible instead of falling back silently.
  */
 export const webRtcLink =
     (options: WebRtcLinkOptions): LinkOpener =>

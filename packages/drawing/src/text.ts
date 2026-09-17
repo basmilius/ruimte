@@ -10,7 +10,6 @@ export const DEFAULT_FONT_STACKS: Record<DrawingFont, string> = {
     mono: 'ui-monospace, SFMono-Regular, Menlo, monospace'
 };
 
-/* An element whose own text is what it says: a written line, or the note it is written on. */
 export type WrittenElement = DrawingElement & { kind: 'text' | 'note' };
 
 /* How much paper a note keeps free around its text, on every side. */
@@ -28,7 +27,6 @@ export const writingFrameOf = (element: WrittenElement): { x: number; y: number;
 
 export const textLines = (text: string): string[] => text.split('\n');
 
-/* The width of one line in world units, in the font the caller has. */
 export type MeasureLine = (line: string) => number;
 
 /*
@@ -40,7 +38,6 @@ export const approximateMeasure = (size: number, font: DrawingFont | undefined):
     return (line) => line.length * size * glyph;
 };
 
-/* One paragraph on as many lines as the width allows; a word that is too long breaks between glyphs. */
 const wrapParagraph = (paragraph: string, maxWidth: number, measure: MeasureLine): string[] => {
     const lines: string[] = [];
     let line = '';
@@ -72,14 +69,10 @@ const wrapParagraph = (paragraph: string, maxWidth: number, measure: MeasureLine
     return lines;
 };
 
-/* The text broken at the box's width; a hard line break always breaks, and an empty paragraph stays a line. */
 export const wrapLines = (text: string, maxWidth: number, measure: MeasureLine): string[] =>
     textLines(text).flatMap((paragraph) => wrapParagraph(paragraph, maxWidth, measure));
 
-/*
- * The lines an element is set on: a note always breaks at its paper, a text once its box is the
- * person's, and otherwise the text stands as it was typed.
- */
+// An unsized text element follows its content; once sized, its box controls wrapping.
 export const linesOf = (element: WrittenElement, measure: MeasureLine): string[] => {
     if (element.kind === 'note') {
         return wrapLines(element.text, writingFrameOf(element).w, measure);

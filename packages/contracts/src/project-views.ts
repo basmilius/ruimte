@@ -17,14 +17,8 @@ import {
 } from './project.ts';
 
 /*
- * What a person does to the list of views, as functions over the list itself. A person does it from
- * the sidebar and an agent does it with `ruimte-context view`, so the rules are here rather than in
- * either half: a view id is unique across the project, a separator is a line and never opens, an
- * edge that would point outside its own canvas falls away, and a project always has a view to open.
- *
- * What is not here is what only one side knows: the camera, the focus, the split layout and the
- * editors that hold a canvas on screen. Those stay in the client, which is the only side with a
- * viewport to measure them against.
+ * Shared view-list rules used by the client and canvas verbs. Viewport state stays client-side;
+ * these functions only preserve project-wide ids, edges and the requirement for an openable view.
  */
 
 export const emptyCanvasView = (id: string, name: string): ProjectCanvasView => ({

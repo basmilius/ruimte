@@ -6,15 +6,8 @@ import type { ChatListResult, ProcessesAlerts, ProcessesSampleEvent, SessionList
 import { readLocalSecret } from '../src/auth/local-secret.ts';
 
 /*
- * Logs what the stuck warnings are judged on, so their thresholds can be calibrated on real sessions:
- * every sample of Ruimte's own tree next to the hook status of every terminal and the status of every
- * chat, one JSON line per sample. It asks a running daemon over its socket with the local secret of
- * `--home` and keeps the panel's tempo of two seconds for as long as it runs.
- *
- *   bun scripts/calibrate-processes.ts                          an hour against the daemon on 4210
- *   bun scripts/calibrate-processes.ts --port 4211 --minutes 20
- *
- * The file lands in `$RUIMTE_HOME/processes/` (`--home` for another one).
+ * Samples process metrics and agent status every two seconds for stuck-warning calibration. Output
+ * is JSONL under `$RUIMTE_HOME/processes`; `--port`, `--minutes` and `--home` override the defaults.
  */
 const { values } = parseArgs({
     args: process.argv.slice(2),

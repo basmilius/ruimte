@@ -11,12 +11,8 @@ import { errorText } from '../error-text.ts';
 export const PAIRING_TTL_MS = 10 * 60 * 1000;
 
 /*
- * Both credentials are optional and a record needs one of them. `publicKey` is what a client pairs
- * with now: it signs a challenge per connection and nothing long lived ever travels. `tokenHash` is
- * what a client paired with before there were key pairs, kept so nobody has to pair again; it goes
- * the moment that client has proved it can sign. `origin` says how the client got in: a pairing link
- * a person handed over, or a statement from the address book. Absent is a link, which is every
- * record from before statements.
+ * New sessions authenticate with a public key. Legacy token hashes remain until that client proves
+ * a key, and an absent origin preserves pre-statement records as link pairings.
  */
 const SessionRecordSchema = z
     .object({

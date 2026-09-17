@@ -303,11 +303,8 @@ export class BrokerRelay implements Relay {
     }
 
     /*
-     * One signal from a client. A signature that does not verify is dropped without a word: answering
-     * it would let anyone make this machine sign messages for keys of their choosing. A signature that
-     * verifies from a key nobody paired gets one signed `not-paired` for an offer, so a revoked client
-     * hears why at once instead of waiting out its timeout, and no peer connection is ever made for it,
-     * unless the offer carries a statement the gate takes, which pairs the key before it is answered.
+     * Drop invalid signatures silently to avoid signing attacker-chosen replies. A valid but unknown
+     * offer gets `not-paired`, unless its accepted statement pairs the key first.
      */
     private async relayed(frame: BrokerRelayed): Promise<void> {
         const { from, envelope, signature } = frame;

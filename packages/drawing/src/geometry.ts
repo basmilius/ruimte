@@ -12,7 +12,6 @@ export interface Rect {
     h: number;
 }
 
-/* The eight squares of a selection box, plus the handle above it that turns the element. */
 export const RESIZE_HANDLES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as const;
 export type ResizeHandle = (typeof RESIZE_HANDLES)[number];
 
@@ -55,7 +54,6 @@ export const boundsOfElements = (elements: readonly DrawingElement[]): Rect | nu
 
 export const intersects = (a: Rect, b: Rect): boolean => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
-/* Two corners of a drag, in either direction, as a rectangle with positive sides. */
 export const rectFromPoints = (from: Point, to: Point): Rect => ({
     x: Math.min(from.x, to.x),
     y: Math.min(from.y, to.y),
@@ -74,7 +72,6 @@ export const distanceToSegment = (point: Point, a: Point, b: Point): number => {
     return Math.hypot(point.x - (a.x + t * dx), point.y - (a.y + t * dy));
 };
 
-/* The points of a line or a stroke in world units; they are stored relative to the element. */
 export const absolutePoints = (element: DrawingElement): Point[] => {
     if (element.kind !== 'line' && element.kind !== 'freehand') {
         return [];
@@ -157,7 +154,6 @@ export const hitsElement = (element: DrawingElement, point: Point, tolerance: nu
     }
 };
 
-/* The element under the pointer: the top-most one, and never a locked one. */
 export const elementAt = (elements: readonly DrawingElement[], point: Point, tolerance: number): DrawingElement | undefined => {
     for (let i = elements.length - 1; i >= 0; i--) {
         const element = elements[i]!;
@@ -171,7 +167,6 @@ export const elementAt = (elements: readonly DrawingElement[], point: Point, tol
 export const elementsIn = (elements: readonly DrawingElement[], rect: Rect): DrawingElement[] =>
     elements.filter((element) => !element.locked && intersects(boundsOf(element), rect));
 
-/* Where the eight handles of a selection sit, before the camera turns them into screen pixels. */
 export const handlePoint = (rect: Rect, handle: ResizeHandle): Point => {
     const x = handle.includes('w') ? rect.x : handle.includes('e') ? rect.x + rect.w : rect.x + rect.w / 2;
     const y = handle.startsWith('n') ? rect.y : handle.startsWith('s') ? rect.y + rect.h : rect.y + rect.h / 2;
@@ -214,7 +209,6 @@ export const resizeRect = (rect: Rect, handle: ResizeHandle, point: Point, aspec
     return { x, y, w, h };
 };
 
-/* Moves and scales the points of a line or a stroke along with the box they sit in. */
 export const scaleElement = (element: DrawingElement, from: Rect, to: Rect): DrawingElement => {
     const scaleX = from.w === 0 ? 1 : to.w / from.w;
     const scaleY = from.h === 0 ? 1 : to.h / from.h;
@@ -238,7 +232,6 @@ export const scaleElement = (element: DrawingElement, from: Rect, to: Rect): Dra
     return placed;
 };
 
-/* The two short lines of an arrow head, in the direction of the segment they close off. */
 export const arrowHead = (tip: Point, from: Point, size: number): [Point, Point][] => {
     const angle = Math.atan2(tip.y - from.y, tip.x - from.x);
     const spread = Math.PI / 7;

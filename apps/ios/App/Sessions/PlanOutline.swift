@@ -372,7 +372,6 @@ struct PlanDocument: Identifiable, Equatable, Sendable {
             }
             return lines + step.steps.flatMap { stepLines($0, depth: depth + 1) }
         }
-        // Consecutive steps form one list; a text block stands as its own block.
         func entryBlocks(_ entries: [PlanEntry]) -> [String] {
             var result: [String] = []
             var list: [String] = []
@@ -436,9 +435,7 @@ struct PlanReveal: Equatable, Sendable {
     var collapsed: Set<String>
 }
 
-/// What the sheet's toolbar shows of the agent's progress. Between one step set done and the next set active, or
-/// while the working state flickers, the plan has no active step for a moment; without a hold the item would vanish
-/// and come back. A new active step shows at once, and only going quiet or pausing waits for the hold.
+/// Holds the last activity briefly so transient gaps between plan steps do not flicker.
 @MainActor @Observable
 final class PlanActivityHold {
     struct Step: Equatable, Sendable {

@@ -9,7 +9,6 @@ const HEAD_LENGTH = 10;
 const HEAD_WIDTH = 6;
 
 export interface ShapePaths {
-    /* The outline, filled and stroked. */
     body: string;
     /* A line drawn on top of the body and never filled: the front edge of a cylinder's lid. */
     detail: string | null;
@@ -33,7 +32,6 @@ const roundedRect = (box: Rect, radius: number): string => {
     ].join(' ');
 };
 
-/* The outline of a node's shape in its box, as SVG path data both the view and the export draw. */
 export const shapePaths = (shape: DiagramShape | undefined, box: Rect): ShapePaths => {
     const right = box.x + box.w;
     const bottom = box.y + box.h;
@@ -62,18 +60,15 @@ export const shapePaths = (shape: DiagramShape | undefined, box: Rect): ShapePat
     }
 };
 
-/* One line of text, positioned as a baseline and anchored in the middle. */
 export interface TextLine {
     text: string;
     x: number;
     y: number;
     size: number;
     bold: boolean;
-    /* The line under a node's label, drawn in the muted tone. */
     muted: boolean;
 }
 
-/* Where every line of a node's label and of the line under it sits, centered in the box as one block. */
 export const textLinesOf = (box: Pick<NodeBox, 'x' | 'y' | 'w' | 'h' | 'label' | 'sub'>, shape?: DiagramShape): TextLine[] => {
     const x = Math.round(box.x + box.w / 2);
     const height = box.label.length * LABEL_LINE + box.sub.length * SUB_LINE;
@@ -85,7 +80,6 @@ export const textLinesOf = (box: Pick<NodeBox, 'x' | 'y' | 'w' | 'h' | 'label' |
     return [...label, ...sub];
 };
 
-/* The lines of an edge's label, centered in the box the layout gave it. */
 export const edgeLabelLinesOf = (label: EdgeLabelBox): TextLine[] => {
     const x = Math.round(label.x + label.w / 2);
     return label.lines.map((text, index) => ({
@@ -100,7 +94,6 @@ export const edgeLabelLinesOf = (label: EdgeLabelBox): TextLine[] => {
 
 export const edgePath = (points: readonly Point[]): string => points.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x} ${point.y}`).join(' ');
 
-/* A closed triangle on the last point, pointing along the last segment. */
 export const arrowHeadPath = (points: readonly Point[]): string => {
     const tip = points.at(-1)!;
     const before = points.at(-2) ?? tip;
@@ -113,7 +106,6 @@ export const arrowHeadPath = (points: readonly Point[]): string => {
     return `M${tip.x} ${tip.y} L${round(baseX - uy * HEAD_WIDTH)} ${round(baseY + ux * HEAD_WIDTH)} L${round(baseX + uy * HEAD_WIDTH)} ${round(baseY - ux * HEAD_WIDTH)} Z`;
 };
 
-/* The dash pattern of an edge style, or null for a solid line. */
 export const dashOf = (style: DiagramEdgeStyle | undefined): string | null => {
     if (style === 'dashed') {
         return '8 6';

@@ -70,15 +70,8 @@ const machineName = (endpointId: string): string | null => {
 };
 
 /*
- * One OS notification per node that turns to needs-you while the window is not focused, taken back
- * the moment the node stops waiting. A question has no setting of its own: it is the agent standing
- * still until somebody answers, which is worth a notification whatever else is switched off.
- *
- * A permission a terminal agent asks for is the same watcher's work, because it is the same node
- * standing still: it rides `agentsApprovals` rather than the turn switch, since a person who put
- * the strip in the header asked to answer permissions away from the terminal, and this is the only
- * thing that reaches them before the hold runs out. It speaks for the node while it stands, so the
- * plain "Needs you" is not raised beside it and one that got there first is taken back.
+ * Notify once while a hidden node needs input, then withdraw when it resumes. A permission replaces
+ * the generic notification because it carries the actionable question and expires.
  */
 export const startAgentNotifications = (): (() => void) => {
     const shown = new Map<string, Notification>();

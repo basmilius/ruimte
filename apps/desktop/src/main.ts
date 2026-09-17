@@ -316,7 +316,6 @@ interface AppTheme {
     resolved: 'light' | 'dark';
     /* True while the app follows the system, which is the one case a page may follow it too. */
     followsSystem: boolean;
-    /* The value of `--bg` in the theme that is up. */
     background: string;
 }
 
@@ -394,15 +393,8 @@ const routePreviewLinks = (contents: Electron.WebContents): void => {
 let keepAwakeId: number | null = null;
 
 /*
- * Keeps the machine from suspending while an agent works. `prevent-app-suspension` is the one that
- * matters: `prevent-display-sleep` only keeps the screen lit, and an agent runs fine with the
- * display off. The client asks for this and never the shell, so the block ends with the last
- * request, with a reload or with the window.
- *
- * On macOS this takes an IOKit assertion Chromium still creates under the name it had before 10.7,
- * so `pmset -g assertions` prints it as `NoIdleSleepAssertion` and not as the
- * `PreventUserIdleSystemSleep` it counts as, owned by "Electron" rather than by the app's name.
- * Grep the type, not the product: `pmset -g assertions | grep NoIdleSleepAssertion`.
+ * Agents need `prevent-app-suspension`, not a lit display. On macOS, `pmset` reports Chromium's
+ * assertion as `NoIdleSleepAssertion` owned by Electron.
  */
 const setKeepAwake = (keep: boolean): void => {
     if (keep === (keepAwakeId !== null)) {
@@ -468,10 +460,7 @@ const createWindow = (): Electron.BrowserWindow => {
         setKeepAwake(false);
         setAgentActivity({ working: 0, attention: 0 });
     });
-    // A reload throws away the client that asked to stay awake and the counts it sent, so both go
-    // with it and the client that comes up says again what is still running. Only a main frame
-    // counts: this event fires for a subframe as well, and dropping the block for a page the client
-    // loaded inside itself would put out a block nothing asks for again until the turn after it.
+    // Reset client-owned state on main-frame reload; subframe loads must not release the power block.
     window.webContents.on('did-start-loading', () => {
         if (!window.webContents.isLoadingMainFrame()) {
             return;
@@ -542,7 +531,6 @@ const SPELLING_SUGGESTIONS = 5;
 /* Where a selection goes when someone asks the system browser to look it up, as in the client's menu. */
 const SEARCH_URL = 'https://www.google.com/search?q=';
 
-/* A selection reads in a menu label on one line, short enough to take in at a glance. */
 const menuLabel = (text: string): string => {
     const line = text.trim().replace(/\s+/g, ' ');
     return line.length > 24 ? `${line.slice(0, 24)}...` : line;
@@ -577,9 +565,7 @@ const editableGuestMenu = (contents: Electron.WebContents, params: Electron.Cont
     }
     template.push({ role: 'delete', enabled: params.editFlags.canDelete }, { role: 'selectAll', enabled: params.editFlags.canSelectAll });
     if (process.platform === 'darwin' && params.selectionText !== '') {
-        // Electron has no role for either of these, so they are ours: the dictionary panel is a
-        // call on the guest, and the search is the same URL the client's own menu opens. Share and
-        // Services are not here, because macOS appends both to a menu popped with its frame.
+        // Electron has no dictionary or search roles; macOS adds Share and Services through the frame.
         template.push(
             { type: 'separator' },
             { label: `Look Up "${menuLabel(params.selectionText)}"`, click: () => contents.showDefinitionForSelection() },
@@ -918,13 +904,7 @@ const releaseNotes = createReleaseNotes({
 
 ipcMain.handle('releases:list', (_event, refresh?: boolean) => releaseNotes.list(refresh === true));
 
-/*
- * The application menu's first column. On macOS the stock `appMenu` role opens Electron's own About
- * panel and has no Settings at all, so both lead into the client's settings instead. Everything else
- * keeps its role: Quit in particular, whose `before-quit` is where the dialog about working agents
- * lives. Settings names no pane, so Cmd+, (which the menu now takes before the page) still opens the
- * dialog where it was. Elsewhere that column is the File menu, which has neither item.
- */
+// Replace macOS's stock About and Settings with client routes while retaining native roles such as Quit.
 function appMenu(): Electron.MenuItemConstructorOptions {
     // Only where a service can run: anywhere else quitting already stops the machine.
     const stopItems: Electron.MenuItemConstructorOptions[] =
@@ -1091,9 +1071,7 @@ if (!app.requestSingleInstanceLock()) {
     });
 
     app.on('before-quit', (event) => {
-        // With the background service the agents keep working, and the question only says so. Without it
-        // quitting takes the daemon and every session with it, so a turn in flight is work thrown away.
-        // Asked once: a quit that a person confirmed must not ask again on its second pass.
+        // Ask once when quitting would stop working agents; the background service lets them survive.
         if (!quitConfirmed && agentActivity.working > 0 && mainWindow !== null && !mainWindow.isDestroyed()) {
             const survives = serviceController.survivesQuit(stopMachineOnQuit);
             const choice = dialog.showMessageBoxSync(mainWindow, {

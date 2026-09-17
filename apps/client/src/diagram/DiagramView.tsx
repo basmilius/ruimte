@@ -256,9 +256,7 @@ export function DiagramView({ id }: { id: string }) {
     }, [store]);
 
     const onPointerDown = (e: React.PointerEvent<HTMLDivElement>): void => {
-        // The controls are portaled into the bar and their menus into the body, yet React still
-        // bubbles their presses through here; capturing the pointer for those would eat the click.
-        // The dock and the rename field sit inside the surface, so they are told apart by their mark.
+        // Portaled controls still bubble here; capturing their pointer would consume the click.
         if ((e.button !== 0 && e.button !== 1) || !e.currentTarget.contains(e.target as Node) || isChrome(e.target)) {
             return;
         }

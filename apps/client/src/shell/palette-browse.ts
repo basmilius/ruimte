@@ -74,13 +74,7 @@ export interface BrowseStart {
     home: string;
 }
 
-/*
- * Where browsing a machine opens. The folder set in settings, else that machine's home, and
- * deliberately not the folder of the open project: that folder is on one machine and is already
- * open, while browsing is for finding another one. The setting is one for every machine rather than
- * one per machine, so it can name a folder that is not on the machine being browsed; `start` is
- * asked for first and `home` is what the caller falls back to when `fs.browse` says it is not there.
- */
+// Prefer the configured browse root, falling back to this machine's home when that path is absent.
 export const browseStart = (configured: string, home: string | null, sep: string): BrowseStart => {
     const homePath = `${home ?? '~'}${sep}`;
     const trimmed = configured.trim();

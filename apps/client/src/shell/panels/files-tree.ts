@@ -112,15 +112,7 @@ export interface SortRow {
     segments: readonly string[];
 }
 
-/*
- * Directories first, then names the way a person reads numbers, which is the daemon's own order.
- *
- * The tree sorts one flat list of whole paths, and a directory only appears in it when it is empty
- * or unloaded: `src/index.ts` is the only row that says `src` exists. So the two rows are compared
- * segment by segment, and the first segment they differ on is the one that decides, a directory
- * before a file. Comparing the last segment alone would put `src/index.ts` wherever `index.ts`
- * happens to fall, which is how directories ended up mixed in among the files.
- */
+// Compare whole path segments because loaded directories may have no row of their own in the flat list.
 export const compareRows = (left: SortRow, right: SortRow): number => {
     const shared = Math.min(left.segments.length, right.segments.length);
     for (let i = 0; i < shared; i++) {

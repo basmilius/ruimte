@@ -10,11 +10,8 @@ export const NodeKindSchema = z.enum(['terminal', 'chat', 'browser', 'group', 'n
 export type NodeKind = z.infer<typeof NodeKindSchema>;
 
 /*
- * What a node or a view of a kind this version does not know is called in memory. A newer Ruimte
- * wrote it, so it is carried along and written back exactly as it came: the entry as it was read
- * rides in `raw`, and only the file holds it in that shape again (`storedContentOf`). The name is
- * reserved: no real kind may ever be called this. A real discriminant rather than `kind` as a branded
- * string, which stops TypeScript from narrowing the view union on `kind` everywhere.
+ * Wrap entries from newer versions so they can be preserved verbatim. The reserved discriminant
+ * keeps TypeScript narrowing useful for every known `kind`.
  */
 export const UNKNOWN_KIND = 'unknown';
 
@@ -139,7 +136,6 @@ export const storedNodeOf = (node: ProjectNode): unknown => {
     return stored;
 };
 
-/* A node on a canvas, whatever its kind: see `UNKNOWN_KIND`. */
 export const CanvasNodeSchema = z.preprocess(
     (value) =>
         readEntry(
@@ -177,10 +173,7 @@ export const ProjectLayoutSchema = z.object({
 });
 export type ProjectLayout = z.infer<typeof ProjectLayoutSchema>;
 
-// The Lucide icons a project, a view or a machine may pick from, grouped by subject so the picker's
-// grid reads in runs. Closed on purpose: the client maps a name to a component, so a name it does
-// not know would render nothing at all. A name in here is written into saved files, so the list only
-// ever grows: renaming or dropping one orphans whatever picked it.
+// Persisted icon names form a closed, append-only set because unknown or renamed names render nothing.
 export const PROJECT_ICON_NAMES = [
     'box',
     'boxes',
@@ -523,9 +516,7 @@ export const ProjectFileTabViewSchema = z.object({
     staged: z.boolean(),
     // The commit the `commit` scope reads; the tab is that whole commit, not one file of it.
     commit: z.string().min(1).optional(),
-    // What the `base` scope measures from instead of the repository's base branch, so a reloaded tab
-    // of a worktree compares with the branch it was made from again. A base tab whose path is `cwd`
-    // itself is every file of that checkout.
+    // Keeps a worktree diff anchored to the branch it came from after reload.
     base: z.string().min(1).optional()
 });
 export type ProjectFileTabView = z.infer<typeof ProjectFileTabViewSchema>;

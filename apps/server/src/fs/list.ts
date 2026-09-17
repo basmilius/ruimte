@@ -60,14 +60,8 @@ const readEntries = async (dir: string, includeHidden: boolean): Promise<FsEntry
 };
 
 /*
- * One directory, or a few levels of it, as a flat list where a directory is followed by what is
- * under it. Symlinks are never walked into, so a link out of the folder lists as one entry and the
- * listing stays inside the folder it was given.
- *
- * The ignore flags come from one `git check-ignore` per level (one call for the default depth of
- * one), with the listed directory as the working directory; outside a repository nothing is
- * ignored. An ignored directory is not walked into, so a deep listing never wanders into
- * `node_modules`.
+ * Never follow symlinks or ignored directories while expanding levels, keeping the listing inside
+ * its root and out of trees such as `node_modules`. Git ignore status is checked once per level.
  */
 export const listDirectory = async (path: string, options: ListOptions = {}): Promise<FsListResult> => {
     const root = resolve(path);

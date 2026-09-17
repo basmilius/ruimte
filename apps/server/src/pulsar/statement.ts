@@ -68,11 +68,8 @@ export interface StatementGateOptions {
 export type StatementVerdict = 'admitted' | 'refused' | 'statements-refused';
 
 /*
- * What a daemon does with a statement in an offer from a key it does not know. The statement has to
- * name this machine and the key that signed the offer, be inside its lifetime and carry a signature
- * from a pinned key; its nonce is then spent for good, and the key lands in the paired clients with
- * the origin `statement`, the same record a pairing link makes. Whether the machine takes statements
- * at all is asked only of a statement that holds up, so a stranger learns nothing about the switch.
+ * Validate the signed machine, client key, lifetime and nonce before consulting the opt-out. This
+ * prevents invalid callers from learning whether the machine accepts account statements.
  */
 export class StatementGate {
     private readonly options: StatementGateOptions;

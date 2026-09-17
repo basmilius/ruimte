@@ -1,19 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { ApprovalChoice, ApprovalRequest } from '@ruimte/contracts';
 
-/*
- * How long the daemon holds a permission request open before it lets go. Claude Code shows its own
- * prompt the moment it asks and runs the hook beside it, so holding costs the agent nothing: the
- * person can always answer in the TUI, and a hook that says nothing leaves that prompt standing.
- * The ceiling is the CLI's, which cancels a hook at the `timeout` in its settings and discards
- * whatever it was about to print, so the three numbers are laddered: this one, then curl's, then
- * the CLI's, and the daemon is always the first to give up.
- */
+// Expire before curl and the CLI hook timeouts so the daemon, not either outer layer, releases first.
 export const APPROVAL_HOLD_MS = 110_000;
 
-// What each answer becomes on the wire back to the CLI; `null` is the daemon saying nothing at all.
-// `hookSpecificOutput.decision` is this object, not the string the published docs show: the CLI rejects a string.
-// `PreToolUse` is the hook with a string decision, and its `defer` is print-mode only, so it cannot hold a request.
+// Despite the published docs, `hookSpecificOutput.decision` must be this object; the CLI rejects a string.
 export type ApprovalDecision = { behavior: 'allow'; updatedPermissions?: unknown[] } | { behavior: 'deny'; message: string };
 
 interface PermissionAsk {

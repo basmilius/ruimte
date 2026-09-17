@@ -49,14 +49,8 @@ interface SigningIdentity {
 }
 
 /*
- * The proof that gets a connection in. The daemon hands out a nonce and signs it, so a client knows
- * it is talking to the machine it paired with and not to whatever answers on that address; the
- * client signs the same nonce back, so the daemon knows the client holds the private half of the
- * key it registered. What comes out is a ticket: a short-lived credential that rotates on every
- * connection, which is what rides in the socket URL instead of something long lived.
- *
- * Challenges and tickets live in memory only. A daemon that restarts hands out new ones, and a
- * client that finds its ticket refused simply signs again.
+ * Both peers sign a fresh nonce, proving their pinned keys before the daemon issues a short-lived
+ * connection ticket. Challenges and tickets stay in memory and are renewed after a restart.
  */
 export class Handshake {
     private readonly store: AuthStore;

@@ -11,13 +11,7 @@ interface GuestElement extends HTMLElement {
 const watched = new Map<HTMLElement, () => void>();
 let installed = false;
 
-/*
- * A press inside a <webview> never reaches the page around it: the guest keeps its input to itself.
- * Whether its focus does depends on the Chromium under it, so two roads are taken and either is
- * enough. The shell hears every guest take the focus and says which one (`guest:focus`), and the
- * element itself may fire a plain `focus`, which does not bubble and is caught on the way down.
- * Answering twice costs nothing: focusing a cell that already has the focus is a no-op.
- */
+// Chromium focus behavior varies, so accept both the shell's guest event and the element's captured focus.
 const install = (): void => {
     if (installed || typeof window === 'undefined') {
         return;

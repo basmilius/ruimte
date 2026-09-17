@@ -24,12 +24,8 @@ const APPROVAL_TIMEOUT_S = 125;
 const APPROVAL_MAX_TIME_S = 120;
 
 /*
- * Outside Ruimte the variables are unset and the hook only drains stdin, so the same settings
- * file serves a plain terminal too. `exit 0` keeps a failed POST from ever blocking the CLI.
- * The response body goes to stdout on purpose: on a prompt hook the daemon answers with the
- * session's context hint and on a permission hook with the decision, which Claude Code reads
- * from there. `-f` keeps an error page from being printed too, since the CLI would take that
- * text as context as well.
+ * Outside Ruimte the hook only drains stdin. Inside it, stdout carries daemon context or a decision;
+ * failed HTTP responses stay silent and never block the CLI.
  */
 export const hookCommand = (kind: AgentKind, event?: string): string => {
     const maxTime = event === APPROVAL_EVENT ? APPROVAL_MAX_TIME_S : HOOK_MAX_TIME_S;

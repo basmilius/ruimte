@@ -2,10 +2,8 @@ import { ArrowLeft, ArrowRight, Code, Copy, Download, ExternalLink, Globe, Image
 import type { LucideIcon } from 'lucide-react';
 import type { BrowserContextParams } from '@/desktop/bridge';
 
-/* Where a selection goes when someone asks the system browser to look it up. */
 const SEARCH_URL = 'https://www.google.com/search?q=';
 
-/* The shell's params plus the two things only the client knows: where the page's history can go. */
 export interface BrowserMenuInput extends BrowserContextParams {
     canGoBack: boolean;
     canGoForward: boolean;
@@ -29,7 +27,6 @@ export type BrowserMenuAction =
     | { kind: 'inspect' };
 
 export interface BrowserMenuItem {
-    /* Unique in the menu, so a row has a key and a test can name one. */
     id: string;
     label: string;
     icon: LucideIcon;
@@ -37,7 +34,6 @@ export interface BrowserMenuItem {
     disabled?: boolean;
 }
 
-/* A selection reads in a menu label on one line, short enough to take in at a glance. */
 const asLabel = (text: string): string => {
     const line = text.trim().replace(/\s+/g, ' ');
     return line.length > 24 ? `${line.slice(0, 24)}...` : line;

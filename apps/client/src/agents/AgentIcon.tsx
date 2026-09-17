@@ -5,9 +5,7 @@ import { siClaude, siGithubcopilot, siGooglegemini } from 'simple-icons';
 import { Icon } from '@/ui/Icon';
 import { PROVIDER_PATHS } from '@/ui/ProviderLogo';
 
-// The brand marks from simple-icons (CC0), one path each, drawn in `currentColor` so a mark takes
-// the color of the row or header it sits in. simple-icons carries no OpenAI mark (it was removed
-// at OpenAI's request), so Codex borrows the one the usage page already draws.
+// simple-icons removed OpenAI's mark at its request, so Codex reuses the usage page's path.
 const MARKS: Partial<Record<AgentKind, { title: string; path: string }>> = {
     claude: siClaude,
     codex: { title: 'Codex', path: PROVIDER_PATHS.codex },
@@ -15,7 +13,6 @@ const MARKS: Partial<Record<AgentKind, { title: string; path: string }>> = {
     copilot: siGithubcopilot
 };
 
-/* The mark of one agent CLI, for a menu row, a palette row and the header of an agent node. */
 export function AgentIcon({ kind, size = 14, className }: { kind: AgentKind; size?: number; className?: string }) {
     const mark = MARKS[kind];
     if (!mark) {

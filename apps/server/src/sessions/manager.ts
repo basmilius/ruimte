@@ -291,15 +291,8 @@ export class SessionManager {
             this.refreshTitle(session, agent);
         }
         if (agent === null || agent.status === 'idle' || agent.status === 'error') {
-            /*
-             * A CLI waiting at its own prompt, one whose turn ended and one that is gone all have
-             * no permission prompt on the screen, so whatever is still held for this session was
-             * answered there. Claude Code 2.1.270 does not cancel the hook when the person answers
-             * in the TUI (measured: the request sat out its whole 110 seconds), and without this
-             * every client would keep offering a question nobody can answer any more. A `running`
-             * hook is no such proof: the CLI runs tools beside each other and may well be asking
-             * about one while it reports another.
-             */
+            /* Claude Code 2.1.270 leaves its hook open after a TUI answer. An idle or ended status
+               proves the prompt is gone; `running` does not, because tools may run concurrently. */
             this.approvals?.dropSession(session.id);
             this.onProcessChange?.(session.id, 'changed');
         }
@@ -336,16 +329,8 @@ export class SessionManager {
     }
 
     /*
-     * The status a session has the moment a permission is answered here. A CLI has no reason to
-     * report one: its own prompt was settled from the outside, and the next hook is the PostToolUse
-     * of the tool that just started, which for a command running for minutes is minutes away.
-     * Measured against Claude Code 2.1.270, a `sleep 12` approved through the hook left twelve
-     * seconds of silence, so a node would keep saying `needs-you` for the whole run. The daemon
-     * knows what the CLI does not bother to say: the question it was waiting on is gone, so the
-     * agent is working again (a deny too, since the agent reads the refusal and carries on), unless
-     * another request is still open, which is a person's turn all the same. Only a session that is
-     * still on `needs-you` is touched, so a hook that spoke after the request opened keeps the last
-     * word, and every later hook overwrites this inference as it would any other status.
+     * Claude Code 2.1.270 emits no hook after an external approval until the tool finishes. Mark the
+     * session running now unless another request still needs an answer; later hooks remain authoritative.
      */
     private settleAfterApproval(sessionId: string): void {
         const session = this.sessions.get(sessionId);
@@ -486,13 +471,7 @@ export class SessionManager {
         }
     }
 
-    /*
-     * The one line a fresh shell gets for its agent. Nothing is typed when the daemon remembers an
-     * agent for this id: the client answers a non-live agent on attach with `agent.resume`, and a
-     * launch line here would land in the input box of the CLI that line had just started. A resume
-     * the node itself asked for is the caller's memory and not evidence, so the shell keeps the
-     * fresh launch behind it.
-     */
+    // Restored shells resume after attach; typing here could land in the input of a CLI that is still alive.
     private async startLine(sessionId: string, launch: AgentLaunch | undefined, restored: boolean): Promise<string | undefined> {
         if (!launch || restored) {
             return undefined;
@@ -506,12 +485,8 @@ export class SessionManager {
     }
 
     /*
-     * What a resume types. A recorded session id is no proof that the conversation is still there:
-     * Claude Code writes a transcript only once a CLI has had a prompt, so one that was started and
-     * never used leaves an id that cannot be resumed, and a transcript can be deleted or moved. The
-     * transcript file is the evidence; without it the CLI answers "No conversation found" and the
-     * node is left with a bare shell. A kind whose hooks name no transcript at all has no evidence
-     * either way, so there the shell decides, with the fresh launch behind a `||`.
+     * A recorded id may outlive its transcript. Resume only when the transcript exists; providers
+     * that expose no path try resume with a fresh launch as the shell fallback.
      */
     private resumeLine(session: Session, agent: AgentInfo): string {
         // A person who started another CLI by hand in this shell is resumed as that CLI, not as the node's.

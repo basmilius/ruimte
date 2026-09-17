@@ -93,12 +93,8 @@ const reportOneMachine = (kept: Endpoint, dropped: Endpoint): void => {
 };
 
 /*
- * The way a client that paired before there were key pairs moves onto one, without anybody pairing
- * again. It runs over a connection the session token already authenticated, which is the only
- * moment this client can believe a key it did not get at pairing: the daemon's key is pinned and
- * this client's is registered, and from the next connection on both sides sign instead. The token
- * that used to sit in every URL is dropped by the daemon the first time a signature lands, and by
- * this client the first time a ticket comes back.
+ * Upgrade a legacy token-authenticated connection by registering the client key and pinning the
+ * daemon key in the same trusted session. Both sides drop the token after signatures succeed.
  */
 const adoptKey = async (endpointId: string, info: EndpointInfo): Promise<void> => {
     const endpoint = useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId);

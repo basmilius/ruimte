@@ -340,14 +340,8 @@ interface Port {
 }
 
 /*
- * Where everything in a diagram goes. Layers run along the direction and every coordinate is a whole
- * number. An edge that skips layers gets a point in each layer it passes, so it runs through the gaps
- * between boxes; an edge that closes a cycle is laid out the same way from its target, and drawn
- * with its head the other way. The order inside a layer comes from barycenter sweeps that keep a
- * group's members together, and every stretch of an edge between two layers turns on a track of its
- * own in the channel between them, with its label in a lane of that channel. A node with `pos` sits
- * where it was put and gives up its place, and its edges take the shortest elbow instead. No
- * measuring and no randomness: two machines with the same file draw the same picture.
+ * Deterministic layered layout with integer coordinates. Barycenter sweeps order unpinned nodes;
+ * pinned nodes keep their position, and skipped layers give edges explicit routing points.
  */
 export const layoutOf = (document: Pick<DiagramDocument, 'meta' | 'nodes' | 'groups' | 'edges'>): DiagramLayout => {
     const down = document.meta.direction === 'down';

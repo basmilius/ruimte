@@ -17,7 +17,6 @@ export type StartDecision =
     /* No service: the app starts its own daemon, as it always did. */
     | 'spawn';
 
-/* The answer of `/health`, or null for anything that is not one. */
 export const healthFrom = (body: unknown): BuildIdentity | null => {
     if (typeof body !== 'object' || body === null) {
         return null;
@@ -49,7 +48,7 @@ export interface MachineWork {
     agents: number;
 }
 
-/* The answer of `/machine/work`, or null for anything else (a daemon from before the route answers 404). */
+// Older daemons return 404 because they do not have this route.
 export const workFrom = (body: unknown): MachineWork | null => {
     if (typeof body !== 'object' || body === null) {
         return null;

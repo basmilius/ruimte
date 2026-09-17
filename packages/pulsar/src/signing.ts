@@ -2,12 +2,8 @@ import type { BrokerRole } from './broker.ts';
 import type { SignalEnvelope } from './signaling.ts';
 
 /*
- * The exact bytes every signature in Pulsar is made over. Each purpose opens with a prefix line of
- * its own, and a prefix never contains a newline, so a signature for one purpose can never verify
- * as another. The fields follow as a JSON array in a fixed order: an SDP carries newlines and a
- * candidate's `sdpMid` may be null, and JSON keeps both apart from the fields around them where a
- * plain join would not. None of these prefixes starts with `ruimte-`, which is what the daemon's own
- * handshake in `@ruimte/contracts` signs under.
+ * Purpose prefixes prevent cross-protocol signatures. Ordered JSON preserves newlines and nulls
+ * without ambiguous separators, and the `pulsar-` namespace stays separate from daemon handshakes.
  */
 export const SIGNING_PURPOSES = {
     brokerHello: 'pulsar-broker-hello-v1',

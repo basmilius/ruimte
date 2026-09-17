@@ -109,13 +109,7 @@ const knownRows = (rows: ProjectRow[], endpoints: Endpoint[], connected: readonl
     });
 };
 
-/*
- * The union as the menu draws it. Machines used to be the outer order, so where a row landed was
- * decided by which daemon it came from. With one flat list that order is gone and `lastOpenedAt`
- * takes over, newest first: it is the one thing every row carries that a person can predict, so the
- * project you were in last sits at the top whichever machine it lives on. Recent sorts on `closedAt`
- * for the same reason, which puts the project you just closed first in line to come back.
- */
+// Flatten machines into one list, sorting active projects by last open and recent ones by close time.
 export const menuProjects = (rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRows => {
     const listed = knownRows(rows, endpoints, connected);
     return {

@@ -1,13 +1,6 @@
 /*
- * Stands in for `claude -p --input-format stream-json` in tests: speaks the same frames, needs no
- * network. `tool: <cmd>` asks for permission first, `run: <cmd>` runs without asking and reports
- * progress the way the real CLI does, `ask: <question>` asks the person a question, `compact`
- * reports a compaction, `write: <path> <text>` writes a file and reports it as an edit,
- * `background: <summary>` launches a subagent and, once the work it put off with `later` runs, wakes
- * the main agent the way the CLI does that on its own, `delegate: <description>` runs one in the
- * foreground and answers the call with its report, `slow` (on a line of its own at the top) waits for an interrupt, `crash` exits
- * with 1. The init frame carries the argument list as `argv`, so a test can see which flags a
- * session started with, and `system?` answers with the `--append-system-prompt` it was started with.
+ * Network-free Claude stream-json fake. Prompt commands exercise permissions, tools, questions,
+ * compaction, edits, subagents, interrupts and crashes through the real frame shapes.
  */
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';

@@ -3,9 +3,7 @@ import RuimteTransport
 import SwiftUI
 import UIKit
 
-/// The plans of a chat: what its agent wrote down and a person checks off. A person sets states, writes notes and
-/// lifts a lock; the structure stays the agent's. Every change goes through `plan.apply`, and the machine decides.
-/// Drawn after the desktop plan panel, so a plan reads the same on both.
+/// Displays and edits a chat plan through `plan.apply`.
 struct PlanSheet: View {
     let store: PlanStore
     let chatID: String
@@ -750,9 +748,7 @@ enum PlanMarkdown {
     }
 }
 
-/// The desktop plan pill: "6/11" with a double check on a raised capsule, counting the newest plan. A red dot marks a
-/// failed step and an accent dot a plan no one here has opened, since the phone never opens one on its own. The check
-/// becomes a turning ring while the chat's agent works on an active step.
+/// Mirrors the desktop plan pill, including failure, unseen and working states.
 struct PlanButton: View {
     let plan: PlanDocument
     let unseen: Bool

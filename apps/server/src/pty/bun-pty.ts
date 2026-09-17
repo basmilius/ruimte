@@ -1,9 +1,7 @@
 import { constants } from 'node:os';
 import { signalExitCode, type PtyAdapter, type PtyProcess, type PtySpawnOptions } from './pty.ts';
 
-// A grandchild that inherits the slave side (a backgrounded `nohup`) keeps the PTY open after
-// the shell has gone, so the EOF we would like to wait for may never come. This is how long
-// after the process exit we still wait for trailing output before reporting the exit anyway.
+// A backgrounded grandchild may keep the PTY open forever, so only wait briefly for trailing output.
 const PTY_DRAIN_GRACE_MS = 250;
 
 class BunPtyProcess implements PtyProcess {

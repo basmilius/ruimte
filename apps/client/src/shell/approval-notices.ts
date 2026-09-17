@@ -2,14 +2,7 @@ import type { ApprovalRequest } from '@ruimte/contracts';
 import { endpointKey } from '@/state/keys';
 import type { SessionsByKey } from '@/state/sessions';
 
-/*
- * The notification for a permission a terminal agent is waiting on, as everything about it that is
- * not the browser's own `Notification`. A permission is the one thing on the canvas with a clock on
- * it: the daemon lets go after `APPROVAL_HOLD_MS` and the person is left with the CLI's own prompt,
- * so a notification that outlives the request sends somebody to a node where there is nothing to
- * answer. That is why withdrawing is modeled here beside raising, rather than left to whoever
- * happens to notice.
- */
+// Permission notifications expire with the daemon's hold, so raising and withdrawal share one model.
 
 /* What a notification needs of a node: who it is on screen. */
 export interface ApprovalNode {

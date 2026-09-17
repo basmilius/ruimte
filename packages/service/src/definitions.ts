@@ -27,12 +27,8 @@ const xmlText = (value: string): string => value.replace(/&/g, '&amp;').replace(
 const plistString = (value: string, indent: string): string => `${indent}<string>${xmlText(value)}</string>`;
 
 /*
- * `KeepAlive` brings the daemon back after a crash, and it is also what hands the port over when the
- * app quits: a service started while the app's own daemon still holds the port exits, and launchd
- * starts it again once the port is free. `ProcessType` is Interactive because launchd throttles the
- * CPU and I/O of a job that leaves it out, and an agent's turn is anything but background work.
- * Not SMAppService: that takes a plist sealed inside the bundle, where the login shell's `PATH` and a
- * log path in the home cannot be written.
+ * `KeepAlive` retries after the app releases the port. `ProcessType=Interactive` avoids launchd
+ * throttling, and a generated plist can include the login PATH and a home-directory log path.
  */
 export const launchAgentPlist = (spec: ServiceSpec): string => {
     const lines = [

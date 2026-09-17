@@ -3,9 +3,7 @@ import RuimtePulsar
 import RuimteTransport
 import SwiftUI
 
-/// The tasks a machine keeps for the projects open on this device: what a chat asked of a node it opened with
-/// `--task`. The machine tells every connection about every task it writes; a connection that opens asks once per
-/// open project, since what changed while it was closed was told to nobody.
+/// Tracks task updates for projects open on this device and reloads each project on open.
 @MainActor @Observable
 final class TaskStore {
     private(set) var tasks: [String: JSONValue] = [:]

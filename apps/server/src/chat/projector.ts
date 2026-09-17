@@ -246,9 +246,7 @@ export class ThreadProjector {
                 this.patchSubagentProgress(generation, event, events);
                 break;
             case 'task.done': {
-                // The tool row already settled from its own result; what is left is the summary,
-                // which says what the turn the CLI opens next is about. One line of it: a header is
-                // not the place for a report, and the CLI is free to hand its whole answer here.
+                // Keep one summary line for the next turn's header; the tool row already has the result.
                 const line = event.summary === null ? '' : summaryLine(event.summary);
                 this.taskSummary = line === '' ? this.taskSummary : line;
                 if (event.ref !== null) {

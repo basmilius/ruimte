@@ -94,14 +94,8 @@ const launchFlags = (launch: AgentLaunch, runtimeMode: RuntimeMode | undefined):
 };
 
 /*
- * The line a terminal types to start one agent CLI. The daemon builds it, so every client (and a
- * node restored from a project file) launches a CLI the same way and a flag never travels the wire.
- *
- * A first prompt rides on that same line as the CLI's own prompt argument, rather than being typed
- * into the CLI once it is up: nobody can tell when a CLI is ready for input, and the line is built
- * here at `session.create`, so a node made on a daemon that restarts before the node is started
- * still starts on its prompt. It also means the person sees the prompt in the shell, as a line they
- * could have typed themselves.
+ * Put the first prompt on the launch command because CLIs expose no reliable ready-for-input signal.
+ * Building the line in the daemon also keeps flags out of the wire protocol.
  */
 export const terminalCommand = (launch: AgentLaunch, firstPrompt?: string, note?: string): string => {
     const provider = providerFor(launch.kind);

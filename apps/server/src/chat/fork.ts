@@ -181,12 +181,8 @@ export const readForkInfo = async (deps: ChatForkDeps, payload: ChatForkInfoPayl
 };
 
 /*
- * A chat node beside the original, or a chat view listed after it, that goes on after one of its turns. The CLI's side is a copy made
- * now (a cut transcript, a Codex thread fork), so a fork is what the conversation was at the click and
- * not whatever the original says by the time a person types into the fork. The record is written
- * before the node, so a client that mounts the node finds the thread; no CLI starts until the first
- * message. A step that is refused takes back the steps before it, except a Codex thread, which Codex
- * gives no way to remove.
+ * Snapshot the CLI conversation before creating its node or view, so mounting always finds a stable
+ * thread. Failed setup rolls back everything except Codex threads, which its API cannot delete.
  */
 export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Promise<ChatForkResult> => {
     const source = await deps.source(payload.chatId);

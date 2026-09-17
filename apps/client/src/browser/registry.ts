@@ -286,9 +286,7 @@ class BrowserRegistry {
                 ...(originOf(url) === originOf(previous) ? {} : { favicon: null })
             });
         };
-        // The plate goes at the start of a load and nowhere else: a failed navigation leaves Chromium
-        // on its own error page under the address that failed, so clearing it from `did-navigate`
-        // would wipe the plate the moment it appears.
+        // Clear the error at load start; `did-navigate` also fires for Chromium's failure page.
         element.addEventListener('did-start-loading', () => patch({ loading: true, error: null }));
         element.addEventListener('did-stop-loading', () => {
             patch({ loading: false });

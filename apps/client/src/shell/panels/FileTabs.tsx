@@ -58,9 +58,7 @@ export function FileTabs() {
             onWheel={onWheel}
         >
             {tabs.map((tab) => {
-                // One tab holds every change a person opens, so it is named after that and not after
-                // the file in it; the file's own name is a hover away. A whole commit is named after
-                // the commit, since no file in it is the one it is about.
+                // A checkout diff is "Changes"; a whole commit uses its hash because no file represents it.
                 const commit = tab.view?.commit;
                 const checkout = isCheckoutDiff(tab.path, tab.view);
                 const count = counts[tab.key];

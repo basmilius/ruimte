@@ -33,12 +33,7 @@ function PanelBody({ kind }: { kind: PanelKind }) {
     }
 }
 
-/* The surface right of the canvas, spanning the whole main column so its header lines up with the
-   toolbar and the top band stays unbroken. It is a split, not an overlay, so the canvas keeps a
-   size of its own and every terminal in it refits instead of being covered. The element stays
-   mounted and animates its width, over an inner column that keeps the stored width and hangs from
-   the right, so the contents do not reflow and the controls in the header keep the window's edge
-   while the panel slides in or out. */
+/* Keep the inner column at its stored width while the outer split animates, avoiding content reflow. */
 export function Panel() {
     const panel = useUi((s) => s.panel);
     const open = panel.open;

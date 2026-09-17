@@ -109,11 +109,8 @@ const contentOf = (document: ProjectDocument): ProjectContent => {
 const isConnectionError = (e: unknown): boolean => e instanceof TransportError && (e.code === 'not-connected' || e.code === 'disconnected');
 
 /*
- * Keeps the canvas on screen and the project file in step, for the one project it opened: a client
- * lives as long as its workspace, and the next project gets a client of its own. Edits save after a short pause;
- * the camera and the panels go to this client's storage and the machine-local file on their own,
- * slower clock. A change that arrives from disk merges into the editors on screen, and only a real
- * conflict replaces the canvas when nothing is unsaved or waits for a decision when something is.
+ * Synchronizes one workspace with its project file. Shared edits debounce to the daemon, local view
+ * state saves separately, and incoming revisions merge unless both sides changed the same field.
  */
 export class ProjectClient {
     private readonly transport: Transport;

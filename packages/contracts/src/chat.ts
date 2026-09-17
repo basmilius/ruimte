@@ -128,7 +128,6 @@ export type ChatInfo = z.infer<typeof ChatInfoSchema>;
 export const ChatSkillSourceSchema = z.enum(['user', 'project', 'plugin']);
 export type ChatSkillSource = z.infer<typeof ChatSkillSourceSchema>;
 
-// One skill a CLI can run, as the composer's `$` picker needs it.
 export const ChatSkillSchema = z.object({
     name: z.string().min(1),
     description: z.string(),
@@ -219,7 +218,6 @@ export const ChatToolItemSchema = z.object({
 export const ChatSubagentStatusSchema = z.enum(['running', 'done', 'failed']);
 export type ChatSubagentStatus = z.infer<typeof ChatSubagentStatusSchema>;
 
-// What a subagent spent, as the CLI counts it.
 export const ChatSubagentUsageSchema = z.object({
     totalTokens: z.number().int().nonnegative(),
     toolUses: z.number().int().nonnegative(),
@@ -405,10 +403,7 @@ export type ChatTurnItem = z.infer<typeof ChatTurnItemSchema>;
 export type ChatNoteItem = z.infer<typeof ChatNoteItemSchema>;
 export type ChatCompactionItem = z.infer<typeof ChatCompactionItemSchema>;
 
-// Every change to a thread is one of these; `item` is an upsert by id so a client can rebuild
-// its view from any prefix of the stream after `chat.attach` handed it the current state.
-// A `delta` appends to an assistant item's text or to a running tool item's partial output.
-// A `reset` replaces the whole thread, which is how a cleared chat reaches a client that was looking.
+// Events apply after the `chat.attach` snapshot; item ids make upserts and streamed deltas replayable.
 export const ChatEventSchema = z.discriminatedUnion('type', [
     z.object({ type: z.literal('item'), item: ChatItemSchema, historyIndex: z.number().int().nonnegative().optional() }),
     z.object({ type: z.literal('delta'), itemId: z.string(), text: z.string() }),

@@ -78,11 +78,8 @@ const newId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.random
 const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
 /*
- * One chat, whichever CLI is behind it: the thread, the turns, the process generation and when a
- * new backend is needed. The backend speaks the CLI's protocol and the projector writes the items,
- * so everything here is the same for every provider. A backend is made on the first message and
- * kept between turns; a dead one is made again with the CLI's own session id on the next send,
- * which is also how a chat survives a daemon restart and how a changed model or mode takes effect.
+ * Provider-neutral chat state. Backends live between turns and resume by CLI session id after a
+ * crash, daemon restart, or model and mode change.
  */
 export class ChatSession {
     readonly thread: ChatThread;
@@ -487,7 +484,7 @@ export class ChatSession {
     }
 
     /*
-     * The row a task stands as in the thread of the chat that gave it, written from the task alone so
+     * The task row in the thread of the chat that gave it, written from the task alone so
      * writing it twice changes nothing. A new row joins the turn that is running, which is the turn
      * that ran the verb; a cancelled task gets a note saying why its row failed.
      */

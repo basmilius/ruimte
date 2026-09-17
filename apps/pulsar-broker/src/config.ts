@@ -201,14 +201,8 @@ export interface ProxyTrust {
 }
 
 /*
- * The address a limit counts against. Behind a proxy every socket comes from loopback, so the proxy's
- * own `X-Forwarded-For` says who it is: the last entry, the one the proxy appended itself, since
- * anything before it is whatever the client chose to send. Only a loopback peer is believed.
- *
- * Behind Cloudflare that address is an edge, shared by everyone near it, and the real client is in
- * `CF-Connecting-IP`. The header is believed only when the address the connection came from (the
- * socket, or what a trusted local proxy saw) is one of Cloudflare's: anyone else could write it and
- * pick the bucket they are counted in.
+ * Trust the last forwarded address only from a loopback proxy. Trust `CF-Connecting-IP` only when
+ * the resulting peer is in Cloudflare's ranges, otherwise clients could choose their rate-limit key.
  */
 export const clientIpOf = (socketAddress: string, headers: ClientHeaders, trust: ProxyTrust): string => {
     const socket = stripMappedPrefix(socketAddress);

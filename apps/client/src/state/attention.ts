@@ -15,13 +15,8 @@ import { currentEndpointId, endpointKey, useEndpointId } from '@/state/keys';
 import { nodeStatus, useSessions, type SessionsByKey, type StatusOf } from '@/state/sessions';
 
 /*
- * Attention: what a person still has to look at. A turn that settles while nobody was watching
- * leaves a mark on its node, and looking at the node is the only thing that takes it off. The pill
- * in the toolbar, the dock badge, the notification and the shell's quit guard are all counted here,
- * so none of them can say a different number than the one beside it.
- *
- * Keys are `endpointKey`, the way every other row about a node is: the marks outlive a switch to
- * another machine, and forgetting one takes its marks with it.
+ * One source of unread and working counts for marks, badges, notifications and quit protection.
+ * Endpoint-scoped keys preserve marks across machine switches and remove them with the machine.
  */
 
 /* One canvas as a question about sight: where the camera is and what stands in front of it. */
@@ -33,13 +28,7 @@ export interface CanvasSight {
     hidden?: ReadonlySet<string>;
 }
 
-/*
- * The nodes of one canvas a person can actually read: inside the rectangle the camera has in front
- * of it, not folded into a collapsed group, and drawn large enough to be read rather than to be a
- * shape. No margin around the viewport, unlike the renderer's own culling: a node half a screen past
- * the edge is kept alive so a pan does not thrash, which is not the same as having been seen.
- * An editor that has no size yet is a frame old and has shown nothing, so it shows nothing here.
- */
+// Count only readable, uncollapsed nodes inside the exact viewport, not the renderer's wider culling area.
 export const readableNodes = (canvas: CanvasSight): string[] => {
     if (!isMeasured(canvas.viewport) || canvas.camera.zoom < READABLE_ZOOM) {
         return [];
@@ -61,11 +50,8 @@ export interface ChatSightWorkspace {
 }
 
 /*
- * The chats on screen, for the plan panel: a chat view in a cell, or a chat node the camera of a
- * canvas in a cell touches. Kinder than `readableNodes` on purpose. No zoom threshold, since a panel
- * that goes away while zooming out reads as a bug, and no window focus, since looking at another
- * window does not take a panel off this one. The panel's own width counts as canvas while it is
- * open: otherwise opening it pushes a node at the right edge out of sight, which closes it again.
+ * Plan visibility ignores zoom and window focus. It also uses the pre-panel viewport so opening the
+ * panel cannot push its own chat out of sight and immediately close it.
  */
 export const chatsInSight = (workspace: ChatSightWorkspace, { planWidth }: { planWidth: number }): Set<string> => {
     const onScreen = new Set(workspace.layout === null ? [] : viewIdsIn(workspace.layout));
@@ -238,13 +224,7 @@ export const clearUnseen = (nodeId: string): void => {
 /* True while this window has the keyboard. A window behind another one is not being looked at. */
 const windowFocused = (): boolean => typeof document !== 'undefined' && document.hasFocus();
 
-/*
- * The nodes in front of a person: per view standing in a cell of the grid, the ones it is showing.
- * A view in no cell shows nothing, whatever it holds. A session standing as a view of its own is the
- * one node it is, and is showing it whenever its cell is on screen: there is no camera to fall
- * outside of. A cell that does not have the focus still counts, because a person looking at the
- * window sees all nine of them.
- */
+// All grid cells are visible; standalone sessions need no camera test, while canvases use `readableNodes`.
 const nodesInSight = (): string[][] => {
     const { views, layout } = useDocument.getState();
     const onScreen = new Set(layout === null ? [] : viewIdsIn(layout));

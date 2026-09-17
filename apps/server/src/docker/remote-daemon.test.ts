@@ -43,15 +43,8 @@ import {
 } from '@ruimte/contracts';
 
 /*
- * The daemon from `apps/server/docker`, talked to the way a client would: over the wire, from
- * another machine. It needs a container listening on a real port, so it only runs when someone
- * asks for it; `bun test` on this repository (and in CI) stays a run of unit tests.
- *
- *   bun run --cwd apps/server docker:test
- *
- * That script starts `daemon-test`, a container of its own on 4320 that throws its state away on
- * every start. The container on 4310 is the one to work against and keeps everything it is given,
- * which these tests, counting projects and repositories, could not run against.
+ * Opt-in wire tests for the disposable daemon container on port 4320. The development container on
+ * 4310 keeps state and must never receive these count-sensitive tests.
  */
 const ENABLED = process.env.RUIMTE_DOCKER === '1';
 

@@ -29,12 +29,8 @@ const serialize = <T>(key: string, work: () => Promise<T>): Promise<T> => {
 };
 
 /*
- * Git trees of a chat's folder, one per turn, so the changed-files card can show what the working
- * tree holds now against what it held when the turn started. The tree is written through an index
- * file of ours (`GIT_INDEX_FILE`), so the person's own index, their stashes and their commits are
- * never touched; `git add -A` against that index means ignored files stay ignored and untracked
- * ones count. A folder outside a repository, or a git that fails, answers null and the card falls
- * back to what the CLI itself reported.
+ * Capture each turn as a git tree through a private `GIT_INDEX_FILE`, leaving the person's index,
+ * stashes and commits untouched. Failure returns null so the UI can use the CLI's change report.
  */
 export class Checkpoints implements CheckpointService {
     readonly root: string;
