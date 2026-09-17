@@ -3,7 +3,7 @@ import { Trash2 } from 'lucide-react';
 import { desktop, type OpenAiCredentialStatus } from '@/desktop/bridge';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Badge, Skeleton } from '@/shell/settings/controls';
+import { Badge, Skeleton, Toggle } from '@/shell/settings/controls';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { Button } from '@/ui/Button';
@@ -41,6 +41,7 @@ export function VoicePane() {
     const language = useSettings((state) => state.voiceLanguage);
     const voice = useSettings((state) => state.liveVoice);
     const microphoneId = useSettings((state) => state.voiceInputDeviceId);
+    const confirmDestructiveActions = useSettings((state) => state.voiceConfirmDestructiveActions);
     const updateSettings = useSettings((state) => state.update);
 
     useEffect(() => {
@@ -257,6 +258,17 @@ export function VoicePane() {
                             label="Conversation voice"
                             align="end"
                             onValueChange={(liveVoice) => updateSettings({ liveVoice })}
+                        />
+                    }
+                />
+                <SettingsRow
+                    label="Confirm deletions"
+                    description="Ask before Voice deletes views or nodes. When off, spoken deletion requests run immediately."
+                    control={
+                        <Toggle
+                            checked={confirmDestructiveActions}
+                            label="Confirm Voice deletions"
+                            onChange={(voiceConfirmDestructiveActions) => updateSettings({ voiceConfirmDestructiveActions })}
                         />
                     }
                 />

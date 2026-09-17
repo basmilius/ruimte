@@ -1,6 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { Check, ChevronDown, LayoutGrid, MessageSquare, Mic, MicOff, PenTool, Plus, RotateCcw, StickyNote, Terminal, X, type LucideIcon } from 'lucide-react';
+import {
+    Check,
+    ChevronRight,
+    LayoutGrid,
+    MessageSquare,
+    Mic,
+    MicOff,
+    PenTool,
+    Plus,
+    RotateCcw,
+    StickyNote,
+    Terminal,
+    Trash2,
+    X,
+    type LucideIcon
+} from 'lucide-react';
 import { FadingWords } from '@/chat/ui/FadingWords';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
@@ -31,7 +46,8 @@ const actionIcons: Record<VoiceActionKind, LucideIcon> = {
     terminal: Terminal,
     chat: MessageSquare,
     node: Plus,
-    view: LayoutGrid
+    view: LayoutGrid,
+    delete: Trash2
 };
 
 const durationLabel = (seconds: number): string => {
@@ -162,25 +178,38 @@ function useElapsedSeconds(startedAt: number | null): number {
 }
 
 function ActionEvent({ action }: { action: VoiceAction }) {
+    const completed = action.status === 'completed';
+
     return (
-        <div className="flex min-h-11 items-center gap-2.5 rounded-lg border border-border bg-surface-raised px-3 py-1.5">
+        <div className="group/action flex min-h-11 items-center gap-2.5 rounded-lg border border-border bg-surface-raised px-3 py-1.5">
             <Icon icon={actionIcons[action.kind]} size={15} className="shrink-0 text-text-muted" />
             <p className="min-w-0 grow truncate text-xs text-text">
                 <span className="font-medium">{action.label}</span>
                 <span className="text-text-muted"> · {action.detail}</span>
             </p>
-            {action.status === 'completed' && action.undoable && (
-                <Tooltip label="Undo action" name>
-                    <button className="icon-btn shrink-0" onClick={() => undoVoiceAction(action.id)}>
-                        <Icon icon={RotateCcw} size={13} />
-                    </button>
-                </Tooltip>
-            )}
-            {action.status === 'completed' ? (
-                <Icon icon={Check} size={15} className="shrink-0 text-positive" />
-            ) : (
-                <span className="shrink-0 text-[10px] text-text-faint">{action.status}</span>
-            )}
+            <div className="grid h-8 w-8 shrink-0 place-items-center">
+                {completed && action.undoable ? (
+                    <>
+                        <Icon
+                            icon={Check}
+                            size={15}
+                            className="col-start-1 row-start-1 text-positive transition-opacity group-hover/action:opacity-0 group-focus-within/action:opacity-0"
+                        />
+                        <Tooltip label="Undo action" name>
+                            <button
+                                className="icon-btn col-start-1 row-start-1 pointer-events-none opacity-0 transition-opacity group-hover/action:pointer-events-auto group-hover/action:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+                                onClick={() => undoVoiceAction(action.id)}
+                            >
+                                <Icon icon={RotateCcw} size={13} />
+                            </button>
+                        </Tooltip>
+                    </>
+                ) : completed ? (
+                    <Icon icon={Check} size={15} className="text-positive" />
+                ) : (
+                    <span className="text-[10px] text-text-faint">{action.status}</span>
+                )}
+            </div>
         </div>
     );
 }
@@ -196,31 +225,61 @@ function ActionGroup({ actions }: { actions: VoiceAction[] }) {
     const context = details[0]?.context && details.every((detail) => detail.context === details[0]?.context) ? details[0].context : null;
     const completed = actions.every((action) => action.status === 'completed');
     const undoable = actions.some((action) => action.status === 'completed' && action.undoable);
+    const undoableIds = actions.filter((action) => action.status === 'completed' && action.undoable).map((action) => action.id);
 
     return (
-        <div className="rounded-lg border border-border bg-surface-raised px-3 py-1.5">
+        <div className="group/action-group rounded-lg border border-border bg-surface-raised px-3 py-1.5">
             <div className="flex min-h-8 items-center gap-2.5">
-                <Icon icon={StickyNote} size={15} className="shrink-0 text-text-muted" />
-                <button className="flex min-w-0 grow items-center gap-2 text-left" type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
+                <button
+                    className="-m-1 grid h-6 w-6 shrink-0 place-items-center rounded-md p-1 hover:bg-surface-hover"
+                    type="button"
+                    aria-label={open ? 'Collapse note actions' : 'Expand note actions'}
+                    aria-expanded={open}
+                    onClick={() => setOpen(!open)}
+                >
+                    <Icon
+                        icon={StickyNote}
+                        size={15}
+                        className="col-start-1 row-start-1 text-text-muted group-hover/action-group:hidden group-focus-within/action-group:hidden"
+                    />
+                    <Icon
+                        icon={ChevronRight}
+                        size={14}
+                        className={clsx(
+                            'col-start-1 row-start-1 hidden text-text-muted transition-transform group-hover/action-group:block group-focus-within/action-group:block',
+                            open && 'rotate-90'
+                        )}
+                    />
+                </button>
+                <button className="min-w-0 grow text-left" type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
                     <span className="min-w-0 grow truncate text-xs text-text">
                         <span className="font-medium">{actions.length} notes added</span>
                         {context && <span className="text-text-muted"> · {context}</span>}
                     </span>
-                    <Icon icon={ChevronDown} size={14} className={clsx('shrink-0 text-text-muted transition-transform', !open && '-rotate-90')} />
                 </button>
-                {undoable && (
-                    <Tooltip label={`Undo ${actions.length} note actions`} name>
-                        <button
-                            className="icon-btn"
-                            onClick={() =>
-                                undoVoiceActions(actions.filter((action) => action.status === 'completed' && action.undoable).map((action) => action.id))
-                            }
-                        >
-                            <Icon icon={RotateCcw} size={13} />
-                        </button>
-                    </Tooltip>
-                )}
-                {completed ? <Icon icon={Check} size={15} className="shrink-0 text-positive" /> : <span className="text-[10px] text-text-faint">undone</span>}
+                <div className="grid h-8 w-8 shrink-0 place-items-center">
+                    {completed && undoable ? (
+                        <>
+                            <Icon
+                                icon={Check}
+                                size={15}
+                                className="col-start-1 row-start-1 text-positive transition-opacity group-hover/action-group:opacity-0 group-focus-within/action-group:opacity-0"
+                            />
+                            <Tooltip label={`Undo ${actions.length} note actions`} name>
+                                <button
+                                    className="icon-btn col-start-1 row-start-1 pointer-events-none opacity-0 transition-opacity group-hover/action-group:pointer-events-auto group-hover/action-group:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+                                    onClick={() => undoVoiceActions(undoableIds)}
+                                >
+                                    <Icon icon={RotateCcw} size={13} />
+                                </button>
+                            </Tooltip>
+                        </>
+                    ) : completed ? (
+                        <Icon icon={Check} size={15} className="text-positive" />
+                    ) : (
+                        <span className="text-[10px] text-text-faint">undone</span>
+                    )}
+                </div>
             </div>
             {open && (
                 <div className="space-y-1.5 pt-1 pb-2 pl-6 text-xs text-text-muted">

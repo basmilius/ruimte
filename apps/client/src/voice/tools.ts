@@ -1,10 +1,11 @@
 import { isCanvasView, isOpenableView, type ProjectNode, type ProjectView, type VoiceToolName } from '@ruimte/contracts';
-import type { ActionOutput, ActionResult } from '@ruimte/actions';
+import type { ActionName, ActionOutput, ActionResult } from '@ruimte/actions';
 import { clientActions, VOICE_ACTION_CALL } from '@/actions/client-actions';
 import { intersects, visibleRect } from '@/canvas/math';
 import { focusedCanvas, type CanvasState } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey } from '@/state/keys';
+import { useSettings } from '@/state/settings';
 import type { VoiceChatFollowUp } from '@/voice/chat-follow-up';
 import type { VoiceActionKind } from '@/voice/state';
 
@@ -75,8 +76,7 @@ const stringArgument = (args: Record<string, unknown>, name: string): string | n
 const nullableStringArgument = (args: Record<string, unknown>, name: string): string | null | undefined =>
     args[name] === null ? null : typeof args[name] === 'string' && args[name].trim() !== '' ? args[name].trim() : undefined;
 
-const booleanArgument = (args: Record<string, unknown>, name: string): boolean | undefined =>
-    typeof args[name] === 'boolean' ? args[name] : undefined;
+const booleanArgument = (args: Record<string, unknown>, name: string): boolean | undefined => (typeof args[name] === 'boolean' ? args[name] : undefined);
 
 const nullableStringsArgument = (args: Record<string, unknown>, name: string): string[] | null | undefined => {
     if (args[name] === null) {
@@ -162,6 +162,14 @@ const failureOf = (result: ActionResult): VoiceToolExecution =>
           })
         : failed(result.status === 'failed' && result.error ? result.error.message : 'The action could not be completed.');
 
+const applyDeletionPreference = async <Name extends ActionName>(pending: Promise<ActionResult<Name>>): Promise<ActionResult<Name>> => {
+    const result = await pending;
+    if (result.status !== 'needs_confirmation' || useSettings.getState().voiceConfirmDestructiveActions) {
+        return result;
+    }
+    return (await clientActions.confirm(result.confirmationToken, true, VOICE_ACTION_CALL)) as ActionResult<Name>;
+};
+
 const manageViews = async (args: Record<string, unknown>): Promise<VoiceToolExecution> => {
     const action = stringArgument(args, 'action');
     const target = nullableStringArgument(args, 'view');
@@ -230,10 +238,10 @@ const manageViews = async (args: Record<string, unknown>): Promise<VoiceToolExec
         });
     }
     if (action === 'delete') {
-        const result = await clientActions.execute('view.delete', { viewId: view.id }, VOICE_ACTION_CALL);
+        const result = await applyDeletionPreference(clientActions.execute('view.delete', { viewId: view.id }, VOICE_ACTION_CALL));
         return result.status === 'completed'
             ? ok(`Deleted “${result.output.view}”.`, result.output, {
-                  kind: 'view',
+                  kind: 'delete',
                   label: 'Deleted view',
                   detail: result.output.view
               })
@@ -410,10 +418,10 @@ const manageCanvas = async (args: Record<string, unknown>): Promise<VoiceToolExe
                   })
                 : failureOf(result);
         }
-        const result = await clientActions.execute('node.delete', { viewId: current.view.id, nodeIds }, VOICE_ACTION_CALL);
+        const result = await applyDeletionPreference(clientActions.execute('node.delete', { viewId: current.view.id, nodeIds }, VOICE_ACTION_CALL));
         return result.status === 'completed'
             ? ok(`Deleted ${nodeIds.length} ${nodeIds.length === 1 ? 'node' : 'nodes'}.`, result.output, {
-                  kind: 'node',
+                  kind: 'delete',
                   label: 'Deleted nodes',
                   detail: nodes.map((node) => node.title).join(', '),
                   ...undoAction(result.undoToken)
@@ -531,7 +539,7 @@ const controlAction = async (args: Record<string, unknown>): Promise<VoiceToolEx
     if (result.action === 'view.delete') {
         const output = result.output as ActionOutput<'view.delete'>;
         return ok(`Deleted “${output.view}”.`, output, {
-            kind: 'view',
+            kind: 'delete',
             label: 'Deleted view',
             detail: output.view
         });
@@ -539,7 +547,7 @@ const controlAction = async (args: Record<string, unknown>): Promise<VoiceToolEx
     if (result.action === 'node.delete') {
         const output = result.output as ActionOutput<'node.delete'>;
         return ok(`Deleted ${output.nodeIds.length} ${output.nodeIds.length === 1 ? 'node' : 'nodes'}.`, output, {
-            kind: 'node',
+            kind: 'delete',
             label: 'Deleted nodes',
             detail: output.nodes.join(', '),
             ...undoAction(result.undoToken)

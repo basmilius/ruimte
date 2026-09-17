@@ -4,6 +4,7 @@ import { defaultCanvases } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey } from '@/state/keys';
+import { useSettings } from '@/state/settings';
 import { executeVoiceTool } from '@/voice/tools';
 
 const main: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [], texts: [], edges: [], layouts: [] };
@@ -42,12 +43,14 @@ const canvasArgs = (overrides: Record<string, unknown>): string =>
     });
 
 beforeEach(() => {
+    useSettings.setState({ voiceConfirmDestructiveActions: true });
     useDocument.getState().load(document, { activeViewId: 'main', views: {} });
     defaultCanvases.of('main').getState().loadView(main, null);
     defaultCanvases.focus('main');
 });
 
 afterEach(() => {
+    useSettings.setState({ voiceConfirmDestructiveActions: true });
     useDocument.getState().load(null, null);
     useChats.setState({ byKey: {} });
     defaultCanvases.release('main');
@@ -185,6 +188,31 @@ describe('Voice domain tools', () => {
             JSON.stringify({ action: 'confirm', confirmation_token: requested.output.confirmation_token })
         );
         expect(confirmed.output).toMatchObject({ ok: true, viewId: 'release' });
+        expect(useDocument.getState().views.some((view) => view.id === 'release')).toBe(false);
+    });
+
+    test('deletes nodes immediately when Voice confirmation is disabled', async () => {
+        useSettings.setState({ voiceConfirmDestructiveActions: false });
+        const note = canvasNode('note', 'Disposable note', 'note', 100);
+        defaultCanvases.of('main').setState({ nodes: { note }, order: ['note'], selection: ['note'] });
+
+        const result = await executeVoiceTool('manage_canvas', canvasArgs({ action: 'delete_nodes', scope: 'selected' }));
+
+        expect(result.output).toMatchObject({ ok: true, nodeIds: ['note'] });
+        expect(result.action).toMatchObject({ kind: 'delete', label: 'Deleted nodes' });
+        expect(defaultCanvases.of('main').getState().nodes.note).toBeUndefined();
+    });
+
+    test('deletes a view immediately when Voice confirmation is disabled', async () => {
+        useSettings.setState({ voiceConfirmDestructiveActions: false });
+
+        const result = await executeVoiceTool(
+            'manage_views',
+            JSON.stringify({ action: 'delete', view: 'Release', kind: null, name: null, url: null, command: null })
+        );
+
+        expect(result.output).toMatchObject({ ok: true, viewId: 'release' });
+        expect(result.action).toMatchObject({ kind: 'delete', label: 'Deleted view' });
         expect(useDocument.getState().views.some((view) => view.id === 'release')).toBe(false);
     });
 

@@ -74,11 +74,17 @@ describe('streaming replies', () => {
 
 describe('GPT-Live speech', () => {
     test('starts in Dutch with Marin and keeps supported choices', () => {
-        expect(settingsFrom({})).toMatchObject({ voiceLanguage: 'nl', liveVoice: 'marin', voiceInputDeviceId: 'default' });
-        expect(settingsFrom({ voiceLanguage: 'ja', liveVoice: 'cedar', voiceInputDeviceId: 'iphone' })).toMatchObject({
+        expect(settingsFrom({})).toMatchObject({
+            voiceLanguage: 'nl',
+            liveVoice: 'marin',
+            voiceInputDeviceId: 'default',
+            voiceConfirmDestructiveActions: true
+        });
+        expect(settingsFrom({ voiceLanguage: 'ja', liveVoice: 'cedar', voiceInputDeviceId: 'iphone', voiceConfirmDestructiveActions: false })).toMatchObject({
             voiceLanguage: 'ja',
             liveVoice: 'cedar',
-            voiceInputDeviceId: 'iphone'
+            voiceInputDeviceId: 'iphone',
+            voiceConfirmDestructiveActions: false
         });
     });
 
@@ -98,6 +104,11 @@ describe('GPT-Live speech', () => {
     test('does not keep an invalid microphone id', () => {
         expect(settingsFrom({ voiceInputDeviceId: '' }).voiceInputDeviceId).toBe('default');
         expect(settingsFrom({ voiceInputDeviceId: 42 as unknown as string }).voiceInputDeviceId).toBe('default');
+    });
+
+    test('only skips destructive-action confirmation after an explicit stored choice', () => {
+        expect(settingsFrom({ voiceConfirmDestructiveActions: false }).voiceConfirmDestructiveActions).toBe(false);
+        expect(settingsFrom({ voiceConfirmDestructiveActions: 0 as unknown as boolean }).voiceConfirmDestructiveActions).toBe(true);
     });
 });
 

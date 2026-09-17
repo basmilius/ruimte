@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { desktop, type OpenAiCredentialStatus } from '@/desktop/bridge';
 
 export type VoicePhase = 'idle' | 'connecting' | 'listening' | 'closing' | 'error';
-export type VoiceActionKind = 'focus' | 'rename' | 'note' | 'terminal' | 'chat' | 'node' | 'view';
+export type VoiceActionKind = 'focus' | 'rename' | 'note' | 'terminal' | 'chat' | 'node' | 'view' | 'delete';
 export type VoiceActionStatus = 'running' | 'completed' | 'undone' | 'failed';
 
 export interface VoiceUtterance {

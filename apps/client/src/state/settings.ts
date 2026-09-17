@@ -72,6 +72,8 @@ export interface Settings {
     voiceLanguage: VoiceLanguage;
     liveVoice: LiveVoice;
     voiceInputDeviceId: string;
+    /* Whether Voice pauses before deleting project data. */
+    voiceConfirmDestructiveActions: boolean;
     /* Whether the desktop shell downloads an update as soon as it finds one, or waits to be asked. */
     updatesAutoDownload: boolean;
     /* Whether a view an agent asks for takes the place of the one you are working in. Off, which is
@@ -137,6 +139,7 @@ const DEFAULT_SETTINGS: Settings = {
     voiceLanguage: 'nl',
     liveVoice: 'marin',
     voiceInputDeviceId: 'default',
+    voiceConfirmDestructiveActions: true,
     updatesAutoDownload: true,
     agentsShowViews: false,
     agentsApprovals: true,
@@ -184,6 +187,7 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
         typeof stored.voiceInputDeviceId === 'string' && stored.voiceInputDeviceId.trim() !== ''
             ? stored.voiceInputDeviceId
             : DEFAULT_SETTINGS.voiceInputDeviceId,
+    voiceConfirmDestructiveActions: stored.voiceConfirmDestructiveActions !== false,
     // Same rule as the block: nothing makes a sound unless a stored `true` asked for it.
     agentsTurnSound: stored.agentsTurnSound === true,
     browserSwipe: stored.browserSwipe !== false,
@@ -257,6 +261,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 voiceLanguage,
                 liveVoice,
                 voiceInputDeviceId,
+                voiceConfirmDestructiveActions,
                 updatesAutoDownload,
                 agentsShowViews,
                 agentsApprovals,
@@ -284,6 +289,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 voiceLanguage,
                 liveVoice,
                 voiceInputDeviceId,
+                voiceConfirmDestructiveActions,
                 updatesAutoDownload,
                 agentsShowViews,
                 agentsApprovals,
