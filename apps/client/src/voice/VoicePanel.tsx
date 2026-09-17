@@ -108,7 +108,7 @@ function VoiceWaveform({ elapsed, phase }: { elapsed: number; phase: VoicePhase 
                     return (
                         <span key={index} className="relative h-full min-w-0 grow" aria-hidden="true">
                             <span
-                                className="voice-waveform-input absolute right-0 bottom-1/2 left-0 rounded-t-sm bg-text transition-[height,opacity] duration-75 ease-out"
+                                className="voice-waveform-input absolute right-0 bottom-1/2 left-0 rounded-t-sm bg-text-muted transition-[height,opacity] duration-75 ease-out"
                                 style={{
                                     height: `${Math.max(2, Math.round(input * 26))}px`,
                                     opacity: Math.max(0.45, input)
