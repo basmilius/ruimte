@@ -54,7 +54,7 @@ public struct PairingIdentity: Hashable, Sendable {
     private let store: any StatementPairingStore
     private var generations: [String: Int] = [:]
 
-    public init(store: (any StatementPairingStore)? = nil) {
+    public init(store: any StatementPairingStore? = nil) {
         self.store = store ?? UserDefaultsPairingStore()
     }
 

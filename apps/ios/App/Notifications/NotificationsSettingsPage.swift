@@ -24,13 +24,12 @@ struct NotificationsSettingsPage: View {
                     Toggle("Approval requests", isOn: $coordinator.approvals)
                     Text("Approval messages are encrypted for this device.")
                         .font(.footnote).foregroundStyle(MobileStyle.muted)
-                }.onChange(of: coordinator.approvals) { Task { await coordinator.savePreferences() } }
+                }
             }
 
             if coordinator.supportsActivities {
                 Section {
                     Toggle("Live Activity", isOn: $coordinator.activities)
-                        .onChange(of: coordinator.activities) { Task { await coordinator.savePreferences() } }
                 } footer: {
                     Text(
                         "Automatically shows working agents and agents needing your attention, grouped by machine. Enable notifications to keep Live Activities updated while Ruimte is closed."

@@ -151,12 +151,10 @@ final class WorkspaceVisualTests: XCTestCase {
     }
 
     @MainActor private func makeWindow(_ host: UIViewController, size: CGSize) -> UIWindow {
-        let window: UIWindow
-        if let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first {
-            window = UIWindow(windowScene: scene)
-        } else {
-            window = UIWindow(frame: CGRect(origin: .zero, size: size))
+        guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else {
+            fatalError("Visual tests require an active window scene")
         }
+        let window = UIWindow(windowScene: scene)
         window.frame = CGRect(origin: .zero, size: size)
         window.rootViewController = host
         window.windowLevel = .alert + 1

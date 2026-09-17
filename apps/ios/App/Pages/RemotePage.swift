@@ -48,7 +48,7 @@ import SwiftUI
             cancelConnection()
             cancelEvents.forEach { $0() }
             continuation.finish()
-            Task {
+            await withTaskCancellationShield {
                 await lease?.release()
                 await stop()
             }

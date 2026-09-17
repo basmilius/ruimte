@@ -23,6 +23,7 @@ struct ChatScreen: View {
     @State private var composerSelection = NSRange(location: 0, length: 0)
     @State private var composerHeight: CGFloat = 72
     @State private var messagesBelow = false
+    @State private var atConversationTop = false
     @State private var scrollToLatest = 0
     @State private var viewportWidth: CGFloat = 0
     @State private var showingIndex = false
@@ -60,7 +61,8 @@ struct ChatScreen: View {
                 ChatTimeline(
                     presentation: model.presentation, client: model.client, chatID: model.chatID,
                     topInset: insets.top, bottomInset: composerHeight, dismissKeyboard: { composerFocused = false },
-                    scrollToLatest: scrollToLatest, onMessagesBelowChanged: { messagesBelow = $0 }
+                    scrollToLatest: scrollToLatest, onMessagesBelowChanged: { messagesBelow = $0 },
+                    onAtTopChanged: { atConversationTop = $0 }
                 )
             }
             .overlay {
@@ -77,19 +79,13 @@ struct ChatScreen: View {
                 }
             }
             .overlay(alignment: .top) {
-                if model.history.cursor != nil && !model.loading {
-                    Button {
+                if model.history.cursor != nil && !model.loading && atConversationTop {
+                    ChatOlderMessagesButton(
+                        loading: model.loadingHistory, disabled: model.loadingHistory || !model.connected
+                    ) {
                         Task { await model.loadOlder() }
-                    } label: {
-                        if model.loadingHistory {
-                            ProgressView()
-                        } else {
-                            Label("Load older messages", lucideIcon: "arrow-up", iconSize: 14)
-                        }
                     }
-                    .frame(minHeight: 44).buttonStyle(.bordered).glassEffect().padding(.top, 8)
-                    .disabled(model.loadingHistory || !model.connected)
-                    .accessibilityLabel(model.loadingHistory ? "Loading older messages" : "Load older messages")
+                    .padding(.top, 8)
                 }
             }
             .overlay(alignment: .bottom) {

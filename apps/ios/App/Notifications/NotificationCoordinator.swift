@@ -148,6 +148,8 @@ struct NotificationDestination: Identifiable, Hashable {
     private var activityDiscoveryTask: Task<Void, Never>?
     private var startTokenTask: Task<Void, Never>?
     private var activityRegistrationTask: Task<Void, Never>?
+    @ObservationIgnored private var preferenceSaveTask: Task<Void, Never>?
+    @ObservationIgnored private var preferenceObservation: ObservationTracking.Token?
     private var startToken: Data?
     private var activityStateTasks: [String: Task<Void, Never>] = [:]
     private var liveAttentionKeys = Set<String>()
@@ -165,7 +167,24 @@ struct NotificationDestination: Identifiable, Hashable {
         self.runtime = runtime
         api = PushAPI(baseURL: runtime.client.baseURL)
         super.init()
+        observePreferences()
     }
+
+    private func observePreferences() {
+        preferenceObservation = withContinuousObservation(options: .didSet) { [weak self] event in
+            guard let self else { return }
+            _ = self.approvals
+            _ = self.activities
+            guard event.kind == .didSet else { return }
+            self.preferenceSaveTask?.cancel()
+            self.preferenceSaveTask = Task { [weak self] in
+                await Task.yield()
+                guard !Task.isCancelled else { return }
+                await self?.savePreferences()
+            }
+        }
+    }
+
     func restore() async {
         guard !restored else { return }
         restored = true
@@ -345,7 +364,7 @@ struct NotificationDestination: Identifiable, Hashable {
         UIApplication.shared.unregisterForRemoteNotifications()
         UNUserNotificationCenter.current().removeAllDeliveredNotifications()
     }
-    func savePreferences() async {
+    private func savePreferences() async {
         UserDefaults.standard.set(approvals, forKey: "ruimte.push.approvals")
         UserDefaults.standard.set(activities, forKey: "ruimte.push.activities")
         if activities && supportsActivities {
@@ -627,17 +646,16 @@ struct NotificationDestination: Identifiable, Hashable {
         guard Double(alert.expiresAt) > Date().timeIntervalSince1970 * 1000 else { throw PushCryptoError.expired }
         if alert.target == .chat {
             let lease = session.rpc.acquireAttachment("chat", id: alert.nodeId)
-            do {
-                let snapshot = try await lease.snapshot(
-                    payload: .object(["chatId": .string(alert.nodeId), "historyLimit": .number(1)]))
-                try Task.checkCancellation()
-                let payload = try NotificationApproval.chatPayload(alert: alert, snapshot: snapshot, allow: allow)
-                _ = try await session.rpc.request("chat.approve", payload: payload)
-                await lease.release()
-            } catch {
-                await lease.release()
-                throw error
+            defer {
+                await withTaskCancellationShield {
+                    await lease.release()
+                }
             }
+            let snapshot = try await lease.snapshot(
+                payload: .object(["chatId": .string(alert.nodeId), "historyLimit": .number(1)]))
+            try Task.checkCancellation()
+            let payload = try NotificationApproval.chatPayload(alert: alert, snapshot: snapshot, allow: allow)
+            _ = try await session.rpc.request("chat.approve", payload: payload)
         } else {
             let snapshot = try await session.rpc.request("session.list")
             let payload = try NotificationApproval.terminalPayload(alert: alert, snapshot: snapshot, allow: allow)

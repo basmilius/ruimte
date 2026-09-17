@@ -32,7 +32,7 @@ public struct RestoredSession: Sendable {
 public actor SessionVault {
     private let client: any SessionAPI
     private let store: any SessionStore
-    private let signer: @Sendable () async throws -> (any SessionSigner)?
+    private let signer: @Sendable () async throws -> any SessionSigner?
     private let now: @Sendable () -> Int64
     private var current: SessionView?
     private var currentRevision: Int?
@@ -41,7 +41,7 @@ public actor SessionVault {
 
     public init(
         client: any SessionAPI, store: any SessionStore,
-        signer: @escaping @Sendable () async throws -> (any SessionSigner)?,
+        signer: @escaping @Sendable () async throws -> any SessionSigner?,
         now: @escaping @Sendable () -> Int64 = { Int64(Date().timeIntervalSince1970 * 1000) }
     ) {
         self.client = client
@@ -147,7 +147,7 @@ public actor SessionVault {
 
     private func rotate(operation: Int) async throws -> SessionView? {
         let stored = try store.read()
-        let key = if let stored, stored.expiresAt > now() { try await signer() } else { nil as (any SessionSigner)? }
+        let key = if let stored, stored.expiresAt > now() { try await signer() } else { nil as any SessionSigner? }
         guard operation == revision else {
             throw CancellationError()
         }

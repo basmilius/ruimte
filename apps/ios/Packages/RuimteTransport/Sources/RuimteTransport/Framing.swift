@@ -14,18 +14,23 @@ public enum DirectFraming {
 
     public static func split(_ frame: String, pieceChars: Int = WireConstants.directPieceChars) -> [String] {
         precondition(pieceChars >= 2)
-        let units = Array(frame.utf16)
-        if units.count <= pieceChars {
+        let units = frame.utf16
+        let unitCount = units.count
+        if unitCount <= pieceChars {
             return ["=" + frame]
         }
         var pieces: [String] = []
-        var start = 0
-        while start < units.count {
-            var end = min(start + pieceChars, units.count)
-            if end < units.count && (0xD800...0xDBFF).contains(units[end - 1]) {
-                end -= 1
+        pieces.reserveCapacity(unitCount / pieceChars + (unitCount.isMultiple(of: pieceChars) ? 0 : 1))
+        var start = units.startIndex
+        while start < units.endIndex {
+            var end = units.index(start, offsetBy: pieceChars, limitedBy: units.endIndex) ?? units.endIndex
+            if end < units.endIndex {
+                let previous = units.index(before: end)
+                if (0xD800...0xDBFF).contains(units[previous]) {
+                    end = previous
+                }
             }
-            pieces.append((end == units.count ? "=" : "+") + String(decoding: units[start..<end], as: UTF16.self))
+            pieces.append((end == units.endIndex ? "=" : "+") + String(decoding: units[start..<end], as: UTF16.self))
             start = end
         }
         return pieces

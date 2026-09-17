@@ -43,7 +43,7 @@ struct AppHome: View {
         Group {
             if usesSidebar { tabletNavigation } else { projectNavigation }
         }
-        .environment(\.openMobileWorkspace, openWorkspace)
+        .environment(\.openMobileWorkspace, OpenMobileWorkspaceAction(id: sceneID, action: openWorkspace))
         .mobileSheet(isPresented: $pairing) { PairMachinePage(runtime: runtime) }
         .mobileSheet(isPresented: $settings) { MobileSettings(runtime: runtime) }
         .mobileSheet(isPresented: $machines, onDismiss: presentPendingPairing) {

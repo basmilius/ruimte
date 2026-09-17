@@ -37,6 +37,8 @@ import RuimtePulsar
     private var cancelTick: (() -> Void)?
     private var gatherDone: (() -> Void)?
     private var candidates = PendingIceCandidates()
+    private var offerTask: Task<Void, Never>?
+    private var answerTask: Task<Void, Never>?
     private var accessTask: Task<Void, Never>?
 
     public init(
@@ -112,19 +114,16 @@ import RuimtePulsar
             }
             self.channel = channel
             channel.delegate = self
-            created.offer(for: constraints) { [weak self] description, error in
-                Task { @MainActor in
-                    guard let self, !self.ended else { return }
-                    guard let description, error == nil else {
-                        self.end(error ?? TransportFailure.invalid("WebRTC made no offer.")); return
-                    }
-                    created.setLocalDescription(description) { [weak self] error in
-                        Task { @MainActor in
-                            guard let self, !self.ended else { return }
-                            if let error { self.end(error); return }
-                            self.waitForGathering()
-                        }
-                    }
+            offerTask = Task { [weak self] in
+                guard let self, !self.ended else { return }
+                do {
+                    let description = try await created.offer(for: constraints)
+                    guard !self.ended, !Task.isCancelled else { return }
+                    try await created.setLocalDescription(description)
+                    guard !self.ended, !Task.isCancelled else { return }
+                    self.waitForGathering()
+                } catch {
+                    if !Task.isCancelled { self.end(error) }
                 }
             }
         } catch { end(error) }
@@ -196,14 +195,17 @@ import RuimtePulsar
                 guard let peer, let offerSDP, binding == nil else { return }
                 let sdp = try string(signal, "sdp")
                 binding = try DirectIdentity.channelBinding(offer: offerSDP, answer: sdp)
-                peer.setRemoteDescription(RTCSessionDescription(type: .answer, sdp: sdp)) { [weak self] error in
-                    Task { @MainActor in
-                        guard let self, !self.ended else { return }
-                        if let error { self.end(error); return }
+                answerTask = Task { [weak self] in
+                    guard let self, !self.ended else { return }
+                    do {
+                        try await peer.setRemoteDescription(RTCSessionDescription(type: .answer, sdp: sdp))
+                        guard !self.ended, !Task.isCancelled else { return }
                         self.trace("answer applied")
                         let pending = self.candidates.answerApplied()
                         self.trace("forwarding \(pending.count) additional candidates")
                         for candidate in pending { self.relayCandidate(candidate) }
+                    } catch {
+                        if !Task.isCancelled { self.end(error) }
                     }
                 }
             case "candidate":
@@ -376,6 +378,10 @@ import RuimtePulsar
         cancelTick?()
         cancelInitialGather?()
         gatherDone = nil
+        offerTask?.cancel()
+        offerTask = nil
+        answerTask?.cancel()
+        answerTask = nil
         accessTask?.cancel()
         accessTask = nil
         membership?.leave()

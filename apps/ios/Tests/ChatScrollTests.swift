@@ -5,6 +5,15 @@ import XCTest
 @testable import Ruimte
 
 final class ChatScrollTests: XCTestCase {
+    func testOlderMessagesAreOnlyOfferedAtTheTopEdge() {
+        let geometry = ChatViewportGeometry(contentHeight: 2_000, height: 600, topInset: 80, bottomInset: 120)
+        XCTAssertTrue(geometry.isAtTop(-100))
+        XCTAssertTrue(geometry.isAtTop(-80))
+        XCTAssertTrue(geometry.isAtTop(-79.5))
+        XCTAssertFalse(geometry.isAtTop(-78))
+        XCTAssertFalse(geometry.isAtTop(0))
+    }
+
     func testExpansionRevealsOnlyWhatIsOutsideTheReadableViewport() {
         let geometry = ChatViewportGeometry(contentHeight: 2000, height: 600, topInset: 80, bottomInset: 120)
         func offset(_ top: CGFloat, _ height: CGFloat) -> CGFloat {
@@ -263,11 +272,10 @@ private final class ChatHostingFixture: NSObject, UICollectionViewDataSource {
         configuration.showsSeparators = false
         let layout = UICollectionViewCompositionalLayout.list(using: configuration)
         list = ChatTimelineCollection(frame: CGRect(x: 0, y: 0, width: 320, height: 600), collectionViewLayout: layout)
-        if let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first {
-            window = UIWindow(windowScene: scene)
-        } else {
-            window = UIWindow(frame: list.frame)
+        guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else {
+            fatalError("Chat scroll tests require an active window scene")
         }
+        window = UIWindow(windowScene: scene)
         super.init()
         list.contentInsetAdjustmentBehavior = .never
         list.register(ChatHostingCell.self, forCellWithReuseIdentifier: "hosted")

@@ -12,6 +12,7 @@ struct ChatTimeline: UIViewControllerRepresentable {
     var dismissKeyboard: () -> Void = {}
     var scrollToLatest = 0
     var onMessagesBelowChanged: (Bool) -> Void = { _ in }
+    var onAtTopChanged: (Bool) -> Void = { _ in }
 
     func makeUIViewController(context: Context) -> ChatTimelineController {
         ChatTimelineController(client: client, chatID: chatID, presentation: presentation)
@@ -20,6 +21,7 @@ struct ChatTimeline: UIViewControllerRepresentable {
         controller.bind(presentation)
         controller.dismissKeyboard = dismissKeyboard
         controller.onMessagesBelowChanged = onMessagesBelowChanged
+        controller.onAtTopChanged = onAtTopChanged
         controller.setViewportInsets(top: topInset, bottom: bottomInset)
         controller.update(entries: presentation.entries, revision: presentation.revision)
         controller.scrollToLatest(command: scrollToLatest)
@@ -35,6 +37,7 @@ struct ChatViewportGeometry: Equatable {
 
     var bottom: CGFloat { max(-topInset, contentHeight - height + bottomInset) }
     func clamped(_ offset: CGFloat) -> CGFloat { min(bottom, max(-topInset, offset)) }
+    func isAtTop(_ offset: CGFloat) -> Bool { offset <= -topInset + 1 }
     func isNearBottom(_ offset: CGFloat) -> Bool { bottom - offset <= 80 }
 
     func revealing(_ frame: CGRect, from offset: CGFloat) -> CGFloat {
@@ -252,10 +255,12 @@ final class ChatTimelineCollection: UICollectionView {
 final class ChatTimelineController: UIViewController, UICollectionViewDelegate, UIGestureRecognizerDelegate {
     var dismissKeyboard: () -> Void = {}
     var onMessagesBelowChanged: (Bool) -> Void = { _ in }
+    var onAtTopChanged: (Bool) -> Void = { _ in }
     private var lastScrollCommand = 0
     private var lastItemScrollCommand = 0
     private var requestedItem: String?
     private var messagesBelow = false
+    private var atTop = false
     private let client: any MachineRequesting
     private let chatID: String
     private var presentation: ChatPresentation
@@ -292,7 +297,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         collection.translatesAutoresizingMaskIntoConstraints = false
         collection.accessibilityIdentifier = "chat.timeline"
         collection.delegate = self
-        collection.viewportChanged = { [weak self] in self?.reportMessagesBelow() }
+        collection.viewportChanged = { [weak self] in self?.reportViewportPosition() }
         answerVisibleEntries()
         let tap = UITapGestureRecognizer(target: self, action: #selector(dismissComposerKeyboard))
         tap.cancelsTouchesInView = false
@@ -323,7 +328,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
                     .id(id)
                     .environment(
                         \.chatWillExpand,
-                        { [weak self] expanding, headerOffset in
+                        ChatWillExpandAction(id: id) { [weak self] expanding, headerOffset in
                             guard let self else { return }
                             let ids = self.source.snapshot().itemIdentifiers
                             let next = ids.firstIndex(of: id).flatMap { index in
@@ -416,7 +421,15 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         collection.finishUserScroll()
     }
 
-    private func reportMessagesBelow() {
+    private func reportViewportPosition() {
+        let top = collection.geometry.isAtTop(collection.contentOffset.y)
+        if top != atTop {
+            atTop = top
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                self.onAtTopChanged(self.atTop)
+            }
+        }
         let below = !collection.geometry.isNearBottom(collection.contentOffset.y)
         guard below != messagesBelow else { return }
         messagesBelow = below
@@ -513,7 +526,7 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
     }
 
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) { collection.beginUserScroll() }
-    func scrollViewDidScroll(_ scrollView: UIScrollView) { reportMessagesBelow() }
+    func scrollViewDidScroll(_ scrollView: UIScrollView) { reportViewportPosition() }
     func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) { collection.finishProgrammaticScroll() }
     func collectionView(
         _ collectionView: UICollectionView, targetContentOffsetForProposedContentOffset proposedContentOffset: CGPoint
@@ -540,6 +553,31 @@ final class ChatTimelineController: UIViewController, UICollectionViewDelegate, 
         super.viewDidDisappear(animated)
         displayLink?.invalidate()
         displayLink = nil
+    }
+}
+
+struct ChatOlderMessagesButton: View {
+    let loading: Bool
+    let disabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Group {
+                if loading {
+                    ProgressView()
+                } else {
+                    Label("Load older messages", lucideIcon: "arrow-up", iconSize: 14)
+                }
+            }
+            .padding(.horizontal, 16)
+            .frame(minHeight: 44)
+            .contentShape(Capsule())
+            .glassEffect(.regular.interactive(), in: .capsule)
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+        .accessibilityLabel(loading ? "Loading older messages" : "Load older messages")
     }
 }
 
@@ -613,7 +651,25 @@ final class ChatHostingCell: UICollectionViewListCell {
 }
 
 extension EnvironmentValues {
-    @Entry var chatWillExpand: (Bool, CGFloat) -> Void = { _, _ in }
+    @Entry var chatWillExpand = ChatWillExpandAction()
+}
+
+struct ChatWillExpandAction: Equatable {
+    private let id: String?
+    private let action: (Bool, CGFloat) -> Void
+
+    init(id: String? = nil, action: @escaping (Bool, CGFloat) -> Void = { _, _ in }) {
+        self.id = id
+        self.action = action
+    }
+
+    func callAsFunction(_ expanding: Bool, _ headerOffset: CGFloat) {
+        action(expanding, headerOffset)
+    }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.id == rhs.id
+    }
 }
 
 struct ChatExpansionButton<Label: View>: View {

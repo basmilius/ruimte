@@ -587,5 +587,23 @@ struct NotePage: View {
 
 extension EnvironmentValues {
     @Entry var inProjectSidebar = false
-    @Entry var openMobileWorkspace: (MobileWorkspace) -> Void = { _ in }
+    @Entry var openMobileWorkspace = OpenMobileWorkspaceAction()
+}
+
+struct OpenMobileWorkspaceAction: Equatable {
+    private let id: String?
+    private let action: (MobileWorkspace) -> Void
+
+    init(id: String? = nil, action: @escaping (MobileWorkspace) -> Void = { _ in }) {
+        self.id = id
+        self.action = action
+    }
+
+    func callAsFunction(_ workspace: MobileWorkspace) {
+        action(workspace)
+    }
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.id == rhs.id
+    }
 }

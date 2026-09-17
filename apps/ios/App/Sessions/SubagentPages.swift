@@ -253,6 +253,7 @@ struct SubagentConversationPage: View {
     let parent: ChatPresentation
     @State private var conversation: SubagentConversation
     @State private var presentation = ChatPresentation()
+    @State private var atConversationTop = false
     private let cwd: String
 
     init(client: any MachineRequesting, chatID: String, crumb: SubagentCrumb, cwd: String, parent: ChatPresentation) {
@@ -269,7 +270,7 @@ struct SubagentConversationPage: View {
         MobileScrollViewport(edges: .vertical) { insets in
             ChatTimeline(
                 presentation: presentation, client: client, chatID: chatID, topInset: insets.top,
-                bottomInset: insets.bottom)
+                bottomInset: insets.bottom, onAtTopChanged: { atConversationTop = $0 })
         }
         .overlay {
             switch conversation.status {
@@ -293,19 +294,13 @@ struct SubagentConversationPage: View {
             }
         }
         .overlay(alignment: .top) {
-            if conversation.cursor != nil && conversation.status == .ready {
-                Button {
+            if conversation.cursor != nil && conversation.status == .ready && atConversationTop {
+                ChatOlderMessagesButton(
+                    loading: conversation.loadingEarlier, disabled: conversation.loadingEarlier
+                ) {
                     conversation.loadEarlier()
-                } label: {
-                    if conversation.loadingEarlier {
-                        ProgressView()
-                    } else {
-                        Label("Load older messages", lucideIcon: "arrow-up", iconSize: 14)
-                    }
                 }
-                .frame(minHeight: 44).buttonStyle(.bordered).glassEffect().padding(.top, 8)
-                .disabled(conversation.loadingEarlier)
-                .accessibilityLabel(conversation.loadingEarlier ? "Loading older messages" : "Load older messages")
+                .padding(.top, 8)
             }
         }
         .background(MobileStyle.surface.ignoresSafeArea())

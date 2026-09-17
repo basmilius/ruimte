@@ -61,7 +61,7 @@ import RuimtePulsar
     private final class Entry {
         let open: Opener
         var members: [UUID: LinkEvents] = [:]
-        var link: (any MachineLink)?
+        var link: any MachineLink?
         var generation = 0
         var retry: (() -> Void)?
         var idleCleanup: (() -> Void)?

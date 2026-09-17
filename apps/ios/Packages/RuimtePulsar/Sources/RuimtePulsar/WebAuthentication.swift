@@ -25,7 +25,14 @@ final class SignInOperation {
             do {
                 let result = try await task.value
                 guard !task.isCancelled else {
-                    await Task { await onCancelledResult(result) }.value
+                    #if os(iOS)
+                        await withTaskCancellationShield {
+                            await onCancelledResult(result)
+                        }
+                    #else
+                        // Cancellation shields require macOS 27, while this package still supports macOS 15.
+                        await Task { await onCancelledResult(result) }.value
+                    #endif
                     throw CancellationError()
                 }
                 return result

@@ -173,7 +173,9 @@ final class AppRuntime {
                     provider: provider, client: client, vault: vault, label: label)
             }
             guard operation == sessionRevision else {
-                await Task { await vault.discard(accessToken: session.accessToken) }.value
+                await withTaskCancellationShield {
+                    await vault.discard(accessToken: session.accessToken)
+                }
                 return
             }
             account = session.account
