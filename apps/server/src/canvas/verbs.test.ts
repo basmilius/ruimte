@@ -2632,6 +2632,17 @@ describe('task list', () => {
         expect(tasks.involving('chat-1')).toEqual([]);
     });
 
+    test('the brief fits the room kept for it, sends a chat to its last answer and a terminal to done in plain quotes', () => {
+        for (const chat of [true, false]) {
+            expect(taskBrief(chat).length).toBeLessThanOrEqual(MAX_PROMPT_LENGTH - MAX_TASK_PROMPT_LENGTH);
+        }
+        // A child that is told about done calls it even when its last answer already reports back.
+        expect(taskBrief(true)).not.toContain('done');
+        // Codex's allow rule cannot read $'...', so that call would wait on a person's approval.
+        expect(taskBrief(false)).toContain("ruimte-context done --result '...'");
+        expect(taskBrief(false)).toContain('\\n');
+    });
+
     test('team --task gives every role a task of its own', async () => {
         const roles = JSON.stringify([
             { title: 'Lexer', prompt: 'fix the tokenizer', provider: 'claude', terminal: true },

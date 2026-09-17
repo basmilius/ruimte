@@ -14,13 +14,15 @@ const BRIEF_ROOM = 240;
 export const MAX_TASK_PROMPT_LENGTH = MAX_PROMPT_LENGTH - BRIEF_ROOM;
 
 /*
- * The line a child reads under its prompt. A chat child's last answer of this turn is its result
- * unless it says otherwise; a terminal child has no answer the daemon can take, so it has to say it.
+ * The line a child reads under its prompt. A chat child's last answer is its result, and naming done
+ * there made every child call it anyway. A terminal child has no answer the daemon can take, so it
+ * calls done; the quoting advice is there because Codex's allow rule cannot parse `$'...'` or a
+ * heredoc, which runs the call sandboxed and asks the person for approval.
  */
 export const taskBrief = (chat: boolean): string =>
     chat
-        ? '\n\n(This is a task from the agent that opened you. Your last answer of this turn is reported back to it; ruimte-context done --result "..." reports something else instead.)'
-        : '\n\n(This is a task from the agent that opened you. When it is finished, report back with ruimte-context done --result "..."; if you exit without it, the task fails.)';
+        ? '\n\n(This is a task from the agent that opened you. End this turn with the result as your last message; that is reported back to it, so no ruimte-context call is needed.)'
+        : "\n\n(This is a task from the agent that opened you. When it is finished, run ruimte-context done --result '...' and write a line break as \\n inside those plain single quotes; if you exit without it, the task fails.)";
 
 export const TASK_LINES: readonly string[] = [
     'task\tWith --task the prompt is the assignment and T its title; only a chat may give one, since only a chat can be woken with the result',
@@ -95,7 +97,7 @@ export const doneVerb = defineVerb({
     usage: '--result T | --result-file F',
     summary: 'Reports the result of the task you were opened with, which wakes the chat that gave it',
     detail: [
-        `flag\t--result T\toptional\tThe result, at most ${MAX_RESULT_LENGTH} characters; \\n, \\t and \\\\ are read as escapes, and --result - takes it from stdin`,
+        `flag\t--result T\toptional\tThe result, at most ${MAX_RESULT_LENGTH} characters; \\n, \\t and \\\\ are read as escapes, so a line break is \\n inside plain single quotes and no $'...', heredoc or pipe is needed; --result - takes it from stdin`,
         'flag\t--result-file F\toptional\tThe same result out of a file inside the project folder; not together with --result',
         'prints\tdone\ttask id\tparent id\tthe task that settled and the chat that is woken with it',
         "who\tOnly a node opened with --task, while its task is open; the first of done, the end of a chat child's first turn and an exit settles it",
