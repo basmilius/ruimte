@@ -209,6 +209,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         contextUrl,
         binDir,
         hasContext: (chatId) => context.has(chatId),
+        depthOf: (chatId) => lineage.depthOf(chatId),
         contextSources: (chatId) => context.list(chatId),
         messages: messagesFor,
         firstPrompt: (chatId) => prompts.take(chatId),
@@ -719,7 +720,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                         // Asked on every event that can carry an answer, so the memory of what this
                         // agent was told keeps up with its turns even where nothing is printed.
                         const changed = context.changeSince(sessionId);
-                        return hookContext(event, context.list(sessionId), { changed, messages: messagesFor(sessionId) });
+                        return hookContext(event, context.list(sessionId), { changed, messages: messagesFor(sessionId), depth: lineage.depthOf(sessionId) });
                     },
                     (token, body, signal) => manager.holdApproval(token, body, signal)
                 );

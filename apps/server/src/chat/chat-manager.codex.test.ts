@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatInfo, ChatItem, ChatSubagentItem } from '@ruimte/contracts';
-import { VERBS_NOTE } from '../context/context-note.ts';
+import { verbsNote } from '../context/context-note.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { AttachmentStore } from './attachment-store.ts';
 import { ChatManager } from './chat-manager.ts';
@@ -384,7 +384,7 @@ describe('ChatManager with Codex', () => {
         await open('chat-note');
         await manager.send('chat-note', 'note?');
         await recorder.until(idle);
-        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual([VERBS_NOTE]);
+        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual([verbsNote({ depth: 0 })]);
     });
 
     test('a thread Codex no longer has starts fresh with a warning', async () => {

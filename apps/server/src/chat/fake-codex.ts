@@ -10,7 +10,9 @@
  * `thread/fork` copies a thread's turns up to `lastTurnId` under a new id and keeps the request in
  * `fakeCodexForks`, and `thread/turns/list` lists the turns a thread ran in any process.
  */
-import { VERBS_NOTE } from '../context/context-note.ts';
+import { verbsNote } from '../context/context-note.ts';
+
+const VERBS_NOTE = verbsNote({ depth: 0 });
 import { runOverStdio, type FakeCli } from './fake-cli.ts';
 
 type Frame = Record<string, unknown>;

@@ -37,6 +37,7 @@ interface ChatSessionOptions {
     spawn?: SpawnChatProcess;
     // Whether the person linked something to this chat; the CLI is told where to look when so.
     hasContext(): boolean;
+    depth?(): number;
     // The links as they are now; a change between two turns is put in front of the next prompt.
     contextSources?(): ContextSource[];
     // What another node left for this chat, taken as it is handed over: delivered once, in front of the next prompt.
@@ -847,6 +848,7 @@ export class ChatSession {
             resume: info.agentSessionId,
             generation,
             hasContext: this.options.hasContext(),
+            depth: this.options.depth?.() ?? 0,
             ...(this.options.spawn ? { spawn: this.options.spawn } : {})
         };
         const made: { backend: ChatBackend | null } = { backend: null };

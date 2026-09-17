@@ -127,7 +127,7 @@ export class CodexBackend implements ChatBackend {
         const parts: string[] = [];
         if (this.hintPending) {
             this.hintPending = false;
-            parts.push(`${chatPrompt(this.launch.hasContext)}\n\n`);
+            parts.push(`${chatPrompt({ hasContext: this.launch.hasContext, depth: this.launch.depth })}\n\n`);
         }
         if (input.preamble !== null) {
             parts.push(`${input.preamble}\n\n`);

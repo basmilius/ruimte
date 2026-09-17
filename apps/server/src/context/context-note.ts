@@ -1,22 +1,46 @@
 import type { ContextSource } from '@ruimte/contracts';
+import { MAX_AGENT_DEPTH, MAX_TEAM_DEPTH } from '../canvas/depth.ts';
+
+const doesAt = (depth: number): string => {
+    if (depth < MAX_TEAM_DEPTH) {
+        return 'reads context linked to you, places nodes on the canvas and opens agents (`agent` for one, `team` for several in parallel)';
+    }
+    if (depth < MAX_AGENT_DEPTH) {
+        return 'reads context linked to you, places nodes on the canvas and opens a helper agent with `agent`';
+    }
+    return 'reads context linked to you and places nodes on the canvas';
+};
 
 /*
  * Said once to every agent, linked or not, so it knows the verbs exist before anyone links a thing.
  * Never a skill file or instruction block in anyone's `$HOME`: a copy per CLI and per SSH host goes
  * stale unnoticed, while this sentence travels with the daemon and `help` renders from the registry.
+ * Every agent reads it every session, so it names only what saves a call: the verbs its depth may
+ * still open agents with, the help that gives their flags, and that a task answers by itself.
  */
-export const VERBS_NOTE =
-    'Ruimte: `ruimte-context` reads context linked to you and places nodes on the canvas; `ruimte-context help` lists what it does and `ruimte-context help <verb>` details one. Ids in its output are for your commands; when you talk to the person, name things by their title, never by id.';
+export const verbsNote = ({ depth }: { depth: number }): string => {
+    const parts = [
+        `Ruimte: \`ruimte-context\` ${doesAt(depth)}.`,
+        '`ruimte-context help <verb>` gives the flags of one verb and `ruimte-context help` lists them all.'
+    ];
+    if (depth < MAX_AGENT_DEPTH) {
+        parts.push('With `--task` a result comes back as your next message once it settles, so end your turn instead of polling.');
+    }
+    parts.push('Ids in its output are for your commands; to the person, name things by their title, never by id.');
+    return parts.join(' ');
+};
 
-const CONTEXT_PROMPT =
+export const CONTEXT_PROMPT =
     'The person linked context to this chat on their canvas. Run `ruimte-context` to list it and `ruimte-context read <id>` to read one item, whenever it could help.';
 
 /*
  * What an agent is told once at the start of a chat process, so it knows the CLI without being
- * nagged every turn. A provider with a system prompt flag passes it there; one without it puts it
- * in front of the first prompt.
+ * nagged every turn. Claude Code takes it as a system prompt and Codex as a thread's developer instructions.
  */
-export const chatPrompt = (hasContext: boolean): string => (hasContext ? `${VERBS_NOTE} ${CONTEXT_PROMPT}` : VERBS_NOTE);
+export const chatPrompt = ({ hasContext, depth }: { hasContext: boolean; depth: number }): string => {
+    const note = verbsNote({ depth });
+    return hasContext ? `${note} ${CONTEXT_PROMPT}` : note;
+};
 
 // Past this many, a busy canvas would flood a prompt line; the rest becomes a count.
 const MAX_NAMED = 5;
@@ -48,11 +72,15 @@ export const contextHint = (sources: ContextSource[]): string | null => {
  * node left for it. A SessionStart is handed the whole list of links anyway, so a change note has
  * nothing to add there; a message does, since it may have been waiting since before the CLI started.
  */
-export const hookContext = (event: string, sources: ContextSource[], turn: { changed?: string | null; messages?: readonly string[] } = {}): string | null => {
+export const hookContext = (
+    event: string,
+    sources: ContextSource[],
+    turn: { changed?: string | null; messages?: readonly string[]; depth?: number } = {}
+): string | null => {
     const start = event === 'SessionStart';
     const hint = contextHint(sources);
     const parts = [
-        ...(start ? [VERBS_NOTE] : []),
+        ...(start ? [verbsNote({ depth: turn.depth ?? 0 })] : []),
         ...(hint === null ? [] : [hint]),
         ...(start || !turn.changed ? [] : [turn.changed]),
         ...(turn.messages ?? [])

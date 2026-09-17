@@ -22,6 +22,8 @@ export interface BackendLaunch {
     generation: number;
     // Whether the person linked context to this chat; the backend decides how to tell the CLI.
     hasContext: boolean;
+    // How deep in a chain of agents this chat sits, which decides what the note about the verbs offers it.
+    depth: number;
     // How the CLI is started; a test runs a fake in the same process, everything else spawns it.
     spawn?: SpawnChatProcess;
 }

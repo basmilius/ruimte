@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import type { ContextSource } from '@ruimte/contracts';
-import { chatPrompt, contextChangeNote, contextHint, hookContext, VERBS_NOTE } from './context-note.ts';
+import { chatPrompt, contextChangeNote, contextHint, hookContext, verbsNote } from './context-note.ts';
+
+const VERBS_NOTE = verbsNote({ depth: 0 });
 
 const text: ContextSource = { id: 'text-1', kind: 'text', title: 'Sprint goals' };
 const terminal: ContextSource = { id: 'term-1', kind: 'terminal', title: 'dev server' };
@@ -22,10 +24,30 @@ describe('contextHint', () => {
     });
 });
 
+describe('verbsNote', () => {
+    test('offers team and agent at depth 0, only agent at depth 1 and neither below', () => {
+        expect(VERBS_NOTE).toContain('`agent` for one, `team` for several in parallel');
+        expect(VERBS_NOTE).toContain('end your turn instead of polling');
+        const helper = verbsNote({ depth: 1 });
+        expect(helper).toContain('opens a helper agent with `agent`');
+        expect(helper).not.toContain('`team`');
+        expect(helper).toContain('--task');
+        const deepest = verbsNote({ depth: 2 });
+        expect(deepest).not.toContain('`agent`');
+        expect(deepest).not.toContain('--task');
+        for (const note of [VERBS_NOTE, helper, deepest]) {
+            expect(note).toContain('`ruimte-context help <verb>`');
+            expect(note).toEndWith('never by id.');
+            expect(note).not.toContain('  ');
+        }
+    });
+});
+
 describe('chatPrompt', () => {
-    test('always names the verbs, and the links only when there are some', () => {
-        expect(chatPrompt(false)).toBe(VERBS_NOTE);
-        expect(chatPrompt(true)).toStartWith(`${VERBS_NOTE} The person linked context to this chat`);
+    test('always names the verbs for its depth, and the links only when there are some', () => {
+        expect(chatPrompt({ hasContext: false, depth: 0 })).toBe(VERBS_NOTE);
+        expect(chatPrompt({ hasContext: false, depth: 2 })).toBe(verbsNote({ depth: 2 }));
+        expect(chatPrompt({ hasContext: true, depth: 0 })).toStartWith(`${VERBS_NOTE} The person linked context to this chat`);
     });
 });
 
@@ -35,6 +57,10 @@ describe('hookContext', () => {
         expect(hookContext('SessionStart', [text])).toBe(`${VERBS_NOTE} ${contextHint([text])}`);
         expect(hookContext('UserPromptSubmit', [])).toBeNull();
         expect(hookContext('UserPromptSubmit', [text])).toBe(contextHint([text]));
+    });
+
+    test('SessionStart names the verbs for the depth the agent sits at', () => {
+        expect(hookContext('SessionStart', [], { depth: 2 })).toBe(verbsNote({ depth: 2 }));
     });
 
     test('a line drawn while the agent ran is named at its next prompt and not at a start', () => {

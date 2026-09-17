@@ -74,6 +74,8 @@ interface ChatManagerOptions {
     // Where an agent reads its linked context, and whether it has any.
     contextUrl?: string;
     hasContext?: (chatId: string) => boolean;
+    // How deep a chat sits in a chain of agents; an unknown chat is one a person opened.
+    depthOf?: (chatId: string) => number;
     // The sources themselves, so a chat can tell its agent what came and went between turns.
     contextSources?: (chatId: string) => ContextSource[];
     // What another node left for this chat, taken once and put in front of the next prompt.
@@ -140,6 +142,7 @@ export class ChatManager {
     private readonly activity = new Map<string, number>();
     private readonly contextUrl: string | null;
     private readonly hasContext: (chatId: string) => boolean;
+    private readonly depthOf: (chatId: string) => number;
     private readonly contextSources: (chatId: string) => ContextSource[];
     private readonly messages: (chatId: string) => string[];
     private readonly firstPrompt: (chatId: string) => Promise<string | null>;
@@ -170,6 +173,7 @@ export class ChatManager {
         this.onLimits = options.onLimits ?? null;
         this.contextUrl = options.contextUrl ?? null;
         this.hasContext = options.hasContext ?? (() => false);
+        this.depthOf = options.depthOf ?? (() => 0);
         this.contextSources = options.contextSources ?? (() => []);
         this.messages = options.messages ?? (() => []);
         this.firstPrompt = options.firstPrompt ?? (() => Promise.resolve(null));
@@ -346,6 +350,7 @@ export class ChatManager {
             ...(this.spawn ? { spawn: this.spawn } : {}),
             env: this.contextUrl ? { ...this.env, RUIMTE_CONTEXT_URL: this.contextUrl, RUIMTE_CONTEXT_TOKEN: token } : this.env,
             hasContext: () => this.hasContext(payload.chatId),
+            depth: () => this.depthOf(payload.chatId),
             contextSources: () => this.contextSources(payload.chatId),
             messages: () => this.messages(payload.chatId),
             ...(this.checkpoints ? { checkpoints: this.checkpoints } : {}),

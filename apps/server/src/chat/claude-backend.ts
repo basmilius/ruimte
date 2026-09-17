@@ -43,7 +43,7 @@ export class ClaudeBackend implements ChatBackend {
         }
         const { selection, runtimeMode, resume } = this.launch;
         const args = [...this.launch.command, ...claudeArgs({ selection, runtimeMode, resume })];
-        args.push('--append-system-prompt', chatPrompt(this.launch.hasContext));
+        args.push('--append-system-prompt', chatPrompt({ hasContext: this.launch.hasContext, depth: this.launch.depth }));
         this.stdinClosed = false;
         const spawn = this.launch.spawn ?? spawnChatProcess;
         const process: ChatProcess = spawn({

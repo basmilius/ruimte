@@ -13,7 +13,7 @@ import { bootTestDaemon, type TestDaemon } from '../tasks/test-daemon.ts';
 import { AttachmentStore } from './attachment-store.ts';
 import { ChatManager } from './chat-manager.ts';
 import { ChatStore } from './chat-store.ts';
-import { VERBS_NOTE } from '../context/context-note.ts';
+import { verbsNote } from '../context/context-note.ts';
 import { claudeProjectSlug } from './claude-transcript.ts';
 import { inProcess } from './fake-cli.ts';
 import { fakeCodex, fakeCodexForks } from './fake-codex.ts';
@@ -258,7 +258,7 @@ describe('forking a Claude chat', () => {
         // The fake takes Codex's own note off the front of a first prompt, so what is left is the handoff before the text.
         expect(reply).toBe(`echo: ${record.preambles[0]}\n\ngo on (medium)`);
         await say(nodeId, 'note?');
-        expect(assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)).toBe(VERBS_NOTE);
+        expect(assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)).toBe(verbsNote({ depth: 0 }));
         expect(daemon.chats.get(nodeId)!.info.agentSessionId).not.toBeNull();
     });
 

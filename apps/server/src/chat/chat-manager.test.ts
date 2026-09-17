@@ -3,7 +3,7 @@ import { appendFile, cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatCheckpointDiff, ChatInfo, ChatItem, ChatSubagentItem, ContextSource } from '@ruimte/contracts';
-import { VERBS_NOTE } from '../context/context-note.ts';
+import { verbsNote } from '../context/context-note.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { AttachmentStore } from './attachment-store.ts';
 import { ChatManager } from './chat-manager.ts';
@@ -273,17 +273,17 @@ describe('ChatManager', () => {
         manager.attach('chat-sys', 'c1');
         await manager.send('chat-sys', 'system?');
         await recorder.until(idle);
-        expect(recorder.ofKind('assistant')[0]?.text).toBe(VERBS_NOTE);
+        expect(recorder.ofKind('assistant')[0]?.text).toBe(verbsNote({ depth: 0 }));
 
         await retire(manager);
-        manager = makeManager({ hasContext: () => true });
+        manager = makeManager({ hasContext: () => true, depthOf: () => 2 });
         const linked = new ChatRecorder();
         manager.subscribe('c2', linked.sink());
         await manager.create({ chatId: 'chat-sys-2', cwd: home });
         manager.attach('chat-sys-2', 'c2');
         await manager.send('chat-sys-2', 'system?');
         await linked.until(() => linked.ofKind('assistant').length === 1 && linked.info?.activeTurnId === null);
-        expect(linked.ofKind('assistant')[0]?.text).toStartWith(`${VERBS_NOTE} The person linked context to this chat on their canvas.`);
+        expect(linked.ofKind('assistant')[0]?.text).toStartWith(`${verbsNote({ depth: 2 })} The person linked context to this chat on their canvas.`);
     });
 
     test('a link made between turns is put in front of the next prompt, once, as a note', async () => {
