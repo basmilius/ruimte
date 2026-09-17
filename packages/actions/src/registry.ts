@@ -20,7 +20,7 @@ export interface ActionCapability {
     name: ActionName;
     title: string;
     description: string;
-    effect: 'local' | 'shared';
+    effect: 'read' | 'local' | 'shared' | 'external';
     input: Record<string, unknown>;
 }
 
@@ -189,14 +189,26 @@ export class ActionRegistry<Context> {
             return failure(name, 'invalid-input', z.prettifyError(parsed.error));
         }
         try {
-            const handled = await handler(parsed.data as ActionInput<Name>, { ...call, confirmed });
+            const handled = await handler(parsed.data as ActionInput<Name>, {
+                ...call,
+                confirmed
+            });
             if ('confirmation' in handled) {
                 if (confirmed) {
                     return failure(name, 'confirmation-loop', `The confirmed action “${name}” asked for confirmation again.`);
                 }
                 const confirmationToken = crypto.randomUUID();
-                remember(this.#pending, confirmationToken, { name, input: parsed.data, actor: call.actor });
-                return { status: 'needs_confirmation', action: name, confirmationToken, confirmation: handled.confirmation };
+                remember(this.#pending, confirmationToken, {
+                    name,
+                    input: parsed.data,
+                    actor: call.actor
+                });
+                return {
+                    status: 'needs_confirmation',
+                    action: name,
+                    confirmationToken,
+                    confirmation: handled.confirmation
+                };
             }
             const output = definition.output.safeParse(handled.output);
             if (!output.success) {
@@ -204,9 +216,18 @@ export class ActionRegistry<Context> {
             }
             const undoToken = handled.undo ? crypto.randomUUID() : undefined;
             if (undoToken && handled.undo) {
-                remember(this.#undo, undoToken, { name, actor: call.actor, run: handled.undo });
+                remember(this.#undo, undoToken, {
+                    name,
+                    actor: call.actor,
+                    run: handled.undo
+                });
             }
-            return { status: 'completed', action: name, output: output.data as ActionOutput<Name>, ...(undoToken ? { undoToken } : {}) };
+            return {
+                status: 'completed',
+                action: name,
+                output: output.data as ActionOutput<Name>,
+                ...(undoToken ? { undoToken } : {})
+            };
         } catch (error) {
             return this.#failed(name, error);
         }

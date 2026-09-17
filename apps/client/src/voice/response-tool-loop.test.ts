@@ -21,16 +21,34 @@ describe('ResponseToolLoop', () => {
             delegation_id: 'delegation-1',
             event: {
                 type: 'response.output_item.done',
-                item: { type: 'function_call', call_id: 'call-1', name: 'focus_view', arguments: '{"view":"Chat Test"}' }
+                item: {
+                    type: 'function_call',
+                    call_id: 'call-1',
+                    name: 'manage_views',
+                    arguments: '{"action":"focus","view":"Chat Test","kind":null,"name":null,"url":null,"command":null}'
+                }
             }
         });
-        loop.handle({ type: 'response.event', delegation_id: 'delegation-1', event: { type: 'response.completed' } });
+        loop.handle({
+            type: 'response.event',
+            delegation_id: 'delegation-1',
+            event: { type: 'response.completed' }
+        });
         await flush();
 
-        expect(calls).toEqual([{ name: 'focus_view', args: '{"view":"Chat Test"}' }]);
+        expect(calls).toEqual([
+            {
+                name: 'manage_views',
+                args: '{"action":"focus","view":"Chat Test","kind":null,"name":null,"url":null,"command":null}'
+            }
+        ]);
         expect(sent[0]).toMatchObject({
             type: 'response.item.create',
-            item: { type: 'function_call_output', call_id: 'call-1', output: expect.stringContaining('Focused Chat Test') }
+            item: {
+                type: 'function_call_output',
+                call_id: 'call-1',
+                output: expect.stringContaining('Focused Chat Test')
+            }
         });
         expect(sent[1]).toMatchObject({ type: 'response.create' });
     });
@@ -47,7 +65,15 @@ describe('ResponseToolLoop', () => {
         const event = {
             type: 'response.event',
             delegation_id: 'delegation-1',
-            event: { type: 'response.output_item.done', item: { type: 'function_call', call_id: 'call-1', name: 'inspect_workspace', arguments: '{}' } }
+            event: {
+                type: 'response.output_item.done',
+                item: {
+                    type: 'function_call',
+                    call_id: 'call-1',
+                    name: 'inspect_workspace',
+                    arguments: '{}'
+                }
+            }
         };
         loop.handle(event);
         loop.handle(event);

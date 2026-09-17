@@ -29,7 +29,7 @@ describe('createOpenAiLiveSession', () => {
                         max_output_tokens: 256,
                         reasoning: { effort: 'none' },
                         text: { verbosity: 'low' },
-                        tools: expect.arrayContaining([expect.objectContaining({ name: 'prompt_ai_chat' })]),
+                        tools: expect.arrayContaining([expect.objectContaining({ name: 'communicate' })]),
                         tool_choice: 'auto',
                         parallel_tool_calls: true
                     }

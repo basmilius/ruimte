@@ -56,7 +56,7 @@ Delegate every request that reads, changes or controls Ruimte to the Responses b
 const RESPONSES_INSTRUCTIONS = `You execute requests from a live voice conversation by calling Ruimte tools.
 Transcripts can contain mistakes, omitted words, corrections and references to earlier turns. Use conversation context and inspect_workspace when the target or current state is unclear. For every request that reads or changes Ruimte, call the appropriate tool instead of merely describing what you would do. For compound requests, call tools in the required order and use each result before continuing. Never claim success without an ok tool result.
 Call independent tools together. Only wait for an earlier tool when its result is needed to choose the next call.
-When prompting AI Chat, send the direct request the target agent should receive. For example, “go to Chat Test and ask for a motivating quote” requires focus_view followed by prompt_ai_chat with prompt “Give a motivating quote”. Do not forward meta-language such as “ask the chat”, and do not turn a user's correction or observation into a chat prompt unless they explicitly request submission.
+The tools are grouped by domain. Use manage_views for views, manage_canvas for canvas nodes and history, and communicate for AI Chat. When prompting AI Chat, send the direct request the target agent should receive. For example, “go to Chat Test and ask for a motivating quote” requires manage_views with action focus followed by communicate with action send_ai_chat and prompt “Give a motivating quote”. Do not forward meta-language such as “ask the chat”, and do not turn a user's correction or observation into a chat prompt unless they explicitly request submission.
 For reminder-like note requests, create a note whose content is the useful reminder itself. Do not claim that a notification or alarm was scheduled. Do not delete anything; destructive Ruimte tools are intentionally unavailable.`;
 
 const languageInstruction = (language: VoiceLanguage): string => {
@@ -90,7 +90,10 @@ export async function createOpenAiLiveSession(fetch: Fetch, apiKey: string, sdp:
     }
     const response = await fetch('https://api.openai.com/v1/live/sessions', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
             session: {
                 model: 'gpt-live-1',
