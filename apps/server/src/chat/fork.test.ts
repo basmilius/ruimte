@@ -255,7 +255,7 @@ describe('forking a Claude chat', () => {
         await daemon.chats.create({ chatId: nodeId });
         await say(nodeId, 'go on');
         const reply = assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)!;
-        // The fake takes Codex's own note off the front of a first prompt, so what is left is the handoff before the text.
+        // The note about the verbs went in as developer instructions, so only the handoff stands before the text.
         expect(reply).toBe(`echo: ${record.preambles[0]}\n\ngo on (medium)`);
         await say(nodeId, 'note?');
         expect(assistantTexts(daemon.chats.get(nodeId)!.thread.list()).at(-1)).toBe(verbsNote({ depth: 0 }));

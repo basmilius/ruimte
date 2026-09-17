@@ -1,6 +1,6 @@
 import { accessSync, constants } from 'node:fs';
 import { attachmentImageMime, type ChatSkill } from '@ruimte/contracts';
-import { chatPrompt } from '../context/context-note.ts';
+import { CONTEXT_PROMPT, chatPrompt } from '../context/context-note.ts';
 import { codexServiceTier, codexThreadOptions } from '../providers/codex.ts';
 import type { ApprovalDecision, BackendEvent, BackendHost, BackendLaunch, ChatBackend, TurnInput } from './backend.ts';
 import { CodexProtocol } from './codex-protocol.ts';
@@ -40,8 +40,8 @@ export const parseSkillsList = (result: unknown): ChatSkill[] => {
 /*
  * One `codex app-server` process on JSON-RPC over stdio. `start` handshakes (initialize, then
  * thread/start or thread/resume) before the first turn goes out, so every later request knows the
- * thread id. Codex has no system prompt flag, so linked context is announced in front of the first
- * prompt instead. The runtime modes are an approval policy plus a sandbox.
+ * thread id. The note about `ruimte-context` goes in as the thread's developer instructions, which
+ * Codex keeps with the thread. The runtime modes are an approval policy plus a sandbox.
  */
 export class CodexBackend implements ChatBackend {
     private readonly launch: BackendLaunch;
@@ -50,8 +50,11 @@ export class CodexBackend implements ChatBackend {
     private transport: CodexTransport | null = null;
     private threadId = '';
     private exitTimer: ReturnType<typeof setTimeout> | null = null;
-    // The note about ruimte-context is told once per process, in front of the first prompt it takes.
-    private hintPending = true;
+    /*
+     * Codex 0.154 ignores developer instructions on `thread/resume` (measured), so a thread started
+     * before anything was linked would never hear of its links; the first prompt of a resumed process says so instead.
+     */
+    private contextPending = false;
     private imageInputSupported: boolean | null = null;
 
     constructor(launch: BackendLaunch, host: BackendHost) {
@@ -91,17 +94,19 @@ export class CodexBackend implements ChatBackend {
             ...(tier === null ? {} : { serviceTier: tier }),
             ...codexThreadOptions(this.launch.runtimeMode)
         };
+        const developerInstructions = chatPrompt({ hasContext: this.launch.hasContext, depth: this.launch.depth });
         let result: unknown;
         if (this.launch.resume) {
             try {
                 result = await transport.request('thread/resume', { threadId: this.launch.resume, excludeTurns: true, ...params });
+                this.contextPending = this.launch.hasContext;
             } catch (error) {
                 // The thread is gone from Codex's store; a fresh one keeps the chat usable.
                 this.emit({ type: 'note', level: 'warning', text: `Codex could not resume its thread (${reason(error)}). Started a new one.` });
-                result = await transport.request('thread/start', params);
+                result = await transport.request('thread/start', { ...params, developerInstructions });
             }
         } else {
-            result = await transport.request('thread/start', params);
+            result = await transport.request('thread/start', { ...params, developerInstructions });
         }
         this.imageInputSupported = await this.readImageSupport(transport);
         for (const event of this.protocol.threadReady(result)) {
@@ -125,9 +130,9 @@ export class CodexBackend implements ChatBackend {
             }
         }
         const parts: string[] = [];
-        if (this.hintPending) {
-            this.hintPending = false;
-            parts.push(`${chatPrompt({ hasContext: this.launch.hasContext, depth: this.launch.depth })}\n\n`);
+        if (this.contextPending) {
+            this.contextPending = false;
+            parts.push(`${CONTEXT_PROMPT}\n\n`);
         }
         if (input.preamble !== null) {
             parts.push(`${input.preamble}\n\n`);

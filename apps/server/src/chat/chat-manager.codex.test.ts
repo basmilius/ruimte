@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatInfo, ChatItem, ChatSubagentItem } from '@ruimte/contracts';
-import { verbsNote } from '../context/context-note.ts';
+import { CONTEXT_PROMPT, chatPrompt, verbsNote } from '../context/context-note.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { AttachmentStore } from './attachment-store.ts';
 import { ChatManager } from './chat-manager.ts';
@@ -380,11 +380,37 @@ describe('ChatManager with Codex', () => {
         expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: second (medium)']);
     });
 
-    test('the first prompt of a process carries the note about the verbs', async () => {
+    test('a thread starts with the note about the verbs as developer instructions, and no prompt carries it', async () => {
+        await retire(manager);
+        manager = makeManager({ depthOf: () => 1 });
+        manager.subscribe('c1', recorder.sink());
         await open('chat-note');
         await manager.send('chat-note', 'note?');
         await recorder.until(idle);
-        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual([verbsNote({ depth: 0 })]);
+        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual([verbsNote({ depth: 1 })]);
+        await manager.send('chat-note', 'hi');
+        await recorder.until(() => recorder.info?.usage.turns === 2 && idle());
+        expect(turnInputs().map((input) => input[0]!.text)).toEqual(['note?', 'hi']);
+    });
+
+    test('a resumed thread keeps its instructions and hears about its links in front of the first prompt only', async () => {
+        await open('chat-resumed-note');
+        await manager.send('chat-resumed-note', 'first');
+        await recorder.until(idle);
+        await retire(manager);
+
+        manager = makeManager({ hasContext: () => true });
+        const again = new ChatRecorder();
+        manager.subscribe('c2', again.sink());
+        await manager.create({ chatId: 'chat-resumed-note' });
+        manager.attach('chat-resumed-note', 'c2');
+        await manager.send('chat-resumed-note', 'note?');
+        await again.until(() => again.ofKind('assistant').length === 1 && again.info?.activeTurnId === null);
+        await manager.send('chat-resumed-note', 'pasted?');
+        await again.until(() => again.ofKind('assistant').length === 2 && again.info?.activeTurnId === null);
+        expect(again.ofKind('assistant').map((item) => item.text)).toEqual([chatPrompt({ hasContext: false, depth: 0 }), CONTEXT_PROMPT]);
+        expect(requests.filter((request) => request.method === 'thread/resume').map((request) => request.params.developerInstructions)).toEqual([undefined]);
+        expect(turnInputs().at(-1)![0]!.text).toBe('pasted?');
     });
 
     test('a thread Codex no longer has starts fresh with a warning', async () => {

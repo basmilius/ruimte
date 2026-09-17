@@ -3,16 +3,15 @@
  * network. `tool: <cmd>` asks approval for a command, `edit: <path>` for a file change, `ask: <q>`
  * asks a blocking question, `async: <q>` asks through an agent message and waits for a steer,
  * `slow` waits for an interrupt, `fail` ends the turn failed, `crash` exits with 1, `note?` answers with
- * what Ruimte put in front of the first prompt. Resuming a thread whose id starts with `named-` finds
+ * the developer instructions the thread was started with (a resume or a fork keeps them, as Codex does), and
+ * `pasted?` with what Ruimte put in front of the first prompt of a process. Resuming a thread whose id starts with `named-` finds
  * it named, `thread/name/set` renames it and says so, and `name?` answers with that name. The thread echoes the
  * model and the sandbox it was started with, so a test can see what a session asked for. `spawn: <prompt>` spawns an
  * agent whose thread holds more steps than a thread row keeps, and `thread/items/list` pages through it.
  * `thread/fork` copies a thread's turns up to `lastTurnId` under a new id and keeps the request in
  * `fakeCodexForks`, and `thread/turns/list` lists the turns a thread ran in any process.
  */
-import { verbsNote } from '../context/context-note.ts';
-
-const VERBS_NOTE = verbsNote({ depth: 0 });
+import { CONTEXT_PROMPT } from '../context/context-note.ts';
 import { runOverStdio, type FakeCli } from './fake-cli.ts';
 
 type Frame = Record<string, unknown>;
@@ -27,6 +26,9 @@ const childThreads = new Map<string, Frame[]>();
 
 // The turn ids per thread, outside any one process for the same reason.
 const threadTurns = new Map<string, string[]>();
+
+// The developer instructions per thread, kept from its start the way Codex keeps them in the rollout.
+const threadInstructions = new Map<string, string | null>();
 
 // Every `thread/fork` a fake was asked, oldest first, so a test can see what the daemon forked at.
 export const fakeCodexForks: Frame[] = [];
@@ -43,7 +45,7 @@ export const fakeCodex: FakeCli = (io) => {
     let threadApproval = '';
     let turnId = '';
     let turnEffort: string | null = null;
-    let firstPromptNote: string | null = null;
+    let pasted: string | null = null;
 
     const notify = (method: string, params: unknown): void => {
         out({ method, params, emittedAtMs: Date.now() });
@@ -132,21 +134,21 @@ export const fakeCodex: FakeCli = (io) => {
         turnEffort = typeof params.effort === 'string' ? params.effort : null;
         const input = Array.isArray(params.input) ? (params.input[0] as { text?: string } | undefined) : undefined;
         const raw = input?.text ?? '';
-        // Codex has no system prompt, so Ruimte puts its note in front of the first prompt; `note?` asks for it back.
-        const noted = raw.startsWith(`${VERBS_NOTE}\n\n`);
+        // A resumed process puts the sentence about links in front of its first prompt; `pasted?` asks for it back.
+        const noted = raw.startsWith(`${CONTEXT_PROMPT}\n\n`);
         if (noted) {
-            firstPromptNote = VERBS_NOTE;
+            pasted = CONTEXT_PROMPT;
         }
-        const text = noted ? raw.slice(VERBS_NOTE.length + 2) : raw;
+        const text = noted ? raw.slice(CONTEXT_PROMPT.length + 2) : raw;
         if (text === 'name?') {
             turnStarted();
             agentMessage(threadName ?? 'unnamed');
             turnCompleted('completed');
             return;
         }
-        if (text === 'note?') {
+        if (text === 'note?' || text === 'pasted?') {
             turnStarted();
-            agentMessage(firstPromptNote ?? 'nothing');
+            agentMessage((text === 'note?' ? threadInstructions.get(threadId) : pasted) ?? 'nothing');
             turnCompleted('completed');
             return;
         }
@@ -318,6 +320,10 @@ export const fakeCodex: FakeCli = (io) => {
                     return;
                 }
                 threadId = resumed ?? `fake-${Math.random().toString(36).slice(2, 8)}`;
+                // Codex 0.154 ignores developer instructions on a resume; only a start sets them.
+                if (resumed === null) {
+                    threadInstructions.set(threadId, typeof params.developerInstructions === 'string' ? params.developerInstructions : null);
+                }
                 threadModel = typeof params.model === 'string' ? params.model : 'fake-model';
                 threadSandbox = typeof params.sandbox === 'string' ? params.sandbox : '';
                 threadApproval = typeof params.approvalPolicy === 'string' ? params.approvalPolicy : '';
@@ -348,6 +354,7 @@ export const fakeCodex: FakeCli = (io) => {
                 fakeCodexForks.push(params);
                 const forked = `fork-${Math.random().toString(36).slice(2, 8)}`;
                 threadTurns.set(forked, turns.slice(0, last + 1));
+                threadInstructions.set(forked, threadInstructions.get(source) ?? null);
                 out({ id, result: { thread: { id: forked, forkedFromId: source, cwd: params.cwd, turns: [] }, model: params.model ?? 'fake-model' } });
                 return;
             }
