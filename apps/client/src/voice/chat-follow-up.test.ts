@@ -28,10 +28,7 @@ describe('voice AI Chat follow-up', () => {
     });
 
     test('turns a completion into a bounded instruction for Voice', () => {
-        const prompt = completionPrompt(
-            { key: 'local:chat', chat: 'Research', turnId: 'turn-1' },
-            { state: 'done', answer: 'I found the answer.' }
-        );
+        const prompt = completionPrompt({ key: 'local:chat', chat: 'Research', turnId: 'turn-1' }, { state: 'done', answer: 'I found the answer.' });
         expect(prompt).toContain('AI Chat “Research”');
         expect(prompt).toContain('I found the answer.');
         expect(prompt).toContain('Tell the user now');

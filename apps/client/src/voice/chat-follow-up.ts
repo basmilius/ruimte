@@ -24,10 +24,7 @@ export const chatCompletion = (chat: ChatState | undefined, turnId: string): Voi
     }
     const answer = chat.order
         .map((id) => chat.items[id])
-        .filter(
-            (item): item is Extract<ChatItem, { kind: 'assistant' }> =>
-                item?.kind === 'assistant' && item.turnId === turnId && !item.parentToolUseId
-        )
+        .filter((item): item is Extract<ChatItem, { kind: 'assistant' }> => item?.kind === 'assistant' && item.turnId === turnId && !item.parentToolUseId)
         .map((item) => item.text.trim())
         .filter(Boolean)
         .join('\n\n')
