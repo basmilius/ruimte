@@ -8,7 +8,6 @@ import {
     sessionNodesOfView,
     storedPathOf,
     withMovedView,
-    withRenamedView,
     withView,
     withViewIcon,
     withoutView,
@@ -18,6 +17,7 @@ import {
     type ProjectViewKind
 } from '@ruimte/contracts';
 import { z } from 'zod';
+import { serverActionCall, serverViewActions } from '../actions/view-actions.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import { checkUrl, newId } from './node-verb.ts';
 import { checkPath, isInside } from './project-paths.ts';
@@ -215,12 +215,20 @@ const renameSub = defineAction('view', {
     flags: z.object({}),
     async run({ positionals: [id, name] }, call) {
         const place = placeOf(call);
-        return call.host.mutate(place.projectId, (content) => {
-            const view = viewNamed(content, id, 'view rename');
-            const views = withRenamedView(content.views, id, name);
-            // A rename to the name it already carries is what the caller asked for, so it is not a refusal.
-            return { content: views === null ? null : { ...content, views }, result: [`${id}\t${view.kind}\t${field(name)}`] };
-        });
+        const result = await serverViewActions.execute('view.rename', { viewId: id, name }, serverActionCall(call.host, place.projectId, call.caller));
+        if (result.status === 'completed') {
+            return [`${id}\t${result.output.kind}\t${field(name)}`];
+        }
+        const content = await call.host.read(place.projectId);
+        const lines =
+            result.status === 'failed' && result.error.code === 'unknown-view'
+                ? [...viewLines(content.views), 'note\tview rename takes a view id, never a name']
+                : [];
+        throw new VerbRefusal(
+            result.status === 'failed' ? result.error.code : 'confirmation-required',
+            result.status === 'failed' ? result.error.message : 'view rename requires confirmation',
+            lines
+        );
     }
 });
 

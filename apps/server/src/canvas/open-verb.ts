@@ -1,5 +1,6 @@
 import { isOpenableView } from '@ruimte/contracts';
 import { z } from 'zod';
+import { serverActionCall, serverViewActions } from '../actions/view-actions.ts';
 import { VerbRefusal, defineAction, field, orNote, placeOf } from './verb.ts';
 import { viewLines } from './view-verb.ts';
 
@@ -28,19 +29,27 @@ export const openAction = defineAction('view', {
     flags: z.object({}),
     async run({ positionals: [id] }, call) {
         const place = placeOf(call);
-        const content = await call.host.read(place.projectId);
-        const view = content.views.find((candidate) => candidate.id === id);
-        // Only what view open itself takes: a refusal that listed the separators would offer what the next call refuses.
-        const openable = (): string[] => orNote(viewLines(content.views.filter(isOpenableView)), 'This project has no view that opens');
-        if (!view) {
-            throw new VerbRefusal('unknown-view', `${id} is not a view of this project`, [...openable(), 'note\tview open takes a view id, never a name']);
+        const result = await serverViewActions.execute('view.focus', { viewId: id }, serverActionCall(call.host, place.projectId, call.caller));
+        if (result.status !== 'completed') {
+            const content = await call.host.read(place.projectId);
+            // Only what view open itself takes: a refusal that listed the separators would offer what the next call refuses.
+            const openable = orNote(viewLines(content.views.filter(isOpenableView)), 'This project has no view that opens');
+            const code =
+                result.status === 'failed' && result.error.code === 'view-not-openable'
+                    ? 'never-opens'
+                    : result.status === 'failed'
+                      ? result.error.code
+                      : 'confirmation-required';
+            const message = result.status === 'failed' ? result.error.message : 'view open requires confirmation';
+            throw new VerbRefusal(
+                code,
+                message,
+                result.status === 'failed' && result.error.code === 'unknown-view' ? [...openable, 'note\tview open takes a view id, never a name'] : openable
+            );
         }
-        if (!isOpenableView(view)) {
-            throw new VerbRefusal('never-opens', `${id} is a separator, a line in the sidebar with nothing to show`, openable());
-        }
-        const shown = call.host.showView(place.projectId, id, call.caller);
+        const shown = result.output.delivered === true;
         return [
-            `showing\t${id}\t${view.kind}\t${field(view.name ?? '')}`,
+            `showing\t${id}\t${result.output.kind}\t${field(result.output.view)}`,
             shown
                 ? 'sent\tyes\tEveryone with this project on screen was told'
                 : 'sent\tno\tNobody has this project on screen right now, so nothing was showing it'

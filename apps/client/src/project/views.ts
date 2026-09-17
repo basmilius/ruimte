@@ -10,6 +10,7 @@ import {
     type ProjectView
 } from '@ruimte/contracts';
 import { askBeforeEndingAgents } from '@/agents/end-children';
+import { focusViewAction } from '@/actions/client-actions';
 import { offerDraft } from '@/chat/drafts';
 import { GRID, toWorld, type Point } from '@/canvas/math';
 import { basenameOf, storedPathOf } from '@/shell/panels/files-tree';
@@ -25,7 +26,7 @@ import { transportFor } from '@/transport';
 
 /* Puts a view on screen. A node that lives on another canvas is reached by switching there first. */
 export const showView = (id: string): void => {
-    useDocument.getState().setActiveView(id);
+    focusViewAction(id);
 };
 
 /*

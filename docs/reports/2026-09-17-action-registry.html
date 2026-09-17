@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Plan voor een gedeelde action-registry</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #155dfc;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1180px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 930px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:hover { text-decoration-thickness: 2px; }
+a:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+.intro { font-size: 21px; max-width: 900px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table { font-variant-numeric: tabular-nums; }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.badge { display: inline-block; white-space: nowrap; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 900px; }
+.catalog { min-width: 960px; }
+.catalog th:first-child, .catalog td:first-child { width: 19%; }
+.catalog th:nth-child(2), .catalog td:nth-child(2) { width: 43%; }
+.catalog th:nth-child(3), .catalog td:nth-child(3) { width: 22%; }
+.catalog th:last-child, .catalog td:last-child { width: 16%; }
+ul, ol { padding-left: 23px; }
+li { margin-bottom: 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 12px 0; color: var(--accent); font-weight: 600; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 15px; }
+.diagram .label { fill: var(--muted); font-size: 13px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .secondary { fill: var(--panel); stroke: var(--reference); }
+.diagram .edge { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow { fill: var(--accent); }
+figure { margin: 20px 0; }
+figcaption { margin-top: 10px; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+.scenario { border-top: 1px solid var(--line); padding-top: 18px; margin-top: 18px; }
+.scenario:first-of-type { border-top: 0; padding-top: 0; }
+.chain { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 14px; }
+.chain code { display: inline-block; padding: 5px 8px; border-radius: 6px; background: var(--panel); color: var(--accent); }
+.chain span { color: var(--muted); align-self: center; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide, .catalog { min-width: 0; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel, .scenario { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#besluit">Ga naar het besluit</a>
+<header>
+  <p class="eyebrow">RUIMTE / ARCHITECTUUR- EN BOUWPLAN / 17 SEPTEMBER 2026</p>
+  <h1>Een gedeelde action-registry voor Ruimte</h1>
+  <p class="intro">Breng betekenisvolle gebruikersacties samen in één getypeerde laag. Voice, de UI, sneltoetsen, de command palette en <code>ruimte-context</code> worden adapters op dezelfde uitvoering.</p>
+  <p class="status">Voorgesteld ontwerp · klaar om in fasen te bouwen</p>
+  <p class="caption">Scope: desktopclient, lokale daemon, agent-CLI en GPT-Live. Bronrevision: <code>c8bafe3b</code> plus lokale Voice-wijzigingen. Inventaris gecontroleerd tegen CLI-help, command palette, stores, menus en RPC-contracten.</p>
+  <nav aria-label="Inhoud">
+    <a href="#besluit">Besluit</a>
+    <a href="#architectuur">Architectuur</a>
+    <a href="#ingangen">Ingangen</a>
+    <a href="#contract">Contract</a>
+    <a href="#catalogus">Acties</a>
+    <a href="#voorbeelden">Voorbeelden</a>
+    <a href="#veiligheid">Veiligheid</a>
+    <a href="#bouwplan">Bouwplan</a>
+  </nav>
+</header>
+<main>
+  <section id="besluit" class="recommendation">
+    <h2>Besluit</h2>
+    <p>Maak één diepe module met een kleine interface voor <code>catalog</code>, <code>execute</code>, <code>confirm</code> en <code>undo</code>. Elke action-definitie bevat schema, beschikbaarheidsregels, actorbeleid, uitvoerder, resultaatvorm en herstelstrategie. De registry wordt de bron voor UI-commando's, CLI-help, Voice-tools en tests.</p>
+    <p>De registry is niet hetzelfde als de Voice-toollijst. De registry mag veel precieze actions bevatten. Voice krijgt een compacte set domeintools die alleen relevante actions voor de huidige context aanbieden. Daarmee behoudt het model goede schemas zonder een vrije CLI-command-string te krijgen.</p>
+    <div class="stats">
+      <div><strong>202</strong><span>voorgestelde, afzonderlijk beschreven actions</span></div>
+      <div><strong>7</strong><span>geplande adapters op dezelfde action-interface</span></div>
+      <div><strong>4</strong><span>operaties aan de externe registry-interface</span></div>
+      <div><strong>4</strong><span>bouwfasen tot brede productdekking</span></div>
+    </div>
+    <p><span class="badge confirmed">Aanbevolen</span> Bouw geen tweede dispatcher naast de bestaande UI en CLI. Verplaats gedeeld gedrag achter de nieuwe seam en vervang oude paden per domein.</p>
+  </section>
+
+  <section id="architectuur">
+    <h2>Architectuur</h2>
+    <figure class="panel">
+      <div class="table" role="region" aria-label="Architectuurdiagram van de action-registry" tabindex="0">
+        <svg class="diagram" width="1000" viewBox="0 0 1000 390" role="img" aria-labelledby="arch-title arch-desc">
+          <title id="arch-title">Alle gebruikersingangen delen één action-registry</title>
+          <desc id="arch-desc">UI, sneltoetsen, command palette, ruimte-context, Voice en toekomstige automatisering sturen getypeerde requests naar een action-coordinator. Deze controleert targets, rechten, bevestiging en revisies en routeert daarna naar client- of daemonexecutors.</desc>
+          <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker></defs>
+          <rect class="secondary" x="20" y="24" width="132" height="58" rx="12"/><text x="86" y="59" text-anchor="middle">UI en menus</text>
+          <rect class="secondary" x="170" y="24" width="132" height="58" rx="12"/><text x="236" y="50" text-anchor="middle">Sneltoetsen</text><text class="label" x="236" y="68" text-anchor="middle">en palette</text>
+          <rect class="secondary" x="320" y="24" width="132" height="58" rx="12"/><text x="386" y="59" text-anchor="middle">ruimte-context</text>
+          <rect class="secondary" x="470" y="24" width="132" height="58" rx="12"/><text x="536" y="59" text-anchor="middle">Voice</text>
+          <rect class="secondary" x="620" y="24" width="132" height="58" rx="12"/><text x="686" y="50" text-anchor="middle">Agenten en</text><text class="label" x="686" y="68" text-anchor="middle">automatisering</text>
+          <rect class="secondary" x="770" y="24" width="132" height="58" rx="12"/><text x="836" y="50" text-anchor="middle">Tests en</text><text class="label" x="836" y="68" text-anchor="middle">documentatie</text>
+          <path class="edge" d="M86 82 V128 H500"/><path class="edge" d="M236 82 V128"/><path class="edge" d="M386 82 V128"/><path class="edge" d="M536 82 V128"/><path class="edge" d="M686 82 V128"/><path class="edge" d="M836 82 V128 H500"/>
+          <rect class="node" x="300" y="128" width="400" height="100" rx="16"/>
+          <text x="500" y="163" text-anchor="middle">Action coordinator</text>
+          <text class="label" x="500" y="188" text-anchor="middle">targetresolutie · actorbeleid · revisie · bevestiging</text>
+          <text class="label" x="500" y="210" text-anchor="middle">resultaat · operation events · action-gebonden undo</text>
+          <path class="edge" d="M430 228 V280 H245" marker-end="url(#arrow)"/>
+          <path class="edge" d="M570 228 V280 H755" marker-end="url(#arrow)"/>
+          <rect class="secondary" x="105" y="280" width="280" height="76" rx="14"/>
+          <text x="245" y="312" text-anchor="middle">Client executor</text>
+          <text class="label" x="245" y="335" text-anchor="middle">focus · selectie · viewport · dialogs · clipboard</text>
+          <rect class="secondary" x="615" y="280" width="280" height="76" rx="14"/>
+          <text x="755" y="312" text-anchor="middle">Daemon executor</text>
+          <text class="label" x="755" y="335" text-anchor="middle">project · sessies · files · git · agents · plans</text>
+        </svg>
+      </div>
+      <figcaption>De coordinator is de seam. Bestaande stores, RPC-handlers en canvas-verbs blijven implementatiedetails en worden stapsgewijs achter deze seam geplaatst.</figcaption>
+    </figure>
+    <div class="split">
+      <div class="panel">
+        <h3>Wat centraal staat</h3>
+        <ul>
+          <li>Stabiele action-naam en versie.</li>
+          <li>Zod- of JSON-schema voor invoer en uitvoer.</li>
+          <li>Actor- en contextvereisten.</li>
+          <li>Effectklasse, bevestigingsregel en herstelstrategie.</li>
+          <li>Client-, daemon- of hybride executor.</li>
+          <li>Menselijke samenvatting voor timeline, toast en spraak.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Wat bewust lokaal blijft</h3>
+        <ul>
+          <li>Pointermoves, dragframes en tussenstappen van tekengebaren.</li>
+          <li>Socket attach/detach, subscriptions en keep-alives.</li>
+          <li>Project-save, watchers, signaling en resize-events.</li>
+          <li>Renderingstate die geen betekenisvolle gebruikersactie is.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="ingangen">
+    <h2>Welke ingangen de registry gebruiken</h2>
+    <div class="table" role="region" aria-label="Adapters op de action-registry" tabindex="0">
+      <table class="wide">
+        <thead><tr><th scope="col">Adapter</th><th scope="col">Gebruik</th><th scope="col">Wat de adapter zelf nog doet</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">UI en contextmenus</th><td>Knoppen, menus, dialogen, dock en sidebar voeren actions uit.</td><td>Verzamelt handmatige invoer, toont bevestigingen en rendert resultaten.</td></tr>
+          <tr><th scope="row">Sneltoetsen</th><td>Roepen dezelfde actions aan als de zichtbare bediening.</td><td>Leveren de actuele focus en selectie als context.</td></tr>
+          <tr><th scope="row">Command palette</th><td>Genereert rijen uit actions die in de huidige context beschikbaar zijn.</td><td>Zoekt labels, vraagt ontbrekende velden en onthoudt recente commando's.</td></tr>
+          <tr><th scope="row"><code>ruimte-context</code></th><td>Parseert mensvriendelijke CLI-syntax naar action-input en formatteert het resultaat.</td><td>Beheert quoting, stdin, tab-separated output en exitcodes.</td></tr>
+          <tr><th scope="row">Voice</th><td>Genereert een compacte, contextuele toolset en stuurt actions via de coordinator.</td><td>Lost gesproken verwijzingen op, vraagt verduidelijking en spreekt de resultaatsamenvatting uit.</td></tr>
+          <tr><th scope="row">Agenten en toekomstige automatisering</th><td>Gebruiken alleen actions die hun actorbeleid en eigenaarschap toestaan.</td><td>Voegen identiteit, taakcontext en expliciete machtigingen toe.</td></tr>
+          <tr><th scope="row">Tests en documentatie</th><td>Testen de action-interface en genereren capability-overzichten uit dezelfde definities.</td><td>Gebruiken in-memory adapters voor client- en daemonafhankelijkheden.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Een action die in de registry staat, is niet automatisch beschikbaar voor Voice of een agent. Elke adapter vraagt de catalogus op voor één actor, machine en context.</p>
+  </section>
+
+  <section id="contract">
+    <h2>Het gedeelde contract</h2>
+    <p>De externe interface blijft klein. Definities en executors kunnen intern per domein worden gesplitst zonder dat adapters die structuur hoeven te kennen.</p>
+    <pre><code>type ActionCoordinator = {
+  catalog(query: CapabilityQuery): Promise&lt;ActionCapability[]&gt;;
+  execute(request: ActionRequest): Promise&lt;ActionResult&gt;;
+  confirm(operationId: string, decision: ConfirmationDecision): Promise&lt;ActionResult&gt;;
+  undo(token: UndoToken): Promise&lt;ActionResult&gt;;
+};
+
+type ActionRequest = {
+  requestId: string;
+  action: string;
+  version: number;
+  input: unknown;
+  actor: ActionActor;
+  context: {
+    endpointId: string;
+    projectId?: string;
+    clientId?: string;
+    viewId?: string;
+    selection?: string[];
+    expectedRevision?: number;
+  };
+};
+
+type ActionResult = {
+  operationId: string;
+  status: 'completed' | 'queued' | 'running' | 'needs_confirmation' | 'failed';
+  summary: string;
+  affected: ActionTarget[];
+  data?: unknown;
+  undoToken?: string;
+  confirmation?: { title: string; consequences: string[] };
+  error?: { code: string; message: string; candidates?: ActionTarget[] };
+};</code></pre>
+    <div class="split">
+      <div class="panel">
+        <h3>Targetresolutie</h3>
+        <p>Adapters mogen een gesproken of getypte naam aanleveren, maar de coordinator voert mutaties alleen op IDs uit. Bij twee gelijknamige doelen retourneert hij kandidaten. Hij kiest nooit stilletjes de eerste.</p>
+      </div>
+      <div class="panel">
+        <h3>Undo</h3>
+        <p>Een undo-token legt action, project, view, revisie en inverse vast. Het token weigert wanneer latere wijzigingen de inverse onveilig maken. <code>focusedCanvas().undo()</code> op het moment van klikken verdwijnt uit action cards.</p>
+      </div>
+      <div class="panel">
+        <h3>Langlopend werk</h3>
+        <p>Agentstarts, Git, worktrees, exports en sommige chatoperaties leveren <code>queued</code> of <code>running</code>. Operation events werken timeline en spraak bij. Starten is niet hetzelfde als slagen.</p>
+      </div>
+      <div class="panel">
+        <h3>Bevestiging</h3>
+        <p>De action-definitie beschrijft concrete gevolgen. De UI vraagt pas bevestiging nadat targets en gevolgen vaststaan. Een model kan die bevestiging niet namens de gebruiker geven.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="catalogus">
+    <h2>Voorgestelde action-catalogus</h2>
+    <p>Onderstaande actions vormen het doelmodel. Ze hoeven niet allemaal in de eerste release klaar te zijn. Fase A bouwt de seam en migreert bestaande Voice-capabilities. Fase B dekt dagelijks workspacewerk. Fase C voegt ontwikkel- en langlopende workflows toe. Fase D bevat rijke editors en clientbeheer.</p>
+    <p><span class="badge confirmed">A</span> fundering en bestaande Voice-flow &nbsp; <span class="badge info">B</span> dagelijkse bediening &nbsp; <span class="badge warning">C</span> ontwikkelworkflows &nbsp; <span class="badge">D</span> rijke en administratieve functies</p>
+
+    <details open>
+      <summary>Catalogus, targets en operations</summary>
+      <div class="table" role="region" aria-label="Actions voor catalogus en operations" tabindex="0">
+        <table class="catalog"><thead><tr><th>Action</th><th>Wat de action doet</th><th>Effect en bescherming</th><th>Fase / adapters</th></tr></thead><tbody>
+          <tr><th><code>capability.list</code></th><td>Geeft actions terug die de actor op dit moment mag gebruiken, inclusief korte beschrijving en invoerschema.</td><td>Alleen lezen. Filtert op machine, project, focus en rechten.</td><td>A · alle adapters</td></tr>
+          <tr><th><code>capability.describe</code></th><td>Geeft het volledige contract, voorbeelden en gevolgen van één action.</td><td>Alleen lezen. Voedt CLI-help en tool discovery.</td><td>A · CLI, Voice, agents</td></tr>
+          <tr><th><code>target.resolve</code></th><td>Zet namen, "hier", "de geselecteerde chat" en andere verwijzingen om naar stabiele IDs.</td><td>Alleen lezen. Ambiguïteit levert kandidaten op.</td><td>A · Voice, palette, CLI</td></tr>
+          <tr><th><code>operation.get</code></th><td>Leest status, voortgang en resultaat van langlopend werk.</td><td>Alleen lezen. Actor ziet alleen toegestane operations.</td><td>A · alle adapters</td></tr>
+          <tr><th><code>operation.cancel</code></th><td>Vraagt een lopende action om veilig te stoppen.</td><td>Geen generieke undo. Resultaat meldt achtergebleven toestand.</td><td>A · UI, Voice, CLI</td></tr>
+          <tr><th><code>operation.confirm</code></th><td>Vervolgt of weigert een action die concrete gebruikersbevestiging nodig heeft.</td><td>Alleen menselijke adapters mogen bevestigen.</td><td>A · UI</td></tr>
+          <tr><th><code>operation.undo</code></th><td>Voert de action-gebonden inverse uit wanneer revisie en targets nog kloppen.</td><td>Weigert stale tokens en niet-herstelbare bijeffecten.</td><td>A · UI, Voice, CLI</td></tr>
+        </tbody></table>
+      </div>
+    </details>
+
+    <details open>
+      <summary>Workspace, projecten, views en splits</summary>
+      <div class="table" role="region" aria-label="Actions voor workspace projecten views en splits" tabindex="0">
+        <table class="catalog"><thead><tr><th>Action</th><th>Wat de action doet</th><th>Effect en bescherming</th><th>Fase / adapters</th></tr></thead><tbody>
+          <tr><th><code>workspace.inspect</code></th><td>Leest endpoint, project, open views, actieve cel, canvasnodes, selectie, panelen en relevante runtime-status.</td><td>Alleen lezen. Grote inhoud blijft achter <code>context.read</code> en de domeinspecifieke read-actions.</td><td>A · UI, Voice, CLI, agents</td></tr>
+          <tr><th><code>project.list</code></th><td>Leest open en recente projecten op een machine.</td><td>Alleen lezen.</td><td>B · UI, Voice</td></tr>
+          <tr><th><code>project.create</code></th><td>Registreert een nieuw project, eventueel bij een bestaande folder.</td><td>Schrijft projectmetadata. Bestanden aanmaken vraagt aparte gevolgen.</td><td>C · UI, CLI</td></tr>
+          <tr><th><code>project.open</code></th><td>Opent een bekend project of een gekozen folder in de client.</td><td>Lokale navigatie. Vorige projectcontext blijft herstelbaar.</td><td>B · UI, palette, Voice</td></tr>
+          <tr><th><code>project.close</code></th><td>Sluit een project en benoemt welke sessies blijven draaien of stoppen.</td><td>Bevestiging bij actieve sessies.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>project.delete</code></th><td>Verwijdert projectregistratie en alleen op expliciet verzoek ook bestanden.</td><td>Destructief. Exact pad en gevolgen moeten zichtbaar zijn.</td><td>D · UI</td></tr>
+          <tr><th><code>project.setAppearance</code></th><td>Wijzigt projectnaam, kleur of icoon.</td><td>Action-gebonden inverse.</td><td>B · UI, Voice</td></tr>
+          <tr><th><code>project.readSettings</code></th><td>Leest projectinstellingen en worktreeconfiguratie.</td><td>Alleen lezen. Geheimen blijven uitgesloten.</td><td>C · UI, CLI, agents</td></tr>
+          <tr><th><code>project.updateSettings</code></th><td>Wijzigt expliciete projectinstellingen.</td><td>Inverse. Rechtengevoelige velden hebben apart beleid.</td><td>D · UI</td></tr>
+          <tr><th><code>view.list</code></th><td>Leest views, soorten, IDs en sidebarvolgorde.</td><td>Alleen lezen.</td><td>A · alle adapters</td></tr>
+          <tr><th><code>view.create</code></th><td>Maakt een canvas, drawing, diagram, file, terminal, browser, chat of separator.</td><td>Inverse verwijdert de view. Een gestarte sessie heeft aparte compensatie.</td><td>A · UI, palette, CLI, Voice</td></tr>
+          <tr><th><code>view.focus</code></th><td>Toont een view in de aanroepende client en focust de juiste splitcel.</td><td>Lokale terugactie. Verandert geen projectinhoud.</td><td>A · UI, palette, CLI, Voice</td></tr>
+          <tr><th><code>view.rename</code></th><td>Geeft een view een nieuwe zichtbare naam zonder de ID te wijzigen.</td><td>Inverse bewaart de vorige naam.</td><td>A · UI, palette, CLI, Voice</td></tr>
+          <tr><th><code>view.setIcon</code></th><td>Stelt een Lucide-icoon of emoji in, of herstelt de standaard.</td><td>Inverse.</td><td>B · UI, CLI, Voice</td></tr>
+          <tr><th><code>view.move</code></th><td>Verplaatst een view naar een concrete positie in de sidebar.</td><td>Inverse bewaart de vorige index.</td><td>B · UI, CLI, Voice</td></tr>
+          <tr><th><code>view.duplicate</code></th><td>Dupliceert een view en ondersteunde inhoud met nieuwe IDs.</td><td>Inverse. Sessieviews starten niet stilzwijgend een tweede proces.</td><td>B · UI, Voice</td></tr>
+          <tr><th><code>view.update</code></th><td>Wijzigt ondersteunde viewgegevens, zoals browser-URL of standalone sessieconfiguratie.</td><td>Inverse voor documentvelden. Runtimewijzigingen zijn aparte actions.</td><td>B · UI, Voice</td></tr>
+          <tr><th><code>view.delete</code></th><td>Verwijdert een view en rapporteert welke nodes, links en sessies geraakt worden.</td><td>Destructief bij inhoud of sessies. Gevolgen eerst bevestigen.</td><td>B · UI, palette, CLI, Voice</td></tr>
+          <tr><th><code>view.placeOnCanvas</code></th><td>Verplaatst een standalone terminal- of chatview naar een canvas met behoud van sessie-ID.</td><td>Inverse. Linkgevolgen worden vermeld.</td><td>B · UI, palette, Voice</td></tr>
+          <tr><th><code>view.showOnCanvas</code></th><td>Maakt een canvasnode die verwijst naar een drawing, diagram of bestand.</td><td>Inverse verwijdert alleen de verwijzing.</td><td>B · UI, CLI, Voice</td></tr>
+          <tr><th><code>split.create</code></th><td>Plaatst een view links, rechts, boven of onder de gefocuste cel.</td><td>Lokale layoutactie met terugactie.</td><td>B · UI, sneltoets, Voice</td></tr>
+          <tr><th><code>split.close</code></th><td>Sluit een splitcel zonder de onderliggende view te verwijderen.</td><td>Lokale terugactie.</td><td>B · UI, sneltoets, Voice</td></tr>
+          <tr><th><code>split.focus</code></th><td>Verplaatst focus naar een cel of richting.</td><td>Alleen lokale presentatie.</td><td>B · UI, sneltoets, Voice</td></tr>
+          <tr><th><code>split.resize</code></th><td>Wijzigt de verhouding tussen kolommen of cellen.</td><td>Lokale inverse.</td><td>D · UI</td></tr>
+          <tr><th><code>split.placeView</code></th><td>Plaatst een bestaande view in een gekozen cel of randzone.</td><td>Lokale inverse. Capaciteitsregels blijven gelden.</td><td>B · UI, Voice</td></tr>
+        </tbody></table>
+      </div>
+    </details>
+
+    <details open>
+      <summary>Canvas, nodes, groepen, links en layouts</summary>
+      <div class="table" role="region" aria-label="Actions voor canvas nodes groepen links en layouts" tabindex="0">
+        <table class="catalog"><thead><tr><th>Action</th><th>Wat de action doet</th><th>Effect en bescherming</th><th>Fase / adapters</th></tr></thead><tbody>
+          <tr><th><code>node.list</code></th><td>Leest nodes met ID, type, titel, positie, groep en relevante status.</td><td>Alleen lezen.</td><td>A · UI, CLI, Voice, agents</td></tr>
+          <tr><th><code>node.read</code></th><td>Leest eigenschappen en toegestane inhoud van één node.</td><td>Alleen lezen. Chat- en terminalinhoud volgt eigen rechten.</td><td>B · UI, CLI, Voice, agents</td></tr>
+          <tr><th><code>node.create</code></th><td>Maakt note, browser, file, terminal, chat, drawing-, diagram- of groupnode op een expliciet canvas. Plaatsing gebruikt vrije ruimte of een opgegeven anker.</td><td>Inverse. Een gestart proces wordt apart gestopt.</td><td>A · UI, palette, CLI, Voice</td></tr>
+          <tr><th><code>node.rename</code></th><td>Hernoemt een node zonder identiteit of sessie te wijzigen.</td><td>Inverse.</td><td>A · UI, CLI, Voice</td></tr>
+          <tr><th><code>node.update</code></th><td>Wijzigt ondersteunde velden zoals notitie-inhoud, kleur, URL, cwd of command.</td><td>Inverse voor documentvelden. Actieve runtimes blijven apart.</td><td>B · UI, Voice</td></tr>
+          <tr><th><code>node.select</code></th><td>Selecteert aangewezen nodes, vervangend of aanvullend.</td><td>Lokale terugactie.</td><td>B · UI, sneltoets, Voice</td></tr>
+          <tr><th><code>node.focus</code></th><td>Selecteert een node en brengt hem in beeld.</td><td>Lokale terugactie.</td><td>A · UI, CLI, Voice</td></tr>
+          <tr><th><code>node.enter</code></th><td>Verplaatst invoerfocus naar de inhoud van een node.</td><td>Alleen lokale presentatie.</td><td>B · UI, sneltoets, Voice</td></tr>
+          <tr><th><code>node.exit</code></th><td>Verlaat node-invoerfocus en geeft toetsen terug aan het canvas.</td><td>Alleen lokale presentatie.</td><td>B · UI, sneltoets, Voice</td></tr>
+          <tr><th><code>node.move</code></th><td>Verplaatst nodes naar posities of met een offset.</td><td>Inverse bewaart vorige geometrie.</td><td>B · UI, Voice</td></tr>
+          <tr><th><code>node.resize</code></th><td>Wijzigt afmetingen binnen geldige minimum- en maximumwaarden.</td><td>Inverse.</td><td>D · UI, Voice</td></tr>
+          <tr><th><code>node.bringToFront</code></th><td>Zet een node boven andere canvasinhoud.</td><td>Inverse bewaart vorige volgorde.</td><td>D · UI</td></tr>
+          <tr><th><code>node.duplicate</code></th><td>Maakt een documentkopie met een vrije plaats en nieuwe ID.</td><td>Inverse. Een runtime wordt niet gekloond zonder expliciete semantiek.</td><td>B · UI, sneltoets, Voice</td></tr>
+          <tr><th><code>node.moveToView</code></th><td>Verplaatst een node naar een ander canvas met behoud van ID en sessie.</td><td>Inverse. Verbroken links worden vooraf gemeld.</td><td>B · UI, palette, Voice</td></tr>
+          <tr><th><code>node.promoteToView</code></th><td>Maakt van een canvasnode een standalone view.</td><td>Inverse. Link- en groepsgevolgen zichtbaar maken.</td><td>B · UI, palette, Voice</td></tr>
+          <tr><th><code>node.arrange</code></th><td>Rangschikt opgegeven nodes in rij, kolom of grid zonder overlap.</td><td>Inverse bewaart alle vorige posities.</td><td>B · CLI, Voice, UI</td></tr>
+          <tr><th><code>node.delete</code></th><td>Verwijdert expliciete nodes. <code>deleteMode</code> bepaalt of een groepsframe alleen of samen met leden verdwijnt.</td><td>Gevolgen bij sessies. Documentinverse herstart geen processen.</td><td>B · UI, sneltoets, CLI, Voice</td></tr>
+          <tr><th><code>group.create</code></th><td>Plaatst een frame rond aangewezen nodes en geeft het optioneel label en kleur.</td><td>Inverse verwijdert alleen het frame.</td><td>A · UI, palette, CLI, Voice</td></tr>
+          <tr><th><code>group.setCollapsed</code></th><td>Klapt een groep in of uit en bewaart leden en hoogte correct.</td><td>Inverse.</td><td>B · UI, Voice</td></tr>
+          <tr><th><code>group.bindWorktree</code></th><td>Koppelt een groep aan een worktree zodat nieuwe sessies daar starten.</td><td>Inverse. Bestaande sessies veranderen niet stilzwijgend van cwd.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>group.unbindWorktree</code></th><td>Verwijdert de groepskoppeling maar behoudt checkout en branch.</td><td>Inverse.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>link.list</code></th><td>Leest gerichte contextlinks met IDs, endpoints en labels.</td><td>Alleen lezen.</td><td>B · UI, CLI, Voice, agents</td></tr>
+          <tr><th><code>link.create</code></th><td>Maakt één of twee gerichte links tussen nodes.</td><td>Inverse. Nieuwe contexttoegang is een zichtbaar gevolg.</td><td>B · UI, CLI, Voice</td></tr>
+          <tr><th><code>link.delete</code></th><td>Verwijdert een specifieke link.</td><td>Inverse zolang beide doelen bestaan.</td><td>B · UI, CLI, Voice</td></tr>
+          <tr><th><code>link.setLabel</code></th><td>Wijzigt of wist het zichtbare label van een link.</td><td>Inverse.</td><td>D · UI, Voice</td></tr>
+          <tr><th><code>canvasText.create</code></th><td>Voegt losse tekst op het canvas toe.</td><td>Inverse.</td><td>B · UI, palette, Voice</td></tr>
+          <tr><th><code>canvasText.update</code></th><td>Wijzigt tekst, stijl of positie van los canvastext.</td><td>Inverse.</td><td>D · UI, Voice</td></tr>
+          <tr><th><code>canvasText.delete</code></th><td>Verwijdert aangewezen losse teksten.</td><td>Inverse.</td><td>D · UI, sneltoets, Voice</td></tr>
+          <tr><th><code>canvas.fit</code></th><td>Brengt alle canvasinhoud in beeld.</td><td>Alleen lokale camera.</td><td>A · UI, sneltoets, Voice</td></tr>
+          <tr><th><code>canvas.zoom</code></th><td>Stelt zoom in, herstelt 100% of zoomt naar selectie.</td><td>Alleen lokale camera.</td><td>B · UI, sneltoets, Voice</td></tr>
+          <tr><th><code>canvas.pan</code></th><td>Verplaatst de camera naar een doel of met een offset.</td><td>Alleen lokale camera.</td><td>D · UI, Voice</td></tr>
+          <tr><th><code>canvas.setLocks</code></th><td>Zet pan-, zoom-, move- en resizelocks gericht aan of uit.</td><td>Lokale inverse.</td><td>B · UI, palette, Voice</td></tr>
+          <tr><th><code>layout.list</code></th><td>Leest opgeslagen canvaslayouts.</td><td>Alleen lezen.</td><td>B · UI, palette, Voice</td></tr>
+          <tr><th><code>layout.save</code></th><td>Bewaart huidige geometrie onder een naam.</td><td>Inverse. Overschrijven vraagt een concreet besluit.</td><td>B · UI, palette, Voice</td></tr>
+          <tr><th><code>layout.apply</code></th><td>Past een benoemde layout toe.</td><td>Inverse bewaart de vorige geometrie.</td><td>B · UI, palette, Voice</td></tr>
+          <tr><th><code>layout.delete</code></th><td>Verwijdert één opgeslagen layout.</td><td>Inverse of bevestiging wanneer herstel niet wordt opgeslagen.</td><td>B · UI, palette, Voice</td></tr>
+          <tr><th><code>history.undo</code></th><td>Draait een specifieke herstelbare action terug via token.</td><td>Revisiecontrole voorkomt verkeerd canvas of verkeerde action.</td><td>A · UI, sneltoets, Voice</td></tr>
+          <tr><th><code>history.redo</code></th><td>Herhaalt een teruggedraaide action wanneer context nog geldig is.</td><td>Dezelfde revisiecontrole.</td><td>B · UI, sneltoets, Voice</td></tr>
+        </tbody></table>
+      </div>
+    </details>
+
+    <details open>
+      <summary>Agents, chats, terminals, context, taken en plannen</summary>
+      <div class="table" role="region" aria-label="Actions voor agents chats terminals context taken en plannen" tabindex="0">
+        <table class="catalog"><thead><tr><th>Action</th><th>Wat de action doet</th><th>Effect en bescherming</th><th>Fase / adapters</th></tr></thead><tbody>
+          <tr><th><code>provider.list</code></th><td>Leest geïnstalleerde agentproviders en ondersteunde chat- en terminaltargets.</td><td>Alleen lezen. Geen verzonnen provider- of modelmapping.</td><td>B · UI, Voice, CLI</td></tr>
+          <tr><th><code>skill.list</code></th><td>Leest skills die een specifieke chat mag gebruiken.</td><td>Alleen lezen.</td><td>C · UI, Voice, agents</td></tr>
+          <tr><th><code>agent.start</code></th><td>Start één agent met provider, nodevorm, prompt, cwd, rechten, taak en optionele worktree.</td><td>Langlopend. Stop is compensatie, geen undo.</td><td>B · UI, palette, CLI, Voice</td></tr>
+          <tr><th><code>agent.resume</code></th><td>Hervat een bestaande providersessie in een nieuwe of herstelde node.</td><td>Langlopend. Exact sessiedoel vereist.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>agent.children</code></th><td>Leest agents die door een gekozen agent zijn gestart.</td><td>Alleen lezen en eigenaarschap toepassen.</td><td>C · UI, Voice, agents</td></tr>
+          <tr><th><code>agent.notify</code></th><td>Levert een korte melding aan een gelinkte agent en meldt delivered, queued of refused.</td><td>Geen undo. Alleen toegestane linkrichting.</td><td>C · CLI, Voice, agents</td></tr>
+          <tr><th><code>agent.answerApproval</code></th><td>Beantwoordt één open terminalgoedkeuring met het exacte request-ID.</td><td>Alleen na menselijke keuze. Voice mag vragen, niet zelf goedkeuren.</td><td>C · UI</td></tr>
+          <tr><th><code>team.start</code></th><td>Start meerdere rollen in een groep, met optionele taken en worktrees.</td><td>Langlopend. Eerst alle rollen valideren, daarna atomair starten.</td><td>C · CLI, Voice</td></tr>
+          <tr><th><code>context.list</code></th><td>Leest bronnen die een actor via contextlinks mag benaderen.</td><td>Alleen lezen. Linkbeleid bepaalt zichtbaarheid.</td><td>B · CLI, Voice, agents</td></tr>
+          <tr><th><code>context.read</code></th><td>Leest toegestane note-, file-, terminal-, chat-, drawing- of diagraminhoud, eventueel begrensd.</td><td>Alleen lezen. Geheimen en niet-gelinkte bronnen blijven buiten bereik.</td><td>B · CLI, Voice, agents</td></tr>
+          <tr><th><code>chat.list</code></th><td>Leest chats, provider en runtime-status.</td><td>Alleen lezen.</td><td>B · UI, Voice</td></tr>
+          <tr><th><code>chat.readHistory</code></th><td>Leest gepagineerde chathistorie.</td><td>Alleen lezen. Actor moet toegang tot de chat hebben.</td><td>C · UI, Voice, agents</td></tr>
+          <tr><th><code>chat.send</code></th><td>Verstuurt een directe prompt met ondersteunde mentions, skills en attachments.</td><td>Kan queued of running teruggeven. Gestart werk is niet undoable.</td><td>A · UI, CLI-adapter, Voice</td></tr>
+          <tr><th><code>chat.unqueue</code></th><td>Haalt een nog niet uitgevoerde prompt uit de wachtrij.</td><td>Herstelt tekst als concept waar mogelijk.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>chat.sendNow</code></th><td>Laat een specifiek wachtrijbericht direct uitvoeren.</td><td>Langlopend. Exact bericht-ID.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>chat.cancel</code></th><td>Stopt de huidige beurt met een expliciete keuze voor subagents.</td><td>Destructief voor runtime. Geen undo.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>chat.stopSubagent</code></th><td>Stopt één gedelegeerde subagent.</td><td>Geen undo. Exact child-ID en gevolg tonen.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>chat.readSubagent</code></th><td>Leest voortgang en resultaat van een subagent.</td><td>Alleen lezen.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>chat.answerQuestion</code></th><td>Beantwoordt een concrete open vraag van een agent.</td><td>Geen undo. Vraag-ID en opties valideren.</td><td>C · UI, Voice met bevestigde gebruikerstaal</td></tr>
+          <tr><th><code>chat.answerApproval</code></th><td>Beantwoordt een concrete toolgoedkeuring.</td><td>Alleen menselijke beslissing. Voice mag nooit raden.</td><td>C · UI</td></tr>
+          <tr><th><code>chat.configure</code></th><td>Wijzigt provider, model, reasoning en ondersteunde runtime-instellingen.</td><td>Inverse. Rechtenvelden volgen apart actorbeleid.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>chat.compact</code></th><td>Laat de chatcontext comprimeren en rapporteert voltooiing.</td><td>Langlopend, geen gewone undo.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>chat.clear</code></th><td>Reset een chat en benoemt actieve beurt, subagents en historie die verdwijnen.</td><td>Destructief. Concrete bevestiging.</td><td>D · UI, Voice</td></tr>
+          <tr><th><code>chat.fork</code></th><td>Maakt een vervolgchat vanaf een beurt, met optionele samenvatting en worktree.</td><td>Langlopend. Nieuwe middelen kunnen apart worden verwijderd.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>chat.turnDiff</code></th><td>Leest de bestandswijzigingen die bij een chatbeurt horen.</td><td>Alleen lezen.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>terminal.list</code></th><td>Leest terminals en runtime-status.</td><td>Alleen lezen.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>terminal.start</code></th><td>Start een shell met expliciete cwd en optioneel initieel command.</td><td>Langlopend. Command kan bijeffecten hebben.</td><td>B · UI, palette, Voice</td></tr>
+          <tr><th><code>terminal.readOutput</code></th><td>Leest begrensde recente uitvoer van een toegestane terminal.</td><td>Alleen lezen en terminaltoegang controleren.</td><td>B · UI, CLI, Voice, agents</td></tr>
+          <tr><th><code>terminal.write</code></th><td>Stuurt tekst of een toets naar één terminal.</td><td>Hoog risico omdat shellinvoer willekeurig werk kan uitvoeren. Actorbeleid en bevestiging voor onveilige commands.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>terminal.clear</code></th><td>Wist de terminalbuffer volgens de bestaande sessiesemantiek.</td><td>Niet herstelbaar. Geen processtop.</td><td>D · UI, Voice</td></tr>
+          <tr><th><code>terminal.stop</code></th><td>Beëindigt een shell of terminalagent.</td><td>Destructief voor runtime. Gevolgen bevestigen bij lopend werk.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>task.list</code></th><td>Leest taken, status, parent, child en resultaat.</td><td>Alleen lezen.</td><td>C · UI, CLI, Voice, agents</td></tr>
+          <tr><th><code>task.complete</code></th><td>Rapporteert het resultaat van de taak van de caller en wekt de ouder.</td><td>Callergebonden, geen gewone undo.</td><td>C · CLI, agents</td></tr>
+          <tr><th><code>plan.list</code></th><td>Leest plannen bij een expliciete chat.</td><td>Alleen lezen.</td><td>B · UI, CLI, Voice</td></tr>
+          <tr><th><code>plan.read</code></th><td>Leest planmetadata, structuur, status en item-IDs.</td><td>Alleen lezen.</td><td>B · UI, CLI, Voice, agents</td></tr>
+          <tr><th><code>plan.create</code></th><td>Maakt een stappen- of testplan uit een gevalideerd document of markdown.</td><td>Inverse verwijdert het nieuwe plan.</td><td>B · CLI, Voice, agents</td></tr>
+          <tr><th><code>plan.setStepState</code></th><td>Wijzigt een of meer stappen en respecteert checks, parentstate en menselijke locks.</td><td>Inverse als de revisie nog klopt. Person-only blijft person-only.</td><td>B · UI, CLI, Voice, agents</td></tr>
+          <tr><th><code>plan.addNote</code></th><td>Schrijft of wist de notitie bij een stap.</td><td>Inverse.</td><td>B · UI, CLI, Voice, agents</td></tr>
+          <tr><th><code>plan.addItem</code></th><td>Voegt een section, textblok of stap op een gekozen positie toe.</td><td>Inverse.</td><td>B · CLI, Voice, agents</td></tr>
+          <tr><th><code>plan.editItem</code></th><td>Wijzigt titel, beschrijving of checkbeleid van een item.</td><td>Inverse. Actorbeleid voor checks.</td><td>B · CLI, Voice, agents</td></tr>
+          <tr><th><code>plan.moveItem</code></th><td>Verplaatst een item met kinderen binnen de planstructuur.</td><td>Inverse en cyclische structuur weigeren.</td><td>B · CLI, Voice, agents</td></tr>
+          <tr><th><code>plan.removeItem</code></th><td>Verwijdert een item en zijn kinderen.</td><td>Destructief. Bestaande person-states beschermen.</td><td>B · CLI, Voice, agents</td></tr>
+          <tr><th><code>plan.setStatus</code></th><td>Wijzigt de korte statusregel van een plan.</td><td>Inverse.</td><td>B · CLI, Voice, agents</td></tr>
+          <tr><th><code>plan.delete</code></th><td>Verwijdert een volledig plan.</td><td>Destructief. Planinhoud en chat benoemen.</td><td>B · CLI, Voice</td></tr>
+        </tbody></table>
+      </div>
+    </details>
+
+    <details open>
+      <summary>Bestanden, notes, drawings, diagrams en browser</summary>
+      <div class="table" role="region" aria-label="Actions voor bestanden notes drawings diagrams en browser" tabindex="0">
+        <table class="catalog"><thead><tr><th>Action</th><th>Wat de action doet</th><th>Effect en bescherming</th><th>Fase / adapters</th></tr></thead><tbody>
+          <tr><th><code>file.browse</code></th><td>Leest folders en bestanden voor navigatie.</td><td>Alleen lezen en binnen toegestane roots.</td><td>C · UI, Voice, agents</td></tr>
+          <tr><th><code>file.searchNames</code></th><td>Zoekt bestanden en folders op naam.</td><td>Alleen lezen, begrensd resultaat.</td><td>C · UI, Voice, agents</td></tr>
+          <tr><th><code>file.searchContents</code></th><td>Zoekt tekst in projectbestanden en retourneert regels met context.</td><td>Alleen lezen, respects ignore en limieten.</td><td>B · UI, palette, Voice, agents</td></tr>
+          <tr><th><code>file.read</code></th><td>Leest begrensde tekst of ondersteunde bestandsinhoud.</td><td>Alleen lezen en paden valideren.</td><td>B · UI, Voice, agents</td></tr>
+          <tr><th><code>file.preview</code></th><td>Opent een bestand op een regel in het filespanel.</td><td>Lokale presentatie.</td><td>B · UI, palette, Voice</td></tr>
+          <tr><th><code>file.reveal</code></th><td>Toont een bestand in het filespanel of OS-bestandsbeheer.</td><td>Lokale presentatie.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>file.showOnCanvas</code></th><td>Maakt een read-only bestandsnode voor een bestaand pad.</td><td>Inverse verwijdert de node, niet het bestand.</td><td>B · UI, CLI, Voice</td></tr>
+          <tr><th><code>file.openAsView</code></th><td>Maakt een bestandsview voor een bestaand pad.</td><td>Inverse verwijdert de view, niet het bestand.</td><td>B · UI, CLI, Voice</td></tr>
+          <tr><th><code>file.copyPath</code></th><td>Kopieert een relatief of absoluut bestandspad.</td><td>Lokale clipboardactie.</td><td>D · UI, Voice</td></tr>
+          <tr><th><code>note.setContent</code></th><td>Vervangt of voegt inhoud toe aan een notitienode.</td><td>Inverse bewaart vorige tekst. Expliciete append of replace.</td><td>B · UI, Voice, agents</td></tr>
+          <tr><th><code>drawing.read</code></th><td>Leest elementen, stijl en selectie van een drawing.</td><td>Alleen lezen.</td><td>D · UI, CLI, Voice</td></tr>
+          <tr><th><code>drawing.addElements</code></th><td>Voegt vormen, lijnen, tekst, notes of freehanddata als afgeronde elementen toe.</td><td>Inverse. Geen pointerframes in de registry.</td><td>D · UI, Voice</td></tr>
+          <tr><th><code>drawing.updateElements</code></th><td>Wijzigt tekst, stijl, geometrie of positie van aangewezen elementen.</td><td>Inverse met elementrevisie.</td><td>D · UI, Voice</td></tr>
+          <tr><th><code>drawing.deleteElements</code></th><td>Verwijdert exact aangewezen elementen.</td><td>Inverse.</td><td>D · UI, sneltoets, Voice</td></tr>
+          <tr><th><code>drawing.duplicateElements</code></th><td>Dupliceert elementen met nieuwe IDs en verschoven plaatsing.</td><td>Inverse.</td><td>D · UI, sneltoets, Voice</td></tr>
+          <tr><th><code>drawing.setOrder</code></th><td>Zet elementen naar voren of achteren.</td><td>Inverse.</td><td>D · UI, Voice</td></tr>
+          <tr><th><code>drawing.setLocked</code></th><td>Vergrendelt of ontgrendelt elementen.</td><td>Inverse.</td><td>D · UI, sneltoets, Voice</td></tr>
+          <tr><th><code>drawing.replaceContent</code></th><td>Vervangt het volledige drawingdocument met revisiecontrole.</td><td>Destructief voor bestaande inhoud. Documentinverse of bevestiging.</td><td>D · CLI, Voice, agents</td></tr>
+          <tr><th><code>drawing.export</code></th><td>Kopieert of bewaart PNG of SVG.</td><td>Langlopend. Overschrijven alleen na concreet bestandspad.</td><td>D · UI, Voice</td></tr>
+          <tr><th><code>diagram.read</code></th><td>Leest nodes, groepen, edges en metadata van een diagram.</td><td>Alleen lezen.</td><td>D · UI, CLI, Voice</td></tr>
+          <tr><th><code>diagram.replaceContent</code></th><td>Vervangt het hele diagram door gevalideerde JSON.</td><td>Destructief voor bestaande inhoud. Revisie en bevestiging.</td><td>D · UI, CLI, Voice, agents</td></tr>
+          <tr><th><code>diagram.updateNode</code></th><td>Wijzigt label, kleur of handmatige positie van een diagramnode.</td><td>Inverse.</td><td>D · UI, Voice</td></tr>
+          <tr><th><code>diagram.resetPosition</code></th><td>Geeft een node terug aan automatische layout.</td><td>Inverse.</td><td>D · UI, Voice</td></tr>
+          <tr><th><code>diagram.export</code></th><td>Kopieert of bewaart JSON, PNG of SVG.</td><td>Langlopend. Overschrijven concreet bevestigen.</td><td>D · UI, Voice</td></tr>
+          <tr><th><code>editor.fit</code></th><td>Brengt drawing- of diagraminhoud in beeld.</td><td>Alleen lokale camera.</td><td>D · UI, sneltoets, Voice</td></tr>
+          <tr><th><code>editor.zoom</code></th><td>Stelt editorzoom in of zoomt naar selectie.</td><td>Alleen lokale camera.</td><td>D · UI, sneltoets, Voice</td></tr>
+          <tr><th><code>browser.navigate</code></th><td>Navigeert een browsernode of -view naar een geldig adres.</td><td>Browsergeschiedenis is terugactie. URL-beleid toepassen.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>browser.back</code></th><td>Gaat terug in browsergeschiedenis.</td><td>Lokale navigatie.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>browser.forward</code></th><td>Gaat vooruit in browsergeschiedenis.</td><td>Lokale navigatie.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>browser.reload</code></th><td>Herlaadt de huidige pagina.</td><td>Lokale navigatie.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>browser.openBeside</code></th><td>Opent een webadres in een nieuwe browsernode naast het bronobject.</td><td>Inverse verwijdert de nieuwe node.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>browser.openExternal</code></th><td>Opent het adres in de systeembrowser.</td><td>Externe lokale actie. Geen undo.</td><td>D · UI, Voice</td></tr>
+        </tbody></table>
+      </div>
+      <p class="note">Ruimte heeft nu geen algemene gebruikersactions voor <code>file.write</code>, <code>file.rename</code> of <code>file.delete</code>, en ook geen browseragent die pagina's leest, klikt of formulieren invult. Voeg die later als nieuw productontwerp toe, niet als vermeende bestaande capability.</p>
+    </details>
+
+    <details open>
+      <summary>Git, worktrees, processen, usage en clientbediening</summary>
+      <div class="table" role="region" aria-label="Actions voor Git worktrees processen usage en clientbediening" tabindex="0">
+        <table class="catalog"><thead><tr><th>Action</th><th>Wat de action doet</th><th>Effect en bescherming</th><th>Fase / adapters</th></tr></thead><tbody>
+          <tr><th><code>git.status</code></th><td>Leest branch, dirty state, staged en unstaged bestanden.</td><td>Alleen lezen.</td><td>C · UI, Voice, agents</td></tr>
+          <tr><th><code>git.diff</code></th><td>Leest verschillen voor bestand, commit, worktree of basis.</td><td>Alleen lezen en output begrenzen.</td><td>C · UI, Voice, agents</td></tr>
+          <tr><th><code>git.refs</code></th><td>Leest branches, remotes en stashes.</td><td>Alleen lezen.</td><td>C · UI, Voice, agents</td></tr>
+          <tr><th><code>git.log</code></th><td>Leest gepagineerde commitgeschiedenis.</td><td>Alleen lezen.</td><td>C · UI, Voice, agents</td></tr>
+          <tr><th><code>git.stage</code></th><td>Stage't exact opgegeven bestanden.</td><td>Inverse via unstage als index nog klopt.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>git.unstage</code></th><td>Haalt exacte bestanden uit de index.</td><td>Inverse via stage als inhoud nog klopt.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>git.discard</code></th><td>Verwerpt opgegeven wijzigingen en rapporteert eventueel een herstelstash.</td><td>Destructief. Bestanden en herstelpad bevestigen.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>git.fetch</code></th><td>Haalt remote refs op.</td><td>Langlopend, geen gewone undo.</td><td>C · UI, Voice, agents</td></tr>
+          <tr><th><code>git.pull</code></th><td>Integreert remote wijzigingen in de checkout.</td><td>Langlopend. Dirty state en conflictstrategie vooraf valideren.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>git.push</code></th><td>Publiceert commits naar een bestaande upstream.</td><td>Externe write, geen gewone undo.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>git.publishBranch</code></th><td>Publiceert een branch en stelt upstream in.</td><td>Externe write. Exacte remote en branch tonen.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>git.forcePush</code></th><td>Vervangt remote historie volgens ondersteunde lease-semantiek.</td><td>Destructief. Altijd expliciete menselijke bevestiging.</td><td>D · UI</td></tr>
+          <tr><th><code>git.sync</code></th><td>Voert de ondersteunde pull- en pushworkflow uit.</td><td>Langlopend. Iedere fase zichtbaar.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>git.checkout</code></th><td>Wisselt branch en kan dirty werk expliciet stashen.</td><td>Terugcheckout is mogelijk als state dat toelaat.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>git.createBranch</code></th><td>Maakt een branch vanaf een gekozen ref.</td><td>Inverse verwijdert alleen een ongebruikte branch.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>git.renameBranch</code></th><td>Hernoemt een lokale branch.</td><td>Inverse.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>git.deleteBranch</code></th><td>Verwijdert een branch, met apart forcebeleid.</td><td>Destructief. Laat commit en merge-status zien.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>git.merge</code></th><td>Voegt een branch samen met de huidige checkout.</td><td>Langlopend. Conflictstatus en herstelactie teruggeven.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>git.rebase</code></th><td>Herbaseert commits op een gekozen basis.</td><td>Destructief voor historie. Menselijke bevestiging.</td><td>D · UI</td></tr>
+          <tr><th><code>git.stash</code></th><td>Bewaart werk onder een herkenbaar bericht.</td><td>Herstel via pop of apply.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>git.popStash</code></th><td>Past een specifieke stash toe en verwijdert hem bij succes.</td><td>Conflicten mogelijk, geen simpele inverse.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>git.suggestCommitMessage</code></th><td>Maakt een commitberichtvoorstel uit de gekozen diff.</td><td>Alleen lezen plus modelwerk. Verstuurt niets.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>git.commit</code></th><td>Maakt een commit van de index of expliciet alle wijzigingen.</td><td>Exacte bestanden en bericht tonen. Git-herstel, geen canvasundo.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>git.commitAndPush</code></th><td>Commit en publiceert in één gevolgde operation.</td><td>Langlopend en externe write. Fases afzonderlijk rapporteren.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>git.createPullRequest</code></th><td>Publiceert zo nodig en maakt een PR met titel en body.</td><td>Externe write. Resultaat bevat URL.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>worktree.list</code></th><td>Leest worktrees, branches, eigenaar, dirty state en commits.</td><td>Alleen lezen.</td><td>C · UI, CLI, Voice, agents</td></tr>
+          <tr><th><code>worktree.create</code></th><td>Maakt een checkout op een nieuwe of bestaande branch.</td><td>Langlopend. Pad blijft binnen beheerde worktreeroot.</td><td>C · UI, Voice, agents</td></tr>
+          <tr><th><code>worktree.diff</code></th><td>Leest alle wijzigingen sinds de vastgelegde basis.</td><td>Alleen lezen.</td><td>C · UI, CLI, Voice, agents</td></tr>
+          <tr><th><code>worktree.merge</code></th><td>Voegt werk samen met strategie en expliciet cleanupbeleid.</td><td>Langlopend. Conflicten, actieve agent en dirty state vooraf tonen.</td><td>C · UI, CLI, Voice</td></tr>
+          <tr><th><code>worktree.abortMerge</code></th><td>Breekt een lopende worktree-merge af.</td><td>Resultaat meldt resterende toestand.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>worktree.remove</code></th><td>Verwijdert checkout en optioneel branch.</td><td>Destructief. Dirty werk en actieve sessies bevestigen.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>process.list</code></th><td>Leest processen en resourcegebruik binnen Ruimte of de hele machine.</td><td>Alleen lezen. Scope volgt actorbeleid.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>process.signal</code></th><td>Stuurt SIGINT, SIGTERM of SIGKILL naar een exact proces.</td><td>Destructief. PID, naam, eigenaar en signaal bevestigen.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>process.listAlerts</code></th><td>Leest resource- en sessiewaarschuwingen.</td><td>Alleen lezen.</td><td>C · UI, Voice</td></tr>
+          <tr><th><code>process.dismissAlert</code></th><td>Sluit één waarschuwing.</td><td>Lokale/persistente presentatiewijziging.</td><td>D · UI, Voice</td></tr>
+          <tr><th><code>usage.summary</code></th><td>Leest beschikbare kosten-, token- en planinformatie.</td><td>Alleen lezen. Geen geheimen retourneren.</td><td>D · UI, Voice</td></tr>
+          <tr><th><code>usage.limits</code></th><td>Leest of ververst providerlimieten.</td><td>Alleen lezen, mogelijk langlopend.</td><td>D · UI, Voice</td></tr>
+          <tr><th><code>ui.openPanel</code></th><td>Toont files, Git, processen, usage of instellingen in de aanroepende client.</td><td>Alleen lokale presentatie.</td><td>B · UI, palette, Voice</td></tr>
+          <tr><th><code>ui.closePanel</code></th><td>Sluit een gekozen paneel.</td><td>Lokale terugactie.</td><td>B · UI, Voice</td></tr>
+          <tr><th><code>ui.setSidebarVisible</code></th><td>Toont of verbergt de sidebar.</td><td>Lokale inverse.</td><td>B · UI, sneltoets, Voice</td></tr>
+          <tr><th><code>ui.showShortcuts</code></th><td>Opent de sneltoetsensectie.</td><td>Alleen lokale presentatie.</td><td>D · UI, palette, Voice</td></tr>
+          <tr><th><code>ui.setTheme</code></th><td>Stelt licht, donker of systeemthema in.</td><td>Lokale inverse.</td><td>D · UI, palette, Voice</td></tr>
+          <tr><th><code>voice.start</code></th><td>Start een voicesessie met de gekozen microfoon en voorkeuren.</td><td>Langlopend. Alleen handmatige UI of sneltoets.</td><td>D · UI, sneltoets</td></tr>
+          <tr><th><code>voice.stop</code></th><td>Beëindigt de actieve voicesessie.</td><td>Veilige lokale stop. Voice zelf mag deze action aanvragen.</td><td>D · UI, sneltoets, Voice</td></tr>
+        </tbody></table>
+      </div>
+    </details>
+  </section>
+
+  <section id="voice-tools">
+    <h2>Hoe de registry naar Voice-tools wordt vertaald</h2>
+    <p>Voice krijgt niet één vrije <code>execute_action</code>-tool en ook niet de volledige catalogus in iedere beurt. De adapter exposeert onderstaande domeintools en vult hun action-enums vanuit <code>capability.list</code>. De coordinator valideert daarna opnieuw. Discovery is dus gebruiksgemak, geen beveiligingslaag.</p>
+    <div class="table" role="region" aria-label="Voice domeintools" tabindex="0">
+      <table class="wide"><thead><tr><th>Voice-tool</th><th>Registry-actions</th><th>Wanneer beschikbaar</th></tr></thead><tbody>
+        <tr><th><code>inspect_workspace</code></th><td><code>workspace.inspect</code>, <code>capability.list</code></td><td>Altijd binnen een project.</td></tr>
+        <tr><th><code>resolve_target</code></th><td><code>target.resolve</code></td><td>Wanneer een naam, verwijzing of selectie ambigu kan zijn.</td></tr>
+        <tr><th><code>read_resource</code></th><td><code>context.*</code>, <code>node.read</code>, <code>file.*</code>, <code>terminal.readOutput</code>, <code>git.diff</code></td><td>Alleen bronnen die de actor mag lezen.</td></tr>
+        <tr><th><code>manage_views</code></th><td><code>project.*</code>, <code>view.*</code>, <code>split.*</code></td><td>Acties gefilterd op huidige machine en client.</td></tr>
+        <tr><th><code>manage_canvas</code></th><td><code>node.*</code>, <code>group.*</code>, <code>link.*</code>, <code>canvas.*</code>, <code>layout.*</code></td><td>Wanneer een canvas of expliciet canvas-ID beschikbaar is.</td></tr>
+        <tr><th><code>edit_content</code></th><td><code>note.*</code>, <code>drawing.*</code>, <code>diagram.*</code></td><td>Alleen voor ondersteunde inhoud en revisies.</td></tr>
+        <tr><th><code>communicate</code></th><td><code>chat.*</code>, <code>terminal.*</code>, <code>context.*</code></td><td>Gericht op één chat, terminal of gelinkte actor.</td></tr>
+        <tr><th><code>manage_agents</code></th><td><code>provider.*</code>, <code>agent.*</code>, <code>team.*</code>, <code>task.*</code></td><td>Alleen providers en modes die de gebruiker toestaat.</td></tr>
+        <tr><th><code>manage_plans</code></th><td><code>plan.*</code></td><td>Wanneer een chatdoel en plancontext bekend zijn.</td></tr>
+        <tr><th><code>developer_workflow</code></th><td><code>git.*</code>, <code>worktree.*</code>, <code>process.*</code>, <code>usage.*</code></td><td>Alleen bij projectfolder en passende actorrechten.</td></tr>
+        <tr><th><code>control_client</code></th><td><code>ui.*</code>, <code>browser.*</code>, <code>voice.stop</code></td><td>Alleen voor de client waar het gesprek plaatsvindt.</td></tr>
+        <tr><th><code>control_operation</code></th><td><code>operation.get</code>, <code>operation.cancel</code>, <code>operation.undo</code></td><td>Alleen operations die deze actor gestart heeft of mag beheren.</td></tr>
+      </tbody></table>
+    </div>
+  </section>
+
+  <section id="voorbeelden">
+    <h2>Voorbeelden van action-ketens</h2>
+    <div class="scenario">
+      <h3>"Maak een canvas voor de release, zet er een notitie op en toon de changelog"</h3>
+      <div class="chain"><code>view.create</code><span>→</span><code>node.create</code><span>+</span><code>file.searchNames</code><span>→</span><code>file.showOnCanvas</code><span>→</span><code>node.arrange</code><span>→</span><code>view.focus</code></div>
+      <p>De coordinator gebruikt het nieuwe view-ID in de vervolgstappen. Notitie en file-search kunnen parallel starten. Arrange wacht tot beide nodes bestaan.</p>
+    </div>
+    <div class="scenario">
+      <h3>"Laat Astra deze notitie uitwerken in een aparte worktree"</h3>
+      <div class="chain"><code>node.read</code><span>→</span><code>provider.list</code><span>→</span><code>agent.start</code><span>→</span><code>link.create</code></div>
+      <p><code>agent.start</code> krijgt de notitie als prompt, een concrete provider en worktreeconfiguratie. Als Astra niet geïnstalleerd is, retourneert de action beschikbare alternatieven.</p>
+    </div>
+    <div class="scenario">
+      <h3>"Start implementatie en review als twee rollen"</h3>
+      <div class="chain"><code>team.start</code><span>→</span><code>operation.get</code><span>→</span><code>task.list</code><span>→</span><code>context.read</code></div>
+      <p>De teamstart valideert eerst alle rollen. Resultaten komen via operation events; Voice hoeft niet te pollen of te doen alsof het werk al klaar is.</p>
+    </div>
+    <div class="scenario">
+      <h3>"Zet deze vijf nodes onder elkaar en vouw de groep dicht"</h3>
+      <div class="chain"><code>target.resolve</code><span>→</span><code>node.arrange</code><span>→</span><code>group.create</code><span>→</span><code>group.setCollapsed</code></div>
+      <p>De groep-ID uit <code>group.create</code> gaat rechtstreeks naar de laatste action. De inverse bevat de oorspronkelijke posities en het nieuwe frame.</p>
+    </div>
+    <div class="scenario">
+      <h3>"Haal alleen het frame weg en laat de terminals staan"</h3>
+      <div class="chain"><code>target.resolve</code><span>→</span><code>node.read</code><span>→</span><code>node.delete</code></div>
+      <p><code>node.delete</code> gebruikt <code>deleteMode: frame_only</code>. Dit maakt het huidige semantische verschil tussen UI en CLI expliciet en testbaar.</p>
+    </div>
+    <div class="scenario">
+      <h3>"Werk het testplan bij: login klaar, upload geblokkeerd door een 413"</h3>
+      <div class="chain"><code>plan.list</code><span>→</span><code>plan.read</code><span>→</span><code>plan.setStepState</code><span>+</span><code>plan.addNote</code></div>
+      <p>De twee wijzigingen kunnen in één revisie worden toegepast. Een person-only stap levert <code>needs_confirmation</code> in plaats van een stille wijziging.</p>
+    </div>
+    <div class="scenario">
+      <h3>"Zoek waar de voice-tools staan en laat de diff zien"</h3>
+      <div class="chain"><code>file.searchContents</code><span>→</span><code>file.preview</code><span>+</span><code>git.status</code><span>→</span><code>git.diff</code><span>→</span><code>ui.openPanel</code></div>
+      <p>Bestandszoekresultaten bepalen de diffdoelen. Het Git-paneel opent pas nadat er een leesbaar resultaat is.</p>
+    </div>
+    <div class="scenario">
+      <h3>"Voeg de reviewer-worktree samen, maar behoud de checkout"</h3>
+      <div class="chain"><code>worktree.list</code><span>→</span><code>worktree.diff</code><span>→</span><code>worktree.merge</code><span>→</span><code>git.status</code></div>
+      <p>De merge gebruikt <code>remove: false</code>. Conflicten leveren een operationstatus en vervolgstappen op, geen algemene foutzin.</p>
+    </div>
+    <div class="scenario">
+      <h3>"Maak een vervolgchat van dit gesprek met dezelfde provider"</h3>
+      <div class="chain"><code>chat.readHistory</code><span>→</span><code>chat.fork</code><span>→</span><code>node.focus</code></div>
+      <p>De forkaction kiest geen worktree zonder expliciete vraag of bestaande forkregel. De nieuwe chat-ID komt uit het resultaat.</p>
+    </div>
+    <div class="scenario">
+      <h3>"Maak dit diagram rustiger en exporteer een SVG"</h3>
+      <div class="chain"><code>diagram.read</code><span>→</span><code>diagram.updateNode</code><span>→</span><code>diagram.export</code></div>
+      <p>De update gebruikt node-IDs uit het diagramdocument. Alleen een bestaand exportpad dat overschreven wordt vraagt bevestiging.</p>
+    </div>
+    <div class="scenario">
+      <h3>"Stop die vastgelopen agent en toon wat hij al heeft veranderd"</h3>
+      <div class="chain"><code>workspace.inspect</code><span>→</span><code>agent.children</code><span>→</span><code>chat.cancel</code><span>→</span><code>chat.turnDiff</code><span>→</span><code>ui.openPanel</code></div>
+      <p>Stoppen verwijdert geen werkbestanden. De diff blijft leesbaar en verschijnt in het Git-paneel.</p>
+    </div>
+  </section>
+
+  <section id="veiligheid">
+    <h2>Veiligheid en productregels</h2>
+    <div class="table" role="region" aria-label="Veiligheidsbeleid per effectklasse" tabindex="0">
+      <table class="wide"><thead><tr><th>Effectklasse</th><th>Voorbeelden</th><th>Standaardgedrag</th></tr></thead><tbody>
+        <tr><th>Read</th><td>Inspecteren, zoeken, status en diff lezen.</td><td>Direct uitvoeren binnen actorrechten. Grote resultaten begrenzen.</td></tr>
+        <tr><th>Local presentation</th><td>Focus, panelen, zoom, splits en selectie.</td><td>Direct uitvoeren op de aanroepende client. Lokale terugactie bewaren.</td></tr>
+        <tr><th>Recoverable write</th><td>Hernoemen, notes wijzigen, rangschikken, links en plannen.</td><td>Direct uitvoeren met action-gebonden undo en revisiecontrole.</td></tr>
+        <tr><th>Long-running</th><td>Agents, chat, exports, Git en worktrees.</td><td><code>queued</code> of <code>running</code> teruggeven en voortgang streamen.</td></tr>
+        <tr><th>Destructive or external</th><td>Verwijderen, processtop, force-push, clear en remote publicatie.</td><td>Eerst concrete doelen en gevolgen tonen. Alleen een mens bevestigt.</td></tr>
+      </tbody></table>
+    </div>
+    <ul>
+      <li>Naamresolutie kiest nooit de eerste van meerdere gelijke namen.</li>
+      <li>Voice leent geen chat- of agentidentiteit. Het krijgt een eigen actor met gebruikerscontext.</li>
+      <li>Een action-resultaat zegt <code>running</code> zolang een agent, merge of chatbeurt nog loopt.</li>
+      <li>Een inverse herstelt documentstate, maar belooft nooit dat een beëindigd proces opnieuw leeft.</li>
+      <li>CLI-eigenaarschap, planchecks, worktreeregels en permission modes verhuizen mee naar de gedeelde implementatie.</li>
+      <li>De coordinator valideert action en actor opnieuw, ook wanneer de adapter al een gefilterde catalogus gebruikte.</li>
+    </ul>
+  </section>
+
+  <section id="bouwplan">
+    <h2>Bouwplan</h2>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>Leg de seam en contracten vast</h3>
+        <p>Voeg action-definities, actorcontext, resultaatstates, targetresolver en operation-events toe aan een gedeeld package. Bouw client- en daemonadapters achter de coordinator.</p>
+        <p><strong>Acceptatie:</strong> contracttests kunnen één read, één lokale action, één daemonwrite, één confirmation en één undo via dezelfde interface uitvoeren.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Migreer de huidige negen Voice-tools</h3>
+        <p>Laat de bestaande Voice-definities actions aanroepen in plaats van <code>voice/tools.ts</code> rechtstreeks stores te laten muteren. Repareer tegelijk unieke targetresolutie en undo-tokens.</p>
+        <p><strong>Acceptatie:</strong> huidig Voice-gedrag blijft werken, maar UI, CLI en Voice delen voor focus, create, rename, chat en canvascontrol dezelfde tests en implementatie.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Sluit command palette en overlappende CLI-verbs aan</h3>
+        <p>Genereer palette-items en CLI-help uit actionmetadata. Behoud mensvriendelijke CLI-syntax als adapter. Verwijder vervangen paden en hun onnodige unit tests zodra action-interface-tests dezelfde observaties dekken.</p>
+        <p><strong>Acceptatie:</strong> een view hernoemen of node maken heeft één uitvoerder, ongeacht menu, sneltoets, CLI of Voice.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Lever dagelijkse workspace-actions</h3>
+        <p>Voeg views, splits, nodes, links, layouts, notes, plannen, contextlezen en agentstarts toe. Genereer het Voice-capabilityplan automatisch uit de registry.</p>
+        <p><strong>Acceptatie:</strong> de voorbeelden voor releasecanvas, Astra-worktree, node-layout en planupdate werken end-to-end met action cards en correcte status.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Voeg ontwikkelworkflows toe</h3>
+        <p>Sluit files, terminals, Git, worktrees, processen, teams en taakresultaten aan. Bouw confirmation- en operation-UI voordat destructieve varianten voor Voice beschikbaar komen.</p>
+        <p><strong>Acceptatie:</strong> langlopende acties tonen voortgang en kunnen veilig stoppen; destructive actions kunnen niet zonder menselijke bevestiging doorgaan.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Voeg rijke editors en clientactions toe</h3>
+        <p>Neem drawings, diagrams, browsernavigatie, panelen, usage en overige clientbediening op. Meet toolkeuze, targetfouten, latency en herstel.</p>
+        <p><strong>Acceptatie:</strong> Voice krijgt alleen contextrelevante domeintools en de catalogus blijft de enige bron voor schemas en capabilitydocumentatie.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section id="beslissingen">
+    <h2>Beslissingen die vóór implementatie vast moeten staan</h2>
+    <ul>
+      <li><strong>Packageplaatsing.</strong> Advies: action-contracten in een nieuw gedeeld package, executors in client en daemon.</li>
+      <li><strong>Voice actor.</strong> Een aparte actor die namens de aanwezige gebruiker handelt, nooit namens een agentnode.</li>
+      <li><strong>Confirmation ownership.</strong> Alleen een interactieve client mag destructive of permissiongevoelige acties bevestigen.</li>
+      <li><strong>Session undo.</strong> Documentherstel en runtimeherstel blijven twee verschillende concepten.</li>
+      <li><strong>Toolbudget.</strong> Verhoog het gedelegeerde Responses-outputbudget boven de huidige 256 tokens voor samengestelde workflows, en meet voordat een vaste waarde wordt gekozen.</li>
+      <li><strong>Scope van administratie.</strong> Machine pairing, auth-revocation, updates en geheime settings blijven eerst buiten Voice. Ze kunnen later dezelfde registry gebruiken met uitsluitend UI-exposure.</li>
+    </ul>
+  </section>
+</main>
+<footer>
+  <p>Dit rapport is een architectuur- en implementatieplan, geen bewijs dat de genoemde actions al bestaan. De huidige code, CLI-help en UI-capabilities zijn op 17 september 2026 geïnventariseerd. Astra hielp de matrix controleren; de aanbeveling en uiteindelijke selectie zijn hier samengebracht. Geen runtimegedrag is voor dit rapport gewijzigd.</p>
+</footer>
+</body>
+</html>

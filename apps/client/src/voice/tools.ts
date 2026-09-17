@@ -1,4 +1,5 @@
 import { isCanvasView, isOpenableView, type ProjectNode, type ProjectView, type VoiceToolName } from '@ruimte/contracts';
+import { clientActions, VOICE_ACTION_CALL } from '@/actions/client-actions';
 import { addNodeAtCenter } from '@/shell/commands';
 import { focusedCanvas } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
@@ -227,10 +228,12 @@ export const executeVoiceTool = async (name: VoiceToolName, rawArguments: string
         if (!view) {
             return failed(`No unique view matched “${requested ?? ''}”.`);
         }
-        const document = useDocument.getState();
-        const previous = document.activeViewId;
-        document.showView(view.id);
-        const title = view.name ?? view.id;
+        const result = await clientActions.execute('view.focus', { viewId: view.id }, VOICE_ACTION_CALL);
+        if (result.status !== 'completed') {
+            return failed(result.status === 'failed' ? result.error.message : 'Focusing this view needs confirmation.');
+        }
+        const title = result.output.view;
+        const undoToken = result.undoToken;
         return ok(
             `Focused the view “${title}”.`,
             { viewId: view.id, view: title },
@@ -238,7 +241,13 @@ export const executeVoiceTool = async (name: VoiceToolName, rawArguments: string
                 kind: 'focus',
                 label: 'Focused view',
                 detail: title,
-                ...(previous && previous !== view.id ? { undo: () => useDocument.getState().setActiveView(previous) } : {})
+                ...(undoToken
+                    ? {
+                          undo: () => {
+                              void clientActions.undo(undoToken, VOICE_ACTION_CALL);
+                          }
+                      }
+                    : {})
             }
         );
     }
@@ -255,8 +264,12 @@ export const executeVoiceTool = async (name: VoiceToolName, rawArguments: string
         if (!view) {
             return failed(target === null ? 'There is no active view to rename.' : `No unique view matched “${target}”.`);
         }
-        const previous = view.name ?? view.id;
-        useDocument.getState().renameView(view.id, nextName);
+        const result = await clientActions.execute('view.rename', { viewId: view.id, name: nextName }, VOICE_ACTION_CALL);
+        if (result.status !== 'completed') {
+            return failed(result.status === 'failed' ? result.error.message : 'Renaming this view needs confirmation.');
+        }
+        const previous = result.output.previousName;
+        const undoToken = result.undoToken;
         return ok(
             `Renamed “${previous}” to “${nextName}”.`,
             { viewId: view.id, view: nextName },
@@ -264,7 +277,13 @@ export const executeVoiceTool = async (name: VoiceToolName, rawArguments: string
                 kind: 'rename',
                 label: 'Renamed view',
                 detail: `${previous} → ${nextName}`,
-                undo: () => useDocument.getState().renameView(view.id, previous)
+                ...(undoToken
+                    ? {
+                          undo: () => {
+                              void clientActions.undo(undoToken, VOICE_ACTION_CALL);
+                          }
+                      }
+                    : {})
             }
         );
     }

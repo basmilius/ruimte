@@ -17,6 +17,7 @@
     "docker:test": "docker/test.sh"
   },
   "dependencies": {
+    "@ruimte/actions": "workspace:*",
     "@ruimte/contracts": "workspace:*",
     "@ruimte/diagram": "workspace:*",
     "@ruimte/drawing": "workspace:*",

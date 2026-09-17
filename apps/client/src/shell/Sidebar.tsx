@@ -25,6 +25,7 @@ import {
 import clsx from 'clsx';
 import { isCanvasView, isSessionView, type AgentKind, type CanvasNodeKind, viewIconOf } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
+import { renameViewAction } from '@/actions/client-actions';
 import { ForkMenuItem } from '@/chat/ui/ForkMenuItem';
 import { useDrafts } from '@/chat/drafts';
 import { isUnseen, useAttention } from '@/state/attention';
@@ -352,7 +353,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                     value={view.name}
                     onDone={(next) => {
                         if (next) {
-                            useDocument.getState().renameView(view.id, next);
+                            renameViewAction(view.id, next);
                         } else {
                             resetTitle(view.id);
                         }

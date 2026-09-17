@@ -2,6 +2,7 @@ import { useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Trash } from 'lucide-react';
+import { renameViewAction } from '@/actions/client-actions';
 import { viewIsBusy } from '@/project/views';
 import { ViewIconDialog } from '@/shell/ViewIconDialog';
 import { useCanvas } from '@/state/canvas';
@@ -35,7 +36,7 @@ export function ViewDialogs() {
         if (dialog?.kind === 'rename' && view) {
             // An empty field is not a name: the view goes back to the one its own source gives it.
             if (trimmed) {
-                useDocument.getState().renameView(view.id, trimmed);
+                renameViewAction(view.id, trimmed);
             } else {
                 resetTitle(view.id);
             }
