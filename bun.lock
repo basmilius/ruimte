@@ -65,6 +65,7 @@
       "name": "@ruimte/desktop",
       "version": "0.0.0",
       "dependencies": {
+        "@ruimte/contracts": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
         "@ruimte/service": "workspace:*",
         "zod": "^4.5.4",

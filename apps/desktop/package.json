@@ -21,6 +21,7 @@
         "pack:dir": "bun run build:main && electron-builder --dir --publish never"
     },
     "dependencies": {
+        "@ruimte/contracts": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
         "@ruimte/service": "workspace:*",
         "zod": "^4.5.4"

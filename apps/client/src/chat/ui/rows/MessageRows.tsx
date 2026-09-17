@@ -10,8 +10,9 @@ import { useSettings } from '@/state/settings';
 import { useMachineUrl } from '@/transport/machine-url';
 import { ImageThumb } from '@/chat/ui/ImageView';
 import { MessageMarkdown, ReplyMarkdown } from '@/chat/ui/Markdown';
+import { FadingWords } from '@/chat/ui/FadingWords';
 import { settledBlocksText } from '@/chat/ui/markdown-blocks';
-import { FADE_CLASS, WHOLE_FADE_CLASS, isWhitespace, wordSegments } from '@/chat/ui/rehype-fade';
+import { WHOLE_FADE_CLASS } from '@/chat/ui/rehype-fade';
 import { useRevealedText } from '@/chat/ui/reveal';
 import { formatDuration } from '@/chat/logic/timeline';
 import { toolSummary } from '@/chat/logic/tools';
@@ -168,24 +169,6 @@ export function AssistantRow({ chatId, item: derived }: { chatId: string; item: 
             <ReplyMarkdown text={reveal.text} streaming={reveal.active} />
             {live && item.text === '' && <span className="inline-block h-3.5 w-1.5 animate-pulse rounded-sm bg-text-faint align-middle" />}
         </div>
-    );
-}
-
-/* Plain text that fades in a word at a time, the way a streamed reply does. */
-function FadingWords({ text }: { text: string }) {
-    return (
-        <>
-            {wordSegments(text).map((segment, index) =>
-                isWhitespace(segment) ? (
-                    segment
-                ) : (
-                    // Words only arrive at the end, so a word keeps its place and its fade is not restarted.
-                    <span key={index} className={FADE_CLASS}>
-                        {segment}
-                    </span>
-                )
-            )}
-        </>
     );
 }
 
