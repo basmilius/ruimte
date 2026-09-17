@@ -4,6 +4,7 @@ import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { chatClient } from '@/chat';
 import { nextPrompt, type PendingPrompt } from '@/prompts/logic/prompts';
 import { answerPrompt, type PromptSubject } from '@/prompts/logic/subjects';
+import { useFocusAfterAnswer } from '@/prompts/logic/useFocusAfterAnswer';
 import { usePromptSession } from '@/prompts/logic/usePromptSession';
 import { PromptView } from '@/prompts/ui/PromptView';
 import { Icon } from '@/ui/Icon';
@@ -18,6 +19,7 @@ export function PromptComposer({
     disabled,
     hasDraft,
     denyReason,
+    onAllAnswered,
     children
 }: {
     chatId: string;
@@ -28,6 +30,8 @@ export function PromptComposer({
     disabled: boolean;
     hasDraft: boolean;
     denyReason: boolean;
+    /* Takes the keyboard back to the composer once the last prompt was answered from its card. */
+    onAllAnswered?: () => void;
     children: ReactNode;
 }) {
     const session = usePromptSession({ prompts: pending, idOf: requestIdOf, pick: nextPrompt, disabled });
@@ -35,6 +39,7 @@ export function PromptComposer({
     const { active, activeId: activeKey } = session;
     const expanded = !!active;
     const subject: PromptSubject | null = active && { kind: 'chat', nodeId: chatId, item: active };
+    const refocus = useFocusAfterAnswer(activeKey, ref, () => onAllAnswered?.());
 
     useEffect(() => {
         if (focused && expanded && !elsewhere && !ref.current?.querySelector('.prompt-card')?.contains(document.activeElement)) {
@@ -62,7 +67,16 @@ export function PromptComposer({
                         subject={subject}
                         draft={session.draftOf(active.requestId)}
                         onDraft={(draft) => session.setDraft(active.requestId, draft)}
-                        onAction={(action) => void session.act(active, () => answerPrompt(subject, action, { chat: chatClient, sessions: null }))}
+                        onAction={(action) => {
+                            refocus.hold();
+                            void session
+                                .act(active, () => answerPrompt(subject, action, { chat: chatClient, sessions: null }))
+                                .then((result) => {
+                                    if (result === 'failed') {
+                                        refocus.release();
+                                    }
+                                });
+                        }}
                         more={session.waiting.length - 1}
                         hasDraft={hasDraft}
                         denyReason={denyReason}

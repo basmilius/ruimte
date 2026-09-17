@@ -1,5 +1,6 @@
 import { CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
+import { PROMPT_SHORTCUTS } from '@/prompts/logic/keys';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { CLEAR_SHORTCUT, LEAVE_NODE_SHORTCUT, platformShortcut } from '@/terminal/keymap';
 import { KEY_SHORTCUTS, shortcut, shortcutParts, type Shortcut } from '@/ui/shortcut';
@@ -100,6 +101,9 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
         title: 'Prompts',
         shortcuts: [
             { keys: CANVAS_SHORTCUTS.focusPrompts, label: 'Answer the front prompt of the canvas' },
+            { keys: PROMPT_SHORTCUTS.primary, label: 'Allow, Next or Answer' },
+            { keys: PROMPT_SHORTCUTS.previousPrompt, label: 'Previous prompt in the stack' },
+            { keys: PROMPT_SHORTCUTS.nextPrompt, label: 'Next prompt in the stack' },
             { keys: KEY_SHORTCUTS.escape, label: 'Back to where you were' }
         ]
     },

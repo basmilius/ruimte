@@ -1,5 +1,7 @@
-import type { ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import { Hand, MessageCircleQuestionMark, type LucideIcon } from 'lucide-react';
+import { isApplePlatform } from '@/desktop/bridge';
+import { headingKey, isPrimaryKey, staysInCard, stepIndex, toolbarKey } from '@/prompts/logic/keys';
 import { Icon } from '@/ui/Icon';
 
 /* The raised glass a chat's composer is made of, for a card that stands on its own over a canvas. */
@@ -25,10 +27,41 @@ interface PromptCardProps {
     children?: ReactNode;
 }
 
+/*
+ * The keys every card shares: Mod+Enter, entering from the heading and the action row. The body handles
+ * its own keys first and says so with `preventDefault`.
+ */
+function onCardKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const card = event.currentTarget;
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    if (!event.defaultPrevented) {
+        if (isPrimaryKey(event.nativeEvent, isApplePlatform())) {
+            event.preventDefault();
+            // A click on the button itself, so a disabled Next or Answer stays as disabled as it looks.
+            card.querySelector<HTMLButtonElement>('[data-prompt-primary]:not(:disabled)')?.click();
+        } else if (target?.classList.contains('prompt-heading') && headingKey(event.nativeEvent)) {
+            event.preventDefault();
+            card.querySelector<HTMLElement>('[data-prompt-entry]:not(:disabled), [data-prompt-primary]:not(:disabled)')?.focus();
+        } else {
+            const toolbar = target?.closest('[role="toolbar"]');
+            const step = toolbar ? toolbarKey(event.nativeEvent) : null;
+            if (toolbar && step !== null) {
+                event.preventDefault();
+                const buttons = [...toolbar.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
+                const current = buttons.findIndex((button) => button.contains(target));
+                buttons[stepIndex(current, buttons.length, step)]?.focus();
+            }
+        }
+    }
+    if (event.defaultPrevented || staysInCard(event.nativeEvent)) {
+        event.stopPropagation();
+    }
+}
+
 /* What every prompt looks like, whatever asked it: in a chat's composer and in a canvas's stack. */
 export function PromptCard({ kind, heading, meta, top, actions, busy, disabled, error, children }: PromptCardProps) {
     const card = (
-        <div className="prompt-card flex min-h-0 flex-col gap-2 p-3" role="group" aria-label={LABELS[kind]} aria-busy={busy}>
+        <div className="prompt-card flex min-h-0 flex-col gap-2 p-3" role="group" aria-label={LABELS[kind]} aria-busy={busy} onKeyDown={onCardKeyDown}>
             <div className="max-h-[min(50dvh,480px)] overflow-auto overscroll-contain">
                 <div className="flex flex-col gap-2">
                     <div className="flex items-start gap-2">
@@ -47,7 +80,9 @@ export function PromptCard({ kind, heading, meta, top, actions, busy, disabled, 
                     )}
                 </div>
             </div>
-            <div className="flex flex-wrap items-center gap-1.5">{actions}</div>
+            <div role="toolbar" aria-label="Actions" className="flex flex-wrap items-center gap-1.5">
+                {actions}
+            </div>
         </div>
     );
     if (top === undefined) {

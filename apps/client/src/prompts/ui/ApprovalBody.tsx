@@ -2,6 +2,8 @@ import { Suspense, lazy, useState } from 'react';
 import clsx from 'clsx';
 import type { ChatApprovalItem } from '@ruimte/contracts';
 import { approvalChanges, fileChanges } from '@/chat/logic/tools';
+import { isApplePlatform } from '@/desktop/bridge';
+import { isPrimaryKey } from '@/prompts/logic/keys';
 import type { PromptDraft } from '@/prompts/logic/prompts';
 import { Button } from '@/ui/Button';
 
@@ -87,6 +89,12 @@ export function ApprovalBody({
                     disabled={locked}
                     value={draft.reason}
                     onChange={(e) => onDraft({ ...draft, reason: e.target.value })}
+                    onKeyDown={(e) => {
+                        // Mod+Enter presses Allow everywhere else in the card, which is the opposite of what a reason for declining is typed for.
+                        if (isPrimaryKey(e.nativeEvent, isApplePlatform())) {
+                            e.preventDefault();
+                        }
+                    }}
                 />
             )}
         </>

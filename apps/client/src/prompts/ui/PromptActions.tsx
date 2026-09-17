@@ -3,10 +3,12 @@ import { ArrowUp, CircleCheck } from 'lucide-react';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 
+/* The one button Mod+Enter presses and ArrowDown from the heading lands on, when the body has nothing to choose. */
 export function PromptPrimary(props: ButtonHTMLAttributes<HTMLButtonElement>) {
     return (
         <button
             type="button"
+            data-prompt-primary
             className="inline-flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-full bg-text px-2.5 text-xs font-medium text-bg hover:opacity-90 disabled:opacity-50"
             {...props}
         />

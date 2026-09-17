@@ -712,6 +712,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                     disabled={disabled}
                     hasDraft={!isEmptyDraft(draft)}
                     denyReason={capabilities?.denyReason === true}
+                    onAllAnswered={() => inputRef.current?.focus()}
                 >
                     {commandMenuOpen && (
                         <div className="border-b border-border px-1.5 py-1.5">

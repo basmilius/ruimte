@@ -32,7 +32,8 @@ const mount = async (page: Page) => {
                 window.showPrompt = label => setPending(PROMPT_SAMPLES.find(sample => sample.label === label).items);
                 window.clearLivePrompts = () => setPending([]);
                 return React.createElement(PromptComposer, {
-                    chatId: 'prompt-test', pending, focused: true, disabled: false, hasDraft: true, denyReason: true
+                    chatId: 'prompt-test', pending, focused: true, disabled: false, hasDraft: true, denyReason: true,
+                    onAllAnswered: () => document.querySelector('.composer-input').focus()
                 }, React.createElement('textarea', { className: 'composer-input', defaultValue: 'Keep this draft', 'aria-label': 'Chat draft', style: { padding: '20px', width: '100%' } }));
             }
             createRoot(document.getElementById('fixture')).render(React.createElement(Harness));
@@ -78,17 +79,17 @@ test('a written answer and multi-selection survive navigating the questions', as
     await expect(page.getByRole('textbox', { name: 'Your answer' })).toBeFocused();
     await expect(page.getByRole('group', { name: 'Question', exact: true }).getByRole('textbox')).toHaveCount(1);
     await page.getByRole('textbox', { name: 'Your answer' }).fill('Keep terminal separate');
-    await page.getByRole('button', { name: 'All three Chat, files and terminal' }).click();
+    await page.getByRole('radio', { name: 'All three Chat, files and terminal' }).click();
     await page.getByPlaceholder('Something else…', { exact: true }).click();
     await expect(page.getByRole('textbox', { name: 'Your answer' })).toHaveValue('Keep terminal separate');
     await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await page.getByRole('button', { name: 'Type check Check all workspaces' }).click();
-    await page.getByRole('button', { name: 'Unit tests Run the targeted tests' }).click();
+    await page.getByRole('checkbox', { name: 'Type check Check all workspaces' }).click();
+    await page.getByRole('checkbox', { name: 'Unit tests Run the targeted tests' }).click();
     await page.getByRole('button', { name: 'Previous', exact: true }).click();
     await expect(page.getByRole('textbox', { name: 'Your answer' })).toHaveValue('Keep terminal separate');
     await expect(page.getByRole('textbox', { name: 'Your answer' })).toHaveValue('Keep terminal separate');
     await page.getByRole('button', { name: 'Next', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Type check Check all workspaces' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('checkbox', { name: 'Type check Check all workspaces' })).toBeChecked();
     await page.getByRole('button', { name: 'Next', exact: true }).click();
     await page.getByRole('textbox', { name: 'Your answer' }).fill('Run targeted tests');
     await page.getByRole('button', { name: 'Answer', exact: true }).click();
@@ -185,4 +186,75 @@ test('session approval shares the action row and sends its own decision', async 
     await expect(session).toHaveAccessibleDescription('Allow commands in this session until it ends.');
     await session.click();
     expect(await calls(page)).toMatchObject([{ name: 'approve', args: expect.arrayContaining(['allow-always']) }]);
+});
+
+test('choices are one list: arrows move, Enter picks and moves on, Space toggles, Enter answers', async ({ page }) => {
+    await choose(page, 'Question · Three questions');
+    await expect(page.locator('.prompt-heading')).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.getByRole('radio', { name: 'All three Chat, files and terminal' })).toBeFocused();
+    await page.keyboard.press('ArrowUp');
+    await expect(page.getByRole('textbox', { name: 'Your answer' })).toBeFocused();
+    await expect(page.getByRole('radio', { name: 'All three Chat, files and terminal' })).not.toBeChecked();
+    await page.keyboard.press('ArrowUp');
+    await expect(page.getByRole('radio', { name: 'Only chat and files Keep terminal retries separate' })).toBeFocused();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('Enter');
+    await expect(page.getByText('Question 2 of 3')).toBeVisible();
+    await expect(page.getByRole('checkbox', { name: 'Type check Check all workspaces' })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('checkbox', { name: 'Type check Check all workspaces' })).toBeChecked();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press(' ');
+    await expect(page.getByRole('checkbox', { name: 'Unit tests Run the targeted tests' })).toBeChecked();
+    await page.keyboard.press('Enter');
+    await expect(page.getByText('Question 3 of 3')).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Your answer' })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('textbox', { name: 'Your answer' })).toHaveValue('');
+    await page.keyboard.type('First line');
+    await page.keyboard.press('Shift+Enter');
+    await page.keyboard.type('second');
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('group', { name: 'Question' })).toHaveCount(0);
+    await expect(page.getByRole('textbox', { name: 'Chat draft' })).toBeFocused();
+    expect(await calls(page)).toMatchObject([
+        { name: 'answer', args: expect.arrayContaining([{ endpoints: 'All three', checks: 'Type check, Unit tests', notes: 'First line\nsecond' }]) }
+    ]);
+});
+
+test('something else leaves upward from its start and sends on Enter', async ({ page }) => {
+    await choose(page, 'Question · Single choice');
+    await page.getByPlaceholder('Something else…', { exact: true }).click();
+    await page.keyboard.type('Neither');
+    await page.keyboard.press('ArrowUp');
+    await expect(page.getByRole('textbox', { name: 'Your answer' })).toBeFocused();
+    await page.keyboard.press('Home');
+    await page.keyboard.press('ArrowUp');
+    await expect(page.getByRole('radio', { name: 'Only chat and files Keep terminal retries separate' })).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('group', { name: 'Question' })).toHaveCount(0);
+    expect(await calls(page)).toMatchObject([{ name: 'answer', args: expect.arrayContaining([{ endpoints: 'Neither' }]) }]);
+});
+
+test('the action row takes arrows and Mod+Enter allows from anywhere but the reason', async ({ page }) => {
+    await page.evaluate(() => (window as unknown as { showLivePrompt(index: number): void }).showLivePrompt(1));
+    await expect(page.locator('.prompt-heading')).toBeFocused();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.getByRole('button', { name: 'Allow', exact: true })).toBeFocused();
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.getByRole('button', { name: 'Deny', exact: true })).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await expect(page.getByRole('button', { name: 'Add a reason', exact: true })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('textbox', { name: 'Reason for declining' })).toBeFocused();
+    await page.keyboard.press('ControlOrMeta+Enter');
+    expect(await calls(page)).toEqual([]);
+    await page.locator('.prompt-heading').focus();
+    await page.keyboard.press('ControlOrMeta+Enter');
+    await expect(page.getByRole('textbox', { name: 'Chat draft' })).toBeFocused();
+    expect(await calls(page)).toMatchObject([{ name: 'approve', args: expect.arrayContaining(['allow']) }]);
 });

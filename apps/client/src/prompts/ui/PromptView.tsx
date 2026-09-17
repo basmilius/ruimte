@@ -69,14 +69,17 @@ export function PromptView({ subject, draft, onDraft, onAction, more, hasDraft, 
     const question = item.kind === 'question' ? item.questions[Math.min(draft.index, item.questions.length - 1)]! : null;
     const answer = question ? questionAnswer(draft, question) : null;
     const last = item.kind === 'question' && draft.index === item.questions.length - 1;
-    const commit = () => {
-        if (item.kind !== 'question') {
+    // Whether Next or Answer may go with this draft: the keys ask it as well as the button.
+    const readyWith = (next: PromptDraft): boolean =>
+        item.kind === 'question' && !!question && !!answerValue(questionAnswer(next, question)) && !(last && !promptAnswers(item, next));
+    const commit = (next: PromptDraft) => {
+        if (item.kind !== 'question' || locked || !readyWith(next)) {
             return;
         }
         if (!last) {
-            onDraft({ ...draft, index: draft.index + 1 });
+            onDraft({ ...next, index: next.index + 1 });
         } else {
-            const answers = promptAnswers(item, draft);
+            const answers = promptAnswers(item, next);
             if (answers) {
                 onAction({ kind: 'answer', answers });
             }
@@ -134,12 +137,12 @@ export function PromptView({ subject, draft, onDraft, onAction, more, hasDraft, 
                     index={draft.index}
                     dismissable={item.async === true}
                     last={last}
-                    ready={!!answer && !!answerValue(answer) && !(last && !promptAnswers(item, draft))}
+                    ready={readyWith(draft)}
                     locked={locked}
                     sending={sending}
                     onPrevious={() => onDraft({ ...draft, index: draft.index - 1 })}
                     onDismiss={() => onAction({ kind: 'dismiss' })}
-                    onCommit={commit}
+                    onCommit={() => commit(draft)}
                 />
             }
         >
@@ -148,6 +151,7 @@ export function PromptView({ subject, draft, onDraft, onAction, more, hasDraft, 
                     question={question}
                     answer={answer}
                     onAnswer={(next) => onDraft({ ...draft, answers: { ...draft.answers, [question.id]: next } })}
+                    onCommit={(next) => commit({ ...draft, answers: { ...draft.answers, [question.id]: next } })}
                     locked={locked}
                 />
             )}

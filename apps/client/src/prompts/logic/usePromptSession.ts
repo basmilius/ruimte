@@ -21,7 +21,8 @@ export interface PromptSession<T> {
     setDraft(id: string, draft: PromptDraft): void;
     sending: boolean;
     errorOf(id: string): string | null;
-    act(prompt: T, send: () => Promise<void>): Promise<void>;
+    /* `busy` when another answer is still on its way, so this one was never sent. */
+    act(prompt: T, send: () => Promise<void>): Promise<'sent' | 'failed' | 'busy'>;
     onPointerDownCapture(): void;
     onClickCapture(event: MouseEvent): void;
 }
@@ -65,9 +66,9 @@ export function usePromptSession<T>({ prompts, idOf, pick, disabled }: PromptSes
             return next;
         });
     };
-    const act = async (prompt: T, send: () => Promise<void>) => {
+    const act = async (prompt: T, send: () => Promise<void>): Promise<'sent' | 'failed' | 'busy'> => {
         if (busy.current || disabled) {
-            return;
+            return 'busy';
         }
         const id = idOf(prompt);
         busy.current = true;
@@ -76,8 +77,10 @@ export function usePromptSession<T>({ prompts, idOf, pick, disabled }: PromptSes
         try {
             await send();
             finish(id);
+            return 'sent';
         } catch (cause) {
             setError({ id, message: cause instanceof Error ? cause.message : String(cause) });
+            return 'failed';
         } finally {
             busy.current = false;
             setSending(false);

@@ -1,13 +1,17 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import clsx from 'clsx';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { StatusDot } from '@/canvas/NodeFrame';
-import { PROMPT_STACK_ATTRIBUTE, usePromptFront } from '@/canvas/prompt-stack';
+import { isTypingTarget } from '@/canvas/canvas-shortcuts';
+import { leavePromptStack, PROMPT_STACK_ATTRIBUTE, usePromptFront } from '@/canvas/prompt-stack';
 import { stackFront, type CanvasPrompt } from '@/canvas/prompts';
 import { useCanvasPrompts } from '@/canvas/use-canvas-prompts';
 import { chatClientFor, sessionClientFor } from '@/transport/connections';
 import { agentName } from '@/processes/format';
+import { isApplePlatform } from '@/desktop/bridge';
+import { pageKey } from '@/prompts/logic/keys';
 import { answerPrompt, promptCreatedAt } from '@/prompts/logic/subjects';
+import { useFocusAfterAnswer } from '@/prompts/logic/useFocusAfterAnswer';
 import { usePromptSession } from '@/prompts/logic/usePromptSession';
 import { PROMPT_SURFACE } from '@/prompts/ui/PromptCard';
 import { PromptView } from '@/prompts/ui/PromptView';
@@ -96,6 +100,9 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
         disabled
     });
     const { active, waiting, index } = session;
+    const container = useRef<HTMLDivElement>(null);
+    // With no card left the keyboard goes back to where Mod+Shift+P took it from, or to the canvas.
+    const refocus = useFocusAfterAnswer(active?.id ?? null, container, leavePromptStack);
 
     const front = usePromptFront((s) => s.request);
     const { setActive } = session;
@@ -124,6 +131,13 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
     };
     const denyReason = active.subject.kind === 'chat' && providers.find((provider) => provider.kind === active.provider)?.capabilities.denyReason === true;
     const edges = Math.min(waiting.length - 1, 2);
+    const step = (delta: number): void => {
+        const next = waiting[index + delta];
+        if (next) {
+            refocus.hold();
+            setActive(next.id);
+        }
+    };
 
     return (
         <div
@@ -134,10 +148,19 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
             )}
         >
             <div
+                ref={container}
                 data-holds-dock
                 className="pointer-events-auto relative w-full max-w-xl"
                 onPointerDownCapture={session.onPointerDownCapture}
                 onClickCapture={session.onClickCapture}
+                onKeyDown={(event) => {
+                    const delta = pageKey(event.nativeEvent, isApplePlatform(), isTypingTarget(event.target));
+                    if (delta !== null) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        step(delta);
+                    }
+                }}
             >
                 {edges >= 2 && <div aria-hidden className={`${PROMPT_SURFACE} absolute inset-x-6 -top-3 h-4`} />}
                 {edges >= 1 && <div aria-hidden className={`${PROMPT_SURFACE} absolute inset-x-3 -top-1.5 h-4`} />}
@@ -148,11 +171,18 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
                             subject={active.subject}
                             draft={session.draftOf(active.id)}
                             onDraft={(draft) => session.setDraft(active.id, draft)}
-                            onAction={(action) =>
-                                void session.act(active, () =>
-                                    answerPrompt(active.subject, action, { chat: chatClientFor(endpointId), sessions: sessionClientFor(endpointId) })
-                                )
-                            }
+                            onAction={(action) => {
+                                refocus.hold();
+                                void session
+                                    .act(active, () =>
+                                        answerPrompt(active.subject, action, { chat: chatClientFor(endpointId), sessions: sessionClientFor(endpointId) })
+                                    )
+                                    .then((result) => {
+                                        if (result === 'failed') {
+                                            refocus.release();
+                                        }
+                                    });
+                            }}
                             onReveal={reveal}
                             more={0}
                             hasDraft={false}
@@ -160,20 +190,7 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
                             disabled={disabled}
                             sending={session.sending}
                             error={session.errorOf(active.id)}
-                            top={
-                                <SourceRow
-                                    prompt={active}
-                                    index={index}
-                                    count={waiting.length}
-                                    onStep={(delta) => {
-                                        const next = waiting[index + delta];
-                                        if (next) {
-                                            setActive(next.id);
-                                        }
-                                    }}
-                                    onGoTo={goTo}
-                                />
-                            }
+                            top={<SourceRow prompt={active} index={index} count={waiting.length} onStep={step} onGoTo={goTo} />}
                         />
                     </ErrorBoundary>
                 </div>
