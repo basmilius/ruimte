@@ -8,6 +8,7 @@ import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 import { closeVoicePanel, startVoice, stopVoice, undoVoiceAction } from '@/voice/controller';
+import { idleVoiceBands, type IdleVoiceBands } from '@/voice/idle-waveform';
 import { useVoice, type VoiceAction, type VoiceActionKind, type VoicePhase, type VoiceUtterance } from '@/voice/state';
 
 const phaseLabel: Record<VoicePhase, string> = {
@@ -37,11 +38,45 @@ const durationLabel = (seconds: number): string => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 };
 
+function useIdleWaveform(active: boolean, count: number): IdleVoiceBands | null {
+    const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const [bands, setBands] = useState<IdleVoiceBands | null>(null);
+
+    useEffect(() => {
+        const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const changed = () => setReducedMotion(query.matches);
+        query.addEventListener('change', changed);
+        return () => query.removeEventListener('change', changed);
+    }, []);
+
+    useEffect(() => {
+        if (!active || reducedMotion) {
+            return;
+        }
+        let frame = 0;
+        let lastFrame = -Infinity;
+        const animate = (now: number) => {
+            if (now - lastFrame >= 1000 / 30) {
+                setBands(idleVoiceBands(now, count));
+                lastFrame = now;
+            }
+            frame = window.requestAnimationFrame(animate);
+        };
+        frame = window.requestAnimationFrame(animate);
+        return () => window.cancelAnimationFrame(frame);
+    }, [active, count, reducedMotion]);
+
+    return active && !reducedMotion ? bands : null;
+}
+
 function VoiceWaveform({ elapsed, phase }: { elapsed: number; phase: VoicePhase }) {
     const inputBands = useVoice((state) => state.inputBands);
     const outputBands = useVoice((state) => state.outputBands);
     const listening = phase === 'listening';
     const idle = phase === 'idle';
+    const idleBands = useIdleWaveform(idle, inputBands.length);
+    const displayedInput = idleBands?.input ?? inputBands;
+    const displayedOutput = idleBands?.output ?? outputBands;
     const inputSpeaking = listening && Math.max(0, ...inputBands) > 0.06;
     const outputSpeaking = listening && Math.max(0, ...outputBands) > 0.04;
     const inputLabel = listening ? (inputSpeaking ? 'speaking' : 'listening') : 'idle';
@@ -63,30 +98,27 @@ function VoiceWaveform({ elapsed, phase }: { elapsed: number; phase: VoicePhase 
                 <span className={outputSpeaking ? 'text-accent' : 'text-text-muted'}>Voice · {outputLabel}</span>
             </div>
             <div
-                className="voice-waveform relative mt-3 flex h-14 items-center gap-0.5"
-                data-idle={idle || undefined}
+                className="relative mt-3 flex h-14 items-center gap-0.5"
                 role="img"
                 aria-label="Your voice above the line and Voice below it"
             >
                 <span className="absolute inset-x-0 top-1/2 h-px bg-border" />
-                {inputBands.map((input, index) => {
-                    const output = outputBands[index] ?? 0;
+                {displayedInput.map((input, index) => {
+                    const output = displayedOutput[index] ?? 0;
                     return (
                         <span key={index} className="relative h-full min-w-0 grow" aria-hidden="true">
                             <span
                                 className="voice-waveform-input absolute right-0 bottom-1/2 left-0 rounded-t-sm bg-text transition-[height,opacity] duration-75 ease-out"
                                 style={{
                                     height: `${Math.max(2, Math.round(input * 26))}px`,
-                                    opacity: Math.max(0.45, input),
-                                    animationDelay: idle ? `${index * -95}ms` : undefined
+                                    opacity: Math.max(0.45, input)
                                 }}
                             />
                             <span
                                 className="voice-waveform-output absolute top-1/2 right-0 left-0 rounded-b-sm bg-accent transition-[height,opacity] duration-75 ease-out"
                                 style={{
                                     height: `${Math.max(2, Math.round(output * 26))}px`,
-                                    opacity: Math.max(0.5, output),
-                                    animationDelay: idle ? `${(inputBands.length - index) * -80}ms` : undefined
+                                    opacity: Math.max(0.5, output)
                                 }}
                             />
                         </span>
