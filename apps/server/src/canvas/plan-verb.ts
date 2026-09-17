@@ -19,7 +19,7 @@ import { z } from 'zod';
 import { fieldLines } from './diagram-verb.ts';
 import { callerKind } from './task-verbs.ts';
 import { unescapeText } from './text-escapes.ts';
-import { VerbRefusal, defineSubVerb, defineVerbGroup, field, orNote, placeOf, type VerbCall } from './verb.ts';
+import { VerbRefusal, defineAction, defineNoun, field, orNote, placeOf, type VerbCall } from './verb.ts';
 
 const HELP_LINE = 'detail\truimte-context help plan';
 
@@ -183,7 +183,7 @@ const parseJson = (source: string): unknown => {
     }
 };
 
-const newSub = defineSubVerb('plan', {
+const newSub = defineAction('plan', {
     name: 'new',
     usage: '[--title T] [--kind steps|test] [--checks anyone|agent|person] [--dry-run] (< plan.json | --markdown -)',
     summary: 'Makes a plan for this chat from a JSON document on stdin or a Markdown task list; prints the plan, every item id and how to check one off',
@@ -261,7 +261,7 @@ const newSub = defineSubVerb('plan', {
     }
 });
 
-const readSub = defineSubVerb('plan', {
+const readSub = defineAction('plan', {
     name: 'read',
     usage: '[--plan P] [--all]',
     summary: 'Prints the newest plan of this chat as text, with every id in brackets; after a compaction this is how you find the ids again',
@@ -292,7 +292,7 @@ const readSub = defineSubVerb('plan', {
     }
 });
 
-const setSub = defineSubVerb('plan', {
+const setSub = defineAction('plan', {
     name: 'set',
     usage: '<stepId>... --state open|active|done|failed|skipped|blocked|warning|info [--note T] [--next ID] [--plan P]',
     summary: 'Sets the state of one or more steps in one rev; with --next the step you move on to becomes active in the same rev',
@@ -319,7 +319,7 @@ const setSub = defineSubVerb('plan', {
     }
 });
 
-const noteSub = defineSubVerb('plan', {
+const noteSub = defineAction('plan', {
     name: 'note',
     usage: '<stepId> --text T [--plan P]',
     summary: 'Writes the note of a step, also one a person set; an empty text clears it',
@@ -336,7 +336,7 @@ const noteSub = defineSubVerb('plan', {
     }
 });
 
-const addSub = defineSubVerb('plan', {
+const addSub = defineAction('plan', {
     name: 'add',
     usage: '--type step|text|section --title T [--description D] [--under ID] [--after ID] [--checks anyone|agent|person] [--id ID] [--plan P]',
     summary: 'Adds a step, text block or section; prints the plan and the id of the new item',
@@ -380,7 +380,7 @@ const addSub = defineSubVerb('plan', {
     }
 });
 
-const editSub = defineSubVerb('plan', {
+const editSub = defineAction('plan', {
     name: 'edit',
     usage: '<itemId> [--title T] [--description D] [--checks anyone|agent|person] [--plan P]',
     summary: 'Changes the title, description or checks of an item',
@@ -414,7 +414,7 @@ const editSub = defineSubVerb('plan', {
     }
 });
 
-const moveSub = defineSubVerb('plan', {
+const moveSub = defineAction('plan', {
     name: 'move',
     usage: '<itemId> [--under ID] [--after ID] [--plan P]',
     summary: 'Moves an item, with everything under it, to another place in the plan',
@@ -443,7 +443,7 @@ const moveSub = defineSubVerb('plan', {
     }
 });
 
-const removeSub = defineSubVerb('plan', {
+const removeSub = defineAction('plan', {
     name: 'remove',
     usage: '<itemId> [--plan P]',
     summary: 'Removes an item and everything under it; refused when a person set a state in it',
@@ -455,7 +455,7 @@ const removeSub = defineSubVerb('plan', {
     }
 });
 
-const statusSub = defineSubVerb('plan', {
+const statusSub = defineAction('plan', {
     name: 'status',
     usage: '--text T [--plan P]',
     summary: 'Sets the line under the title about what happens now or next; an empty text clears it',
@@ -472,7 +472,7 @@ const statusSub = defineSubVerb('plan', {
     }
 });
 
-const deleteSub = defineSubVerb('plan', {
+const deleteSub = defineAction('plan', {
     name: 'delete',
     usage: '--plan P',
     summary: 'Removes a whole plan of this chat',
@@ -491,7 +491,7 @@ const deleteSub = defineSubVerb('plan', {
     }
 });
 
-export const planVerb = defineVerbGroup({
+export const planVerb = defineNoun({
     name: 'plan',
     summary: 'Keeps a plan beside this chat: steps you check off as you go, or a test plan a person runs; only a chat has plans',
     detail: [
@@ -507,5 +507,5 @@ export const planVerb = defineVerbGroup({
         'others\truimte-context read <chat> on a linked chat shows its plans above the conversation; you never set steps of another chat',
         REFUSAL_CODES
     ],
-    subs: [newSub, readSub, setSub, noteSub, addSub, editSub, moveSub, removeSub, statusSub, deleteSub]
+    actions: [newSub, readSub, setSub, noteSub, addSub, editSub, moveSub, removeSub, statusSub, deleteSub]
 });

@@ -31,7 +31,7 @@ export const wakePrompt = (tasks: readonly Task[], teamsOut = 0): string => {
         if (cut) {
             lines.push(
                 '',
-                `[The result was cut at ${RESULT_PREVIEW_BYTES / 1024} KiB. ruimte-context read ${task.childId} shows the rest once a line runs from that node into you; ruimte-context link --to ${task.childId} draws it.]`
+                `[The result was cut at ${RESULT_PREVIEW_BYTES / 1024} KiB. ruimte-context read ${task.childId} shows the rest once a line runs from that node into you; ruimte-context link new --to ${task.childId} draws it.]`
             );
         }
         return lines.join('\n');

@@ -21,7 +21,7 @@ import { z } from 'zod';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import { checkUrl, newId } from './node-verb.ts';
 import { checkPath, isInside } from './project-paths.ts';
-import { TITLE_LINE, VerbRefusal, defineSubVerb, defineVerbGroup, field, placeOf, titleField } from './verb.ts';
+import { TITLE_LINE, VerbRefusal, defineAction, field, placeOf, titleField, type Action } from './verb.ts';
 
 /*
  * A ceiling on the sidebar, not a budget: a project with this many rows is one nobody can read any
@@ -55,7 +55,7 @@ export const viewLines = (views: readonly ProjectView[]): string[] => views.map(
 /*
  * Whether `view delete` would remove this view for this caller, and why: one it made itself, or any
  * view at all on a machine that says so. A view the caller is standing in is never deletable, since
- * the verb would end the session that is asking. The reason is what the `views` column prints, so a
+ * the verb would end the session that is asking. The reason is what the `view list` column prints, so a
  * `yes` on a machine that frees everything does not read as a mistake to a caller that made none of them.
  */
 export const deleteReason = (view: ProjectView, call: { caller: string; place: IndexedPlace; anyView: boolean }): { may: boolean; why: string } => {
@@ -110,7 +110,7 @@ const viewNamed = (content: ProjectContent, id: string, flag: string): ProjectVi
 
 const nameArgument = titleField('A view name', 'view new needs a name');
 
-const newSub = defineSubVerb('view', {
+const newSub = defineAction('view', {
     name: 'new',
     usage: `<name> [--kind ${VIEW_KINDS.join('|')}] [--path P] [--url U] [--after V]`,
     summary: `Adds a view to the sidebar and prints id, kind, name; the default kind is ${VIEW_KINDS[0]}`,
@@ -198,12 +198,12 @@ const madeView = (kind: (typeof VIEW_KINDS)[number], id: string, name: string, c
     return { kind, id, name, createdBy };
 };
 
-const renameSub = defineSubVerb('view', {
+const renameSub = defineAction('view', {
     name: 'rename',
     usage: '<viewId> <name>',
     summary: 'Renames a view and prints id, kind, name; nothing the view hosts renames over it again',
     detail: [
-        'argument\t<viewId>\trequired\tThe view to rename, by id; ruimte-context views lists them',
+        'argument\t<viewId>\trequired\tThe view to rename, by id; ruimte-context view list lists them',
         'argument\t<name>\trequired\tThe new name, one argument, spaces and all',
         'prints\tid\tkind\tname\tthe view as it now stands',
         'note\tA name set here is the view name for good: a page or a session never renames over it',
@@ -224,12 +224,12 @@ const renameSub = defineSubVerb('view', {
     }
 });
 
-const iconSub = defineSubVerb('view', {
+const iconSub = defineAction('view', {
     name: 'icon',
     usage: '<viewId> <lucide-name|emoji>',
     summary: 'Gives a view a mark of its own and prints id, kind, icon kind, icon',
     detail: [
-        'argument\t<viewId>\trequired\tThe view to mark, by id; ruimte-context views lists them',
+        'argument\t<viewId>\trequired\tThe view to mark, by id; ruimte-context view list lists them',
         'argument\t<mark>\trequired\tA Lucide name from the set the picker has, or an emoji',
         'prints\tid\tkind\tlucide|emoji\tthe mark the view now wears',
         `names\t${PROJECT_ICON_NAMES.length} Lucide names; a refusal prints all of them`,
@@ -255,12 +255,12 @@ const iconSub = defineSubVerb('view', {
     }
 });
 
-const moveSub = defineSubVerb('view', {
+const moveSub = defineAction('view', {
     name: 'move',
     usage: '<viewId> --after V | --first',
     summary: 'Moves a view to another place in the sidebar and prints id, kind, the place it now has',
     detail: [
-        'argument\t<viewId>\trequired\tThe view to move, by id; ruimte-context views lists them',
+        'argument\t<viewId>\trequired\tThe view to move, by id; ruimte-context view list lists them',
         'flag\t--after V\tone of two\tPuts the row right under view V',
         'flag\t--first\tno value\tPuts the row at the top of the list',
         'prints\tid\tkind\tindex\tthe place it now has, counted from 0 over every row, separators included',
@@ -300,12 +300,12 @@ const moveSub = defineSubVerb('view', {
     }
 });
 
-const deleteSub = defineSubVerb('view', {
+const deleteSub = defineAction('view', {
     name: 'delete',
     usage: '<viewId>',
     summary: 'Removes a view you made, with the sessions it holds, and prints what went',
     detail: [
-        'argument\t<viewId>\trequired\tThe view to remove, by id; ruimte-context views lists them',
+        'argument\t<viewId>\trequired\tThe view to remove, by id; ruimte-context view list lists them',
         'prints\tdeleted\tid\tkind\tname\tthe view that went',
         'prints\tended\tid\tkind\tone line per session it took with it, a terminal or a chat',
         `prints\tnode\tid\tkind\ttitle\tone line per node that stood on it, up to ${DELETED_NODE_LINES}, with a nodes row counting them all`,
@@ -313,7 +313,7 @@ const deleteSub = defineSubVerb('view', {
         'rule\tA machine can free every view of every project on it; a refusal says whether this one does',
         'rule\tNever the view you are standing in, since that would end the session asking, which is also why this can never empty the sidebar',
         'note\tA canvas takes its nodes with it, so the shells and agents on it stop where they are',
-        'see\truimte-context views\tthe last column says which views this rule lets you remove'
+        'see\truimte-context view list\tthe last column says which views this rule lets you remove'
     ],
     positionals: z.tuple([z.string().min(1, 'view delete needs the id of a view')], {
         error: (issue) => (issue.code === 'too_big' ? 'view delete takes one view id and nothing else' : 'view delete needs the id of a view')
@@ -370,13 +370,42 @@ const refuseUndeletable = (view: ProjectView, call: { caller: string; place: Ind
     ]);
 };
 
-export const viewVerb = defineVerbGroup({
-    name: 'view',
-    summary: 'Manages the views of the project: makes one, renames it, marks it, moves it, removes it',
+const listSub = defineAction('view', {
+    name: 'list',
+    usage: '',
+    summary: 'Lists the views of the project in sidebar order: id, kind, name, whether you may delete it and why',
     detail: [
-        'see\truimte-context views\tthe views of the project, which is where every id here comes from',
-        'note\tA view is a row in the sidebar: a canvas, a drawing, a diagram, a file, a page, a session of its own, or a line between them',
-        'note\tThe views of a project are shared, so what you make here is what every person with this project open sees'
+        'prints\tid\tkind\tname\tdelete\twhy\tone line per view, in the order the sidebar has them',
+        `kinds\t${VIEW_KINDS.join('\t')}`,
+        'delete\tyes or no: whether ruimte-context view delete would remove that view for you, with the reason beside it',
+        'why\tyours, this machine frees every view, a person made it, <id> made it, or you are in it',
+        'self\tThe last row is self and the view you are in: the canvas you stand on, or your own id when you are a view of your own',
+        'note\tA separator is a line in the sidebar and has an empty name',
+        'see\truimte-context help view\tmaking a view, renaming it, marking it, moving it, removing it'
     ],
-    subs: [newSub, renameSub, iconSub, moveSub, deleteSub]
+    positionals: z.tuple([], { error: 'view list takes no arguments' }),
+    flags: z.object({}),
+    async run(_input, call) {
+        const place = placeOf(call);
+        const content = await call.host.read(place.projectId);
+        const anyView = call.host.agentsDeleteAnyView();
+        return [
+            ...content.views.map((view) => {
+                const { may, why } = deleteReason(view, { caller: call.caller, place, anyView });
+                return `${view.id}\t${view.kind}\t${field(view.name ?? '')}\t${may ? 'yes' : 'no'}\t${why}`;
+            }),
+            `self\t${place.canvasId ?? call.caller}`
+        ];
+    }
 });
+
+/* Without `view open` and `view diagram`, which need `viewLines` from here; the registry puts them after these. */
+export const VIEW_ACTIONS: readonly Action[] = [listSub, newSub, renameSub, iconSub, moveSub, deleteSub];
+
+export const VIEW_SUMMARY = 'Lists, makes, renames, marks, moves, removes and shows the views of the project, and writes a diagram';
+
+export const VIEW_DETAIL: readonly string[] = [
+    'see\truimte-context view list\tthe views of the project, which is where every id here comes from',
+    'note\tA view is a row in the sidebar: a canvas, a drawing, a diagram, a file, a page, a session of its own, or a line between them',
+    'note\tThe views of a project are shared, so what you make here is what every person with this project open sees'
+];

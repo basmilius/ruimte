@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
 import { readResultFile } from './project-paths.ts';
 import { unescapeText } from './text-escapes.ts';
-import { VerbRefusal, defineVerb, field, placeOf } from './verb.ts';
+import { VerbRefusal, defineAction, defineVerb, field, placeOf } from './verb.ts';
 
 /* A result past this is a document, not an answer; the wake shows at most the first 8 KiB of it anyway. */
 export const MAX_RESULT_LENGTH = 32_000;
@@ -28,17 +28,17 @@ export const TASK_LINES: readonly string[] = [
     'task\tOnce a task settles you are woken once, as soon as you have no turn running, with the results of every task that settled by then; you never have to poll',
     'task\tThe tasks of one team --task call wake you together: only once every one of them settled (done, failed or cancelled), so one slow role holds back the results of the others',
     "task\tA task from agent --task wakes you on its own, also while a team of yours is still out; that wake leaves the team's results out, and they all come in a later wake of their own",
-    'task\truimte-context tasks lists the ones still open or yet to wake you, with their status; --all adds the history'
+    'task\truimte-context task list lists the ones still open or yet to wake you, with their status; --all adds the history'
 ];
 
 /*
- * The last line after tasks are given. An agent that is not told to end its turn polls `tasks`, links
+ * The last line after tasks are given. An agent that is not told to end its turn polls `task list`, links
  * back and reads every child, which costs a call each while the wake comes anyway.
  */
 export const nextLine = (team: boolean): string =>
     team
-        ? 'next\tEnd your turn now: the results arrive as your next message once every task settled. Do not poll tasks, link or read the agents for them.'
-        : 'next\tEnd your turn once you gave every task you mean to give: the result arrives as your next message once this task settled. Do not poll tasks, link or read the agent for it.';
+        ? 'next\tEnd your turn now: the results arrive as your next message once every task settled. Do not poll task list, run link new or read the agents for them.'
+        : 'next\tEnd your turn once you gave every task you mean to give: the result arrives as your next message once this task settled. Do not poll task list, run link new or read the agent for it.';
 
 /* What kind of node or view the caller is in its project, or null when neither names it. */
 export const callerKind = (content: ProjectContent, caller: string): string | null => {
@@ -72,7 +72,7 @@ export const requireChatParent = (content: ProjectContent, caller: string): void
 
 const firstLine = (text: string): string => field(text.split('\n').find((line) => line.trim() !== '') ?? '').slice(0, 200);
 
-/* One row of `tasks`, from the side of the node that asks. */
+/* One row of `task list`, from the side of the node that asks. */
 export const taskLine = (task: Task, nodeId: string): string => {
     const gave = task.parentId === nodeId;
     return [
@@ -156,8 +156,8 @@ export const doneVerb = defineVerb({
  */
 const isCurrentTask = (task: Task, nodeId: string): boolean => task.status === 'open' || (task.parentId === nodeId && task.wake === 'pending');
 
-export const tasksVerb = defineVerb({
-    name: 'tasks',
+export const taskListAction = defineAction('task', {
+    name: 'list',
     usage: '[--all]',
     summary:
         'Lists the tasks you gave and the task you were given that are still open or have yet to wake you: id, direction, status, the other node, title, wake, result, batch',
@@ -171,7 +171,7 @@ export const tasksVerb = defineVerb({
         'result\tThe first line of the result, at most 200 characters; the whole of it reaches the parent when it is woken',
         ...TASK_LINES
     ],
-    positionals: z.tuple([], { error: 'tasks takes no arguments' }),
+    positionals: z.tuple([], { error: 'task list takes no arguments' }),
     switches: ['all'],
     flags: z.object({}),
     async run({ switches }, call) {
@@ -189,7 +189,7 @@ export const tasksVerb = defineVerb({
         if (older === 0) {
             return lines;
         }
-        const hidden = `${older === 1 ? '1 older task is' : `${older} older tasks are`} hidden, settled and already reported; ruimte-context tasks --all lists them`;
+        const hidden = `${older === 1 ? '1 older task is' : `${older} older tasks are`} hidden, settled and already reported; ruimte-context task list --all lists them`;
         return [...lines, current.length === 0 ? `note\tNo task is open or waiting to wake you; ${hidden}` : `note\t${hidden}`];
     }
 });

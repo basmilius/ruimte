@@ -126,19 +126,34 @@ export interface VerbHelp {
     name: string;
     usage: string;
     summary: string;
-    /* The tab-separated lines `help <verb>` prints: everything the one-line summary has no room for. */
+    /* The tab-separated lines `help` prints for this one: everything the one-line summary has no room for. */
     detail: readonly string[];
 }
 
-/* A verb `POST /canvas/<verb>` runs. */
+/* A word `POST /canvas/<verb>` runs on its own, such as `agent`: no noun in front of it. */
 export interface Verb extends VerbHelp {
     served: 'canvas';
     /* The flags the parser takes, from the schema validation runs, so help and a test see the same list. */
     flagNames: readonly string[];
-    /* Whether `--dry-run` means something here; only the verbs that make something take it. */
+    /* Whether `--dry-run` means something here; only what makes something takes it. */
     dryRun: boolean;
-    /* The words that can follow a verb that has them, so `help <verb>` renders every one of them. */
-    subcommands?: readonly VerbHelp[];
+    run(argv: readonly string[], call: VerbCall): Promise<string[]>;
+}
+
+/* The word after a noun, such as `rename` in `node rename`; `name` is both words, which is what a refusal and `help` say. */
+export interface Action extends Omit<Verb, 'served'> {
+    word: string;
+}
+
+/* A first word that only says what the action after it works on: `node`, `link`, `view`. */
+export interface Noun {
+    served: 'noun';
+    name: string;
+    /* `<list|new|...> ...`, read off the actions, so it cannot name one that is not there. */
+    usage: string;
+    summary: string;
+    detail: readonly string[];
+    actions: readonly Action[];
     run(argv: readonly string[], call: VerbCall): Promise<string[]>;
 }
 
@@ -147,7 +162,11 @@ export interface ContextVerb extends VerbHelp {
     served: 'context';
 }
 
-export type VerbEntry = Verb | ContextVerb;
+export type VerbEntry = Verb | Noun | ContextVerb;
+
+/* Two things an agent keeps mixing up, so the line is in the root of `help` and in the detail of each verb it is about. */
+export const SCOPE_LINE =
+    'scope\tlist and read are what a person linked into this session; node, link, view, task, agent, team, done, notify and worktree are the project itself, and plan is the chat of the caller\ta node you add is readable through read only once a line runs from it into you';
 
 export const DRY_RUN_FLAG = 'dry-run';
 
@@ -155,9 +174,8 @@ export const DRY_RUN_FLAG = 'dry-run';
 export const DRY_RUN_PREVIEW = 'a refused call makes nothing either, so it is only a preview and never needed for safety';
 
 /*
- * The verbs that take `--dry-run`, filled as each is defined. A verb that does not take it refuses
- * the flag by name and points at the ones that do, so an agent never gets a silent nothing from a
- * dry run that was never dry.
+ * What takes `--dry-run`, filled as each is defined. Everything else refuses the flag by name and
+ * points at these, so an agent never gets a silent nothing from a dry run that was never dry.
  */
 const dryRunVerbs: string[] = [];
 
@@ -169,25 +187,22 @@ interface ArgsSpec<Positionals extends z.ZodType, Flags extends z.ZodObject> {
     flags: Flags;
     /* The flags that are on by being written and take no value of their own. */
     switches?: readonly string[];
-    /* Whether this verb makes something and can therefore be asked to validate and stop. */
+    /* Whether this makes something and can therefore be asked to validate and stop. */
     dryRun?: boolean;
     run(input: { positionals: z.infer<Positionals>; flags: z.infer<Flags>; switches: ReadonlySet<string>; dryRun: boolean }, call: VerbCall): Promise<string[]>;
 }
 
 interface VerbSpec<Positionals extends z.ZodType, Flags extends z.ZodObject> extends VerbHelp, ArgsSpec<Positionals, Flags> {}
 
-/* What `help <verb>` names and what a refusal over arguments points at; a subcommand names both words. */
-const usageLinesOf = (name: string, usage: string): string[] => [`usage\t${name}\t${usage}`, `detail\truimte-context help ${name.split(' ')[0]}`];
+/* What a refusal over arguments points at; for an action `name` is both words, which is what `help` takes. */
+const usageLinesOf = (name: string, usage: string): string[] => [`usage\t${name}\t${usage}`, `detail\truimte-context help ${name}`];
 
 const flagsOf = (spec: ArgsSpec<z.ZodType, z.ZodObject>): { values: string[]; switches: string[] } => ({
     values: Object.keys(spec.flags.shape),
     switches: [...(spec.switches ?? []), ...(spec.dryRun === true ? [DRY_RUN_FLAG] : [])]
 });
 
-/*
- * One set of arguments parsed and run, whether it is a whole verb or a word after one. `name` is
- * what a refusal calls it, so `view new` refuses under both its words.
- */
+/* One set of arguments parsed and run. `name` is what a refusal calls it, so `view new` refuses under both its words. */
 const runArgs = async <Positionals extends z.ZodType, Flags extends z.ZodObject>(
     name: string,
     usage: string,
@@ -219,76 +234,62 @@ const runArgs = async <Positionals extends z.ZodType, Flags extends z.ZodObject>
     return spec.run({ positionals: positionals.data, flags: flags.data, switches: parsed.switches, dryRun: parsed.switches.has(DRY_RUN_FLAG) }, call);
 };
 
-/*
- * One object per verb, holding its synopsis and the schemas its arguments are checked against, so
- * `help` renders from what validation runs and the two cannot drift apart.
- */
-export const defineVerb = <Positionals extends z.ZodType, Flags extends z.ZodObject>(spec: VerbSpec<Positionals, Flags>): Verb => {
+/* What a verb and an action share: the synopsis beside the schemas its arguments are checked against. */
+const defineArgs = <Positionals extends z.ZodType, Flags extends z.ZodObject>(name: string, spec: VerbSpec<Positionals, Flags>): Omit<Verb, 'served'> => {
     const { values, switches } = flagsOf(spec);
     if (spec.dryRun === true) {
-        dryRunVerbs.push(spec.name);
+        dryRunVerbs.push(name);
     }
     return {
-        served: 'canvas',
-        name: spec.name,
-        usage: spec.usage,
-        summary: spec.summary,
-        detail: spec.detail,
-        flagNames: [...values, ...switches],
-        dryRun: spec.dryRun === true,
-        run: (argv, call) => runArgs(spec.name, spec.usage, spec, argv, call)
-    };
-};
-
-interface SubVerb extends VerbHelp {
-    /* Just the second word; `name` is both, since that is what a refusal and `help` have to say. */
-    word: string;
-    run(argv: readonly string[], call: VerbCall): Promise<string[]>;
-    flagNames: readonly string[];
-}
-
-export const defineSubVerb = <Positionals extends z.ZodType, Flags extends z.ZodObject>(verb: string, spec: VerbSpec<Positionals, Flags>): SubVerb => {
-    const name = `${verb} ${spec.name}`;
-    const { values, switches } = flagsOf(spec);
-    return {
-        word: spec.name,
         name,
         usage: spec.usage,
         summary: spec.summary,
         detail: spec.detail,
         flagNames: [...values, ...switches],
+        dryRun: spec.dryRun === true,
         run: (argv, call) => runArgs(name, spec.usage, spec, argv, call)
     };
 };
 
 /*
- * A verb whose first word says which of its own operations to run. The table is the only source:
- * the dispatch, the synopsis in the verb list and everything `help <verb>` prints come out of it,
- * so a subcommand that is added is documented by being defined.
+ * One object per verb, holding its synopsis and the schemas its arguments are checked against, so
+ * `help` renders from what validation runs and the two cannot drift apart.
  */
-export const defineVerbGroup = (spec: { name: string; summary: string; detail: readonly string[]; subs: readonly SubVerb[] }): Verb => {
-    const words = spec.subs.map((sub) => sub.word);
-    const usage = `<${words.join('|')}> ...`;
+export const defineVerb = <Positionals extends z.ZodType, Flags extends z.ZodObject>(spec: VerbSpec<Positionals, Flags>): Verb => ({
+    served: 'canvas',
+    ...defineArgs(spec.name, spec)
+});
+
+/* `spec.name` is only the action's own word; the noun goes in front of it. */
+export const defineAction = <Positionals extends z.ZodType, Flags extends z.ZodObject>(noun: string, spec: VerbSpec<Positionals, Flags>): Action => ({
+    word: spec.name,
+    ...defineArgs(`${noun} ${spec.name}`, spec)
+});
+
+/*
+ * A noun and its actions. The table is the only source: the dispatch, the row in `help` and
+ * everything `help <noun>` prints come out of it, so an action is documented by being defined.
+ */
+export const defineNoun = (spec: { name: string; summary: string; detail: readonly string[]; actions: readonly Action[] }): Noun => {
+    const words = spec.actions.map((action) => action.word);
     return {
-        served: 'canvas',
+        served: 'noun',
         name: spec.name,
-        usage,
+        usage: `<${words.join('|')}> ...`,
         summary: spec.summary,
         detail: spec.detail,
-        flagNames: [...new Set(spec.subs.flatMap((sub) => sub.flagNames))],
-        dryRun: false,
-        subcommands: spec.subs,
+        actions: spec.actions,
         async run(argv, call) {
             const [word, ...rest] = argv;
-            const sub = spec.subs.find((candidate) => candidate.word === word);
-            if (!sub) {
+            const action = spec.actions.find((candidate) => candidate.word === word);
+            if (!action) {
                 throw new VerbRefusal(
-                    'unknown-subcommand',
+                    'unknown-action',
                     `${spec.name} needs one of ${words.join(', ')}${word === undefined ? '' : `, and ${word} is not one`}`,
-                    spec.subs.map((candidate) => `usage\t${candidate.name}\t${candidate.usage}`)
+                    [...spec.actions.map((candidate) => `usage\t${candidate.name}\t${candidate.usage}`), `detail\truimte-context help ${spec.name}`]
                 );
             }
-            return sub.run(rest, call);
+            return action.run(rest, call);
         }
     };
 };

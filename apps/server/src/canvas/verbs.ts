@@ -2,30 +2,29 @@ import { ChatSubagentSourceSchema, ContextSourceSchema } from '@ruimte/contracts
 import { z } from 'zod';
 import { MAX_SCREEN_LINES } from '../context/context-store.ts';
 import { agentVerb } from './agent-verb.ts';
-import { arrangeVerb } from './arrange-verb.ts';
-import { diagramVerb } from './diagram-verb.ts';
-import { groupVerb } from './group-verb.ts';
-import { linkVerb } from './link-verb.ts';
-import { containersOf } from './placement.ts';
+import { arrangeAction } from './arrange-verb.ts';
+import { diagramAction } from './diagram-verb.ts';
+import { groupAction } from './group-verb.ts';
+import { linkDeleteAction, linkListAction, linkNewAction } from './link-verb.ts';
+import { nodeDeleteAction, nodeListAction, nodeNewAction } from './node-verb.ts';
 import { notifyVerb } from './notify-verb.ts';
-import { renameVerb } from './rename-verb.ts';
-import { nodeVerb } from './node-verb.ts';
-import { openVerb } from './open-verb.ts';
+import { openAction } from './open-verb.ts';
 import { planVerb } from './plan-verb.ts';
-import { doneVerb, tasksVerb } from './task-verbs.ts';
+import { renameAction } from './rename-verb.ts';
+import { doneVerb, taskListAction } from './task-verbs.ts';
 import { teamVerb } from './team-verb.ts';
-import { VIEW_KINDS, deleteReason, viewVerb } from './view-verb.ts';
+import { VIEW_ACTIONS, VIEW_DETAIL, VIEW_SUMMARY } from './view-verb.ts';
 import { worktreeVerb } from './worktree-verb.ts';
 import {
     DRY_RUN_FLAG,
     DRY_RUN_PREVIEW,
+    SCOPE_LINE,
     VerbRefusal,
-    canvasFor,
+    defineNoun,
     defineVerb,
     dryRunVerbNames,
-    field,
-    placeOf,
     type ContextVerb,
+    type Noun,
     type VerbEntry
 } from './verb.ts';
 
@@ -33,54 +32,91 @@ import {
 const REFUSAL_LINE =
     'refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused';
 
-/* Two things an agent keeps mixing up, so the line is in the list and in the detail of each verb it is about. */
-const SCOPE_LINE =
-    'scope\tlist and read are what a person linked into this session; nodes, edges, views, node, agent, team, done, tasks, link, notify, view, open, group, arrange, rename, diagram and worktree are the project itself, and plan is the chat of the caller\ta node you add is readable through read only once a line runs from it into you';
-
 /* Agents repeat ids to people, who know nodes, views and plans only by their titles. */
 const IDS_LINE = 'ids\tIds in this output are for your commands. When you talk to the person, name things by their title, never by id';
 
-/* Said once under the list, since the flag is on some verbs and refused by name on the rest. */
+/* Said once under the list, since the flag is on some actions and refused by name on the rest. */
 const dryRunLine = (): string =>
     `dry run\t--${DRY_RUN_FLAG}\t${dryRunVerbNames().join(', ')}\tsame checks, nothing made; ${DRY_RUN_PREVIEW}; every other verb refuses the flag`;
 
-/* Every row says what it is in its first field, so the lines under the list are never read as verbs. */
-export const verbSummaryLines = (): string[] => VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`);
+/*
+ * Every row says what it is in its first field, so the lines under the list are never read as verbs.
+ * A noun names its actions and not their arguments, which keeps the root short; `help <noun>` has those.
+ */
+export const verbSummaryLines = (): string[] =>
+    VERBS.map((entry) =>
+        entry.served === 'noun'
+            ? `noun\t${entry.name}\t${entry.actions.map((action) => action.word).join('|')}\t${entry.summary}`
+            : `verb\t${entry.name}\t${entry.usage}\t${entry.summary}`
+    );
 
-/* A verb with words of its own prints each of them in full under its own lines, out of the same
-   table the dispatch reads, so a subcommand is documented by being defined. */
-const subcommandLines = (verb: VerbEntry): string[] =>
-    verb.served !== 'canvas' || verb.subcommands === undefined
-        ? []
-        : verb.subcommands.flatMap((sub) => [`usage\t${sub.name}\t${sub.usage}`, `about\t${sub.name}\t${sub.summary}`, ...sub.detail]);
+/* The signatures of every action of a noun, for `help <noun>` and a refusal about one. */
+const actionLines = (noun: Noun): string[] => noun.actions.map((action) => `action\t${action.name}\t${action.usage}\t${action.summary}`);
 
-const detailLines = (verb: VerbEntry): string[] => [
-    `usage\t${verb.name}\t${verb.usage}`,
-    `about\t${verb.summary}`,
-    ...verb.detail,
-    ...subcommandLines(verb),
+const detailLines = (entry: { name: string; usage: string; summary: string; detail: readonly string[] }): string[] => [
+    `usage\t${entry.name}\t${entry.usage}`,
+    `about\t${entry.summary}`,
+    ...entry.detail,
+    REFUSAL_LINE
+];
+
+const nounLines = (noun: Noun): string[] => [
+    `usage\t${noun.name}\t${noun.usage}`,
+    `about\t${noun.summary}`,
+    ...noun.detail,
+    ...actionLines(noun),
+    `detail\truimte-context help ${noun.name} <action>\tone action in full`,
     REFUSAL_LINE
 ];
 
 const helpVerb = defineVerb({
     name: 'help',
-    usage: '[verb]',
-    summary: 'Lists every verb: name, arguments, what it does; with a verb, everything that one verb takes',
+    usage: '[noun] [action]',
+    summary: 'Lists every verb and noun; with a noun the signature of each of its actions, with a noun and an action or with a verb everything that one takes',
     detail: [
-        'argument\t<verb>\toptional\tThe verb to detail; without one every verb is listed',
-        'prints\tverb\tname\targuments\tsummary\tone row per verb; a row that does not start with verb is not one'
+        'argument\t<noun>\toptional\tThe noun or verb to detail; without one every verb and noun is listed',
+        'argument\t<action>\toptional\tOne action of that noun, in full',
+        'prints\tverb\tname\targuments\tsummary\tone row per verb',
+        'prints\tnoun\tname\tactions\tsummary\tone row per noun, its actions separated by |; a row that starts with neither is not one'
     ],
-    positionals: z.array(z.string()).max(1, 'help takes one verb name and nothing else'),
+    positionals: z.array(z.string()).max(2, 'help takes a verb, or a noun and one of its actions, and nothing else'),
     flags: z.object({}),
-    run: async ({ positionals: [name] }) => {
+    run: async ({ positionals: [name, actionWord] }) => {
         if (name === undefined) {
-            return [...verbSummaryLines(), SCOPE_LINE, IDS_LINE, dryRunLine(), 'detail\truimte-context help <verb>\tone verb in full', REFUSAL_LINE];
+            return [
+                ...verbSummaryLines(),
+                SCOPE_LINE,
+                IDS_LINE,
+                dryRunLine(),
+                'detail\truimte-context help <noun>\tthe signature of every action of a noun',
+                'detail\truimte-context help <noun> <action>\tone action in full',
+                'detail\truimte-context help <verb>\tone verb in full',
+                REFUSAL_LINE
+            ];
         }
-        const verb = verbNamed(name);
-        if (!verb) {
-            throw new VerbRefusal('unknown-verb', `${name} is not a verb`, verbSummaryLines());
+        const entry = verbNamed(name);
+        if (!entry) {
+            throw new VerbRefusal('unknown-verb', `${name} is not a verb or a noun`, [
+                'detail\truimte-context help\tevery verb and noun, with what each takes',
+                ...verbSummaryLines()
+            ]);
         }
-        return detailLines(verb);
+        if (entry.served !== 'noun') {
+            if (actionWord !== undefined) {
+                throw new VerbRefusal('bad-arguments', `${name} is a verb and has no actions; ruimte-context help ${name} details it`, [
+                    `detail\truimte-context help ${name}\tone verb in full`
+                ]);
+            }
+            return detailLines(entry);
+        }
+        if (actionWord === undefined) {
+            return nounLines(entry);
+        }
+        const action = entry.actions.find((candidate) => candidate.word === actionWord);
+        if (!action) {
+            throw new VerbRefusal('unknown-action', `${actionWord} is not an action of ${name}`, actionLines(entry));
+        }
+        return detailLines(action);
     }
 });
 
@@ -118,119 +154,52 @@ const readVerb: ContextVerb = {
     ]
 };
 
-const nodesVerb = defineVerb({
-    name: 'nodes',
-    usage: '[--view V]',
-    summary: 'Lists the nodes of a canvas: id, kind, title, x, y, w, h, group',
+const nodeNoun = defineNoun({
+    name: 'node',
+    summary: 'Lists, adds, renames, removes, frames and lays out the nodes of a canvas',
     detail: [
-        'flag\t--view V\toptional\tThe canvas to list, by view id; ruimte-context views lists them',
-        'prints\tid\tkind\ttitle\tx\ty\tw\th\tgroup\tone line per node, rounded to whole pixels',
-        'units\tx and y are the top left corner of the node in canvas pixels, w and h its size; the canvas has no edges and x or y may be negative',
-        'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
-        'self\tThe last row is not a node: it is self and your own id, or self and a dash when you are not a node on this canvas',
-        'self\tA terminal session also carries its own id in $RUIMTE_SESSION_ID; a chat backend is given none, which is what the self row is for',
-        'groups\tA group is a row of kind group; its id is what --group takes on agent, and the group column names the frame a node stands in, empty on the canvas itself',
-        'see\truimte-context edges\tthe lines of the same canvas, which this list does not show',
-        'note\tA tab or a newline in a title is printed as a space, so a node is always one row',
+        'note\tA node is a note, a browser, a drawing, a diagram, a file, a terminal, a chat or a group on a canvas; agent and team add agent nodes that start working',
         SCOPE_LINE
     ],
-    positionals: z.tuple([], { error: 'nodes takes no arguments, only flags' }),
-    flags: z.object({ view: z.string().min(1, '--view needs the id of a canvas').optional() }),
-    async run({ flags }, call) {
-        const place = placeOf(call);
-        const canvas = canvasFor(await call.host.read(place.projectId), place, flags.view);
-        const containers = containersOf(canvas.nodes);
-        const mine = canvas.nodes.some((node) => node.id === call.caller);
-        return [
-            ...canvas.nodes.map((node) =>
-                [
-                    node.id,
-                    node.kind,
-                    field(node.title),
-                    ...[node.x, node.y, node.w, node.h].map((value) => String(Math.round(value))),
-                    containers.get(node.id)?.id ?? ''
-                ].join('\t')
-            ),
-            // Which row is the caller, which it can read nowhere else: a chat backend has no $RUIMTE_SESSION_ID.
-            mine ? `self\t${call.caller}` : 'self\t-\tyou are not a node on this canvas'
-        ];
-    }
+    actions: [nodeListAction, nodeNewAction, renameAction, nodeDeleteAction, groupAction, arrangeAction]
 });
 
-const edgesVerb = defineVerb({
-    name: 'edges',
-    usage: '[--view V]',
-    summary: 'Lists the lines of a canvas: id, from, to, label',
-    detail: [
-        'flag\t--view V\toptional\tThe canvas to list, by view id; ruimte-context views lists them',
-        'prints\tid\tfrom\tto\tlabel\tone line per line on the canvas, the label empty where it has none',
-        'direction\tA line runs from the first id into the second; into an agent node that is what makes the first readable to it, and never the other way round',
-        'both ways\tTwo agents that read each other are two lines, one each way; ruimte-context link draws the second',
-        'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
-        'note\tA canvas with no lines on it prints nothing at all',
-        SCOPE_LINE
-    ],
-    positionals: z.tuple([], { error: 'edges takes no arguments, only flags' }),
-    flags: z.object({ view: z.string().min(1, '--view needs the id of a canvas').optional() }),
-    async run({ flags }, call) {
-        const place = placeOf(call);
-        const canvas = canvasFor(await call.host.read(place.projectId), place, flags.view);
-        return canvas.edges.map((edge) => [edge.id, edge.from, edge.to, field(edge.label ?? '')].join('\t'));
-    }
+const linkNoun = defineNoun({
+    name: 'link',
+    summary: 'Lists, draws and removes the lines of a canvas, which is what lets an agent read the node a line runs from',
+    detail: [SCOPE_LINE],
+    actions: [linkListAction, linkNewAction, linkDeleteAction]
 });
 
-const viewsVerb = defineVerb({
-    name: 'views',
-    usage: '',
-    summary: 'Lists the views of the project in sidebar order: id, kind, name, whether you may delete it and why',
-    detail: [
-        'prints\tid\tkind\tname\tdelete\twhy\tone line per view, in the order the sidebar has them',
-        `kinds\t${VIEW_KINDS.join('\t')}`,
-        'delete\tyes or no: whether ruimte-context view delete would remove that view for you, with the reason beside it',
-        'why\tyours, this machine frees every view, a person made it, <id> made it, or you are in it',
-        'self\tThe last row is self and the view you are in: the canvas you stand on, or your own id when you are a view of your own',
-        'note\tA separator is a line in the sidebar and has an empty name',
-        'see\truimte-context view\tmaking a view, renaming it, marking it, moving it, removing it'
-    ],
-    positionals: z.tuple([], { error: 'views takes no arguments' }),
-    flags: z.object({}),
-    async run(_input, call) {
-        const place = placeOf(call);
-        const content = await call.host.read(place.projectId);
-        const anyView = call.host.agentsDeleteAnyView();
-        return [
-            ...content.views.map((view) => {
-                const { may, why } = deleteReason(view, { caller: call.caller, place, anyView });
-                return `${view.id}\t${view.kind}\t${field(view.name ?? '')}\t${may ? 'yes' : 'no'}\t${why}`;
-            }),
-            `self\t${place.canvasId ?? call.caller}`
-        ];
-    }
+const viewNoun = defineNoun({
+    name: 'view',
+    summary: VIEW_SUMMARY,
+    detail: VIEW_DETAIL,
+    actions: [...VIEW_ACTIONS, openAction, diagramAction]
 });
 
-/* In the order `help` lists them: everything `ruimte-context` does, whichever route serves it. */
+const taskNoun = defineNoun({
+    name: 'task',
+    summary: 'Lists the tasks you gave and the task you were given; done reports the result of yours',
+    detail: ['see\truimte-context done\treporting the result of the task you were opened with'],
+    actions: [taskListAction]
+});
+
+/* In the order `help` lists them, the verbs of their own before the nouns: everything `ruimte-context` does, whichever route serves it. */
 export const VERBS: readonly VerbEntry[] = [
     helpVerb,
     listVerb,
     readVerb,
-    nodesVerb,
-    edgesVerb,
-    viewsVerb,
-    nodeVerb,
+    doneVerb,
+    notifyVerb,
     agentVerb,
     teamVerb,
-    doneVerb,
-    tasksVerb,
-    linkVerb,
-    notifyVerb,
-    viewVerb,
-    openVerb,
-    groupVerb,
-    arrangeVerb,
-    renameVerb,
-    diagramVerb,
-    worktreeVerb,
-    planVerb
+    nodeNoun,
+    linkNoun,
+    viewNoun,
+    taskNoun,
+    planVerb,
+    worktreeVerb
 ];
 
 export const verbNamed = (name: string): VerbEntry | undefined => VERBS.find((verb) => verb.name === name);

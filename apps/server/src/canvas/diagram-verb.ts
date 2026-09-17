@@ -3,7 +3,7 @@ import { DEFAULT_EDGE_TONE, DEFAULT_GROUP_TONE, DEFAULT_NODE_TONE } from '@ruimt
 import { z } from 'zod';
 import { DiagramError } from '../projects/diagram-store.ts';
 import { viewLines } from './view-verb.ts';
-import { VerbRefusal, defineVerb, orNote, placeOf } from './verb.ts';
+import { VerbRefusal, defineAction, orNote, placeOf } from './verb.ts';
 
 /*
  * The document as an agent hands it in. Strict at every level, unlike the schema a save reads: a
@@ -100,8 +100,8 @@ export const DIAGRAM_EXAMPLE = JSON.stringify({
 });
 
 const DETAIL: readonly string[] = [
-    'argument\t<viewId>\trequired\tA diagram view of this project; ruimte-context views lists them, ruimte-context view new <name> --kind diagram makes one',
-    "stdin\tThe document as JSON, piped in or as a heredoc: ruimte-context diagram <viewId> <<'EOF' ... EOF",
+    'argument\t<viewId>\trequired\tA diagram view of this project; ruimte-context view list lists them, ruimte-context view new <name> --kind diagram makes one',
+    "stdin\tThe document as JSON, piped in or as a heredoc: ruimte-context view diagram <viewId> <<'EOF' ... EOF",
     'flag\t--document JSON\toptional\tThe document as one argument instead of on stdin; the CLI puts stdin here when you leave it out',
     'prints\tview\trev\tnodes\tgroups\tedges\tthe view written, its new rev, and how many nodes, groups and edges it now holds',
     'document\t{ meta, nodes, groups, edges }\tone JSON object; version and rev belong to the daemon and are ignored when present',
@@ -166,7 +166,7 @@ const issueText = (issue: z.core.$ZodIssue, json: unknown): string => {
 // Enough to repair a document in one pass, few enough that a broken one does not fill the window.
 const MAX_PROBLEMS = 20;
 
-const HELP_LINE = 'detail\truimte-context help diagram';
+const HELP_LINE = 'detail\truimte-context help view diagram';
 
 const documentProblems = (error: z.ZodError, json: unknown): VerbRefusal => {
     const problems = error.issues.map((issue) => {
@@ -181,14 +181,16 @@ const documentProblems = (error: z.ZodError, json: unknown): VerbRefusal => {
     ]);
 };
 
-export const diagramVerb = defineVerb({
+export const diagramAction = defineAction('view', {
     name: 'diagram',
     usage: '<viewId> < document.json',
     summary: 'Replaces the whole diagram of a diagram view with the JSON document on stdin; prints view, rev, nodes, groups, edges',
     detail: DETAIL,
-    positionals: z.tuple([z.string().min(1, 'diagram needs the id of a diagram view')], {
+    positionals: z.tuple([z.string().min(1, 'view diagram needs the id of a diagram view')], {
         error: (issue) =>
-            issue.code === 'too_big' ? 'diagram takes one view id and nothing else; the document goes on stdin' : 'diagram needs the id of a diagram view'
+            issue.code === 'too_big'
+                ? 'view diagram takes one view id and nothing else; the document goes on stdin'
+                : 'view diagram needs the id of a diagram view'
     }),
     flags: z.object({ document: z.string().optional() }),
     async run({ positionals: [viewId], flags }, call) {
@@ -206,9 +208,11 @@ export const diagramVerb = defineVerb({
             );
         }
         if (flags.document === undefined || flags.document.trim() === '') {
-            throw new VerbRefusal('no-document', "diagram reads the document on stdin and got nothing: ruimte-context diagram <viewId> <<'EOF' ... EOF", [
-                HELP_LINE
-            ]);
+            throw new VerbRefusal(
+                'no-document',
+                "view diagram reads the document on stdin and got nothing: ruimte-context view diagram <viewId> <<'EOF' ... EOF",
+                [HELP_LINE]
+            );
         }
         let json: unknown;
         try {

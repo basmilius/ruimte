@@ -16,23 +16,10 @@ import {
 } from '@ruimte/contracts';
 import { z } from 'zod';
 import type { IndexedPlace } from '../projects/project-index.ts';
-import { groupMembers, placeBeside, placeFree } from './placement.ts';
+import { containersOf, groupMembers, placeBeside, placeFree } from './placement.ts';
 import { checkCwd, checkPath, isInside } from './project-paths.ts';
 import { unescapeText } from './text-escapes.ts';
-import {
-    DRY_RUN_PREVIEW,
-    MAX_TITLE_LENGTH,
-    TITLE_LINE,
-    VerbRefusal,
-    canvasFor,
-    defineSubVerb,
-    defineVerb,
-    field,
-    orNote,
-    placeOf,
-    titleField,
-    type Verb
-} from './verb.ts';
+import { DRY_RUN_PREVIEW, MAX_TITLE_LENGTH, SCOPE_LINE, TITLE_LINE, VerbRefusal, canvasFor, defineAction, field, orNote, placeOf, titleField } from './verb.ts';
 
 export const NODE_VERB_KINDS = ['note', 'browser', 'drawing', 'diagram', 'file', 'terminal', 'chat'] as const;
 type NodeVerbKind = (typeof NODE_VERB_KINDS)[number];
@@ -79,7 +66,7 @@ const kindLine = (kind: NodeVerbKind): string =>
 /* The three flags no kind is without; a refusal about one kind would otherwise read as if they were gone. */
 const EVERY_KIND_LINE = 'kind\tevery kind\t--title T, --view V, --beside N';
 
-const KIND_MESSAGE = `node needs a kind: ${NODE_VERB_KINDS.join(', ')}`;
+const KIND_MESSAGE = `node new needs a kind: ${NODE_VERB_KINDS.join(', ')}`;
 
 const NODE_DETAIL: readonly string[] = [
     `argument\t<kind>\trequired\t${NODE_VERB_KINDS.join(', ')}`,
@@ -87,12 +74,12 @@ const NODE_DETAIL: readonly string[] = [
     ...NODE_VERB_KINDS.map(kindLine),
     EVERY_KIND_LINE,
     `flag\t--title T\tevery kind\tThe title, at most ${MAX_TITLE_LENGTH} characters; one set here is the node's for good, the session never renames over it`,
-    'flag\t--view V\tevery kind\tThe canvas to add to, by view id; ruimte-context views lists them',
+    'flag\t--view V\tevery kind\tThe canvas to add to, by view id; ruimte-context view list lists them',
     'flag\t--beside N\tevery kind\tPuts the node directly right of node N, top edges level, whatever is there already',
     `flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field is dry-run instead of the id the node would have got; ${DRY_RUN_PREVIEW}`,
     `flag\t--text B\t${kindsFor('text')}\tThe body; \\n, \\t and \\\\ are read as escapes, and --text - takes the body from stdin, byte for byte`,
     `flag\t--url U\t${kindsFor('url')}\tAn http or https address`,
-    `flag\t--source V\t${kindsFor('source')}\tThe id of a view of this project of the same kind as the node, a drawing for a drawing and a diagram for a diagram; ruimte-context views lists them`,
+    `flag\t--source V\t${kindsFor('source')}\tThe id of a view of this project of the same kind as the node, a drawing for a drawing and a diagram for a diagram; ruimte-context view list lists them`,
     `flag\t--path P\t${kindsFor('path')}\tThe file to show; it has to exist`,
     `flag\t--cwd P\t${kindsFor('cwd')}\tThe directory the shell starts in`,
     'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
@@ -121,7 +108,7 @@ const BESIDE_LINES_MAX = 20;
 export const nodeLines = (canvas: ProjectCanvasView, options: { takes?: (node: ProjectNode) => boolean; empty?: string } = {}): string[] => {
     const nodes = options.takes === undefined ? canvas.nodes : canvas.nodes.filter(options.takes);
     if (nodes.length > BESIDE_LINES_MAX) {
-        return [`detail\truimte-context nodes\tthe ${canvas.nodes.length} nodes of ${canvas.id}`];
+        return [`detail\truimte-context node list\tthe ${canvas.nodes.length} nodes of ${canvas.id}`];
     }
     return orNote(
         nodes.map((node) => `node\t${node.id}\t${node.kind}\t${field(node.title)}`),
@@ -129,7 +116,7 @@ export const nodeLines = (canvas: ProjectCanvasView, options: { takes?: (node: P
     );
 };
 
-/* A group is never one of --nodes: `group` and `arrange` both refuse one, so neither offers one. */
+/* A group is never one of --nodes: `node group` and `node arrange` both refuse one, so neither offers one. */
 export const NOT_A_GROUP = {
     takes: (node: ProjectNode): boolean => node.kind !== 'group',
     empty: 'This canvas holds nothing but frames, and a frame is never one of --nodes'
@@ -206,8 +193,8 @@ export const checkUrl = (url: string): string => {
     return parsed.href;
 };
 
-const addVerb = defineVerb({
-    name: 'node',
+export const nodeNewAction = defineAction('node', {
+    name: 'new',
     usage: `<${NODE_VERB_KINDS.join('|')}> [--title T] [--text B] [--url U] [--path P] [--source V] [--cwd P] [--view V] [--beside N] [--dry-run]`,
     // The required flags are in the summary too: without them the first thing a first-time caller meets is a refusal.
     summary: `Adds one node to a canvas and prints id, kind, view; ${Object.entries(REQUIRED_FLAG)
@@ -216,7 +203,7 @@ const addVerb = defineVerb({
     detail: NODE_DETAIL,
     dryRun: true,
     positionals: z.tuple([z.enum(NODE_VERB_KINDS, { error: KIND_MESSAGE })], {
-        error: (issue) => (issue.code === 'too_big' ? 'node takes one kind and nothing else; a title goes in --title' : KIND_MESSAGE)
+        error: (issue) => (issue.code === 'too_big' ? 'node new takes one kind and nothing else; a title goes in --title' : KIND_MESSAGE)
     }),
     flags: z.object({
         title: titleField('--title', '--title needs a title').optional(),
@@ -319,7 +306,7 @@ const deletableLines = (
 ): string[] => {
     const canvas = place.canvasId === null ? undefined : content.views.find((view) => view.id === place.canvasId);
     if (canvas === undefined || !isCanvasView(canvas)) {
-        return ['detail\truimte-context nodes --view <id>\tthe nodes of a canvas, which is where an id comes from'];
+        return ['detail\truimte-context node list --view <id>\tthe nodes of a canvas, which is where an id comes from'];
     }
     return nodeLines(canvas, {
         takes: (node) => node.id !== call.caller && (call.anyNode || call.madeBy(node.id) === call.caller),
@@ -327,22 +314,22 @@ const deletableLines = (
     });
 };
 
-const deleteSub = defineSubVerb('node', {
+export const nodeDeleteAction = defineAction('node', {
     name: 'delete',
     usage: '<nodeId>',
     summary: 'Removes a node you made, with the session it holds and the lines that ran into it',
     detail: [
-        'argument\t<nodeId>\trequired\tThe node to remove, by id; ruimte-context nodes lists them',
+        'argument\t<nodeId>\trequired\tThe node to remove, by id; ruimte-context node list lists them',
         'prints\tdeleted\tid\tkind\ttitle\tthe node that went',
         'prints\tended\tid\tkind\tthe session it took with it, for a terminal or a chat',
         'prints\tedges\tcount\thow many lines ran into or out of it and went with it',
         'prints\tmembers\tcount\tfor a group: how many nodes stood in the frame and stayed where they are',
-        'rule\tOnly a node whose maker is you, which is every node you made with node, agent or team',
+        'rule\tOnly a node whose maker is you, which is every node you made with node new, node group, agent or team',
         'rule\tA machine can free every node and view of every project on it; a refusal says whether this one does',
         'rule\tNever your own node, since that would end the session asking',
         'group\tRemoving a group takes the frame and nothing else: the nodes inside it stay where they stand, because they are not yours to remove with it',
         'note\tThe node is found on any canvas of this project, so this takes no --view',
-        'see\truimte-context nodes\tthe nodes of a canvas, with the ids this takes'
+        'see\truimte-context node list\tthe nodes of a canvas, with the ids this takes'
     ],
     positionals: z.tuple([z.string().min(1, 'node delete needs the id of a node')], {
         error: (issue) => (issue.code === 'too_big' ? 'node delete takes one node id and nothing else' : 'node delete needs the id of a node')
@@ -399,15 +386,41 @@ const deleteSub = defineSubVerb('node', {
     }
 });
 
-/*
- * One verb with one word after it that is not a kind. `node delete` is not a group of its own
- * because everything else `node` does is `node <kind>`, and a registry entry that dispatches on the
- * first word keeps both shapes on one verb, with the sub rendered by the same `help` as `view`'s.
- */
-export const nodeVerb: Verb = {
-    ...addVerb,
-    usage: `${addVerb.usage} | delete <nodeId>`,
-    flagNames: [...new Set([...addVerb.flagNames, ...deleteSub.flagNames])],
-    subcommands: [deleteSub],
-    run: (argv, call) => (argv[0] === deleteSub.word ? deleteSub.run(argv.slice(1), call) : addVerb.run(argv, call))
-};
+export const nodeListAction = defineAction('node', {
+    name: 'list',
+    usage: '[--view V]',
+    summary: 'Lists the nodes of a canvas: id, kind, title, x, y, w, h, group',
+    detail: [
+        'flag\t--view V\toptional\tThe canvas to list, by view id; ruimte-context view list lists them',
+        'prints\tid\tkind\ttitle\tx\ty\tw\th\tgroup\tone line per node, rounded to whole pixels',
+        'units\tx and y are the top left corner of the node in canvas pixels, w and h its size; the canvas has no edges and x or y may be negative',
+        'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
+        'self\tThe last row is not a node: it is self and your own id, or self and a dash when you are not a node on this canvas',
+        'self\tA terminal session also carries its own id in $RUIMTE_SESSION_ID; a chat backend is given none, which is what the self row is for',
+        'groups\tA group is a row of kind group; its id is what --group takes on agent, and the group column names the frame a node stands in, empty on the canvas itself',
+        'see\truimte-context link list\tthe lines of the same canvas, which this list does not show',
+        'note\tA tab or a newline in a title is printed as a space, so a node is always one row',
+        SCOPE_LINE
+    ],
+    positionals: z.tuple([], { error: 'node list takes no arguments, only flags' }),
+    flags: z.object({ view: z.string().min(1, '--view needs the id of a canvas').optional() }),
+    async run({ flags }, call) {
+        const place = placeOf(call);
+        const canvas = canvasFor(await call.host.read(place.projectId), place, flags.view);
+        const containers = containersOf(canvas.nodes);
+        const mine = canvas.nodes.some((node) => node.id === call.caller);
+        return [
+            ...canvas.nodes.map((node) =>
+                [
+                    node.id,
+                    node.kind,
+                    field(node.title),
+                    ...[node.x, node.y, node.w, node.h].map((value) => String(Math.round(value))),
+                    containers.get(node.id)?.id ?? ''
+                ].join('\t')
+            ),
+            // Which row is the caller, which it can read nowhere else: a chat backend has no $RUIMTE_SESSION_ID.
+            mine ? `self\t${call.caller}` : 'self\t-\tyou are not a node on this canvas'
+        ];
+    }
+});

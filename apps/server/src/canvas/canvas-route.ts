@@ -34,7 +34,7 @@ interface CanvasRouteDeps {
 }
 
 /*
- * `POST /canvas/<verb>` with `{ argv }`, the words after the verb. The daemon parses them rather
+ * `POST /canvas/<verb or noun>` with `{ argv }`, the words after it. The daemon parses them rather
  * than the CLI, so a `ruimte-context` from an older build never disagrees with the verbs it talks to.
  */
 export const handleCanvasRequest = async (request: Request, pathname: string, deps: CanvasRouteDeps): Promise<Response> => {
@@ -55,7 +55,12 @@ export const handleCanvasRequest = async (request: Request, pathname: string, de
     }
     const verb = verbNamed(name);
     if (!verb) {
-        return refusal('unknown-verb', `${name || '(none)'} is not a verb`, [...joinedWordsLines(name), ...verbSummaryLines()], 404);
+        return refusal(
+            'unknown-verb',
+            `${name || '(none)'} is not a verb or a noun`,
+            [...joinedWordsLines(name), 'detail\truimte-context help\tevery verb and noun, with what each takes', ...verbSummaryLines()],
+            404
+        );
     }
     if (verb.served === 'context') {
         return refusal('not-a-canvas-verb', `${name} is answered by GET /context; run ruimte-context ${name}`, [], 404);

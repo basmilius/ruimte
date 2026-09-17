@@ -2,7 +2,7 @@ import { isCanvasView, type ProjectContent, type Worktree } from '@ruimte/contra
 import { z } from 'zod';
 import { GitError } from '../git/run.ts';
 import { isInside } from './project-paths.ts';
-import { VerbRefusal, defineSubVerb, defineVerbGroup, field, orNote, placeOf, type VerbCall, type WorktreeHost } from './verb.ts';
+import { VerbRefusal, defineAction, defineNoun, field, orNote, placeOf, type VerbCall, type WorktreeHost } from './verb.ts';
 
 // How far up the chain of openers a merge looks for the caller; a chain this deep is refused by `agent` long before.
 const MAX_LINEAGE = 64;
@@ -76,7 +76,7 @@ const openedByCaller = (call: VerbCall, nodeId: string): boolean => {
     return false;
 };
 
-const listSub = defineSubVerb('worktree', {
+const listSub = defineAction('worktree', {
     name: 'list',
     usage: '',
     summary: 'Lists the worktrees of the repository: branch, path, nodes, from, changed, new, commits',
@@ -110,7 +110,7 @@ const listSub = defineSubVerb('worktree', {
     }
 });
 
-const diffSub = defineSubVerb('worktree', {
+const diffSub = defineAction('worktree', {
     name: 'diff',
     usage: '<branch> [--stat] [--tail N]',
     summary: 'Prints what a worktree changed since the branch it was made from, uncommitted and new files included',
@@ -156,7 +156,7 @@ const diffSub = defineSubVerb('worktree', {
     }
 });
 
-const mergeSub = defineSubVerb('worktree', {
+const mergeSub = defineAction('worktree', {
     name: 'merge',
     usage: '<branch> [--squash | --rebase] [--message M]',
     summary: 'Merges the worktree of an agent you opened into the branch it was made from; the worktree and its branch stay',
@@ -215,12 +215,12 @@ const mergeSub = defineSubVerb('worktree', {
     }
 });
 
-export const worktreeVerb = defineVerbGroup({
+export const worktreeVerb = defineNoun({
     name: 'worktree',
     summary: 'Reads the worktrees of the repository and what each changed, and merges the ones of agents you opened',
     detail: [
         'worktrees\tagent --worktree and team --worktree give each agent a worktree of its own; these are the words to see and bring back their work',
         'never\tNothing removes a worktree on its own, also not after a merge; a person removes it from the git panel or when deleting its node'
     ],
-    subs: [listSub, diffSub, mergeSub]
+    actions: [listSub, diffSub, mergeSub]
 });

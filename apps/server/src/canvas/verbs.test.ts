@@ -43,15 +43,17 @@ import { MAX_LINKS } from './link-verb.ts';
 import { MAX_CANVAS_NODES } from './node-verb.ts';
 import { PLACEMENT_GAP, TEAM_COLUMNS } from './placement.ts';
 import { MAX_ROLES, ROLES_SHAPE } from './team-verb.ts';
-import { MAX_PROJECT_VIEWS, VIEW_KINDS, viewVerb } from './view-verb.ts';
+import { MAX_PROJECT_VIEWS, VIEW_KINDS } from './view-verb.ts';
 import { MAX_NOTICE_LENGTH } from '../context/notices.ts';
 import type { Notice, NoticeDelivery } from '../context/notices.ts';
-import { MAX_TITLE_LENGTH, type AgentStart, type CanvasHost } from './verb.ts';
+import { MAX_TITLE_LENGTH, type AgentStart, type CanvasHost, type Noun } from './verb.ts';
 import { VERBS } from './verbs.ts';
 import { TaskStore } from '../tasks/task-store.ts';
 import { MAX_TASK_PROMPT_LENGTH, nextLine, taskBrief } from './task-verbs.ts';
 
-const VIEW_SUBS = viewVerb.subcommands ?? [];
+const nounNamed = (name: string): Noun => VERBS.find((entry): entry is Noun => entry.served === 'noun' && entry.name === name)!;
+
+const VIEW_SUBS = nounNamed('view').actions;
 
 let root: string;
 let folder: string;
@@ -245,7 +247,7 @@ const made = async (name: string, argv: string[] = [], token = 'term'): Promise<
 /* The last column of `views`, per view id: whether `view delete` would remove it for this caller. */
 const deleteColumn = async (token = 'term'): Promise<Record<string, string>> =>
     Object.fromEntries(
-        (await post('views', [], token)).lines
+        (await post('view', ['list'], token)).lines
             .filter((line) => !line.startsWith('self\t'))
             .map((line) => line.split('\t'))
             .map(([id, , , may]) => [id!, may!])
@@ -254,13 +256,27 @@ const deleteColumn = async (token = 'term'): Promise<Record<string, string>> =>
 /* The reason column beside it, which is what makes a yes or a no read as more than an opinion. */
 const deleteWhy = async (token = 'term'): Promise<Record<string, string>> =>
     Object.fromEntries(
-        (await post('views', [], token)).lines
+        (await post('view', ['list'], token)).lines
             .filter((line) => !line.startsWith('self\t'))
             .map((line) => line.split('\t'))
             .map(([id, , , , why]) => [id!, why!])
     );
 
 const viewOnDisk = async (id: string): Promise<ProjectView | undefined> => (await onDisk()).views.find((view) => view.id === id);
+
+/* What the root of `help` and an unknown verb print, one row per entry of the registry. */
+const rootRows = (): string[] =>
+    VERBS.map((entry) =>
+        entry.served === 'noun'
+            ? `noun\t${entry.name}\t${entry.actions.map((action) => action.word).join('|')}\t${entry.summary}`
+            : `verb\t${entry.name}\t${entry.usage}\t${entry.summary}`
+    );
+
+const HELP_LINE = 'detail\truimte-context help\tevery verb and noun, with what each takes';
+
+/* Every action of every noun with its noun, so a test walks the whole tree. */
+const allActions = (): Array<{ noun: Noun; action: Noun['actions'][number] }> =>
+    VERBS.flatMap((entry) => (entry.served === 'noun' ? entry.actions.map((action) => ({ noun: entry, action })) : []));
 
 describe('the route', () => {
     test('answers 405 to anything but POST and 401 to an unknown token', async () => {
@@ -270,21 +286,35 @@ describe('the route', () => {
         expect((await post('help', [], 'nope')).status).toBe(401);
     });
 
-    test('an unknown verb is a 404 refusal that lists the verbs', async () => {
+    test('an unknown verb is a 404 refusal that points at help and lists the verbs and nouns', async () => {
         const { status, lines } = await post('spawn', ['claude']);
         expect(status).toBe(404);
-        expect(lines[0]).toBe('refused\tunknown-verb\tspawn is not a verb');
-        expect(lines.slice(1)).toEqual(VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`));
+        expect(lines[0]).toBe('refused\tunknown-verb\tspawn is not a verb or a noun');
+        expect(lines[1]).toBe(HELP_LINE);
+        expect(lines.slice(2)).toEqual(rootRows());
+    });
+
+    test('a spelling from before the nouns is an unknown verb like any other', async () => {
+        for (const old of ['nodes', 'edges', 'views', 'rename', 'group', 'arrange', 'open', 'diagram', 'tasks']) {
+            const { status, lines } = await post(old, []);
+            expect(status).toBe(404);
+            expect(lines[0]).toBe(`refused\tunknown-verb\t${old} is not a verb or a noun`);
+            expect(lines[1]).toBe(HELP_LINE);
+        }
     });
 
     test('a verb and its arguments quoted into one name is told what went wrong', async () => {
         const { status, lines } = await post('help agent', []);
         expect(status).toBe(404);
-        expect(lines[0]).toBe('refused\tunknown-verb\thelp agent is not a verb');
+        expect(lines[0]).toBe('refused\tunknown-verb\thelp agent is not a verb or a noun');
         expect(lines[1]).toBe('note\tA verb and its arguments are separate words, so this is ruimte-context help agent, not one name');
-        expect(lines.slice(2)).toEqual(VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`));
+        expect(lines[2]).toBe(HELP_LINE);
+        expect(lines.slice(3)).toEqual(rootRows());
+        expect((await post('node list', [])).lines[1]).toBe(
+            'note\tA verb and its arguments are separate words, so this is ruimte-context node list, not one name'
+        );
         // A name that starts with nothing this daemon knows gets the list and no guess.
-        expect((await post('spawn team', [])).lines[1]).toStartWith('verb\t');
+        expect((await post('spawn team', [])).lines[1]).toBe(HELP_LINE);
     });
 
     test('a body without argv is refused', async () => {
@@ -298,55 +328,166 @@ describe('the route', () => {
     });
 });
 
+describe('the tree', () => {
+    test('a noun needs one of its actions, and says which they are', async () => {
+        for (const noun of ['node', 'link', 'task']) {
+            const entry = nounNamed(noun);
+            const words = entry.actions.map((action) => action.word).join(', ');
+            const bare = await post(noun, []);
+            expect(bare.status).toBe(422);
+            expect(bare.lines).toEqual([
+                `refused\tunknown-action\t${noun} needs one of ${words}`,
+                ...entry.actions.map((action) => `usage\t${action.name}\t${action.usage}`),
+                `detail\truimte-context help ${noun}`
+            ]);
+        }
+        // A kind where the action goes, or a flag, is not an action either: node <kind> and a bare link are gone.
+        expect((await post('node', ['note', '--text', 'x'])).lines[0]).toBe(
+            'refused\tunknown-action\tnode needs one of list, new, rename, delete, group, arrange, and note is not one'
+        );
+        expect((await post('link', ['--to', 'note-1'])).lines[0]).toBe('refused\tunknown-action\tlink needs one of list, new, delete, and --to is not one');
+    });
+
+    test('the nouns hold the actions the grammar names, in that order', () => {
+        const words = (noun: string): string[] => nounNamed(noun).actions.map((action) => action.word);
+        expect(words('node')).toEqual(['list', 'new', 'rename', 'delete', 'group', 'arrange']);
+        expect(words('link')).toEqual(['list', 'new', 'delete']);
+        expect(words('view')).toEqual(['list', 'new', 'rename', 'icon', 'move', 'delete', 'open', 'diagram']);
+        expect(words('task')).toEqual(['list']);
+        expect(words('worktree')).toEqual(['list', 'diff', 'merge']);
+        expect(VERBS.filter((entry) => entry.served !== 'noun').map((entry) => entry.name)).toEqual([
+            'help',
+            'list',
+            'read',
+            'done',
+            'notify',
+            'agent',
+            'team'
+        ]);
+        for (const { noun, action } of allActions()) {
+            expect(action.name).toBe(`${noun.name} ${action.word}`);
+        }
+    });
+
+    test('an argument refusal of an action names both words and points at its own help', async () => {
+        const { lines } = await post('link', ['list', 'main']);
+        expect(lines).toEqual([
+            'refused\tbad-arguments\tlink list takes no arguments, only flags',
+            'usage\tlink list\t[--view V]',
+            'detail\truimte-context help link list'
+        ]);
+    });
+});
+
 describe('help', () => {
-    test('renders one row per verb from the registry, with what is not a verb marked as such', async () => {
+    test('renders one row per verb and noun from the registry, with what is neither marked as such', async () => {
         const { status, lines } = await post('help', []);
         expect(status).toBe(200);
-        expect(lines.slice(0, -5)).toEqual(VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`));
-        expect(lines.map((line) => line.split('\t')[0])).toEqual([...VERBS.map(() => 'verb'), 'scope', 'ids', 'dry run', 'detail', 'refusal']);
+        expect(lines.slice(0, -7)).toEqual(rootRows());
+        expect(lines.map((line) => line.split('\t')[0])).toEqual([
+            ...VERBS.map((entry) => (entry.served === 'noun' ? 'noun' : 'verb')),
+            'scope',
+            'ids',
+            'dry run',
+            'detail',
+            'detail',
+            'detail',
+            'refusal'
+        ]);
         expect(lines[2]).toBe('verb\tread\t<id> [--tail N] [--subagent T]\tPrints one linked source, whole or its last N lines');
-        expect(lines.at(-5)).toStartWith('scope\tlist and read are what a person linked into this session;');
-        expect(lines.at(-4)).toBe('ids\tIds in this output are for your commands. When you talk to the person, name things by their title, never by id');
-        expect(lines.at(-3)).toBe(
-            'dry run\t--dry-run\tnode, agent, team\tsame checks, nothing made; a refused call makes nothing either, so it is only a preview and never needed for safety; every other verb refuses the flag'
+        expect(lines).toContain('noun\tnode\tlist|new|rename|delete|group|arrange\tLists, adds, renames, removes, frames and lays out the nodes of a canvas');
+        expect(lines.at(-7)).toStartWith('scope\tlist and read are what a person linked into this session;');
+        expect(lines.at(-6)).toBe('ids\tIds in this output are for your commands. When you talk to the person, name things by their title, never by id');
+        expect(lines.at(-5)).toBe(
+            'dry run\t--dry-run\tnode new, agent, plan new, team\tsame checks, nothing made; a refused call makes nothing either, so it is only a preview and never needed for safety; every other verb refuses the flag'
         );
-        expect(lines.at(-2)).toBe('detail\truimte-context help <verb>\tone verb in full');
+        expect(lines.slice(-4, -1)).toEqual([
+            'detail\truimte-context help <noun>\tthe signature of every action of a noun',
+            'detail\truimte-context help <noun> <action>\tone action in full',
+            'detail\truimte-context help <verb>\tone verb in full'
+        ]);
         expect(lines.at(-1)).toBe(
             'refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused'
         );
     });
 
+    test('the root names every noun and every verb of its own, and no action by its arguments', async () => {
+        const { lines } = await post('help', []);
+        for (const noun of ['node', 'link', 'view', 'task', 'plan', 'worktree']) {
+            expect(lines.filter((line) => line.startsWith(`noun\t${noun}\t`))).toHaveLength(1);
+        }
+        for (const verb of ['help', 'list', 'read', 'done', 'notify', 'agent', 'team']) {
+            expect(lines.filter((line) => line.startsWith(`verb\t${verb}\t`))).toHaveLength(1);
+        }
+        expect(lines.some((line) => line.includes('--text B'))).toBe(false);
+    });
+
     test('help <verb> details one verb, synopsis first and refusals last', async () => {
         for (const verb of VERBS) {
+            if (verb.served === 'noun') {
+                continue;
+            }
             const { status, lines } = await post('help', [verb.name]);
             expect(status).toBe(200);
             expect(lines[0]).toBe(`usage\t${verb.name}\t${verb.usage}`);
             expect(lines[1]).toBe(`about\t${verb.summary}`);
-            const subs = verb.served === 'canvas' ? (verb.subcommands ?? []) : [];
-            expect(lines.slice(2, -1)).toEqual([
-                ...verb.detail,
-                ...subs.flatMap((sub) => [`usage\t${sub.name}\t${sub.usage}`, `about\t${sub.name}\t${sub.summary}`, ...sub.detail])
-            ]);
+            expect(lines.slice(2, -1)).toEqual([...verb.detail]);
             expect(lines.at(-1)).toStartWith('refusal\t');
             // Tab-separated rows, never a paragraph.
             expect(lines.every((line) => line.includes('\t'))).toBe(true);
         }
     });
 
-    test('every flag a verb takes is a line of its own detail', async () => {
-        for (const verb of VERBS) {
-            if (verb.served !== 'canvas') {
+    test('help <noun> prints the signature of every action and no action in full', async () => {
+        for (const noun of VERBS) {
+            if (noun.served !== 'noun') {
                 continue;
             }
-            const { lines } = await post('help', [verb.name]);
-            for (const flag of verb.flagNames) {
-                expect(lines.some((line) => line.startsWith(`flag\t--${flag} `) || line.startsWith(`flag\t--${flag}\t`))).toBe(true);
+            const { status, lines } = await post('help', [noun.name]);
+            expect(status).toBe(200);
+            expect(lines).toEqual([
+                `usage\t${noun.name}\t${noun.usage}`,
+                `about\t${noun.summary}`,
+                ...noun.detail,
+                ...noun.actions.map((action) => `action\t${action.name}\t${action.usage}\t${action.summary}`),
+                `detail\truimte-context help ${noun.name} <action>\tone action in full`,
+                lines.at(-1)!
+            ]);
+            expect(lines.at(-1)).toStartWith('refusal\t');
+        }
+    });
+
+    test('help <noun> <action> details one action, synopsis first and refusals last', async () => {
+        for (const { action } of allActions()) {
+            const { status, lines } = await post('help', action.name.split(' '));
+            expect(status).toBe(200);
+            expect(lines[0]).toBe(`usage\t${action.name}\t${action.usage}`);
+            expect(lines[1]).toBe(`about\t${action.summary}`);
+            expect(lines.slice(2, -1)).toEqual([...action.detail]);
+            expect(lines.at(-1)).toStartWith('refusal\t');
+            expect(lines.every((line) => line.includes('\t'))).toBe(true);
+        }
+    });
+
+    test('every flag a verb or an action takes is a line of its own detail', async () => {
+        const entries = [
+            ...VERBS.flatMap((entry) => (entry.served === 'canvas' ? [{ words: [entry.name], flagNames: entry.flagNames }] : [])),
+            ...allActions().map(({ action }) => ({ words: action.name.split(' '), flagNames: action.flagNames }))
+        ];
+        for (const { words, flagNames } of entries) {
+            const { lines } = await post('help', words);
+            for (const flag of flagNames) {
+                expect({ words, flag, found: lines.some((line) => line.startsWith(`flag\t--${flag} `) || line.startsWith(`flag\t--${flag}\t`)) }).toEqual({
+                    words,
+                    flag,
+                    found: true
+                });
             }
         }
     });
 
-    test('help node says what it prints, which flag goes with which kind, and where a node lands', async () => {
-        const { lines } = await post('help', ['node']);
+    test('help node new says what it prints, which flag goes with which kind, and where a node lands', async () => {
+        const { lines } = await post('help', ['node', 'new']);
         expect(lines).toContain('prints\tid\tkind\tview\tthe id of the new node, its kind, and the canvas it landed on');
         expect(lines).toContain('kind\tnote\t--text\tcalled "Note" without --title');
         expect(lines).toContain('kind\tbrowser\t--url (required)\tcalled "Browser" without --title');
@@ -369,8 +510,8 @@ describe('help', () => {
         expect(lines.some((line) => line.startsWith('flag\t--prompt T\t') && line.includes(String(MAX_PROMPT_LENGTH)))).toBe(true);
         expect(lines.some((line) => line.startsWith('paths\t') && line.includes('worktree'))).toBe(true);
         expect(lines.some((line) => line.startsWith('without a prompt\t'))).toBe(true);
-        expect(lines.some((line) => line.startsWith('edge\t') && line.includes('One way only') && line.includes('ruimte-context link'))).toBe(true);
-        expect(lines.some((line) => line.startsWith('groups\t') && line.includes('ruimte-context nodes'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('edge\t') && line.includes('One way only') && line.includes('ruimte-context link new'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('groups\t') && line.includes('ruimte-context node list'))).toBe(true);
         // An apostrophe in a prompt is where a shell eats the argument, which no refusal can explain afterwards.
         expect(lines.some((line) => line.startsWith('quoting\t') && line.includes("'\\''"))).toBe(true);
         expect(lines.some((line) => line.startsWith('flag\t--title T\t') && line.includes(String(MAX_TITLE_LENGTH)))).toBe(true);
@@ -382,7 +523,7 @@ describe('help', () => {
             'prints\tid\tkind\ttitle\tview\tcli\tedge\ttask\tthe group first, its label in the title column and a dash for the CLI and the edge, then one line per role in the order of --roles, with the id of its task last under --task; the title is what tells two rows of one CLI apart'
         );
         // The way back into a role's work, which agent says and team did not.
-        expect(lines.some((line) => line.startsWith('edges\t') && line.includes('ruimte-context link --to'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('edges\t') && line.includes('ruimte-context link new --to'))).toBe(true);
         // Which CLIs take a chat role, from the registry rather than from a phrase that can drift.
         expect(lines.some((line) => line.startsWith('roles\tchat\t') && line.includes('(claude, codex)'))).toBe(true);
         expect(lines.some((line) => line.startsWith('depth\t') && line.includes(`A role lands at depth ${MAX_TEAM_DEPTH}`) && line.includes('agent'))).toBe(
@@ -395,24 +536,24 @@ describe('help', () => {
         expect(lines.some((line) => line.startsWith('flag\t--dry-run\t') && line.includes("<from> -> <the role's title>"))).toBe(true);
     });
 
-    test('help link says what its label may be', async () => {
-        const { lines } = await post('help', ['link']);
+    test('help link new says what its label may be', async () => {
+        const { lines } = await post('help', ['link', 'new']);
         expect(lines.some((line) => line.startsWith('flag\t--label L\t') && line.includes(String(MAX_TITLE_LENGTH)))).toBe(true);
     });
 
-    test('every verb that draws or lists a line points at edges', async () => {
-        for (const verb of ['agent', 'team', 'link', 'nodes']) {
-            const { lines } = await post('help', [verb]);
-            expect(lines.some((line) => line.includes('ruimte-context edges'))).toBe(true);
+    test('everything that draws or lists a line points at link list', async () => {
+        for (const words of [['agent'], ['team'], ['link', 'new'], ['node', 'list'], ['link', 'delete']]) {
+            const { lines } = await post('help', words);
+            expect(lines.some((line) => line.includes('ruimte-context link list'))).toBe(true);
         }
         const { lines } = await post('help', ['team']);
         expect(lines.some((line) => line.startsWith('edges\t') && line.includes('One way only'))).toBe(true);
         expect(lines.some((line) => line.startsWith('example\t') && line.includes('--roles'))).toBe(true);
     });
 
-    test('the verbs about linked context and the verbs about the canvas are told apart wherever they meet', async () => {
-        for (const verb of ['list', 'read', 'nodes']) {
-            const scope = (await post('help', [verb])).lines.filter((line) => line.startsWith('scope\t'));
+    test('the verbs about linked context and the actions about the canvas are told apart wherever they meet', async () => {
+        for (const words of [['list'], ['read'], ['node', 'list']]) {
+            const scope = (await post('help', words)).lines.filter((line) => line.startsWith('scope\t'));
             expect(scope).toHaveLength(1);
             expect(scope[0]).toInclude('a node you add is readable through read only once a line runs from it into you');
         }
@@ -427,8 +568,8 @@ describe('help', () => {
         expect(lines.some((line) => line.startsWith('kind\tfile\t') && line.includes('read it yourself'))).toBe(true);
     });
 
-    test('help nodes says which row the caller is, and names the variable that says it too', async () => {
-        const self = (await post('help', ['nodes'])).lines.filter((line) => line.startsWith('self\t'));
+    test('help node list says which row the caller is, and names the variable that says it too', async () => {
+        const self = (await post('help', ['node', 'list'])).lines.filter((line) => line.startsWith('self\t'));
         expect(self).toHaveLength(2);
         expect(self[0]).toInclude('self and your own id');
         expect(self[1]).toInclude('$RUIMTE_SESSION_ID');
@@ -437,15 +578,29 @@ describe('help', () => {
         expect(self[1]).toInclude('a chat backend is given none');
     });
 
-    test('help views says a separator has no name', async () => {
-        expect((await post('help', ['views'])).lines).toContain('note\tA separator is a line in the sidebar and has an empty name');
+    test('help view list says a separator has no name', async () => {
+        expect((await post('help', ['view', 'list'])).lines).toContain('note\tA separator is a line in the sidebar and has an empty name');
     });
 
-    test('a verb it does not have is refused with the list', async () => {
+    test('a verb or noun it does not have is refused with the list', async () => {
         const { status, lines } = await post('help', ['spawn']);
         expect(status).toBe(422);
-        expect(lines[0]).toBe('refused\tunknown-verb\tspawn is not a verb');
-        expect(lines.slice(1)).toEqual(VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`));
+        expect(lines[0]).toBe('refused\tunknown-verb\tspawn is not a verb or a noun');
+        expect(lines.slice(1)).toEqual([HELP_LINE, ...rootRows()]);
+        expect((await post('help', ['nodes'])).lines[0]).toBe('refused\tunknown-verb\tnodes is not a verb or a noun');
+    });
+
+    test('an action a noun does not have is refused with the actions it does', async () => {
+        const { status, lines } = await post('help', ['link', 'draw']);
+        expect(status).toBe(422);
+        expect(lines).toEqual([
+            'refused\tunknown-action\tdraw is not an action of link',
+            ...nounNamed('link').actions.map((action) => `action\t${action.name}\t${action.usage}\t${action.summary}`)
+        ]);
+        expect((await post('help', ['agent', 'claude'])).lines).toEqual([
+            'refused\tbad-arguments\tagent is a verb and has no actions; ruimte-context help agent details it',
+            'detail\truimte-context help agent\tone verb in full'
+        ]);
     });
 
     test('list and read are named there but not run by the canvas route', async () => {
@@ -458,10 +613,10 @@ describe('help', () => {
 
     test('refuses arguments it does not take', async () => {
         expect((await post('help', ['--view', 'main'])).lines[0]).toStartWith('refused\tunknown-flag\t');
-        const extra = await post('help', ['nodes', 'node']);
+        const extra = await post('help', ['node', 'list', 'x']);
         expect(extra.lines).toEqual([
-            'refused\tbad-arguments\thelp takes one verb name and nothing else',
-            'usage\thelp\t[verb]',
+            'refused\tbad-arguments\thelp takes a verb, or a noun and one of its actions, and nothing else',
+            'usage\thelp\t[noun] [action]',
             'detail\truimte-context help help'
         ]);
     });
@@ -470,48 +625,59 @@ describe('help', () => {
 describe('refusals', () => {
     test('say what is missing and, for a closed set, what may go there', async () => {
         const cases: Array<{ verb: string; argv: string[]; code: string; message: string }> = [
-            { verb: 'node', argv: [], code: 'bad-arguments', message: 'node needs a kind: note, browser, drawing, diagram, file, terminal, chat' },
-            { verb: 'node', argv: ['group'], code: 'bad-arguments', message: 'node needs a kind: note, browser, drawing, diagram, file, terminal, chat' },
-            { verb: 'node', argv: ['note', 'My note'], code: 'bad-arguments', message: 'node takes one kind and nothing else; a title goes in --title' },
-            { verb: 'node', argv: ['note', '--title='], code: 'bad-arguments', message: '--title needs a title' },
-            { verb: 'node', argv: ['note', '--view='], code: 'bad-arguments', message: '--view needs the id of a canvas' },
-            { verb: 'node', argv: ['note', '--beside='], code: 'bad-arguments', message: '--beside needs the id of a node on that canvas' },
-            { verb: 'nodes', argv: ['main'], code: 'bad-arguments', message: 'nodes takes no arguments, only flags' },
-            { verb: 'views', argv: ['all'], code: 'bad-arguments', message: 'views takes no arguments' },
+            { verb: 'node new', argv: [], code: 'bad-arguments', message: 'node new needs a kind: note, browser, drawing, diagram, file, terminal, chat' },
             {
-                verb: 'node',
+                verb: 'node new',
+                argv: ['group'],
+                code: 'bad-arguments',
+                message: 'node new needs a kind: note, browser, drawing, diagram, file, terminal, chat'
+            },
+            {
+                verb: 'node new',
+                argv: ['note', 'My note'],
+                code: 'bad-arguments',
+                message: 'node new takes one kind and nothing else; a title goes in --title'
+            },
+            { verb: 'node new', argv: ['note', '--title='], code: 'bad-arguments', message: '--title needs a title' },
+            { verb: 'node new', argv: ['note', '--view='], code: 'bad-arguments', message: '--view needs the id of a canvas' },
+            { verb: 'node new', argv: ['note', '--beside='], code: 'bad-arguments', message: '--beside needs the id of a node on that canvas' },
+            { verb: 'node list', argv: ['main'], code: 'bad-arguments', message: 'node list takes no arguments, only flags' },
+            { verb: 'view list', argv: ['all'], code: 'bad-arguments', message: 'view list takes no arguments' },
+            {
+                verb: 'node new',
                 argv: ['note', '--cmd', 'ls'],
                 code: 'unknown-flag',
                 message: '--cmd is not one of --title, --text, --url, --path, --source, --cwd, --view, --beside, --dry-run'
             },
-            { verb: 'views', argv: ['--view', 'main'], code: 'unknown-flag', message: '--view is not a flag here; this verb takes none' },
+            { verb: 'view list', argv: ['--view', 'main'], code: 'unknown-flag', message: '--view is not a flag here; this verb takes none' },
             {
-                verb: 'node',
+                verb: 'node new',
                 argv: ['note', '--text'],
                 code: 'missing-value',
                 message: '--text needs a value (write --text=<value> for one that starts with --)'
             },
-            { verb: 'node', argv: ['note', '--title', 'a', '--title', 'b'], code: 'duplicate-flag', message: '--title is given twice' }
+            { verb: 'node new', argv: ['note', '--title', 'a', '--title', 'b'], code: 'duplicate-flag', message: '--title is given twice' }
         ];
         for (const { verb, argv, code, message } of cases) {
-            const { status, lines } = await post(verb, argv);
+            const [first, ...rest] = verb.split(' ');
+            const { status, lines } = await post(first!, [...rest, ...argv]);
             expect({ argv, status, line: lines[0] }).toEqual({ argv, status: 422, line: `refused\t${code}\t${message}` });
             expect(lines).toContain(`detail\truimte-context help ${verb}`);
         }
     });
 
     test('name what can be picked instead wherever the set is closed', async () => {
-        const missing = await post('node', ['browser']);
+        const missing = await post('node', ['new', 'browser']);
         expect(missing.lines).toEqual([
             'refused\tmissing-flag\tA browser node needs --url',
             'kind\tbrowser\t--url (required)\tcalled "Browser" without --title',
             'kind\tevery kind\t--title T, --view V, --beside N'
         ]);
-        expect((await post('node', ['note', '--url', 'https://example.com'])).lines.slice(1)).toEqual([
+        expect((await post('node', ['new', 'note', '--url', 'https://example.com'])).lines.slice(1)).toEqual([
             'kind\tnote\t--text\tcalled "Note" without --title',
             'kind\tevery kind\t--title T, --view V, --beside N'
         ]);
-        expect((await post('node', ['note', '--beside', 'nope'])).lines).toEqual([
+        expect((await post('node', ['new', 'note', '--beside', 'nope'])).lines).toEqual([
             'refused\tunknown-node\tnope is not a node on main',
             'node\tterm-1\tterminal\tshell',
             'node\tnote-1\tnote\tPlan with a tab'
@@ -523,9 +689,9 @@ describe('refusals', () => {
         const board = full.views[2] as ProjectCanvasView;
         board.nodes = Array.from({ length: 30 }, (_, i) => ({ id: `n-${i}`, kind: 'note' as const, title: 'n', x: i * 400, y: 0, w: 320, h: 240 }));
         await store.mutate(projectId, () => ({ content: full, result: null }));
-        expect((await post('node', ['note', '--view', 'board', '--beside', 'nope'])).lines).toEqual([
+        expect((await post('node', ['new', 'note', '--view', 'board', '--beside', 'nope'])).lines).toEqual([
             'refused\tunknown-node\tnope is not a node on board',
-            'detail\truimte-context nodes\tthe 30 nodes of board'
+            'detail\truimte-context node list\tthe 30 nodes of board'
         ]);
     });
 
@@ -537,7 +703,7 @@ describe('refusals', () => {
             { argv: ['terminal', '--cwd', 'nope'], code: 'bad-cwd', says: 'resolved against the project folder' }
         ];
         for (const { argv, code, says } of cases) {
-            const { lines } = await post('node', argv);
+            const { lines } = await post('node', ['new', ...argv]);
             expect(lines[0]).toStartWith(`refused\t${code}\t`);
             expect(lines[0]).toInclude(says);
             // Nothing is invented: a path or an address has no list to pick from.
@@ -548,13 +714,14 @@ describe('refusals', () => {
     test('never leak a message out of zod', async () => {
         const argvPerVerb: Record<string, string[][]> = {
             help: [['nope', 'nope']],
-            nodes: [['x'], ['--view=']],
-            views: [['x']],
-            node: [[], ['x'], ['note', 'x'], ['note', '--path=']]
+            'node list': [['x'], ['--view=']],
+            'view list': [['x']],
+            'node new': [[], ['x'], ['note', 'x'], ['note', '--path=']]
         };
         for (const [verb, cases] of Object.entries(argvPerVerb)) {
             for (const argv of cases) {
-                const message = (await post(verb, argv)).lines[0]!.split('\t')[2]!;
+                const [first, ...rest] = verb.split(' ');
+                const message = (await post(first!, [...rest, ...argv])).lines[0]!.split('\t')[2]!;
                 expect(message).not.toStartWith('Too ');
                 expect(message).not.toStartWith('Invalid ');
                 expect(message).not.toInclude('expected');
@@ -569,13 +736,13 @@ describe('a closed set that is empty', () => {
         expect(noGroups.lines[0]).toBe('refused\tunknown-group\tnote-1 is not a group on main');
         expect(noGroups.lines.slice(1)).toEqual(['note\tmain has no groups on it yet; team opens one of its own, and a person groups nodes on the canvas']);
 
-        const noNodes = await post('node', ['note', '--text', 'x', '--view', 'board', '--beside', 'ghost']);
+        const noNodes = await post('node', ['new', 'note', '--text', 'x', '--view', 'board', '--beside', 'ghost']);
         expect(noNodes.lines).toEqual(['refused\tunknown-node\tghost is not a node on board', 'note\tboard has no nodes on it yet']);
 
         const empty = content();
         empty.views = [{ kind: 'chat', id: 'chat-1', name: 'Planner', node: {} }];
         await store.mutate(projectId, () => ({ content: empty, result: null }));
-        const noCanvas = await post('node', ['note', '--text', 'x'], 'chat');
+        const noCanvas = await post('node', ['new', 'note', '--text', 'x'], 'chat');
         expect(noCanvas.lines).toEqual([
             'refused\tview-required\tThis session is not on a canvas; name one with --view',
             'note\tThis project has no canvas; a node only ever lands on one'
@@ -586,7 +753,7 @@ describe('a closed set that is empty', () => {
         const noDrawings = content();
         noDrawings.views = noDrawings.views.filter((view) => view.kind !== 'drawing');
         await store.mutate(projectId, () => ({ content: noDrawings, result: null }));
-        const { lines } = await post('node', ['drawing', '--source', 'nowhere']);
+        const { lines } = await post('node', ['new', 'drawing', '--source', 'nowhere']);
         expect(lines).toEqual([
             'refused\tnot-a-drawing\tnowhere is not a drawing view of this project',
             'note\tThis project has no drawing views; a person makes one in the sidebar'
@@ -596,33 +763,33 @@ describe('a closed set that is empty', () => {
 
 describe('scoping', () => {
     test('a caller no project places is refused', async () => {
-        expect((await post('views', [], 'stray')).lines).toEqual([
+        expect((await post('view', ['list'], 'stray')).lines).toEqual([
             'refused\tnot-in-project\tThis session is not a node or a view of any project on this machine'
         ]);
     });
 
     test('a node on a canvas works on that canvas by default', async () => {
-        const { status, lines } = await post('nodes', []);
+        const { status, lines } = await post('node', ['list']);
         expect(status).toBe(200);
         expect(lines).toEqual(['term-1\tterminal\tshell\t0\t0\t560\t360\t', 'note-1\tnote\tPlan with a tab\t0\t601\t320\t240\t', 'self\tterm-1']);
     });
 
     test('--view picks another canvas, where the caller is nobody', async () => {
-        expect(await post('nodes', ['--view', 'board'])).toEqual({ status: 200, lines: ['self\t-\tyou are not a node on this canvas'] });
+        expect(await post('node', ['list', '--view', 'board'])).toEqual({ status: 200, lines: ['self\t-\tyou are not a node on this canvas'] });
     });
 
     test('a chat that is a view of its own needs --view, and hears which canvases there are', async () => {
-        const { status, lines } = await post('nodes', [], 'chat');
+        const { status, lines } = await post('node', ['list'], 'chat');
         expect(status).toBe(422);
         expect(lines[0]).toStartWith('refused\tview-required\t');
         expect(lines.slice(1)).toEqual(CANVAS_LINES);
-        expect((await post('node', ['note'], 'chat')).lines[0]).toStartWith('refused\tview-required\t');
-        expect((await post('node', ['note', '--view', 'board'], 'chat')).status).toBe(200);
+        expect((await post('node', ['new', 'note'], 'chat')).lines[0]).toStartWith('refused\tview-required\t');
+        expect((await post('node', ['new', 'note', '--view', 'board'], 'chat')).status).toBe(200);
     });
 
     test('a --view that is not a canvas is refused with the canvases listed', async () => {
         for (const view of ['chat-1', 'sketch-1', 'missing']) {
-            const { status, lines } = await post('nodes', ['--view', view]);
+            const { status, lines } = await post('node', ['list', '--view', view]);
             expect(status).toBe(422);
             expect(lines[0]).toStartWith('refused\tnot-a-canvas\t');
             expect(lines.slice(1)).toEqual(CANVAS_LINES);
@@ -630,9 +797,9 @@ describe('scoping', () => {
     });
 });
 
-describe('views', () => {
+describe('view list', () => {
     test('lists every view in sidebar order, a separator with an empty name', async () => {
-        expect((await post('views', [])).lines).toEqual([
+        expect((await post('view', ['list'])).lines).toEqual([
             'main\tcanvas\tCanvas\tno\tyou are in it',
             'sep-1\tseparator\t\tno\ta person made it',
             'board\tcanvas\tBoard\tno\ta person made it',
@@ -641,7 +808,7 @@ describe('views', () => {
             // The last row is the view the caller stands in, which it can read nowhere else.
             'self\tmain'
         ]);
-        expect((await post('views', [], 'chat')).lines.at(-1)).toBe('self\tchat-1');
+        expect((await post('view', ['list'], 'chat')).lines.at(-1)).toBe('self\tchat-1');
     });
 
     test('the last column is whether view delete would remove that view for the caller', async () => {
@@ -675,11 +842,11 @@ describe('views', () => {
     });
 });
 
-describe('edges', () => {
+describe('link list', () => {
     test('lists the lines of a canvas, id, from, to and label', async () => {
-        await post('link', ['--to', 'note-1', '--label', 'plan']);
-        await post('link', ['--to', 'note-1', '--from', 'note-1']).catch(() => null);
-        const { status, lines } = await post('edges', []);
+        await post('link', ['new', '--to', 'note-1', '--label', 'plan']);
+        await post('link', ['new', '--to', 'note-1', '--from', 'note-1']).catch(() => null);
+        const { status, lines } = await post('link', ['list']);
         expect(status).toBe(200);
         const edges = (await canvasOnDisk()).edges;
         expect(lines).toEqual(edges.map((edge) => [edge.id, edge.from, edge.to, edge.label ?? ''].join('\t')));
@@ -687,21 +854,21 @@ describe('edges', () => {
     });
 
     test('a canvas with no lines on it prints nothing, and --view says which canvas', async () => {
-        expect((await post('edges', [])).lines).toEqual([]);
-        expect((await post('edges', ['--view', 'board'])).lines).toEqual([]);
-        expect((await post('edges', ['--view', 'sketch-1'])).lines[0]).toBe('refused\tnot-a-canvas\tsketch-1 is not a canvas of this project');
-        expect((await post('edges', ['--view', 'main'], 'chat')).lines).toEqual([]);
-        expect((await post('edges', [], 'chat')).lines[0]).toStartWith('refused\tview-required\t');
+        expect((await post('link', ['list'])).lines).toEqual([]);
+        expect((await post('link', ['list', '--view', 'board'])).lines).toEqual([]);
+        expect((await post('link', ['list', '--view', 'sketch-1'])).lines[0]).toBe('refused\tnot-a-canvas\tsketch-1 is not a canvas of this project');
+        expect((await post('link', ['list', '--view', 'main'], 'chat')).lines).toEqual([]);
+        expect((await post('link', ['list'], 'chat')).lines[0]).toStartWith('refused\tview-required\t');
     });
 
     test('reads only, so it takes no --dry-run', async () => {
-        expect((await post('edges', ['--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
+        expect((await post('link', ['list', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
     });
 });
 
-describe('node', () => {
+describe('node new', () => {
     test('adds a note beside the caller on a released project and prints its id', async () => {
-        const { status, lines } = await post('node', ['note', '--text', 'hello']);
+        const { status, lines } = await post('node', ['new', 'note', '--text', 'hello']);
         expect(status).toBe(200);
         const [id, kind, viewId] = lines[0]!.split('\t');
         expect(id).toMatch(/^note-[0-9a-z]{8}$/);
@@ -714,11 +881,11 @@ describe('node', () => {
     });
 
     test('--beside places right of a named node, and refuses one that is not on the canvas', async () => {
-        const { lines } = await post('node', ['terminal', '--beside', 'note-1', '--title', 'Build']);
+        const { lines } = await post('node', ['new', 'terminal', '--beside', 'note-1', '--title', 'Build']);
         const id = lines[0]!.split('\t')[0];
         const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === id)!;
         expect([node.x, node.y, node.title, node.titleSource]).toEqual([320 + PLACEMENT_GAP, 601, 'Build', 'user']);
-        expect((await post('node', ['note', '--beside', 'chat-1'])).lines[0]).toStartWith('refused\tunknown-node\t');
+        expect((await post('node', ['new', 'note', '--beside', 'chat-1'])).lines[0]).toStartWith('refused\tunknown-node\t');
     });
 
     test('--beside wins over the row beside the caller, wherever the anchor sits', async () => {
@@ -728,21 +895,21 @@ describe('node', () => {
         (moved.views[0] as ProjectCanvasView).nodes[1]!.y = 2400;
         await store.mutate(projectId, () => ({ content: moved, result: null }));
 
-        const { lines } = await post('node', ['note', '--beside', 'note-1']);
+        const { lines } = await post('node', ['new', 'note', '--beside', 'note-1']);
         const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === lines[0]!.split('\t')[0])!;
         expect([node.x, node.y]).toEqual([-4000 + 320 + PLACEMENT_GAP, 2400]);
     });
 
     test('--text reads \\n, \\t and \\\\ and leaves every other backslash alone', async () => {
-        const { lines } = await post('node', ['note', '--text', 'Line one\\nLine two\\tend\\\\d\\s']);
+        const { lines } = await post('node', ['new', 'note', '--text', 'Line one\\nLine two\\tend\\\\d\\s']);
         const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === lines[0]!.split('\t')[0])!;
         expect(node.body).toBe('Line one\nLine two\tend\\d\\s');
     });
 
     test('needs a kind it knows', async () => {
-        expect((await post('node', [])).lines[0]).toStartWith('refused\tbad-arguments\t');
-        expect((await post('node', ['group'])).lines[0]).toStartWith('refused\tbad-arguments\t');
-        expect((await post('node', ['note', '--cmd', 'ls'])).lines[0]).toStartWith('refused\tunknown-flag\t');
+        expect((await post('node', ['new'])).lines[0]).toStartWith('refused\tbad-arguments\t');
+        expect((await post('node', ['new', 'group'])).lines[0]).toStartWith('refused\tbad-arguments\t');
+        expect((await post('node', ['new', 'note', '--cmd', 'ls'])).lines[0]).toStartWith('refused\tunknown-flag\t');
     });
 
     test('refuses a flag that does not belong to the kind', async () => {
@@ -754,35 +921,35 @@ describe('node', () => {
             ['chat', '--source', 'sketch-1']
         ];
         for (const argv of cases) {
-            expect((await post('node', argv)).lines[0]).toStartWith('refused\tflag-not-for-kind\t');
+            expect((await post('node', ['new', ...argv])).lines[0]).toStartWith('refused\tflag-not-for-kind\t');
         }
     });
 
     test('a browser needs an http(s) URL', async () => {
-        expect((await post('node', ['browser'])).lines[0]).toStartWith('refused\tmissing-flag\t');
-        expect((await post('node', ['browser', '--url', 'file:///etc/passwd'])).lines[0]).toStartWith('refused\tbad-url\t');
-        expect((await post('node', ['browser', '--url', 'not a url'])).lines[0]).toStartWith('refused\tbad-url\t');
-        const { lines } = await post('node', ['browser', '--url', 'https://example.com/docs']);
+        expect((await post('node', ['new', 'browser'])).lines[0]).toStartWith('refused\tmissing-flag\t');
+        expect((await post('node', ['new', 'browser', '--url', 'file:///etc/passwd'])).lines[0]).toStartWith('refused\tbad-url\t');
+        expect((await post('node', ['new', 'browser', '--url', 'not a url'])).lines[0]).toStartWith('refused\tbad-url\t');
+        const { lines } = await post('node', ['new', 'browser', '--url', 'https://example.com/docs']);
         const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === lines[0]!.split('\t')[0])!;
         expect(node.url).toBe('https://example.com/docs');
     });
 
     test('a file stores its path relative to the folder, and an outside one absolute', async () => {
-        expect((await post('node', ['file'])).lines[0]).toStartWith('refused\tmissing-flag\t');
-        expect((await post('node', ['file', '--path', 'src/missing.ts'])).lines[0]).toStartWith('refused\tbad-path\t');
-        expect((await post('node', ['file', '--path', 'src'])).lines[0]).toStartWith('refused\tbad-path\t');
-        const inside = (await post('node', ['file', '--path', 'src/main.ts'])).lines[0]!.split('\t')[0];
-        const absolute = (await post('node', ['file', '--path', join(outside, 'notes.md')])).lines[0]!.split('\t')[0];
+        expect((await post('node', ['new', 'file'])).lines[0]).toStartWith('refused\tmissing-flag\t');
+        expect((await post('node', ['new', 'file', '--path', 'src/missing.ts'])).lines[0]).toStartWith('refused\tbad-path\t');
+        expect((await post('node', ['new', 'file', '--path', 'src'])).lines[0]).toStartWith('refused\tbad-path\t');
+        const inside = (await post('node', ['new', 'file', '--path', 'src/main.ts'])).lines[0]!.split('\t')[0];
+        const absolute = (await post('node', ['new', 'file', '--path', join(outside, 'notes.md')])).lines[0]!.split('\t')[0];
         const nodes = (await canvasOnDisk()).nodes;
         expect(nodes.find((node) => node.id === inside)).toMatchObject({ path: 'src/main.ts', title: 'main.ts' });
         expect(nodes.find((node) => node.id === absolute)).toMatchObject({ path: join(outside, 'notes.md'), title: 'notes.md' });
     });
 
     test('a drawing needs a drawing view of the same project as its source', async () => {
-        expect((await post('node', ['drawing'])).lines[0]).toStartWith('refused\tmissing-flag\t');
-        const wrong = await post('node', ['drawing', '--source', 'board']);
+        expect((await post('node', ['new', 'drawing'])).lines[0]).toStartWith('refused\tmissing-flag\t');
+        const wrong = await post('node', ['new', 'drawing', '--source', 'board']);
         expect(wrong.lines).toEqual(['refused\tnot-a-drawing\tboard is not a drawing view of this project', 'drawing\tsketch-1\tSketch']);
-        const { lines } = await post('node', ['drawing', '--source', 'sketch-1']);
+        const { lines } = await post('node', ['new', 'drawing', '--source', 'sketch-1']);
         const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === lines[0]!.split('\t')[0])!;
         expect(node).toMatchObject({ viewId: 'sketch-1', title: 'Sketch' });
     });
@@ -792,15 +959,15 @@ describe('node', () => {
         withFlow.views.push({ kind: 'diagram', id: 'flow-1', name: 'Flow' });
         await store.mutate(projectId, () => ({ content: withFlow, result: null }));
 
-        expect((await post('node', ['diagram'])).lines[0]).toStartWith('refused\tmissing-flag\t');
+        expect((await post('node', ['new', 'diagram'])).lines[0]).toStartWith('refused\tmissing-flag\t');
         // A drawing is not a diagram, even though both take --source.
-        const wrongKind = await post('node', ['diagram', '--source', 'sketch-1']);
+        const wrongKind = await post('node', ['new', 'diagram', '--source', 'sketch-1']);
         expect(wrongKind.lines).toEqual(['refused\tnot-a-diagram\tsketch-1 is not a diagram view of this project', 'diagram\tflow-1\tFlow']);
-        const unknown = await post('node', ['diagram', '--source', 'nowhere']);
+        const unknown = await post('node', ['new', 'diagram', '--source', 'nowhere']);
         expect(unknown.lines[0]).toBe('refused\tnot-a-diagram\tnowhere is not a diagram view of this project');
-        expect((await post('node', ['drawing', '--source', 'flow-1'])).lines[0]).toStartWith('refused\tnot-a-drawing\t');
+        expect((await post('node', ['new', 'drawing', '--source', 'flow-1'])).lines[0]).toStartWith('refused\tnot-a-drawing\t');
 
-        const { lines } = await post('node', ['diagram', '--source', 'flow-1']);
+        const { lines } = await post('node', ['new', 'diagram', '--source', 'flow-1']);
         const [id, kind] = lines[0]!.split('\t');
         expect(kind).toBe('diagram');
         const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === id)!;
@@ -808,7 +975,7 @@ describe('node', () => {
     });
 
     test('a --source with no diagram view in the project says how to make one', async () => {
-        const { lines } = await post('node', ['diagram', '--source', 'nowhere']);
+        const { lines } = await post('node', ['new', 'diagram', '--source', 'nowhere']);
         expect(lines).toEqual([
             'refused\tnot-a-diagram\tnowhere is not a diagram view of this project',
             'note\tThis project has no diagram views; ruimte-context view new --kind diagram makes one'
@@ -816,30 +983,30 @@ describe('node', () => {
     });
 
     test('a cwd lies inside the folder or a worktree of it', async () => {
-        const { lines } = await post('node', ['chat', '--cwd', 'src']);
+        const { lines } = await post('node', ['new', 'chat', '--cwd', 'src']);
         expect(lines[0]).not.toStartWith('refused');
         const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === lines[0]!.split('\t')[0])!;
         // Stored portable, like every cwd the client saves.
         expect(node.cwd).toBe('./src');
 
-        expect((await post('node', ['terminal', '--cwd', outside])).lines[0]).toStartWith('refused\tcwd-outside-project\t');
-        expect((await post('node', ['terminal', '--cwd', '../elsewhere'])).lines[0]).toStartWith('refused\tcwd-outside-project\t');
-        expect((await post('node', ['terminal', '--cwd', 'nope'])).lines[0]).toStartWith('refused\tbad-cwd\t');
+        expect((await post('node', ['new', 'terminal', '--cwd', outside])).lines[0]).toStartWith('refused\tcwd-outside-project\t');
+        expect((await post('node', ['new', 'terminal', '--cwd', '../elsewhere'])).lines[0]).toStartWith('refused\tcwd-outside-project\t');
+        expect((await post('node', ['new', 'terminal', '--cwd', 'nope'])).lines[0]).toStartWith('refused\tbad-cwd\t');
 
         await symlink(outside, join(folder, 'escape'));
-        expect((await post('node', ['terminal', '--cwd', 'escape'])).lines[0]).toStartWith('refused\tcwd-outside-project\t');
+        expect((await post('node', ['new', 'terminal', '--cwd', 'escape'])).lines[0]).toStartWith('refused\tcwd-outside-project\t');
 
         worktrees = [worktree];
-        expect((await post('node', ['terminal', '--cwd', worktree])).status).toBe(200);
+        expect((await post('node', ['new', 'terminal', '--cwd', worktree])).status).toBe(200);
     });
 
     test('a cwd outside names the folder and every worktree, so the next try needs no guessing', async () => {
-        const bare = await post('node', ['terminal', '--cwd', outside]);
+        const bare = await post('node', ['new', 'terminal', '--cwd', outside]);
         expect(bare.lines).toEqual([`refused\tcwd-outside-project\t${outside} is outside ${folder} and the worktrees of its repository`, `folder\t${folder}`]);
 
         // git lists the checkout itself among the worktrees; the folder line already said that one.
         worktrees = [folder, worktree];
-        const listed = await post('node', ['terminal', '--cwd', outside]);
+        const listed = await post('node', ['new', 'terminal', '--cwd', outside]);
         expect(listed.lines).toEqual([listed.lines[0]!, `folder\t${folder}`, `worktree\t${worktree}`]);
     });
 
@@ -862,14 +1029,14 @@ describe('node', () => {
         };
         await store.save(opened.summary.projectId, opened.document.rev, loose);
         TOKENS.loose = 'term-2';
-        expect((await post('node', ['terminal', '--cwd', '/tmp'], 'loose')).lines[0]).toStartWith('refused\tno-folder\t');
-        expect((await post('node', ['note'], 'loose')).status).toBe(200);
+        expect((await post('node', ['new', 'terminal', '--cwd', '/tmp'], 'loose')).lines[0]).toStartWith('refused\tno-folder\t');
+        expect((await post('node', ['new', 'note'], 'loose')).status).toBe(200);
     });
 
     test('an id is unique across the whole project', async () => {
         const ids = new Set<string>();
         for (let i = 0; i < 20; i++) {
-            ids.add((await post('node', ['note'])).lines[0]!.split('\t')[0]!);
+            ids.add((await post('node', ['new', 'note'])).lines[0]!.split('\t')[0]!);
         }
         expect(ids.size).toBe(20);
     });
@@ -881,10 +1048,10 @@ describe('node', () => {
         await store.mutate(projectId, () => ({ content: full, result: null }));
         const before = await onDisk();
         for (const argv of [
-            ['node', 'note'],
+            ['node', 'new', 'note'],
             ['agent', 'claude']
         ]) {
-            expect((await post(argv[0]!, [argv[1]!, '--view', 'board'])).lines[0]).toBe(
+            expect((await post(argv[0]!, [...argv.slice(1), '--view', 'board'])).lines[0]).toBe(
                 `refused\tcanvas-full\tBoard holds ${MAX_CANVAS_NODES} nodes and this would add 1 more; a canvas holds at most ${MAX_CANVAS_NODES}`
             );
         }
@@ -1329,16 +1496,16 @@ describe('team', () => {
             `refused\tbad-arguments\t--label is ${MAX_TITLE_LENGTH + 1} characters and at most ${MAX_TITLE_LENGTH} fit in a name on the canvas`
         );
         for (const verb of ['node', 'agent']) {
-            const argv = verb === 'node' ? ['note'] : ['claude'];
+            const argv = verb === 'node' ? ['new', 'note'] : ['claude'];
             expect((await post(verb, [...argv, '--title', long])).lines[0]).toBe(
                 `refused\tbad-arguments\t--title is ${MAX_TITLE_LENGTH + 1} characters and at most ${MAX_TITLE_LENGTH} fit in a name on the canvas`
             );
         }
-        expect((await post('link', ['--to', 'note-1', '--label', long])).lines[0]).toStartWith(
+        expect((await post('link', ['new', '--to', 'note-1', '--label', long])).lines[0]).toStartWith(
             `refused\tbad-arguments\t--label is ${MAX_TITLE_LENGTH + 1} characters`
         );
         // A name of exactly the cap is a name, not a refusal.
-        expect((await post('node', ['note', '--title', 'L'.repeat(MAX_TITLE_LENGTH)])).status).toBe(200);
+        expect((await post('node', ['new', 'note', '--title', 'L'.repeat(MAX_TITLE_LENGTH)])).status).toBe(200);
     });
 });
 
@@ -1407,9 +1574,9 @@ describe('the depth limit', () => {
     });
 });
 
-describe('link', () => {
+describe('link new', () => {
     test('draws a line from the caller into a node and prints what it made', async () => {
-        const { status, lines } = await post('link', ['--to', 'note-1']);
+        const { status, lines } = await post('link', ['new', '--to', 'note-1']);
         expect(status).toBe(200);
         const [id, from, to, state, way] = lines[0]!.split('\t');
         expect([from, to, state, way]).toEqual(['term-1', 'note-1', 'new', 'out']);
@@ -1421,7 +1588,7 @@ describe('link', () => {
         (pair.views[0] as ProjectCanvasView).nodes.push({ id: 'term-2', kind: 'terminal', title: 'other', x: 2000, y: 0, w: 560, h: 360 });
         await store.mutate(projectId, () => ({ content: pair, result: null }));
 
-        const { lines } = await post('link', ['--to', 'term-2']);
+        const { lines } = await post('link', ['new', '--to', 'term-2']);
         // The last column is what tells one --to answering in two rows from a mistake.
         expect(lines.map((line) => line.split('\t').slice(1))).toEqual([
             ['term-1', 'term-2', 'new', 'out'],
@@ -1434,35 +1601,35 @@ describe('link', () => {
     });
 
     test('running the same link again changes nothing and says so', async () => {
-        await post('link', ['--to', 'note-1']);
+        await post('link', ['new', '--to', 'note-1']);
         const rev = (await onDisk()).rev;
-        const { lines } = await post('link', ['--to', 'note-1']);
+        const { lines } = await post('link', ['new', '--to', 'note-1']);
         expect(lines[0]!.split('\t')[3]).toBe('existing');
         expect((await onDisk()).rev).toBe(rev);
     });
 
     test('refuses ids that are not on the canvas and a line to itself', async () => {
-        const missing = await post('link', ['--to', 'note-1,ghost,other']);
+        const missing = await post('link', ['new', '--to', 'note-1,ghost,other']);
         expect(missing.lines[0]).toBe('refused\tunknown-node\tghost, other are not a node on main');
         // Never the node the line starts from: --to itself is refused as a self-link.
         expect(missing.lines.slice(1)).toEqual(['node\tnote-1\tnote\tPlan with a tab']);
-        expect((await post('link', ['--to', 'term-1'])).lines[0]).toStartWith('refused\tself-link\t');
-        expect((await post('link', ['--to', 'note-1', '--view', 'main'], 'chat')).lines[0]).toStartWith(
+        expect((await post('link', ['new', '--to', 'term-1'])).lines[0]).toStartWith('refused\tself-link\t');
+        expect((await post('link', ['new', '--to', 'note-1', '--view', 'main'], 'chat')).lines[0]).toStartWith(
             'refused\tunknown-node\tYou are not a node on main, so a line has nowhere to start'
         );
         expect((await onDisk()).rev).toBe(1);
     });
 
     test('--from, --label and --view say where the line goes and what it is called', async () => {
-        const { lines } = await post('link', ['--to', 'term-1', '--from', 'note-1', '--label', 'plan']);
+        const { lines } = await post('link', ['new', '--to', 'term-1', '--from', 'note-1', '--label', 'plan']);
         expect(lines[0]!.split('\t').slice(1)).toEqual(['note-1', 'term-1', 'new', 'out']);
         expect((await canvasOnDisk()).edges[0]!.label).toBe('plan');
     });
 
     test('refuses more than the cap and an empty id', async () => {
         const many = Array.from({ length: MAX_LINKS + 1 }, (_, i) => `n-${i}`).join(',');
-        expect((await post('link', ['--to', many])).lines[0]).toStartWith('refused\ttoo-many-links\t');
-        expect((await post('link', ['--to', 'note-1,'])).lines[0]).toStartWith('refused\tbad-arguments\t');
+        expect((await post('link', ['new', '--to', many])).lines[0]).toStartWith('refused\ttoo-many-links\t');
+        expect((await post('link', ['new', '--to', 'note-1,'])).lines[0]).toStartWith('refused\tbad-arguments\t');
     });
 });
 
@@ -1483,20 +1650,21 @@ describe('--dry-run', () => {
     });
 
     test('node says which kind it would have made', async () => {
-        expect((await post('node', ['note', '--text', 'x', '--dry-run'])).lines).toEqual(['dry-run\tnote\tmain']);
+        expect((await post('node', ['new', 'note', '--text', 'x', '--dry-run'])).lines).toEqual(['dry-run\tnote\tmain']);
         expect((await onDisk()).rev).toBe(1);
     });
 
     test('a verb that makes nothing refuses the flag and names the ones that take it', async () => {
-        const { status, lines } = await post('nodes', ['--dry-run']);
+        const { status, lines } = await post('node', ['list', '--dry-run']);
         expect(status).toBe(422);
         expect(lines).toEqual([
-            'refused\tno-dry-run\tnodes takes no --dry-run; only the verbs that make something do',
-            'verb\tnode\ttakes --dry-run',
+            'refused\tno-dry-run\tnode list takes no --dry-run; only the verbs that make something do',
+            'verb\tnode new\ttakes --dry-run',
             'verb\tagent\ttakes --dry-run',
+            'verb\tplan new\ttakes --dry-run',
             'verb\tteam\ttakes --dry-run'
         ]);
-        expect((await post('link', ['--to', 'note-1', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
+        expect((await post('link', ['new', '--to', 'note-1', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
     });
 });
 
@@ -1714,9 +1882,9 @@ describe('view delete', () => {
 
     test('a canvas takes its sessions with it, and the answer names them', async () => {
         const id = await made('Crew');
-        const shell = (await post('node', ['terminal', '--view', id])).lines[0]!.split('\t')[0]!;
-        const chat = (await post('node', ['chat', '--view', id])).lines[0]!.split('\t')[0]!;
-        await post('node', ['note', '--text', 'x', '--view', id]);
+        const shell = (await post('node', ['new', 'terminal', '--view', id])).lines[0]!.split('\t')[0]!;
+        const chat = (await post('node', ['new', 'chat', '--view', id])).lines[0]!.split('\t')[0]!;
+        await post('node', ['new', 'note', '--text', 'x', '--view', id]);
 
         const { lines } = await post('view', ['delete', id]);
         expect(lines.slice(0, 3)).toEqual([`deleted\t${id}\tcanvas\tCrew`, `ended\t${shell}\tterminal`, `ended\t${chat}\tchat`]);
@@ -1766,18 +1934,17 @@ describe('the view verb itself', () => {
     test('needs one of its words, and says which they are', async () => {
         const { status, lines } = await post('view', []);
         expect(status).toBe(422);
-        expect(lines[0]).toBe('refused\tunknown-subcommand\tview needs one of new, rename, icon, move, delete');
-        expect(lines.slice(1)).toEqual(VIEW_SUBS.map((sub) => `usage\t${sub.name}\t${sub.usage}`));
+        expect(lines[0]).toBe('refused\tunknown-action\tview needs one of list, new, rename, icon, move, delete, open, diagram');
+        expect(lines.slice(1)).toEqual([...VIEW_SUBS.map((sub) => `usage\t${sub.name}\t${sub.usage}`), 'detail\truimte-context help view']);
         expect((await post('view', ['duplicate', 'board'])).lines[0]).toBe(
-            'refused\tunknown-subcommand\tview needs one of new, rename, icon, move, delete, and duplicate is not one'
+            'refused\tunknown-action\tview needs one of list, new, rename, icon, move, delete, open, diagram, and duplicate is not one'
         );
     });
 
-    test('help view prints every one of them in full, out of the registry', async () => {
+    test('help view prints the signature of every one of them, out of the registry', async () => {
         const { lines } = await post('help', ['view']);
         for (const sub of VIEW_SUBS) {
-            expect(lines).toContain(`usage\t${sub.name}\t${sub.usage}`);
-            expect(lines).toContain(`about\t${sub.name}\t${sub.summary}`);
+            expect(lines).toContain(`action\t${sub.name}\t${sub.usage}\t${sub.summary}`);
         }
     });
 
@@ -1787,14 +1954,14 @@ describe('the view verb itself', () => {
     });
 });
 
-describe('open', () => {
+describe('view open', () => {
     /* What open itself would take: the separator is left out, since open refuses it a line later. */
     const VIEW_LINES = ['view\tmain\tcanvas\tCanvas', 'view\tboard\tcanvas\tBoard', 'view\tchat-1\tchat\tPlanner', 'view\tsketch-1\tdrawing\tSketch'];
 
     test('tells the clients that have the project on screen, and writes nothing', async () => {
         await store.openProject({ projectId });
         store.addViewer('client-1', projectId);
-        const { status, lines } = await post('open', ['board']);
+        const { status, lines } = await post('view', ['open', 'board']);
         expect(status).toBe(200);
         expect(lines).toEqual(['showing\tboard\tcanvas\tBoard', 'sent\tyes\tEveryone with this project on screen was told']);
         expect(watching).toEqual([{ projectId, viewId: 'board', by: 'term-1' }]);
@@ -1803,7 +1970,7 @@ describe('open', () => {
     });
 
     test('a project nobody has on screen is not a failure, and the client is not told', async () => {
-        const { status, lines } = await post('open', ['sketch-1']);
+        const { status, lines } = await post('view', ['open', 'sketch-1']);
         expect(status).toBe(200);
         expect(lines).toEqual(['showing\tsketch-1\tdrawing\tSketch', 'sent\tno\tNobody has this project on screen right now, so nothing was showing it']);
         expect(watching).toEqual([]);
@@ -1811,14 +1978,14 @@ describe('open', () => {
 
     test('a client that let the project go stops being told', async () => {
         store.addViewer('client-1', projectId);
-        expect((await post('open', ['board'])).lines[1]).toStartWith('sent\tyes\t');
+        expect((await post('view', ['open', 'board'])).lines[1]).toStartWith('sent\tyes\t');
         store.removeViewer('client-1', projectId);
-        expect((await post('open', ['board'])).lines[1]).toStartWith('sent\tno\t');
+        expect((await post('view', ['open', 'board'])).lines[1]).toStartWith('sent\tno\t');
         expect(watching).toHaveLength(1);
     });
 
     test('a separator never opens', async () => {
-        const { status, lines } = await post('open', ['sep-1']);
+        const { status, lines } = await post('view', ['open', 'sep-1']);
         expect(status).toBe(422);
         expect(lines[0]).toBe('refused\tnever-opens\tsep-1 is a separator, a line in the sidebar with nothing to show');
         expect(lines.slice(1)).toEqual(VIEW_LINES);
@@ -1826,22 +1993,22 @@ describe('open', () => {
     });
 
     test('an id the project does not have is refused with the views it does', async () => {
-        const { status, lines } = await post('open', ['Board']);
+        const { status, lines } = await post('view', ['open', 'Board']);
         expect(status).toBe(422);
         expect(lines[0]).toBe('refused\tunknown-view\tBoard is not a view of this project');
-        expect(lines.slice(1)).toEqual([...VIEW_LINES, 'note\topen takes a view id, never a name']);
+        expect(lines.slice(1)).toEqual([...VIEW_LINES, 'note\tview open takes a view id, never a name']);
         expect(watching).toEqual([]);
     });
 
     test('takes one id, and nothing that would make it a dry run', async () => {
-        expect((await post('open', [])).lines[0]).toBe('refused\tbad-arguments\topen needs the id of a view');
-        expect((await post('open', ['board', 'main'])).lines[0]).toBe('refused\tbad-arguments\topen takes one view id and nothing else');
-        expect((await post('open', ['board', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
+        expect((await post('view', ['open'])).lines[0]).toBe('refused\tbad-arguments\tview open needs the id of a view');
+        expect((await post('view', ['open', 'board', 'main'])).lines[0]).toBe('refused\tbad-arguments\tview open takes one view id and nothing else');
+        expect((await post('view', ['open', 'board', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
         expect(watching).toEqual([]);
     });
 
     test('a session that is in no project of this machine shows nobody anything', async () => {
-        expect((await post('open', ['board'], 'stray')).lines[0]).toStartWith('refused\tnot-in-project\t');
+        expect((await post('view', ['open', 'board'], 'stray')).lines[0]).toStartWith('refused\tnot-in-project\t');
         expect(watching).toEqual([]);
     });
 });
@@ -1866,10 +2033,10 @@ const box = (id: string, x: number, y: number, extra: Partial<ProjectNode> = {})
 
 const nodeOnDisk = async (id: string): Promise<ProjectNode | undefined> => (await canvasOnDisk()).nodes.find((node) => node.id === id);
 
-describe('group', () => {
+describe('node group', () => {
     test('draws the frame a person grouping the same selection would have drawn', async () => {
         await seed(box('a', 400, 400), box('b', 800, 600));
-        const { status, lines } = await post('group', ['--nodes', 'a,b']);
+        const { status, lines } = await post('node', ['group', '--nodes', 'a,b']);
         expect(status).toBe(200);
         const [id, kind, title, view, members] = lines[0]!.split('\t');
         expect([kind, title, view, members]).toEqual(['group', 'Group', 'main', '2']);
@@ -1888,11 +2055,11 @@ describe('group', () => {
 
     test('--label and --color are the ones the client offers', async () => {
         await seed(box('a', 400, 400), box('b', 800, 600));
-        const { lines } = await post('group', ['--nodes', 'a,b', '--label', 'Parser work', '--color', 'violet']);
+        const { lines } = await post('node', ['group', '--nodes', 'a,b', '--label', 'Parser work', '--color', 'violet']);
         expect(lines[0]!.split('\t')[2]).toBe('Parser work');
         expect(await nodeOnDisk(lines[0]!.split('\t')[0]!)).toMatchObject({ title: 'Parser work', accent: 'violet' });
 
-        const bad = await post('group', ['--nodes', 'a', '--color', '#ff0000']);
+        const bad = await post('node', ['group', '--nodes', 'a', '--color', '#ff0000']);
         expect(bad.status).toBe(422);
         expect(bad.lines[0]).toBe(`refused\tunknown-color\t#ff0000 is not one of the ${NODE_ACCENT_NAMES.length} colors a frame takes`);
         expect(bad.lines[1]).toBe(['colors', ...NODE_ACCENT_NAMES].join('\t'));
@@ -1900,14 +2067,14 @@ describe('group', () => {
 
     test('says which nodes it caught that were not named', async () => {
         await seed(box('a', 400, 400), box('b', 800, 600), box('between', 600, 500));
-        const { lines } = await post('group', ['--nodes', 'a,b']);
+        const { lines } = await post('node', ['group', '--nodes', 'a,b']);
         expect(lines[0]!.split('\t')[4]).toBe('3');
         expect(lines.slice(1)).toEqual(['also\tbetween\tnote\tbetween']);
     });
 
     test('refuses a group, since the client leaves one out of a selection too', async () => {
         await seed(box('a', 400, 400), box('frame', 300, 300, { kind: 'group', w: 800, h: 800 }));
-        const { status, lines } = await post('group', ['--nodes', 'a,frame']);
+        const { status, lines } = await post('node', ['group', '--nodes', 'a,frame']);
         expect(status).toBe(422);
         expect(lines[0]).toStartWith('refused\tnot-groupable\tframe is a group');
         expect((await canvasOnDisk()).nodes.filter((node) => node.kind === 'group')).toHaveLength(1);
@@ -1916,7 +2083,7 @@ describe('group', () => {
     test('a refusal over an id never offers the frame this verb refuses a line later', async () => {
         await seed(box('a', 400, 400), box('frame', 300, 300, { kind: 'group', w: 800, h: 800 }));
         for (const verb of ['group', 'arrange']) {
-            const { lines } = await post(verb, ['--nodes', 'a,ghost']);
+            const { lines } = await post('node', [verb, '--nodes', 'a,ghost']);
             expect(lines[0]).toBe('refused\tunknown-node\tghost is not a node on main');
             expect(lines.slice(1)).not.toContain('node\tframe\tgroup\tframe');
             expect(lines.slice(1)).toContain('node\ta\tnote\ta');
@@ -1925,7 +2092,7 @@ describe('group', () => {
 
     test('refuses nodes that do not stand in the same place already', async () => {
         await seed(box('inside', 400, 400), box('outside', 4000, 4000), box('frame', 300, 300, { kind: 'group', w: 800, h: 800 }));
-        const { status, lines } = await post('group', ['--nodes', 'inside,outside']);
+        const { status, lines } = await post('node', ['group', '--nodes', 'inside,outside']);
         expect(status).toBe(422);
         expect(lines[0]).toBe(
             'refused\tdifferent-groups\tinside stands in group frame and outside stands on the canvas itself; a frame goes around nodes that are already in the same place'
@@ -1938,19 +2105,19 @@ describe('group', () => {
             box('two', 700, 400),
             box('frame', 300, 300, { kind: 'group', w: 800, h: 39, collapsed: true, expandedHeight: 800, memberIds: ['one', 'two'] })
         );
-        const { lines } = await post('group', ['--nodes', 'one,two']);
+        const { lines } = await post('node', ['group', '--nodes', 'one,two']);
         const id = lines[0]!.split('\t')[0]!;
         expect((await nodeOnDisk('frame'))!.memberIds).toEqual(['one', 'two', id]);
     });
 
     test('refuses an id that is not on the canvas, and says nothing about titles', async () => {
         await seed(box('a', 400, 400));
-        const missing = await post('group', ['--nodes', 'a,ghost']);
+        const missing = await post('node', ['group', '--nodes', 'a,ghost']);
         expect(missing.lines[0]).toBe('refused\tunknown-node\tghost is not a node on main');
         expect(missing.lines.slice(1)).toContain('node\ta\tnote\ta');
-        expect((await post('group', ['--nodes', 'a,'])).lines[0]).toStartWith('refused\tbad-arguments\t');
-        expect((await post('group', [])).lines[0]).toBe('refused\tbad-arguments\t--nodes needs one or more node ids, separated by commas');
-        expect((await post('group', ['--nodes', 'a', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
+        expect((await post('node', ['group', '--nodes', 'a,'])).lines[0]).toStartWith('refused\tbad-arguments\t');
+        expect((await post('node', ['group'])).lines[0]).toBe('refused\tbad-arguments\t--nodes needs one or more node ids, separated by commas');
+        expect((await post('node', ['group', '--nodes', 'a', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
     });
 
     test('works on another canvas than the caller is on, and only through --view', async () => {
@@ -1959,18 +2126,18 @@ describe('group', () => {
             (next.views[2] as ProjectCanvasView).nodes.push(box('far', 0, 0));
             return { content: next, result: null };
         });
-        expect((await post('group', ['--nodes', 'far'])).lines[0]).toBe('refused\tunknown-node\tfar is not a node on main');
-        const { lines } = await post('group', ['--nodes', 'far', '--view', 'board']);
+        expect((await post('node', ['group', '--nodes', 'far'])).lines[0]).toBe('refused\tunknown-node\tfar is not a node on main');
+        const { lines } = await post('node', ['group', '--nodes', 'far', '--view', 'board']);
         expect(lines[0]!.split('\t')[3]).toBe('board');
     });
 });
 
-describe('arrange', () => {
+describe('node arrange', () => {
     test('lays the nodes out from the corner they already occupied and prints where each one went', async () => {
         await seed(box('a', 1000, 1000), box('b', 4000, 2000), box('c', 2000, 3000));
-        expect((await post('nodes', [])).lines).toContain('b\tnote\tb\t4000\t2000\t200\t100\t');
+        expect((await post('node', ['list'])).lines).toContain('b\tnote\tb\t4000\t2000\t200\t100\t');
 
-        const { status, lines } = await post('arrange', ['--nodes', 'a,b,c']);
+        const { status, lines } = await post('node', ['arrange', '--nodes', 'a,b,c']);
         expect(status).toBe(200);
         // Two columns for three nodes, 40 px apart, starting at the top left of the box they filled.
         expect(lines).toEqual(['a\t1000\t1000', `b\t${1000 + 200 + PLACEMENT_GAP}\t1000`, `c\t1000\t${1000 + 100 + PLACEMENT_GAP}`]);
@@ -1979,27 +2146,27 @@ describe('arrange', () => {
 
     test('--layout row and column are one row and one column', async () => {
         await seed(box('a', 0, 0), box('b', 500, 500));
-        expect((await post('arrange', ['--nodes', 'a,b', '--layout', 'row'])).lines).toEqual(['a\t0\t0', 'b\t240\t0']);
-        expect((await post('arrange', ['--nodes', 'a,b', '--layout', 'column'])).lines).toEqual(['a\t0\t0', 'b\t0\t140']);
+        expect((await post('node', ['arrange', '--nodes', 'a,b', '--layout', 'row'])).lines).toEqual(['a\t0\t0', 'b\t240\t0']);
+        expect((await post('node', ['arrange', '--nodes', 'a,b', '--layout', 'column'])).lines).toEqual(['a\t0\t0', 'b\t0\t140']);
     });
 
     test('--cols is the grid and nothing else', async () => {
         await seed(box('a', 0, 0), box('b', 500, 500), box('c', 900, 100));
-        expect((await post('arrange', ['--nodes', 'a,b,c', '--cols', '3'])).lines).toEqual(['a\t0\t0', 'b\t240\t0', 'c\t480\t0']);
+        expect((await post('node', ['arrange', '--nodes', 'a,b,c', '--cols', '3'])).lines).toEqual(['a\t0\t0', 'b\t240\t0', 'c\t480\t0']);
 
-        const wrongLayout = await post('arrange', ['--nodes', 'a,b,c', '--layout', 'row', '--cols', '2']);
+        const wrongLayout = await post('node', ['arrange', '--nodes', 'a,b,c', '--layout', 'row', '--cols', '2']);
         expect(wrongLayout.status).toBe(422);
         expect(wrongLayout.lines[0]).toBe('refused\tflag-not-for-layout\t--cols does not go with row; a row is one row and a column is one column');
 
-        const tooMany = await post('arrange', ['--nodes', 'a,b', '--cols', '5']);
+        const tooMany = await post('node', ['arrange', '--nodes', 'a,b', '--cols', '5']);
         expect(tooMany.lines[0]).toBe('refused\ttoo-many-columns\t--cols is 5 and you named 2 nodes; a grid holds at most one column per node');
-        expect((await post('arrange', ['--nodes', 'a', '--cols', 'two'])).lines[0]).toStartWith('refused\tbad-arguments\t--cols needs a whole number');
-        expect((await post('arrange', ['--nodes', 'a', '--layout', 'circle'])).lines[0]).toStartWith('refused\tbad-arguments\t--layout takes one of');
+        expect((await post('node', ['arrange', '--nodes', 'a', '--cols', 'two'])).lines[0]).toStartWith('refused\tbad-arguments\t--cols needs a whole number');
+        expect((await post('node', ['arrange', '--nodes', 'a', '--layout', 'circle'])).lines[0]).toStartWith('refused\tbad-arguments\t--layout takes one of');
     });
 
     test('keeps the sizes and never lets two of them touch', async () => {
         await seed(box('wide', 0, 0, { w: 560, h: 360 }), box('tall', 100, 100, { w: 200, h: 520 }), box('small', 50, 50));
-        await post('arrange', ['--nodes', 'wide,tall,small', '--layout', 'row']);
+        await post('node', ['arrange', '--nodes', 'wide,tall,small', '--layout', 'row']);
         const nodes = await Promise.all(['wide', 'tall', 'small'].map(nodeOnDisk));
         expect(nodes.map((node) => [node!.w, node!.h])).toEqual([
             [560, 360],
@@ -2012,7 +2179,7 @@ describe('arrange', () => {
 
     test('a group carries what stands in it, so it is not something to arrange', async () => {
         await seed(box('a', 0, 0), box('frame', 300, 300, { kind: 'group', w: 800, h: 800 }));
-        const { status, lines } = await post('arrange', ['--nodes', 'a,frame']);
+        const { status, lines } = await post('node', ['arrange', '--nodes', 'a,frame']);
         expect(status).toBe(422);
         expect(lines[0]).toStartWith('refused\tnot-arrangeable\tframe is a group and carries whatever stands inside it');
         expect(await nodeOnDisk('a')).toMatchObject({ x: 0, y: 0 });
@@ -2020,66 +2187,68 @@ describe('arrange', () => {
 
     test('nodes that already stand where this would put them are reported and nothing is written', async () => {
         await seed(box('a', 0, 0), box('b', 240, 0));
-        await post('arrange', ['--nodes', 'a,b', '--layout', 'row']);
+        await post('node', ['arrange', '--nodes', 'a,b', '--layout', 'row']);
         const rev = (await onDisk()).rev;
-        const { lines } = await post('arrange', ['--nodes', 'a,b', '--layout', 'row']);
+        const { lines } = await post('node', ['arrange', '--nodes', 'a,b', '--layout', 'row']);
         expect(lines).toEqual(['a\t0\t0', 'b\t240\t0']);
         expect((await onDisk()).rev).toBe(rev);
     });
 
     test('refuses an id that is not on the canvas and takes no dry run', async () => {
-        expect((await post('arrange', ['--nodes', 'ghost'])).lines[0]).toBe('refused\tunknown-node\tghost is not a node on main');
-        expect((await post('arrange', ['--nodes', 'note-1', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
-        expect((await post('arrange', [])).lines[0]).toBe('refused\tbad-arguments\t--nodes needs one or more node ids, separated by commas');
+        expect((await post('node', ['arrange', '--nodes', 'ghost'])).lines[0]).toBe('refused\tunknown-node\tghost is not a node on main');
+        expect((await post('node', ['arrange', '--nodes', 'note-1', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
+        expect((await post('node', ['arrange'])).lines[0]).toBe('refused\tbad-arguments\t--nodes needs one or more node ids, separated by commas');
     });
 });
 
-describe('rename', () => {
+describe('node rename', () => {
     test('names a node for good, so the session never renames over it', async () => {
-        const { status, lines } = await post('rename', ['--node', 'term-1', '--title', 'Build the parser']);
+        const { status, lines } = await post('node', ['rename', 'term-1', '--title', 'Build the parser']);
         expect(status).toBe(200);
         expect(lines).toEqual(['term-1\tterminal\tBuild the parser']);
         expect(await nodeOnDisk('term-1')).toMatchObject({ title: 'Build the parser', titleSource: 'user' });
     });
 
     test('the title it already carries writes nothing', async () => {
-        await post('rename', ['--node', 'note-1', '--title', 'Plan']);
+        await post('node', ['rename', 'note-1', '--title', 'Plan']);
         const rev = (await onDisk()).rev;
-        const { lines } = await post('rename', ['--node', 'note-1', '--title', 'Plan']);
+        const { lines } = await post('node', ['rename', 'note-1', '--title', 'Plan']);
         expect(lines).toEqual(['note-1\tnote\tPlan']);
         expect((await onDisk()).rev).toBe(rev);
     });
 
     test('one node per call, by id, with the same cap on a name as everywhere else', async () => {
-        const missing = await post('rename', ['--node', 'shell', '--title', 'x']);
+        const missing = await post('node', ['rename', 'shell', '--title', 'x']);
         expect(missing.status).toBe(422);
         expect(missing.lines[0]).toBe('refused\tunknown-node\tshell is not a node on main');
         expect(missing.lines.slice(1)).toContain('node\tterm-1\tterminal\tshell');
-        expect((await post('rename', ['--node', 'term-1', '--title', 'x'.repeat(MAX_TITLE_LENGTH + 1)])).lines[0]).toBe(
+        expect((await post('node', ['rename', 'term-1', '--title', 'x'.repeat(MAX_TITLE_LENGTH + 1)])).lines[0]).toBe(
             `refused\tbad-arguments\t--title is ${MAX_TITLE_LENGTH + 1} characters and at most ${MAX_TITLE_LENGTH} fit in a name on the canvas`
         );
-        expect((await post('rename', ['--node', 'term-1'])).lines[0]).toBe('refused\tbad-arguments\t--title needs a title');
-        expect((await post('rename', ['--title', 'x'])).lines[0]).toBe('refused\tbad-arguments\t--node needs the id of a node');
-        expect((await post('rename', ['term-1', '--title', 'x'])).lines[0]).toStartWith('refused\tbad-arguments\trename takes no arguments');
+        expect((await post('node', ['rename', 'term-1'])).lines[0]).toBe('refused\tbad-arguments\t--title needs a title');
+        expect((await post('node', ['rename', '--title', 'x'])).lines[0]).toBe('refused\tbad-arguments\tnode rename needs the id of a node');
+        expect((await post('node', ['rename', 'term-1', 'note-1', '--title', 'x'])).lines[0]).toBe(
+            'refused\tbad-arguments\tnode rename takes one node id and nothing else; the title goes in --title'
+        );
         expect((await onDisk()).rev).toBe(1);
     });
 });
 
 describe('notify', () => {
     test('a message travels along a line from the caller and nowhere else', async () => {
-        const target = (await post('node', ['terminal', '--title', 'builder'])).lines[0]!.split('\t')[0]!;
+        const target = (await post('node', ['new', 'terminal', '--title', 'builder'])).lines[0]!.split('\t')[0]!;
         const refused = await post('notify', [target, '--text', 'the build is green']);
         expect(refused.status).toBe(422);
         expect(refused.lines[0]).toBe(
             `refused\tnot-linked\t${target} is a terminal node on main, but no line runs from you into it: draw that line and it can be notified`
         );
         expect(refused.lines).toContain(
-            `note\tNothing on main has a line from you into it yet; ruimte-context link --to ${target} draws the one this call needs`
+            `note\tNothing on main has a line from you into it yet; ruimte-context link new --to ${target} draws the one this call needs`
         );
-        expect(refused.lines).toContain(`see\truimte-context link --to ${target}\tdraws the line this needs`);
+        expect(refused.lines).toContain(`see\truimte-context link new --to ${target}\tdraws the line this needs`);
         expect(notified).toEqual([]);
 
-        await post('link', ['--to', target]);
+        await post('link', ['new', '--to', target]);
         const sent = await post('notify', [target, '--text', 'the build is green']);
         expect(sent.status).toBe(200);
         expect(sent.lines).toEqual([`notified\t${target}\twaiting\t${delivery.detail}`]);
@@ -2088,8 +2257,8 @@ describe('notify', () => {
     });
 
     test('says where the message landed, in the words the daemon gave it', async () => {
-        const target = (await post('node', ['terminal'])).lines[0]!.split('\t')[0]!;
-        await post('link', ['--to', target]);
+        const target = (await post('node', ['new', 'terminal'])).lines[0]!.split('\t')[0]!;
+        await post('link', ['new', '--to', target]);
         delivery = { at: 'now', detail: 'printed on the screen of that terminal' };
         expect((await post('notify', [target, '--text', 'look at the log'])).lines).toEqual([
             `notified\t${target}\tnow\tprinted on the screen of that terminal`
@@ -2142,8 +2311,8 @@ describe('notify', () => {
 
 describe('node delete', () => {
     test('removes a node the caller made, with the lines that ran into it', async () => {
-        const note = (await post('node', ['note', '--title', 'Scratch'])).lines[0]!.split('\t')[0]!;
-        await post('link', ['--to', note]);
+        const note = (await post('node', ['new', 'note', '--title', 'Scratch'])).lines[0]!.split('\t')[0]!;
+        await post('link', ['new', '--to', note]);
         const { status, lines } = await post('node', ['delete', note]);
         expect(status).toBe(200);
         expect(lines).toEqual([`deleted\t${note}\tnote\tScratch`, 'edges\t1']);
@@ -2153,7 +2322,7 @@ describe('node delete', () => {
     });
 
     test('a terminal node it made stops before the canvas lets go of it', async () => {
-        const made = (await post('node', ['terminal', '--title', 'runner'])).lines[0]!.split('\t')[0]!;
+        const made = (await post('node', ['new', 'terminal', '--title', 'runner'])).lines[0]!.split('\t')[0]!;
         const { lines } = await post('node', ['delete', made]);
         expect(lines).toEqual([`deleted\t${made}\tterminal\trunner`, `ended\t${made}\tterminal`, 'edges\t0']);
         expect(ended).toEqual([`terminal\t${made}`]);
@@ -2178,14 +2347,14 @@ describe('node delete', () => {
         expect(nowhere.lines[0]).toBe('refused\tunknown-node\tnope is not a node on any canvas of this project');
         // Nothing it could not delete anyway: the caller's own node and a person's note are both out.
         expect(nowhere.lines.slice(1)).toEqual(['note\tYou have no node on main to remove; node delete takes a node you made yourself']);
-        const mine = (await post('node', ['note', '--title', 'Mine'])).lines[0]!.split('\t')[0]!;
+        const mine = (await post('node', ['new', 'note', '--title', 'Mine'])).lines[0]!.split('\t')[0]!;
         expect((await post('node', ['delete', 'nope'])).lines.slice(1)).toEqual([`node\t${mine}\tnote\tMine`]);
     });
 
     test('a group loses its frame and keeps its nodes where they stand', async () => {
-        const first = (await post('node', ['note', '--title', 'One'])).lines[0]!.split('\t')[0]!;
-        const second = (await post('node', ['note', '--title', 'Two'])).lines[0]!.split('\t')[0]!;
-        const group = (await post('group', ['--nodes', `${first},${second}`, '--label', 'Work'])).lines[0]!.split('\t')[0]!;
+        const first = (await post('node', ['new', 'note', '--title', 'One'])).lines[0]!.split('\t')[0]!;
+        const second = (await post('node', ['new', 'note', '--title', 'Two'])).lines[0]!.split('\t')[0]!;
+        const group = (await post('node', ['group', '--nodes', `${first},${second}`, '--label', 'Work'])).lines[0]!.split('\t')[0]!;
         const { lines } = await post('node', ['delete', group]);
         expect(lines).toEqual([`deleted\t${group}\tgroup\tWork`, 'edges\t0', 'members\t2\tleft where they stand']);
         const nodes = (await canvasOnDisk()).nodes.map((node) => node.id);
@@ -2195,7 +2364,89 @@ describe('node delete', () => {
     });
 });
 
-describe('diagram', () => {
+describe('link delete', () => {
+    const newNode = async (kind: string, token = 'term', argv: string[] = []): Promise<string> =>
+        (await post('node', ['new', kind, ...argv], token)).lines[0]!.split('\t')[0]!;
+
+    const edgeIds = async (id = 'main'): Promise<string[]> => (await canvasOnDisk(id)).edges.map((edge) => edge.id);
+
+    test('removes a line from the caller into a node it made, and prints the line that went', async () => {
+        const note = await newNode('note');
+        const edge = (await post('link', ['new', '--to', note, '--label', 'plan'])).lines[0]!.split('\t')[0]!;
+        const { status, lines } = await post('link', ['delete', edge]);
+        expect(status).toBe(200);
+        expect(lines).toEqual([`deleted\t${edge}\tterm-1\t${note}\tplan`]);
+        expect(await edgeIds()).toEqual([]);
+        // Both ends stay.
+        expect((await canvasOnDisk()).nodes.map((node) => node.id)).toContain(note);
+    });
+
+    test('between two agents it removes the one direction it is given and leaves the other', async () => {
+        const shell = await newNode('terminal');
+        const [out, back] = (await post('link', ['new', '--to', shell])).lines.map((line) => line.split('\t')[0]!);
+        expect((await post('link', ['delete', out!])).lines).toEqual([`deleted\t${out}\tterm-1\t${shell}\tcontext`]);
+        expect(await edgeIds()).toEqual([back!]);
+    });
+
+    test('a line that touches a node a person or another agent made stays, unless the machine frees every one', async () => {
+        const into = (await post('link', ['new', '--to', 'note-1'])).lines[0]!.split('\t')[0]!;
+        const refused = await post('link', ['delete', into]);
+        expect(refused.status).toBe(422);
+        expect(refused.lines).toEqual([
+            `refused\tnot-yours\t${into} runs into note-1, which a person made, and link delete only removes a line whose ends are both yours`,
+            'made by\tnote-1\ta person',
+            'you\tterm-1',
+            "setting\tagentsDeleteAnyView in this machine's endpoint.json frees every node, view and line; a person turns it on from the Machines pane"
+        ]);
+
+        // The context a person gave the caller is theirs, even though the caller is one of its ends.
+        const given = (await post('link', ['new', '--from', 'note-1', '--to', 'term-1'])).lines[0]!.split('\t')[0]!;
+        expect((await post('link', ['delete', given])).lines[0]).toStartWith(`refused\tnot-yours\t${given} runs from note-1, which a person made,`);
+
+        const theirs = await newNode('note', 'chat', ['--view', 'main']);
+        const toTheirs = (await post('link', ['new', '--to', theirs])).lines[0]!.split('\t')[0]!;
+        expect((await post('link', ['delete', toTheirs])).lines[0]).toStartWith(`refused\tnot-yours\t${toTheirs} runs into ${theirs}, which chat-1 made,`);
+        expect(await edgeIds()).toEqual([into, given, toTheirs]);
+
+        deleteAnyView = true;
+        expect((await post('link', ['delete', into])).lines).toEqual([`deleted\t${into}\tterm-1\tnote-1\t`]);
+        expect(await edgeIds()).toEqual([given, toTheirs]);
+    });
+
+    test('an id that is no line is refused with only the lines this call would remove', async () => {
+        const empty = await post('link', ['delete', 'nope']);
+        expect(empty.lines).toEqual(['refused\tunknown-edge\tnope is not a line on main', 'note\tmain has no lines on it']);
+
+        await post('link', ['new', '--to', 'note-1']);
+        expect((await post('link', ['delete', 'nope'])).lines.slice(1)).toEqual([
+            'note\tYou have no line on main to remove; link delete takes a line whose ends are both yours'
+        ]);
+
+        const note = await newNode('note');
+        const mine = (await post('link', ['new', '--to', note])).lines[0]!.split('\t')[0]!;
+        expect((await post('link', ['delete', 'nope'])).lines.slice(1)).toEqual([`edge\t${mine}\tterm-1\t${note}\t`]);
+        // A node id is not a line id.
+        expect((await post('link', ['delete', note])).lines[0]).toBe(`refused\tunknown-edge\t${note} is not a line on main`);
+    });
+
+    test('finds the canvas the way link new does, and takes one id and nothing that would make it a dry run', async () => {
+        const note = await newNode('note', 'term', ['--view', 'board']);
+        const other = await newNode('note', 'term', ['--view', 'board']);
+        const line = (await post('link', ['new', '--from', note, '--to', other, '--view', 'board'])).lines[0]!.split('\t')[0]!;
+        expect((await post('link', ['delete', line])).lines[0]).toBe(`refused\tunknown-edge\t${line} is not a line on main`);
+        expect((await post('link', ['delete', line], 'chat')).lines[0]).toStartWith('refused\tview-required\t');
+        expect((await post('link', ['delete', line, '--view', 'sketch-1'])).lines[0]).toBe('refused\tnot-a-canvas\tsketch-1 is not a canvas of this project');
+        expect((await post('link', ['delete', line, '--view', 'board'])).lines).toEqual([`deleted\t${line}\t${note}\t${other}\t`]);
+        expect(await edgeIds('board')).toEqual([]);
+
+        expect((await post('link', ['delete'])).lines[0]).toBe('refused\tbad-arguments\tlink delete needs the id of a line');
+        expect((await post('link', ['delete', 'a', 'b'])).lines[0]).toBe('refused\tbad-arguments\tlink delete takes one line id and nothing else');
+        expect((await post('link', ['delete', 'a', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
+        expect((await post('link', ['delete', 'a'], 'stray')).lines[0]).toStartWith('refused\tnot-in-project\t');
+    });
+});
+
+describe('view diagram', () => {
     const doc = (overrides: Record<string, unknown> = {}): string =>
         JSON.stringify({
             meta: { title: 'Wire', direction: 'down' },
@@ -2209,7 +2460,7 @@ describe('diagram', () => {
         });
 
     const write = (viewId: string, document: string, token = 'term'): Promise<{ status: number; lines: string[] }> =>
-        post('diagram', [viewId, `--document=${document}`], token);
+        post('view', ['diagram', viewId, `--document=${document}`], token);
 
     const diagramOnDisk = async (viewId: string, base = folder): Promise<unknown> =>
         readFile(join(base, '.ruimte', 'diagrams', `${viewId}.json`), 'utf8')
@@ -2217,7 +2468,7 @@ describe('diagram', () => {
             .catch(() => null);
 
     test('help diagram names every field of the document and every value a closed field takes', async () => {
-        const { lines } = await post('help', ['diagram']);
+        const { lines } = await post('help', ['view', 'diagram']);
         const shapes = {
             'meta.': DiagramMetaSchema.shape,
             'nodes[].': DiagramNodeSchema.shape,
@@ -2295,7 +2546,7 @@ describe('diagram', () => {
         expect(problems).toContain('problem\tnodes[1].label\tis missing and needs a string (node "api")');
         expect(problems).toContain('problem\tnodes[1]\thas no field lable (node "api")');
         expect(problems.some((line) => line.startsWith('problem\tedges[0].style\t') && line.endsWith('(the edge from "web" to "api")'))).toBe(true);
-        expect(lines.at(-1)).toBe('detail\truimte-context help diagram');
+        expect(lines.at(-1)).toBe('detail\truimte-context help view diagram');
         for (const line of lines) {
             expect(line).not.toInclude('Invalid');
             expect(line).not.toInclude('expected');
@@ -2305,14 +2556,14 @@ describe('diagram', () => {
 
     test('no document, one that is not JSON, one that is not an object and a --dry-run are each refused by name', async () => {
         const id = await made('Flow', ['--kind', 'diagram']);
-        expect((await post('diagram', [id])).lines[0]).toStartWith('refused\tno-document\t');
+        expect((await post('view', ['diagram', id])).lines[0]).toStartWith('refused\tno-document\t');
         expect((await write(id, '  \n')).lines[0]).toStartWith('refused\tno-document\t');
         expect((await write(id, '{ nodes: [')).lines[0]).toStartWith('refused\tbad-json\tThe document is not JSON: ');
         expect((await write(id, '[]')).lines[0]).toBe('refused\tbad-document\tdocument needs to be one JSON object with meta, nodes, groups and edges');
         expect((await write(id, JSON.stringify({ nodes: [], groups: [], edges: [] }))).lines[0]).toBe(
             'refused\tbad-document\tmeta is missing and needs an object'
         );
-        expect((await post('diagram', [id, '--dry-run', `--document=${doc()}`])).lines[0]).toStartWith('refused\tno-dry-run\t');
+        expect((await post('view', ['diagram', id, '--dry-run', `--document=${doc()}`])).lines[0]).toStartWith('refused\tno-dry-run\t');
     });
 
     test('a view that is no diagram, or a diagram of another project, is refused with the diagrams of this one', async () => {
@@ -2343,7 +2594,7 @@ describe('diagram', () => {
     });
 });
 
-describe('tasks', () => {
+describe('task list', () => {
     // The chat view `chat-1` is a chat, the one kind of caller that can be woken with a result.
     const give = (argv: string[]) => post('agent', ['claude', '--chat', '--view', 'main', ...argv], 'chat');
 
@@ -2404,13 +2655,13 @@ describe('tasks', () => {
             expect((await post('done', ['--result', 'Fixed\\nboth bugs'], 'child')).lines).toEqual([`done\t${taskId}\tchat-1`]);
             expect(tasks.get(taskId!)).toMatchObject({ status: 'done', result: { text: 'Fixed\nboth bugs', source: 'done' } });
             expect((await post('done', ['--result', 'again'], 'child')).lines[0]).toStartWith('refused\tno-open-task\t');
-            expect((await post('tasks', [], 'chat')).lines).toEqual([`task\t${taskId}\tgave\tdone\t${childId}\tLexer\tpending\tFixed\t-`]);
+            expect((await post('task', ['list'], 'chat')).lines).toEqual([`task\t${taskId}\tgave\tdone\t${childId}\tLexer\tpending\tFixed\t-`]);
             // The child is done with a task that settled, while the parent still waits for the wake.
-            expect((await post('tasks', [], 'child')).lines).toEqual([
-                'note\tNo task is open or waiting to wake you; 1 older task is hidden, settled and already reported; ruimte-context tasks --all lists them'
+            expect((await post('task', ['list'], 'child')).lines).toEqual([
+                'note\tNo task is open or waiting to wake you; 1 older task is hidden, settled and already reported; ruimte-context task list --all lists them'
             ]);
-            expect((await post('tasks', ['--all'], 'child')).lines).toEqual([`task\t${taskId}\tgiven\tdone\tchat-1\tLexer\tpending\tFixed\t-`]);
-            expect((await post('tasks', [], 'term')).lines).toEqual([
+            expect((await post('task', ['list', '--all'], 'child')).lines).toEqual([`task\t${taskId}\tgiven\tdone\tchat-1\tLexer\tpending\tFixed\t-`]);
+            expect((await post('task', ['list'], 'term')).lines).toEqual([
                 'note\tYou have given no task and were given none; ruimte-context agent --task gives one'
             ]);
         } finally {
@@ -2423,10 +2674,10 @@ describe('tasks', () => {
         await tasks.markWoken([earlier!]);
         const [laterChild, , , , , later] = (await give(['--task', 'Lexer', '--prompt', 'fix it again'])).lines[0]!.split('\t');
 
-        expect((await post('tasks', [], 'chat')).lines).toEqual([
+        expect((await post('task', ['list'], 'chat')).lines).toEqual([
             `task\t${later}\tgave\topen\t${laterChild}\tLexer\tpending\t\t-`,
-            'note\t1 older task is hidden, settled and already reported; ruimte-context tasks --all lists them'
+            'note\t1 older task is hidden, settled and already reported; ruimte-context task list --all lists them'
         ]);
-        expect((await post('tasks', ['--all'], 'chat')).lines.map((line) => line.split('\t')[1])).toEqual([earlier, later]);
+        expect((await post('task', ['list', '--all'], 'chat')).lines.map((line) => line.split('\t')[1])).toEqual([earlier, later]);
     });
 });

@@ -174,8 +174,8 @@ describe('a task wakes the chat that gave it', () => {
         expect(page.live).toBe(false);
 
         // What `tasks` shows the lead: nothing current once the wake went, and the history under --all.
-        expect((await verb(daemon, 'chat-lead', 'tasks', [])).map((line) => line.split('\t')[0])).toEqual(['note']);
-        expect((await verb(daemon, 'chat-lead', 'tasks', ['--all'])).map((line) => line.split('\t').slice(0, 4).join('\t'))).toEqual(
+        expect((await verb(daemon, 'chat-lead', 'task', ['list'])).map((line) => line.split('\t')[0])).toEqual(['note']);
+        expect((await verb(daemon, 'chat-lead', 'task', ['list', '--all'])).map((line) => line.split('\t').slice(0, 4).join('\t'))).toEqual(
             children.map((child) => `task\t${child.taskId}\tgave\tdone`)
         );
     });
@@ -321,7 +321,7 @@ describe('the tasks of one team call wake the lead together', () => {
         expect(daemon.tasks.ofParent('chat-lead').map((task) => task.wake)).toEqual(['sent', 'sent', 'sent']);
         expect(daemon.outbox.list()).toEqual([]);
         const batchId = [...batchIds][0]!;
-        expect((await verb(daemon, 'chat-lead', 'tasks', ['--all'])).map((line) => line.split('\t').at(-1))).toEqual([batchId, batchId, batchId]);
+        expect((await verb(daemon, 'chat-lead', 'task', ['list', '--all'])).map((line) => line.split('\t').at(-1))).toEqual([batchId, batchId, batchId]);
     });
 
     test('a role that fails and a role a person removes still complete the team', async () => {

@@ -9,9 +9,11 @@ import { escapeText } from '../canvas/text-escapes.ts';
  *   ruimte-context read <id>            prints one of them
  *   ruimte-context read <id> --tail N   prints its last N lines
  *   ruimte-context read <id> --subagent T   prints the whole conversation of one subagent of a linked chat
- *   ruimte-context help                 lists all of the above and every canvas verb
+ *   ruimte-context help                 lists all of the above and every canvas verb and noun
+ *   ruimte-context help <noun> [action] the actions of a noun, or everything one action takes
  *   ruimte-context help <verb>          everything that one verb takes
  *   ruimte-context <verb> ...           runs one; the daemon parses the arguments
+ *   ruimte-context <noun> <action> ...  the same for an action, such as node new or link delete
  *
  * Exit codes: 0 done, 1 the daemon could not be reached or failed, 2 not inside a live session (no
  * token, or a 401 for one the daemon does not know, such as the token of a session that ended), 3 a
@@ -94,8 +96,8 @@ export const runContext = async (args: string[], env: Environment = process.env,
     }
 
     const argv =
-        command === 'diagram'
-            ? await withStdinDocument(args.slice(1), stdin)
+        command === 'view' && args[1] === 'diagram'
+            ? ['diagram', ...(await withStdinDocument(args.slice(2), stdin))]
             : command === 'plan' && args[1] === 'new'
               ? ['new', ...(await withStdinPlan(args.slice(2), stdin))]
               : await withStdinText(args.slice(1), stdin);
@@ -103,7 +105,7 @@ export const runContext = async (args: string[], env: Environment = process.env,
 };
 
 /*
- * `diagram` takes its document on stdin, which the daemon never sees, so it travels as `--document`.
+ * `view diagram` takes its document on stdin, which the daemon never sees, so it travels as `--document`.
  * Not escaped the way `--text` is: the daemon parses JSON here and reads no escapes of its own. A
  * `--document` already given means stdin is not the source, so it is left unread.
  */
@@ -115,7 +117,7 @@ const withStdinDocument = async (argv: string[], stdin: () => Promise<string>): 
 };
 
 /*
- * `plan new` takes its plan on stdin like `diagram`: JSON as `--document`, or a Markdown list as
+ * `plan new` takes its plan on stdin like `view diagram`: JSON as `--document`, or a Markdown list as
  * `--markdown -`. Both arrive untouched, since the daemon parses them and reads no escapes.
  */
 const withStdinPlan = async (argv: string[], stdin: () => Promise<string>): Promise<string[]> => {

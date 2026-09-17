@@ -47,13 +47,14 @@ const daemon = {
         seen.push({ verb, argv, authorization: request.headers.get('authorization') });
         switch (verb) {
             case 'node':
+                if (argv[0] === 'list') {
+                    return new Response('refused\tview-required\tname one with --view\ncanvas\tmain\tCanvas\n', { status: 422 });
+                }
                 return new Response('note-12345678\tnote\tmain\n');
-            case 'diagram':
+            case 'view':
                 return new Response('flow-1\t1\t0\t0\t0\n');
             case 'done':
                 return new Response('done\ttask-1\tchat-lead\n');
-            case 'nodes':
-                return new Response('refused\tview-required\tname one with --view\ncanvas\tmain\tCanvas\n', { status: 422 });
             case 'broken':
                 return new Response('boom', { status: 500 });
             default:
@@ -102,7 +103,7 @@ afterEach(() => {
 
 describe('runContext', () => {
     test('outside a session exits 2', async () => {
-        expect(await runContext(['node', 'note'], {})).toBe(2);
+        expect(await runContext(['node', 'new', 'note'], {})).toBe(2);
     });
 
     test('bare and list still list the linked sources', async () => {
@@ -183,7 +184,7 @@ describe('runContext', () => {
         expect(await runContext(['list'], stale)).toBe(2);
         expect(await runContext(['read', 'n1'], stale)).toBe(2);
         expect(await runContext(['read', 'n1', '--tail', '3'], stale)).toBe(2);
-        expect(await runContext(['nodes'], stale)).toBe(2);
+        expect(await runContext(['node', 'list'], stale)).toBe(2);
         expect(stderr.trim().split('\n')).toEqual(Array.from({ length: 4 }, () => 'Not inside a live Ruimte session: the daemon answered 401 Unknown token'));
         expect(stdout).toBe('');
     });
@@ -200,7 +201,7 @@ describe('runContext', () => {
     test('a daemon out of reach says when a sandbox is the likely reason', async () => {
         const gone = { ...env, RUIMTE_CONTEXT_URL: 'http://127.0.0.1:1/context' };
         const retry = 'run the same command again with network access or escalated permissions';
-        expect(await runContext(['nodes'], { ...gone, CODEX_SANDBOX: 'seatbelt', CODEX_SANDBOX_NETWORK_DISABLED: '1' })).toBe(1);
+        expect(await runContext(['node', 'list'], { ...gone, CODEX_SANDBOX: 'seatbelt', CODEX_SANDBOX_NETWORK_DISABLED: '1' })).toBe(1);
         expect(stderr).toBe(
             `Could not reach the daemon: Unable to connect. This command runs in a sandbox without network access, which blocks the daemon's local address; ${retry}.\n`
         );
@@ -217,8 +218,8 @@ describe('runContext', () => {
     });
 
     test('a verb posts its argv to /canvas/<verb> and prints the answer', async () => {
-        expect(await runContext(['node', 'note', '--text', 'hello'], env)).toBe(0);
-        expect(seen).toEqual([{ verb: 'node', argv: ['note', '--text', 'hello'], authorization: 'Bearer tok' }]);
+        expect(await runContext(['node', 'new', 'note', '--text', 'hello'], env)).toBe(0);
+        expect(seen).toEqual([{ verb: 'node', argv: ['new', 'note', '--text', 'hello'], authorization: 'Bearer tok' }]);
         expect(stdout).toBe('note-12345678\tnote\tmain\n');
     });
 
@@ -231,14 +232,22 @@ describe('runContext', () => {
         expect(seen.map((call) => [call.verb, call.argv])).toEqual(VERBS.map((verb) => ['help', [verb.name]]));
     });
 
+    test('help <noun> <action> travels as the verb help with both words, for every action there is', async () => {
+        const actions = VERBS.flatMap((entry) => (entry.served === 'noun' ? entry.actions.map((action) => action.name.split(' ')) : []));
+        for (const words of actions) {
+            await runContext(['help', ...words], env);
+        }
+        expect(seen.map((call) => [call.verb, call.argv])).toEqual(actions.map((words) => ['help', words]));
+    });
+
     test('--text - takes the body from stdin, escaped so the daemon reads it back byte for byte', async () => {
         const body = 'Line one\nLine two\\n still one line\n';
-        expect(await runContext(['node', 'note', '--text', '-'], env, async () => body)).toBe(0);
-        expect(await runContext(['node', 'note', '--text=-'], env, async () => body)).toBe(0);
+        expect(await runContext(['node', 'new', 'note', '--text', '-'], env, async () => body)).toBe(0);
+        expect(await runContext(['node', 'new', 'note', '--text=-'], env, async () => body)).toBe(0);
         const sent = seen.map((call) => call.argv);
-        expect(sent[0]).toEqual(['note', '--text=Line one\nLine two\\\\n still one line\n']);
+        expect(sent[0]).toEqual(['new', 'note', '--text=Line one\nLine two\\\\n still one line\n']);
         expect(sent[1]).toEqual(sent[0]);
-        expect(unescapeText((sent[0] as string[])[1]!.slice('--text='.length))).toBe(body);
+        expect(unescapeText((sent[0] as string[])[2]!.slice('--text='.length))).toBe(body);
     });
 
     test('--result - takes the result of a task from stdin the same way', async () => {
@@ -253,20 +262,20 @@ describe('runContext', () => {
         const stdin = async (): Promise<string> => {
             throw new Error('stdin was read');
         };
-        expect(await runContext(['node', 'note', '--text', 'a\\nb', '--title', '-'], env, stdin)).toBe(0);
-        expect(seen[0]!.argv).toEqual(['note', '--text', 'a\\nb', '--title', '-']);
+        expect(await runContext(['node', 'new', 'note', '--text', 'a\\nb', '--title', '-'], env, stdin)).toBe(0);
+        expect(seen[0]!.argv).toEqual(['new', 'note', '--text', 'a\\nb', '--title', '-']);
     });
 
-    test('diagram sends stdin as --document byte for byte, and leaves stdin unread when --document is given', async () => {
+    test('view diagram sends stdin as --document byte for byte, and leaves stdin unread when --document is given', async () => {
         const document = '{"meta":{"title":"a\\nb","direction":"right"}}\n';
-        expect(await runContext(['diagram', 'flow-1'], env, async () => document)).toBe(0);
-        expect(seen[0]!.argv).toEqual(['flow-1', `--document=${document}`]);
+        expect(await runContext(['view', 'diagram', 'flow-1'], env, async () => document)).toBe(0);
+        expect(seen[0]!.argv).toEqual(['diagram', 'flow-1', `--document=${document}`]);
         expect(stdout).toBe('flow-1\t1\t0\t0\t0\n');
         const stdin = async (): Promise<string> => {
             throw new Error('stdin was read');
         };
-        expect(await runContext(['diagram', 'flow-1', '--document', '{}'], env, stdin)).toBe(0);
-        expect(seen[1]!.argv).toEqual(['flow-1', '--document', '{}']);
+        expect(await runContext(['view', 'diagram', 'flow-1', '--document', '{}'], env, stdin)).toBe(0);
+        expect(seen[1]!.argv).toEqual(['diagram', 'flow-1', '--document', '{}']);
     });
 
     test('plan new sends stdin as --document, or as --markdown for --markdown -, byte for byte', async () => {
@@ -281,7 +290,7 @@ describe('runContext', () => {
     });
 
     test('a refusal exits 3 and goes to stderr', async () => {
-        expect(await runContext(['nodes'], env)).toBe(3);
+        expect(await runContext(['node', 'list'], env)).toBe(3);
         expect(stderr).toBe('refused\tview-required\tname one with --view\ncanvas\tmain\tCanvas\n');
         expect(stdout).toBe('');
     });
