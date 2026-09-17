@@ -21,7 +21,7 @@ describe('hookCommand', () => {
 
     test('gives the permission hook room to wait for a person and leaves the others quick', () => {
         expect(hookCommand('claude', 'PermissionRequest')).toContain('curl -sf -m 120 ');
-        expect(hookCommand('claude', 'Stop')).toContain('curl -sf -m 3 ');
+        expect(hookCommand('claude', 'Stop')).toContain('curl -sf -m 2 ');
     });
 });
 
@@ -69,11 +69,11 @@ describe('mergeHooks', () => {
         // Laddered above the daemon's own hold and above curl's, so the CLI is never the one to cut it off.
         expect(hooks.PermissionRequest[0]?.hooks[0]?.timeout).toBe(125);
         expect(hooks.PermissionRequest[0]?.hooks[0]?.command).toBe(hookCommand('claude', 'PermissionRequest'));
-        expect(hooks.Stop[0]?.hooks[0]?.timeout).toBe(5);
+        expect(hooks.Stop[0]?.hooks[0]?.timeout).toBe(3);
     });
 
     test('removes our hook from an event the daemon no longer listens for', () => {
-        const ours = { type: 'command', command: hookCommand('claude'), timeout: 5 };
+        const ours = { type: 'command', command: hookCommand('claude'), timeout: 3 };
         const { config } = mergeHooks({ hooks: { PreModelSwitch: [{ hooks: [ours] }] } }, 'claude');
         expect((config.hooks as Record<string, unknown>).PreModelSwitch).toBeUndefined();
     });

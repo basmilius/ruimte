@@ -10,8 +10,9 @@ import { HOOK_EVENTS } from './hooks.ts';
 export const HOOK_MARKER = 'RUIMTE_HOOK_URL';
 
 // Seconds the CLI waits for the hook; the POST is loopback, so anything longer means the daemon is gone.
-const HOOK_TIMEOUT_S = 5;
-const HOOK_MAX_TIME_S = 3;
+// Codex clamps a SessionEnd or Interrupt hook to 3 s and warns on screen about anything longer.
+const HOOK_TIMEOUT_S = 3;
+const HOOK_MAX_TIME_S = 2;
 
 /*
  * The permission hook is the one the daemon answers late: it holds the request while a person
