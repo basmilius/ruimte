@@ -20,7 +20,7 @@ import { ErrorBoundary } from '@/ui/ErrorBoundary';
 const DiffPool = lazy(() => import('@/chat/ui/DiffPool'));
 
 /* The body of a chat, the same on a canvas inside a frame and filling a view of its own. */
-export function ChatBody({ id, focused }: { id: string; focused: boolean }) {
+export function ChatBody({ id, focused, onCanvas = false }: { id: string; focused: boolean; onCanvas?: boolean }) {
     const info = useChatRow(id, (row) => row?.info);
     const providerFixed = useNodeHost(id)?.providerFixed === true;
     useSuggestedTitle(id, info?.suggestedTitle);
@@ -99,6 +99,7 @@ export function ChatBody({ id, focused }: { id: string; focused: boolean }) {
                                         chatId={id}
                                         info={info}
                                         focused={focused}
+                                        onCanvas={onCanvas}
                                         disabled={status !== 'open'}
                                         providerFixed={providerFixed}
                                         onSend={send}

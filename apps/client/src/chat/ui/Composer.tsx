@@ -32,6 +32,7 @@ import { enterAction, inCode, inFenceBody, inOpenFence, listItemAt, recallDirect
 import { ComposerInput, type ComposerInputHandle } from '@/chat/ui/ComposerInput';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { PromptComposer } from '@/chat/ui/PromptComposer';
+import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { ModelPicker, ModePicker, OptionsPicker, StashPicker } from '@/chat/ui/Pickers';
 import { UploadThumb } from '@/chat/ui/UploadThumb';
 import { isApplePlatform } from '@/desktop/bridge';
@@ -71,6 +72,8 @@ interface ComposerProps {
     chatId: string;
     info: ChatInfo;
     focused: boolean;
+    /* On a canvas, whose prompt stack may be where this chat's prompts are answered. */
+    onCanvas: boolean;
     disabled: boolean;
     /* Opened for one CLI from a menu: the model is the remembered one and there is nothing to pick. */
     providerFixed: boolean;
@@ -104,7 +107,7 @@ const splitPath = (path: string): { name: string; dir: string } => {
 };
 
 // Keep the editor mounted while a pending request takes over, so its selection and draft survive.
-export function Composer({ chatId, info, focused, disabled, providerFixed, onSend, onRetarget }: ComposerProps) {
+export function Composer({ chatId, info, focused, onCanvas, disabled, providerFixed, onSend, onRetarget }: ComposerProps) {
     const [draft, setDraft] = useState<ChatDraft>(() => readDraft(chatId));
     const [historyIndex, setHistoryIndex] = useState<number | null>(null);
     const [menuIndex, setMenuIndex] = useState(0);
@@ -705,6 +708,7 @@ export function Composer({ chatId, info, focused, disabled, providerFixed, onSen
                     chatId={chatId}
                     pending={pending}
                     focused={focused}
+                    elsewhere={onCanvas && !PROMPTS_IN_NODES}
                     disabled={disabled}
                     hasDraft={!isEmptyDraft(draft)}
                     denyReason={capabilities?.denyReason === true}

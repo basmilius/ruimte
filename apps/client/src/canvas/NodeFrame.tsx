@@ -32,6 +32,7 @@ import { ProcessAlertMark, useNodeAlerts } from '@/processes/ProcessAlertMark';
 import { useHasContextLinks } from '@/context/sources';
 import { accentColor } from '@/canvas/accents';
 import { ApprovalStrip } from '@/canvas/ApprovalStrip';
+import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { useCellHasFocus } from '@/state/document';
 import { useProject } from '@/state/project';
@@ -346,7 +347,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         </Tooltip>
                     </div>
                 </header>
-                {node.kind === 'terminal' && !collapsed && <ApprovalStrip id={id} />}
+                {node.kind === 'terminal' && !collapsed && PROMPTS_IN_NODES && <ApprovalStrip id={id} />}
                 {isGroup ? (
                     // No body attribute: a press anywhere on the frame drags it, together with what it holds.
                     <div className="grow" />
@@ -363,7 +364,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         {/* Around the body only, so the header, the menu, a drag and a resize keep working. */}
                         <NodeBodyBoundary kind={node.kind}>
                             {node.kind === 'terminal' && (live ? <TerminalBody id={id} focused={takesKeyboard} /> : <TerminalPlate id={id} />)}
-                            {node.kind === 'chat' && <ChatBody id={id} focused={takesKeyboard} />}
+                            {node.kind === 'chat' && <ChatBody id={id} focused={takesKeyboard} onCanvas />}
                             {node.kind === 'browser' && <BrowserBody id={id} focused={focused} />}
                             {node.kind === 'note' && <NoteNode id={id} focused={focused} />}
                             {node.kind === 'drawing' && <DrawingNode id={id} />}

@@ -1,9 +1,12 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { ArrowDown, Hand, MessageCircleQuestionMark } from 'lucide-react';
+import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { chatClient } from '@/chat';
 import { nextPrompt, type PendingPrompt } from '@/prompts/logic/prompts';
 import { answerPrompt, type PromptSubject } from '@/prompts/logic/subjects';
 import { usePromptSession } from '@/prompts/logic/usePromptSession';
 import { PromptView } from '@/prompts/ui/PromptView';
+import { Icon } from '@/ui/Icon';
 
 const requestIdOf = (item: PendingPrompt): string => item.requestId;
 
@@ -11,6 +14,7 @@ export function PromptComposer({
     chatId,
     pending,
     focused,
+    elsewhere,
     disabled,
     hasDraft,
     denyReason,
@@ -19,6 +23,8 @@ export function PromptComposer({
     chatId: string;
     pending: PendingPrompt[];
     focused: boolean;
+    /* The canvas's prompt stack answers the prompt; the composer only says where it went. */
+    elsewhere: boolean;
     disabled: boolean;
     hasDraft: boolean;
     denyReason: boolean;
@@ -31,14 +37,25 @@ export function PromptComposer({
     const subject: PromptSubject | null = active && { kind: 'chat', nodeId: chatId, item: active };
 
     useEffect(() => {
-        if (focused && expanded && !ref.current?.querySelector('.prompt-card')?.contains(document.activeElement)) {
+        if (focused && expanded && !elsewhere && !ref.current?.querySelector('.prompt-card')?.contains(document.activeElement)) {
             ref.current?.querySelector<HTMLElement>('.prompt-heading')?.focus({ preventScroll: true });
         }
-    }, [activeKey, expanded, focused]);
+    }, [activeKey, expanded, focused, elsewhere]);
 
     return (
         <div ref={ref} onPointerDownCapture={session.onPointerDownCapture} onClickCapture={session.onClickCapture}>
-            {active && subject && (
+            {active && subject && elsewhere && (
+                <button
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3.5 py-3 text-left text-sm text-text-muted hover:text-text"
+                    onClick={() => bringPromptToFront(chatId)}
+                >
+                    <Icon icon={active.kind === 'approval' ? Hand : MessageCircleQuestionMark} size={16} className="shrink-0 text-status-needs-you" />
+                    <span className="grow">Waiting for your answer below</span>
+                    <Icon icon={ArrowDown} size={16} className="shrink-0" />
+                </button>
+            )}
+            {active && subject && !elsewhere && (
                 <div hidden={!expanded}>
                     <PromptView
                         key={activeKey}
