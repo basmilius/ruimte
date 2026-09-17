@@ -37,6 +37,7 @@ describe('verbsNote', () => {
         expect(deepest).not.toContain('--task');
         for (const note of [VERBS_NOTE, helper, deepest]) {
             expect(note).toContain('`ruimte-context help <verb or noun>`');
+            expect(note).toContain('a command you run in your shell, not a tool');
             expect(note).toEndWith('never by id.');
             expect(note).not.toContain('  ');
         }
