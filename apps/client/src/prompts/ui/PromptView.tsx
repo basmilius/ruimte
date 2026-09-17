@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
 import { toolSummary } from '@/chat/logic/tools';
-import { answerValue, promptAnswers, questionAnswer, type PendingPrompt, type PromptAction, type PromptDraft } from '@/prompts/logic/prompts';
-import { ApprovalBody } from '@/prompts/ui/ApprovalBody';
-import { ApprovalActions, QuestionActions, type ApprovalButton } from '@/prompts/ui/PromptActions';
+import { answerValue, promptAnswers, questionAnswer, type PromptAction, type PromptDraft } from '@/prompts/logic/prompts';
+import { approvalButtons, type PromptSubject } from '@/prompts/logic/subjects';
+import { ApprovalBody, CommandBox } from '@/prompts/ui/ApprovalBody';
+import { ApprovalActions, PromptPrimary, QuestionActions } from '@/prompts/ui/PromptActions';
 import { PromptCard } from '@/prompts/ui/PromptCard';
 import { QuestionBody } from '@/prompts/ui/QuestionBody';
 
 interface Props {
-    item: PendingPrompt;
+    subject: PromptSubject;
     draft: PromptDraft;
     onDraft(draft: PromptDraft): void;
     onAction(action: PromptAction): void;
@@ -18,16 +19,56 @@ interface Props {
     sending: boolean;
     error: string | null;
     top?: ReactNode;
+    /* Takes the person to the terminal a waiting card is about. */
+    onReveal?: () => void;
 }
 
-/* A chat's permission request or question, answered in place. */
-export function PromptView({ item, draft, onDraft, onAction, more, hasDraft, denyReason, disabled, sending, error, top }: Props) {
+/* A permission request or question, answered in place: a chat's, or a terminal's drawn the same way. */
+export function PromptView({ subject, draft, onDraft, onAction, more, hasDraft, denyReason, disabled, sending, error, top, onReveal }: Props) {
+    const locked = sending || disabled;
+    const buttons = approvalButtons(subject, draft.reason).map(({ action, ...button }) => ({ ...button, onPress: () => onAction(action) }));
+
+    if (subject.kind === 'terminal-waiting') {
+        return (
+            <PromptCard
+                kind="waiting"
+                heading="Waiting for you in its terminal"
+                top={top}
+                busy={false}
+                disabled={false}
+                error={null}
+                actions={
+                    <div className="ml-auto flex items-center">
+                        <PromptPrimary onClick={onReveal}>Go to terminal</PromptPrimary>
+                    </div>
+                }
+            >
+                <p className="text-sm text-text-muted">This question can only be answered in the terminal.</p>
+            </PromptCard>
+        );
+    }
+
+    if (subject.kind === 'terminal-approval') {
+        const { request } = subject;
+        return (
+            <PromptCard
+                kind="approval"
+                heading={request.toolName === 'Bash' ? 'Run command' : request.toolName}
+                top={top}
+                busy={sending}
+                disabled={disabled}
+                error={error}
+                actions={<ApprovalActions buttons={buttons} locked={locked} sending={sending} />}
+            >
+                {request.summary !== '' && <CommandBox command={request.summary} />}
+            </PromptCard>
+        );
+    }
+
+    const { item } = subject;
     const question = item.kind === 'question' ? item.questions[Math.min(draft.index, item.questions.length - 1)]! : null;
     const answer = question ? questionAnswer(draft, question) : null;
-    const locked = sending || disabled;
     const last = item.kind === 'question' && draft.index === item.questions.length - 1;
-    const approve = (decision: 'allow' | 'allow-always' | 'deny') =>
-        onAction({ kind: 'approve', decision, ...(decision === 'deny' && draft.reason.trim() ? { message: draft.reason.trim() } : {}) });
     const commit = () => {
         if (item.kind !== 'question') {
             return;
@@ -56,21 +97,6 @@ export function PromptView({ item, draft, onDraft, onAction, more, hasDraft, den
         ) : null;
 
     if (item.kind === 'approval') {
-        const buttons: ApprovalButton[] = [
-            ...(item.canAllowAlways && item.allowAlways
-                ? [
-                      {
-                          id: 'allow-always',
-                          label: item.allowAlways.label,
-                          description: item.allowAlways.description,
-                          primary: false,
-                          onPress: () => approve('allow-always')
-                      }
-                  ]
-                : []),
-            { id: 'deny', label: 'Deny', primary: false, onPress: () => approve('deny') },
-            { id: 'allow', label: 'Allow', primary: true, onPress: () => approve('allow') }
-        ];
         return (
             <PromptCard
                 kind="approval"

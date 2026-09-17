@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { chatClient } from '@/chat';
-import { nextPrompt, type PendingPrompt, type PromptAction } from '@/prompts/logic/prompts';
+import { nextPrompt, type PendingPrompt } from '@/prompts/logic/prompts';
+import { answerPrompt, type PromptSubject } from '@/prompts/logic/subjects';
 import { usePromptSession } from '@/prompts/logic/usePromptSession';
 import { PromptView } from '@/prompts/ui/PromptView';
 
@@ -27,6 +28,7 @@ export function PromptComposer({
     const ref = useRef<HTMLDivElement>(null);
     const { active, activeId: activeKey } = session;
     const expanded = !!active;
+    const subject: PromptSubject | null = active && { kind: 'chat', nodeId: chatId, item: active };
 
     useEffect(() => {
         if (focused && expanded && !ref.current?.querySelector('.prompt-card')?.contains(document.activeElement)) {
@@ -34,25 +36,16 @@ export function PromptComposer({
         }
     }, [activeKey, expanded, focused]);
 
-    const send = (item: PendingPrompt, action: PromptAction): Promise<void> => {
-        if (action.kind === 'approve') {
-            return chatClient.approve(chatId, item.requestId, action.decision, action.message);
-        }
-        if (action.kind === 'answer') {
-            return chatClient.answer(chatId, item.requestId, action.answers);
-        }
-        return chatClient.dismiss(chatId, item.id);
-    };
     return (
         <div ref={ref} onPointerDownCapture={session.onPointerDownCapture} onClickCapture={session.onClickCapture}>
-            {active && (
+            {active && subject && (
                 <div hidden={!expanded}>
                     <PromptView
                         key={activeKey}
-                        item={active}
+                        subject={subject}
                         draft={session.draftOf(active.requestId)}
                         onDraft={(draft) => session.setDraft(active.requestId, draft)}
-                        onAction={(action) => void session.act(active, () => send(active, action))}
+                        onAction={(action) => void session.act(active, () => answerPrompt(subject, action, { chat: chatClient, sessions: null }))}
                         more={session.waiting.length - 1}
                         hasDraft={hasDraft}
                         denyReason={denyReason}

@@ -5,7 +5,9 @@ export type PendingPrompt = ChatApprovalItem | ChatQuestionItem;
 export type PromptAction =
     | { kind: 'approve'; decision: 'allow' | 'allow-always' | 'deny'; message?: string }
     | { kind: 'answer'; answers: Record<string, string> }
-    | { kind: 'dismiss' };
+    | { kind: 'dismiss' }
+    // A terminal's permission request, answered with one of the choices the daemon offered.
+    | { kind: 'choose'; choiceId: string };
 export interface PromptAnswer {
     choices: string[];
     text: string;
@@ -27,13 +29,19 @@ export function pickPromptChoice(answer: PromptAnswer, question: ChatQuestion, l
     return { ...answer, custom: false, choices: question.multiSelect ? toggleChoice(answer.choices, label) : [label] };
 }
 
-export function nextPrompt(items: PendingPrompt[], activeId: string | null): PendingPrompt | null {
+/* An optional question never stands in front of a request that holds the agent up. */
+export const isBlockingPrompt = (item: PendingPrompt): boolean => item.kind === 'approval' || !item.async;
+
+/* Blocking prompts first and optional ones after, each oldest first. The chat and a canvas's stack both follow it. */
+export const orderPrompts = <T>(prompts: readonly T[], blocking: (prompt: T) => boolean, createdAt: (prompt: T) => number): T[] =>
+    [...prompts].sort((a, b) => Number(blocking(b)) - Number(blocking(a)) || createdAt(a) - createdAt(b));
+
+export function nextPrompt(items: readonly PendingPrompt[], activeId: string | null): PendingPrompt | null {
     const active = items.find((item) => item.requestId === activeId);
     if (active) {
         return active;
     }
-    const blocking = items.filter((item) => item.kind === 'approval' || !item.async);
-    return [...(blocking.length ? blocking : items)].sort((a, b) => a.createdAt - b.createdAt)[0] ?? null;
+    return orderPrompts(items, isBlockingPrompt, (item) => item.createdAt)[0] ?? null;
 }
 
 export function promptAnswers(item: ChatQuestionItem, draft: PromptDraft): Record<string, string> | null {
