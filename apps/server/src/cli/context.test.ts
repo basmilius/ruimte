@@ -197,6 +197,25 @@ describe('runContext', () => {
         expect(stdout).toBe('');
     });
 
+    test('a daemon out of reach says when a sandbox is the likely reason', async () => {
+        const gone = { ...env, RUIMTE_CONTEXT_URL: 'http://127.0.0.1:1/context' };
+        const retry = 'run the same command again with network access or escalated permissions';
+        expect(await runContext(['nodes'], { ...gone, CODEX_SANDBOX: 'seatbelt', CODEX_SANDBOX_NETWORK_DISABLED: '1' })).toBe(1);
+        expect(stderr).toBe(
+            `Could not reach the daemon: Unable to connect. This command runs in a sandbox without network access, which blocks the daemon's local address; ${retry}.\n`
+        );
+        stderr = '';
+        expect(await runContext(['list'], { ...gone, CODEX_SANDBOX: 'seatbelt' })).toBe(1);
+        expect(stderr).toBe(
+            `Could not reach the daemon: Unable to connect. This command runs in a sandbox, which may block the daemon's local address; if so, ${retry}.\n`
+        );
+        stderr = '';
+        expect(await runContext(['read', 'n1'], gone)).toBe(1);
+        expect(stderr).toBe(
+            `Could not reach the daemon: Unable to connect. A sandbox without network access is a common cause; if this command runs in one, ${retry}.\n`
+        );
+    });
+
     test('a verb posts its argv to /canvas/<verb> and prints the answer', async () => {
         expect(await runContext(['node', 'note', '--text', 'hello'], env)).toBe(0);
         expect(seen).toEqual([{ verb: 'node', argv: ['note', '--text', 'hello'], authorization: 'Bearer tok' }]);

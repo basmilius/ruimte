@@ -17,11 +17,7 @@ import { escapeText } from '../canvas/text-escapes.ts';
  * token, or a 401 for one the daemon does not know, such as the token of a session that ended), 3 a
  * refusal (an unknown verb, bad arguments, a rule of the project, or a `read` of nothing linked).
  */
-export const runContext = async (
-    args: string[],
-    env: Record<string, string | undefined> = process.env,
-    stdin: () => Promise<string> = () => Bun.stdin.text()
-): Promise<number> => {
+export const runContext = async (args: string[], env: Environment = process.env, stdin: () => Promise<string> = () => Bun.stdin.text()): Promise<number> => {
     const url = env.RUIMTE_CONTEXT_URL;
     const token = env.RUIMTE_CONTEXT_TOKEN ?? env.RUIMTE_HOOK_TOKEN;
     if (!url || !token) {
@@ -35,7 +31,7 @@ export const runContext = async (
     if (command === 'list') {
         let sources: ContextRow[];
         try {
-            sources = await fetchSources(url, headers);
+            sources = await fetchSources(url, headers, env);
         } catch (e) {
             console.error(e instanceof Error ? e.message : 'The daemon failed');
             return e instanceof StaleToken ? 2 : 1;
@@ -54,7 +50,7 @@ export const runContext = async (
             return refuse('bad-arguments', 'read takes the id of a linked source', [
                 READ_USAGE,
                 'detail\truimte-context help read',
-                ...(await linkedLines(url, headers))
+                ...(await linkedLines(url, headers, env))
             ]);
         }
         const tail = tailOf(args.slice(2));
@@ -76,7 +72,7 @@ export const runContext = async (
         try {
             response = await fetch(`${url}/${encodeURIComponent(id)}${query.size === 0 ? '' : `?${query}`}`, { headers });
         } catch (e) {
-            console.error(unreachable(e));
+            console.error(unreachable(e, env));
             return 1;
         }
         if (response.status === 401) {
@@ -84,7 +80,7 @@ export const runContext = async (
             return 2;
         }
         if (response.status === 404) {
-            return refuse('unknown-source', `${id} is not linked to this session`, await linkedLines(url, headers));
+            return refuse('unknown-source', `${id} is not linked to this session`, await linkedLines(url, headers, env));
         }
         if (response.status === 422) {
             return refuse('unknown-subagent', await response.text(), [READ_USAGE, 'detail\truimte-context help read']);
@@ -103,7 +99,7 @@ export const runContext = async (
             : command === 'plan' && args[1] === 'new'
               ? ['new', ...(await withStdinPlan(args.slice(2), stdin))]
               : await withStdinText(args.slice(1), stdin);
-    return runVerb(url.replace(/\/context\/?$/, '/canvas'), command, argv, headers);
+    return runVerb(url.replace(/\/context\/?$/, '/canvas'), command, argv, headers, env);
 };
 
 /*
@@ -170,12 +166,12 @@ const tailOf = (argv: readonly string[]): number | null | 'bad' => {
     return count;
 };
 
-const fetchSources = async (url: string, headers: Record<string, string>): Promise<ContextRow[]> => {
+const fetchSources = async (url: string, headers: Record<string, string>, env: Environment): Promise<ContextRow[]> => {
     let response: Response;
     try {
         response = await fetch(url, { headers });
     } catch (e) {
-        throw new Error(unreachable(e));
+        throw new Error(unreachable(e, env));
     }
     if (response.status === 401) {
         throw new StaleToken(staleToken(await response.text()));
@@ -192,8 +188,8 @@ const fetchSources = async (url: string, headers: Record<string, string>): Promi
  * second question leaves the refusal without a list rather than turning it into a failure: the first
  * answer already said what the refusal is.
  */
-const linkedLines = async (url: string, headers: Record<string, string>): Promise<string[]> => {
-    const sources = await fetchSources(url, headers).catch(() => null);
+const linkedLines = async (url: string, headers: Record<string, string>, env: Environment): Promise<string[]> => {
+    const sources = await fetchSources(url, headers, env).catch(() => null);
     if (sources === null) {
         return [];
     }
@@ -214,7 +210,24 @@ class StaleToken extends Error {}
 
 const staleToken = (body: string): string => `Not inside a live Ruimte session: the daemon answered 401${body.trim() ? ` ${body.trim()}` : ''}`;
 
-const unreachable = (e: unknown): string => `Could not reach the daemon: ${e instanceof Error ? e.message : 'unknown error'}`;
+type Environment = Record<string, string | undefined>;
+
+/*
+ * A sandboxed agent reads a refused connection as a daemon that is down and gives up, while the fix is
+ * to run the same command with network access. Codex sets CODEX_SANDBOX in its sandbox and
+ * CODEX_SANDBOX_NETWORK_DISABLED=1 when that sandbox has no network; other sandboxes say nothing.
+ */
+const unreachable = (e: unknown, env: Environment): string => {
+    const reason = `Could not reach the daemon: ${e instanceof Error ? e.message : 'unknown error'}`;
+    const retry = 'run the same command again with network access or escalated permissions';
+    if (env.CODEX_SANDBOX_NETWORK_DISABLED === '1') {
+        return `${reason}. This command runs in a sandbox without network access, which blocks the daemon's local address; ${retry}.`;
+    }
+    if (env.CODEX_SANDBOX) {
+        return `${reason}. This command runs in a sandbox, which may block the daemon's local address; if so, ${retry}.`;
+    }
+    return `${reason}. A sandbox without network access is a common cause; if this command runs in one, ${retry}.`;
+};
 
 // The flags whose value `-` stands for stdin: a message, and the result of a task.
 const STDIN_FLAGS = ['--text', '--result'];
@@ -242,7 +255,7 @@ const withStdinText = async (argv: string[], stdin: () => Promise<string>): Prom
     return words;
 };
 
-const runVerb = async (canvasUrl: string, verb: string, argv: string[], headers: Record<string, string>): Promise<number> => {
+const runVerb = async (canvasUrl: string, verb: string, argv: string[], headers: Record<string, string>, env: Environment): Promise<number> => {
     let response: Response;
     let body: string;
     try {
@@ -253,7 +266,7 @@ const runVerb = async (canvasUrl: string, verb: string, argv: string[], headers:
         });
         body = await response.text();
     } catch (e) {
-        console.error(unreachable(e));
+        console.error(unreachable(e, env));
         return 1;
     }
     if (response.ok) {
