@@ -106,14 +106,20 @@ function VoiceWaveform({ elapsed, phase }: { elapsed: number; phase: VoicePhase 
                     return (
                         <span key={index} className="relative h-full min-w-0 grow" aria-hidden="true">
                             <span
-                                className="voice-waveform-input absolute right-0 bottom-1/2 left-0 rounded-t-sm bg-text-muted transition-[height,opacity] duration-75 ease-out"
+                                className={clsx(
+                                    'voice-waveform-input absolute right-0 bottom-1/2 left-0 rounded-t-sm bg-text-muted',
+                                    !idle && 'transition-[height,opacity] duration-75 ease-out'
+                                )}
                                 style={{
                                     height: waveformHeight(input),
                                     opacity: Math.max(0.45, input)
                                 }}
                             />
                             <span
-                                className="voice-waveform-output absolute top-1/2 right-0 left-0 rounded-b-sm bg-accent transition-[height] duration-75 ease-out"
+                                className={clsx(
+                                    'voice-waveform-output absolute top-1/2 right-0 left-0 rounded-b-sm bg-accent',
+                                    !idle && 'transition-[height] duration-75 ease-out'
+                                )}
                                 style={{ height: waveformHeight(output) }}
                             />
                         </span>
