@@ -44,7 +44,7 @@ export function DiagramNode({ id }: { id: string }) {
             {/* No "being written" state: the daemon cannot know an agent is about to write one. */}
             {!mirror?.gone && !drawn && !mirror?.loading && (
                 <EmptyState icon={<Icon icon={Workflow} size={16} />} className="h-full">
-                    Nothing in this diagram yet. An agent fills it with ruimte-context diagram; double-click to open it.
+                    Nothing in this diagram yet. An agent fills it with ruimte-context view diagram; double-click to open it.
                 </EmptyState>
             )}
             {drawn && box && (

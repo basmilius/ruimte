@@ -34,7 +34,7 @@ describe('groups', () => {
         expect(group.x).toBeLessThan(100);
         expect(group.x + group.w).toBeGreaterThan(600);
         expect(canvas().selection).toEqual([groupId!]);
-        // The frame the daemon's `group` verb draws around the same nodes, which is the point of sharing it.
+        // The frame the daemon's `node group` action draws around the same nodes, which is the point of sharing it.
         expect(group).toMatchObject(groupFrame([node('a', 100, 100), node('b', 400, 100)])!);
 
         canvas().moveSelected(16, 8);

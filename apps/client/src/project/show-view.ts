@@ -31,7 +31,7 @@ export interface ShowViewNotice {
 }
 
 /*
- * What an agent's `open` says, in all three cases. Every one of them is the banner over the views:
+ * What an agent's `view open` says, in all three cases. Every one of them is the banner over the views:
  * whether the view moved or not, it is the same agent speaking about the same thing, and a message
  * that changes place with a setting is two features to learn instead of one. `alreadyThere` is asked
  * before anything moves, since offering a way back to where the person is standing reads as a bug.

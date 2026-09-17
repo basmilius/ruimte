@@ -545,7 +545,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         groupSelection() {
             const { nodes, selection } = get();
             const members = selection.map((id) => nodes[id]).filter((node): node is CanvasNode => Boolean(node) && node!.kind !== 'group');
-            // The same frame the daemon's `group` verb draws, so the two ways to group cannot drift.
+            // The same frame the daemon's `node group` action draws, so the two ways to group cannot drift.
             const frame = groupFrame(members);
             if (!frame) {
                 return null;

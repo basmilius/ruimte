@@ -69,7 +69,7 @@ export interface DocumentState {
     viewLocal: Record<string, ProjectViewLocal>;
     /* Whether the keyboard is inside the body of a standalone view; Escape leaves it to the sidebar. */
     bodyFocused: boolean;
-    /* What an agent's `open` left on the banner over the views, in either setting. Null when there is
+    /* What an agent's `view open` left on the banner over the views, in either setting. Null when there is
        nothing to say; one at a time, since the last thing an agent asked for is the one worth acting on. */
     viewNotice: ViewNotice | null;
     /* Counts changes to the document itself. Switching views writes the canvas back, which is not one. */
@@ -93,7 +93,7 @@ export interface DocumentState {
     showView(id: string): ShownView | null;
     /* The way back out of that toast, run against the grid as it stands when the button is pressed. */
     undoShowView(shown: Omit<ShownView, 'layout'>): void;
-    /* What an agent's `open` has to say, put in the banner over whatever was standing in it. */
+    /* What an agent's `view open` has to say, put in the banner over whatever was standing in it. */
     showNotice(notice: ViewNotice): void;
     /* The button on that banner, whichever of the two it is. It takes the banner off the screen as
        well, which is what a card with a button has to do: leaving it up after the press reads as a

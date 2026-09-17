@@ -23,7 +23,7 @@ struct RenderDocumentPage: View {
                     if kind == "diagram" && scene.list("elements").isEmpty {
                         ContentUnavailableView(
                             "This diagram is empty", lucideIcon: "workflow",
-                            description: Text("An agent fills it with ruimte-context diagram.")
+                            description: Text("An agent fills it with ruimte-context view diagram.")
                         )
                         .allowsHitTesting(false)
                         .accessibilityIdentifier("diagram.empty")

@@ -32,7 +32,7 @@ const snap = (value: number): number => Math.round(value / CANVAS_GRID) * CANVAS
 
 /*
  * The frame a group takes around what it holds: room on every side and the title band above it,
- * snapped to the grid. Both the client's own grouping and the daemon's `group` verb run this, so a
+ * snapped to the grid. Both the client's own grouping and the daemon's `node group` action run this, so a
  * frame an agent draws sits where a person's drag would have put it. Nothing to hold is no frame.
  */
 export const groupFrame = (members: readonly NodeRect[]): NodeRect | null => {

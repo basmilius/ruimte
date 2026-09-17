@@ -8,7 +8,7 @@ export const ContextSourceSchema = z.object({
     /* A text element carries its own content, and a file carries its path (absolute on the daemon's
        machine). A terminal, a chat, a drawing and a diagram are read live from the daemon instead. */
     text: z.string().optional(),
-    /* The node a drawing or a diagram is linked through, whose id is what `nodes` and `edges` show,
+    /* The node a drawing or a diagram is linked through, whose id is what `node list` and `link list` show,
        so `read` takes it beside the view id. */
     nodeId: z.string().min(1).optional()
 });

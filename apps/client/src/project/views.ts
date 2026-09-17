@@ -147,7 +147,7 @@ export const askAgentAboutDiagram = (viewId: string): string | null => {
         return null;
     }
     canvas.addEdge(mirror, chat);
-    offerDraft(chat, `Fill the empty diagram "${view.name ?? viewId}" with \`ruimte-context diagram ${viewId}\`. It should show `);
+    offerDraft(chat, `Fill the empty diagram "${view.name ?? viewId}" with \`ruimte-context view diagram ${viewId}\`. It should show `);
     canvas.goToNode(chat);
     return chat;
 };
