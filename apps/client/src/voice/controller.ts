@@ -256,3 +256,9 @@ export function undoVoiceAction(id: string): void {
         actions: state.actions.map((action) => (action.id === id ? { ...action, status: 'undone', undoable: false } : action))
     }));
 }
+
+export function undoVoiceActions(ids: string[]): void {
+    for (const id of ids.toReversed()) {
+        undoVoiceAction(id);
+    }
+}

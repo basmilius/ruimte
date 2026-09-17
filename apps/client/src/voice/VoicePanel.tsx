@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { Check, LayoutGrid, MessageSquare, Mic, MicOff, PenTool, Plus, RotateCcw, StickyNote, Terminal, X, type LucideIcon } from 'lucide-react';
+import { Check, ChevronDown, LayoutGrid, MessageSquare, Mic, MicOff, PenTool, Plus, RotateCcw, StickyNote, Terminal, X, type LucideIcon } from 'lucide-react';
 import { FadingWords } from '@/chat/ui/FadingWords';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
-import { closeVoicePanel, startVoice, stopVoice, undoVoiceAction } from '@/voice/controller';
+import { closeVoicePanel, startVoice, stopVoice, undoVoiceAction, undoVoiceActions } from '@/voice/controller';
 import { idleVoiceBands, type IdleVoiceBands } from '@/voice/idle-waveform';
 import { useVoice, type VoiceAction, type VoiceActionKind, type VoicePhase, type VoiceUtterance } from '@/voice/state';
+import { voiceTimeline, type VoiceTimelineEntry } from '@/voice/timeline';
 
 const phaseLabel: Record<VoicePhase, string> = {
     idle: 'Ready',
@@ -98,10 +99,7 @@ function VoiceStatus({ elapsed, phase }: { elapsed: number; phase: VoicePhase })
     return (
         <div className="flex shrink-0 items-center gap-1.5 text-[10px] text-text-muted" role="status">
             <span
-                className={clsx(
-                    'h-1.5 w-1.5 rounded-full',
-                    phase === 'listening' ? 'bg-positive' : phase === 'error' ? 'bg-status-error' : 'bg-text-faint'
-                )}
+                className={clsx('h-1.5 w-1.5 rounded-full', phase === 'listening' ? 'bg-positive' : phase === 'error' ? 'bg-status-error' : 'bg-text-faint')}
             />
             <span className="tabular-nums">{phase === 'listening' ? `Live · ${durationLabel(elapsed)}` : phaseLabel[phase]}</span>
         </div>
@@ -127,11 +125,7 @@ function VoiceWaveform({ phase }: { phase: VoicePhase }) {
                 <span className={inputSpeaking ? 'text-text' : 'text-text-muted'}>You · {inputLabel}</span>
                 <span className={outputSpeaking ? 'text-accent' : 'text-text-muted'}>Voice · {outputLabel}</span>
             </div>
-            <div
-                className="relative mt-3 flex h-14 items-center gap-0.5"
-                role="img"
-                aria-label="Your voice above the line and Voice below it"
-            >
+            <div className="relative mt-3 flex h-14 items-center gap-0.5" role="img" aria-label="Your voice above the line and Voice below it">
                 <span className="absolute inset-x-0 top-1/2 z-10 h-px bg-surface" />
                 {displayed.input.map((input, index) => {
                     const output = displayed.output[index] ?? 0;
@@ -169,7 +163,7 @@ function useElapsedSeconds(startedAt: number | null): number {
 
 function ActionEvent({ action }: { action: VoiceAction }) {
     return (
-        <div className="flex min-h-11 items-center gap-2.5 rounded-lg border border-border bg-surface-raised px-3 py-2">
+        <div className="flex min-h-11 items-center gap-2.5 rounded-lg border border-border bg-surface-raised px-3 py-1.5">
             <Icon icon={actionIcons[action.kind]} size={15} className="shrink-0 text-text-muted" />
             <p className="min-w-0 grow truncate text-xs text-text">
                 <span className="font-medium">{action.label}</span>
@@ -190,6 +184,59 @@ function ActionEvent({ action }: { action: VoiceAction }) {
         </div>
     );
 }
+
+const actionDetail = (detail: string): { item: string; context: string | null } => {
+    const separator = detail.lastIndexOf(' · ');
+    return separator === -1 ? { item: detail, context: null } : { item: detail.slice(0, separator), context: detail.slice(separator + 3) };
+};
+
+function ActionGroup({ actions }: { actions: VoiceAction[] }) {
+    const [open, setOpen] = useState(true);
+    const details = actions.map((action) => actionDetail(action.detail));
+    const context = details[0]?.context && details.every((detail) => detail.context === details[0]?.context) ? details[0].context : null;
+    const completed = actions.every((action) => action.status === 'completed');
+    const undoable = actions.some((action) => action.status === 'completed' && action.undoable);
+
+    return (
+        <div className="rounded-lg border border-border bg-surface-raised px-3 py-1.5">
+            <div className="flex min-h-8 items-center gap-2.5">
+                <Icon icon={StickyNote} size={15} className="shrink-0 text-text-muted" />
+                <button className="flex min-w-0 grow items-center gap-2 text-left" type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
+                    <span className="min-w-0 grow truncate text-xs text-text">
+                        <span className="font-medium">{actions.length} notes added</span>
+                        {context && <span className="text-text-muted"> · {context}</span>}
+                    </span>
+                    <Icon icon={ChevronDown} size={14} className={clsx('shrink-0 text-text-muted transition-transform', !open && '-rotate-90')} />
+                </button>
+                {undoable && (
+                    <Tooltip label={`Undo ${actions.length} note actions`} name>
+                        <button
+                            className="icon-btn"
+                            onClick={() =>
+                                undoVoiceActions(actions.filter((action) => action.status === 'completed' && action.undoable).map((action) => action.id))
+                            }
+                        >
+                            <Icon icon={RotateCcw} size={13} />
+                        </button>
+                    </Tooltip>
+                )}
+                {completed ? <Icon icon={Check} size={15} className="shrink-0 text-positive" /> : <span className="text-[10px] text-text-faint">undone</span>}
+            </div>
+            {open && (
+                <div className="space-y-1.5 pt-1 pb-2 pl-6 text-xs text-text-muted">
+                    {details.map((detail, index) => (
+                        <p key={actions[index]!.id} className="truncate">
+                            {detail.item}
+                            {!context && detail.context && <span className="text-text-faint"> · {detail.context}</span>}
+                        </p>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
+const isActionEntry = (entry: VoiceTimelineEntry): boolean => entry.kind === 'action' || entry.kind === 'action-group';
 
 function TranscriptEntry({ streaming, utterance }: { streaming: boolean; utterance: VoiceUtterance }) {
     return (
@@ -230,10 +277,9 @@ export function VoicePanel() {
         onWidth: (next) => useVoice.getState().setWidth(next)
     });
     const active = phase === 'connecting' || phase === 'listening' || phase === 'closing';
-    const timeline = [...transcript.map((item) => ({ kind: 'utterance' as const, item })), ...actions.map((item) => ({ kind: 'action' as const, item }))].sort(
-        (left, right) => left.item.order - right.item.order
-    );
-    const streamingOrder = phase === 'listening' && timeline.at(-1)?.kind === 'utterance' ? timeline.at(-1)?.item.order : null;
+    const timeline = voiceTimeline(transcript, actions);
+    const last = timeline.at(-1);
+    const streamingOrder = phase === 'listening' && last?.kind === 'utterance' ? last.item.order : null;
 
     useEffect(() => {
         bottom.current?.scrollIntoView({ block: 'end' });
@@ -278,14 +324,21 @@ export function VoicePanel() {
                                 )}
                             </div>
                         )}
-                        <div className="space-y-6">
-                            {timeline.map(({ kind, item }) =>
-                                kind === 'utterance' ? (
-                                    <TranscriptEntry key={`utterance-${item.id}`} streaming={item.order === streamingOrder} utterance={item} />
-                                ) : (
-                                    <ActionEvent key={`action-${item.id}`} action={item} />
-                                )
-                            )}
+                        <div>
+                            {timeline.map((entry, index) => (
+                                <div
+                                    key={entry.kind === 'action-group' ? `action-group-${entry.order}` : `${entry.kind}-${entry.item.id}`}
+                                    className={index === 0 ? undefined : isActionEntry(entry) && isActionEntry(timeline[index - 1]!) ? 'mt-3' : 'mt-6'}
+                                >
+                                    {entry.kind === 'utterance' ? (
+                                        <TranscriptEntry streaming={entry.item.order === streamingOrder} utterance={entry.item} />
+                                    ) : entry.kind === 'action-group' ? (
+                                        <ActionGroup actions={entry.items} />
+                                    ) : (
+                                        <ActionEvent action={entry.item} />
+                                    )}
+                                </div>
+                            ))}
                         </div>
                         <div ref={bottom} className="h-5" aria-hidden="true" />
                     </div>
