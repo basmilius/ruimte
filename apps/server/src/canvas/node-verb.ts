@@ -19,7 +19,20 @@ import type { IndexedPlace } from '../projects/project-index.ts';
 import { groupMembers, placeBeside, placeFree } from './placement.ts';
 import { checkCwd, checkPath, isInside } from './project-paths.ts';
 import { unescapeText } from './text-escapes.ts';
-import { MAX_TITLE_LENGTH, TITLE_LINE, VerbRefusal, canvasFor, defineSubVerb, defineVerb, field, orNote, placeOf, titleField, type Verb } from './verb.ts';
+import {
+    DRY_RUN_PREVIEW,
+    MAX_TITLE_LENGTH,
+    TITLE_LINE,
+    VerbRefusal,
+    canvasFor,
+    defineSubVerb,
+    defineVerb,
+    field,
+    orNote,
+    placeOf,
+    titleField,
+    type Verb
+} from './verb.ts';
 
 export const NODE_VERB_KINDS = ['note', 'browser', 'drawing', 'diagram', 'file', 'terminal', 'chat'] as const;
 type NodeVerbKind = (typeof NODE_VERB_KINDS)[number];
@@ -76,7 +89,7 @@ const NODE_DETAIL: readonly string[] = [
     `flag\t--title T\tevery kind\tThe title, at most ${MAX_TITLE_LENGTH} characters; one set here is the node's for good, the session never renames over it`,
     'flag\t--view V\tevery kind\tThe canvas to add to, by view id; ruimte-context views lists them',
     'flag\t--beside N\tevery kind\tPuts the node directly right of node N, top edges level, whatever is there already',
-    'flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field is dry-run instead of the id the node would have got',
+    `flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field is dry-run instead of the id the node would have got; ${DRY_RUN_PREVIEW}`,
     `flag\t--text B\t${kindsFor('text')}\tThe body; \\n, \\t and \\\\ are read as escapes, and --text - takes the body from stdin, byte for byte`,
     `flag\t--url U\t${kindsFor('url')}\tAn http or https address`,
     `flag\t--source V\t${kindsFor('source')}\tThe id of a view of this project of the same kind as the node, a drawing for a drawing and a diagram for a diagram; ruimte-context views lists them`,

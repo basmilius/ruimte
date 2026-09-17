@@ -10,7 +10,19 @@ import { MAX_CANVAS_NODES, canvasFull, newId } from './node-verb.ts';
 import { placeFree, placeTeam, TEAM_COLUMNS } from './placement.ts';
 import { checkCwd } from './project-paths.ts';
 import { MAX_TASK_PROMPT_LENGTH, TASK_LINES, nextLine, requireChatParent, taskBrief } from './task-verbs.ts';
-import { MAX_TITLE_LENGTH, OPENING_OFF_CANVAS, TITLE_LINE, VerbRefusal, canvasFor, defineVerb, field, lengthOf, placeOf, titleField } from './verb.ts';
+import {
+    DRY_RUN_PREVIEW,
+    MAX_TITLE_LENGTH,
+    OPENING_OFF_CANVAS,
+    TITLE_LINE,
+    VerbRefusal,
+    canvasFor,
+    defineVerb,
+    field,
+    lengthOf,
+    placeOf,
+    titleField
+} from './verb.ts';
 import { WORKTREE_LINES, branchSlug, branchesForWorktrees, freeBranch, makeWorktrees } from './worktree.ts';
 
 /* As many as one caller may have open at once, so a single team can fill that allowance and no more. */
@@ -64,7 +76,7 @@ const TEAM_DETAIL: readonly string[] = [
     'flag\t--mode M\toptional\tThe permission mode every role runs in: supervised, auto-accept-edits, auto or full-access, never wider than your own',
     'flag\t--worktree\tno value\tStarts every role in a git worktree of its own, on a new branch named after the role; not together with --cwd',
     `flag\t--task\tno value\tGives every role a task titled after the role, which its prompt describes; you are woken once, with the results of all roles, when the last of them settles; each prompt at most ${MAX_TASK_PROMPT_LENGTH} characters`,
-    "flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field of every line is dry-run and the last names the edge it would draw, as <from> -> <the role's title>",
+    `flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field of every line is dry-run and the last names the edge it would draw, as <from> -> <the role's title>; every role is checked before any is made, and ${DRY_RUN_PREVIEW}`,
     'edges\tOne edge per role, from you into that agent, so each of them can read you with ruimte-context read; only when you are a node on that canvas',
     'edges\tOne way only: you do not read them through it, and the roles do not read each other',
     "edges\truimte-context link --to <the role's id> draws the line back, which is how you read what a role has done; its id is the first field of that role's row",

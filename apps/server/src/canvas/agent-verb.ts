@@ -12,6 +12,7 @@ import { MAX_TASK_PROMPT_LENGTH, TASK_LINES, nextLine, requireChatParent, taskBr
 import { unescapeText } from './text-escapes.ts';
 import { WORKTREE_LINES, branchSlug, branchesForWorktrees, freeBranch, makeWorktrees } from './worktree.ts';
 import {
+    DRY_RUN_PREVIEW,
     MAX_TITLE_LENGTH,
     OPENING_OFF_CANVAS,
     TITLE_LINE,
@@ -56,7 +57,7 @@ const AGENT_DETAIL: readonly string[] = [
     'flag\t--mode M\toptional\tThe permission mode the agent runs in: supervised, auto-accept-edits, auto or full-access, never wider than your own',
     'flag\t--worktree\tno value\tStarts the agent in a git worktree of its own on a new branch; not together with --cwd',
     'flag\t--branch B\toptional\tWith --worktree: the branch to use instead of one named after the task or the title; an existing branch is checked out as it is',
-    'flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field is dry-run and the last names the edge it would draw, as <from> -> <new node>',
+    `flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field is dry-run and the last names the edge it would draw, as <from> -> <new node>; ${DRY_RUN_PREVIEW}`,
     'kinds\tterminal\tThat CLI running in a shell, which is what the person sees and can type in',
     'kinds\tchat\tThe CLI as a thread in the node, fixed to that CLI, with no model picker on the composer',
     'edge\tThe edge runs from you into the new node, which is the direction that makes you readable to it: it can run ruimte-context read on your id',

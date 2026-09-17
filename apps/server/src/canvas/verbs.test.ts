@@ -307,7 +307,9 @@ describe('help', () => {
         expect(lines[2]).toBe('verb\tread\t<id> [--tail N] [--subagent T]\tPrints one linked source, whole or its last N lines');
         expect(lines.at(-5)).toStartWith('scope\tlist and read are what a person linked into this session;');
         expect(lines.at(-4)).toBe('ids\tIds in this output are for your commands. When you talk to the person, name things by their title, never by id');
-        expect(lines.at(-3)).toBe('dry run\t--dry-run\tnode, agent, team\tsame checks, nothing made; every other verb refuses the flag');
+        expect(lines.at(-3)).toBe(
+            'dry run\t--dry-run\tnode, agent, team\tsame checks, nothing made; a refused call makes nothing either, so it is only a preview and never needed for safety; every other verb refuses the flag'
+        );
         expect(lines.at(-2)).toBe('detail\truimte-context help <verb>\tone verb in full');
         expect(lines.at(-1)).toBe(
             'refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused'

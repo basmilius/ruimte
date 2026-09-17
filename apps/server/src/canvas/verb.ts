@@ -151,6 +151,9 @@ export type VerbEntry = Verb | ContextVerb;
 
 export const DRY_RUN_FLAG = 'dry-run';
 
+/* Agents dry-run every call before the real one to be safe, which doubles what each costs them. */
+export const DRY_RUN_PREVIEW = 'a refused call makes nothing either, so it is only a preview and never needed for safety';
+
 /*
  * The verbs that take `--dry-run`, filled as each is defined. A verb that does not take it refuses
  * the flag by name and points at the ones that do, so an agent never gets a silent nothing from a

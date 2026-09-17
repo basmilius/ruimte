@@ -16,7 +16,18 @@ import { doneVerb, tasksVerb } from './task-verbs.ts';
 import { teamVerb } from './team-verb.ts';
 import { VIEW_KINDS, deleteReason, viewVerb } from './view-verb.ts';
 import { worktreeVerb } from './worktree-verb.ts';
-import { DRY_RUN_FLAG, VerbRefusal, canvasFor, defineVerb, dryRunVerbNames, field, placeOf, type ContextVerb, type VerbEntry } from './verb.ts';
+import {
+    DRY_RUN_FLAG,
+    DRY_RUN_PREVIEW,
+    VerbRefusal,
+    canvasFor,
+    defineVerb,
+    dryRunVerbNames,
+    field,
+    placeOf,
+    type ContextVerb,
+    type VerbEntry
+} from './verb.ts';
 
 /* The one line about failure every help output ends with; the codes are the CLI's, which is what runs the verb. */
 const REFUSAL_LINE =
@@ -30,7 +41,8 @@ const SCOPE_LINE =
 const IDS_LINE = 'ids\tIds in this output are for your commands. When you talk to the person, name things by their title, never by id';
 
 /* Said once under the list, since the flag is on some verbs and refused by name on the rest. */
-const dryRunLine = (): string => `dry run\t--${DRY_RUN_FLAG}\t${dryRunVerbNames().join(', ')}\tsame checks, nothing made; every other verb refuses the flag`;
+const dryRunLine = (): string =>
+    `dry run\t--${DRY_RUN_FLAG}\t${dryRunVerbNames().join(', ')}\tsame checks, nothing made; ${DRY_RUN_PREVIEW}; every other verb refuses the flag`;
 
 /* Every row says what it is in its first field, so the lines under the list are never read as verbs. */
 export const verbSummaryLines = (): string[] => VERBS.map((verb) => `verb\t${verb.name}\t${verb.usage}\t${verb.summary}`);
