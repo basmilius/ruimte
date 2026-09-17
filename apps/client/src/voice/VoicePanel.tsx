@@ -41,6 +41,7 @@ function VoiceWaveform({ elapsed, phase }: { elapsed: number; phase: VoicePhase 
     const inputBands = useVoice((state) => state.inputBands);
     const outputBands = useVoice((state) => state.outputBands);
     const listening = phase === 'listening';
+    const idle = phase === 'idle';
     const inputSpeaking = listening && Math.max(0, ...inputBands) > 0.06;
     const outputSpeaking = listening && Math.max(0, ...outputBands) > 0.04;
     const inputLabel = listening ? (inputSpeaking ? 'speaking' : 'listening') : 'idle';
@@ -61,19 +62,32 @@ function VoiceWaveform({ elapsed, phase }: { elapsed: number; phase: VoicePhase 
                 <span className={inputSpeaking ? 'text-text' : 'text-text-muted'}>You · {inputLabel}</span>
                 <span className={outputSpeaking ? 'text-accent' : 'text-text-muted'}>Voice · {outputLabel}</span>
             </div>
-            <div className="relative mt-3 flex h-14 items-center gap-0.5" role="img" aria-label="Your voice above the line and Voice below it">
+            <div
+                className="voice-waveform relative mt-3 flex h-14 items-center gap-0.5"
+                data-idle={idle || undefined}
+                role="img"
+                aria-label="Your voice above the line and Voice below it"
+            >
                 <span className="absolute inset-x-0 top-1/2 h-px bg-border" />
                 {inputBands.map((input, index) => {
                     const output = outputBands[index] ?? 0;
                     return (
                         <span key={index} className="relative h-full min-w-0 grow" aria-hidden="true">
                             <span
-                                className="absolute right-0 bottom-1/2 left-0 rounded-t-sm bg-text-muted transition-[height,opacity] duration-75 ease-out"
-                                style={{ height: `${Math.max(2, Math.round(input * 26))}px`, opacity: Math.max(0.45, input) }}
+                                className="voice-waveform-input absolute right-0 bottom-1/2 left-0 rounded-t-sm bg-text-muted transition-[height,opacity] duration-75 ease-out"
+                                style={{
+                                    height: `${Math.max(2, Math.round(input * 26))}px`,
+                                    opacity: Math.max(0.45, input),
+                                    animationDelay: idle ? `${index * -65}ms` : undefined
+                                }}
                             />
                             <span
-                                className="absolute top-1/2 right-0 left-0 rounded-b-sm bg-accent transition-[height,opacity] duration-75 ease-out"
-                                style={{ height: `${Math.max(2, Math.round(output * 26))}px`, opacity: Math.max(0.5, output) }}
+                                className="voice-waveform-output absolute top-1/2 right-0 left-0 rounded-b-sm bg-accent transition-[height,opacity] duration-75 ease-out"
+                                style={{
+                                    height: `${Math.max(2, Math.round(output * 26))}px`,
+                                    opacity: Math.max(0.5, output),
+                                    animationDelay: idle ? `${index * -65}ms` : undefined
+                                }}
                             />
                         </span>
                     );

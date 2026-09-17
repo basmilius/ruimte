@@ -609,6 +609,17 @@
     .panel-shell[data-resizing],
     .panel-shell[data-instant] { transition: none; }
 
+    .voice-waveform[data-idle] .voice-waveform-input,
+    .voice-waveform[data-idle] .voice-waveform-output {
+        transform-origin: center bottom;
+        animation: voice-idle-wave 2.8s ease-in-out infinite;
+    }
+    .voice-waveform[data-idle] .voice-waveform-output { transform-origin: center top; }
+    @keyframes voice-idle-wave {
+        0%, 38%, 62%, 100% { transform: scaleY(1); opacity: 0.32; }
+        50% { transform: scaleY(2.75); opacity: 0.56; }
+    }
+
     /* A 2px line that says "something is on its way" without knowing how far along it is: a bar of
        a third of the width sweeping across, which is a pseudo-element and a keyframe. Used under
        the toolbar and under a browser's address. */
