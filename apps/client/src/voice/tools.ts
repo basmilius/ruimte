@@ -1,6 +1,8 @@
 import { isCanvasView, isOpenableView, type ProjectNode, type ProjectView, type VoiceToolName } from '@ruimte/contracts';
+import type { ActionOutput, ActionResult } from '@ruimte/actions';
 import { clientActions, VOICE_ACTION_CALL } from '@/actions/client-actions';
-import { focusedCanvas } from '@/state/canvas';
+import { intersects, visibleRect } from '@/canvas/math';
+import { focusedCanvas, type CanvasState } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
 import type { VoiceActionKind } from '@/voice/state';
 
@@ -21,8 +23,8 @@ const ok = (message: string, data: Record<string, unknown> = {}, action?: ToolAc
     ...(action ? { action } : {})
 });
 
-const failed = (message: string): VoiceToolExecution => ({
-    output: { ok: false, message }
+const failed = (message: string, data: Record<string, unknown> = {}): VoiceToolExecution => ({
+    output: { ok: false, message, ...data }
 });
 
 const normalized = (value: string): string =>
@@ -33,14 +35,26 @@ const normalized = (value: string): string =>
         .replace(/[^a-z0-9]+/g, ' ')
         .trim();
 
-const named = <T>(name: string, values: T[], label: (value: T) => string): T | null => {
+type NamedMatch<T> = { status: 'found'; value: T } | { status: 'missing' } | { status: 'ambiguous'; candidates: T[] };
+
+const named = <T>(name: string, values: T[], label: (value: T) => string): NamedMatch<T> => {
     const target = normalized(name);
-    const exact = values.find((value) => normalized(label(value)) === target);
-    if (exact) {
-        return exact;
+    const exact = values.filter((value) => normalized(label(value)) === target);
+    if (exact.length === 1) {
+        return { status: 'found', value: exact[0]! };
+    }
+    if (exact.length > 1) {
+        return { status: 'ambiguous', candidates: exact };
+    }
+    if (target === '') {
+        return { status: 'missing' };
     }
     const candidates = values.filter((value) => normalized(label(value)).includes(target) || target.includes(normalized(label(value))));
-    return target !== '' && candidates.length === 1 ? candidates[0]! : null;
+    return candidates.length === 1
+        ? { status: 'found', value: candidates[0]! }
+        : candidates.length > 1
+          ? { status: 'ambiguous', candidates }
+          : { status: 'missing' };
 };
 
 const objectArguments = (raw: string): Record<string, unknown> | null => {
@@ -58,40 +72,56 @@ const stringArgument = (args: Record<string, unknown>, name: string): string | n
 const nullableStringArgument = (args: Record<string, unknown>, name: string): string | null | undefined =>
     args[name] === null ? null : typeof args[name] === 'string' && args[name].trim() !== '' ? args[name].trim() : undefined;
 
+const nullableStringsArgument = (args: Record<string, unknown>, name: string): string[] | null | undefined => {
+    if (args[name] === null) {
+        return null;
+    }
+    if (!Array.isArray(args[name]) || args[name].some((value) => typeof value !== 'string' || value.trim() === '')) {
+        return undefined;
+    }
+    return (args[name] as string[]).map((value) => value.trim());
+};
+
 const activeCanvas = () => {
     const active = activeViewOf(useDocument.getState());
     return active && isCanvasView(active) ? { view: active, canvas: focusedCanvas().getState() } : null;
 };
 
-const findView = (name: string | null): ProjectView | null => {
+const findView = (name: string | null): NamedMatch<ProjectView> => {
     const document = useDocument.getState();
-    return name === null ? activeViewOf(document) : named(name, document.views.filter(isOpenableView), (view) => view.name ?? '');
+    const active = activeViewOf(document);
+    return name === null
+        ? active
+            ? { status: 'found', value: active }
+            : { status: 'missing' }
+        : named(name, document.views.filter(isOpenableView), (view) => view.name ?? '');
 };
 
-const findNode = (name: string | null): ProjectNode | null => {
+const findNode = (name: string | null): NamedMatch<ProjectNode> => {
     const current = activeCanvas();
     if (!current) {
-        return null;
+        return { status: 'missing' };
     }
     if (name === null) {
-        return current.canvas.selection.length === 1 ? (current.canvas.nodes[current.canvas.selection[0]!] ?? null) : null;
+        const selected = current.canvas.selection.length === 1 ? current.canvas.nodes[current.canvas.selection[0]!] : undefined;
+        return selected ? { status: 'found', value: selected } : { status: 'missing' };
     }
     return named(name, Object.values(current.canvas.nodes), (node) => node.title);
 };
 
-const findChat = (name: string | null): { id: string; title: string } | null => {
+const findChat = (name: string | null): NamedMatch<{ id: string; title: string }> => {
     const document = useDocument.getState();
     const active = activeViewOf(document);
     const canvas = activeCanvas();
     if (name === null) {
         if (active?.kind === 'chat') {
-            return { id: active.id, title: active.name };
+            return { status: 'found', value: { id: active.id, title: active.name } };
         }
         if (canvas) {
             const selected = canvas.canvas.selection.map((id) => canvas.canvas.nodes[id]).filter((node) => node?.kind === 'chat');
-            return selected.length === 1 ? { id: selected[0]!.id, title: selected[0]!.title } : null;
+            return selected.length === 1 ? { status: 'found', value: { id: selected[0]!.id, title: selected[0]!.title } } : { status: 'missing' };
         }
-        return null;
+        return { status: 'missing' };
     }
     const candidates: { id: string; title: string }[] = [];
     for (const view of document.views) {
@@ -114,8 +144,14 @@ const undoAction = (undoToken: string | undefined): Pick<ToolAction, 'undo'> | R
           }
         : {};
 
-const failureOf = (result: { status: string; error?: { message: string } }): VoiceToolExecution =>
-    failed(result.status === 'failed' && result.error ? result.error.message : 'This action needs confirmation.');
+const failureOf = (result: ActionResult): VoiceToolExecution =>
+    result.status === 'needs_confirmation'
+        ? failed('Ask the user to confirm or cancel this action before continuing.', {
+              needs_confirmation: true,
+              confirmation_token: result.confirmationToken,
+              confirmation: result.confirmation
+          })
+        : failed(result.status === 'failed' && result.error ? result.error.message : 'The action could not be completed.');
 
 const manageViews = async (args: Record<string, unknown>): Promise<VoiceToolExecution> => {
     const action = stringArgument(args, 'action');
@@ -150,10 +186,16 @@ const manageViews = async (args: Record<string, unknown>): Promise<VoiceToolExec
             detail: result.output.view
         });
     }
-    const view = findView(target ?? null);
-    if (!view) {
-        return failed(target === null ? 'There is no active view.' : `No unique view matched “${target ?? ''}”.`);
+    const matched = findView(target ?? null);
+    if (matched.status === 'ambiguous') {
+        return failed(`More than one view matched “${target ?? ''}”. Ask which one the user means.`, {
+            candidates: matched.candidates.map((view) => ({ id: view.id, name: view.name, kind: view.kind }))
+        });
     }
+    if (matched.status === 'missing') {
+        return failed(target === null ? 'There is no active view.' : `No view matched “${target ?? ''}”.`);
+    }
+    const view = matched.value;
     if (action === 'focus') {
         const result = await clientActions.execute('view.focus', { viewId: view.id }, VOICE_ACTION_CALL);
         if (result.status !== 'completed') {
@@ -178,7 +220,54 @@ const manageViews = async (args: Record<string, unknown>): Promise<VoiceToolExec
             ...undoAction(result.undoToken)
         });
     }
-    return failed('Choose focus, create or rename and provide the required view arguments.');
+    if (action === 'delete') {
+        const result = await clientActions.execute('view.delete', { viewId: view.id }, VOICE_ACTION_CALL);
+        return result.status === 'completed'
+            ? ok(`Deleted “${result.output.view}”.`, result.output, {
+                  kind: 'view',
+                  label: 'Deleted view',
+                  detail: result.output.view
+              })
+            : failureOf(result);
+    }
+    return failed('Choose focus, create, rename or delete and provide the required view arguments.');
+};
+
+type NodeSet = { nodes: ProjectNode[] } | { failure: VoiceToolExecution };
+
+const nodesInScope = (canvas: CanvasState, scope: string | null): ProjectNode[] => {
+    if (scope === 'selected' || scope === null) {
+        return canvas.selection.map((id) => canvas.nodes[id]).filter((node): node is ProjectNode => node !== undefined);
+    }
+    const nodes = Object.values(canvas.nodes).filter((node) => !canvas.hidden.has(node.id));
+    if (scope === 'visible') {
+        const viewport = visibleRect(canvas.camera, canvas.viewport);
+        return nodes.filter((node) => intersects(node, viewport));
+    }
+    return nodes;
+};
+
+const matchNodeSet = (canvas: CanvasState, names: string[] | null, kind: string | null, scope: string | null): NodeSet => {
+    const source = nodesInScope(canvas, names === null ? scope : (scope ?? 'all')).filter((node) => kind === null || node.kind === kind);
+    if (names !== null) {
+        const matches: ProjectNode[] = [];
+        for (const name of names) {
+            const match = named(name, source, (node) => node.title);
+            if (match.status === 'ambiguous') {
+                return {
+                    failure: failed(`More than one node matched “${name}”. Ask which one the user means.`, {
+                        candidates: match.candidates.map((node) => ({ id: node.id, name: node.title, kind: node.kind }))
+                    })
+                };
+            }
+            if (match.status === 'missing') {
+                return { failure: failed(`No node matched “${name}” in the requested scope.`) };
+            }
+            matches.push(match.value);
+        }
+        return { nodes: [...new Map(matches.map((node) => [node.id, node])).values()] };
+    }
+    return { nodes: source };
 };
 
 const manageCanvas = async (args: Record<string, unknown>): Promise<VoiceToolExecution> => {
@@ -190,8 +279,23 @@ const manageCanvas = async (args: Record<string, unknown>): Promise<VoiceToolExe
     const content = nullableStringArgument(args, 'content');
     const url = nullableStringArgument(args, 'url');
     const command = nullableStringArgument(args, 'command');
-    if ([target, kind, name, title, content, url, command].includes(undefined)) {
+    const names = nullableStringsArgument(args, 'nodes');
+    const scope = nullableStringArgument(args, 'scope');
+    if (
+        target === undefined ||
+        kind === undefined ||
+        name === undefined ||
+        title === undefined ||
+        content === undefined ||
+        url === undefined ||
+        command === undefined ||
+        names === undefined ||
+        scope === undefined
+    ) {
         return failed('The canvas arguments were invalid.');
+    }
+    if (scope !== null && !['selected', 'visible', 'all'].includes(scope)) {
+        return failed('Choose selected, visible or all as the canvas scope.');
     }
     const current = activeCanvas();
     if (!current) {
@@ -266,10 +370,57 @@ const manageCanvas = async (args: Record<string, unknown>): Promise<VoiceToolExe
               })
             : failureOf(result);
     }
-    const node = findNode(target ?? null);
-    if (!node) {
-        return failed(target === null ? 'Select exactly one node first.' : `No unique node matched “${target ?? ''}” on the active canvas.`);
+    if (action === 'select_nodes' || action === 'group_nodes' || action === 'delete_nodes') {
+        const matched = matchNodeSet(current.canvas, names ?? null, kind ?? null, scope ?? null);
+        if ('failure' in matched) {
+            return matched.failure;
+        }
+        const nodes = action === 'group_nodes' ? matched.nodes.filter((node) => node.kind !== 'group') : matched.nodes;
+        if (nodes.length === 0) {
+            return failed('No nodes matched the requested names, kind and scope.');
+        }
+        const nodeIds = nodes.map((node) => node.id);
+        if (action === 'select_nodes') {
+            const result = await clientActions.execute('canvas.select', { viewId: current.view.id, nodeIds }, VOICE_ACTION_CALL);
+            return result.status === 'completed'
+                ? ok(`Selected ${nodeIds.length} ${nodeIds.length === 1 ? 'node' : 'nodes'}.`, result.output, {
+                      kind: 'node',
+                      label: 'Selected nodes',
+                      detail: result.output.nodes.join(', ')
+                  })
+                : failureOf(result);
+        }
+        if (action === 'group_nodes') {
+            const result = await clientActions.execute('group.create', { viewId: current.view.id, nodeIds }, VOICE_ACTION_CALL);
+            return result.status === 'completed'
+                ? ok(`Grouped ${nodeIds.length} ${nodeIds.length === 1 ? 'node' : 'nodes'}.`, result.output, {
+                      kind: 'node',
+                      label: 'Grouped nodes',
+                      detail: nodes.map((node) => node.title).join(', '),
+                      ...undoAction(result.undoToken)
+                  })
+                : failureOf(result);
+        }
+        const result = await clientActions.execute('node.delete', { viewId: current.view.id, nodeIds }, VOICE_ACTION_CALL);
+        return result.status === 'completed'
+            ? ok(`Deleted ${nodeIds.length} ${nodeIds.length === 1 ? 'node' : 'nodes'}.`, result.output, {
+                  kind: 'node',
+                  label: 'Deleted nodes',
+                  detail: nodes.map((node) => node.title).join(', '),
+                  ...undoAction(result.undoToken)
+              })
+            : failureOf(result);
     }
+    const matched = findNode(target ?? null);
+    if (matched.status === 'ambiguous') {
+        return failed(`More than one node matched “${target ?? ''}”. Ask which one the user means.`, {
+            candidates: matched.candidates.map((node) => ({ id: node.id, name: node.title, kind: node.kind }))
+        });
+    }
+    if (matched.status === 'missing') {
+        return failed(target === null ? 'Select exactly one node first.' : `No node matched “${target ?? ''}” on the active canvas.`);
+    }
+    const node = matched.value;
     if (action === 'focus_node') {
         const result = await clientActions.execute('node.focus', { viewId: current.view.id, nodeId: node.id }, VOICE_ACTION_CALL);
         return result.status === 'completed'
@@ -312,10 +463,16 @@ const communicate = async (args: Record<string, unknown>): Promise<VoiceToolExec
     if (action !== 'send_ai_chat' || target === undefined || !prompt) {
         return failed('The AI Chat target or prompt was invalid.');
     }
-    const chat = findChat(target);
-    if (!chat) {
-        return failed(target === null ? 'Open an AI Chat view or select exactly one AI Chat node.' : `No unique AI Chat matched “${target}”.`);
+    const matched = findChat(target);
+    if (matched.status === 'ambiguous') {
+        return failed(`More than one AI Chat matched “${target ?? ''}”. Ask which one the user means.`, {
+            candidates: matched.candidates
+        });
     }
+    if (matched.status === 'missing') {
+        return failed(target === null ? 'Open an AI Chat view or select exactly one AI Chat node.' : `No AI Chat matched “${target}”.`);
+    }
+    const chat = matched.value;
     const result = await clientActions.execute('chat.send', { chatId: chat.id, prompt }, VOICE_ACTION_CALL);
     if (result.status !== 'completed') {
         return failureOf(result);
@@ -325,6 +482,36 @@ const communicate = async (args: Record<string, unknown>): Promise<VoiceToolExec
         label: result.output.queued ? 'Queued AI Chat prompt' : 'Prompted AI Chat',
         detail: `${result.output.chat}: ${prompt.slice(0, 120)}`
     });
+};
+
+const controlAction = async (args: Record<string, unknown>): Promise<VoiceToolExecution> => {
+    const action = stringArgument(args, 'action');
+    const token = stringArgument(args, 'confirmation_token');
+    if (!token || (action !== 'confirm' && action !== 'cancel')) {
+        return failed('Choose confirm or cancel and provide the confirmation token.');
+    }
+    const result = await clientActions.confirm(token, action === 'confirm', VOICE_ACTION_CALL);
+    if (result.status !== 'completed') {
+        return failureOf(result);
+    }
+    if (result.action === 'view.delete') {
+        const output = result.output as ActionOutput<'view.delete'>;
+        return ok(`Deleted “${output.view}”.`, output, {
+            kind: 'view',
+            label: 'Deleted view',
+            detail: output.view
+        });
+    }
+    if (result.action === 'node.delete') {
+        const output = result.output as ActionOutput<'node.delete'>;
+        return ok(`Deleted ${output.nodeIds.length} ${output.nodeIds.length === 1 ? 'node' : 'nodes'}.`, output, {
+            kind: 'node',
+            label: 'Deleted nodes',
+            detail: output.nodes.join(', '),
+            ...undoAction(result.undoToken)
+        });
+    }
+    return ok('Confirmed the action.', result.output);
 };
 
 export const executeVoiceTool = async (name: VoiceToolName, rawArguments: string): Promise<VoiceToolExecution> => {
@@ -348,6 +535,9 @@ export const executeVoiceTool = async (name: VoiceToolName, rawArguments: string
     }
     if (name === 'communicate') {
         return communicate(args);
+    }
+    if (name === 'control_action') {
+        return controlAction(args);
     }
     return failed(`Ruimte does not support the tool “${name}”.`);
 };

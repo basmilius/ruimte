@@ -1,7 +1,7 @@
 import { ActionRefusal, ActionRegistry, type ActionCall, type ActionOutput } from '@ruimte/actions';
 import { isCanvasView, isOpenableView, isUnknownNode, isUnknownView, type NodeTitleSource, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
-import { toWorld } from '@/canvas/math';
+import { intersects, toWorld, visibleRect } from '@/canvas/math';
 import { nearestFreeNodeRect } from '@/canvas/place-node';
 import { focusedCanvas, NODE_SIZE, type CanvasState, type NodeKind } from '@/state/canvas';
 import { activeViewOf, useDocument, type DocumentState } from '@/state/document';
@@ -76,6 +76,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>): A
             const state = document.getState();
             const active = activeViewOf(state);
             const current = active && isCanvasView(active) ? focusedCanvas().getState() : null;
+            const viewport = current ? visibleRect(current.camera, current.viewport) : null;
             return {
                 output: {
                     project: useProject.getState().current?.name ?? 'Untitled project',
@@ -100,7 +101,8 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>): A
                                       .map((node) => ({
                                           id: node.id,
                                           title: node.title,
-                                          kind: kindOfNode(node)
+                                          kind: kindOfNode(node),
+                                          visible: viewport !== null && !current.hidden.has(node.id) && intersects(node, viewport)
                                       })),
                                   selected: current.selection
                                       .map((id) => current.nodes[id])
@@ -210,6 +212,34 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>): A
                 }
             };
         },
+        'view.delete': ({ viewId }, { confirmed }) => {
+            const state = document.getState();
+            const view = state.exportViews().find((candidate) => candidate.id === viewId);
+            if (!view) {
+                throw new ActionRefusal('unknown-view', `No view with id “${viewId}” exists in this project.`);
+            }
+            if (!confirmed) {
+                const nodes = isCanvasView(view) ? view.nodes.length : 0;
+                const sessions = isCanvasView(view)
+                    ? view.nodes.filter((node) => node.kind === 'chat' || node.kind === 'terminal').length
+                    : view.kind === 'chat' || view.kind === 'terminal'
+                      ? 1
+                      : 0;
+                return {
+                    confirmation: {
+                        title: `Delete “${view.name}”?`,
+                        consequences: [
+                            nodes === 0 ? 'The view will be removed.' : `The view and its ${nodes} ${nodes === 1 ? 'node' : 'nodes'} will be removed.`,
+                            ...(sessions === 0
+                                ? []
+                                : [`${sessions} ${sessions === 1 ? 'chat or terminal session' : 'chat or terminal sessions'} may be ended.`])
+                        ]
+                    }
+                };
+            }
+            state.deleteView(viewId);
+            return { output: { viewId, view: view.name ?? viewId, kind: kindOf(view) } };
+        },
         'node.focus': ({ viewId, nodeId }) => {
             const { view, canvas } = activeCanvas(document, viewId);
             const node = canvas.nodes[nodeId];
@@ -308,6 +338,46 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>): A
                     kind: kindOfNode(copy)
                 },
                 undo: historyUndo(viewId, depth + 1, copy.id)
+            };
+        },
+        'canvas.select': ({ viewId, nodeIds }) => {
+            const { view, canvas } = activeCanvas(document, viewId);
+            const nodes = nodeIds.map((nodeId) => canvas.nodes[nodeId]);
+            const missing = nodeIds.find((_nodeId, index) => nodes[index] === undefined);
+            if (missing) {
+                throw new ActionRefusal('unknown-node', `No node with id “${missing}” exists on “${view.name}”.`);
+            }
+            canvas.select(nodeIds);
+            return { output: { viewId, view: view.name, nodeIds, nodes: nodes.map((node) => node!.title) } };
+        },
+        'node.delete': ({ viewId, nodeIds }, { confirmed }) => {
+            const { view, canvas } = activeCanvas(document, viewId);
+            const nodes = nodeIds.map((nodeId) => canvas.nodes[nodeId]);
+            const missing = nodeIds.find((_nodeId, index) => nodes[index] === undefined);
+            if (missing) {
+                throw new ActionRefusal('unknown-node', `No node with id “${missing}” exists on “${view.name}”.`);
+            }
+            const titles = nodes.map((node) => node!.title);
+            if (!confirmed) {
+                const sessions = nodes.filter((node) => node?.kind === 'chat' || node?.kind === 'terminal').length;
+                return {
+                    confirmation: {
+                        title: nodeIds.length === 1 ? `Delete “${titles[0]}”?` : `Delete ${nodeIds.length} nodes?`,
+                        consequences: [
+                            nodeIds.length === 1 ? 'The node and its connections will be removed.' : 'The nodes and their connections will be removed.',
+                            ...(sessions === 0
+                                ? []
+                                : [`${sessions} ${sessions === 1 ? 'chat or terminal session' : 'chat or terminal sessions'} may be ended.`])
+                        ]
+                    }
+                };
+            }
+            const depth = canvas.past.length;
+            canvas.select(nodeIds);
+            canvas.deleteSelected();
+            return {
+                output: { viewId, view: view.name, nodeIds, nodes: titles },
+                undo: historyUndo(viewId, depth + 1)
             };
         },
         'group.create': ({ viewId, nodeIds }) => {

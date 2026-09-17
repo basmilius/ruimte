@@ -48,7 +48,8 @@ export const ACTION_DEFINITIONS = {
                         z.object({
                             id: z.string().min(1),
                             title: z.string(),
-                            kind: ActionCanvasNodeKindSchema
+                            kind: ActionCanvasNodeKindSchema,
+                            visible: z.boolean()
                         })
                     ),
                     selected: z.array(
@@ -105,6 +106,18 @@ export const ACTION_DEFINITIONS = {
             viewId,
             view: viewName,
             kind: ActionCreatableViewKindSchema
+        })
+    },
+    'view.delete': {
+        title: 'Delete view',
+        description: 'Deletes a view and everything it contains after confirmation.',
+        effect: 'shared',
+        actors: ACTION_ACTOR_KINDS,
+        input: z.object({ viewId }),
+        output: z.object({
+            viewId,
+            view: viewName,
+            kind: ActionViewKindSchema
         })
     },
     'node.focus': {
@@ -170,6 +183,32 @@ export const ACTION_DEFINITIONS = {
             nodeId: z.string().min(1),
             node: z.string(),
             kind: ActionCanvasNodeKindSchema
+        })
+    },
+    'canvas.select': {
+        title: 'Select canvas nodes',
+        description: 'Replaces the active canvas selection with specific nodes.',
+        effect: 'local',
+        actors: ACTION_ACTOR_KINDS,
+        input: z.object({ viewId, nodeIds: z.array(z.string().min(1)).min(1) }),
+        output: z.object({
+            viewId,
+            view: viewName,
+            nodeIds: z.array(z.string().min(1)),
+            nodes: z.array(z.string())
+        })
+    },
+    'node.delete': {
+        title: 'Delete canvas nodes',
+        description: 'Deletes one or more nodes from the active canvas after confirmation.',
+        effect: 'shared',
+        actors: ACTION_ACTOR_KINDS,
+        input: z.object({ viewId, nodeIds: z.array(z.string().min(1)).min(1) }),
+        output: z.object({
+            viewId,
+            view: viewName,
+            nodeIds: z.array(z.string().min(1)),
+            nodes: z.array(z.string())
         })
     },
     'group.create': {

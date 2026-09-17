@@ -14,11 +14,11 @@ export const VOICE_TOOL_DEFINITIONS = [
     {
         type: 'function',
         name: 'manage_views',
-        description: 'Focus, create or rename a Ruimte view.',
+        description: 'Focus, create, rename or request deletion of a Ruimte view.',
         parameters: {
             type: 'object',
             properties: {
-                action: { type: 'string', enum: ['focus', 'create', 'rename'] },
+                action: { type: 'string', enum: ['focus', 'create', 'rename', 'delete'] },
                 view: {
                     type: ['string', 'null'],
                     description: 'Existing view name. Use null for the active view or when creating.'
@@ -48,13 +48,26 @@ export const VOICE_TOOL_DEFINITIONS = [
     {
         type: 'function',
         name: 'manage_canvas',
-        description: 'Focus, rename, create, duplicate or group nodes, fit the canvas, or undo and redo canvas changes.',
+        description:
+            'Focus, rename, create, duplicate, select, group or request deletion of canvas nodes. Node sets can be matched by spoken names, kind and whether they are selected, visible or anywhere on the canvas.',
         parameters: {
             type: 'object',
             properties: {
                 action: {
                     type: 'string',
-                    enum: ['focus_node', 'rename_node', 'create_node', 'duplicate_node', 'group_selection', 'fit', 'undo', 'redo']
+                    enum: [
+                        'focus_node',
+                        'rename_node',
+                        'create_node',
+                        'duplicate_node',
+                        'select_nodes',
+                        'group_nodes',
+                        'group_selection',
+                        'delete_nodes',
+                        'fit',
+                        'undo',
+                        'redo'
+                    ]
                 },
                 node: {
                     type: ['string', 'null'],
@@ -62,7 +75,7 @@ export const VOICE_TOOL_DEFINITIONS = [
                 },
                 kind: {
                     type: ['string', 'null'],
-                    enum: ['terminal', 'chat', 'browser', 'group', 'note', null]
+                    enum: ['terminal', 'chat', 'browser', 'group', 'note', 'drawing', 'diagram', 'file', null]
                 },
                 name: {
                     type: ['string', 'null'],
@@ -83,9 +96,19 @@ export const VOICE_TOOL_DEFINITIONS = [
                 command: {
                     type: ['string', 'null'],
                     description: 'Initial command for a new terminal node.'
+                },
+                nodes: {
+                    type: ['array', 'null'],
+                    items: { type: 'string' },
+                    description: 'Spoken node names to match. Preserve the user’s wording. Use null when selecting by kind or scope.'
+                },
+                scope: {
+                    type: ['string', 'null'],
+                    enum: ['selected', 'visible', 'all', null],
+                    description: 'Where to find nodes. Visible means intersecting the current viewport. Null defaults to selected nodes.'
                 }
             },
-            required: ['action', 'node', 'kind', 'name', 'title', 'content', 'url', 'command'],
+            required: ['action', 'node', 'kind', 'name', 'title', 'content', 'url', 'command', 'nodes', 'scope'],
             additionalProperties: false
         },
         strict: true
@@ -108,6 +131,22 @@ export const VOICE_TOOL_DEFINITIONS = [
                 }
             },
             required: ['action', 'chat', 'prompt'],
+            additionalProperties: false
+        },
+        strict: true
+    },
+    {
+        type: 'function',
+        name: 'control_action',
+        description:
+            'Confirm or cancel a destructive Ruimte action after the user answers the confirmation question. Never confirm during the same turn that first requested deletion.',
+        parameters: {
+            type: 'object',
+            properties: {
+                action: { type: 'string', enum: ['confirm', 'cancel'] },
+                confirmation_token: { type: 'string' }
+            },
+            required: ['action', 'confirmation_token'],
             additionalProperties: false
         },
         strict: true
