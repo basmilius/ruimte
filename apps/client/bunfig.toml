@@ -1,4 +1,3 @@
 [test]
-# Bun reads the bunfig of the folder it runs in, so a run from here needs the root's ignores too:
-# `e2e/` is Playwright's, and integration tests run from the root with `bun run test:integration`.
-pathIgnorePatterns = ["**/e2e/**", "**/*.integration.test.ts"]
+# Bun reads the bunfig of the folder it runs in, so a run from here needs the root's ignore too.
+pathIgnorePatterns = ["**/*.integration.test.ts"]

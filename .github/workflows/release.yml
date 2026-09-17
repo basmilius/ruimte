@@ -38,7 +38,7 @@ jobs:
       - name: Version from the tag
         run: echo "RUIMTE_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
       - run: bun run check
-      - run: bun test
+      - run: bun run test
       - run: bun run --cwd apps/client build
       - name: Compile the daemon
         run: bun run --cwd apps/server compile -- --os mac --arch arm64

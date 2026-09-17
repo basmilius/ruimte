@@ -14,7 +14,7 @@
     "build": "bun run --cwd apps/client build && bun run --cwd apps/desktop build",
     "check": "bun run --filter '*' typecheck && oxlint",
     "lint": "oxlint",
-    "test": "bun test",
+    "test": "bun test --parallel --only-failures",
     "test:integration": "bun --config=integration.bunfig.toml test .integration.test.ts",
     "format": "prettier --write \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\"",
     "format:check": "prettier --check \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\"",

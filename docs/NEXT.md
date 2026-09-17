@@ -72,9 +72,8 @@ larger ones becomes a GitHub issue when it starts.
     `path:line`, used from menus, diff rows and paths in terminal output. Still unmeasured: what a
     canvas of ten file nodes on the largest files of a repository costs, now that the plate and the
     highlighting cap are the two things standing between it and the thirty-node goal.
-12. **A test floor**: a 30-node harness (a dev-only palette command or a Playwright spec, out of
-    CI) and whatever it finds; a DOM setup for `bun test` with first specs for the composer and the
-    canvas wiring; a daemon-backed e2e job in CI for the terminal spec.
+12. **A test floor**: a dev-only 30-node palette command and whatever it finds; a DOM setup for
+    `bun test` with first specs for the composer and the canvas wiring.
 13. **Usage v2**: a Days table, price and plan overrides, a currency setting, and an export.
 14. **More than one window**: a window shows a start screen or one project, and two projects side by
     side never share one (decided 16 September). A second project opens in a window of its own;
