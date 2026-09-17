@@ -2,6 +2,8 @@ import { rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { AgentLaunch } from '@ruimte/contracts';
+import { verbsNote } from '../context/context-note.ts';
+import { terminalCommand } from '../providers/launch.ts';
 import { SessionError, type SessionManagerOptions } from './manager.ts';
 import { Recorder, makeHarness, type Harness } from './test-helpers.ts';
 
@@ -207,7 +209,7 @@ describe('agent status via hooks', () => {
         const pty = harness.adapter.forSession('s8');
         harness.manager.resumeAgent('s8');
         expect(pty.input).toEqual([
-            "codex resume --ask-for-approval never --sandbox danger-full-access 'codex-1' || codex --ask-for-approval never --sandbox danger-full-access\n"
+            `codex resume --ask-for-approval never --sandbox danger-full-access 'codex-1' || ${terminalCommand({ kind: 'codex', runtimeMode: 'full-access' }, undefined, verbsNote({ depth: 0 }))}\n`
         ]);
     });
 

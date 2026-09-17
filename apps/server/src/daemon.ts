@@ -171,6 +171,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         contextFor: (sessionId) => context.list(sessionId),
         firstPrompt: (sessionId) => prompts.take(sessionId),
         firstNotices: messagesFor,
+        depthOf: (sessionId) => lineage.depthOf(sessionId),
         approvals: config.approvals,
         claudeTitles,
         codexTitles: new CodexTitleReader()

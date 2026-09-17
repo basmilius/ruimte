@@ -31,6 +31,28 @@ describe('terminalCommand', () => {
         expect(terminalCommand({ kind: 'copilot', runtimeMode: 'supervised' }, 'go')).toBe("copilot '-p' 'go'");
     });
 
+    test('a Codex launch carries the note as developer instructions, one shell word holding a TOML string', () => {
+        const note = 'Run `ruimte-context help`; it\'s "quoted"\nand \\ kept';
+        const line = terminalCommand({ kind: 'codex', runtimeMode: 'supervised' }, 'go', note);
+        expect(line).toBe(
+            `codex --ask-for-approval on-request --sandbox workspace-write -c 'developer_instructions="Run \`ruimte-context help\`; it'\\''s \\"quoted\\"\\nand \\\\ kept"' 'go'`
+        );
+        const word = line.split(' -c ')[1]!.split(" 'go'")[0]!;
+        // What a POSIX shell hands the CLI: the quotes gone and each '\'' an apostrophe again.
+        const argument = word.slice(1, -1).replaceAll(`'\\''`, "'");
+        expect(Bun.TOML.parse(argument)).toEqual({ developer_instructions: note });
+    });
+
+    test('only Codex takes the note on its line, and only on a fresh launch', () => {
+        expect(terminalCommand({ kind: 'claude', runtimeMode: 'supervised' }, undefined, 'note')).toBe('claude');
+        expect(terminalCommand({ kind: 'codex', runtimeMode: 'supervised', resume: 'abc-123' }, undefined, 'note')).toBe(
+            "codex resume --ask-for-approval on-request --sandbox workspace-write 'abc-123'"
+        );
+        expect(resumeOrFreshCommand({ kind: 'codex', runtimeMode: 'supervised' }, 'abc-123', 'note')).toBe(
+            `codex resume --ask-for-approval on-request --sandbox workspace-write 'abc-123' || codex --ask-for-approval on-request --sandbox workspace-write -c 'developer_instructions="note"'`
+        );
+    });
+
     test('a resume never carries a first prompt: the session it picks up has its own history', () => {
         expect(terminalCommand({ kind: 'claude', resume: 'abc-123' }, 'say hello')).toBe("claude --resume 'abc-123'");
     });

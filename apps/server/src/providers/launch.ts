@@ -60,6 +60,15 @@ export const launchedMode = (launch: AgentLaunch | null): RuntimeMode => {
 const quote = (value: string): string => `'${value.replaceAll("'", `'\\''`)}'`;
 
 /*
+ * How a CLI without a hook that folds context in is told about `ruimte-context` at launch. Codex parses a
+ * `-c` value as TOML, and a JSON string is a valid TOML basic string. Only a fresh launch carries it:
+ * Codex 0.154 ignores developer instructions on a resume (measured) and keeps those the session started with.
+ */
+const NOTE_FLAGS: Partial<Record<AgentKind, (note: string) => string[]>> = {
+    codex: (note) => ['-c', quote(`developer_instructions=${JSON.stringify(note)}`)]
+};
+
+/*
  * What a launch puts on a CLI's line beside the command itself: the permission mode and, where the
  * CLI takes one, the model. A launch that names no mode gets no mode flag; only a fresh launch fills
  * that gap with `DEFAULT_RUNTIME_MODE`, because a resume of a CLI nobody chose a mode for would
@@ -84,13 +93,17 @@ const launchFlags = (launch: AgentLaunch, runtimeMode: RuntimeMode | undefined):
  * still starts on its prompt. It also means the person sees the prompt in the shell, as a line they
  * could have typed themselves.
  */
-export const terminalCommand = (launch: AgentLaunch, firstPrompt?: string): string => {
+export const terminalCommand = (launch: AgentLaunch, firstPrompt?: string, note?: string): string => {
     const provider = providerFor(launch.kind);
     if (launch.resume) {
         return resumeCommandFor(provider.resumeCommand, launch.resume, launchFlags(launch, launch.runtimeMode));
     }
     // Only the executable: the arguments on a provider are the ones its chat backend needs.
     const parts = [provider.command[0]!, ...launchFlags(launch, launch.runtimeMode ?? DEFAULT_RUNTIME_MODE)];
+    const noteFlags = NOTE_FLAGS[launch.kind];
+    if (note && noteFlags) {
+        parts.push(...noteFlags(note));
+    }
     if (firstPrompt) {
         parts.push(...provider.firstPromptArgs(firstPrompt).map(quote));
     }
@@ -108,12 +121,12 @@ export const resumeCommand = (launch: AgentLaunch, agentSessionId: string): stri
     resumeCommandFor(providerFor(launch.kind).resumeCommand, agentSessionId, launchFlags(launch, launch.runtimeMode));
 
 /* The line a CLI starts fresh with, whatever the launch it was recorded with asked to resume. */
-export const freshCommand = (launch: AgentLaunch): string => terminalCommand({ ...launch, resume: undefined });
+export const freshCommand = (launch: AgentLaunch, note?: string): string => terminalCommand({ ...launch, resume: undefined }, undefined, note);
 
 /*
  * A resume the daemon has no evidence for, in one line. The CLI exits non-zero when the session it
  * was handed is not there, so the shell starts a fresh one itself: the node ends up with its CLI
  * either way and the shell still reads a single line, which is what typing two of them cost before.
  */
-export const resumeOrFreshCommand = (launch: AgentLaunch, agentSessionId: string): string =>
-    `${resumeCommand(launch, agentSessionId)} || ${freshCommand(launch)}`;
+export const resumeOrFreshCommand = (launch: AgentLaunch, agentSessionId: string, note?: string): string =>
+    `${resumeCommand(launch, agentSessionId)} || ${freshCommand(launch, note)}`;

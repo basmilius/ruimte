@@ -6,7 +6,7 @@ import type { AgentStore } from '../agents/agent-store.ts';
 import { ApprovalStore, parsePermissionAsk, type ApprovalDecision } from '../agents/approvals.ts';
 import { modeOfHook, normalizeHook } from '../agents/hooks.ts';
 import { freshCommand, launchedMode, resumeCommand, resumeOrFreshCommand, terminalCommand } from '../providers/launch.ts';
-import { contextHint } from '../context/context-note.ts';
+import { contextHint, verbsNote } from '../context/context-note.ts';
 import { defaultShell, defaultShellArgs, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
 import type { SnapshotStore } from './snapshot-store.ts';
@@ -71,6 +71,8 @@ export interface SessionManagerOptions {
     firstPrompt?: (sessionId: string) => Promise<string | null>;
     // Messages another node left for this one before it started, taken once and shown above the first prompt.
     firstNotices?: (sessionId: string) => string[];
+    // How deep a session sits in a chain of agents, which decides what the note about the verbs offers its CLI.
+    depthOf?: (sessionId: string) => number;
     // Lets a test move the clock the resume guard reads.
     now?: () => number;
     // Whether a permission request may be held for a client; off leaves every one to the CLI's own prompt.
@@ -126,6 +128,7 @@ export class SessionManager {
     private readonly contextFor: (sessionId: string) => ContextSource[];
     private readonly firstPrompt: (sessionId: string) => Promise<string | null>;
     private readonly firstNotices: (sessionId: string) => string[];
+    private readonly depthOf: (sessionId: string) => number;
     // Told when the process tree of a session is about to change or just did: the end of a turn, an exit, a kill.
     onProcessChange: ((sessionId: string, phase: ProcessChangePhase) => void) | null = null;
     // Whether the process monitor found the agent of a session gone while its status still says it runs.
@@ -142,6 +145,7 @@ export class SessionManager {
         this.contextFor = options.contextFor ?? (() => []);
         this.firstPrompt = options.firstPrompt ?? (() => Promise.resolve(null));
         this.firstNotices = options.firstNotices ?? (() => []);
+        this.depthOf = options.depthOf ?? (() => 0);
         this.now = options.now ?? Date.now;
         this.claudeTitles = options.claudeTitles ?? null;
         this.codexTitles = options.codexTitles ?? null;
@@ -493,11 +497,12 @@ export class SessionManager {
         if (!launch || restored) {
             return undefined;
         }
+        const note = verbsNote({ depth: this.depthOf(sessionId) });
         if (launch.resume) {
-            return resumeOrFreshCommand(launch, launch.resume);
+            return resumeOrFreshCommand(launch, launch.resume, note);
         }
         // Taken only here: a prompt that is not put on a line is a prompt nobody would ever see.
-        return terminalCommand(launch, (await this.firstPrompt(sessionId)) ?? undefined);
+        return terminalCommand(launch, (await this.firstPrompt(sessionId)) ?? undefined, note);
     }
 
     /*
@@ -511,13 +516,14 @@ export class SessionManager {
     private resumeLine(session: Session, agent: AgentInfo): string {
         // A person who started another CLI by hand in this shell is resumed as that CLI, not as the node's.
         const launch: AgentLaunch = session.launch?.kind === agent.kind ? session.launch : { kind: agent.kind };
+        const note = verbsNote({ depth: this.depthOf(session.id) });
         if (agent.transcriptPath === null) {
-            return resumeOrFreshCommand(launch, agent.agentSessionId);
+            return resumeOrFreshCommand(launch, agent.agentSessionId, note);
         }
         if (existsSync(agent.transcriptPath)) {
             return resumeCommand(launch, agent.agentSessionId);
         }
-        return freshCommand(launch);
+        return freshCommand(launch, note);
     }
 
     private spawn(options: {
