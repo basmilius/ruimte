@@ -26,6 +26,17 @@ jobs:
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 && exit 0
           gh release create "$GITHUB_REF_NAME" --draft --title "${GITHUB_REF_NAME#v}" --notes ''
 
+  verify:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+      - run: bun run test
+
   build:
     needs: draft
     runs-on: macos-latest
@@ -37,8 +48,6 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Version from the tag
         run: echo "RUIMTE_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
-      - run: bun run check
-      - run: bun run test
       - run: bun run --cwd apps/client build
       - name: Compile the daemon
         run: bun run --cwd apps/server compile -- --os mac --arch arm64
@@ -94,8 +103,8 @@ jobs:
           rm -f "$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/cert.p12"
           security delete-keychain "$RUNNER_TEMP/build.keychain-db" || true
 
-  # The check and the tests run in the macOS job on the same commit; a failure there leaves a draft
-  # nobody publishes, so this job only builds.
+  # Verification runs alongside packaging. A failure leaves the release as a draft, so no artifact
+  # is published before the commit has passed its checks.
   linux:
     needs: draft
     strategy:
@@ -113,8 +122,12 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      # fpm builds the rpm through rpmbuild, which the runner does not carry.
-      - run: sudo apt-get update && sudo apt-get install -y rpm
+      - name: Install rpmbuild when the runner lacks it
+        run: |
+          if ! command -v rpmbuild >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y rpm
+          fi
       - run: bun install --frozen-lockfile
       - name: Version from the tag
         run: echo "RUIMTE_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"

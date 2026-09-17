@@ -19,6 +19,7 @@ afterPack: build/after-pack.cjs
 npmRebuild: false
 # Nothing in dist/ needs node_modules; the main bundle inlines electron-updater.
 nodeGypRebuild: false
+electronLanguages: [en-US]
 publish:
   provider: github
   owner: basmilius
@@ -67,6 +68,7 @@ linux:
   # same name or a desktop environment cannot tie the running window to the icon it launched.
   syncDesktopName: true
 deb:
+  compression: gz
   depends:
     - libgtk-3-0
     - libnotify4
@@ -77,3 +79,5 @@ deb:
     - libatspi2.0-0
     - libuuid1
     - libsecret-1-0
+rpm:
+  compression: gzip

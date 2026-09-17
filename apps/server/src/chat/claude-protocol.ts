@@ -49,7 +49,8 @@ const parseQuestions = (input: unknown): ChatQuestion[] => {
 
 // What the CLI waits for on stdin, kept until `chat.approve` or `chat.answer` names the request.
 type Pending =
-    { type: 'approval'; toolUseId: string | null; input: unknown; suggestions: unknown[] } | { type: 'question'; toolUseId: string | null; input: unknown };
+    | { type: 'approval'; toolUseId: string | null; input: unknown; suggestions: unknown[] }
+    | { type: 'question'; toolUseId: string | null; input: unknown };
 
 /*
  * Claude Code's stream-json frames, in and out. Text is keyed by message id plus the ordinal of the

@@ -155,7 +155,8 @@ export interface ViewNotice {
 
 /* What a new standalone view needs: a chat and a terminal carry a node, a browser carries a page. */
 export type StandaloneRequest =
-    { kind: 'chat' | 'terminal'; name: string; id?: string; node: StandaloneNode } | { kind: 'browser'; name: string; id?: string; url: string };
+    | { kind: 'chat' | 'terminal'; name: string; id?: string; node: StandaloneNode }
+    | { kind: 'browser'; name: string; id?: string; url: string };
 
 /*
  * The editors of the project, handed in rather than imported, so a test with stores of its own moves

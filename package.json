@@ -16,15 +16,15 @@
     "lint": "oxlint",
     "test": "bun test --parallel --only-failures",
     "test:integration": "bun --config=integration.bunfig.toml test .integration.test.ts",
-    "format": "prettier --write \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\"",
-    "format:check": "prettier --check \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\"",
+    "format": "oxfmt --write \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\"",
+    "format:check": "oxfmt --check \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\"",
     "dev:desktop": "bun run --cwd apps/desktop dev",
     "serve": "bun run --cwd apps/client build && bun run --cwd apps/server start -- --host 0.0.0.0 --serve ../client/dist",
     "dist": "bun run --cwd apps/client build && bun run --cwd apps/server compile && bun run --cwd apps/desktop pack"
   },
   "devDependencies": {
+    "oxfmt": "^0.68.0",
     "oxlint": "^1.79.0",
-    "prettier": "^3.9.6",
     "typescript": "~6.0.2"
   },
   "trustedDependencies": [

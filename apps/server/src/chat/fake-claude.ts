@@ -378,7 +378,8 @@ export const fakeClaude: FakeCli = (io) => {
 
     const handleControlResponse = (response: Record<string, unknown>): void => {
         const inner = response.response as
-            { behavior?: string; updatedInput?: { answers?: Record<string, string> }; updatedPermissions?: unknown[] } | undefined;
+            | { behavior?: string; updatedInput?: { answers?: Record<string, string> }; updatedPermissions?: unknown[] }
+            | undefined;
         if (pendingQuestion) {
             const answer = inner?.updatedInput?.answers?.[pendingQuestion] ?? 'no answer';
             pendingQuestion = null;
