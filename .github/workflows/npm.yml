@@ -49,7 +49,7 @@ jobs:
             runner: ubuntu-latest
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: v${{ needs.version.outputs.version }}
       - uses: oven-sh/setup-bun@v2
@@ -74,7 +74,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: v${{ needs.version.outputs.version }}
       - uses: oven-sh/setup-bun@v2
