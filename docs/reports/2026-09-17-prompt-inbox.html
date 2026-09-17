@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Eén plek voor alles wat agents je vragen</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--reference); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+/* Mockups of the app surface; illustrations, drawn with the report tokens so both schemes work. */
+.mock { position: relative; overflow: hidden; border-radius: 14px; border: 1px solid var(--line); background-color: var(--page); background-image: radial-gradient(var(--line) 1.2px, transparent 1.2px); background-size: 18px 18px; min-height: 420px; font-size: 13px; line-height: 1.4; }
+.mock.short { min-height: 300px; }
+.mock.tiny { min-height: 220px; }
+.mnode { position: absolute; background: var(--paper); border-radius: 10px; box-shadow: var(--shadow-border); padding: 8px 10px; width: 170px; }
+.mnode .mhead { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12px; }
+.mnode .mbody { height: 44px; margin-top: 6px; border-radius: 6px; background: var(--panel); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--reference); flex: none; }
+.dot.you { background: var(--warning); }
+.dot.run { background: var(--info); }
+.mdock { position: absolute; left: 50%; bottom: 12px; translate: -50% 0; display: flex; align-items: center; gap: 6px; padding: 4px 6px; background: var(--paper); border-radius: 12px; box-shadow: var(--shadow-border); white-space: nowrap; }
+.mdock .ic { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 7px; color: var(--muted); font-size: 12px; }
+.mdock .sep { width: 1px; height: 16px; background: var(--line); }
+.mdock .count { display: inline-flex; align-items: center; gap: 5px; padding: 0 6px; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; }
+.mdock .count.on { background: var(--highlight); border-radius: 7px; height: 26px; color: var(--ink); }
+.mcard { background: var(--paper); border-radius: 14px; box-shadow: var(--shadow-border); padding: 10px 12px; }
+.mcard .mtop { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.mcard .mtop strong { color: var(--ink); font-weight: 600; }
+.mcard .mtop .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mcard .mtitle { margin: 6px 0 2px; font-weight: 600; font-size: 13px; }
+.mcard .mcode { margin: 6px 0 0; padding: 6px 8px; border-radius: 7px; background: var(--panel); font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; overflow-wrap: anywhere; }
+.mcard .mactions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
+.mcard .mactions .grow { flex: 1; }
+.mb { display: inline-flex; align-items: center; min-height: 28px; min-width: 0; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-size: 12px; font-weight: 500; }
+.mb.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.mb.link { border-color: transparent; color: var(--muted); }
+.mcell { position: absolute; top: 0; bottom: 0; }
+.mcell.left { left: 0; right: 50%; border-right: 1px solid var(--line); }
+.mcell.right { left: 50%; right: 0; }
+.mcell.focus { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 14px; }
+.demo-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+@media (max-width: 700px) { .mnode.hide-narrow { display: none; } }
+@media print { .mock { break-inside: avoid; } }
+/* The deck: the front card, with the edges of the ones behind it peeking out above. */
+.mdeck { position: absolute; left: 50%; bottom: 58px; translate: -50% 0; width: min(440px, calc(100% - 24px)); }
+.mdeck.static { position: relative; left: auto; bottom: auto; translate: none; width: 100%; margin-top: 22px; }
+.mdeck .mcard { position: relative; z-index: 3; }
+.mghost { transform-origin: top center; position: absolute; left: 0; right: 0; top: 0; bottom: 0; background: var(--paper); border-radius: 14px; box-shadow: var(--shadow-border); }
+.mghost.g1 { z-index: 2; translate: 0 -9px; scale: 0.95; opacity: .75; }
+.mghost.g2 { z-index: 1; translate: 0 -18px; scale: 0.9; opacity: .45; }
+.mnav { display: inline-flex; align-items: center; gap: 2px; font-variant-numeric: tabular-nums; }
+.mnav button { min-width: 22px; min-height: 22px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 12px; }
+.mnav button:hover:not(:disabled) { background: var(--highlight); }
+.mhint { margin-top: 6px; padding: 6px 8px; border-radius: 8px; background: var(--highlight); font-size: 12px; color: var(--ink); }
+/* The chat's prompt card, as PendingDock draws it today. */
+.pc { position: relative; z-index: 3; display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--paper); border-radius: 16px; box-shadow: var(--shadow-border); font-size: 13px; line-height: 1.4; }
+.pc-src { display: flex; align-items: center; gap: 8px; padding-bottom: 8px; margin-bottom: 2px; border-bottom: 1px dashed var(--line); font-size: 12px; color: var(--muted); }
+.pc-src strong { color: var(--ink); font-weight: 600; }
+.pc-src .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-head { display: flex; align-items: flex-start; gap: 8px; }
+.pc-head svg { flex: none; width: 18px; height: 18px; margin-top: 1px; color: var(--warning); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.pc-head h4 { margin: 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.pc-meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pc-sunken { padding: 10px; border-radius: 12px; background: var(--panel); }
+.pc-sunken .cwd { margin: 0 0 6px; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; color: var(--muted); }
+.pc-sunken pre { margin: 0; padding: 0; background: none; font-size: 12px; white-space: pre-wrap; }
+.pc-diff { overflow: hidden; border-radius: 12px; background: var(--panel); font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; }
+.pc-diff .ln { padding: 1px 10px; white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+.pc-diff .add { background: var(--success-bg); color: var(--success); }
+.pc-diff .del { background: var(--danger-bg); color: var(--danger); }
+.pc-diffbar { display: flex; margin: 0; padding: 4px; border-top: 1px solid var(--line); }
+.pc-choices { display: flex; flex-direction: column; gap: 6px; }
+.pc-choice { display: flex; align-items: flex-start; gap: 8px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--highlight); font-size: 12px; }
+.pc-choice.on { border-color: var(--accent); }
+.pc-choice .ring { flex: none; width: 14px; height: 14px; margin-top: 1px; border: 1.5px solid var(--muted); border-radius: 50%; }
+.pc-choice.on .ring { border-color: var(--accent); background: radial-gradient(var(--accent) 45%, transparent 50%); }
+.pc-choice .desc { color: var(--muted); margin-left: 6px; }
+.pc-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; }
+.pc-foot .grow { flex: 1; }
+.pc-btn { display: inline-flex; align-items: center; gap: 6px; min-width: 0; min-height: 28px; padding: 0 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink); font-size: 12px; font-weight: 500; }
+.pc-btn.primary { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.pc-deck { position: absolute; left: 50%; bottom: 58px; translate: -50% 0; width: min(460px, calc(100% - 24px)); }
+.pc-deck.static { position: relative; left: auto; bottom: auto; translate: none; width: 100%; margin-top: 22px; }
+.pc-deck .mghost { border-radius: 16px; }
+.mock.tall { min-height: 520px; }
+.tree { font-size: 13px; }
+#components th[scope="row"] code { white-space: nowrap; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></symbol>
+  <symbol id="i-question" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-terminal" viewBox="0 0 24 24"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></symbol>
+</svg>
+<a class="skip" href="#summary">Naar de samenvatting</a>
+<header>
+  <p class="eyebrow">Ruimte / ontwerpvoorstel / 17 september 2026</p>
+  <h1>Eén plek voor alles wat agents je vragen</h1>
+  <p class="intro">Elk canvas krijgt een stapel promptkaarten boven de dock. De oudste ligt vooraan en is meteen te beantwoorden. De randen erachter laten zien dat er meer wacht. Een kaart ziet er precies zo uit als de prompt in een AI-chat nu, omdat chat en stapel dezelfde componenten gebruiken. Alles blijft in de client.</p>
+  <p class="status">Derde versie, met gedeelde promptcomponenten. Wacht op goedkeuring</p>
+  <p class="caption">Gebaseerd op <code>main</code> bij <code>30ed2835</code>. De mockups zijn illustraties die <code>PendingDock</code> nabootsen, geen screenshots.</p>
+  <nav aria-label="Inhoud">
+    <a href="#summary">Samenvatting</a>
+    <a href="#decisions">Besluiten</a>
+    <a href="#now">Huidige situatie</a>
+    <a href="#examples">Voorbeelden</a>
+    <a href="#components">Gedeelde componenten</a>
+    <a href="#behavior">Gedrag</a>
+    <a href="#architecture">Architectuur</a>
+    <a href="#plan">Plan</a>
+    <a href="#open">Open punten</a>
+  </nav>
+</header>
+<main>
+  <section id="summary" class="recommendation">
+    <h2>Samenvatting</h2>
+    <p>Een prompt staat nu in de node die hem stelt. Een chat vervangt zijn composer door de prompt, en een terminal toont een strook onder de kop. Op een vol canvas mis je die snel.</p>
+    <p>Voortaan zijn prompts op een canvas op één plek te zien: een stapel kaarten boven de dock, gesorteerd op binnenkomst. De voorste kaart is altijd volledig in beeld. Er is geen lijst en geen ingeklapte pil. De prompt in de node wordt verborgen, maar de code blijft, zodat hij later met één schakelaar terug kan.</p>
+    <p>Voor dat uiterlijk wordt <code>PendingDock</code> opgeknipt in gedeelde componenten: een kaart, de inhoud van een toestemming, de inhoud van een vraag en de knoppen. De chat en de stapel bouwen er allebei mee. Een terminaltoestemming krijgt via een kleine adapter dezelfde kaart. De chat zelf verandert niet zichtbaar.</p>
+    <div class="stats">
+      <div><strong>0</strong><span>wijzigingen aan wire, contracts of daemon</span></div>
+      <div><strong>1</strong><span>kaart voor chat, stapel en terminal</span></div>
+      <div><strong>6</strong><span>stappen in het plan</span></div>
+    </div>
+  </section>
+
+  <section id="decisions">
+    <h2>Besluiten</h2>
+    <div class="table" role="region" aria-label="Besluiten" tabindex="0">
+      <table>
+        <thead><tr><th scope="col">Vraag</th><th scope="col">Besluit</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Plek</th><td>Boven de dock.</td></tr>
+          <tr><th scope="row">Prompt in de node</th><td>Verborgen op het canvas, niet verwijderd. Een constante in de client zet hem terug.</td></tr>
+          <tr><th scope="row">Instelling om de stapel uit te zetten</th><td>Geen.</td></tr>
+          <tr><th scope="row">iOS</th><td>Buiten deze ronde.</td></tr>
+          <tr><th scope="row">Vorm</th><td>Een stapel kaarten die meteen in beeld is. Geen lijst, geen pil met "waiting".</td></tr>
+          <tr><th scope="row">Bereik</th><td>Het canvas blijft lokaal: een stapel toont alleen prompts van nodes op zijn eigen canvas.</td></tr>
+          <tr><th scope="row">Uiterlijk</th><td>Precies zoals de prompt in de AI-chat nu, via componenten die de chat en de stapel delen.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="now">
+    <h2>Huidige situatie</h2>
+    <div class="table" role="region" aria-label="Soorten prompts" tabindex="0">
+      <table class="wide">
+        <caption>De soorten prompts en wat de client ervan weet voor een node op een canvas in beeld</caption>
+        <thead><tr><th scope="col">Soort</th><th scope="col">Nu getekend door</th><th scope="col">Te beantwoorden via</th><th scope="col">Tijdstip voor de volgorde</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Chat: toestemming</th><td><code>PendingDock</code>: kaart met diff, commando of details</td><td><code>chat.approve</code></td><td><code>createdAt</code> van het item</td></tr>
+          <tr><th scope="row">Chat: vraag</th><td><code>PendingDock</code>: keuzes, "Something else…", meerdere vragen</td><td><code>chat.answer</code>, <code>chat.dismiss</code></td><td><code>createdAt</code> van het item</td></tr>
+          <tr><th scope="row">Terminal: toestemming</th><td><code>ApprovalStrip</code>: één regel onder de kop, en de TUI</td><td><code>agent.answerApproval</code>, 110&nbsp;s geldig</td><td><code>createdAt</code> van het request</td></tr>
+          <tr><th scope="row">Terminal: vraag of elicitation</th><td>Alleen de TUI, de node krijgt status <code>needs-you</code></td><td><span class="badge warning">alleen in de terminal</span></td><td><code>updatedAt</code> van de agent</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><span class="badge confirmed">geverifieerd</span> Een chatnode op een getekend canvas blijft gemount, ook buiten beeld (<code>NodeFrame.tsx</code> slaat <code>ChatBody</code> niet over), en blijft daardoor geattacht. Terminaltoestemmingen gaan naar elke client. Voor één canvas heeft de client dus al alle prompts in <code>useChats</code> en <code>useSessions</code>.</p>
+    <p><span class="badge confirmed">geverifieerd</span> <code>PendingDock</code> (278 regels) mengt vier dingen: de kaart zelf, de inhoud van een toestemming (<code>ApprovalDetails</code>), de inhoud van een vraag en de knoppenrij. <code>PromptComposer</code> houdt concepten, verzendstatus en fouten per request bij, en voorkomt dat een klik op Send een Allow wordt als er net een prompt onder verschijnt. Die logica heeft de stapel ook nodig.</p>
+    <p class="note">Een canvas dat niet in de splitsing staat, is niet gemount. Zijn prompts zie je pas als je ernaartoe gaat. De teller in de dock wijst daar nu al de weg, maar mist chats op zo'n canvas. Dat gat bestond al en valt buiten dit voorstel.</p>
+  </section>
+
+  <section id="examples">
+    <h2>Voorbeelden</h2>
+    <p>Op één canvas komen vier prompts binnen tussen 14:02 en 14:03, uit twee terminals en twee chats. Alles onder de stippellijn van een kaart is de gedeelde chatprompt. De regel erboven, met node, bron, tijd en bladeren, hoort alleen bij de stapel. De UI-teksten zijn Engels, zoals in de app.</p>
+
+    <h3>1. De stapel</h3>
+    <p class="interactive-only">Probeer het: een antwoord haalt de voorste kaart weg en de volgende schuift naar voren. Met de pijltjes sla je een kaart over die je nog niet kunt beantwoorden, zonder dat de volgorde verandert.</p>
+    <figure>
+      <div class="mock tall" aria-live="polite">
+        <div class="mnode" style="left:24px;top:24px"><div class="mhead"><span class="dot you"></span>API refactor</div><div class="mbody"></div></div>
+        <div class="mnode hide-narrow" style="left:230px;top:50px"><div class="mhead"><span class="dot run"></span>Tests</div><div class="mbody"></div></div>
+        <div class="mnode hide-narrow" style="right:24px;top:30px"><div class="mhead"><span class="dot you"></span>Docs rewrite</div><div class="mbody"></div></div>
+        <div class="pc-deck" id="demo-deck">
+          <div class="mghost g1"></div>
+          <div class="mghost g2"></div>
+          <div class="pc" role="group" aria-label="Permission request">
+            <div class="pc-src"><span class="dot you"></span><span class="grow"><strong>API refactor</strong> · Claude · terminal · 14:02</span><span class="mnav"><button type="button" data-step="-1" aria-label="Previous prompt" disabled>‹</button><span>1 of 4</span><button type="button" data-step="1" aria-label="Next prompt">›</button></span></div>
+            <div class="pc-head"><svg aria-hidden="true"><use href="#i-hand"/></svg><h4>Run command</h4></div>
+            <div class="pc-sunken"><p class="cwd">~/Development/Projects/ruimte</p><pre>bun test apps/server/src/outbox</pre></div>
+            <div class="pc-foot"><button class="pc-btn" type="button" data-answer>Always allow Bash(bun test:*)</button><button class="pc-btn" type="button" data-answer>Deny</button><button class="pc-btn primary" type="button" data-answer>✓ Allow</button></div>
+          </div>
+        </div>
+        <div class="mdock"><span class="ic">◐</span><span class="sep"></span><span class="count" id="demo-count"><span class="dot you"></span>4</span><span class="ic">+</span><span class="sep"></span><span class="ic">-</span><span class="count">100%</span><span class="ic">+</span></div>
+      </div>
+      <figcaption>Een terminaltoestemming in dezelfde kaart als een chattoestemming: kop met hand-icoon, het commando in een verzonken vlak, de knoppen rechts met Allow als primaire knop. Achter de kaart steken hooguit twee randen uit. Bij één prompt is er geen rand en geen "1 of N".</figcaption>
+    </figure>
+    <div class="demo-controls interactive-only"><button type="button" id="demo-reset">Opnieuw</button></div>
+    <noscript><p class="caption">Zonder JavaScript staat de eerste kaart stil. Hieronder staan de andere soorten kaarten.</p></noscript>
+
+    <h3>2. De andere soorten kaarten</h3>
+    <div class="split">
+      <figure>
+        <div class="pc-deck static">
+          <div class="mghost g1"></div>
+          <div class="pc">
+            <div class="pc-src"><span class="dot you"></span><span class="grow"><strong>Docs rewrite</strong> · Claude · chat · 14:02</span><span class="mnav"><span>2 of 4</span></span></div>
+            <div class="pc-head"><svg aria-hidden="true"><use href="#i-question"/></svg><h4>Which tone should the README take?</h4></div>
+            <div class="pc-choices">
+              <div class="pc-choice on"><span class="ring"></span><span>Technical<span class="desc">Short, for contributors</span></span></div>
+              <div class="pc-choice"><span class="ring"></span><span>Friendly<span class="desc">For first-time users</span></span></div>
+              <div class="pc-choice"><span class="ring"></span><span class="desc" style="margin:0">Something else…</span></div>
+            </div>
+            <div class="pc-foot"><span class="grow"></span><span class="pc-btn primary">Answer ↑</span></div>
+          </div>
+        </div>
+        <figcaption>Een vraag van een chat, zoals <code>PendingDock</code> hem nu tekent: keuzes met beschrijving, een vrij antwoord en "Answer". Bij meerdere vragen staat "Question 1 of 3" onder de kop, met Previous en Next.</figcaption>
+      </figure>
+      <figure>
+        <div class="pc-deck static">
+          <div class="mghost g1"></div>
+          <div class="pc">
+            <div class="pc-src"><span class="dot you"></span><span class="grow"><strong>Worktree merge</strong> · Codex · chat · 14:03</span><span class="mnav"><span>3 of 4</span></span></div>
+            <div class="pc-head"><svg aria-hidden="true"><use href="#i-hand"/></svg><h4>Edit worktree-merge.ts</h4></div>
+            <div class="pc-diff">
+              <div class="ln">@@ -41,6 +41,15 @@</div>
+              <div class="ln del">-    if (dirty) {</div>
+              <div class="ln add">+    if (dirty &amp;&amp; !options.allowDirty) {</div>
+              <div class="ln">         return refuse('dirty');</div>
+              <p class="pc-diffbar"><span class="pc-btn">View full diff</span></p>
+            </div>
+            <div class="pc-foot"><span class="pc-btn">Deny</span><span class="pc-btn primary">✓ Allow</span></div>
+          </div>
+        </div>
+        <figcaption>Een toestemming met een diff, ingeklapt met "View full diff", zoals nu. De kaart heeft dezelfde maximale hoogte als in de chat (<code>min(50dvh, 480px)</code>) en scrollt daarbinnen.</figcaption>
+      </figure>
+      <figure>
+        <div class="pc-deck static">
+          <div class="pc">
+            <div class="pc-src"><span class="dot you"></span><span class="grow"><strong>iOS build</strong> · Claude · terminal · 14:03</span><span class="mnav"><span>4 of 4</span></span></div>
+            <div class="pc-head"><svg aria-hidden="true"><use href="#i-terminal"/></svg><h4>Waiting for you in its terminal</h4></div>
+            <p class="pc-meta">This question can only be answered in the terminal.</p>
+            <div class="pc-foot"><span class="pc-btn primary">Go to terminal</span></div>
+          </div>
+        </div>
+        <figcaption>Een vraag in de TUI van een terminal is niet van buitenaf te beantwoorden. De kaart gebruikt dezelfde schil en knoppen, met alleen "Go to terminal". Een toestemming na 110&nbsp;s, als de daemon hem heeft losgelaten, krijgt dezelfde kaart.</figcaption>
+      </figure>
+      <figure>
+        <div class="mock tiny" role="img" aria-label="Een chatnode met in plaats van de prompt een regel die naar de stapel wijst">
+          <div class="mnode" style="left:50%;top:22px;translate:-50% 0;width:260px">
+            <div class="mhead"><span class="dot you"></span>Docs rewrite</div>
+            <div class="mbody" style="height:60px"></div>
+            <p class="mhint">Waiting for your answer below</p>
+          </div>
+        </div>
+        <figcaption>In de chatnode zelf staat in plaats van de prompt een regel. Een klik erop haalt die kaart naar voren in de stapel.</figcaption>
+      </figure>
+    </div>
+
+    <h3>3. Twee canvassen naast elkaar</h3>
+    <figure>
+      <div class="mock short" role="img" aria-label="Twee canvascellen naast elkaar, elk met een eigen stapel; de dock staat alleen in de cel met focus">
+        <div class="mcell left">
+          <div class="mnode" style="left:16px;top:16px;width:140px"><div class="mhead"><span class="dot you"></span>API refactor</div><div class="mbody"></div></div>
+          <div class="pc-deck" style="bottom:14px;width:calc(100% - 24px)">
+            <div class="pc"><div class="pc-head"><svg aria-hidden="true"><use href="#i-hand"/></svg><h4>Run command</h4></div><div class="pc-foot"><span class="pc-btn">Deny</span><span class="pc-btn primary">✓ Allow</span></div></div>
+          </div>
+        </div>
+        <div class="mcell right focus">
+          <div class="mnode" style="right:16px;top:16px;width:140px"><div class="mhead"><span class="dot you"></span>Docs rewrite</div><div class="mbody"></div></div>
+          <div class="pc-deck" style="bottom:54px;width:calc(100% - 24px)">
+            <div class="mghost g1"></div>
+            <div class="pc"><div class="pc-head"><svg aria-hidden="true"><use href="#i-question"/></svg><h4>Which tone should the README take?</h4></div><div class="pc-foot"><span class="pc-btn primary">Answer ↑</span></div></div>
+          </div>
+          <div class="mdock" style="bottom:10px"><span class="ic">◐</span><span class="count"><span class="dot you"></span>3</span><span class="ic">+</span></div>
+        </div>
+      </div>
+      <figcaption>De stapel hoort bij het canvas en niet bij de dock. Een canvascel zonder focus heeft geen dock, maar wel zijn eigen stapel. Anders zou een verborgen prompt nergens staan. De bronregel is hier weggelaten om de mockup klein te houden.</figcaption>
+    </figure>
+  </section>
+
+  <section id="components">
+    <h2>Gedeelde componenten</h2>
+    <p>Stap één is een refactor zonder zichtbare wijziging: <code>PendingDock</code> en de toestand uit <code>PromptComposer</code> gaan naar een eigen map. De chat gebruikt daarna dezelfde onderdelen die de stapel gebruikt.</p>
+    <div class="table" role="region" aria-label="Componenten" tabindex="0">
+      <table class="wide">
+        <caption>Nieuwe indeling onder <code>apps/client/src/prompts</code></caption>
+        <thead><tr><th scope="col">Onderdeel</th><th scope="col">Komt uit</th><th scope="col">Doet</th><th scope="col">Gebruikt door</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>ui/PromptCard.tsx</code></th><td><code>PendingDock</code>, de buitenste div</td><td>De schil: <code>prompt-card</code>, icoon en kop, regel met "requests waiting" of "Question 1 of 3", scrollvlak met maximale hoogte, knoppenrij. Een optioneel slot bovenin voor de bronregel van de stapel.</td><td>Chat, stapel</td></tr>
+          <tr><th scope="row"><code>ui/ApprovalBody.tsx</code></th><td><code>ApprovalDetails</code></td><td>Diff, commando met map, of details als JSON. Met het veld voor een reden bij Deny.</td><td>Chat, stapel</td></tr>
+          <tr><th scope="row"><code>ui/QuestionBody.tsx</code></th><td>Het vraaggedeelte van <code>PendingDock</code></td><td>Keuzes, multiselect, "Something else…" en vrije tekst.</td><td>Chat, stapel</td></tr>
+          <tr><th scope="row"><code>ui/PromptActions.tsx</code></th><td>De knoppenrij en <code>PromptPrimary</code></td><td>Allow, Deny, Always allow en Add a reason; bij vragen Previous, Dismiss, Next en Answer.</td><td>Chat, stapel</td></tr>
+          <tr><th scope="row"><code>ui/PromptView.tsx</code></th><td>De rest van <code>PendingDock</code></td><td>Zet de vier onderdelen samen voor een <code>PromptSubject</code>. <code>PendingDock</code> wordt een dunne wrapper hierom, of verdwijnt.</td><td>Chat, stapel</td></tr>
+          <tr><th scope="row"><code>logic/usePromptSession.ts</code></th><td><code>PromptComposer</code></td><td>Concepten, verzendstatus, fouten en afgeronde requests per prompt, en de klikbeveiliging bij een prompt die onder de muis verschijnt.</td><td>Chat, stapel</td></tr>
+          <tr><th scope="row"><code>logic/prompts.ts</code></th><td><code>chat/logic/prompts.ts</code> (verplaatst)</td><td>Concepten en antwoorden, <code>nextPrompt</code>.</td><td>Chat, stapel</td></tr>
+          <tr><th scope="row"><code>logic/subjects.ts</code></th><td>Nieuw</td><td>Maakt van een chat-item, een <code>ApprovalRequest</code> of een wachtende terminal een <code>PromptSubject</code> en zegt hoe je antwoordt.</td><td>Stapel</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <details open>
+      <summary>Schets van <code>PromptSubject</code></summary>
+      <pre><code>// What a prompt card draws, whatever asked it. The chat's items pass through unchanged.
+export type PromptSubject =
+    | { kind: 'chat'; chatId: string; item: ChatApprovalItem | ChatQuestionItem }
+    // A terminal approval drawn as a chat approval: summary as the command, its choices as the buttons.
+    | { kind: 'terminal-approval'; sessionId: string; request: ApprovalRequest }
+    // Only its TUI can answer; the card offers the way there.
+    | { kind: 'terminal-waiting'; sessionId: string; since: number };
+
+// How a card's action reaches the machine: chat.approve / chat.answer / chat.dismiss or agent.answerApproval.
+export function answerPrompt(subject: PromptSubject, action: PromptAction): Promise&lt;void&gt;;</code></pre>
+    </details>
+    <h3>Een terminaltoestemming in de chatkaart</h3>
+    <p>Een <code>ApprovalRequest</code> heeft minder dan een chat-item: een <code>toolName</code>, een regel <code>summary</code> en een lijst <code>choices</code> met labels. De adapter doet het volgende:</p>
+    <ul>
+      <li>De kop volgt de chat: "Run command" voor Bash, anders de toolnaam.</li>
+      <li><code>summary</code> komt in hetzelfde verzonken vlak als een commando in de chat. Een diff of map is er niet, want die stuurt de daemon voor terminals niet mee.</li>
+      <li>De knoppen komen uit <code>choices</code>, in de volgorde en stijl van de chat: de <code>remember</code>-keuze als "Always allow", dan Deny, dan Allow als primaire knop. De labels komen van de daemon.</li>
+      <li>"Add a reason" bij Deny valt weg, omdat <code>agent.answerApproval</code> geen reden meeneemt.</li>
+    </ul>
+    <p><code>ApprovalStrip</code> blijft zoals hij is. Hij is op het canvas verborgen, en in een terminal als eigen view blijft de strook staan.</p>
+  </section>
+
+  <section id="behavior">
+    <h2>Gedrag</h2>
+    <div class="table" role="region" aria-label="Gedragsregels" tabindex="0">
+      <table class="wide">
+        <caption>Regels voor de stapel</caption>
+        <thead><tr><th scope="col">Situatie</th><th scope="col">Voorstel</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Volgorde</th><td>Oplopend op tijdstip. Een nieuwe prompt komt achteraan, nooit voor de kaart die je leest. Blader je met de pijltjes, dan blijf je op die kaart tot je antwoordt of terugbladert.</td></tr>
+          <tr><th scope="row">Concepten</th><td>Een half ingevuld antwoord blijft bewaard als je doorbladert, per request, net als in de chat nu.</td></tr>
+          <tr><th scope="row">Focus</th><td>De stapel neemt nooit vanzelf focus, zodat typen in een terminal gewoon doorgaat. <kbd>Mod+Shift+P</kbd> (nog vrij, in <code>canvas-shortcuts.ts</code>) zet de focus op de kop van de voorste kaart; Escape geeft hem terug.</td></tr>
+          <tr><th scope="row">Dock verborgen</th><td>De stapel blijft staan, ook met "Hide the dock" aan, en schuift dan omlaag naar de plek van de dock.</td></tr>
+          <tr><th scope="row">Elders beantwoord</th><td>In de TUI, een ander venster of op de iPhone: de store verandert en de kaart verdwijnt. Een klik die te laat komt, toont de fout in de kaart, zoals de chat dat nu doet.</td></tr>
+          <tr><th scope="row">Prompt in de node</th><td>Op het canvas verborgen achter <code>PROMPTS_IN_NODES = false</code>. Een chat of terminal als eigen view houdt zijn prompt in de view, want daar is geen stapel.</td></tr>
+          <tr><th scope="row">Instelling <code>agentsApprovals</code></th><td>Staat die uit, dan worden terminaltoestemmingen kaarten met "Go to terminal", net zoals nu de strook wegvalt.</td></tr>
+          <tr><th scope="row">Zoom en vergrendeling</th><td>De stapel ligt boven het canvas, schaalt niet mee met de zoom en reageert niet op vergrendelingen.</td></tr>
+          <tr><th scope="row">Desktopmelding</th><td>Een klik gaat nog steeds met <code>revealNode</code> naar de node en haalt daarnaast die kaart naar voren.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="architecture">
+    <h2>Architectuur</h2>
+    <figure class="panel">
+      <div class="table" role="region" aria-label="Datastroom, horizontaal scrollbaar" tabindex="0">
+        <svg class="diagram plot" width="900" viewBox="0 0 900 260" role="img" aria-labelledby="flow-title flow-desc">
+          <title id="flow-title">Datastroom en componenten</title>
+          <desc id="flow-desc">useChats, useSessions en de nodes van het canvas gaan naar canvasPrompts, dat gesorteerde PromptSubjects levert aan PromptStack. PromptStack en de chatcomposer tekenen allebei PromptView. Antwoorden gaan via answerPrompt naar de bestaande requests.</desc>
+          <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker></defs>
+          <rect class="node" x="10" y="14" width="180" height="52" rx="10"/>
+          <rect class="node" x="10" y="84" width="180" height="52" rx="10"/>
+          <rect class="node" x="10" y="154" width="180" height="52" rx="10"/>
+          <rect class="node" x="260" y="84" width="170" height="52" rx="10"/>
+          <rect class="node" x="500" y="84" width="160" height="52" rx="10"/>
+          <rect class="node" x="500" y="190" width="160" height="52" rx="10"/>
+          <rect class="node" x="730" y="137" width="160" height="52" rx="10"/>
+          <text x="100" y="45" text-anchor="middle">useChats</text>
+          <text x="100" y="115" text-anchor="middle">useSessions</text>
+          <text x="100" y="185" text-anchor="middle">canvas nodes</text>
+          <text x="345" y="115" text-anchor="middle">canvasPrompts()</text>
+          <text x="580" y="115" text-anchor="middle">PromptStack</text>
+          <text x="580" y="221" text-anchor="middle">Chat composer</text>
+          <text x="810" y="168" text-anchor="middle">PromptView</text>
+          <path class="edge" d="M190 40 C225 40 230 104 256 106" marker-end="url(#arrow)"/>
+          <path class="edge" d="M190 110 H256" marker-end="url(#arrow)"/>
+          <path class="edge" d="M190 180 C225 180 230 116 256 114" marker-end="url(#arrow)"/>
+          <path class="edge" d="M430 110 H496" marker-end="url(#arrow)"/>
+          <path class="edge" d="M660 110 C700 110 700 158 726 160" marker-end="url(#arrow)"/>
+          <path class="edge" d="M660 216 C700 216 700 168 726 166" marker-end="url(#arrow)"/>
+          <text class="label" x="463" y="100" text-anchor="middle">sorted</text>
+          <text class="label" x="810" y="215" text-anchor="middle">shared, answers</text>
+          <text class="label" x="810" y="235" text-anchor="middle">via answerPrompt</text>
+        </svg>
+      </div>
+      <figcaption>Alles staat al in de client. Een zuivere functie maakt er per canvas een gesorteerde lijst van. De stapel en de chatcomposer tekenen allebei <code>PromptView</code> en antwoorden via dezelfde requests als nu.</figcaption>
+    </figure>
+    <h3>Aanname</h3>
+    <p><span class="badge info">aanname</span> <code>AgentInfo.updatedAt</code> verandert op het moment dat de status <code>needs-you</code> wordt. Werkt de CLI daarna nog iets anders bij, bijvoorbeeld de titel, dan schuift de terminalkaart naar achteren. Dat controleer ik in stap 3; klopt het niet, dan onthoudt de client zelf wanneer hij de status voor het eerst zag.</p>
+  </section>
+
+  <section id="plan">
+    <h2>Plan</h2>
+    <ol class="steps">
+      <li class="step"><div>
+        <h3>Gedeelde promptcomponenten</h3>
+        <p>Knip <code>PendingDock</code> op in <code>PromptCard</code>, <code>ApprovalBody</code>, <code>QuestionBody</code>, <code>PromptActions</code> en <code>PromptView</code>. Verplaats de toestand uit <code>PromptComposer</code> naar <code>usePromptSession</code>. De chat gebruikt de nieuwe onderdelen. Dit is een aparte <code>refactor:</code>-commit.</p>
+        <p>Klaar als de chat er pixel voor pixel hetzelfde uitziet (screenshots van toestemming met diff, commando, vraag met meerdere vragen en een fout, voor en na) en de bestaande tests slagen.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Onderwerpen en antwoorden</h3>
+        <p><code>PromptSubject</code>, de adapter voor <code>ApprovalRequest</code> en <code>answerPrompt</code> in <code>prompts/logic/subjects.ts</code>, met tests.</p>
+        <p>Klaar als tests laten zien dat een terminaltoestemming de knoppen in chatvolgorde krijgt en elk onderwerp het juiste request stuurt.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Het promptmodel per canvas</h3>
+        <p><code>canvasPrompts</code> in <code>apps/client/src/canvas/prompts.ts</code>, met tests.</p>
+        <p>Klaar als tests laten zien dat prompts van vier soorten op tijdstip staan, dat nodes van een ander canvas wegvallen en dat een beantwoorde prompt verdwijnt.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>PromptStack</h3>
+        <p><code>canvas/PromptStack.tsx</code>, getekend per canvascel boven de plek van de dock. <code>PromptView</code> vooraan met de bronregel, hooguit twee randen, "1 of N" met pijltjes, <code>Mod+Shift+P</code>. Met een <code>ErrorBoundary</code>.</p>
+        <p>Klaar als vier prompts op één canvas op volgorde te beantwoorden zijn zonder te navigeren, ook met de dock verborgen.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>De prompt in de node verbergen</h3>
+        <p>Achter <code>PROMPTS_IN_NODES</code> tekent een chatnode op het canvas de regel "Waiting for your answer below" in plaats van de prompt, en tekent een terminalnode geen <code>ApprovalStrip</code>. Views zonder canvas blijven zoals ze zijn.</p>
+        <p>Klaar als de oude weergave terugkomt door de constante op <code>true</code> te zetten.</p>
+      </div></li>
+      <li class="step"><div>
+        <h3>Nalopen in de Electron-app</h3>
+        <p>Splitsing met twee canvassen, verborgen dock, antwoorden in de TUI en in een tweede venster, een verlopen terminaltoestemming, een vraag met meerdere vragen en een concept dat blijft staan na doorbladeren.</p>
+        <p>Klaar als <code>bun run format</code> en <code>bun run check</code> slagen en jij het getest hebt.</p>
+      </div></li>
+    </ol>
+  </section>
+
+  <section id="open">
+    <h2>Open punten</h2>
+    <ol>
+      <li>Een chat of terminal als eigen view houdt zijn prompt in de view, want daar is geen stapel. Is dat goed?</li>
+      <li>De chat zet nu toestemmingen en blokkerende vragen vóór een async vraag (<code>nextPrompt</code>). De stapel volgt strikt de binnenkomst, dus een async vraag kan een toestemming erachter tijdelijk afdekken. Mag dat, of volgt de stapel de regel van de chat?</li>
+    </ol>
+  </section>
+</main>
+<footer><p>Controle: het codeonderzoek is gedaan op <code>30ed2835</code>, en de genoemde componenten, stores en requests bestaan. Niet gecontroleerd: of <code>Mod+Shift+P</code> in Electron of in een terminal-CLI al iets doet, en hoe de stapel samengaat met de dock van een tekening. De mockups zijn met de hand nagetekend naar <code>PendingDock</code> en tonen de indeling, niet de exacte pixels.</p></footer>
+<script>
+{
+  const deck = document.getElementById('demo-deck');
+  const initial = deck.innerHTML;
+  const count = document.getElementById('demo-count');
+  const start = [
+    { node: 'API refactor', meta: 'Claude · terminal · 14:02', icon: 'i-hand', title: 'Run command', body: '<div class="pc-sunken"><p class="cwd">~/Development/Projects/ruimte</p><pre>bun test apps/server/src/outbox</pre></div>', actions: ['Always allow Bash(bun test:*)', 'Deny', '✓ Allow'], grow: false },
+    { node: 'Docs rewrite', meta: 'Claude · chat · 14:02', icon: 'i-question', title: 'Which tone should the README take?', body: '<div class="pc-choices"><div class="pc-choice on"><span class="ring"></span><span>Technical<span class="desc">Short, for contributors</span></span></div><div class="pc-choice"><span class="ring"></span><span>Friendly<span class="desc">For first-time users</span></span></div><div class="pc-choice"><span class="ring"></span><span class="desc" style="margin:0">Something else…</span></div></div>', actions: ['Answer ↑'], grow: true },
+    { node: 'Worktree merge', meta: 'Codex · chat · 14:03', icon: 'i-hand', title: 'Edit worktree-merge.ts', body: '<div class="pc-diff"><div class="ln">@@ -41,6 +41,15 @@</div><div class="ln del">-    if (dirty) {</div><div class="ln add">+    if (dirty &amp;&amp; !options.allowDirty) {</div><p class="pc-diffbar"><span class="pc-btn">View full diff</span></p></div>', actions: ['Deny', '✓ Allow'], grow: false },
+    { node: 'iOS build', meta: 'Claude · terminal · 14:03', icon: 'i-terminal', title: 'Waiting for you in its terminal', body: '<p class="pc-meta">This question can only be answered in the terminal.</p>', actions: ['Go to terminal'], grow: false }
+  ];
+  let queue = start.slice();
+  let at = 0;
+  function render() {
+    count.innerHTML = '<span class="dot you"></span>' + queue.length;
+    if (queue.length === 0) {
+      deck.innerHTML = '';
+      return;
+    }
+    const current = queue[at];
+    const behind = Math.min(queue.length - 1, 2);
+    const ghosts = (behind > 0 ? '<div class="mghost g1"></div>' : '') + (behind > 1 ? '<div class="mghost g2"></div>' : '');
+    const nav = queue.length > 1
+      ? '<span class="mnav"><button type="button" data-step="-1" aria-label="Previous prompt"' + (at === 0 ? ' disabled' : '') + '>‹</button><span>' + (at + 1) + ' of ' + queue.length + '</span><button type="button" data-step="1" aria-label="Next prompt"' + (at === queue.length - 1 ? ' disabled' : '') + '>›</button></span>'
+      : '';
+    const last = current.actions.length - 1;
+    const buttons = current.actions.map((label, i) => '<button class="pc-btn' + (i === last ? ' primary' : '') + '" type="button" data-answer>' + label + '</button>').join('');
+    deck.innerHTML = ghosts + '<div class="pc" role="group"><div class="pc-src"><span class="dot you"></span><span class="grow"><strong>' + current.node + '</strong> · ' + current.meta + '</span>' + nav + '</div>'
+      + '<div class="pc-head"><svg aria-hidden="true"><use href="#' + current.icon + '"/></svg><h4>' + current.title + '</h4></div>'
+      + current.body
+      + '<div class="pc-foot">' + (current.grow ? '<span class="grow"></span>' : '') + buttons + '</div></div>';
+  }
+  deck.addEventListener('click', (event) => {
+    const step = event.target.closest('[data-step]');
+    if (step) {
+      at = Math.max(0, Math.min(queue.length - 1, at + Number(step.dataset.step)));
+      render();
+      return;
+    }
+    if (event.target.closest('[data-answer]')) {
+      queue.splice(at, 1);
+      at = Math.min(at, Math.max(queue.length - 1, 0));
+      render();
+    }
+  });
+  document.getElementById('demo-reset').addEventListener('click', () => {
+    queue = start.slice();
+    at = 0;
+    deck.innerHTML = initial;
+    count.innerHTML = '<span class="dot you"></span>4';
+  });
+}
+</script>
+</body>
+</html>
