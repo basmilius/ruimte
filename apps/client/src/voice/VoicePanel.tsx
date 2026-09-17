@@ -74,11 +74,11 @@ function VoiceWaveform({ elapsed, phase }: { elapsed: number; phase: VoicePhase 
                     return (
                         <span key={index} className="relative h-full min-w-0 grow" aria-hidden="true">
                             <span
-                                className="voice-waveform-input absolute right-0 bottom-1/2 left-0 rounded-t-sm bg-text-muted transition-[height,opacity] duration-75 ease-out"
+                                className="voice-waveform-input absolute right-0 bottom-1/2 left-0 rounded-t-sm bg-text transition-[height,opacity] duration-75 ease-out"
                                 style={{
                                     height: `${Math.max(2, Math.round(input * 26))}px`,
                                     opacity: Math.max(0.45, input),
-                                    animationDelay: idle ? `${index * -65}ms` : undefined
+                                    animationDelay: idle ? `${index * -95}ms` : undefined
                                 }}
                             />
                             <span
@@ -86,7 +86,7 @@ function VoiceWaveform({ elapsed, phase }: { elapsed: number; phase: VoicePhase 
                                 style={{
                                     height: `${Math.max(2, Math.round(output * 26))}px`,
                                     opacity: Math.max(0.5, output),
-                                    animationDelay: idle ? `${index * -65}ms` : undefined
+                                    animationDelay: idle ? `${(inputBands.length - index) * -80}ms` : undefined
                                 }}
                             />
                         </span>

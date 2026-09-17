@@ -609,15 +609,29 @@
     .panel-shell[data-resizing],
     .panel-shell[data-instant] { transition: none; }
 
-    .voice-waveform[data-idle] .voice-waveform-input,
-    .voice-waveform[data-idle] .voice-waveform-output {
+    .voice-waveform[data-idle] .voice-waveform-input {
         transform-origin: center bottom;
-        animation: voice-idle-wave 2.8s ease-in-out infinite;
+        animation: voice-idle-user 4.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
     }
-    .voice-waveform[data-idle] .voice-waveform-output { transform-origin: center top; }
-    @keyframes voice-idle-wave {
-        0%, 38%, 62%, 100% { transform: scaleY(1); opacity: 0.32; }
-        50% { transform: scaleY(2.75); opacity: 0.56; }
+    .voice-waveform[data-idle] .voice-waveform-output {
+        transform-origin: center top;
+        animation: voice-idle-assistant 5.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+    @keyframes voice-idle-user {
+        0%, 100% { transform: scaleY(1); opacity: 0.3; }
+        15% { transform: scaleY(2.1); opacity: 0.44; }
+        31% { transform: scaleY(1.15); opacity: 0.34; }
+        50% { transform: scaleY(4.2); opacity: 0.62; }
+        69% { transform: scaleY(1.35); opacity: 0.36; }
+        84% { transform: scaleY(2.7); opacity: 0.5; }
+    }
+    @keyframes voice-idle-assistant {
+        0%, 100% { transform: scaleY(1.15); opacity: 0.28; }
+        20% { transform: scaleY(3.4); opacity: 0.54; }
+        39% { transform: scaleY(1.2); opacity: 0.32; }
+        57% { transform: scaleY(2.2); opacity: 0.44; }
+        75% { transform: scaleY(4); opacity: 0.6; }
+        91% { transform: scaleY(1.3); opacity: 0.34; }
     }
 
     /* A 2px line that says "something is on its way" without knowing how far along it is: a bar of
