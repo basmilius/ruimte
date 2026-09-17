@@ -25,7 +25,7 @@ const mount = async (page: Page) => {
             const React = (await import('${reactUrl}')).default;
             const { createRoot } = (await import('${domUrl}')).default;
             const { PromptComposer } = await import('/src/chat/ui/PromptComposer.tsx');
-            const { PROMPT_SAMPLES } = await import('/src/chat/logic/prompts.fixtures.ts');
+            const { PROMPT_SAMPLES } = await import('/src/prompts/logic/prompts.fixtures.ts');
             function Harness() {
                 const [pending, setPending] = React.useState([]);
                 window.showLivePrompt = index => setPending(PROMPT_SAMPLES[index].items);

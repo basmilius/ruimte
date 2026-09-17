@@ -1,7 +1,11 @@
 import type { ChatApprovalItem, ChatQuestionItem, ChatQuestion } from '@ruimte/contracts';
-import { toggleChoice } from './answers';
+import { toggleChoice } from '@/chat/logic/answers';
 
 export type PendingPrompt = ChatApprovalItem | ChatQuestionItem;
+export type PromptAction =
+    | { kind: 'approve'; decision: 'allow' | 'allow-always' | 'deny'; message?: string }
+    | { kind: 'answer'; answers: Record<string, string> }
+    | { kind: 'dismiss' };
 export interface PromptAnswer {
     choices: string[];
     text: string;
