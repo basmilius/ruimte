@@ -40,9 +40,17 @@ const durationLabel = (seconds: number): string => {
 
 const waveformHeight = (value: number): string => `${Math.max(2, value * 26).toFixed(2)}px`;
 
-function useIdleWaveform(active: boolean, count: number): IdleVoiceBands | null {
+function useDisplayedWaveform(phase: VoicePhase, inputBands: number[], outputBands: number[]): IdleVoiceBands {
     const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-    const [bands, setBands] = useState<IdleVoiceBands | null>(null);
+    const count = inputBands.length;
+    const phaseRef = useRef(phase);
+    const liveBandsRef = useRef<IdleVoiceBands>({ input: inputBands, output: outputBands });
+    const initial = useRef(idleVoiceBands(performance.now(), count));
+    const displayedRef = useRef(initial.current);
+    const [bands, setBands] = useState(initial.current);
+
+    phaseRef.current = phase;
+    liveBandsRef.current = { input: inputBands, output: outputBands };
 
     useEffect(() => {
         const query = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -52,46 +60,70 @@ function useIdleWaveform(active: boolean, count: number): IdleVoiceBands | null 
     }, []);
 
     useEffect(() => {
-        if (!active || reducedMotion) {
+        if (reducedMotion) {
             return;
         }
         let frame = 0;
+        let previous = performance.now();
         const animate = (now: number) => {
-            setBands(idleVoiceBands(now, count));
+            const target = phaseRef.current === 'listening' ? liveBandsRef.current : idleVoiceBands(now, count);
+            const response = 1 - Math.exp(-(now - previous) / 110);
+            previous = now;
+            const current = displayedRef.current;
+            const next = {
+                input: Array.from({ length: count }, (_, index) => {
+                    const value = target.input[index] ?? 0;
+                    return (current.input[index] ?? value) + (value - (current.input[index] ?? value)) * response;
+                }),
+                output: Array.from({ length: count }, (_, index) => {
+                    const value = target.output[index] ?? 0;
+                    return (current.output[index] ?? value) + (value - (current.output[index] ?? value)) * response;
+                })
+            };
+            displayedRef.current = next;
+            setBands(next);
             frame = window.requestAnimationFrame(animate);
         };
         frame = window.requestAnimationFrame(animate);
         return () => window.cancelAnimationFrame(frame);
-    }, [active, count, reducedMotion]);
+    }, [count, reducedMotion]);
 
-    return active && !reducedMotion ? bands : null;
+    if (!reducedMotion) {
+        return bands;
+    }
+    return phase === 'listening' ? { input: inputBands, output: outputBands } : idleVoiceBands(0, count);
 }
 
-function VoiceWaveform({ elapsed, phase }: { elapsed: number; phase: VoicePhase }) {
+function VoiceStatus({ elapsed, phase }: { elapsed: number; phase: VoicePhase }) {
+    return (
+        <div className="flex shrink-0 items-center gap-1.5 text-[10px] text-text-muted" role="status">
+            <span
+                className={clsx(
+                    'h-1.5 w-1.5 rounded-full',
+                    phase === 'listening' ? 'bg-positive' : phase === 'error' ? 'bg-status-error' : 'bg-text-faint'
+                )}
+            />
+            <span className="tabular-nums">{phase === 'listening' ? `Live · ${durationLabel(elapsed)}` : phaseLabel[phase]}</span>
+        </div>
+    );
+}
+
+function VoiceWaveform({ phase }: { phase: VoicePhase }) {
     const inputBands = useVoice((state) => state.inputBands);
     const outputBands = useVoice((state) => state.outputBands);
     const listening = phase === 'listening';
-    const idle = phase === 'idle';
-    const idleBands = useIdleWaveform(idle, inputBands.length);
-    const displayedInput = idleBands?.input ?? inputBands;
-    const displayedOutput = idleBands?.output ?? outputBands;
+    const displayed = useDisplayedWaveform(phase, inputBands, outputBands);
     const inputSpeaking = listening && Math.max(0, ...inputBands) > 0.06;
     const outputSpeaking = listening && Math.max(0, ...outputBands) > 0.04;
     const inputLabel = listening ? (inputSpeaking ? 'speaking' : 'listening') : 'idle';
     const outputLabel = listening ? (outputSpeaking ? 'speaking' : 'listening') : 'idle';
 
     return (
-        <section className="shrink-0 border-b border-border px-4 py-4" aria-label="Conversation audio activity">
-            <div className="flex items-center gap-1.5 text-[11px] text-text-muted" role="status">
-                <span
-                    className={clsx(
-                        'h-1.5 w-1.5 rounded-full',
-                        phase === 'listening' ? 'bg-positive' : phase === 'error' ? 'bg-status-error' : 'bg-text-faint'
-                    )}
-                />
-                <span className="tabular-nums">{phase === 'listening' ? `Live · ${durationLabel(elapsed)}` : phaseLabel[phase]}</span>
-            </div>
-            <div className="mt-3 flex items-center justify-between text-[10px] font-medium tracking-wide uppercase">
+        <section
+            className="relative z-10 shrink-0 px-4 pt-4 pb-5 after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-8 after:bg-gradient-to-b after:from-surface after:to-transparent"
+            aria-label="Conversation audio activity"
+        >
+            <div className="flex items-center justify-between text-[10px] font-medium tracking-wide uppercase">
                 <span className={inputSpeaking ? 'text-text' : 'text-text-muted'}>You · {inputLabel}</span>
                 <span className={outputSpeaking ? 'text-accent' : 'text-text-muted'}>Voice · {outputLabel}</span>
             </div>
@@ -101,25 +133,16 @@ function VoiceWaveform({ elapsed, phase }: { elapsed: number; phase: VoicePhase 
                 aria-label="Your voice above the line and Voice below it"
             >
                 <span className="absolute inset-x-0 top-1/2 z-10 h-px bg-surface" />
-                {displayedInput.map((input, index) => {
-                    const output = displayedOutput[index] ?? 0;
+                {displayed.input.map((input, index) => {
+                    const output = displayed.output[index] ?? 0;
                     return (
                         <span key={index} className="relative h-full min-w-0 grow" aria-hidden="true">
                             <span
-                                className={clsx(
-                                    'voice-waveform-input absolute right-0 bottom-1/2 left-0 rounded-t-sm bg-text-muted',
-                                    !idle && 'transition-[height,opacity] duration-75 ease-out'
-                                )}
-                                style={{
-                                    height: waveformHeight(input),
-                                    opacity: Math.max(0.45, input)
-                                }}
+                                className="voice-waveform-input absolute right-0 bottom-1/2 left-0 rounded-t-sm bg-[color-mix(in_srgb,var(--accent)_62%,white)]"
+                                style={{ height: waveformHeight(input) }}
                             />
                             <span
-                                className={clsx(
-                                    'voice-waveform-output absolute top-1/2 right-0 left-0 rounded-b-sm bg-accent',
-                                    !idle && 'transition-[height] duration-75 ease-out'
-                                )}
+                                className="voice-waveform-output absolute top-1/2 right-0 left-0 rounded-b-sm bg-accent"
                                 style={{ height: waveformHeight(output) }}
                             />
                         </span>
@@ -231,13 +254,14 @@ export function VoicePanel() {
                             <Icon icon={Mic} size={14} className="text-text-muted" />
                             Voice
                         </span>
+                        <VoiceStatus elapsed={elapsed} phase={phase} />
                         <Tooltip label="Close voice panel" name>
                             <button className="icon-btn" onClick={closeVoicePanel}>
                                 <Icon icon={X} size={16} />
                             </button>
                         </Tooltip>
                     </header>
-                    <VoiceWaveform elapsed={elapsed} phase={phase} />
+                    <VoiceWaveform phase={phase} />
                     <div className="min-h-0 grow overflow-y-auto px-4 py-5" role="log" aria-live="polite">
                         {timeline.length === 0 && (
                             <div className="flex min-h-48 flex-col items-center justify-center gap-2 text-center">
