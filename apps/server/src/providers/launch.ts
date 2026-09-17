@@ -1,4 +1,5 @@
 import { resumeCommandFor, type AgentKind, type AgentLaunch, type RuntimeMode } from '@ruimte/contracts';
+import { CLAUDE_ALLOW_CONTEXT } from './claude.ts';
 import { providerFor } from './registry.ts';
 
 /*
@@ -59,6 +60,11 @@ export const launchedMode = (launch: AgentLaunch | null): RuntimeMode => {
 
 const quote = (value: string): string => `'${value.replaceAll("'", `'\\''`)}'`;
 
+// What a CLI gets on every line, fresh or resumed, whatever the mode.
+const ALWAYS_FLAGS: Partial<Record<AgentKind, string[]>> = {
+    claude: [quote(CLAUDE_ALLOW_CONTEXT)]
+};
+
 /*
  * How a CLI without a hook that folds context in is told about `ruimte-context` at launch. Codex parses a
  * `-c` value as TOML, and a JSON string is a valid TOML basic string. Only a fresh launch carries it:
@@ -75,7 +81,7 @@ const NOTE_FLAGS: Partial<Record<AgentKind, (note: string) => string[]>> = {
  * otherwise be handed full access.
  */
 const launchFlags = (launch: AgentLaunch, runtimeMode: RuntimeMode | undefined): string[] => {
-    const flags = runtimeMode === undefined ? [] : [...RUNTIME_FLAGS[launch.kind][runtimeMode]];
+    const flags = [...(ALWAYS_FLAGS[launch.kind] ?? []), ...(runtimeMode === undefined ? [] : RUNTIME_FLAGS[launch.kind][runtimeMode])];
     const modelFlag = MODEL_FLAG[launch.kind];
     if (launch.model && modelFlag) {
         flags.push(modelFlag, quote(launch.model));

@@ -13,6 +13,13 @@ const CLAUDE_CHAT_ARGS = [
     'stdio'
 ];
 
+/*
+ * Lets every `ruimte-context` call through without a prompt, in every mode: the daemon already enforces each
+ * verb (mode ceiling, depth, cwd), so a prompt adds no protection. The `=` form matters, since the flag is
+ * variadic and would swallow a prompt argument after it (measured on Claude Code 2.1.274).
+ */
+export const CLAUDE_ALLOW_CONTEXT = '--allowedTools=Bash(ruimte-context *)';
+
 // Effort values the CLI takes on its flag; anything else is asked for in the prompt instead.
 const FLAG_EFFORTS = new Set(['low', 'medium', 'high', 'xhigh', 'max']);
 
@@ -31,7 +38,7 @@ interface ClaudeLaunch {
 
 /* The argument list for one Claude Code chat process. */
 export const claudeArgs = (launch: ClaudeLaunch): string[] => {
-    const args = [...CLAUDE_CHAT_ARGS];
+    const args = [...CLAUDE_CHAT_ARGS, CLAUDE_ALLOW_CONTEXT];
     const contextWindow = launch.selection.options.contextWindow;
     args.push('--model', `${launch.selection.model}${contextWindow === '1m' ? '[1m]' : ''}`);
     const effort = launch.selection.options.effort;

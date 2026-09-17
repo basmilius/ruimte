@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { ModelCatalog } from './catalog.ts';
-import { claudeArgs, promptPrefix } from './claude.ts';
+import { CLAUDE_ALLOW_CONTEXT, claudeArgs, promptPrefix } from './claude.ts';
 
 const catalog = new ModelCatalog();
 
@@ -73,5 +73,12 @@ describe('claudeArgs', () => {
         expect(supervised).not.toContain('--effort');
         expect(promptPrefix(selection)).toBe('ultrathink\n\n');
         expect(promptPrefix({ model: 'x', options: { effort: 'high' } })).toBe('');
+    });
+
+    test('every mode lets ruimte-context through without a prompt', () => {
+        const selection = { model: 'claude-sonnet-5', options: {} };
+        for (const runtimeMode of ['supervised', 'auto-accept-edits', 'auto', 'full-access'] as const) {
+            expect(claudeArgs({ selection, runtimeMode, resume: null })).toContain(CLAUDE_ALLOW_CONTEXT);
+        }
     });
 });

@@ -3,9 +3,12 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { AgentLaunch } from '@ruimte/contracts';
 import { verbsNote } from '../context/context-note.ts';
+import { CLAUDE_ALLOW_CONTEXT } from '../providers/claude.ts';
 import { terminalCommand } from '../providers/launch.ts';
 import { SessionError, type SessionManagerOptions } from './manager.ts';
 import { Recorder, makeHarness, type Harness } from './test-helpers.ts';
+
+const ALLOW = `'${CLAUDE_ALLOW_CONTEXT}'`;
 
 let harness: Harness;
 // The transcript of the agent the hooks below report; the daemon resumes only what is still on disk.
@@ -128,7 +131,7 @@ describe('agent status via hooks', () => {
         expect(pty.input).toEqual([]);
 
         harness.manager.resumeAgent('s2');
-        expect(pty.input).toEqual(["claude --resume 'claude-1'\n"]);
+        expect(pty.input).toEqual([`claude ${ALLOW} --resume 'claude-1'\n`]);
         expect(() => harness.manager.resumeAgent('s3')).toThrow('No session');
     });
 
@@ -152,7 +155,7 @@ describe('agent status via hooks', () => {
         // Starting the CLI here would land beside the resume the attach asks for: two commands for one agent.
         expect(pty.input).toEqual([]);
 
-        const line = "claude --permission-mode bypassPermissions --resume 'claude-1'\n";
+        const line = `claude ${ALLOW} --permission-mode bypassPermissions --resume 'claude-1'\n`;
         harness.manager.resumeAgent('s6');
         // The mode the node was made in rides on the resume too, so it comes back the way it started.
         expect(pty.input).toEqual([line]);
@@ -178,12 +181,12 @@ describe('agent status via hooks', () => {
 
         harness.manager.isAgentGone = (sessionId) => sessionId === 's12';
         harness.manager.resumeAgent('s12');
-        expect(harness.adapter.forSession('s12').input).toEqual(["claude --resume 'claude-1'\n"]);
+        expect(harness.adapter.forSession('s12').input).toEqual([`claude ${ALLOW} --resume 'claude-1'\n`]);
     });
 
     test('a restored agent whose transcript is gone launches the CLI fresh instead of resuming it', async () => {
         await createAgent('s7', { kind: 'claude', runtimeMode: 'full-access' });
-        expect(harness.adapter.forSession('s7').input).toEqual(['claude --permission-mode bypassPermissions\n']);
+        expect(harness.adapter.forSession('s7').input).toEqual([`claude ${ALLOW} --permission-mode bypassPermissions\n`]);
         await harness.manager.applyHook('claude', harness.manager.get('s7')!.hookToken, hook('UserPromptSubmit'));
         await endShell('s7');
         // Claude Code persists a conversation only once it has had a prompt, and a transcript can be
@@ -193,7 +196,7 @@ describe('agent status via hooks', () => {
         await createAgent('s7', { kind: 'claude', runtimeMode: 'full-access' });
         const pty = harness.adapter.forSession('s7');
         harness.manager.resumeAgent('s7');
-        expect(pty.input).toEqual(['claude --permission-mode bypassPermissions\n']);
+        expect(pty.input).toEqual([`claude ${ALLOW} --permission-mode bypassPermissions\n`]);
     });
 
     test('a resume for a kind whose hooks name no transcript carries its own fallback', async () => {
@@ -217,7 +220,7 @@ describe('agent status via hooks', () => {
         await createAgent('s9', { kind: 'claude', runtimeMode: 'full-access', resume: 'claude-9' });
         // One line for one agent, fallback and all.
         expect(harness.adapter.forSession('s9').input).toEqual([
-            "claude --permission-mode bypassPermissions --resume 'claude-9' || claude --permission-mode bypassPermissions\n"
+            `claude ${ALLOW} --permission-mode bypassPermissions --resume 'claude-9' || claude ${ALLOW} --permission-mode bypassPermissions\n`
         ]);
     });
 
@@ -247,7 +250,7 @@ describe('agent status via hooks', () => {
 
             restarted.manager.resumeAgent('s10');
             // Only the resume: the fallback a fresh line carries must not have been typed too.
-            expect(pty.input).toEqual(["claude --permission-mode acceptEdits --model 'claude-opus-5' --resume 'claude-1'\n"]);
+            expect(pty.input).toEqual([`claude ${ALLOW} --permission-mode acceptEdits --model 'claude-opus-5' --resume 'claude-1'\n`]);
         } finally {
             await restarted.cleanup();
         }
@@ -262,7 +265,7 @@ describe('agent status via hooks', () => {
         await createAgent('s11', { kind: 'codex', runtimeMode: 'supervised' });
         const pty = harness.adapter.forSession('s11');
         harness.manager.resumeAgent('s11');
-        expect(pty.input).toEqual(["claude --resume 'claude-1'\n"]);
+        expect(pty.input).toEqual([`claude ${ALLOW} --resume 'claude-1'\n`]);
     });
 
     test('a command given at create is typed as the first line, and what it prints before an attach is on the screen', async () => {
