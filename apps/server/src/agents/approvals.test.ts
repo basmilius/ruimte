@@ -42,6 +42,10 @@ describe('parsePermissionAsk', () => {
         expect(parsePermissionAsk({ hook_event_name: 'PermissionRequest' })).toBeNull();
         expect(parsePermissionAsk('nope')).toBeNull();
     });
+
+    test('is null for a question, which only the TUI can answer', () => {
+        expect(parsePermissionAsk({ ...ASK, tool_name: 'AskUserQuestion', tool_input: { questions: [] } })).toBeNull();
+    });
 });
 
 describe('ApprovalStore', () => {

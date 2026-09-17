@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { ApprovalChoice, ApprovalRequest } from '@ruimte/contracts';
+import { ASKING_TOOLS } from './hooks.ts';
 
 // Expire before curl and the CLI hook timeouts so the daemon, not either outer layer, releases first.
 export const APPROVAL_HOLD_MS = 110_000;
@@ -72,7 +73,8 @@ export const parsePermissionAsk = (body: unknown): PermissionAsk | null => {
         return null;
     }
     const toolName = asString(body.tool_name);
-    if (toolName === null) {
+    // A question asks for answers, not for permission: Allow would only let the TUI ask it, so its own screen does.
+    if (toolName === null || ASKING_TOOLS.has(toolName)) {
         return null;
     }
     return {

@@ -33,7 +33,7 @@ const EVENT_STATUS: Record<string, AgentStatus | 'gone'> = {
 };
 
 // Tools that stop and wait for the person, even though they arrive as a plain tool call.
-const ASKING_TOOLS = new Set(['AskUserQuestion']);
+export const ASKING_TOOLS: ReadonlySet<string> = new Set(['AskUserQuestion']);
 
 // Notification types that mean the CLI is blocked on the person; the others are informational.
 const NOTIFICATION_STATUS: Record<string, AgentStatus> = {
