@@ -87,6 +87,8 @@ export type ChatAttachment = z.infer<typeof ChatAttachmentSchema>;
 // A message typed while a turn was running; the daemon sends it when that turn settles.
 export const ChatQueuedMessageSchema = z.object({
     id: z.string().min(1),
+    // Older saved queues have no reserved turn yet; draining them still mints one.
+    turnId: z.string().min(1).optional(),
     text: z.string(),
     mentions: z.array(z.string()).optional(),
     skills: z.array(z.string()).optional(),
@@ -541,8 +543,8 @@ export const ChatSendPayloadSchema = z
     .refine((payload) => payload.text.trim() !== '' || (payload.attachments?.length ?? 0) > 0, { message: 'A message needs text or an attachment' });
 export type ChatSendPayload = z.infer<typeof ChatSendPayloadSchema>;
 
-// True when a turn was still running, so the message went into the chat's queue instead of out.
-export const ChatSendResultSchema = z.object({ queued: z.boolean() });
+// The turn id is reserved before queueing, so callers can follow this exact request until it settles.
+export const ChatSendResultSchema = z.object({ queued: z.boolean(), turnId: z.string().min(1) });
 export type ChatSendResult = z.infer<typeof ChatSendResultSchema>;
 
 export const ChatQueuePayloadSchema = z.object({

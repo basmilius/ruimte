@@ -77,7 +77,7 @@ describe('ChatManager', () => {
         await manager.send('chat-1', 'hello there');
         expect(manager.get('chat-1')?.running).toBe(true);
         // A send while the turn runs queues instead of failing; this test wants the queue empty again.
-        expect(await manager.send('chat-1', 'again')).toEqual({ queued: true });
+        expect(await manager.send('chat-1', 'again')).toMatchObject({ queued: true });
         manager.unqueue('chat-1', manager.get('chat-1')!.info.queue![0]!.id);
         await recorder.until(idle);
 
@@ -450,13 +450,18 @@ describe('ChatManager', () => {
     test('messages sent during a turn queue in order and go out when it settles', async () => {
         await manager.create({ chatId: 'chat-q', cwd: home });
         manager.attach('chat-q', 'c1');
-        expect(await manager.send('chat-q', 'first')).toEqual({ queued: false });
-        expect(await manager.send('chat-q', 'second')).toEqual({ queued: true });
-        expect(await manager.send('chat-q', 'third')).toEqual({ queued: true });
+        const first = await manager.send('chat-q', 'first');
+        const second = await manager.send('chat-q', 'second');
+        const third = await manager.send('chat-q', 'third');
+        expect(first).toMatchObject({ queued: false });
+        expect(second).toMatchObject({ queued: true });
+        expect(third).toMatchObject({ queued: true });
         expect(recorder.info?.queue?.map((message) => message.text)).toEqual(['second', 'third']);
 
         await recorder.until(() => recorder.ofKind('user').length === 3 && idle());
-        expect(recorder.ofKind('user').map((item) => item.text)).toEqual(['first', 'second', 'third']);
+        const messages = recorder.ofKind('user');
+        expect(messages.map((item) => item.text)).toEqual(['first', 'second', 'third']);
+        expect(messages.map((item) => item.turnId)).toEqual([first.turnId, second.turnId, third.turnId]);
         expect(recorder.info?.queue).toEqual([]);
     });
 

@@ -167,10 +167,12 @@ export class ChatSession {
      * that turn settles. One queue for both providers: Claude's steer and Codex's own queue have
      * different semantics, and one rule is easier to reason about than a rule per CLI.
      */
-    send(text: string, extras: ChatSendExtras = {}): { queued: boolean } {
+    send(text: string, extras: ChatSendExtras = {}): { queued: boolean; turnId: string } {
+        const turnId = newId('turn');
         if (this.busy) {
             const message: ChatQueuedMessage = {
                 id: newId('queued'),
+                turnId,
                 text,
                 createdAt: Date.now(),
                 ...(extras.mentions?.length ? { mentions: extras.mentions } : {}),
@@ -178,10 +180,10 @@ export class ChatSession {
                 ...(extras.attachments?.length ? { attachments: extras.attachments } : {})
             };
             this.setQueue([...this.queue, message]);
-            return { queued: true };
+            return { queued: true, turnId };
         }
-        this.dispatch(text, extras);
-        return { queued: false };
+        this.dispatch(text, extras, turnId);
+        return { queued: false, turnId };
     }
 
     /* Drops a queued message; false when nothing waits under that id. */
@@ -226,13 +228,13 @@ export class ChatSession {
             return;
         }
         this.setQueue(rest);
-        this.dispatch(next.text, { mentions: next.mentions, skills: next.skills, attachments: next.attachments });
+        this.dispatch(next.text, { mentions: next.mentions, skills: next.skills, attachments: next.attachments }, next.turnId);
     }
 
-    private dispatch(text: string, extras: ChatSendExtras): void {
+    private dispatch(text: string, extras: ChatSendExtras, requestedTurnId?: string): void {
         this.settleAgentTurn();
         const note = this.contextNote(text);
-        const turnId = this.openTurn(text, note, extras);
+        const turnId = this.openTurn(text, note, extras, requestedTurnId);
         const input = {
             text,
             preamble: note,
@@ -715,8 +717,8 @@ export class ChatSession {
         return scanned.filter((skill) => known.has(skill.name));
     }
 
-    private openTurn(text: string | null, note: string | null, extras: ChatSendExtras): string {
-        const turnId = newId('turn');
+    private openTurn(text: string | null, note: string | null, extras: ChatSendExtras, requestedTurnId?: string): string {
+        const turnId = requestedTurnId ?? newId('turn');
         const now = Date.now();
         const events = [this.thread.upsert({ id: turnId, kind: 'turn', createdAt: now, turnId, state: 'running', origin: 'user', endedAt: null, costUsd: 0 })];
         if (note !== null) {

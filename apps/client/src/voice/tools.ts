@@ -4,6 +4,8 @@ import { clientActions, VOICE_ACTION_CALL } from '@/actions/client-actions';
 import { intersects, visibleRect } from '@/canvas/math';
 import { focusedCanvas, type CanvasState } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
+import { currentEndpointId, endpointKey } from '@/state/keys';
+import type { VoiceChatFollowUp } from '@/voice/chat-follow-up';
 import type { VoiceActionKind } from '@/voice/state';
 
 interface ToolAction {
@@ -16,6 +18,7 @@ interface ToolAction {
 export interface VoiceToolExecution {
     output: Record<string, unknown>;
     action?: ToolAction;
+    followUp?: VoiceChatFollowUp;
 }
 
 const ok = (message: string, data: Record<string, unknown> = {}, action?: ToolAction): VoiceToolExecution => ({
@@ -71,6 +74,9 @@ const stringArgument = (args: Record<string, unknown>, name: string): string | n
 
 const nullableStringArgument = (args: Record<string, unknown>, name: string): string | null | undefined =>
     args[name] === null ? null : typeof args[name] === 'string' && args[name].trim() !== '' ? args[name].trim() : undefined;
+
+const booleanArgument = (args: Record<string, unknown>, name: string): boolean | undefined =>
+    typeof args[name] === 'boolean' ? args[name] : undefined;
 
 const nullableStringsArgument = (args: Record<string, unknown>, name: string): string[] | null | undefined => {
     if (args[name] === null) {
@@ -464,7 +470,8 @@ const communicate = async (args: Record<string, unknown>): Promise<VoiceToolExec
     const target = nullableStringArgument(args, 'chat');
     const prompt = nullableStringArgument(args, 'prompt');
     const limit = nullableIntegerArgument(args, 'limit');
-    if (!action || target === undefined || prompt === undefined || limit === undefined) {
+    const notifyOnCompletion = booleanArgument(args, 'notify_on_completion');
+    if (!action || target === undefined || prompt === undefined || limit === undefined || notifyOnCompletion === undefined) {
         return failed('The AI Chat action arguments were invalid.');
     }
     const matched = findChat(target);
@@ -494,11 +501,21 @@ const communicate = async (args: Record<string, unknown>): Promise<VoiceToolExec
     if (result.status !== 'completed') {
         return failureOf(result);
     }
-    return ok(`${result.output.queued ? 'Queued' : 'Submitted'} the prompt in “${result.output.chat}”.`, result.output, {
+    const execution = ok(`${result.output.queued ? 'Queued' : 'Submitted'} the prompt in “${result.output.chat}”.`, result.output, {
         kind: 'chat',
         label: result.output.queued ? 'Queued AI Chat prompt' : 'Prompted AI Chat',
         detail: `${result.output.chat}: ${prompt.slice(0, 120)}`
     });
+    return notifyOnCompletion
+        ? {
+              ...execution,
+              followUp: {
+                  key: endpointKey(currentEndpointId(), chat.id),
+                  chat: result.output.chat,
+                  turnId: result.output.turnId
+              }
+          }
+        : execution;
 };
 
 const controlAction = async (args: Record<string, unknown>): Promise<VoiceToolExecution> => {

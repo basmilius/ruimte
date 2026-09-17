@@ -1,11 +1,13 @@
 import { isCanvasView, isOpenableView } from '@ruimte/contracts';
 import { focusedCanvas } from '@/state/canvas';
+import { useChats } from '@/state/chats';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { LiveSession, type LiveEvent } from '@/voice/live-session';
 import { MicrophoneMonitor, WaveformMonitor, WAVEFORM_BAND_COUNT } from '@/voice/microphone';
 import { ResponseToolLoop } from '@/voice/response-tool-loop';
+import { chatCompletion, completionPrompt, type VoiceChatFollowUp } from '@/voice/chat-follow-up';
 import { addTranscriptDelta, nextVoiceTimelineOrder, useVoice, type VoiceAction, type VoiceActionKind } from '@/voice/state';
 import { executeVoiceTool } from '@/voice/tools';
 
@@ -14,9 +16,11 @@ let microphone: MicrophoneMonitor | null = null;
 let outputWaveform: WaveformMonitor | null = null;
 let toolLoop: ResponseToolLoop | null = null;
 let unsubscribeDocument: (() => void) | null = null;
+let unsubscribeChats: (() => void) | null = null;
 let contextTimer: number | null = null;
 let clockTimer: number | null = null;
 const undo = new Map<string, () => void>();
+const chatFollowUps = new Map<string, VoiceChatFollowUp>();
 
 const failureText = (error: unknown): string => (error instanceof Error ? error.message : 'GPT-Live could not start');
 
@@ -59,6 +63,24 @@ const workspaceContext = (): string => {
 
 const appendContext = (): void => session?.send({ type: 'session.thinking.append', delegation_id: null, content: workspaceContext() });
 const appendTime = (): void => session?.send({ type: 'session.thinking.append', delegation_id: null, content: temporalContext() });
+
+const flushChatFollowUps = (): void => {
+    const chats = useChats.getState().byKey;
+    for (const [id, followUp] of chatFollowUps) {
+        const completion = chatCompletion(chats[followUp.key], followUp.turnId);
+        if (!completion) {
+            continue;
+        }
+        chatFollowUps.delete(id);
+        session?.send({ type: 'session.thinking.append', delegation_id: null, content: completionPrompt(followUp, completion) });
+        session?.send({ type: 'response.create', event_id: crypto.randomUUID() });
+    }
+};
+
+const trackChatFollowUp = (followUp: VoiceChatFollowUp): void => {
+    chatFollowUps.set(`${followUp.key}:${followUp.turnId}`, followUp);
+    flushChatFollowUps();
+};
 
 const addAction = (kind: VoiceActionKind, label: string, detail: string, undoAction?: () => void): void => {
     const action: VoiceAction = {
@@ -128,6 +150,9 @@ export async function startVoice(): Promise<void> {
             if (execution.action) {
                 addAction(execution.action.kind, execution.action.label, execution.action.detail, execution.action.undo);
             }
+            if (execution.followUp) {
+                trackChatFollowUp(execution.followUp);
+            }
             return execution.output;
         }
     );
@@ -149,6 +174,7 @@ export async function startVoice(): Promise<void> {
             }
             contextTimer = window.setTimeout(appendContext, 250);
         });
+        unsubscribeChats = useChats.subscribe(flushChatFollowUps);
     } catch (error) {
         next.close();
         session = null;
@@ -175,6 +201,9 @@ export function stopVoice(): void {
     }
     unsubscribeDocument?.();
     unsubscribeDocument = null;
+    unsubscribeChats?.();
+    unsubscribeChats = null;
+    chatFollowUps.clear();
     useVoice.setState({ phase: session ? 'closing' : 'idle' });
     session?.close();
     session = null;

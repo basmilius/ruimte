@@ -588,7 +588,7 @@ export class ChatManager {
      * Answers whether the message went into the chat's queue because a turn was still running. The
      * uploads become files first, so a queued message carries paths and never its own bytes.
      */
-    async send(chatId: string, text: string, extras: ChatSendExtras = {}, uploads: ChatAttachmentUpload[] = []): Promise<{ queued: boolean }> {
+    async send(chatId: string, text: string, extras: ChatSendExtras = {}, uploads: ChatAttachmentUpload[] = []): Promise<{ queued: boolean; turnId: string }> {
         const session = this.require(chatId);
         const checked = ChatAttachmentUploadsSchema.safeParse(uploads);
         if (!checked.success) {

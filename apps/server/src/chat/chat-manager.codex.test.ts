@@ -114,7 +114,7 @@ describe('ChatManager with Codex', () => {
         await open('chat-queued-image');
         await manager.send('chat-queued-image', 'slow');
         await recorder.until(() => recorder.ofKind('assistant').length === 1);
-        expect(await manager.send('chat-queued-image', '', {}, [png])).toEqual({ queued: true });
+        expect(await manager.send('chat-queued-image', '', {}, [png])).toMatchObject({ queued: true });
         const queued = recorder.info!.queue![0]!.attachments![0]!;
         manager.cancel('chat-queued-image');
         await recorder.until(() => turnInputs().length === 2 && recorder.ofKind('turn').at(-1)?.state === 'done' && idle());
@@ -194,7 +194,7 @@ describe('ChatManager with Codex', () => {
         await manager.send('chat-1', 'hello there');
         expect(manager.get('chat-1')?.running).toBe(true);
         // A send while the turn runs queues instead of failing; this test wants the queue empty again.
-        expect(await manager.send('chat-1', 'again')).toEqual({ queued: true });
+        expect(await manager.send('chat-1', 'again')).toMatchObject({ queued: true });
         manager.unqueue('chat-1', manager.get('chat-1')!.info.queue![0]!.id);
         await recorder.until(idle);
 

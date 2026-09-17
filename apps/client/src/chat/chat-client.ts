@@ -130,16 +130,15 @@ export class ChatClient {
         }
     }
 
-    /* Answers whether a turn was still running, so the message went into the chat's queue instead. */
-    async send(chatId: string, text: string, extras: ChatSendExtras = {}): Promise<boolean> {
-        const { queued } = await this.transport.request('chat.send', {
+    /* Returns the stable turn id even when the message first has to wait in the queue. */
+    async send(chatId: string, text: string, extras: ChatSendExtras = {}): Promise<{ queued: boolean; turnId: string }> {
+        return this.transport.request('chat.send', {
             chatId,
             text,
             mentions: extras.mentions,
             skills: extras.skills,
             attachments: extras.attachments
         });
-        return queued;
     }
 
     async unqueue(chatId: string, messageId: string): Promise<void> {

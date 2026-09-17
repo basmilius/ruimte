@@ -48,6 +48,8 @@ class FakeTransport implements Transport {
                 } as RequestMap[T]['result']);
             case 'chat.configure':
                 return Promise.resolve({ ...info(chatId), runtimeMode: 'auto' } as RequestMap[T]['result']);
+            case 'chat.send':
+                return Promise.resolve({ queued: false, turnId: 'turn-test' } as RequestMap[T]['result']);
             case 'provider.list':
                 return Promise.resolve({
                     providers: [{ kind: 'claude', name: 'Claude Code', installed: true, version: '1', models: [], defaultModel: null }]

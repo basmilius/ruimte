@@ -135,9 +135,13 @@ export const VOICE_TOOL_DEFINITIONS = [
                     minimum: 1,
                     maximum: 20,
                     description: 'Recent message count when reading. Use null for the default of 20.'
+                },
+                notify_on_completion: {
+                    type: 'boolean',
+                    description: 'True only when the user asks Voice to report the result after the AI Chat finishes.'
                 }
             },
-            required: ['action', 'chat', 'prompt', 'limit'],
+            required: ['action', 'chat', 'prompt', 'limit', 'notify_on_completion'],
             additionalProperties: false
         },
         strict: true

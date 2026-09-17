@@ -434,8 +434,8 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>): A
             if (!chat) {
                 throw new ActionRefusal('unknown-chat', `No AI Chat with id “${chatId}” exists in this project.`);
             }
-            const queued = await chatClient.send(chatId, prompt);
-            return { output: { chatId, chat, queued } };
+            const submitted = await chatClient.send(chatId, prompt);
+            return { output: { chatId, chat, ...submitted } };
         },
         'chat.read': ({ chatId, limit }) => {
             const chat = chatTitle(document, chatId);

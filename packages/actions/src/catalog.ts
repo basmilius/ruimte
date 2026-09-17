@@ -260,7 +260,8 @@ export const ACTION_DEFINITIONS = {
         output: z.object({
             chatId: z.string().min(1),
             chat: z.string(),
-            queued: z.boolean()
+            queued: z.boolean(),
+            turnId: z.string().min(1)
         })
     },
     'chat.read': {

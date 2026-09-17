@@ -5734,6 +5734,10 @@
               "type": "string",
               "minLength": 1
             },
+            "turnId": {
+              "type": "string",
+              "minLength": 1
+            },
             "text": {
               "type": "string"
             },
@@ -6932,6 +6936,10 @@
               "type": "object",
               "properties": {
                 "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "turnId": {
                   "type": "string",
                   "minLength": 1
                 },
@@ -9870,6 +9878,10 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "turnId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
                           "text": {
                             "type": "string"
                           },
@@ -10128,6 +10140,10 @@
                         "type": "object",
                         "properties": {
                           "id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "turnId": {
                             "type": "string",
                             "minLength": 1
                           },
@@ -11249,10 +11265,15 @@
     "properties": {
       "queued": {
         "type": "boolean"
+      },
+      "turnId": {
+        "type": "string",
+        "minLength": 1
       }
     },
     "required": [
-      "queued"
+      "queued",
+      "turnId"
     ]
   },
   "request.chat.unqueue.payload": {
@@ -11563,6 +11584,10 @@
           "type": "object",
           "properties": {
             "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "turnId": {
               "type": "string",
               "minLength": 1
             },
@@ -12093,6 +12118,10 @@
               "type": "object",
               "properties": {
                 "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "turnId": {
                   "type": "string",
                   "minLength": 1
                 },
@@ -25852,6 +25881,10 @@
                     "type": "string",
                     "minLength": 1
                   },
+                  "turnId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
                   "text": {
                     "type": "string"
                   },
@@ -28096,6 +28129,10 @@
                           "type": "string",
                           "minLength": 1
                         },
+                        "turnId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
                         "text": {
                           "type": "string"
                         },
@@ -28354,6 +28391,10 @@
                       "type": "object",
                       "properties": {
                         "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "turnId": {
                           "type": "string",
                           "minLength": 1
                         },

@@ -211,7 +211,10 @@ describe('Voice domain tools', () => {
                 }
             }
         });
-        const result = await executeVoiceTool('communicate', JSON.stringify({ action: 'read_ai_chat', chat: 'Chat Test', prompt: null, limit: 2 }));
+        const result = await executeVoiceTool(
+            'communicate',
+            JSON.stringify({ action: 'read_ai_chat', chat: 'Chat Test', prompt: null, limit: 2, notify_on_completion: false })
+        );
         expect(result.output).toMatchObject({
             ok: true,
             messages: [
