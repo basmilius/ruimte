@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { serverActionCall, serverViewActions } from '../actions/view-actions.ts';
 import { nodesNamed } from './node-verb.ts';
-import { MAX_TITLE_LENGTH, TITLE_LINE, canvasFor, defineAction, field, placeOf, titleField } from './verb.ts';
+import { MAX_TITLE_LENGTH, TITLE_LINE, VerbRefusal, canvasFor, defineAction, field, placeOf, titleField } from './verb.ts';
 
 const RENAME_DETAIL: readonly string[] = [
     'argument\t<nodeId>\trequired\tThe node to rename, by id; one node per call',
@@ -29,18 +30,19 @@ export const renameAction = defineAction('node', {
     }),
     async run({ positionals: [id], flags }, call) {
         const place = placeOf(call);
-        return call.host.mutate(place.projectId, (content) => {
-            const canvas = canvasFor(content, place, flags.view);
-            const [node] = nodesNamed(canvas, [id]);
-            const result = [[node!.id, node!.kind, field(flags.title)].join('\t')];
-            if (node!.title === flags.title && node!.titleSource === 'user') {
-                return { content: null, result };
-            }
-            const nodes = canvas.nodes.map((candidate) =>
-                // A title the agent chose is not one the session may rename, the rule a person's typing follows.
-                candidate.id === node!.id ? { ...candidate, title: flags.title, titleSource: 'user' as const } : candidate
+        const canvas = canvasFor(await call.host.read(place.projectId), place, flags.view);
+        const [node] = nodesNamed(canvas, [id]);
+        const result = await serverViewActions.execute(
+            'node.rename',
+            { viewId: canvas.id, nodeId: id, name: flags.title },
+            serverActionCall(call.host, place.projectId, call.caller)
+        );
+        if (result.status !== 'completed') {
+            throw new VerbRefusal(
+                result.status === 'failed' ? result.error.code : 'confirmation-required',
+                result.status === 'failed' ? result.error.message : 'node rename requires confirmation'
             );
-            return { content: { ...content, views: content.views.map((view) => (view.id === canvas.id ? { ...canvas, nodes } : view)) }, result };
-        });
+        }
+        return [[node!.id, result.output.kind, field(result.output.name)].join('\t')];
     }
 });

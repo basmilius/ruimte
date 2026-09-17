@@ -1,5 +1,14 @@
 import { ActionRefusal, ActionRegistry, type ActionCall, type ActionOutput } from '@ruimte/actions';
-import { isOpenableView, isUnknownView, withRenamedView, type NodeTitleSource, type ProjectView } from '@ruimte/contracts';
+import {
+    isCanvasView,
+    isOpenableView,
+    isUnknownNode,
+    isUnknownView,
+    withRenamedView,
+    type NodeTitleSource,
+    type ProjectCanvasView,
+    type ProjectView
+} from '@ruimte/contracts';
 import type { CanvasHost } from '../canvas/verb.ts';
 
 interface ServerActionContext {
@@ -51,6 +60,50 @@ export const serverViewActions = new ActionRegistry<ServerActionContext>({
                                   });
                               }
                           })
+                }
+            };
+        });
+    },
+    'node.rename': async ({ viewId, nodeId, name }, { context }) => {
+        return context.host.mutate(context.projectId, (content) => {
+            const canvas = content.views.find((view): view is ProjectCanvasView => view.id === viewId && isCanvasView(view));
+            const node = canvas?.nodes.find((candidate) => candidate.id === nodeId);
+            if (!canvas || !node || isUnknownNode(node)) {
+                throw new ActionRefusal('unknown-node', `${nodeId} is not a renameable node on ${viewId}`);
+            }
+            const previousName = node.title;
+            const previousSource = node.titleSource ?? null;
+            const changed = previousName !== name || previousSource !== 'user';
+            const nodes = changed
+                ? canvas.nodes.map((candidate) => (candidate.id === nodeId ? { ...candidate, title: name, titleSource: 'user' as const } : candidate))
+                : canvas.nodes;
+            return {
+                content: changed ? { ...content, views: content.views.map((view) => (view.id === viewId ? { ...canvas, nodes } : view)) } : null,
+                result: {
+                    output: { viewId, nodeId, kind: node.kind, previousName, name, changed },
+                    ...(changed
+                        ? {
+                              undo: async () => {
+                                  await context.host.mutate(context.projectId, (current) => {
+                                      const currentCanvas = current.views.find((view): view is ProjectCanvasView => view.id === viewId && isCanvasView(view));
+                                      const currentNode = currentCanvas?.nodes.find((candidate) => candidate.id === nodeId);
+                                      if (!currentCanvas || !currentNode || currentNode.title !== name || currentNode.titleSource !== 'user') {
+                                          throw new ActionRefusal('stale-undo', `${name} is no longer the current title of this node`);
+                                      }
+                                      const restored = currentCanvas.nodes.map((candidate) =>
+                                          candidate.id === nodeId ? { ...candidate, title: previousName, titleSource: previousSource ?? undefined } : candidate
+                                      );
+                                      return {
+                                          content: {
+                                              ...current,
+                                              views: current.views.map((view) => (view.id === viewId ? { ...currentCanvas, nodes: restored } : view))
+                                          },
+                                          result: undefined
+                                      };
+                                  });
+                              }
+                          }
+                        : {})
                 }
             };
         });
