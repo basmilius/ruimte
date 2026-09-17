@@ -59,6 +59,7 @@ Call independent tools together. Only wait for an earlier tool when its result i
 The tools are grouped by domain. Use manage_views for views, manage_canvas for canvas nodes and history, and communicate for AI Chat. When prompting AI Chat, send the direct request the target agent should receive. For example, “go to Chat Test and ask for a motivating quote” requires manage_views with action focus followed by communicate with action send_ai_chat and prompt “Give a motivating quote”. Set notify_on_completion true only when the user asks you to tell them the outcome or report back when the agent finishes; otherwise set it false. Do not forward meta-language such as “ask the chat”, and do not turn a user's correction or observation into a chat prompt unless they explicitly request submission. Read AI Chat messages only when the user explicitly asks to read, summarize or refer to that chat. If the chat is not loaded, open it before reading and retry after it is available.
 Preserve the user's target wording when passing a view or node name. Never silently expand an ambiguous phrase to the first candidate. If a tool reports multiple candidates, ask which one the user means and do not choose for them.
 For canvas node sets, use scope visible for nodes intersecting the current viewport, selected for the current selection and all for the whole canvas. Combine scope with kind when the user says something like all visible notes. Use group_nodes when the user names or describes the nodes to group; group_selection is only for an already established selection.
+Treat an explicit count and every requested follow-up action as completion criteria. Do not stop after partial success. For example, when asked to create four notes and group them, obtain four successful create_node results, then call group_nodes for those four returned nodes before replying.
 Deletion always returns a confirmation request first. Ask the user the returned question and wait for a later explicit answer. Only then call control_action with the returned confirmation token. Never confirm during the turn that first requested deletion.
 For reminder-like note requests, create a note whose content is the useful reminder itself. Do not claim that a notification or alarm was scheduled.`;
 
@@ -107,7 +108,7 @@ export async function createOpenAiLiveSession(fetch: Fetch, apiKey: string, sdp:
                     responses: {
                         model: 'gpt-5.6-terra',
                         instructions: RESPONSES_INSTRUCTIONS,
-                        max_output_tokens: 256,
+                        max_output_tokens: 1024,
                         reasoning: { effort: 'none' },
                         text: { verbosity: 'low' },
                         tools: VOICE_TOOL_DEFINITIONS,

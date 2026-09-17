@@ -80,4 +80,44 @@ describe('ResponseToolLoop', () => {
         await flush();
         expect(executions).toBe(1);
     });
+
+    test('completes every parallel call before requesting the dependent response', async () => {
+        const sent: LiveEvent[] = [];
+        const completed: string[] = [];
+        const loop = new ResponseToolLoop(
+            (event) => sent.push(event),
+            async (_name, args) => {
+                const title = String(JSON.parse(args).title);
+                await Promise.resolve();
+                completed.push(title);
+                return { ok: true, node: title };
+            }
+        );
+
+        for (const title of ['One', 'Two', 'Three', 'Four']) {
+            loop.handle({
+                type: 'response.event',
+                delegation_id: 'delegation-notes',
+                event: {
+                    type: 'response.output_item.done',
+                    item: {
+                        type: 'function_call',
+                        call_id: `call-${title}`,
+                        name: 'manage_canvas',
+                        arguments: JSON.stringify({ title })
+                    }
+                }
+            });
+        }
+        loop.handle({
+            type: 'response.event',
+            delegation_id: 'delegation-notes',
+            event: { type: 'response.completed' }
+        });
+        await flush();
+
+        expect(completed).toEqual(['One', 'Two', 'Three', 'Four']);
+        expect(sent.filter((event) => event.type === 'response.item.create')).toHaveLength(4);
+        expect(sent.filter((event) => event.type === 'response.create')).toHaveLength(1);
+    });
 });
