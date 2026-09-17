@@ -1,6 +1,7 @@
 import { Fragment, useState, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, type ReactElement } from 'react';
 import clsx from 'clsx';
-import type { SplitLayout } from '@ruimte/contracts';
+import { isCanvasView, type SplitLayout } from '@ruimte/contracts';
+import { PromptStack } from '@/canvas/PromptStack';
 import { useDocument } from '@/state/document';
 import { CellViewContext } from '@/state/workspace-stores';
 import { canSplit, cellCount, isSameCell, locateView, snapToEven, type CellAt, type SplitZone } from '@/shell/split';
@@ -125,6 +126,7 @@ function Cell({
     onZone: (zone: SplitZone | null, box: { top: number; height: number }) => void;
 }) {
     const view = useDocument((s) => s.views.find((candidate) => candidate.id === viewId) ?? null);
+    const [dockHidden, setDockHidden] = useState(false);
 
     /* Where the drag would land, or null for a drop the grid cannot take: the pointer then reads
        `no-drop` and nothing lights up. A target that is not there needs no explanation. */
@@ -157,7 +159,9 @@ function Cell({
             <ViewSurface view={view} />
             {/* The dock belongs to the canvas under it, so it is drawn in the cell that has the
                 focus and nowhere else: nine docks would be nine rows of the same buttons. */}
-            {focused && <Dock />}
+            {focused && <Dock onHiddenChange={setDockHidden} />}
+            {/* A stack per canvas, not per dock: a cell without the focus has no dock, and its prompts still need a place. */}
+            {isCanvasView(view) && <PromptStack viewId={viewId} dockShown={focused && !dockHidden} />}
         </div>
     );
     return (

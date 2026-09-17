@@ -4,7 +4,7 @@ import { PROMPT_SAMPLES } from '@/prompts/logic/prompts.fixtures';
 import type { ChatsById } from '@/state/chats';
 import { endpointKey } from '@/state/keys';
 import type { SessionsByKey } from '@/state/sessions';
-import { canvasPrompts, stackFront, type CanvasPromptsInput } from './prompts';
+import { canvasPrompts, samePrompts, stackFront, type CanvasPromptsInput } from './prompts';
 
 const ENDPOINT = 'local';
 const key = (nodeId: string): string => endpointKey(ENDPOINT, nodeId);
@@ -115,5 +115,16 @@ describe('stackFront', () => {
         expect(stackFront(['a', 'c'], 'b', 1)).toBe('c');
         expect(stackFront(['a'], 'b', 1)).toBe('a');
         expect(stackFront([], 'b', 1)).toBeNull();
+    });
+});
+
+describe('samePrompts', () => {
+    test('two readings of the same state are the same stack, and a new request is not', () => {
+        const first = canvasPrompts(input());
+        const base = input();
+        const stable = { ...base, waitingSince: first.waitingSince };
+        expect(samePrompts(canvasPrompts(stable).prompts, canvasPrompts(stable).prompts)).toBe(true);
+        const sessions = { ...base.sessions, [key('api')]: { attached: true, agent: agent('needs-you', 100), approvals: [request('api-2', 150)] } };
+        expect(samePrompts(canvasPrompts(stable).prompts, canvasPrompts({ ...stable, sessions }).prompts)).toBe(false);
     });
 });

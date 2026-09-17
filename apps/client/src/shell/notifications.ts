@@ -1,5 +1,6 @@
 import type { ChatTurnItem } from '@ruimte/contracts';
 import { agentTurnLabel, turnLabel } from '@/chat/logic/timeline';
+import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { projectNodes, revealNode } from '@/project/views';
 import { approvalNotices, nextExpiry, noticeChanges, type ApprovalNotice } from '@/shell/approval-notices';
 import { useChats, type ChatsById } from '@/state/chats';
@@ -17,6 +18,7 @@ const notify = (nodeId: string, title: string, body: string, tag: string, silent
     notification.onclick = () => {
         window.focus();
         revealNode(nodeId);
+        bringPromptToFront(nodeId);
         notification.close();
     };
     return notification;

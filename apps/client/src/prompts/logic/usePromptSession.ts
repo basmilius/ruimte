@@ -4,14 +4,16 @@ import { emptyPromptDraft, type PromptDraft } from '@/prompts/logic/prompts';
 interface PromptSessionOptions<T> {
     prompts: readonly T[];
     idOf(prompt: T): string;
-    /* Which waiting prompt is in front, given the one that was; a new prompt never takes the place of the one being read. */
-    pick(waiting: readonly T[], activeId: string | null): T | null;
+    /* Which waiting prompt is in front, given the one that was and where it stood; a new prompt never takes the place of the one being read. */
+    pick(waiting: readonly T[], activeId: string | null, activeIndex: number): T | null;
     disabled: boolean;
 }
 
 export interface PromptSession<T> {
     active: T | null;
     activeId: string | null;
+    /* Where the active prompt stands among the waiting ones. */
+    index: number;
     /* The prompts not answered yet from this card, in the order they came in. */
     waiting: readonly T[];
     setActive(id: string): void;
@@ -31,6 +33,7 @@ export interface PromptSession<T> {
  */
 export function usePromptSession<T>({ prompts, idOf, pick, disabled }: PromptSessionOptions<T>): PromptSession<T> {
     const [activeId, setActiveId] = useState<string | null>(null);
+    const [activeIndex, setActiveIndex] = useState(0);
     const [completed, setCompleted] = useState<string[]>([]);
     const [drafts, setDrafts] = useState<Record<string, PromptDraft>>({});
     const [sending, setSending] = useState(false);
@@ -42,8 +45,12 @@ export function usePromptSession<T>({ prompts, idOf, pick, disabled }: PromptSes
         setCompleted(stillCompleted);
     }
     const waiting = prompts.filter((prompt) => !completed.includes(idOf(prompt)));
-    const active = pick(waiting, activeId);
+    const active = pick(waiting, activeId, activeIndex);
     const activeKey = active === null ? null : idOf(active);
+    const index = active === null ? 0 : waiting.indexOf(active);
+    if (index !== activeIndex) {
+        setActiveIndex(index);
+    }
 
     if (activeKey !== activeId) {
         setActiveId(activeKey);
@@ -79,6 +86,7 @@ export function usePromptSession<T>({ prompts, idOf, pick, disabled }: PromptSes
     return {
         active,
         activeId: activeKey,
+        index,
         waiting,
         setActive: (id) => {
             setActiveId(id);

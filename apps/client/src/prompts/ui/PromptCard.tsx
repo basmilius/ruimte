@@ -2,6 +2,10 @@ import type { ReactNode } from 'react';
 import { Hand, MessageCircleQuestionMark, type LucideIcon } from 'lucide-react';
 import { Icon } from '@/ui/Icon';
 
+/* The raised glass a chat's composer is made of, for a card that stands on its own over a canvas. */
+export const PROMPT_SURFACE =
+    'flex flex-col overflow-hidden rounded-2xl border border-border bg-[color-mix(in_srgb,var(--surface-raised)_92%,transparent)] shadow-float backdrop-blur-[14px]';
+
 export type PromptCardKind = 'approval' | 'question' | 'waiting';
 
 const ICONS: Record<PromptCardKind, LucideIcon> = { approval: Hand, question: MessageCircleQuestionMark, waiting: MessageCircleQuestionMark };

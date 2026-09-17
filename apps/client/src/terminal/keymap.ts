@@ -37,6 +37,7 @@ export const TERMINAL_HANDED_BACK: readonly Shortcut[] = [
     CANVAS_SHORTCUTS.previousView,
     CANVAS_SHORTCUTS.nextView,
     CANVAS_SHORTCUTS.togglePanel,
+    CANVAS_SHORTCUTS.focusPrompts,
     ...Object.values(FOCUS_SHORTCUTS),
     APP_SHORTCUTS.settings,
     APP_SHORTCUTS.sidebar

@@ -12,6 +12,7 @@ export const CANVAS_SHORTCUTS = {
     closeCell: shortcut('Mod+W'),
     newView: shortcut('Mod+T'),
     togglePanel: shortcut('Mod+Alt+B'),
+    focusPrompts: shortcut('Mod+Shift+P'),
     previousView: shortcut('Mod+Shift+['),
     nextView: shortcut('Mod+Shift+]'),
     browserBack: shortcut('Mod+['),

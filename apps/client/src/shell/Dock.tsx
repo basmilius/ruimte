@@ -47,7 +47,7 @@ const centerWorld = (store: StoreApi<CanvasState>) => {
  * has no canvas under it, so the dock stays away there; its counters are the sidebar's "Needs you"
  * section, and the way out of a body is Escape, the shortcut a terminal uses, or its row in the list.
  */
-export function Dock() {
+export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) => void }) {
     /* The canvas under this dock. It is drawn in the focused cell only, so the focused editor would
        answer the same today, but reading the cell keeps that a coincidence rather than a rule. */
     const canvasStore = useCanvasStore();
@@ -77,7 +77,7 @@ export function Dock() {
         return null;
     }
     return (
-        <DockShell>
+        <DockShell onHiddenChange={onHiddenChange}>
             <ModeChip />
             <Separator />
             <StatusSummary />

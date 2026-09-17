@@ -6,6 +6,7 @@ import { isApplePlatform } from '@/desktop/bridge';
 import { addNodeAtCenter } from '@/shell/commands';
 import { newCanvasView, showView, splitFocusedCell, stepView, viewAtIndex } from '@/project/views';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
+import { focusPromptStack, isInPromptStack, leavePromptStack } from '@/canvas/prompt-stack';
 import { useSubagentView } from '@/chat/subagent-view';
 import { stepTimelineMessage } from '@/chat/timeline-scroll';
 import { focusedCanvas } from '@/state/canvas';
@@ -179,6 +180,13 @@ export const useCanvasShortcuts = (): void => {
                 newCanvasView();
                 return;
             }
+            // From anywhere, a terminal included: the point is to answer without first leaving what you type in.
+            if (is(CANVAS_SHORTCUTS.focusPrompts)) {
+                if (focusPromptStack()) {
+                    e.preventDefault();
+                }
+                return;
+            }
             if (is(CANVAS_SHORTCUTS.togglePanel)) {
                 e.preventDefault();
                 useUi.getState().togglePanel();
@@ -250,7 +258,17 @@ export const useCanvasShortcuts = (): void => {
             if (e.key !== 'Escape' || e.metaKey || e.ctrlKey || e.altKey || e.isComposing) {
                 return;
             }
-            if (isInFloatingLayer(e.target) || isTypingTarget(e.target)) {
+            if (isInFloatingLayer(e.target)) {
+                return;
+            }
+            // A card of a prompt stack hands the keyboard back, before a chat or a node behind it hears the key.
+            if (isInPromptStack(e.target)) {
+                e.preventDefault();
+                e.stopPropagation();
+                leavePromptStack();
+                return;
+            }
+            if (isTypingTarget(e.target)) {
                 return;
             }
             const key = focusedChatKey();

@@ -97,6 +97,13 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
         shortcuts: [{ keys: CANVAS_SHORTCUTS.togglePanel, label: 'Toggle the last open panel' }]
     },
     {
+        title: 'Prompts',
+        shortcuts: [
+            { keys: CANVAS_SHORTCUTS.focusPrompts, label: 'Answer the front prompt of the canvas' },
+            { keys: KEY_SHORTCUTS.escape, label: 'Back to where you were' }
+        ]
+    },
+    {
         title: 'Chat',
         shortcuts: [
             { keys: CANVAS_SHORTCUTS.previousMessage, label: 'Previous message you sent' },

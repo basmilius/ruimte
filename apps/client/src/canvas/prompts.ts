@@ -103,3 +103,20 @@ export const stackFront = (ids: readonly string[], activeId: string | null, last
     }
     return ids[Math.min(Math.max(lastIndex, 0), ids.length - 1)]!;
 };
+
+const payloadOf = (subject: PromptSubject): unknown =>
+    subject.kind === 'chat' ? subject.item : subject.kind === 'terminal-approval' ? subject.request : subject.since;
+
+/* Whether a new reading draws the same stack, so a word streaming into a chat does not redraw its cards. */
+export const samePrompts = (a: readonly CanvasPrompt[], b: readonly CanvasPrompt[]): boolean =>
+    a.length === b.length &&
+    a.every((prompt, i) => {
+        const other = b[i]!;
+        return (
+            prompt.id === other.id &&
+            prompt.title === other.title &&
+            prompt.provider === other.provider &&
+            prompt.subject.kind === other.subject.kind &&
+            payloadOf(prompt.subject) === payloadOf(other.subject)
+        );
+    });
