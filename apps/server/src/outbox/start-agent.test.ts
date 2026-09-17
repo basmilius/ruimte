@@ -27,9 +27,9 @@ const stillClock: OutboxClock = { now: () => 1, setTimeout: () => null, clearTim
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
 const TEAM = [
-    { title: 'Lexer', prompt: 'fix the tokenizer', provider: 'claude' },
-    { title: 'Parser', prompt: 'fix the parser', provider: 'codex', chat: true },
-    { title: 'Docs', prompt: 'write the docs', provider: 'claude', chat: true }
+    { title: 'Lexer', prompt: 'fix the tokenizer', provider: 'claude', terminal: true },
+    { title: 'Parser', prompt: 'fix the parser', provider: 'codex' },
+    { title: 'Docs', prompt: 'write the docs', provider: 'claude' }
 ];
 
 const content = (): ProjectContent => ({

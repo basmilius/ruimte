@@ -65,8 +65,8 @@ const firstTurn = (chatId: string): ChatTurnItem | undefined =>
 test('two roles that change the same file each work in a worktree of their own, and each turn diff holds only its own change', async () => {
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
     const roles = [
-        { title: 'Lexer', prompt: 'write: shared.txt from the lexer', provider: 'claude', chat: true },
-        { title: 'Parser', prompt: 'write: shared.txt from the parser', provider: 'claude', chat: true }
+        { title: 'Lexer', prompt: 'write: shared.txt from the lexer', provider: 'claude' },
+        { title: 'Parser', prompt: 'write: shared.txt from the parser', provider: 'claude' }
     ];
     const lines = await runVerb(daemon, 'chat-lead', 'team', ['--label', 'Crew', '--worktree', '--roles', JSON.stringify(roles)]);
     const [lexer, parser] = lines.slice(1).map((line) => line.split('\t')[0]!);
@@ -99,7 +99,7 @@ test('a worktree an agent verb makes is written down with the branch and commit 
     const featureHead = (await gitIn(folder, ['rev-parse', 'HEAD'])).trim();
     const projectId = store.index.locate('chat-lead')!.projectId;
 
-    const lines = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--chat', '--worktree', '--title', 'Lexer']);
+    const lines = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--worktree', '--title', 'Lexer']);
     const nodeId = lines[0]!.split('\t')[0]!;
 
     const worktrees = new Worktrees(join(root, 'home'));

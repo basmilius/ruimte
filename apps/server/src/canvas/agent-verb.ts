@@ -34,7 +34,7 @@ export const newNode = (name = 'new node'): string => `<${name}>`;
 
 export const NEW_NODE = newNode();
 
-/* The CLIs with a chat backend; the rest only ever runs in a shell, which is what `--chat` refuses. */
+/* The CLIs with a chat backend; the rest only ever runs in a shell, so an agent of theirs is always a terminal. */
 export const chatKinds = (): AgentKind[] => AGENT_KINDS.filter((kind) => providerFor(kind).capabilities.chat);
 
 export const nameOf = (kind: AgentKind): string => providerFor(kind).name;
@@ -43,9 +43,9 @@ const KIND_MESSAGE = `agent needs a CLI: ${AGENT_KINDS.join(', ')}`;
 
 const AGENT_DETAIL: readonly string[] = [
     `argument\t<cli>\trequired\t${AGENT_KINDS.join(', ')}`,
-    'prints\tid\tkind\tview\tcli\tedge\ttask\tthe new node, its kind (terminal or chat), the canvas it landed on, the CLI it runs, the id of the edge drawn into it (- when none was drawn) and, with --task, the id of the task',
+    'prints\tid\tkind\tview\tcli\tedge\ttask\tthe new node, its kind (chat or terminal), the canvas it landed on, the CLI it runs, the id of the edge drawn into it (- when none was drawn) and, with --task, the id of the task',
     'prints\tnext\tthe last line under --task, saying what to do while the task runs',
-    `flag\t--chat\tno value\tMakes a chat node instead of a terminal node; only a CLI with a chat backend takes it (${chatKinds().join(', ')})`,
+    `flag\t--terminal\tno value\tMakes a terminal node instead of a chat node; a CLI without a chat backend is a terminal anyway (only ${chatKinds().join(', ')} have one)`,
     `flag\t--prompt T\toptional\tWhat the agent starts working on; \\n, \\t and \\\\ are read as escapes, at most ${MAX_PROMPT_LENGTH} characters`,
     'flag\t--prompt-file F\toptional\tThe same prompt out of a file, for one with exact bytes; not together with --prompt',
     'flag\t--cwd P\toptional\tThe directory the agent starts in',
@@ -58,8 +58,8 @@ const AGENT_DETAIL: readonly string[] = [
     'flag\t--worktree\tno value\tStarts the agent in a git worktree of its own on a new branch; not together with --cwd',
     'flag\t--branch B\toptional\tWith --worktree: the branch to use instead of one named after the task or the title; an existing branch is checked out as it is',
     `flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field is dry-run and the last names the edge it would draw, as <from> -> <new node>; ${DRY_RUN_PREVIEW}`,
-    'kinds\tterminal\tThat CLI running in a shell, which is what the person sees and can type in',
-    'kinds\tchat\tThe CLI as a thread in the node, fixed to that CLI, with no model picker on the composer',
+    `kinds\tchat\tThe default for ${chatKinds().join(', ')}: the CLI as a thread in the node, fixed to that CLI, with no model picker on the composer; its last answer settles a task`,
+    'kinds\tterminal\tThat CLI running in a shell, which is what the person sees and can type in; the only kind for a CLI without a chat backend, and a terminal child has to call done to settle a task',
     'edge\tThe edge runs from you into the new node, which is the direction that makes you readable to it: it can run ruimte-context read on your id',
     'edge\tOnly a node on that canvas gets one: a chat that is a view of its own, or a node of another canvas, gets no edge and the edge column shows -',
     'edge\tOne way only: you do not read the new agent through it. ruimte-context link new --to <its id> draws the line back when you want that too',
@@ -147,14 +147,14 @@ const promptOf = async (flags: { prompt?: string; 'prompt-file'?: string }, call
 
 export const agentVerb = defineVerb({
     name: 'agent',
-    usage: `<${AGENT_KINDS.join('|')}> [--chat] [--prompt T | --prompt-file F] [--cwd P] [--view V] [--beside N] [--group G] [--title T] [--task T] [--mode M] [--worktree [--branch B]] [--dry-run]`,
+    usage: `<${AGENT_KINDS.join('|')}> [--terminal] [--prompt T | --prompt-file F] [--cwd P] [--view V] [--beside N] [--group G] [--title T] [--task T] [--mode M] [--worktree [--branch B]] [--dry-run]`,
     summary: 'Opens an agent node that starts working, with an edge from you into it when you are a node on that canvas, so it can read what you have',
     detail: AGENT_DETAIL,
     dryRun: true,
     positionals: z.tuple([z.enum(AGENT_KINDS, { error: KIND_MESSAGE })], {
         error: (issue) => (issue.code === 'too_big' ? 'agent takes one CLI and nothing else; what it should do goes in --prompt' : KIND_MESSAGE)
     }),
-    switches: ['chat', 'worktree'],
+    switches: ['terminal', 'worktree'],
     flags: z.object({
         prompt: z.string().optional(),
         'prompt-file': z.string().min(1, '--prompt-file needs the path of a file').optional(),
@@ -171,20 +171,13 @@ export const agentVerb = defineVerb({
         const place = placeOf(call);
         const depth = depthForOpening(call, 'agent', 1);
         const ceiling = modeForOpening(call, flags.mode);
-        const chat = switches.has('chat');
+        const chat = !switches.has('terminal') && providerFor(kind).capabilities.chat;
         const inWorktree = switches.has('worktree');
         if (flags.branch !== undefined && !inWorktree) {
             throw new VerbRefusal('branch-needs-worktree', '--branch names the branch of a worktree; add --worktree');
         }
         if (inWorktree && flags.cwd !== undefined) {
             throw new VerbRefusal('worktree-and-cwd', '--worktree and --cwd both say where the agent starts; give one of them');
-        }
-        if (chat && !providerFor(kind).capabilities.chat) {
-            throw new VerbRefusal(
-                'no-chat-backend',
-                `${nameOf(kind)} has no chat backend; leave --chat out and it opens as a terminal agent`,
-                chatKinds().map((candidate) => `cli\t${candidate}\t${nameOf(candidate)}\ttakes --chat`)
-            );
         }
         if (flags.beside !== undefined && flags.group !== undefined) {
             throw new VerbRefusal('two-places', '--beside and --group both say where the node goes; give one of them');

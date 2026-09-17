@@ -81,8 +81,8 @@ const firstTurn = (chatId: string): ChatTurnItem | undefined =>
 const team = async (lexerWrites: string, parserWrites: string): Promise<{ lexer: string; parser: string }> => {
     await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder });
     const roles = [
-        { title: 'Lexer', prompt: `write: ${lexerWrites}`, provider: 'claude', chat: true },
-        { title: 'Parser', prompt: `write: ${parserWrites}`, provider: 'claude', chat: true }
+        { title: 'Lexer', prompt: `write: ${lexerWrites}`, provider: 'claude' },
+        { title: 'Parser', prompt: `write: ${parserWrites}`, provider: 'claude' }
     ];
     const lines = await runVerb(daemon, 'chat-lead', 'team', ['--label', 'Crew', '--worktree', '--roles', JSON.stringify(roles)]);
     const [lexer, parser] = lines.slice(1).map((line) => line.split('\t')[0]!);

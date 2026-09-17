@@ -503,10 +503,10 @@ describe('help', () => {
     test('help agent covers what a first-time caller cannot see from the canvas', async () => {
         const { lines } = await post('help', ['agent']);
         expect(lines).toContain(
-            'prints\tid\tkind\tview\tcli\tedge\ttask\tthe new node, its kind (terminal or chat), the canvas it landed on, the CLI it runs, the id of the edge drawn into it (- when none was drawn) and, with --task, the id of the task'
+            'prints\tid\tkind\tview\tcli\tedge\ttask\tthe new node, its kind (chat or terminal), the canvas it landed on, the CLI it runs, the id of the edge drawn into it (- when none was drawn) and, with --task, the id of the task'
         );
-        // Which CLIs take --chat, from the registry rather than from a sentence that can drift.
-        expect(lines.some((line) => line.startsWith('flag\t--chat\t') && line.includes('claude, codex'))).toBe(true);
+        // Which CLIs open as a chat, from the registry rather than from a sentence that can drift.
+        expect(lines.some((line) => line.startsWith('flag\t--terminal\t') && line.includes('claude, codex'))).toBe(true);
         expect(lines.some((line) => line.startsWith('flag\t--prompt T\t') && line.includes(String(MAX_PROMPT_LENGTH)))).toBe(true);
         expect(lines.some((line) => line.startsWith('paths\t') && line.includes('worktree'))).toBe(true);
         expect(lines.some((line) => line.startsWith('without a prompt\t'))).toBe(true);
@@ -524,8 +524,8 @@ describe('help', () => {
         );
         // The way back into a role's work, which agent says and team did not.
         expect(lines.some((line) => line.startsWith('edges\t') && line.includes('ruimte-context link new --to'))).toBe(true);
-        // Which CLIs take a chat role, from the registry rather than from a phrase that can drift.
-        expect(lines.some((line) => line.startsWith('roles\tchat\t') && line.includes('(claude, codex)'))).toBe(true);
+        // Which CLIs open a chat role, from the registry rather than from a phrase that can drift.
+        expect(lines.some((line) => line.startsWith('roles\tterminal\t') && line.includes('claude, codex'))).toBe(true);
         expect(lines.some((line) => line.startsWith('depth\t') && line.includes(`A role lands at depth ${MAX_TEAM_DEPTH}`) && line.includes('agent'))).toBe(
             true
         );
@@ -1065,8 +1065,8 @@ describe('node new', () => {
 });
 
 describe('agent', () => {
-    test('opens a terminal agent with an edge from the caller into it, and holds the prompt', async () => {
-        const { status, lines } = await post('agent', ['claude', '--prompt', 'say hello']);
+    test('--terminal opens a terminal agent with an edge from the caller into it, and holds the prompt', async () => {
+        const { status, lines } = await post('agent', ['claude', '--terminal', '--prompt', 'say hello']);
         expect(status).toBe(200);
         const [id, kind, viewId, cli, edgeId] = lines[0]!.split('\t');
         expect(id).toMatch(/^terminal-[0-9a-z]{8}$/);
@@ -1086,8 +1086,8 @@ describe('agent', () => {
         expect(node.runtimeMode).toBe('full-access');
     });
 
-    test('--chat makes a chat node fixed to its CLI', async () => {
-        const { lines } = await post('agent', ['codex', '--chat', '--title', 'Reviewer']);
+    test('a CLI with a chat backend opens as a chat node fixed to its CLI', async () => {
+        const { lines } = await post('agent', ['codex', '--title', 'Reviewer']);
         const [id, kind] = lines[0]!.split('\t');
         expect(kind).toBe('chat');
         const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === id)!;
@@ -1096,11 +1096,12 @@ describe('agent', () => {
         expect(started).toEqual([{ projectId, nodeId: id!, openedBy: 'term-1', node: 'chat', provider: 'codex', cwd: folder }]);
     });
 
-    test('--chat is refused for a CLI without a chat backend, with the ones that have one', async () => {
-        const { status, lines } = await post('agent', ['gemini', '--chat']);
-        expect(status).toBe(422);
-        expect(lines[0]).toBe('refused\tno-chat-backend\tGemini has no chat backend; leave --chat out and it opens as a terminal agent');
-        expect(lines.slice(1)).toEqual(['cli\tclaude\tClaude Code\ttakes --chat', 'cli\tcodex\tCodex\ttakes --chat']);
+    test('a CLI without a chat backend opens as a terminal, with or without --terminal', async () => {
+        const plain = await post('agent', ['gemini']);
+        const asked = await post('agent', ['gemini', '--terminal']);
+        expect([plain.status, asked.status]).toEqual([200, 200]);
+        expect([plain.lines[0]!.split('\t')[1], asked.lines[0]!.split('\t')[1]]).toEqual(['terminal', 'terminal']);
+        expect(started.map((start) => start.node)).toEqual(['terminal', 'terminal']);
     });
 
     test('a CLI that is not installed is refused with the ones that are', async () => {
@@ -1165,7 +1166,7 @@ describe('agent', () => {
 
     test('a caller that is not a node on the canvas gets no edge', async () => {
         const { lines } = await post('agent', ['claude', '--view', 'board'], 'chat');
-        expect(lines[0]!.split('\t').slice(1)).toEqual(['terminal', 'board', 'claude', '-']);
+        expect(lines[0]!.split('\t').slice(1)).toEqual(['chat', 'board', 'claude', '-']);
         expect((await canvasOnDisk('board')).edges).toEqual([]);
     });
 
@@ -1194,7 +1195,7 @@ describe('agent', () => {
 describe('the mode ceiling', () => {
     test("--mode wider than the caller is refused with a code and the caller's mode", async () => {
         modes = { 'chat-1': 'supervised' };
-        const { status, lines } = await post('agent', ['claude', '--chat', '--mode', 'full-access', '--view', 'board'], 'chat');
+        const { status, lines } = await post('agent', ['claude', '--mode', 'full-access', '--view', 'board'], 'chat');
         expect(status).toBe(422);
         expect(lines[0]).toBe(
             'refused\tmode-above-parent\tYou run in supervised and --mode full-access is wider; an agent you open runs in your mode or a narrower one'
@@ -1212,8 +1213,8 @@ describe('the mode ceiling', () => {
 
     test('--mode at or under the caller is what the agent starts in', async () => {
         modes = { 'term-1': 'auto' };
-        const chat = await post('agent', ['claude', '--chat', '--mode', 'auto-accept-edits']);
-        const terminal = await post('agent', ['codex', '--mode', 'auto']);
+        const chat = await post('agent', ['claude', '--mode', 'auto-accept-edits']);
+        const terminal = await post('agent', ['codex', '--terminal', '--mode', 'auto']);
         expect(started.map((start) => [start.node, start.runtimeMode])).toEqual([
             ['chat', 'auto-accept-edits'],
             ['terminal', 'auto']
@@ -1227,14 +1228,14 @@ describe('the mode ceiling', () => {
     test("a terminal agent takes the person's terminal mode narrowed to the caller, and a chat is left to the daemon", async () => {
         modes = { 'term-1': 'auto-accept-edits' };
         terminalPreference = 'full-access';
-        await post('agent', ['claude']);
+        await post('agent', ['claude', '--terminal']);
         terminalPreference = 'supervised';
+        await post('agent', ['claude', '--terminal']);
         await post('agent', ['claude']);
-        await post('agent', ['claude', '--chat']);
         expect(started.map((start) => start.runtimeMode)).toEqual(['auto-accept-edits', 'supervised', undefined]);
         const roles = JSON.stringify([
-            { provider: 'claude', title: 'One', prompt: 'a' },
-            { provider: 'claude', title: 'Two', prompt: 'b', chat: true }
+            { provider: 'claude', title: 'One', prompt: 'a', terminal: true },
+            { provider: 'claude', title: 'Two', prompt: 'b' }
         ]);
         started = [];
         await post('team', ['--label', 'Crew', '--mode', 'supervised', '--roles', roles]);
@@ -1260,7 +1261,7 @@ describe('--worktree', () => {
         branches = ['main', 'lexer'];
         const roles = JSON.stringify([
             { provider: 'claude', title: 'Lexer', prompt: 'a' },
-            { provider: 'claude', title: 'Lexer', prompt: 'b', chat: true },
+            { provider: 'claude', title: 'Lexer', prompt: 'b' },
             { provider: 'codex', title: 'Parser!', prompt: 'c' }
         ]);
         const { lines } = await post('team', ['--label', 'Crew', '--worktree', '--roles', roles]);
@@ -1276,7 +1277,7 @@ describe('--worktree', () => {
     test('a single agent is named after its task, or takes the branch it is given', async () => {
         branches = ['main'];
         modes = { 'chat-1': 'full-access' };
-        await post('agent', ['claude', '--chat', '--worktree', '--task', 'Fix the lexer', '--prompt', 'go', '--view', 'board'], 'chat');
+        await post('agent', ['claude', '--worktree', '--task', 'Fix the lexer', '--prompt', 'go', '--view', 'board'], 'chat');
         await post('agent', ['claude', '--worktree', '--branch', 'feature/own']);
         expect(madeWorktrees.map((made) => made.branch)).toEqual(['fix-the-lexer', 'feature/own']);
     });
@@ -1309,8 +1310,8 @@ describe('team', () => {
     });
 
     const THREE = [
-        { title: 'Lexer', prompt: 'fix the tokenizer', provider: 'claude' },
-        { title: 'Parser', prompt: 'fix the parser', provider: 'codex', chat: true },
+        { title: 'Lexer', prompt: 'fix the tokenizer', provider: 'claude', terminal: true },
+        { title: 'Parser', prompt: 'fix the parser', provider: 'codex' },
         { title: 'Docs', prompt: 'write the docs', provider: 'gemini' }
     ];
 
@@ -1399,7 +1400,8 @@ describe('team', () => {
             [[THREE[0], { title: 'Parser', provider: 'codex' }], 'role 1 (prompt): prompt says what this agent starts working on'],
             [[{ title: 'Lexer', prompt: 'go', provider: 'kimi' }], `role 0 (provider): provider needs a CLI: ${AGENT_KINDS.join(', ')}`],
             [[{ prompt: 'go', provider: 'claude' }], 'role 0 (title): title needs a name for the node'],
-            [[THREE[0], { title: 'Parser', prompt: 'go', provider: 'codex', chat: 'yes' }], 'role 1 (chat): chat is true or false'],
+            [[THREE[0], { title: 'Parser', prompt: 'go', provider: 'codex', terminal: 'yes' }], 'role 1 (terminal): terminal is true or false'],
+            [[{ title: 'Lexer', prompt: 'go', provider: 'claude', chat: true }], 'role 0: Unrecognized key: "chat"'],
             [[{ title: 'Lexer', prompt: 'go', provider: 'claude', cwd: 'src' }], 'role 0: Unrecognized key: "cwd"'],
             [
                 [{ title: 'Lexer', prompt: 'x'.repeat(MAX_PROMPT_LENGTH + 1), provider: 'claude' }],
@@ -1417,11 +1419,7 @@ describe('team', () => {
         expect((await onDisk()).rev).toBe(1);
     });
 
-    test('a role asking for a chat on a CLI without one, or for a CLI that is not here, is refused by index', async () => {
-        const noChat = await post('team', args([THREE[0], { title: 'Docs', prompt: 'go', provider: 'gemini', chat: true }]));
-        expect(noChat.lines[0]).toBe('refused\tno-chat-backend\trole 1 (gemini): Gemini has no chat backend; leave chat out and it opens as a terminal agent');
-        expect(noChat.lines.slice(1)).toEqual(['cli\tclaude\tClaude Code\ttakes chat', 'cli\tcodex\tCodex\ttakes chat']);
-
+    test('a role for a CLI that is not here is refused by index', async () => {
         installed = ['claude'];
         const gone = await post('team', args(THREE));
         expect(gone.lines[0]).toBe('refused\tcli-not-installed\trole 1 (codex): Codex is not installed on this machine');
@@ -1478,8 +1476,8 @@ describe('team', () => {
         ];
         const dry = await post('team', [...args(pair), '--dry-run']);
         expect(dry.lines.slice(1)).toEqual([
-            'dry-run\tterminal\tLexer\tmain\tclaude\tterm-1 -> <Lexer>',
-            'dry-run\tterminal\tReviewer\tmain\tclaude\tterm-1 -> <Reviewer>'
+            'dry-run\tchat\tLexer\tmain\tclaude\tterm-1 -> <Lexer>',
+            'dry-run\tchat\tReviewer\tmain\tclaude\tterm-1 -> <Reviewer>'
         ]);
         const { lines } = await post('team', args(pair));
         expect(lines.slice(1).map((line) => line.split('\t')[2])).toEqual(['Lexer', 'Reviewer']);
@@ -1637,7 +1635,7 @@ describe('--dry-run', () => {
     test('agent checks everything, prints what it would make and writes nothing', async () => {
         const { status, lines } = await post('agent', ['claude', '--prompt', 'hi', '--dry-run']);
         expect(status).toBe(200);
-        expect(lines).toEqual([`dry-run\tterminal\tmain\tclaude\tterm-1 -> ${NEW_NODE}`]);
+        expect(lines).toEqual([`dry-run\tchat\tmain\tclaude\tterm-1 -> ${NEW_NODE}`]);
         expect((await onDisk()).rev).toBe(1);
         expect(held).toEqual([]);
     });
@@ -2596,7 +2594,7 @@ describe('view diagram', () => {
 
 describe('task list', () => {
     // The chat view `chat-1` is a chat, the one kind of caller that can be woken with a result.
-    const give = (argv: string[]) => post('agent', ['claude', '--chat', '--view', 'main', ...argv], 'chat');
+    const give = (argv: string[]) => post('agent', ['claude', '--view', 'main', ...argv], 'chat');
 
     test('agent --task from a chat records an open task, titles the node after it and tells the child how to report back', async () => {
         const { status, lines } = await give(['--task', 'Lexer', '--prompt', 'fix the tokenizer']);
@@ -2636,8 +2634,8 @@ describe('task list', () => {
 
     test('team --task gives every role a task of its own', async () => {
         const roles = JSON.stringify([
-            { title: 'Lexer', prompt: 'fix the tokenizer', provider: 'claude' },
-            { title: 'Docs', prompt: 'write the docs', provider: 'claude', chat: true }
+            { title: 'Lexer', prompt: 'fix the tokenizer', provider: 'claude', terminal: true },
+            { title: 'Docs', prompt: 'write the docs', provider: 'claude' }
         ]);
         const { lines } = await post('team', ['--label', 'Crew', '--task', '--roles', roles, '--view', 'main'], 'chat');
         const rows = lines.slice(1, -1).map((line) => line.split('\t'));

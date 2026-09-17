@@ -40,7 +40,7 @@ const RoleSchema = z.strictObject({
             error: (issue) => `prompt is ${lengthOf(issue.input)} characters and at most ${MAX_PROMPT_LENGTH} fit on the line a CLI is started with`
         }),
     provider: z.enum(AGENT_KINDS, { error: `provider needs a CLI: ${AGENT_KINDS.join(', ')}` }),
-    chat: z.boolean({ error: 'chat is true or false' }).optional()
+    terminal: z.boolean({ error: 'terminal is true or false' }).optional()
 });
 
 type Role = z.infer<typeof RoleSchema>;
@@ -58,7 +58,7 @@ const ROLES_LINES: readonly string[] = [
     `roles\ttitle\trequired\tThe title of the node, at most ${MAX_TITLE_LENGTH} characters; the session never renames over it`,
     `roles\tprompt\trequired\tWhat that agent starts working on, at most ${MAX_PROMPT_LENGTH} characters`,
     `roles\tprovider\trequired\t${AGENT_KINDS.join(', ')}`,
-    `roles\tchat\toptional\ttrue opens a chat node instead of a terminal node; only a CLI with a chat backend takes it (${chatKinds().join(', ')})`,
+    `roles\tterminal\toptional\ttrue opens a terminal node instead of a chat node; a CLI without a chat backend is a terminal anyway (only ${chatKinds().join(', ')} have one)`,
     `roles\tcount\tbetween 1 and ${MAX_ROLES}`
 ];
 
@@ -68,7 +68,7 @@ const TEAM_DETAIL: readonly string[] = [
     ...ROLES_LINES,
     'json\tA prompt is a JSON string, so a line break in it is \\n of JSON itself and nothing is escaped twice',
     `quoting\tThe JSON goes in single quotes, so an apostrophe in a prompt ends the quote early: write it as '\\'' or as \\u0027 inside the JSON string`,
-    `example\truimte-context team --label "Parser work" --roles '[{"title":"Lexer","prompt":"Fix the tokenizer in src/lex.ts","provider":"claude"},{"title":"Reviewer","prompt":"Read the Lexer node and review its work","provider":"codex","chat":true}]'`,
+    `example\truimte-context team --label "Parser work" --roles '[{"title":"Lexer","prompt":"Fix the tokenizer in src/lex.ts","provider":"claude"},{"title":"Reviewer","prompt":"Read the Lexer node and review its work","provider":"codex"},{"title":"Shell","prompt":"Run the lexer tests","provider":"claude","terminal":true}]'`,
     'prints\tid\tkind\ttitle\tview\tcli\tedge\ttask\tthe group first, its label in the title column and a dash for the CLI and the edge, then one line per role in the order of --roles, with the id of its task last under --task; the title is what tells two rows of one CLI apart',
     'prints\tnext\tthe last line under --task, saying what to do while the tasks run',
     'flag\t--cwd P\toptional\tThe directory every agent starts in; a directory per role is --worktree',
@@ -128,7 +128,7 @@ const parseRoles = (raw: string): Role[] => {
     return parsed.data;
 };
 
-const kindOf = (role: Role): 'chat' | 'terminal' => (role.chat === true ? 'chat' : 'terminal');
+const kindOf = (role: Role): 'chat' | 'terminal' => (role.terminal !== true && providerFor(role.provider).capabilities.chat ? 'chat' : 'terminal');
 
 export const teamVerb = defineVerb({
     name: 'team',
@@ -163,15 +163,6 @@ export const teamVerb = defineVerb({
             throw new VerbRefusal('worktree-and-cwd', '--worktree and --cwd both say where the agents start; give one of them');
         }
 
-        for (const [index, role] of roles.entries()) {
-            if (role.chat === true && !providerFor(role.provider).capabilities.chat) {
-                throw new VerbRefusal(
-                    'no-chat-backend',
-                    `role ${index} (${role.provider}): ${nameOf(role.provider)} has no chat backend; leave chat out and it opens as a terminal agent`,
-                    chatKinds().map((candidate) => `cli\t${candidate}\t${nameOf(candidate)}\ttakes chat`)
-                );
-            }
-        }
         const installed = await call.host.installedAgents();
         const missing = roles.findIndex((role) => !installed.includes(role.provider));
         if (missing !== -1) {

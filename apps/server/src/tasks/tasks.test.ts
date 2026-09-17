@@ -69,7 +69,7 @@ const verb = runVerb;
 
 /* Opens a child with a task and answers its id and the id of the task. */
 const delegate = async (daemon: Daemon, title: string, prompt: string, chat = true): Promise<{ childId: string; taskId: string }> => {
-    const [line] = await verb(daemon, 'chat-lead', 'agent', ['claude', ...(chat ? ['--chat'] : []), '--task', title, '--prompt', prompt]);
+    const [line] = await verb(daemon, 'chat-lead', 'agent', ['claude', ...(chat ? [] : ['--terminal']), '--task', title, '--prompt', prompt]);
     const fields = line!.split('\t');
     expect(fields).toHaveLength(6);
     return { childId: fields[0]!, taskId: fields[5]! };
@@ -77,7 +77,7 @@ const delegate = async (daemon: Daemon, title: string, prompt: string, chat = tr
 
 /* Opens a team of terminal roles with --task, which settle only when each calls done, and answers each role's node and task. */
 const delegateTeam = async (daemon: Daemon, titles: readonly string[]): Promise<Array<{ childId: string; taskId: string }>> => {
-    const roles = titles.map((title) => ({ title, prompt: `work on ${title}`, provider: 'claude' }));
+    const roles = titles.map((title) => ({ title, prompt: `work on ${title}`, provider: 'claude', terminal: true }));
     const lines = await verb(daemon, 'chat-lead', 'team', ['--label', 'Crew', '--task', '--roles', JSON.stringify(roles)]);
     expect(lines).toHaveLength(titles.length + 2);
     expect(lines.at(-1)).toBe(nextLine(true));
@@ -229,7 +229,7 @@ describe('a task wakes the chat that gave it', () => {
 
     test('a terminal agent is refused a task', async () => {
         const daemon = await boot();
-        const [line] = await verb(daemon, 'term-lead', 'agent', ['claude', '--chat', '--task', 'Lexer', '--prompt', 'fix it']);
+        const [line] = await verb(daemon, 'term-lead', 'agent', ['claude', '--task', 'Lexer', '--prompt', 'fix it']);
         expect(line).toStartWith('refused\tnot-a-chat-parent\t');
         expect(daemon.tasks.involving('term-lead')).toEqual([]);
     });

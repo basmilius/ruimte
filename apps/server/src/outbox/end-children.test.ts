@@ -77,8 +77,8 @@ const leadWorking = async (daemon: TestDaemon): Promise<void> => {
 
 /* A chat child that is still working on its task, and a terminal child whose shell runs. */
 const twoRunningChildren = async (daemon: TestDaemon): Promise<{ chat: string; terminal: string }> => {
-    const [chatLine] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--chat', '--task', 'Slow', '--prompt', 'slow']);
-    const [terminalLine] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--task', 'Shell', '--prompt', 'work']);
+    const [chatLine] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--task', 'Slow', '--prompt', 'slow']);
+    const [terminalLine] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--terminal', '--task', 'Shell', '--prompt', 'work']);
     const chat = chatLine!.split('\t')[0]!;
     const terminal = terminalLine!.split('\t')[0]!;
     await daemon.worker.settled();
@@ -193,7 +193,7 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
         const daemon = await boot();
         daemon.worker.start();
         await daemon.sessions.create({ sessionId: 'term-lead', cols: 80, rows: 24, cwd: folder, agent: { kind: 'claude', runtimeMode: 'full-access' } });
-        const [line] = await runVerb(daemon, 'term-lead', 'agent', ['claude', '--prompt', 'work']);
+        const [line] = await runVerb(daemon, 'term-lead', 'agent', ['claude', '--terminal', '--prompt', 'work']);
         const child = line!.split('\t')[0]!;
         await daemon.worker.settled();
 
@@ -225,11 +225,11 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
     test('an agent never opens one in a wider mode than its own', async () => {
         const daemon = await boot();
         await daemon.chats.create({ chatId: 'chat-lead', provider: 'claude', cwd: folder, runtimeMode: 'supervised' });
-        const [refusal] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--chat', '--mode', 'full-access']);
+        const [refusal] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--mode', 'full-access']);
         expect(refusal).toStartWith('refused\tmode-above-parent\t');
         // A person's wider composer pick does not reach a chat the lead opens either.
         daemon.chats.composerPreferences.set('client-1', { runtimeMode: 'full-access', changedAt: 1 });
-        const [line] = await runVerb(daemon, 'chat-lead', 'agent', ['claude', '--chat']);
+        const [line] = await runVerb(daemon, 'chat-lead', 'agent', ['claude']);
         daemon.worker.start();
         await daemon.worker.settled();
         expect(daemon.chats.get(line!.split('\t')[0]!)?.info.runtimeMode).toBe('supervised');
