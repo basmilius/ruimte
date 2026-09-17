@@ -188,7 +188,7 @@ export const placeInGroup = (group: GroupFrame, members: readonly Rect[], size: 
     };
 };
 
-// How wide a team stands before it starts a second row: eight roles then read as two rows of four.
+// How wide a team stands before it starts a second row: a full team of sixteen then reads as four rows of four.
 export const TEAM_COLUMNS = 4;
 
 /*

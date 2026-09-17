@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
 import { providerFor } from '../providers/registry.ts';
 import { AGENT_KINDS, agentNode, chatKinds, nameOf, newNode, terminalMode } from './agent-verb.ts';
-import { DEPTH_LIMIT_LINES, MAX_TEAM_DEPTH, depthForOpening } from './depth.ts';
+import { DEPTH_LIMIT_LINES, MAX_OPENED_PER_CALLER, MAX_TEAM_DEPTH, depthForOpening } from './depth.ts';
 import { MODE_LINES, modeFlag, modeForOpening } from './mode.ts';
 import { MAX_CANVAS_NODES, canvasFull, newId } from './node-verb.ts';
 import { placeFree, placeTeam, TEAM_COLUMNS } from './placement.ts';
@@ -13,8 +13,8 @@ import { MAX_TASK_PROMPT_LENGTH, TASK_LINES, requireChatParent, taskBrief } from
 import { MAX_TITLE_LENGTH, OPENING_OFF_CANVAS, TITLE_LINE, VerbRefusal, canvasFor, defineVerb, field, lengthOf, placeOf, titleField } from './verb.ts';
 import { WORKTREE_LINES, branchSlug, branchesForWorktrees, freeBranch, makeWorktrees } from './worktree.ts';
 
-/* The design's number: past eight the group is a wall of terminals and the bill is somebody's day. */
-export const MAX_ROLES = 8;
+/* As many as one caller may have open at once, so a single team can fill that allowance and no more. */
+export const MAX_ROLES = MAX_OPENED_PER_CALLER;
 
 /* Every field says its own sentence, so a role that is missing one reads the same as a role that
    filled it with the wrong thing; zod's default would name a type where the agent needs the field. */

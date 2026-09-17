@@ -5,7 +5,7 @@ import { VerbRefusal, type VerbCall } from './verb.ts';
  * an agent verb opens sits one deeper than the caller. `agent` reaches depth 2, so a person's agent
  * can open a helper and that helper one more, which is a chain somebody is still watching. `team`
  * reaches depth 1, so only a node a person opened may open one: a team that could open teams is a
- * fork bomb with a token bill, eight agents becoming sixty-four becoming five hundred and twelve.
+ * fork bomb with a token bill, sixteen agents becoming two hundred and fifty-six.
  */
 export const MAX_AGENT_DEPTH = 2;
 export const MAX_TEAM_DEPTH = 1;

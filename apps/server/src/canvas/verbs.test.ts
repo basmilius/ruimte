@@ -41,7 +41,7 @@ import { MAX_AGENT_DEPTH, MAX_OPENED_PER_CALLER, MAX_TEAM_DEPTH } from './depth.
 import { AGENT_KINDS, NEW_NODE } from './agent-verb.ts';
 import { MAX_LINKS } from './link-verb.ts';
 import { MAX_CANVAS_NODES } from './node-verb.ts';
-import { PLACEMENT_GAP } from './placement.ts';
+import { PLACEMENT_GAP, TEAM_COLUMNS } from './placement.ts';
 import { MAX_ROLES, ROLES_SHAPE } from './team-verb.ts';
 import { MAX_PROJECT_VIEWS, VIEW_KINDS, viewVerb } from './view-verb.ts';
 import { MAX_NOTICE_LENGTH } from '../context/notices.ts';
@@ -1203,8 +1203,8 @@ describe('team', () => {
                 expect(over).toBe(false);
             }
         }
-        // Four to a row, so eight roles stand in two.
-        expect(new Set(placed.map((node) => node.y)).size).toBe(2);
+        // Four to a row, so a full team stands in as many rows as it has fours.
+        expect(new Set(placed.map((node) => node.y)).size).toBe(Math.ceil(MAX_ROLES / TEAM_COLUMNS));
         // The group went beside the caller rather than over the note below it.
         const frame = canvas.nodes.find((node) => node.id === lines[0]!.split('\t')[0])!;
         expect(frame.x).toBe(560 + PLACEMENT_GAP);
@@ -1220,7 +1220,7 @@ describe('team', () => {
         expect((await post('team', args(many(MAX_ROLES + 1)))).lines[0]).toBe(
             `refused\tbad-roles\t--roles has ${MAX_ROLES + 1} roles and a team takes at most ${MAX_ROLES}`
         );
-        expect((await post('team', args([]))).lines[0]).toBe('refused\tbad-roles\t--roles has no roles in it; a team is between 1 and 8 of them');
+        expect((await post('team', args([]))).lines[0]).toBe(`refused\tbad-roles\t--roles has no roles in it; a team is between 1 and ${MAX_ROLES} of them`);
         expect((await post('team', args('claude'))).lines[0]).toBe('refused\tbad-roles\t--roles is a JSON array of roles');
         expect((await onDisk()).rev).toBe(1);
     });
