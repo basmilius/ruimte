@@ -51,7 +51,7 @@ import { Handshake } from './auth/handshake.ts';
 import type { Relay } from './auth/relay.ts';
 import { HOOKS_PATH, handleHookRequest } from './agents/hook-receiver.ts';
 import { HOOK_EVENTS } from './agents/hooks.ts';
-import { defaultHookPaths, installHooks } from './agents/install.ts';
+import { defaultCodexRulesPath, defaultHookPaths, installCodexRules, installHooks } from './agents/install.ts';
 import { ATTACHMENTS_PATH, handleAttachmentRequest } from './chat/attachment-route.ts';
 import { AttachmentStore } from './chat/attachment-store.ts';
 import { CANVAS_PATH, handleCanvasRequest } from './canvas/canvas-route.ts';
@@ -528,6 +528,14 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 })
                 .catch((e) => console.error(`Could not install ${kind} hooks:`, errorText(e)));
         }
+        const rulesPath = defaultCodexRulesPath();
+        installCodexRules(rulesPath)
+            .then((result) => {
+                if (result === 'written') {
+                    console.log(`Installed the codex rule for ruimte-context in ${rulesPath}`);
+                }
+            })
+            .catch((e) => console.error('Could not install the codex rule:', errorText(e)));
     }
 
     interface ConnectionState {

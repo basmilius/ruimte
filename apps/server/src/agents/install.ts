@@ -150,3 +150,31 @@ export const defaultHookPaths = (env: Record<string, string | undefined> = proce
         codex: join(env.CODEX_HOME ?? join(home, '.codex'), 'hooks.json')
     };
 };
+
+/*
+ * Lets Codex run `ruimte-context` outside its sandbox without asking: the seatbelt of workspace-write
+ * blocks every socket, loopback included, and Codex 0.154 has no setting that opens only the daemon's.
+ * The daemon already enforces every verb (mode ceiling, depth, cwd). A file of its own, so a person's
+ * `default.rules` is never touched, and rules only load from this folder, never from a flag.
+ */
+export const CODEX_RULES = '# Written by Ruimte; it is rewritten when it changes.\nprefix_rule(pattern=["ruimte-context"], decision="allow")\n';
+
+/* Idempotent like the hooks: a file that already says the same is left alone. */
+export const installCodexRules = async (path: string): Promise<InstallResult> => {
+    try {
+        if ((await readFile(path, 'utf8')) === CODEX_RULES) {
+            return 'unchanged';
+        }
+    } catch (e) {
+        if (!isNotFound(e)) {
+            throw new Error(`Cannot read ${path}: ${e instanceof Error ? e.message : String(e)}`);
+        }
+    }
+    await mkdir(dirname(path), { recursive: true });
+    await writeAtomic(path, CODEX_RULES, 0o644);
+    return 'written';
+};
+
+// Codex loads every `*.rules` file in this folder.
+export const defaultCodexRulesPath = (env: Record<string, string | undefined> = process.env): string =>
+    join(env.CODEX_HOME ?? join(env.HOME ?? homedir(), '.codex'), 'rules', 'ruimte.rules');

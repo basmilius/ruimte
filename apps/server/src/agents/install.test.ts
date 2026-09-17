@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { HOOK_EVENTS } from './hooks.ts';
-import { HOOK_MARKER, hookCommand, installHooks, mergeHooks } from './install.ts';
+import { CODEX_RULES, HOOK_MARKER, defaultCodexRulesPath, hookCommand, installCodexRules, installHooks, mergeHooks } from './install.ts';
 
 const other = { type: 'command', command: 'echo other' };
 
@@ -104,5 +104,39 @@ describe('installHooks', () => {
         await writeFile(path, '{ not json');
         await expect(installHooks(path, 'claude')).rejects.toThrow('Cannot read');
         expect(await readFile(path, 'utf8')).toBe('{ not json');
+    });
+});
+
+describe('installCodexRules', () => {
+    let dir: string;
+
+    beforeEach(async () => {
+        dir = await mkdtemp(join(tmpdir(), 'ruimte-rules-'));
+    });
+
+    afterEach(async () => {
+        await rm(dir, { recursive: true, force: true });
+    });
+
+    test('writes a file of its own beside the rules of a person, then leaves it untouched', async () => {
+        const rules = join(dir, 'rules');
+        const theirs = join(rules, 'default.rules');
+        await installCodexRules(join(rules, 'ruimte.rules'));
+        await writeFile(theirs, 'prefix_rule(pattern=["git", "add"], decision="allow")\n');
+        expect(await installCodexRules(join(rules, 'ruimte.rules'))).toBe('unchanged');
+        expect(await readFile(join(rules, 'ruimte.rules'), 'utf8')).toBe(CODEX_RULES);
+        expect(await readFile(theirs, 'utf8')).toContain('"git", "add"');
+    });
+
+    test('rewrites a file that drifted', async () => {
+        const path = join(dir, 'ruimte.rules');
+        await writeFile(path, 'prefix_rule(pattern=["rm"], decision="allow")\n');
+        expect(await installCodexRules(path)).toBe('written');
+        expect(await readFile(path, 'utf8')).toBe(CODEX_RULES);
+    });
+
+    test('lands in the rules folder of CODEX_HOME', () => {
+        expect(defaultCodexRulesPath({ CODEX_HOME: '/x/codex', HOME: '/home/a' })).toBe('/x/codex/rules/ruimte.rules');
+        expect(defaultCodexRulesPath({ HOME: '/home/a' })).toBe('/home/a/.codex/rules/ruimte.rules');
     });
 });
