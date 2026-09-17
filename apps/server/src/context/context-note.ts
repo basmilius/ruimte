@@ -21,7 +21,7 @@ const doesAt = (depth: number): string => {
 export const verbsNote = ({ depth }: { depth: number }): string => {
     const parts = [
         `Ruimte: \`ruimte-context\` ${doesAt(depth)}.`,
-        '`ruimte-context help <verb>` gives the flags of one verb and `ruimte-context help` lists them all.'
+        '`ruimte-context help` lists the verbs and nouns, and `ruimte-context help <verb or noun>` details one.'
     ];
     if (depth < MAX_AGENT_DEPTH) {
         parts.push('With `--task` a result comes back as your next message once it settles, so end your turn instead of polling.');

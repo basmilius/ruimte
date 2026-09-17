@@ -36,7 +36,7 @@ describe('verbsNote', () => {
         expect(deepest).not.toContain('`agent`');
         expect(deepest).not.toContain('--task');
         for (const note of [VERBS_NOTE, helper, deepest]) {
-            expect(note).toContain('`ruimte-context help <verb>`');
+            expect(note).toContain('`ruimte-context help <verb or noun>`');
             expect(note).toEndWith('never by id.');
             expect(note).not.toContain('  ');
         }
