@@ -12,6 +12,7 @@ import { Select } from '@/ui/Select';
 import { Tooltip } from '@/ui/Tooltip';
 import { useVoice } from '@/voice/state';
 import { closeVoicePanel } from '@/voice/controller';
+import { DEFAULT_MICROPHONE_ID, listMicrophones, type MicrophoneDevice } from '@/voice/microphone';
 import { LIVE_VOICES, VOICE_LANGUAGES } from '@/voice/preferences';
 
 const failureText = (error: unknown): string => (error instanceof Error ? error.message : 'The API key could not be saved.');
@@ -32,11 +33,14 @@ export function VoicePane() {
     const [status, setStatus] = useState<OpenAiCredentialStatus | null>(null);
     const [draft, setDraft] = useState('');
     const [busy, setBusy] = useState(false);
+    const [microphones, setMicrophones] = useState<MicrophoneDevice[]>([]);
+    const [microphonesAvailable, setMicrophonesAvailable] = useState(() => navigator.mediaDevices !== undefined);
     const bridge = desktop()?.openAi;
     const sharedStatus = useVoice((state) => state.credential);
     const displayStatus = sharedStatus ?? status;
     const language = useSettings((state) => state.voiceLanguage);
     const voice = useSettings((state) => state.liveVoice);
+    const microphoneId = useSettings((state) => state.voiceInputDeviceId);
     const updateSettings = useSettings((state) => state.update);
 
     useEffect(() => {
@@ -58,6 +62,54 @@ export function VoicePane() {
             current = false;
         };
     }, [bridge]);
+
+    useEffect(() => {
+        const mediaDevices = navigator.mediaDevices;
+        if (!mediaDevices) {
+            return;
+        }
+        let current = true;
+        let permission: PermissionStatus | null = null;
+        const refresh = (): void => {
+            void listMicrophones()
+                .then((devices) => {
+                    if (current) {
+                        setMicrophones(devices);
+                        setMicrophonesAvailable(true);
+                    }
+                })
+                .catch(() => {
+                    if (current) {
+                        setMicrophonesAvailable(false);
+                    }
+                });
+        };
+        refresh();
+        mediaDevices.addEventListener('devicechange', refresh);
+        void navigator.permissions
+            ?.query({ name: 'microphone' as PermissionName })
+            .then((status) => {
+                if (!current) {
+                    return;
+                }
+                permission = status;
+                permission.addEventListener('change', refresh);
+            })
+            .catch(() => undefined);
+        return () => {
+            current = false;
+            mediaDevices.removeEventListener('devicechange', refresh);
+            permission?.removeEventListener('change', refresh);
+        };
+    }, []);
+
+    const microphoneItems = [
+        { value: DEFAULT_MICROPHONE_ID, label: 'System default', description: 'Follows the macOS input selection' },
+        ...microphones.map((device) => ({ value: device.id, label: device.label })),
+        ...(microphoneId !== DEFAULT_MICROPHONE_ID && !microphones.some((device) => device.id === microphoneId)
+            ? [{ value: microphoneId, label: 'Unavailable microphone', description: 'Uses the system default until it returns', disabled: true }]
+            : [])
+    ];
 
     async function save(event: FormEvent<HTMLFormElement>): Promise<void> {
         event.preventDefault();
@@ -160,6 +212,24 @@ export function VoicePane() {
                 title="Conversation"
                 description="Changes apply when you start the next conversation. Only an active conversation sends microphone audio to OpenAI."
             >
+                <SettingsRow
+                    label="Microphone"
+                    description={
+                        microphonesAvailable
+                            ? 'Input used for new conversations. Nearby iPhones appear when macOS makes them available.'
+                            : 'Microphones could not be listed. New conversations use the system default.'
+                    }
+                    control={
+                        <Select
+                            value={microphoneId}
+                            items={microphoneItems}
+                            label="Conversation microphone"
+                            align="end"
+                            className="max-w-72"
+                            onValueChange={(voiceInputDeviceId) => updateSettings({ voiceInputDeviceId })}
+                        />
+                    }
+                />
                 <SettingsRow
                     label="Language"
                     description="The language Ruimte listens and replies in."

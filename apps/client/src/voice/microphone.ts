@@ -7,6 +7,48 @@ export interface MicrophoneSnapshot {
 }
 
 export const WAVEFORM_BAND_COUNT = 40;
+export const DEFAULT_MICROPHONE_ID = 'default';
+
+export interface MicrophoneDevice {
+    id: string;
+    label: string;
+}
+
+export const microphoneConstraints = (deviceId: string): MediaStreamConstraints => ({
+    audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        ...(deviceId === DEFAULT_MICROPHONE_ID ? {} : { deviceId: { exact: deviceId } })
+    }
+});
+
+type GetUserMedia = (constraints: MediaStreamConstraints) => Promise<MediaStream>;
+
+export const openMicrophoneStream = async (
+    deviceId: string,
+    getUserMedia: GetUserMedia = (constraints) => navigator.mediaDevices.getUserMedia(constraints)
+): Promise<MediaStream> => {
+    try {
+        return await getUserMedia(microphoneConstraints(deviceId));
+    } catch (error) {
+        const unavailable = error instanceof DOMException && (error.name === 'NotFoundError' || error.name === 'OverconstrainedError');
+        if (deviceId === DEFAULT_MICROPHONE_ID || !unavailable) {
+            throw error;
+        }
+        return getUserMedia(microphoneConstraints(DEFAULT_MICROPHONE_ID));
+    }
+};
+
+export const listMicrophones = async (): Promise<MicrophoneDevice[]> => {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    let unnamed = 0;
+    return devices
+        .filter((device) => device.kind === 'audioinput' && device.deviceId !== DEFAULT_MICROPHONE_ID)
+        .map((device) => ({
+            id: device.deviceId,
+            label: device.label || `Microphone ${++unnamed}`
+        }));
+};
 
 export class WaveformMonitor {
     readonly #onBands: (bands: number[]) => void;
@@ -88,13 +130,15 @@ export class WaveformMonitor {
 
 export class MicrophoneMonitor {
     readonly #onSnapshot: (snapshot: MicrophoneSnapshot) => void;
+    readonly #deviceId: string;
     #stream: MediaStream | null = null;
     #waveform: WaveformMonitor | null = null;
     #stopped = false;
     #starting: Promise<MediaStream> | null = null;
 
-    constructor(onSnapshot: (snapshot: MicrophoneSnapshot) => void) {
+    constructor(onSnapshot: (snapshot: MicrophoneSnapshot) => void, deviceId = DEFAULT_MICROPHONE_ID) {
         this.#onSnapshot = onSnapshot;
+        this.#deviceId = deviceId;
     }
 
     start(): Promise<MediaStream> {
@@ -111,7 +155,7 @@ export class MicrophoneMonitor {
         if ((await desktop()?.requestMicrophoneAccess?.()) === false) {
             throw new DOMException('Microphone access is disabled in System Settings', 'NotAllowedError');
         }
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+        const stream = await openMicrophoneStream(this.#deviceId);
         if (this.#stopped) {
             stream.getTracks().forEach((track) => track.stop());
             throw new DOMException('The microphone test was stopped', 'AbortError');

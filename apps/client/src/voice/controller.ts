@@ -189,7 +189,7 @@ async function startMicrophone(): Promise<MediaStream> {
     if (microphone !== null) {
         return microphone.start();
     }
-    const next = new MicrophoneMonitor(({ bands }) => useVoice.setState({ inputBands: bands }));
+    const next = new MicrophoneMonitor(({ bands }) => useVoice.setState({ inputBands: bands }), useSettings.getState().voiceInputDeviceId);
     microphone = next;
     try {
         return await next.start();

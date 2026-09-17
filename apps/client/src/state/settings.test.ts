@@ -74,8 +74,12 @@ describe('streaming replies', () => {
 
 describe('GPT-Live speech', () => {
     test('starts in Dutch with Marin and keeps supported choices', () => {
-        expect(settingsFrom({})).toMatchObject({ voiceLanguage: 'nl', liveVoice: 'marin' });
-        expect(settingsFrom({ voiceLanguage: 'ja', liveVoice: 'cedar' })).toMatchObject({ voiceLanguage: 'ja', liveVoice: 'cedar' });
+        expect(settingsFrom({})).toMatchObject({ voiceLanguage: 'nl', liveVoice: 'marin', voiceInputDeviceId: 'default' });
+        expect(settingsFrom({ voiceLanguage: 'ja', liveVoice: 'cedar', voiceInputDeviceId: 'iphone' })).toMatchObject({
+            voiceLanguage: 'ja',
+            liveVoice: 'cedar',
+            voiceInputDeviceId: 'iphone'
+        });
     });
 
     test('does not pass unknown stored values to a Live session', () => {
@@ -89,6 +93,11 @@ describe('GPT-Live speech', () => {
     test('moves the earlier male and female choices to their named voices', () => {
         expect(settingsFrom({ voiceGender: 'male' } as never).liveVoice).toBe('cedar');
         expect(settingsFrom({ voiceGender: 'female' } as never).liveVoice).toBe('marin');
+    });
+
+    test('does not keep an invalid microphone id', () => {
+        expect(settingsFrom({ voiceInputDeviceId: '' }).voiceInputDeviceId).toBe('default');
+        expect(settingsFrom({ voiceInputDeviceId: 42 as unknown as string }).voiceInputDeviceId).toBe('default');
     });
 });
 
