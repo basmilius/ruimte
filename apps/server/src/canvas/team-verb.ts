@@ -9,7 +9,7 @@ import { MODE_LINES, modeFlag, modeForOpening } from './mode.ts';
 import { MAX_CANVAS_NODES, canvasFull, newId } from './node-verb.ts';
 import { placeFree, placeTeam, TEAM_COLUMNS } from './placement.ts';
 import { checkCwd } from './project-paths.ts';
-import { MAX_TASK_PROMPT_LENGTH, TASK_LINES, requireChatParent, taskBrief } from './task-verbs.ts';
+import { MAX_TASK_PROMPT_LENGTH, TASK_LINES, nextLine, requireChatParent, taskBrief } from './task-verbs.ts';
 import { MAX_TITLE_LENGTH, OPENING_OFF_CANVAS, TITLE_LINE, VerbRefusal, canvasFor, defineVerb, field, lengthOf, placeOf, titleField } from './verb.ts';
 import { WORKTREE_LINES, branchSlug, branchesForWorktrees, freeBranch, makeWorktrees } from './worktree.ts';
 
@@ -58,6 +58,7 @@ const TEAM_DETAIL: readonly string[] = [
     `quoting\tThe JSON goes in single quotes, so an apostrophe in a prompt ends the quote early: write it as '\\'' or as \\u0027 inside the JSON string`,
     `example\truimte-context team --label "Parser work" --roles '[{"title":"Lexer","prompt":"Fix the tokenizer in src/lex.ts","provider":"claude"},{"title":"Reviewer","prompt":"Read the Lexer node and review its work","provider":"codex","chat":true}]'`,
     'prints\tid\tkind\ttitle\tview\tcli\tedge\ttask\tthe group first, its label in the title column and a dash for the CLI and the edge, then one line per role in the order of --roles, with the id of its task last under --task; the title is what tells two rows of one CLI apart',
+    'prints\tnext\tthe last line under --task, saying what to do while the tasks run',
     'flag\t--cwd P\toptional\tThe directory every agent starts in; a directory per role is --worktree',
     'flag\t--view V\toptional\tThe canvas to add to, by view id; ruimte-context views lists them. Without it the canvas you are a node on',
     'flag\t--mode M\toptional\tThe permission mode every role runs in: supervised, auto-accept-edits, auto or full-access, never wider than your own',
@@ -268,6 +269,10 @@ export const teamVerb = defineVerb({
                     }
                     made.push({ id, title: role.title, prompt: role.prompt, chat, provider: role.provider, line: lines.length, index });
                     lines.push([id, chat ? 'chat' : 'terminal', field(role.title), canvas.id, role.provider, edgeId].join('\t'));
+                }
+
+                if (tasked) {
+                    lines.push(nextLine(true));
                 }
 
                 return {

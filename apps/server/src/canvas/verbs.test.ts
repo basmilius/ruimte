@@ -49,7 +49,7 @@ import type { Notice, NoticeDelivery } from '../context/notices.ts';
 import { MAX_TITLE_LENGTH, type AgentStart, type CanvasHost } from './verb.ts';
 import { VERBS } from './verbs.ts';
 import { TaskStore } from '../tasks/task-store.ts';
-import { MAX_TASK_PROMPT_LENGTH, taskBrief } from './task-verbs.ts';
+import { MAX_TASK_PROMPT_LENGTH, nextLine, taskBrief } from './task-verbs.ts';
 
 const VIEW_SUBS = viewVerb.subcommands ?? [];
 
@@ -2348,6 +2348,8 @@ describe('tasks', () => {
     test('agent --task from a chat records an open task, titles the node after it and tells the child how to report back', async () => {
         const { status, lines } = await give(['--task', 'Lexer', '--prompt', 'fix the tokenizer']);
         expect(status).toBe(200);
+        expect(lines).toHaveLength(2);
+        expect(lines[1]).toBe(nextLine(false));
         const [id, kind, , , , taskId] = lines[0]!.split('\t');
         expect(kind).toBe('chat');
         expect(tasks.get(taskId!)).toMatchObject({
@@ -2385,8 +2387,9 @@ describe('tasks', () => {
             { title: 'Docs', prompt: 'write the docs', provider: 'claude', chat: true }
         ]);
         const { lines } = await post('team', ['--label', 'Crew', '--task', '--roles', roles, '--view', 'main'], 'chat');
-        const rows = lines.slice(1).map((line) => line.split('\t'));
+        const rows = lines.slice(1, -1).map((line) => line.split('\t'));
         expect(rows.map((row) => tasks.get(row[6]!)?.title)).toEqual(['Lexer', 'Docs']);
+        expect(lines.at(-1)).toBe(nextLine(true));
         expect(held.map((entry) => entry.prompt)).toEqual([`fix the tokenizer${taskBrief(false)}`, `write the docs${taskBrief(true)}`]);
     });
 

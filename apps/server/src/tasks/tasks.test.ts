@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatItem, ChatSubagentItem, ChatTurnItem, ProjectContent } from '@ruimte/contracts';
+import { nextLine } from '../canvas/task-verbs.ts';
 import { ManualClock } from '../outbox/manual-clock.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from './test-daemon.ts';
@@ -78,8 +79,9 @@ const delegate = async (daemon: Daemon, title: string, prompt: string, chat = tr
 const delegateTeam = async (daemon: Daemon, titles: readonly string[]): Promise<Array<{ childId: string; taskId: string }>> => {
     const roles = titles.map((title) => ({ title, prompt: `work on ${title}`, provider: 'claude' }));
     const lines = await verb(daemon, 'chat-lead', 'team', ['--label', 'Crew', '--task', '--roles', JSON.stringify(roles)]);
-    expect(lines).toHaveLength(titles.length + 1);
-    return lines.slice(1).map((line) => {
+    expect(lines).toHaveLength(titles.length + 2);
+    expect(lines.at(-1)).toBe(nextLine(true));
+    return lines.slice(1, -1).map((line) => {
         const fields = line.split('\t');
         return { childId: fields[0]!, taskId: fields[6]! };
     });

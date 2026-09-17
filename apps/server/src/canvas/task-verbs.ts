@@ -31,6 +31,15 @@ export const TASK_LINES: readonly string[] = [
     'task\truimte-context tasks lists them with their status'
 ];
 
+/*
+ * The last line after tasks are given. An agent that is not told to end its turn polls `tasks`, links
+ * back and reads every child, which costs a call each while the wake comes anyway.
+ */
+export const nextLine = (team: boolean): string =>
+    team
+        ? 'next\tEnd your turn now: the results arrive as your next message once every task settled. Do not poll tasks, link or read the agents for them.'
+        : 'next\tEnd your turn once you gave every task you mean to give: the result arrives as your next message once this task settled. Do not poll tasks, link or read the agent for it.';
+
 /* What kind of node or view the caller is in its project, or null when neither names it. */
 export const callerKind = (content: ProjectContent, caller: string): string | null => {
     for (const view of content.views) {

@@ -8,7 +8,7 @@ import { MODE_LINES, modeFlag, modeForOpening, narrowerMode } from './mode.ts';
 import { MAX_CANVAS_NODES, canvasFull, newId, nodeLines } from './node-verb.ts';
 import { groupMembers, placeBeside, placeFree, placeInGroup, type Rect } from './placement.ts';
 import { checkCwd, readPromptFile } from './project-paths.ts';
-import { MAX_TASK_PROMPT_LENGTH, TASK_LINES, requireChatParent, taskBrief } from './task-verbs.ts';
+import { MAX_TASK_PROMPT_LENGTH, TASK_LINES, nextLine, requireChatParent, taskBrief } from './task-verbs.ts';
 import { unescapeText } from './text-escapes.ts';
 import { WORKTREE_LINES, branchSlug, branchesForWorktrees, freeBranch, makeWorktrees } from './worktree.ts';
 import {
@@ -43,6 +43,7 @@ const KIND_MESSAGE = `agent needs a CLI: ${AGENT_KINDS.join(', ')}`;
 const AGENT_DETAIL: readonly string[] = [
     `argument\t<cli>\trequired\t${AGENT_KINDS.join(', ')}`,
     'prints\tid\tkind\tview\tcli\tedge\ttask\tthe new node, its kind (terminal or chat), the canvas it landed on, the CLI it runs, the id of the edge drawn into it (- when none was drawn) and, with --task, the id of the task',
+    'prints\tnext\tthe last line under --task, saying what to do while the task runs',
     `flag\t--chat\tno value\tMakes a chat node instead of a terminal node; only a CLI with a chat backend takes it (${chatKinds().join(', ')})`,
     `flag\t--prompt T\toptional\tWhat the agent starts working on; \\n, \\t and \\\\ are read as escapes, at most ${MAX_PROMPT_LENGTH} characters`,
     'flag\t--prompt-file F\toptional\tThe same prompt out of a file, for one with exact bytes; not together with --prompt',
@@ -259,7 +260,7 @@ export const agentVerb = defineVerb({
                 const node = agentNode({ id, chat, kind, title: flags.title ?? flags.task, rect, cwd, ...(runtimeMode === undefined ? {} : { runtimeMode }) });
                 const edge: ProjectEdge | null = caller ? { id: newId('edge', content, [id]), from: caller.id, to: id, label: 'context' } : null;
                 const nodes = [...canvas.nodes.map((candidate) => (group && candidate.id === group.id ? grownGroup(candidate, inGroup, id) : candidate)), node];
-                const result = [[id, node.kind, canvas.id, kind, edge?.id ?? '-'].join('\t')];
+                const result = [[id, node.kind, canvas.id, kind, edge?.id ?? '-'].join('\t'), ...(flags.task === undefined ? [] : [nextLine(false)])];
 
                 return {
                     landed: async () => {
