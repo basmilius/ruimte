@@ -38,6 +38,8 @@ const durationLabel = (seconds: number): string => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 };
 
+const waveformHeight = (value: number): string => `${Math.max(2, value * 26).toFixed(2)}px`;
+
 function useIdleWaveform(active: boolean, count: number): IdleVoiceBands | null {
     const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     const [bands, setBands] = useState<IdleVoiceBands | null>(null);
@@ -54,12 +56,8 @@ function useIdleWaveform(active: boolean, count: number): IdleVoiceBands | null 
             return;
         }
         let frame = 0;
-        let lastFrame = -Infinity;
         const animate = (now: number) => {
-            if (now - lastFrame >= 1000 / 30) {
-                setBands(idleVoiceBands(now, count));
-                lastFrame = now;
-            }
+            setBands(idleVoiceBands(now, count));
             frame = window.requestAnimationFrame(animate);
         };
         frame = window.requestAnimationFrame(animate);
@@ -110,16 +108,13 @@ function VoiceWaveform({ elapsed, phase }: { elapsed: number; phase: VoicePhase 
                             <span
                                 className="voice-waveform-input absolute right-0 bottom-1/2 left-0 rounded-t-sm bg-text-muted transition-[height,opacity] duration-75 ease-out"
                                 style={{
-                                    height: `${Math.max(2, Math.round(input * 26))}px`,
+                                    height: waveformHeight(input),
                                     opacity: Math.max(0.45, input)
                                 }}
                             />
                             <span
-                                className="voice-waveform-output absolute top-1/2 right-0 left-0 rounded-b-sm bg-accent transition-[height,opacity] duration-75 ease-out"
-                                style={{
-                                    height: `${Math.max(2, Math.round(output * 26))}px`,
-                                    opacity: Math.max(0.5, output)
-                                }}
+                                className="voice-waveform-output absolute top-1/2 right-0 left-0 rounded-b-sm bg-accent transition-[height] duration-75 ease-out"
+                                style={{ height: waveformHeight(output) }}
                             />
                         </span>
                     );
