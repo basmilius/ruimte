@@ -40,21 +40,23 @@ larger ones becomes a GitHub issue when it starts.
    node" (a chat node beside it with a context edge, so the new agent reads the plan through
    `ruimte-context`), subagent rows that stay anchored, citations from selected assistant text,
    review comments from a diff into the prompt, approval choices with the provider's warning text,
-   branch a conversation into a new node. Branching follows `docs/reports/2026-09-16-fork-design.html`,
-   where it is item 9: phases 1 to 4 are done ("Fork from here" on a turn, the strip's card, the node
-   menu and a chat view's row; a worktree per fork with the work after the turn undone; another CLI
-   with a handoff of the last whole turns; a summary written by the fork and delivered to the original
-   as a note and a preamble). Left for later: "Restore files to this turn" as its own action on a turn
+   branch a conversation into a new node. Branching is done in phases 1 to 4 ("Fork from here" on
+   a turn, the strip's card, the node menu and a chat view's row; a worktree per fork with the work
+   after the turn undone; another CLI with a handoff of the last whole turns; a summary written by
+   the fork and delivered to the original as a note and a preamble). Left for later: "Restore files to this turn" as its own action on a turn
    (the shared-folder undo) and a verb for agents to fork. The iOS app forks too (a sheet from a
-   message's menu, the way back, summaries and a message index in place of the strip).
+   message's menu, the way back, summaries and a message index in place of the strip). Resuming a
+   chat that sat idle with a large context offers to compact it first
+   (`docs/reports/2026-09-16-resume-compaction.html`, designed, nothing built). Two small ones:
+   a question in a finished turn stays outside its fold, since it explains the answer below it, and
+   after Stop an empty composer offers "Continue" in place of the send button.
 9. **Settings and keyboard**: one binding table with `when` contexts, read by the handlers and the
    Keyboard pane (which lists them read-only today), then overrides with press-to-record, conflict
    labels and reset. A "restore defaults" action, a canvas font size for chat and text elements,
    and settings search that the palette reads.
 10. **Per-project settings** in `.ruimte/settings.json`: the file, `project.settings` and its first
     field (`worktrees.share`) are there; the terminal agent mode is next, then clone a repository as a
-    project. Worktrees (`docs/reports/2026-09-16-worktree-merge-design.html`) are done in all five
-    phases: the register and safe removal, a tab of everything a worktree holds against the branch it
+    project. Worktrees are done in all five phases: the register and safe removal, a tab of everything a worktree holds against the branch it
     came from, merging from the git panel, a node's menu and a group's menu (squash by default, loose
     work committed first, a conflict left for the panel with Abort), the `worktree` verb (`list`,
     `diff`, and `merge` for an agent's own children only, which leaves the worktree and branch for a
