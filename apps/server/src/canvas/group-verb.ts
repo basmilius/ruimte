@@ -54,7 +54,7 @@ export const groupAction = defineAction('node', {
             if (canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
                 throw canvasFull(canvas, 1);
             }
-            const members = nodesNamed(canvas, ids, NOT_A_GROUP);
+            const members = nodesNamed(content, canvas, ids, { ...NOT_A_GROUP, cannot: 'it cannot stand inside a frame' });
             const framed = members.find((node) => node.kind === 'group');
             if (framed) {
                 throw new VerbRefusal(

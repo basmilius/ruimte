@@ -7,6 +7,7 @@ import { DEPTH_LIMIT_LINES, depthForOpening } from './depth.ts';
 import { MODE_LINES, modeFlag, modeForOpening, narrowerMode } from './mode.ts';
 import { readsFlag, readsIds, readsLines } from './link-verb.ts';
 import { MAX_CANVAS_NODES, canvasFull, newId, nodeLines, nodesNamed } from './node-verb.ts';
+import { refuseMissingNodes } from './own-view.ts';
 import { groupMembers, placeBeside, placeFree, placeInGroup, type Rect } from './placement.ts';
 import { checkCwd, readPromptFile } from './project-paths.ts';
 import { MAX_TASK_PROMPT_LENGTH, TASK_LINES, nextLine, requireChatParent, taskBrief } from './task-verbs.ts';
@@ -230,13 +231,13 @@ export const agentVerb = defineVerb({
                 }
                 const anchor = flags.beside === undefined ? undefined : canvas.nodes.find((node) => node.id === flags.beside);
                 if (flags.beside !== undefined && !anchor) {
-                    throw new VerbRefusal('unknown-node', `${flags.beside} is not a node on ${canvas.id}`, nodeLines(canvas));
+                    throw refuseMissingNodes(content, [flags.beside], canvas.id, 'the agent this opens has nothing there to stand beside', nodeLines(canvas));
                 }
                 const group = flags.group === undefined ? undefined : canvas.nodes.find((node) => node.id === flags.group && node.kind === 'group');
                 if (flags.group !== undefined && !group) {
                     throw new VerbRefusal('unknown-group', `${flags.group} is not a group on ${canvas.id}`, groupLines(canvas));
                 }
-                const read = nodesNamed(canvas, readIds);
+                const read = nodesNamed(content, canvas, readIds, { cannot: 'no line can run from it into the agent this opens' });
 
                 const size = NODE_SIZE[chat ? 'chat' : 'terminal'];
                 const caller = canvas.nodes.find((node) => node.id === call.caller) ?? null;

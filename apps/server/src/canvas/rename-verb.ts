@@ -30,8 +30,9 @@ export const renameAction = defineAction('node', {
     }),
     async run({ positionals: [id], flags }, call) {
         const place = placeOf(call);
-        const canvas = canvasFor(await call.host.read(place.projectId), place, flags.view);
-        const [node] = nodesNamed(canvas, [id]);
+        const content = await call.host.read(place.projectId);
+        const canvas = canvasFor(content, place, flags.view);
+        const [node] = nodesNamed(content, canvas, [id], { cannot: 'there is no node to rename' });
         const result = await serverViewActions.execute(
             'node.rename',
             { viewId: canvas.id, nodeId: id, name: flags.title },

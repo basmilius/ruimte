@@ -949,7 +949,11 @@ describe('node new', () => {
         const id = lines[0]!.split('\t')[0];
         const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === id)!;
         expect([node.x, node.y, node.title, node.titleSource]).toEqual([320 + PLACEMENT_GAP, 601, 'Build', 'user']);
-        expect((await post('node', ['new', 'note', '--beside', 'chat-1'])).lines[0]).toStartWith('refused\tunknown-node\t');
+        // chat-1 is a view of its own, which the refusal says rather than leaving it to be looked for.
+        expect((await post('node', ['new', 'note', '--beside', 'chat-1'])).lines[0]).toBe(
+            'refused\tnot-on-a-canvas\tchat-1 is a chat that is a view of its own, not a node on any canvas of this project, so the new node has nothing there to stand beside'
+        );
+        expect((await post('node', ['new', 'note', '--beside', 'ghost'])).lines[0]).toBe('refused\tunknown-node\tghost is not a node on main');
     });
 
     test('--beside wins over the row beside the caller, wherever the anchor sits', async () => {
@@ -1754,6 +1758,25 @@ describe('link new', () => {
         expect((await onDisk()).rev).toBe(1);
     });
 
+    test('a chat that is a view of its own is named as one, so nothing goes looking for it on another canvas', async () => {
+        const own = await post('link', ['new', '--to', 'chat-1']);
+        expect(own.status).toBe(422);
+        expect(own.lines[0]).toBe(
+            'refused\tnot-on-a-canvas\tchat-1 is a chat that is a view of its own, not a node on any canvas of this project, so no line can be drawn into it'
+        );
+        // The same misunderstanding at the other end of the line.
+        expect((await post('link', ['new', '--to', 'note-1', '--from', 'chat-1'])).lines[0]).toBe(
+            'refused\tnot-on-a-canvas\tchat-1 is a chat that is a view of its own, not a node on any canvas of this project, so a line has nowhere to start there'
+        );
+        // Beside an id that names nothing, the sentence about the set stays and the view is named under it.
+        const both = await post('link', ['new', '--to', 'chat-1,ghost']);
+        expect(both.lines[0]).toBe('refused\tunknown-node\tchat-1, ghost are not a node on main');
+        expect(both.lines[1]).toBe('note\tchat-1 is a chat that is a view of its own, not a node on any canvas of this project');
+        // A node on another canvas of this project is neither case and keeps the sentence it had.
+        const elsewhere = (await post('node', ['new', 'note', '--view', 'board'])).lines[0]!.split('\t')[0]!;
+        expect((await post('link', ['new', '--to', elsewhere])).lines[0]).toBe(`refused\tunknown-node\t${elsewhere} is not a node on main`);
+    });
+
     test('--from, --label and --view say where the line goes and what it is called', async () => {
         const { lines } = await post('link', ['new', '--to', 'term-1', '--from', 'note-1', '--label', 'plan']);
         expect(lines[0]!.split('\t').slice(1)).toEqual(['note-1', 'term-1', 'new', 'out']);
@@ -2543,6 +2566,17 @@ describe('notify', () => {
         expect(lines[0]).toBe('refused\tnot-on-a-canvas\tYou are a view of your own, not a node on a canvas, so no line runs from you into anything');
     });
 
+    test('a chat that is a view of its own cannot be notified, and the refusal says why in one sentence', async () => {
+        const { status, lines } = await post('notify', ['chat-1', '--text', 'hi']);
+        expect(status).toBe(422);
+        expect(lines[0]).toBe(
+            'refused\tnot-on-a-canvas\tchat-1 is a chat that is a view of its own, not a node on any canvas of this project, so no line can run from you into it, and that is what a message travels along'
+        );
+        expect(notified).toEqual([]);
+        // An id this project has nowhere is the other case and keeps its own sentence.
+        expect((await post('notify', ['nowhere', '--text', 'hi'])).lines[0]).toBe('refused\tunknown-node\tnowhere is not a node on main');
+    });
+
     test('help notify names the whole set of refusals it can answer with, and what it cannot promise', async () => {
         const lines = (await post('help', ['notify'])).lines;
         const refusals = lines
@@ -2610,6 +2644,12 @@ describe('node delete', () => {
         expect(nowhere.lines[0]).toBe('refused\tunknown-node\tnope is not a node on any canvas of this project');
         // Nothing it could not delete anyway: the caller's own node and a person's note are both out.
         expect(nowhere.lines.slice(1)).toEqual(['note\tYou have no node on main to remove; node delete takes a node you made yourself']);
+        // A chat the sidebar holds is no node either, and the refusal says which of the two it is.
+        const own = await post('node', ['delete', 'chat-1']);
+        expect(own.lines[0]).toBe(
+            'refused\tnot-on-a-canvas\tchat-1 is a chat that is a view of its own, not a node on any canvas of this project, so there is no node to remove'
+        );
+        expect(own.lines.at(-1)).toBe('see\truimte-context view delete chat-1\tremoves a view you made, with the session it holds');
         const mine = (await post('node', ['new', 'note', '--title', 'Mine'])).lines[0]!.split('\t')[0]!;
         expect((await post('node', ['delete', 'nope'])).lines.slice(1)).toEqual([`node\t${mine}\tnote\tMine`]);
     });

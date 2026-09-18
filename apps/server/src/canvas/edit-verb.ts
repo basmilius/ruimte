@@ -1,6 +1,7 @@
 import type { ProjectCanvasView, ProjectNode } from '@ruimte/contracts';
 import { z } from 'zod';
 import { nodeLines } from './node-verb.ts';
+import { refuseMissingNodes } from './own-view.ts';
 import { unescapeText } from './text-escapes.ts';
 import { VerbRefusal, canvasFor, defineAction, placeOf, type VerbCall } from './verb.ts';
 
@@ -21,7 +22,7 @@ const EDIT_DETAIL: readonly string[] = [
     'append\tEach call reads the note in the moment it writes it, so an append that crosses another keeps both lines',
     'note\tThe body it already carries writes nothing and is not a refusal',
     'note\tWithout --append the old body is gone; on a note you share with another agent that is what --append is for',
-    'refusals\tnot-a-note\tnot-linked\tunknown-node\tthe whole set this action refuses with',
+    'refusals\tnot-a-note\tnot-linked\tunknown-node\tnot-on-a-canvas\tthe whole set this action refuses with',
     'ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs',
     'see\truimte-context node new note --text B\tadding the note in the first place',
     'see\truimte-context link new --to <id>\tthe line that makes a note somebody else made yours to write in'
@@ -76,7 +77,7 @@ export const nodeEditAction = defineAction('node', {
             const canvas = canvasFor(content, place, flags.view);
             const node = canvas.nodes.find((candidate) => candidate.id === id);
             if (!node) {
-                throw new VerbRefusal('unknown-node', `${id} is not a node on ${canvas.id}`, writableLines(canvas, call));
+                throw refuseMissingNodes(content, [id], canvas.id, 'there is no node to write in', writableLines(canvas, call));
             }
             if (node.kind !== 'note') {
                 throw new VerbRefusal(

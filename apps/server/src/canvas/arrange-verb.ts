@@ -54,7 +54,7 @@ export const arrangeAction = defineAction('node', {
 
         return call.host.mutate(place.projectId, (content) => {
             const canvas = canvasFor(content, place, flags.view);
-            const moving = nodesNamed(canvas, ids, NOT_A_GROUP);
+            const moving = nodesNamed(content, canvas, ids, { ...NOT_A_GROUP, cannot: 'there is nothing there to move' });
             const carrier = moving.find((node) => node.kind === 'group');
             if (carrier) {
                 throw new VerbRefusal(

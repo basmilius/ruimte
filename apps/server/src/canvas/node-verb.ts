@@ -18,6 +18,7 @@ import {
 } from '@ruimte/contracts';
 import { z } from 'zod';
 import type { IndexedPlace } from '../projects/project-index.ts';
+import { ownViewOf, refuseMissingNodes, refuseOwnView } from './own-view.ts';
 import { containersOf, groupMembers, placeBeside, placeFree } from './placement.ts';
 import { checkCwd, checkPath, isInside } from './project-paths.ts';
 import { unescapeText } from './text-escapes.ts';
@@ -158,17 +159,14 @@ export const idList = (raw: string, flag: string): string[] => {
 
 /* The nodes those ids name on this canvas, refused with what this verb takes when one of them names none. */
 export const nodesNamed = (
+    content: Pick<ProjectContent, 'views'>,
     canvas: ProjectCanvasView,
     ids: readonly string[],
-    options: { takes?: (node: ProjectNode) => boolean; empty?: string } = {}
+    options: { takes?: (node: ProjectNode) => boolean; empty?: string; cannot?: string } = {}
 ): ProjectNode[] => {
     const missing = ids.filter((id) => !canvas.nodes.some((node) => node.id === id));
     if (missing.length > 0) {
-        throw new VerbRefusal(
-            'unknown-node',
-            `${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} not a node on ${canvas.id}`,
-            nodeLines(canvas, options)
-        );
+        throw refuseMissingNodes(content, missing, canvas.id, options.cannot ?? 'there is no node under that id', nodeLines(canvas, options));
     }
     return ids.map((id) => canvas.nodes.find((node) => node.id === id)!);
 };
@@ -297,7 +295,7 @@ export const nodeNewAction = defineAction('node', {
             const size = NODE_SIZE[kind];
             const anchor = flags.beside === undefined ? undefined : canvas.nodes.find((node) => node.id === flags.beside);
             if (flags.beside !== undefined && !anchor) {
-                throw new VerbRefusal('unknown-node', `${flags.beside} is not a node on ${canvas.id}`, nodeLines(canvas));
+                throw refuseMissingNodes(content, [flags.beside], canvas.id, 'the new node has nothing there to stand beside', nodeLines(canvas));
             }
             const caller = canvas.nodes.find((node) => node.id === call.caller) ?? null;
             const rect = anchor ? placeBeside(anchor, size) : placeFree(canvas.nodes, size, caller);
@@ -386,11 +384,15 @@ export const nodeDeleteAction = defineAction('node', {
             const canvas = content.views.filter(isCanvasView).find((view) => view.nodes.some((node) => node.id === id));
             const node = canvas?.nodes.find((candidate) => candidate.id === id);
             if (!canvas || !node) {
-                throw new VerbRefusal(
-                    'unknown-node',
-                    `${id} is not a node on any canvas of this project`,
-                    deletableLines(content, place, { caller: call.caller, madeBy: (candidate) => call.host.madeBy(candidate), anyNode })
-                );
+                const lines = deletableLines(content, place, { caller: call.caller, madeBy: (candidate) => call.host.madeBy(candidate), anyNode });
+                const own = ownViewOf(content, id);
+                if (own) {
+                    throw refuseOwnView(own, 'there is no node to remove', [
+                        ...lines,
+                        `see\truimte-context view delete ${id}\tremoves a view you made, with the session it holds`
+                    ]);
+                }
+                throw new VerbRefusal('unknown-node', `${id} is not a node on any canvas of this project`, lines);
             }
             if (id === call.caller) {
                 throw new VerbRefusal('deletes-caller', `You are ${id}, so removing it would end the session asking`);

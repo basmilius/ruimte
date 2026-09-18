@@ -215,7 +215,7 @@ export const teamVerb = defineVerb({
                     throw canvasFull(canvas, roles.length + 1);
                 }
 
-                const read = nodesNamed(canvas, readIds);
+                const read = nodesNamed(content, canvas, readIds, { cannot: 'no line can run from it into the agents this opens' });
                 const layout = placeTeam(roles.map((role) => NODE_SIZE[kindOf(role)]));
                 const caller = canvas.nodes.find((node) => node.id === call.caller) ?? null;
                 const origin = placeFree(canvas.nodes, layout.frame, caller);

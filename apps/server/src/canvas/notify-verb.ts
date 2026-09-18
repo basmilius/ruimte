@@ -1,6 +1,7 @@
 import { isAgentKind } from '@ruimte/contracts';
 import { z } from 'zod';
 import { MAX_NOTICE_LENGTH, MAX_NOTICES, NOTICE_MAX_AGE_MS } from '../context/notices.ts';
+import { refuseMissingNodes } from './own-view.ts';
 import { unescapeText } from './text-escapes.ts';
 import { VerbRefusal, canvasFor, defineVerb, field, lengthOf, orNote, placeOf } from './verb.ts';
 
@@ -76,7 +77,7 @@ export const notifyVerb = defineVerb({
                 `Nothing on ${canvas.id} has a line from you into it yet; ruimte-context link new --to ${id} draws the one this call needs`
             );
         if (!target) {
-            throw new VerbRefusal('unknown-node', `${id} is not a node on ${canvas.id}`, lines());
+            throw refuseMissingNodes(content, [id], canvas.id, 'no line can run from you into it, and that is what a message travels along', lines());
         }
         if (!isAgentKind(target.kind)) {
             throw new VerbRefusal('not-an-agent', `${id} is a ${target.kind} node; only a terminal or a chat has an agent that could read a message`, lines());

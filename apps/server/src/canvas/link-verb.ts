@@ -1,6 +1,7 @@
 import { EDGE_ROLES, isAgentKind, type ProjectCanvasView, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
 import { z } from 'zod';
 import { idList, newId, nodeLines } from './node-verb.ts';
+import { refuseMissingNodes } from './own-view.ts';
 import { MAX_TITLE_LENGTH, SCOPE_LINE, VerbRefusal, canvasFor, defineAction, field, orNote, placeOf, titleField, type VerbCall } from './verb.ts';
 
 // Lines drawn per call. Past this it is not linking any more, it is an agent in a loop.
@@ -105,23 +106,28 @@ export const linkNewAction = defineAction('link', {
             const from = flags.from ?? call.caller;
             const source = canvas.nodes.find((node) => node.id === from);
             if (!source) {
-                throw new VerbRefusal(
-                    'unknown-node',
-                    flags.from === undefined
-                        ? `You are not a node on ${canvas.id}, so a line has nowhere to start; name one with --from`
-                        : `${from} is not a node on ${canvas.id}`,
-                    nodeLines(canvas)
-                );
+                if (flags.from === undefined) {
+                    throw new VerbRefusal(
+                        'unknown-node',
+                        `You are not a node on ${canvas.id}, so a line has nowhere to start; name one with --from`,
+                        nodeLines(canvas)
+                    );
+                }
+                throw refuseMissingNodes(content, [from], canvas.id, 'a line has nowhere to start there', nodeLines(canvas));
             }
             const missing = targets.filter((id) => !canvas.nodes.some((node) => node.id === id));
             if (missing.length > 0) {
-                throw new VerbRefusal('unknown-node', `${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} not a node on ${canvas.id}`, [
+                throw refuseMissingNodes(
+                    content,
+                    missing,
+                    canvas.id,
+                    'no line can be drawn into it',
                     // Never the node the line starts from: a line into itself is refused a moment later.
-                    ...nodeLines(canvas, {
+                    nodeLines(canvas, {
                         takes: (node) => node.id !== from,
                         empty: `${canvas.id} holds no other node for a line to run into`
                     })
-                ]);
+                );
             }
             if (targets.includes(from)) {
                 throw new VerbRefusal('self-link', `${from} is both ends of the line; a node reads itself without one`);

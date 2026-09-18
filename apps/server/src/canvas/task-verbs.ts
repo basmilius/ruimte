@@ -1,6 +1,7 @@
 import { isAgentKind, isCanvasView, type ProjectContent, type ProjectNode, type Task } from '@ruimte/contracts';
 import { z } from 'zod';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
+import { ownViewOf, refuseOwnView } from './own-view.ts';
 import { readPromptFile, readResultFile } from './project-paths.ts';
 import { unescapeText } from './text-escapes.ts';
 import { MAX_TITLE_LENGTH, VerbRefusal, defineAction, defineVerb, field, orNote, placeOf, titleField, type VerbCall } from './verb.ts';
@@ -215,7 +216,7 @@ const TASK_NEW_DETAIL: readonly string[] = [
     "waiting\tAn agent in a turn keeps that turn: the task opens the turn after it, the way a person's message waits for the turn it was sent into",
     'mode\tThe agent keeps the permission mode it was opened in, which was already no wider than yours; a task never widens it',
     'depth\tNo node is opened here, so neither the depth an agent may open at nor the number of agents you may have open comes in',
-    'refusals\tnot-a-chat-parent\tself-task\tunknown-node\tnot-an-agent\tnot-yours\tnot-a-chat\tno-agent\ttask-running\tthe whole set this action refuses with',
+    'refusals\tnot-a-chat-parent\tself-task\tunknown-node\tnot-on-a-canvas\tnot-an-agent\tnot-yours\tnot-a-chat\tno-agent\ttask-running\tthe whole set this action refuses with',
     'see\truimte-context agent --task\topens an agent that is not there yet, with a task of its own',
     'see\truimte-context notify\tleaves a message an agent hears at the start of its next turn, without starting one',
     ...TASK_LINES,
@@ -252,6 +253,10 @@ export const taskNewAction = defineAction('task', {
             );
         const target = nodeOf(content, id);
         if (!target) {
+            const own = ownViewOf(content, id);
+            if (own) {
+                throw refuseOwnView(own, 'there is no node there to give a task to', lines());
+            }
             throw new VerbRefusal('unknown-node', `${id} is not a node of this project`, lines());
         }
         if (!isAgentKind(target.kind)) {
