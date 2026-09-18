@@ -396,8 +396,10 @@ export function WorkingRow({ startedAt }: { startedAt: number }) {
     useEffect(() => {
         const tick = (): void => {
             const seconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
             if (ref.current) {
-                ref.current.textContent = `${pad(Math.floor(seconds / 60))}:${pad(seconds % 60)}`;
+                ref.current.textContent = hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds % 60)}` : `${pad(minutes)}:${pad(seconds % 60)}`;
             }
         };
         tick();
