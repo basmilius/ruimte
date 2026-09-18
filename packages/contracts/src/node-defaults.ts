@@ -52,6 +52,56 @@ export const groupFrame = (members: readonly NodeRect[]): NodeRect | null => {
     };
 };
 
+/* What saying which things a group holds needs of it, so a frame that is not a node yet also fits. */
+export interface GroupFrame extends NodeRect {
+    id: string;
+    collapsed?: boolean;
+    memberIds?: readonly string[];
+    expandedHeight?: number;
+}
+
+/* A thing on a canvas a group can hold: a node counts by its center, a text by the point it sits on. */
+export interface GroupItem {
+    id: string;
+    x: number;
+    y: number;
+    w?: number;
+    h?: number;
+}
+
+/*
+ * The rectangle a group holds its members in. A collapsed group is drawn as its header alone, but
+ * its members keep the places they had, so what lies inside it is measured against the height it
+ * goes back to when it opens.
+ */
+export const groupRect = (group: Omit<GroupFrame, 'id'>): NodeRect => ({
+    x: group.x,
+    y: group.y,
+    w: group.w,
+    h: group.collapsed === true ? (group.expandedHeight ?? group.h) : group.h
+});
+
+const holds = (rect: NodeRect, item: GroupItem): boolean => {
+    const x = item.x + (item.w ?? 0) / 2;
+    const y = item.y + (item.h ?? 0) / 2;
+    return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
+};
+
+/*
+ * Which of these things the group holds, in the order they came in. Open, that is read off the
+ * positions, which is what makes membership a matter of where a thing lies and not of a field;
+ * collapsed, the file spells it out, because the members sit nowhere near the header the group has
+ * shrunk to. Only ids that are still there come back, so a member removed while collapsed is gone.
+ */
+export const groupMemberIds = (group: GroupFrame, items: readonly GroupItem[]): string[] => {
+    if (group.collapsed === true) {
+        const ids = new Set(group.memberIds ?? []);
+        return items.filter((item) => ids.has(item.id)).map((item) => item.id);
+    }
+    const rect = groupRect(group);
+    return items.filter((item) => item.id !== group.id && holds(rect, item)).map((item) => item.id);
+};
+
 /*
  * The colors a node's accent and a group's frame pick from, in the hue order the picker draws them
  * in. Shared because both sides need the same closed set: the client paints the swatches and the

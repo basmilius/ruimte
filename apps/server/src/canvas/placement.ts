@@ -1,4 +1,4 @@
-import { GROUP_HEADER, GROUP_PADDING, type ProjectNode } from '@ruimte/contracts';
+import { GROUP_HEADER, GROUP_PADDING, groupMemberIds, groupRect, type ProjectNode } from '@ruimte/contracts';
 
 export interface Rect {
     x: number;
@@ -99,36 +99,13 @@ export const arrangeRects = (rects: readonly Rect[], layout: ArrangeLayout, cols
 type GroupFrame = Pick<ProjectNode, 'x' | 'y' | 'w' | 'h' | 'collapsed' | 'expandedHeight'>;
 
 /*
- * The rectangle a group holds its members in. A collapsed group is drawn as its header alone, but
- * its members keep the places they had, so what a new one has to fit inside is the height it goes
- * back to when it opens.
- */
-export const groupRect = (group: GroupFrame): Rect => ({
-    x: group.x,
-    y: group.y,
-    w: group.w,
-    h: group.collapsed === true ? (group.expandedHeight ?? group.h) : group.h
-});
-
-/*
- * What a group holds. Open, that is read off the positions, the same center-in-rect test the client
- * runs (`membersOf` in `apps/client/src/state/canvas.ts`); collapsed, the file spells it out,
- * because the members sit nowhere near the header the group has shrunk to.
+ * What a group holds, as nodes rather than ids: which things lie inside a frame is the project
+ * document's own rule (`groupMemberIds`), shared with whatever else has to answer it, and this side
+ * only needs the nodes back in the order the canvas keeps them.
  */
 export const groupMembers = (group: ProjectNode, nodes: readonly ProjectNode[]): ProjectNode[] => {
-    if (group.collapsed === true) {
-        const ids = new Set(group.memberIds ?? []);
-        return nodes.filter((node) => ids.has(node.id));
-    }
-    const rect = groupRect(group);
-    return nodes.filter(
-        (node) =>
-            node.id !== group.id &&
-            node.x + node.w / 2 >= rect.x &&
-            node.x + node.w / 2 <= rect.x + rect.w &&
-            node.y + node.h / 2 >= rect.y &&
-            node.y + node.h / 2 <= rect.y + rect.h
-    );
+    const ids = new Set(groupMemberIds(group, nodes));
+    return nodes.filter((node) => ids.has(node.id));
 };
 
 /*

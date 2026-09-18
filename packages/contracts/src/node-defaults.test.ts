@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { CANVAS_GRID, GROUP_HEADER, GROUP_PADDING, groupFrame } from './node-defaults.ts';
+import { CANVAS_GRID, GROUP_HEADER, GROUP_PADDING, groupFrame, groupMemberIds } from './node-defaults.ts';
 
 describe('groupFrame', () => {
     test('keeps room on every side and a title band above what it holds', () => {
@@ -31,5 +31,22 @@ describe('groupFrame', () => {
 
     test('nothing to hold is no frame', () => {
         expect(groupFrame([])).toBeNull();
+    });
+});
+
+describe('groupMemberIds', () => {
+    const frame = { id: 'frame', x: 0, y: 0, w: 1000, h: 1000 };
+    const inside = { id: 'inside', x: 100, y: 100, w: 200, h: 200 };
+    const straddling = { id: 'straddling', x: 700, y: 100, w: 400, h: 200 };
+    const outside = { id: 'outside', x: 4000, y: 0, w: 100, h: 100 };
+    const text = { id: 'text', x: 500, y: 500 };
+
+    test('an open frame holds what lies in it by its center, hanging over an edge included, and a text by the point it sits on', () => {
+        expect(groupMemberIds(frame, [frame, inside, straddling, outside, text])).toEqual(['inside', 'straddling', 'text']);
+    });
+
+    test('a collapsed frame holds what the file says, and only what is still there', () => {
+        const folded = { ...frame, collapsed: true, expandedHeight: 1000, h: 40, memberIds: ['outside', 'gone'] };
+        expect(groupMemberIds(folded, [folded, inside, outside])).toEqual(['outside']);
     });
 });
