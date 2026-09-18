@@ -1,4 +1,4 @@
-import { isAgentKind, type ProjectCanvasView, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
+import { EDGE_ROLES, isAgentKind, type ProjectCanvasView, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
 import { z } from 'zod';
 import { newId, nodeLines } from './node-verb.ts';
 import { MAX_TITLE_LENGTH, SCOPE_LINE, VerbRefusal, canvasFor, defineAction, field, orNote, placeOf, titleField, type VerbCall } from './verb.ts';
@@ -6,16 +6,26 @@ import { MAX_TITLE_LENGTH, SCOPE_LINE, VerbRefusal, canvasFor, defineAction, fie
 // Lines drawn per call. Past this it is not linking any more, it is an agent in a loop.
 export const MAX_LINKS = 20;
 
+/* What each role is for, offered whenever a call names one this version does not have. */
+const ROLE_LINES: readonly string[] = [
+    `roles\t${EDGE_ROLES.join('\t')}`,
+    'role\tcontext\tThe head reads the tail with ruimte-context read and may notify along the line; this is what a line without a role already is',
+    'role\ttarget\tFrom an agent into something it can drive, such as a device or a page',
+    'role\torigin\tOne node opened the other; it says where a node came from and nothing more'
+];
+
 const LINK_DETAIL: readonly string[] = [
     'flag\t--to A,B\trequired\tThe nodes the line runs into, by id, separated by commas',
     'flag\t--from N\toptional\tWhere the line starts; without it, you',
     `flag\t--label L\toptional\tWhat the line is called on the canvas, at most ${MAX_TITLE_LENGTH} characters; a line into an agent is called "context" without one`,
+    `flag\t--role R\toptional\tWhat the line is for: ${EDGE_ROLES.join(', ')}; without it a line into a terminal or a chat is context and any other line is only a line`,
     'flag\t--view V\toptional\tThe canvas both ends are on, by view id; without it the one you are on',
     'prints\tid\tfrom\tto\tstate\tway\tone line per edge, where state is new for one that was drawn and existing for one that was there already',
     'way\tout for the line you asked for, back for the one this verb drew the other way by itself, so two rows for one --to is not a mistake',
     'context\tAn edge into a terminal or a chat node is what lets that agent read the other end with ruimte-context read; a line between two other nodes is only a line',
     'both ways\tA --to that names a terminal or a chat, from a terminal or a chat, is two edges and two rows: each of them then reads the other, and either may notify the other',
     'both ways\tInto anything else it is one edge and one row, since only an agent node reads what a line brings it',
+    'both ways\tA --role of target or origin is one edge and one row whatever the two ends are, since either only reads one way',
     'again\tAn edge that is already there is left alone and reported as existing, so running the same link new twice changes nothing',
     `limit\tAt most ${MAX_LINKS} ids in --to`,
     'ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs',
@@ -28,7 +38,7 @@ const pickId = (edge: ProjectEdge): string => edge.id;
 
 export const linkNewAction = defineAction('link', {
     name: 'new',
-    usage: '--to A,B [--from N] [--label L] [--view V]',
+    usage: '--to A,B [--from N] [--label L] [--role R] [--view V]',
     summary: 'Draws a context line between nodes of one canvas; between two agents it draws both ways, which is two rows',
     detail: LINK_DETAIL,
     positionals: z.tuple([], { error: 'link new takes no arguments, only flags; the nodes go in --to' }),
@@ -36,6 +46,10 @@ export const linkNewAction = defineAction('link', {
         to: z.string().min(1, '--to needs one or more node ids, separated by commas'),
         from: z.string().min(1, '--from needs the id of a node on that canvas').optional(),
         label: titleField('--label', '--label needs a word').optional(),
+        role: z
+            .string()
+            .min(1, `--role needs one of ${EDGE_ROLES.join(', ')}`)
+            .optional(),
         view: z.string().min(1, '--view needs the id of a canvas').optional()
     }),
     async run({ flags }, call) {
@@ -47,6 +61,14 @@ export const linkNewAction = defineAction('link', {
         if (targets.length > MAX_LINKS) {
             throw new VerbRefusal('too-many-links', `--to names ${targets.length} nodes and at most ${MAX_LINKS} may be linked at once`);
         }
+        const role = flags.role;
+        if (role !== undefined && !(EDGE_ROLES as readonly string[]).includes(role)) {
+            throw new VerbRefusal('unknown-role', `${role} is not one of the ${EDGE_ROLES.length} things a line can be for`, [...ROLE_LINES]);
+        }
+        /* A line that reads: the role says so, or nothing was said and a line into an agent has read
+           the other end since before the field existed. The only kind drawn back, and the only one
+           this verb calls "context" by itself. */
+        const reads = role === undefined || role === 'context';
 
         return call.host.mutate(place.projectId, (content) => {
             const canvas = canvasFor(content, place, flags.view);
@@ -86,12 +108,13 @@ export const linkNewAction = defineAction('link', {
                     return;
                 }
                 // The label a person's own drag gives it: named only where the line means something.
-                const label = flags.label ?? (isAgentKind(end.kind) ? 'context' : undefined);
+                const label = flags.label ?? (reads && isAgentKind(end.kind) ? 'context' : undefined);
                 const edge: ProjectEdge = {
                     id: newId('edge', content, made.map(pickId)),
                     from: start,
                     to: end.id,
-                    ...(label === undefined ? {} : { label })
+                    ...(label === undefined ? {} : { label }),
+                    ...(role === undefined ? {} : { role })
                 };
                 made.push(edge);
                 lines.push([edge.id, start, end.id, 'new', way].join('\t'));
@@ -100,8 +123,10 @@ export const linkNewAction = defineAction('link', {
             for (const id of targets) {
                 const target = canvas.nodes.find((node) => node.id === id)!;
                 draw(from, target, 'out');
-                // Both ways between two agents: each of them is then something the other can read.
-                if (isAgentKind(source.kind) && isAgentKind(target.kind)) {
+                /* Both ways between two agents: each of them is then something the other can read.
+                   Only for a line that reads; a target or an origin means something in one direction
+                   only, so the copy back would be a line that says something nobody meant. */
+                if (reads && isAgentKind(source.kind) && isAgentKind(target.kind)) {
                     draw(id, source, 'back');
                 }
             }

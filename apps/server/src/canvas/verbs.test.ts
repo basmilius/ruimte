@@ -13,6 +13,7 @@ import {
     DiagramMetaSchema,
     DiagramNodeSchema,
     DrawingColorSchema,
+    EDGE_ROLES,
     GROUP_HEADER,
     GROUP_PADDING,
     NODE_ACCENT_NAMES,
@@ -1630,6 +1631,29 @@ describe('link new', () => {
         const many = Array.from({ length: MAX_LINKS + 1 }, (_, i) => `n-${i}`).join(',');
         expect((await post('link', ['new', '--to', many])).lines[0]).toStartWith('refused\ttoo-many-links\t');
         expect((await post('link', ['new', '--to', 'note-1,'])).lines[0]).toStartWith('refused\tbad-arguments\t');
+    });
+
+    test('--role says what the line is for and puts the word on the edge', async () => {
+        await post('link', ['new', '--to', 'note-1', '--role', 'target']);
+        expect((await canvasOnDisk()).edges.map((edge) => [edge.from, edge.to, edge.role])).toEqual([['term-1', 'note-1', 'target']]);
+    });
+
+    test('a target or an origin is one line, and is never named context by itself', async () => {
+        const pair = content();
+        (pair.views[0] as ProjectCanvasView).nodes.push({ id: 'term-2', kind: 'terminal', title: 'other', x: 2000, y: 0, w: 560, h: 360 });
+        await store.mutate(projectId, () => ({ content: pair, result: null }));
+
+        const { lines } = await post('link', ['new', '--to', 'term-2', '--role', 'origin']);
+        expect(lines.map((line) => line.split('\t').slice(1))).toEqual([['term-1', 'term-2', 'new', 'out']]);
+        expect((await canvasOnDisk()).edges.map((edge) => [edge.label, edge.role])).toEqual([[undefined, 'origin']]);
+    });
+
+    test('refuses a role it does not have and says which ones it does', async () => {
+        const { status, lines } = await post('link', ['new', '--to', 'note-1', '--role', 'beams']);
+        expect(status).toBe(422);
+        expect(lines[0]).toBe(`refused\tunknown-role\tbeams is not one of the ${EDGE_ROLES.length} things a line can be for`);
+        expect(lines[1]).toBe(['roles', ...EDGE_ROLES].join('\t'));
+        expect((await onDisk()).rev).toBe(1);
     });
 });
 
