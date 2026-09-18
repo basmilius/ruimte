@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatCheckpointDiff, ChatInfo, ChatItem, ChatSubagentItem, ContextSource } from '@ruimte/contracts';
 import { verbsNote } from '../context/context-note.ts';
+import { deliverNotice, noticeNote, NoticeStore, renderNotice, showNotices, type Notice } from '../context/notices.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { AttachmentStore } from './attachment-store.ts';
 import { ChatManager } from './chat-manager.ts';
@@ -885,5 +886,95 @@ describe("stopping a subagent of the CLI's own", () => {
         // A second stop, or a row that is not there, changes nothing or says so.
         await manager.stopSubagent('chat-stop', 'toolu_bg');
         await expect(manager.stopSubagent('chat-stop', 'toolu_none')).rejects.toMatchObject({ code: 'subagent-not-found' });
+    });
+});
+/*
+ * A message another node left, which reaches two readers: a person reads it in the thread the moment
+ * it lands, and the model hears it once, in front of its next prompt. Wired the way the daemon wires
+ * it, so the test says what a person and an agent really get.
+ */
+describe('a message another node left', () => {
+    let notices: NoticeStore;
+
+    const withNotices = (): ChatManager =>
+        makeManager({
+            messages: (chatId) => notices.take(chatId).map(renderNotice),
+            unshownMessages: async (chatId) => (await notices.show(chatId)).map(noticeNote)
+        });
+
+    const notify = async (targetId: string, text: string): Promise<void> => {
+        const notice: Omit<Notice, 'createdAt'> = { projectId: 'project-1', targetId, from: 'term-1', fromTitle: 'dev server', text };
+        await deliverNotice(notices, { terminal: () => null, hasChat: (id) => manager.get(id) !== undefined }, notice);
+        await showNotices(notices, { has: (id) => manager.hasStored(id), note: (id, line) => manager.addNote(id, 'info', line) }, targetId);
+    };
+
+    const heard = 'Ruimte: node term-1 ("dev server") sent you a message: the build is green';
+    const read = 'dev server sent a message: the build is green';
+
+    beforeEach(async () => {
+        await retire(manager);
+        notices = new NoticeStore(home);
+        manager = withNotices();
+        recorder = new ChatRecorder();
+        manager.subscribe('c1', recorder.sink());
+    });
+
+    test('lands in the thread of a running chat at once, and in front of its next prompt once', async () => {
+        await manager.create({ chatId: 'chat-msg', cwd: home });
+        manager.attach('chat-msg', 'c1');
+        await manager.send('chat-msg', 'first');
+        await recorder.until(idle);
+
+        await notify('chat-msg', 'the build is green');
+        await recorder.until(() => recorder.ofKind('note').length === 1);
+        // Outside any turn: nothing the model did put it there.
+        expect(recorder.ofKind('note')[0]).toMatchObject({ level: 'info', turnId: null, text: read });
+
+        await manager.send('chat-msg', 'second');
+        await recorder.until(() => recorder.info?.usage.turns === 2 && idle());
+        await manager.send('chat-msg', 'third');
+        await recorder.until(() => recorder.info?.usage.turns === 3 && idle());
+
+        // The fake echoes its prompt, so the reply shows what the CLI was given.
+        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: first', `echo: ${heard}\n\nsecond`, 'echo: third']);
+        /* The prompt that carried it shows its preamble, the way every preamble is shown: a person
+           reads when the message landed on the first line and when the model heard it on the second. */
+        const notes = recorder.ofKind('note');
+        expect(notes).toHaveLength(2);
+        expect(notes[1]).toMatchObject({ turnId: recorder.ofKind('turn')[1]?.id, text: heard });
+    });
+
+    test('waits for a chat nobody has started, and is in the thread before its first prompt', async () => {
+        await notify('chat-cold', 'the build is green');
+        // Nothing holds that id yet, so nothing was shown and nothing was taken.
+        expect(notices.waiting('chat-cold')).toHaveLength(1);
+
+        await manager.create({ chatId: 'chat-cold', cwd: home });
+        expect(manager.attach('chat-cold', 'c1').items).toEqual([expect.objectContaining({ kind: 'note', level: 'info', turnId: null, text: read })]);
+
+        await manager.send('chat-cold', 'what happened');
+        await recorder.until(idle);
+        expect(recorder.ofKind('assistant')[0]?.text).toBe(`echo: ${heard}\n\nwhat happened`);
+    });
+
+    test('is in the thread once after a restart, whether or not the model heard it yet', async () => {
+        await manager.create({ chatId: 'chat-again', cwd: home });
+        manager.attach('chat-again', 'c1');
+        await notify('chat-again', 'the build is green');
+        await store.written('chat-again', (record) => record.items.some((item) => item.kind === 'note'));
+
+        await retire(manager);
+        notices = new NoticeStore(home);
+        await notices.load();
+        manager = withNotices();
+        recorder = new ChatRecorder();
+        manager.subscribe('c1', recorder.sink());
+
+        await manager.create({ chatId: 'chat-again', cwd: home });
+        expect(manager.attach('chat-again', 'c1').items.filter((item) => item.kind === 'note')).toEqual([expect.objectContaining({ text: read })]);
+        // And the model, which had not heard it when the daemon went down, still hears it exactly once.
+        await manager.send('chat-again', 'what happened');
+        await recorder.until(idle);
+        expect(recorder.ofKind('assistant')[0]?.text).toBe(`echo: ${heard}\n\nwhat happened`);
     });
 });

@@ -58,7 +58,7 @@ import { CANVAS_PATH, handleCanvasRequest } from './canvas/canvas-route.ts';
 import { ChatManager } from './chat/chat-manager.ts';
 import { hookContext } from './context/context-note.ts';
 import { CONTEXT_PATH, ContextStore } from './context/context-store.ts';
-import { deliverNotice, NoticeStore, renderNotice, type Notice } from './context/notices.ts';
+import { deliverNotice, noticeNote, NoticeStore, renderNotice, showNotices, type Notice } from './context/notices.ts';
 import { ChatStore } from './chat/chat-store.ts';
 import type { ServerConfig } from './config.ts';
 import { Dispatcher, type ClientAccess } from './dispatcher.ts';
@@ -171,6 +171,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     /* What a node hears the moment it can: taken here, so whichever channel gets there first is the
        only one that delivers it. */
     const messagesFor = (targetId: string): string[] => notices.take(targetId).map(renderNotice);
+    /* The other reader: what a chat has to show a person in its thread, which is never taken from the model. */
+    const unshownFor = async (chatId: string): Promise<string[]> => (await notices.show(chatId)).map(noticeNote);
     // One reader for chats and terminals, so a transcript both look at is only read on from where either stopped.
     const claudeTitles = new ClaudeTitleReader();
     const manager = new SessionManager({
@@ -227,6 +229,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         depthOf: (chatId) => lineage.depthOf(chatId),
         contextSources: (chatId) => context.list(chatId),
         messages: messagesFor,
+        unshownMessages: unshownFor,
         firstPrompt: (chatId) => prompts.take(chatId),
         // A turn reports what is left of its plan in passing; that belongs to the machine's numbers.
         onLimits: (update) => limits.applyLive(update),
@@ -372,6 +375,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         launch: (id: string) => manager.get(id)?.launch,
         reportedMode: (id: string) => manager.get(id)?.reportedMode
     };
+    /* Where a message a person has not seen goes: the thread of the chat left under that node id. */
+    const noticeChat = {
+        has: (id: string) => chats.hasStored(id),
+        note: (id: string, text: string) => chats.addNote(id, 'info', text)
+    };
     const canvasHost = {
         locate: (id: string) => projects.index.locate(id),
         read: (projectId: string) => projects.read(projectId),
@@ -406,8 +414,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             await endChildren.owe(nodeId);
             await (kind === 'terminal' ? manager.kill(nodeId) : chats.kill(nodeId)).catch(() => undefined);
         },
-        notify: (notice: Omit<Notice, 'createdAt'>) =>
-            deliverNotice(
+        notify: async (notice: Omit<Notice, 'createdAt'>) => {
+            const delivery = await deliverNotice(
                 notices,
                 {
                     /* An exited session still lists its last screen, but nobody is reading it; its
@@ -419,7 +427,14 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                     hasChat: (id) => chats.get(id) !== undefined
                 },
                 notice
-            )
+            );
+            /* A chat shows it to a person the moment it lands. Never in the way of the answer to the
+               sender: the message is in the queue by now, so the model hears it whatever a thread does. */
+            await showNotices(notices, noticeChat, notice.targetId).catch((e) =>
+                console.error(`Showing a message in chat ${notice.targetId} failed:`, errorText(e))
+            );
+            return delivery;
+        }
     };
 
     const push = new PushService({

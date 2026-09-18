@@ -80,6 +80,8 @@ interface ChatManagerOptions {
     contextSources?: (chatId: string) => ContextSource[];
     // What another node left for this chat, taken once and put in front of the next prompt.
     messages?: (chatId: string) => string[];
+    // The same messages, as the lines a person reads in the thread; asked once, when the chat is loaded.
+    unshownMessages?: (chatId: string) => Promise<string[]>;
     // The prompt an agent node was made with, taken once; it becomes the thread's first message.
     firstPrompt?: (chatId: string) => Promise<string | null>;
     // Put in front of PATH, so `ruimte-context` is there for the CLI's shell.
@@ -145,6 +147,7 @@ export class ChatManager {
     private readonly depthOf: (chatId: string) => number;
     private readonly contextSources: (chatId: string) => ContextSource[];
     private readonly messages: (chatId: string) => string[];
+    private readonly unshownMessages: (chatId: string) => Promise<string[]>;
     private readonly firstPrompt: (chatId: string) => Promise<string | null>;
     private readonly claudeTitles: ChatManagerOptions['claudeTitles'] | null;
     private readonly nameChat: ChatManagerOptions['nameChat'] | null;
@@ -176,6 +179,7 @@ export class ChatManager {
         this.depthOf = options.depthOf ?? (() => 0);
         this.contextSources = options.contextSources ?? (() => []);
         this.messages = options.messages ?? (() => []);
+        this.unshownMessages = options.unshownMessages ?? (() => Promise.resolve([]));
         this.firstPrompt = options.firstPrompt ?? (() => Promise.resolve(null));
         this.commands = {
             ...(options.command ? { claude: options.command } : {}),
@@ -369,6 +373,16 @@ export class ChatManager {
         }
         for (const task of this.taskRows(payload.chatId)) {
             session.upsertTaskRow(task);
+        }
+        /* A message that landed while nobody held this chat is in the thread before its first prompt,
+           so a person reads it here; the model still hears it from the queue, in front of that prompt. */
+        try {
+            for (const text of await this.unshownMessages(payload.chatId)) {
+                session.addNote('info', text);
+            }
+        } catch (e) {
+            // The messages themselves wait in the queue either way, and a chat must open regardless.
+            console.error(`Showing the messages left for chat ${payload.chatId} failed:`, errorText(e));
         }
         // Send before returning info so attach includes the initial prompt as the thread's first message.
         const prompt = await this.firstPrompt(payload.chatId);

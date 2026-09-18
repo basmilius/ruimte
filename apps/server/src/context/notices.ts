@@ -31,7 +31,13 @@ const NoticeSchema = z.object({
     from: z.string().min(1),
     fromTitle: z.string(),
     text: z.string().min(1),
-    createdAt: z.number()
+    createdAt: z.number(),
+    /*
+     * Whether a person was shown this message already. Its own mark, beside the queue: the queue is
+     * emptied by the model reading the message, and the two readers must not take it from each
+     * other. Absent is unshown, so a message left by an older daemon is still shown once.
+     */
+    shown: z.boolean().optional()
 });
 
 export type Notice = z.infer<typeof NoticeSchema>;
@@ -44,6 +50,13 @@ const fileName = (targetId: string): string => `${encodeURIComponent(targetId)}.
 /* What the receiving agent hears: the id to act on, the title to read, and the message itself. */
 export const renderNotice = (notice: Notice): string =>
     `Ruimte: node ${notice.from}${notice.fromTitle === '' ? '' : ` ("${notice.fromTitle}")`} sent you a message: ${notice.text}`;
+
+/*
+ * What a person reads in the thread: the sender by the name it carries on the canvas, since that is
+ * what they can point at, and the message whole. Not what the agent hears: this one is addressed to
+ * nobody and names no id to act on.
+ */
+export const noticeNote = (notice: Notice): string => `${notice.fromTitle === '' ? `Node ${notice.from}` : notice.fromTitle} sent a message: ${notice.text}`;
 
 /*
  * The messages waiting for each node, held until that node's agent has a moment to hear them. On
@@ -126,6 +139,24 @@ export class NoticeStore {
         return this.lastDrop;
     }
 
+    /*
+     * What nobody showed a person yet, marked here so it is shown once. The messages stay in the
+     * queue: this is the second reader, and only the model's copy may be taken away.
+     */
+    async show(targetId: string): Promise<Notice[]> {
+        const queue = this.waiting(targetId);
+        const unshown = queue.filter((notice) => notice.shown !== true);
+        if (unshown.length === 0) {
+            return [];
+        }
+        this.queues.set(
+            targetId,
+            queue.map((notice) => ({ ...notice, shown: true }))
+        );
+        await this.persist(targetId);
+        return unshown;
+    }
+
     /* What waits for a node, without taking it; the stale ones are already gone from the answer. */
     waiting(targetId: string): Notice[] {
         const queue = this.queues.get(targetId);
@@ -201,4 +232,27 @@ export const deliverNotice = async (store: NoticeStore, targets: NoticeTargets, 
         return { at: 'waiting', detail: `the chat reads it in front of its next prompt (${count})` };
     }
     return { at: 'waiting', detail: `nothing runs in that node yet; it reads the message when it starts (${count})` };
+};
+
+/* The chat a message was left for, as the two things showing it needs: whether it is there, and a line in its thread. */
+export interface NoticeChat {
+    /* Whether this daemon holds a chat under the id, running or on disk. */
+    has(id: string): Promise<boolean>;
+    /* Puts a line in that chat's thread, loading the chat when nobody has. */
+    note(id: string, text: string): Promise<void>;
+}
+
+/*
+ * What a chat has to show a person, in its thread, the moment a message lands and not when the model
+ * gets round to it: without this a message left for a busy node is a file under $RUIMTE_HOME and
+ * nothing else. An id no chat holds shows nothing and marks nothing, so the chat that opens on that
+ * id later still has all of it.
+ */
+export const showNotices = async (store: NoticeStore, chat: NoticeChat, targetId: string): Promise<void> => {
+    if (!(await chat.has(targetId))) {
+        return;
+    }
+    for (const notice of await store.show(targetId)) {
+        await chat.note(targetId, noticeNote(notice));
+    }
 };
