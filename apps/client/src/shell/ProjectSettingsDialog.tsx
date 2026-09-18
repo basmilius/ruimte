@@ -27,11 +27,10 @@ const readAsBase64 = (file: File): Promise<string> =>
         reader.readAsDataURL(file);
     });
 
-interface ProjectSettingsDialogProps {
+/* Everything the form works on, in one value the dialog can outlive its target with. */
+export interface ProjectSettingsSubject {
     project: ProjectSummary;
     endpointId: string;
-    open: boolean;
-    onOpenChange(open: boolean): void;
     actions: {
         rename(name: string): Promise<void>;
         setChosenIcon(icon: ProjectIconChoice): Promise<void>;
@@ -40,7 +39,15 @@ interface ProjectSettingsDialogProps {
     };
 }
 
-function ProjectSettingsForm({ project, endpointId, onOpenChange, actions }: Omit<ProjectSettingsDialogProps, 'open'>) {
+interface ProjectSettingsDialogProps {
+    /* Null before the dialog is ever opened, and again once it has finished closing. */
+    subject: ProjectSettingsSubject | null;
+    open: boolean;
+    onOpenChange(open: boolean): void;
+    onOpenChangeComplete(open: boolean): void;
+}
+
+function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: ProjectSettingsSubject & { onOpenChange(open: boolean): void }) {
     const chosen = project.icon.kind === 'emoji' || project.icon.kind === 'lucide' ? project.icon : null;
     const fileRef = useRef<HTMLInputElement>(null);
     const [name, setName] = useState(project.name);
@@ -181,14 +188,16 @@ function ProjectSettingsForm({ project, endpointId, onOpenChange, actions }: Omi
     );
 }
 
-export function ProjectSettingsDialog({ project, endpointId, open, onOpenChange, actions }: ProjectSettingsDialogProps) {
+/* The dialog stays in the tree with its subject, so Base UI sees the open go from false to true and
+   the popup animates both ways. A subject dropped at the click would cut the closing one short. */
+export function ProjectSettingsDialog({ subject, open, onOpenChange, onOpenChangeComplete }: ProjectSettingsDialogProps) {
     return (
-        <Dialog.Root open={open} onOpenChange={onOpenChange}>
+        <Dialog.Root open={open} onOpenChange={onOpenChange} onOpenChangeComplete={onOpenChangeComplete}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
                 <Dialog.Popup className="dialog-popup w-[420px] p-5">
                     <Dialog.Title className="text-base font-semibold text-text">Project settings</Dialog.Title>
-                    <ProjectSettingsForm project={project} endpointId={endpointId} onOpenChange={onOpenChange} actions={actions} />
+                    {subject !== null && <ProjectSettingsForm {...subject} onOpenChange={onOpenChange} />}
                 </Dialog.Popup>
             </Dialog.Portal>
         </Dialog.Root>
