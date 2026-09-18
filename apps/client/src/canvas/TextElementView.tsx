@@ -1,6 +1,15 @@
 import { memo, useEffect, useRef } from 'react';
 import clsx from 'clsx';
+import type { DrawingFont } from '@ruimte/contracts';
+import { loadDrawingFont } from '@/drawing/fonts';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
+
+/* Absent is 'sans', so a label written before there was a choice keeps the face it had. */
+export const FONT_STACK: Record<DrawingFont, string> = {
+    hand: 'var(--font-hand)',
+    sans: 'var(--font-sans)',
+    mono: 'var(--font-mono)'
+};
 
 export const TextElementView = memo(function TextElementView({ id }: { id: string }) {
     const canvasStore = useCanvasStore();
@@ -9,6 +18,14 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
     const editing = useCanvas((s) => s.editingTextId === id);
     const hidden = useCanvas((s) => s.hidden.has(id));
     const ref = useRef<HTMLDivElement>(null);
+    const hand = text?.font === 'hand';
+
+    /* Kalam is not in the bundle's first load; a label set in it asks for the face the drawings use. */
+    useEffect(() => {
+        if (hand) {
+            void loadDrawingFont();
+        }
+    }, [hand]);
 
     useEffect(() => {
         if (editing && ref.current) {
@@ -41,11 +58,13 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
             data-text-id={id}
             data-placeholder="Type something"
             className={clsx(
-                'text-element absolute whitespace-pre rounded-sm px-1 py-0.5 leading-tight font-medium text-text',
-                selected && !editing && 'outline-2 outline-(--selection)',
+                'text-element absolute whitespace-pre rounded-sm px-1 py-0.5 leading-tight text-text',
+                text.bold ? 'font-bold' : 'font-medium',
+                text.italic && 'italic',
+                selected && !editing && 'outline-2 outline-accent',
                 !editing && 'cursor-default'
             )}
-            style={{ left: text.x, top: text.y, fontSize: text.size }}
+            style={{ left: text.x, top: text.y, fontSize: text.size, fontFamily: FONT_STACK[text.font ?? 'sans'] }}
             contentEditable={editing ? 'plaintext-only' : false}
             suppressContentEditableWarning
             onDoubleClick={(e) => {

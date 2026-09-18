@@ -14,7 +14,7 @@ interface CanvasSlice {
     edges: unknown[];
     order: string[];
     camera: { x: number; y: number; zoom: number };
-    mode: { kind: 'canvas' } | { kind: 'node'; nodeId: string };
+    bodyFocusId: string | null;
     loading: boolean;
 }
 
@@ -380,7 +380,8 @@ export class ProjectClient {
             this.sink.setDirty(true);
             this.scheduleSave();
         }
-        if (state.camera !== previous.camera || state.mode !== previous.mode) {
+        // Where the keyboard sits is what the local file keeps as the view's focused node.
+        if (state.camera !== previous.camera || state.bodyFocusId !== previous.bodyFocusId) {
             this.scheduleLocal();
         }
     }

@@ -3,6 +3,7 @@ import { AgentKindSchema } from './agent.ts';
 import { GitDiffScopeSchema } from './git.ts';
 import { RuntimeModeSchema } from './model.ts';
 import { DeviceReferenceSchema } from './device.ts';
+import { DrawingFontSchema } from './font.ts';
 
 export const ProjectIdSchema = z.string().min(1);
 export type ProjectId = z.infer<typeof ProjectIdSchema>;
@@ -150,12 +151,17 @@ export const CanvasNodeSchema = z.preprocess(
     ProjectNodeSchema
 );
 
+/* A label standing free on a canvas. Style is the whole element's; there is no run inside the text. */
 export const ProjectTextSchema = z.object({
     id: z.string().min(1),
     x: z.number(),
     y: z.number(),
     text: z.string(),
-    size: z.number().positive()
+    size: z.number().positive(),
+    // Absent means 'sans', the face the app itself is set in.
+    font: DrawingFontSchema.optional(),
+    bold: z.boolean().optional(),
+    italic: z.boolean().optional()
 });
 export type ProjectText = z.infer<typeof ProjectTextSchema>;
 

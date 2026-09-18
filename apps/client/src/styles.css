@@ -41,10 +41,15 @@
     /* The pressed step of a toggle. It cannot be `--surface-raised`, which equals `--surface` in the
        light theme, and it has to sit a shade past `--surface-hover` so pressed outranks hover. */
     --surface-active: #dcdce2;
-    --border: #e2e2e6;
-    --border-strong: #c9c9d0;
+    /* Borders carry an alpha rather than a gray of their own, so a line takes the color of whatever
+       it is drawn over instead of fighting it. A gray hairline over a tinted surface reads as a
+       smudge; the same line in black at a low alpha stays a line. Everything with a surface of its
+       own clips its background to the padding box (see `@layer base`), or the border would blend
+       with that surface and never with the ground behind it. */
+    --border: rgb(0 0 0 / 0.11);
+    --border-strong: rgb(0 0 0 / 0.2);
     /* A hairline that stays out of the way: on a sunken field a full `--border` draws a box. */
-    --border-soft: #e7e7ea;
+    --border-soft: rgb(0 0 0 / 0.06);
     --text: #18181b;
     --text-muted: #6f6f78;
     --text-faint: #a1a1aa;
@@ -182,9 +187,10 @@
     --surface-sunken: #08080a;
     --surface-hover: #202024;
     --surface-active: #28282e;
-    --border: #1f1f24;
-    --border-strong: #2c2c33;
-    --border-soft: #16161a;
+    /* White at a low alpha, which is what gives a dark surface its lifted edge. */
+    --border: rgb(255 255 255 / 0.07);
+    --border-strong: rgb(255 255 255 / 0.13);
+    --border-soft: rgb(255 255 255 / 0.03);
     --text: #ececf1;
     --text-muted: #9a9aa6;
     --text-faint: #5f5f6b;
@@ -314,6 +320,8 @@
     /* Not inline: the terminal font setting overrides this variable on `<html>`, and `font-mono`
        has to follow it. */
     --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+    /* The hand a drawing is written in, for the text a person places by hand on a canvas as well. */
+    --font-hand: "Kalam", "Comic Sans MS", cursive;
 }
 
 /* A line height relative to the font would put a line between two pixels. Inline, so the `em`
@@ -381,6 +389,15 @@
 }
 
 @layer base {
+    /*
+     * A border with an alpha has to mix with what is behind the element, not with the element's own
+     * background: by default a background runs on under the border and a node's white surface would
+     * wash its line out over the canvas. Utilities sit in a later layer, so `bg-clip-text` still wins.
+     */
+    *, ::before, ::after {
+        background-clip: padding-box;
+    }
+
     html, body, #root {
         height: 100%;
         margin: 0;
@@ -606,11 +623,11 @@
 
     /* ---------------------------------------------------------------- Canvas */
 
-    /* The focus ring of a node frame has to lose to the node that is focused or selected, which is
-       a `:not()` chain and not a variant. */
-    .node-focused { outline: 2px solid var(--accent); outline-offset: 0; }
-    .node-selected { outline: 2px solid var(--selection); outline-offset: 0; }
-    [data-node-id]:focus-visible:not(.node-focused):not(.node-selected) { outline: 2px solid var(--accent); outline-offset: 2px; }
+    /* The accent itself, not a wash of it: a selection ring has to read at a glance on a canvas full
+       of surfaces. `--selection` stays what it is for a run of selected text. The frame's own focus
+       ring has to lose to a selected node, which is a `:not()` and not a variant. */
+    .node-selected { outline: 2px solid var(--accent); outline-offset: 0; }
+    [data-node-id]:focus-visible:not(.node-selected) { outline: 2px solid var(--accent); outline-offset: 2px; }
 
     /* A text element is a `contenteditable`, so its placeholder is drawn from an attribute and its
        caret has to lose to the `cursor-default` the view puts on it while it is not being edited. */

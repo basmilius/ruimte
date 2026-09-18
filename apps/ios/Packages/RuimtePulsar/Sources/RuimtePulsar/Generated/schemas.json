@@ -16516,6 +16516,20 @@
                           "size": {
                             "type": "number",
                             "exclusiveMinimum": 0
+                          },
+                          "font": {
+                            "type": "string",
+                            "enum": [
+                              "hand",
+                              "sans",
+                              "mono"
+                            ]
+                          },
+                          "bold": {
+                            "type": "boolean"
+                          },
+                          "italic": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -18632,6 +18646,20 @@
                           "size": {
                             "type": "number",
                             "exclusiveMinimum": 0
+                          },
+                          "font": {
+                            "type": "string",
+                            "enum": [
+                              "hand",
+                              "sans",
+                              "mono"
+                            ]
+                          },
+                          "bold": {
+                            "type": "boolean"
+                          },
+                          "italic": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -33118,6 +33146,20 @@
                           "size": {
                             "type": "number",
                             "exclusiveMinimum": 0
+                          },
+                          "font": {
+                            "type": "string",
+                            "enum": [
+                              "hand",
+                              "sans",
+                              "mono"
+                            ]
+                          },
+                          "bold": {
+                            "type": "boolean"
+                          },
+                          "italic": {
+                            "type": "boolean"
                           }
                         },
                         "required": [

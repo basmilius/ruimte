@@ -6,6 +6,7 @@ import { isApplePlatform } from '@/desktop/bridge';
 import { addNodeAtCenter } from '@/shell/commands';
 import { newCanvasView, showView, splitFocusedCell, stepView, viewAtIndex } from '@/project/views';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
+import { isInNodeBody } from '@/canvas/node-body';
 import { focusPromptStack, isInPromptStack, leavePromptStack } from '@/canvas/prompt-stack';
 import { useSubagentView } from '@/chat/subagent-view';
 import { stepTimelineMessage } from '@/chat/timeline-scroll';
@@ -32,7 +33,7 @@ const onStandaloneView = (): boolean => {
     return view !== null && !isCanvasView(view);
 };
 
-/* The page the keyboard means: a browser view in the focused cell, or the browser node stepped into on its canvas. */
+/* The page the keyboard means: a browser view in the focused cell, or the active browser node on its canvas. */
 const focusedBrowserKey = (): string | null => {
     const endpointId = workspaceEndpointId();
     const view = activeViewOf(useDocument.getState());
@@ -42,11 +43,11 @@ const focusedBrowserKey = (): string | null => {
     if (!isCanvasView(view)) {
         return view.kind === 'browser' ? endpointKey(endpointId, view.id) : null;
     }
-    const { mode, nodes } = focusedCanvas().getState();
-    return mode.kind === 'node' && nodes[mode.nodeId]?.kind === 'browser' ? endpointKey(endpointId, mode.nodeId) : null;
+    const { bodyFocusId, nodes } = focusedCanvas().getState();
+    return bodyFocusId !== null && nodes[bodyFocusId]?.kind === 'browser' ? endpointKey(endpointId, bodyFocusId) : null;
 };
 
-/* The chat the keyboard is in: a chat view whose body has it, or the chat node stepped into on its canvas. */
+/* The chat the keyboard is in: a chat view whose body has it, or the active chat node on its canvas. */
 const focusedChatKey = (): string | null => {
     const endpointId = workspaceEndpointId();
     const documentState = useDocument.getState();
@@ -57,8 +58,8 @@ const focusedChatKey = (): string | null => {
     if (!isCanvasView(view)) {
         return view.kind === 'chat' && documentState.bodyFocused ? endpointKey(endpointId, view.id) : null;
     }
-    const { mode, nodes } = focusedCanvas().getState();
-    return mode.kind === 'node' && nodes[mode.nodeId]?.kind === 'chat' ? endpointKey(endpointId, mode.nodeId) : null;
+    const { bodyFocusId, nodes } = focusedCanvas().getState();
+    return bodyFocusId !== null && nodes[bodyFocusId]?.kind === 'chat' ? endpointKey(endpointId, bodyFocusId) : null;
 };
 
 export const isTypingTarget = (el: EventTarget | null): boolean => {
@@ -100,11 +101,10 @@ export const useCanvasShortcuts = (): void => {
                     s.setLinkDraft(null);
                 } else if (s.editingTextId) {
                     s.setEditingText(null);
-                } else if (s.mode.kind === 'node') {
-                    s.exitNode();
                 } else {
                     s.clearSelection();
                 }
+                s.setBodyFocus(null);
                 (document.activeElement as HTMLElement | null)?.blur();
                 return;
             }
@@ -209,7 +209,7 @@ export const useCanvasShortcuts = (): void => {
             }
             // A dialog owns the keyboard while it is up; Backspace there must not delete nodes. Nor may
             // a key reach the canvas that is parked behind a view of its own.
-            if (isTypingTarget(e.target) || s.mode.kind === 'node' || useUi.getState().settings.open || onStandaloneView()) {
+            if (isTypingTarget(e.target) || isInNodeBody(e.target) || useUi.getState().settings.open || onStandaloneView()) {
                 return;
             }
             const addKind = entryFor(ADD_NODE_SHORTCUTS, e, apple);

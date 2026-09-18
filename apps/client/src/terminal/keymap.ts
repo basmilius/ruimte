@@ -12,7 +12,7 @@ export const platformShortcut = (pair: PlatformShortcut, apple: boolean): Shortc
 
 /*
  * Escape belongs to the program in the terminal (Claude Code interrupts on it, vim lives on it), so
- * leaving node mode is a shortcut. Plain Ctrl+Escape is the Windows Start menu, which never reaches the page.
+ * leaving a terminal is a shortcut. Plain Ctrl+Escape is the Windows Start menu, which never reaches the page.
  */
 export const LEAVE_NODE_SHORTCUT: PlatformShortcut = { mac: shortcut('Meta+Escape'), other: shortcut('Ctrl+Shift+Escape') };
 

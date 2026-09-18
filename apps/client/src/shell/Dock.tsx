@@ -27,7 +27,6 @@ import type { StoreApi } from 'zustand';
 import { useCanvas, useCanvasStore, type CanvasState, type NodeKind } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
-import { ModeChip } from '@/shell/ModeChip';
 import { StatusSummary } from '@/shell/StatusSummary';
 import { BTN_GROUP, MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { DockShell } from '@/ui/DockShell';
@@ -78,8 +77,6 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
     }
     return (
         <DockShell onHiddenChange={onHiddenChange}>
-            <ModeChip />
-            <Separator />
             <StatusSummary />
 
             <Menu.Root>

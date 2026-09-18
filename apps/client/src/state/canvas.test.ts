@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { groupFrame, type ProjectCanvasView } from '@ruimte/contracts';
 import { toWorld } from '@/canvas/math';
-import { carriedByGroups, createCanvasStore, focusedCanvas, type CanvasNode } from './canvas';
+import { carriedByGroups, createCanvasStore, focusedCanvas, isNodeActive, type CanvasNode } from './canvas';
 
 /* Every test here is about one editor, and with no workspace open that is the module's own. */
 const canvas = () => focusedCanvas().getState();
@@ -201,5 +201,72 @@ describe('notes', () => {
         expect(canvas().nodes[id]).toMatchObject({ kind: 'note', title: 'Note' });
         canvas().updateNode(id, { body: '# Hello', color: 'blue' });
         expect(canvas().exportContent().nodes[0]).toMatchObject({ id, body: '# Hello', color: 'blue' });
+    });
+});
+
+describe('the node the keyboard is in', () => {
+    const two = (): void => {
+        focusedCanvas().setState({
+            nodes: { a: node('a', 0, 0), b: node('b', 300, 0) },
+            texts: {},
+            order: ['a', 'b'],
+            selection: [],
+            bodyFocusId: null,
+            edges: [],
+            viewId: 'main'
+        });
+    };
+
+    test('activateNode selects a node, puts it on top and hands it the keyboard', () => {
+        two();
+        canvas().activateNode('a');
+        expect(canvas().selection).toEqual(['a']);
+        expect(canvas().order).toEqual(['b', 'a']);
+        expect(isNodeActive(canvas().bodyFocusId, 'a')).toBe(true);
+    });
+
+    test('selecting is not focusing: a node picked up to be moved stays untouched', () => {
+        two();
+        canvas().select(['a']);
+        expect(canvas().bodyFocusId).toBeNull();
+        expect(isNodeActive(canvas().bodyFocusId, 'a')).toBe(false);
+
+        canvas().activateNode('a');
+        canvas().select(['b']);
+        // Selecting elsewhere leaves the keyboard where it is; the canvas hands it back on the press.
+        expect(canvas().bodyFocusId).toBe('a');
+        canvas().setBodyFocus(null);
+        expect(isNodeActive(canvas().bodyFocusId, 'a')).toBe(false);
+    });
+
+    test('a node that goes away takes the keyboard with it', () => {
+        two();
+        canvas().activateNode('a');
+        canvas().select(['a']);
+        canvas().deleteSelected();
+        expect(canvas().bodyFocusId).toBeNull();
+    });
+});
+
+describe('text elements', () => {
+    test('a new text has no style of its own and keeps what it is given through a save', () => {
+        focusedCanvas().setState({ nodes: {}, texts: {}, order: [], edges: [], selection: [], viewId: 'main' });
+        const id = canvas().addText({ x: 40, y: 40 });
+        expect(canvas().texts[id]).toMatchObject({ text: '', size: 18 });
+        expect(canvas().texts[id]!.font).toBeUndefined();
+
+        canvas().updateText(id, 'Milestone');
+        canvas().styleText(id, { font: 'hand', bold: true, size: 28 });
+        expect(canvas().exportContent().texts).toEqual([{ id, x: 40, y: 40, text: 'Milestone', size: 28, font: 'hand', bold: true }]);
+
+        canvas().styleText(id, { bold: false });
+        expect(canvas().texts[id]).toMatchObject({ bold: false, font: 'hand' });
+    });
+
+    test('styling a text that is gone changes nothing', () => {
+        focusedCanvas().setState({ nodes: {}, texts: {}, order: [], edges: [], selection: [], viewId: 'main' });
+        const before = canvas().texts;
+        canvas().styleText('text-gone', { italic: true });
+        expect(canvas().texts).toBe(before);
     });
 });

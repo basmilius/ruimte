@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DrawingFontSchema } from './font.ts';
 import { ProjectIdSchema, ProjectSaveResultSchema } from './project.ts';
 
 /*
@@ -23,9 +24,6 @@ export type DrawingStrokeWidth = z.infer<typeof DrawingStrokeWidthSchema>;
 /* Architect, Artist, Cartoonist. Absent reads as 1, so a file written by hand looks hand drawn. */
 export const DrawingRoughnessSchema = z.union([z.literal(0), z.literal(1), z.literal(2)]);
 export type DrawingRoughness = z.infer<typeof DrawingRoughnessSchema>;
-
-export const DrawingFontSchema = z.enum(['hand', 'sans', 'mono']);
-export type DrawingFont = z.infer<typeof DrawingFontSchema>;
 
 export const DrawingAlignSchema = z.enum(['left', 'center', 'right']);
 export type DrawingAlign = z.infer<typeof DrawingAlignSchema>;

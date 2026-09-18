@@ -6,7 +6,7 @@ import { focusCellOfView, watchGuestFocus } from '@/browser/guest-focus';
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { cellElement, subscribeCells } from '@/shell/cell-rects';
 import { viewIdsIn } from '@/shell/split';
-import { GROUP_HEADER_PX, isNodeFocused, liveCanvas, subscribeCanvases } from '@/state/canvas';
+import { GROUP_HEADER_PX, isNodeActive, liveCanvas, subscribeCanvases } from '@/state/canvas';
 import { splitKey } from '@/state/keys';
 import { useDocument, viewOfNode } from '@/state/document';
 
@@ -73,8 +73,9 @@ function DesktopWebviewParking() {
                 const node = canvas?.nodes[nodeId];
                 const shown = canvas !== null && node !== undefined && node.kind === 'browser' && !canvas.hidden.has(nodeId);
                 host.style.visibility = shown ? 'visible' : 'hidden';
-                // Only a focused node hands the pointer to its page, and never while a gesture runs.
-                host.style.pointerEvents = shown && isNodeFocused(canvas!.mode, nodeId) && !canvas!.gesturing ? 'auto' : 'none';
+                /* Only the active node hands the pointer to its page, and never while a gesture runs.
+                   A page that always took it would swallow the wheel, and panning over it would stop. */
+                host.style.pointerEvents = shown && isNodeActive(canvas!.bodyFocusId, nodeId) && !canvas!.gesturing ? 'auto' : 'none';
                 if (!shown) {
                     continue;
                 }

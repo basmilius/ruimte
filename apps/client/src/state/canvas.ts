@@ -28,6 +28,7 @@ import type {
     ProjectCanvasView,
     ProjectLayout,
     ProjectNode,
+    ProjectText,
     ProjectViewLocal,
     RuntimeMode,
     ViewCamera
@@ -61,11 +62,8 @@ export interface AddNodeOptions {
     path?: string;
 }
 
-export interface TextElement extends Point {
-    id: string;
-    text: string;
-    size: number;
-}
+/* A label on the canvas. Style belongs to the whole element; the text itself holds no runs. */
+export type TextElement = ProjectText;
 
 export interface Edge {
     id: string;
@@ -94,8 +92,6 @@ export interface Locks {
     move: boolean;
     resize: boolean;
 }
-
-type Mode = { kind: 'canvas' } | { kind: 'node'; nodeId: string };
 
 /* What undo and redo restore: the placement of everything, never the camera or the selection. */
 interface Snapshot {
@@ -142,7 +138,12 @@ export interface CanvasState {
     /* Node ids inside a collapsed group; they keep running, they are just not drawn. */
     hidden: Set<string>;
     selection: string[];
-    mode: Mode;
+    /*
+     * The node whose content has the keyboard. It is not a second selection: a node is selected to be
+     * moved, resized or removed, and it has the focus to be typed in. Dragging one never gives it the
+     * focus, and a node keeps it while it is dragged by its own header.
+     */
+    bodyFocusId: string | null;
     editingTextId: string | null;
     locks: Locks;
     /* Node currently under a resize handle, so it can show its size. Transient. */
@@ -169,8 +170,9 @@ export interface CanvasState {
     select(ids: string[], additive?: boolean): void;
     clearSelection(): void;
     selectInRect(rect: Rect): void;
-    enterNode(id: string): void;
-    exitNode(): void;
+    /* Puts a node on top, selects it and hands its content the keyboard: what a click in a body does. */
+    activateNode(id: string): void;
+    setBodyFocus(id: string | null): void;
 
     /* `first` marks the first step of a drag, the moment worth remembering for undo. */
     moveSelected(dx: number, dy: number, first?: boolean): void;
@@ -192,6 +194,8 @@ export interface CanvasState {
     groupSelection(): string | null;
     addText(at: Point): string;
     updateText(id: string, text: string): void;
+    /* The face, the weight, the slant and the size of a text element, all of it the whole element's. */
+    styleText(id: string, patch: Partial<Pick<TextElement, 'font' | 'bold' | 'italic' | 'size'>>): void;
     setEditingText(id: string | null): void;
     deleteSelected(): void;
     toggleLock(key: keyof Locks): void;
@@ -313,7 +317,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         linkDraft: null,
         hidden: new Set(),
         selection: [],
-        mode: { kind: 'canvas' },
+        bodyFocusId: null,
         editingTextId: null,
         locks: { pan: false, zoom: false, move: false, resize: false },
         resizing: null,
@@ -396,8 +400,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                runs on one frame old: it waits for the size rather than landing in the corner. */
             set({
                 ...(next === null ? { pendingCamera: { kind: 'node', id } } : { camera: next, pendingCamera: null }),
-                selection: [id],
-                mode: { kind: 'canvas' }
+                selection: [id]
             });
         },
         viewCamera() {
@@ -424,12 +427,12 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
             ];
             set({ selection: hits });
         },
-        enterNode(id) {
+        activateNode(id) {
             get().bringToFront(id);
-            set({ mode: { kind: 'node', nodeId: id }, selection: [id], editingTextId: null });
+            set({ selection: [id], bodyFocusId: id, editingTextId: null });
         },
-        exitNode() {
-            set({ mode: { kind: 'canvas' } });
+        setBodyFocus(id) {
+            set({ bodyFocusId: id });
         },
 
         moveSelected(dx, dy, first = false) {
@@ -503,7 +506,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
             const copyId = nextId(source.kind);
             // A copy is a new node: a fresh session, never the original's agent session.
             const copy: CanvasNode = { ...source, id: copyId, x: source.x + 32, y: source.y + 32, resume: undefined };
-            set((s) => ({ nodes: { ...s.nodes, [copyId]: copy }, order: [...s.order, copyId], selection: [copyId], mode: { kind: 'canvas' }, ...remember(s) }));
+            set((s) => ({ nodes: { ...s.nodes, [copyId]: copy }, order: [...s.order, copyId], selection: [copyId], ...remember(s) }));
         },
         bringToFront(id) {
             const { order } = get();
@@ -543,7 +546,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 viewId: options.viewId,
                 path: options.path
             };
-            set((s) => ({ nodes: { ...s.nodes, [id]: node }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' }, ...remember(s) }));
+            set((s) => ({ nodes: { ...s.nodes, [id]: node }, order: [...s.order, id], selection: [id], ...remember(s) }));
             return id;
         },
         groupSelection() {
@@ -556,17 +559,20 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
             }
             const id = nextId('group');
             const group: CanvasNode = { id, kind: 'group', title: DEFAULT_TITLES.group, ...frame };
-            set((s) => ({ nodes: { ...s.nodes, [id]: group }, order: [...s.order, id], selection: [id], mode: { kind: 'canvas' }, ...remember(s) }));
+            set((s) => ({ nodes: { ...s.nodes, [id]: group }, order: [...s.order, id], selection: [id], ...remember(s) }));
             return id;
         },
         addText(at) {
             const id = nextId('text');
             const text: TextElement = { id, x: snapToGrid(at.x), y: snapToGrid(at.y), text: '', size: 18 };
-            set((s) => ({ texts: { ...s.texts, [id]: text }, selection: [id], editingTextId: id, mode: { kind: 'canvas' }, ...remember(s) }));
+            set((s) => ({ texts: { ...s.texts, [id]: text }, selection: [id], editingTextId: id, ...remember(s) }));
             return id;
         },
         updateText(id, text) {
             set((s) => (s.texts[id] ? { texts: { ...s.texts, [id]: { ...s.texts[id], text } } } : {}));
+        },
+        styleText(id, patch) {
+            set((s) => (s.texts[id] ? { texts: { ...s.texts, [id]: { ...s.texts[id], ...patch } }, ...remember(s) } : {}));
         },
         setEditingText(id) {
             set({ editingTextId: id });
@@ -599,7 +605,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 order: order.filter((id) => !gone.has(id)),
                 edges: edges.filter((e) => !gone.has(e.id) && !gone.has(e.from) && !gone.has(e.to)),
                 selection: [],
-                mode: { kind: 'canvas' },
+                bodyFocusId: gone.has(get().bodyFocusId ?? '') ? null : get().bodyFocusId,
                 ...remember(get())
             });
         },
@@ -651,7 +657,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 return;
             }
             const to = node ? center(node) : { x: text!.x, y: text!.y };
-            set({ linkDraft: { from, to, aiming: true }, selection: [from], mode: { kind: 'canvas' } });
+            set({ linkDraft: { from, to, aiming: true }, selection: [from] });
         },
         removeEdge(id) {
             set((s) => ({ edges: s.edges.filter((edge) => edge.id !== id), selection: s.selection.filter((selected) => selected !== id), ...remember(s) }));
@@ -710,7 +716,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 linkDraft: null,
                 hidden: hiddenIn(nodes),
                 selection: [],
-                mode: { kind: 'canvas' },
+                bodyFocusId: null,
                 editingTextId: null,
                 resizing: null,
                 past: [],
@@ -769,7 +775,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                         ? {}
                         : {
                               selection: s.selection.filter((id) => !gone.has(id) && !hidden.has(id)),
-                              mode: s.mode.kind === 'node' && gone.has(s.mode.nodeId) ? { kind: 'canvas' as const } : s.mode,
+                              bodyFocusId: lost(s.bodyFocusId) ? null : s.bodyFocusId,
                               editingTextId: lost(s.editingTextId) ? null : s.editingTextId,
                               resizing: lost(s.resizing) ? null : s.resizing,
                               linkDraft: lost(s.linkDraft?.from) ? null : s.linkDraft
@@ -807,7 +813,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 past: s.past.slice(0, -1),
                 future: [snapshotOf(s), ...s.future],
                 selection: [],
-                mode: { kind: 'canvas' }
+                bodyFocusId: null
             });
         },
         redo() {
@@ -822,7 +828,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 past: [...s.past, snapshotOf(s)],
                 future: s.future.slice(1),
                 selection: [],
-                mode: { kind: 'canvas' }
+                bodyFocusId: null
             });
         }
     }));
@@ -896,4 +902,5 @@ export const liveCanvases = (): [string, CanvasState][] => defaultCanvases.live(
  */
 export const subscribeCanvases = (listener: () => void): (() => void) => defaultCanvases.subscribe(listener);
 
-export const isNodeFocused = (mode: Mode, id: string): boolean => mode.kind === 'node' && mode.nodeId === id;
+/* A node's content has the keyboard, which is what a page, a terminal and the wheel all read. */
+export const isNodeActive = (bodyFocusId: string | null, id: string): boolean => bodyFocusId === id;

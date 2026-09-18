@@ -125,8 +125,8 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
         title: 'Nodes',
         shortcuts: [
             { keys: shortcut('Tab'), label: 'Move focus to the next node' },
-            { keys: KEY_SHORTCUTS.enter, label: 'Step into the focused node' },
-            { keys: KEY_SHORTCUTS.escape, label: 'Return to the canvas (a terminal passes Escape to its program)' },
+            { keys: KEY_SHORTCUTS.enter, label: 'Select the node the keyboard is on' },
+            { keys: KEY_SHORTCUTS.escape, label: 'Clear the selection (a terminal passes Escape to its program)' },
             { keys: platformShortcut(LEAVE_NODE_SHORTCUT, apple), label: 'Leave a terminal node' }
         ]
     },

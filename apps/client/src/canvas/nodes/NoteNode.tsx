@@ -96,14 +96,12 @@ export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
             <button
                 className="h-full w-full cursor-text px-3 py-2.5 text-left text-sm text-text-faint"
                 onPointerDown={(e) => e.stopPropagation()}
-                onClick={() => canvasStore.getState().enterNode(id)}
+                onClick={() => canvasStore.getState().activateNode(id)}
             >
                 Click to write
             </button>
         );
     }
 
-    // No menu here: the frame lays an overlay over an unfocused body, so there is nothing to select
-    // and nothing to copy until the note is entered, which is where its own menu lives.
     return <div className="h-full overflow-auto px-3 py-2.5 select-text">{<Markdown text={body} breaks />}</div>;
 }

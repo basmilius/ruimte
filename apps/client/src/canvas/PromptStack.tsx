@@ -127,7 +127,7 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
     };
     const reveal = (): void => {
         canvasStore.getState().goToNode(nodeId);
-        canvasStore.getState().enterNode(nodeId);
+        canvasStore.getState().activateNode(nodeId);
     };
     const denyReason = active.subject.kind === 'chat' && providers.find((provider) => provider.kind === active.provider)?.capabilities.denyReason === true;
     const edges = Math.min(waiting.length - 1, 2);

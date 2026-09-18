@@ -5,7 +5,7 @@ import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } f
 import { finderPaths } from '@/canvas/finder-drop';
 import { GRID, intersects, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math';
 import { isSpaceDown } from '@/canvas/canvas-shortcuts';
-import { NODE_SIZE, useCanvas, useCanvasStore } from '@/state/canvas';
+import { isNodeActive, NODE_SIZE, useCanvas, useCanvasStore } from '@/state/canvas';
 import { useEndpointId } from '@/state/keys';
 import { showFileOnCanvas } from '@/project/views';
 import { CanvasMenuPopup } from '@/canvas/CanvasMenu';
@@ -13,6 +13,7 @@ import { EmptyCanvas } from '@/canvas/EmptyCanvas';
 import { EdgeLayer } from '@/canvas/EdgeLayer';
 import { NodeFrame } from '@/canvas/NodeFrame';
 import { TextElementView } from '@/canvas/TextElementView';
+import { TextToolbar } from '@/canvas/TextToolbar';
 import { isInFloatingLayer } from '@/ui/floating';
 import { isModHeld } from '@/ui/shortcut';
 import { isApplePlatform } from '@/desktop/bridge';
@@ -35,6 +36,9 @@ const ZOOM_SETTLE_MS = 160;
    stands beside the first instead of over it. */
 const DROP_STEP = NODE_SIZE.file.w + 24;
 const MIN_NODE = { w: 240, h: 160 };
+
+/* Hands the keyboard back to the page, so the node that had it stops answering keys. */
+const blurActive = (): void => (document.activeElement as HTMLElement | null)?.blur();
 
 /* Snapped rect for a resize from `edge`, keeping the opposite edge fixed. */
 const resizedRect = (rect: Rect, edge: string, dx: number, dy: number): Rect => {
@@ -76,23 +80,28 @@ export function Canvas() {
     // Where the last right-click landed, in world units, so the menu's "add here" knows where.
     const menuPoint = useRef<Point>({ x: 0, y: 0 });
 
-    const { camera, order, texts, mode, locks, aiming } = useCanvas(
+    const { camera, order, texts, locks, aiming } = useCanvas(
         useShallow((s) => ({
             camera: s.camera,
             order: s.order,
             texts: s.texts,
-            mode: s.mode,
             locks: s.locks,
             aiming: s.linkDraft?.aiming === true
         }))
     );
     const textIds = useMemo(() => Object.keys(texts), [texts]);
-    // Groups paint under everything else, whatever their place in the stacking order.
     const nodes = useCanvas((s) => s.nodes);
-    const renderOrder = useMemo(
-        () => [...order.filter((id) => nodes[id]?.kind === 'group'), ...order.filter((id) => nodes[id]?.kind !== 'group')],
-        [order, nodes]
-    );
+    /* The nodes are drawn in a fixed order and stacked with a z-index instead of being reordered in
+       the DOM: moving an element takes it out of the document for a moment, and a body that had the
+       keyboard loses it. Bringing a node to the front is a click in it, so that is exactly when it
+       may not happen. */
+    const drawIds = useMemo(() => [...order].sort(), [order]);
+    // Groups paint under everything else, whatever their place in the stacking order.
+    const stacking = useMemo(() => {
+        const groups = order.filter((id) => nodes[id]?.kind === 'group');
+        const rest = order.filter((id) => nodes[id]?.kind !== 'group');
+        return Object.fromEntries([...groups, ...rest].map((id, index) => [id, index + 1]));
+    }, [order, nodes]);
 
     // The pages park outside this transform and may not swallow the pointer mid-gesture.
     useEffect(() => {
@@ -131,13 +140,18 @@ export function Canvas() {
             const target = e.target as HTMLElement;
             const ownerId = target.closest('[data-node-body]')?.closest('[data-node-id]')?.getAttribute('data-node-id');
             const isZoom = wheelZooms(e);
-            /* A focused node owns the wheel inside its body, and a pinch that reaches the canvas is the
+            /* The active node owns the wheel inside its body, and a pinch that reaches the canvas is the
                camera's. A pinch over a page that owns the pointer goes nowhere: Chromium applies the page
                scale only in the top-most widget, never in a `<webview>` guest, and the canvas never sees
                the event. */
-            if (!isZoom && s.mode.kind === 'node' && ownerId === s.mode.nodeId) {
+            if (!isZoom && ownerId !== null && ownerId !== undefined && isNodeActive(s.bodyFocusId, ownerId)) {
                 return;
             }
+            /* Two fingers over a node nobody is working in pan the canvas. This listener runs in the
+               capture phase and stops the event there, because a scrollable body (a terminal's
+               scrollback, a thread) scrolls itself rather than through a default this could prevent:
+               it would scroll and pan at once. */
+            e.stopPropagation();
             e.preventDefault();
             const rect = el.getBoundingClientRect();
             const anchor = {
@@ -173,12 +187,12 @@ export function Canvas() {
             }
         };
         const swallowGesture = (e: Event): void => e.preventDefault();
-        el.addEventListener('wheel', onWheel, { passive: false });
+        el.addEventListener('wheel', onWheel, { passive: false, capture: true });
         document.addEventListener('wheel', swallowPinch, { passive: false });
         document.addEventListener('gesturestart', swallowGesture);
         document.addEventListener('gesturechange', swallowGesture);
         return () => {
-            el.removeEventListener('wheel', onWheel);
+            el.removeEventListener('wheel', onWheel, { capture: true });
             document.removeEventListener('wheel', swallowPinch);
             document.removeEventListener('gesturestart', swallowGesture);
             document.removeEventListener('gesturechange', swallowGesture);
@@ -202,7 +216,7 @@ export function Canvas() {
     const onPointerDown = (e: ReactPointerEvent): void => {
         const target = e.target as HTMLElement;
         /* A popup portals out of its node but keeps bubbling here, so the checks below would read it
-           as empty canvas. The press belongs to the popup, node mode and all. */
+           as empty canvas. The press belongs to the popup. */
         if (isInFloatingLayer(target)) {
             return;
         }
@@ -260,24 +274,25 @@ export function Canvas() {
         }
 
         if (nodeId) {
-            const inBody = Boolean(target.closest('[data-node-body]'));
-            const focused = s.mode.kind === 'node' && s.mode.nodeId === nodeId;
-            if (inBody) {
-                if (!focused) {
-                    /* The mousedown that follows would move focus to body, after the node's own focus effect ran. */
-                    e.preventDefault();
-                    s.enterNode(nodeId);
+            if (target.closest('[data-node-body]')) {
+                /* The press goes on into the body untouched: a click in a terminal, a thread or a page
+                   is the person's. The canvas only notes that the keyboard is in this node now. */
+                if (!isNodeActive(s.bodyFocusId, nodeId)) {
+                    s.activateNode(nodeId);
                 }
                 return;
+            }
+            /* The header and the frame around the body: this press picks the node up, it does not step
+               into it. A node being dragged keeps the keyboard only if it already had it. */
+            if (s.bodyFocusId !== nodeId) {
+                s.setBodyFocus(null);
+                blurActive();
             }
             if (!s.selection.includes(nodeId)) {
                 s.select([nodeId], e.shiftKey);
             } else if (e.shiftKey) {
                 s.select(s.selection.filter((id) => id !== nodeId));
                 return;
-            }
-            if (s.mode.kind === 'node') {
-                s.exitNode();
             }
             s.bringToFront(nodeId);
             if (target.closest('button')) {
@@ -299,14 +314,13 @@ export function Canvas() {
             if (s.editingTextId === textId) {
                 return;
             }
+            s.setBodyFocus(null);
+            blurActive();
             if (!s.selection.includes(textId)) {
                 s.select([textId], e.shiftKey);
             } else if (e.shiftKey) {
                 s.select(s.selection.filter((id) => id !== textId));
                 return;
-            }
-            if (s.mode.kind === 'node') {
-                s.exitNode();
             }
             startGesture(
                 {
@@ -325,13 +339,11 @@ export function Canvas() {
         if (target.closest('button')) {
             return;
         }
-        if (s.mode.kind === 'node') {
-            s.exitNode();
-        }
         if (s.editingTextId) {
             s.setEditingText(null);
         }
-        (document.activeElement as HTMLElement | null)?.blur();
+        s.setBodyFocus(null);
+        blurActive();
         if (!e.shiftKey) {
             s.clearSelection();
         }
@@ -512,7 +524,6 @@ export function Canvas() {
                     // oxlint-disable-next-line react/refs
                     cursor: aiming ? 'crosshair' : activeGesture === 'pan' ? 'grabbing' : locks.pan ? undefined : isSpaceDown() ? 'grab' : undefined
                 }}
-                data-mode={mode.kind}
                 data-gesture={activeGesture ?? undefined}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
@@ -537,11 +548,12 @@ export function Canvas() {
                     {textIds.map((id) => (
                         <TextElementView key={id} id={id} />
                     ))}
-                    {renderOrder.map((id) => (
-                        <NodeFrame key={id} id={id} />
+                    {drawIds.map((id) => (
+                        <NodeFrame key={id} id={id} z={stacking[id] ?? 1} />
                     ))}
                 </div>
-                {renderOrder.length === 0 && textIds.length === 0 && <EmptyCanvas />}
+                <TextToolbar />
+                {drawIds.length === 0 && textIds.length === 0 && <EmptyCanvas />}
                 {dropping && <div className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-accent ring-inset" aria-hidden />}
                 {box && (
                     <div

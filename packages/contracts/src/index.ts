@@ -213,6 +213,7 @@ export * from './context-sources.ts';
 export * from './diagram.ts';
 export * from './drawing.ts';
 export * from './envelope.ts';
+export * from './font.ts';
 export * from './fs.ts';
 export * from './git.ts';
 export * from './ids.ts';

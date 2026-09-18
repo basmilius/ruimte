@@ -27,7 +27,7 @@ import { useChildTask } from '@/state/tasks';
 import { useUnseen } from '@/state/attention';
 import { deleteSelectionAsking } from '@/canvas/delete-selection';
 import { useOptionalConnection } from '@/transport/context';
-import { isNodeFocused, useCanvas, useCanvasStore, type AgentStatus } from '@/state/canvas';
+import { isNodeActive, useCanvas, useCanvasStore, type AgentStatus } from '@/state/canvas';
 import { useNodeStatus } from '@/state/chats';
 import { ProcessAlertMark, useNodeAlerts } from '@/processes/ProcessAlertMark';
 import { useHasContextLinks } from '@/context/sources';
@@ -174,16 +174,18 @@ function NodeBodyBoundary({ kind, children }: { kind: CanvasNodeKind; children: 
     );
 }
 
-export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
+export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: number }) {
     const canvasStore = useCanvasStore();
     const transport = useOptionalConnection()?.transport ?? null;
     const node = useCanvas((s) => s.nodes[id]);
     const selected = useCanvas((s) => s.selection.includes(id));
-    const focused = useCanvas((s) => isNodeFocused(s.mode, id));
-    /* Every cell's canvas keeps a focused node of its own; only the one in the focused cell may take
+    /* The keyboard is in this node's content. It is not what the ring shows: a node is selected to be
+       moved, resized or removed, and it has the focus to be typed in. */
+    const active = useCanvas((s) => isNodeActive(s.bodyFocusId, id));
+    /* Every cell's canvas keeps an active node of its own; only the one in the focused cell may take
        the keyboard, or a node remounting beside it pulls the grid's focus over. */
     const cellHasFocus = useCellHasFocus();
-    const takesKeyboard = focused && cellHasFocus;
+    const takesKeyboard = active && cellHasFocus;
     const resizable = useCanvas((s) => !s.locks.resize);
     const resizing = useCanvas((s) => s.resizing === id);
     const inViewport = useNodeInViewport(id);
@@ -230,29 +232,29 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     // isolate: xterm's layers carry z-indexes; without a stacking context they would paint over a node added later.
                     'absolute isolate flex flex-col overflow-hidden rounded-xl border focus-visible:outline-none',
                     isGroup ? GROUP_FRAME : isNote ? clsx('shadow-node', noteColorClass(node.color)) : 'bg-surface shadow-node',
-                    focused
-                        ? 'node-focused border-transparent'
-                        : selected
-                          ? 'node-selected border-transparent'
-                          : isGroup
-                            ? 'border-border-strong'
-                            : 'border-border'
+                    selected && 'node-selected',
+                    /* The border stays under the selection ring, which is drawn outside it: a
+                       transparent border would show a line of bare canvas now that a surface is
+                       clipped to its padding box. A group's is its color, which is what tells one
+                       group from another. */
+                    isGroup && accent ? 'border-(--group-accent)' : isGroup ? 'border-border-strong' : 'border-border'
                 )}
                 style={{
                     left: node.x,
                     top: node.y,
                     width: node.w,
                     height: node.h,
+                    zIndex: z,
                     ...(isGroup && accent ? { '--group-accent': accent } : {})
                 }}
                 tabIndex={0}
                 // The node's own menu answers the right-click; the canvas must not open its menu as well.
                 onContextMenu={(e) => e.stopPropagation()}
                 onKeyDown={(e) => {
-                    // Tab reaches the frame; Enter steps into it, so a node is usable without a pointer.
+                    // Tab reaches the frame; Enter makes it the selection, so a node is usable without a pointer.
                     if (e.key === 'Enter' && e.target === e.currentTarget && !isGroup) {
                         e.preventDefault();
-                        canvasStore.getState().enterNode(id);
+                        canvasStore.getState().activateNode(id);
                     }
                 }}
             >
@@ -364,17 +366,16 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                         className={clsx(
                             'relative min-h-0 grow',
                             // A thread reads at the node's own 14px, over the 22px a chat gives its prose.
-                            node.kind === 'chat' && '[--text-sm--line-height:22px]',
-                            !focused && 'cursor-default'
+                            node.kind === 'chat' && '[--text-sm--line-height:22px]'
                         )}
                     >
                         {/* Around the body only, so the header, the menu, a drag and a resize keep working. */}
                         <NodeBodyBoundary kind={node.kind}>
                             {node.kind === 'terminal' && (live ? <TerminalBody id={id} focused={takesKeyboard} /> : <TerminalPlate id={id} />)}
                             {node.kind === 'chat' && <ChatBody id={id} focused={takesKeyboard} onCanvas />}
-                            {node.kind === 'browser' && <BrowserBody id={id} focused={focused} />}
+                            {node.kind === 'browser' && <BrowserBody id={id} focused={active} />}
                             {node.kind === 'device' && (live && readable ? <DeviceBody id={id} /> : <DevicePlate id={id} />)}
-                            {node.kind === 'note' && <NoteNode id={id} focused={focused} />}
+                            {node.kind === 'note' && <NoteNode id={id} focused={active} />}
                             {node.kind === 'drawing' && <DrawingNode id={id} />}
                             {node.kind === 'diagram' && (live && readable ? <DiagramNode id={id} /> : <DiagramPlate id={id} />)}
                             {isUnknown && <UnknownNodePlate id={id} />}
@@ -387,15 +388,14 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                                     <FilePlate id={id} />
                                 ))}
                         </NodeBodyBoundary>
-                        {!focused && <div className="absolute inset-0" aria-hidden="true" />}
                     </div>
                 )}
+                {/* Every node resizes, selected or not: the edges are a grip, not something a
+                    selection unlocks. They carry no paint, so an idle node looks no different. */}
                 {resizable &&
-                    selected &&
-                    !focused &&
                     !collapsed &&
                     RESIZE_EDGES.map((edge) => <div key={edge} data-resize={edge} className={clsx('absolute z-10', EDGE_STYLE[edge])} />)}
-                {(selected || focused) && (
+                {selected && (
                     <Tooltip label="Drag to connect to another node" side="right">
                         <div
                             data-port={id}

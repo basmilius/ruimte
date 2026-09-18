@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { isApplePlatform } from '@/desktop/bridge';
+import { isInNodeBody } from '@/canvas/node-body';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
-import { focusedCanvas } from '@/state/canvas';
 import { useUi } from '@/state/ui';
 import { matchesShortcut, type KeyLike } from '@/ui/shortcut';
 
@@ -9,14 +9,14 @@ import { matchesShortcut, type KeyLike } from '@/ui/shortcut';
 export type AppShortcut = 'palette' | 'find-in-files' | 'settings' | 'sidebar';
 
 export interface ShortcutContext {
-    /* The keyboard is inside a node, which is what keeps Ctrl+B out of readline's way off macOS. */
+    /* The keyboard is inside a node's content, which is what keeps Ctrl+B out of readline's way off macOS. */
     inNode: boolean;
     apple: boolean;
 }
 
 /*
  * Which window shortcut a keystroke is, or null for every other key. There is no guard on what has the
- * focus: these work from anywhere, a focused node or a text field included. A focused terminal is the
+ * focus: these work from anywhere, a node's content or a text field included. A focused terminal is the
  * exception, and it stops the shortcuts it owns before this listener (`terminal/keymap.ts`).
  */
 export const appShortcutFor = (e: KeyLike, { inNode, apple }: ShortcutContext): AppShortcut | null => {
@@ -63,7 +63,7 @@ export const runAppShortcut = (shortcut: AppShortcut): void => {
 export const useAppShortcuts = (): void => {
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent): void => {
-            const shortcut = appShortcutFor(e, { inNode: focusedCanvas().getState().mode.kind === 'node', apple: isApplePlatform() });
+            const shortcut = appShortcutFor(e, { inNode: isInNodeBody(e.target), apple: isApplePlatform() });
             if (shortcut === null) {
                 return;
             }

@@ -17,7 +17,7 @@ Pair another machine on your network once and its projects open like local proje
 ## Principles
 
 - **Views, not tabs.** A project is a sidebar of views. Most are canvases holding many kinds of things at once; a chat, terminal, browser, drawing or file can also stand as a view of its own.
-- **Focus and camera are explicit state.** Canvas mode or node mode, never decided by where the pointer happens to be. Nothing in the background moves the view.
+- **Selection and camera are explicit state.** A node is selected or it is not, never decided by where the pointer happens to be. Nothing in the background moves the view.
 - **Server first.** There is always a backend that owns sessions and talks to the UI over WebSocket. The desktop app embeds it; a remote machine is another endpoint.
 - **Opinionated.** A handful of settings in the UI. Everything else is a default.
 

@@ -128,7 +128,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                 if (isLeaveNodeShortcut(e, apple)) {
                     return false;
                 }
-                // The canvas listens on window, where any Escape would end node mode.
+                // The canvas listens on window, where any Escape would clear the selection.
                 e.stopPropagation();
                 return true;
             }
