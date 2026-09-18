@@ -750,13 +750,15 @@
 
     /* ---------------------------------------------------------------- Files and git panels */
 
-    /* The Files panel. The tree draws itself inside a shadow root that reaches nothing here except
-       the `--trees-*-override` variables on its host, so the panel's tokens travel that way. */
-    .files-tree {
+    /* A file tree in a panel, in the Files panel and in the git panel's changes. The tree draws
+       itself inside a shadow root that reaches nothing here except the `--trees-*-override`
+       variables on its host, so the panel's tokens travel that way. */
+    .panel-tree {
         display: block;
         height: 100%;
         --trees-bg-override: transparent;
-        --trees-bg-muted-override: var(--surface-sunken);
+        /* The tree calls its hover "muted"; in this app a row under the pointer lifts, never sinks. */
+        --trees-bg-muted-override: var(--surface-hover);
         --trees-fg-override: var(--text);
         --trees-fg-muted-override: var(--text-muted);
         --trees-selected-bg-override: var(--surface-active);

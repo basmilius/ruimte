@@ -54,8 +54,6 @@ export interface Settings {
        the folders people keep their work in have the same name everywhere; a path that is not on the
        machine being browsed falls back to its home, which `fs.browse` answering `exists` can tell. */
     browseStartFolder: string;
-    /* Whether the git panel groups its changed files by folder instead of listing them flat. */
-    gitTree: boolean;
     /* Whether a diff draws the two sides next to each other or one patch under the other. */
     diffLayout: 'stacked' | 'split';
     /* Whether a diff counts and shows changes that are whitespace alone. */
@@ -129,7 +127,6 @@ const DEFAULT_SETTINGS: Settings = {
     filesTabLimit: 5,
     filesShowHidden: false,
     browseStartFolder: '',
-    gitTree: true,
     diffLayout: 'stacked',
     diffWhitespace: true,
     worktreeMergeStrategy: 'squash',
@@ -251,7 +248,6 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 filesTabLimit,
                 filesShowHidden,
                 browseStartFolder,
-                gitTree,
                 diffLayout,
                 diffWhitespace,
                 worktreeMergeStrategy,
@@ -279,7 +275,6 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 filesTabLimit,
                 filesShowHidden,
                 browseStartFolder,
-                gitTree,
                 diffLayout,
                 diffWhitespace,
                 worktreeMergeStrategy,

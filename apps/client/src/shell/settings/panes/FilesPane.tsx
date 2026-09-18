@@ -8,7 +8,6 @@ export function FilesPane() {
     const filesTabLimit = useSettings((s) => s.filesTabLimit);
     const filesShowHidden = useSettings((s) => s.filesShowHidden);
     const browseStartFolder = useSettings((s) => s.browseStartFolder);
-    const gitTree = useSettings((s) => s.gitTree);
     const diffLayout = useSettings((s) => s.diffLayout);
     const diffWhitespace = useSettings((s) => s.diffWhitespace);
     const update = useSettings((s) => s.update);
@@ -52,11 +51,6 @@ export function FilesPane() {
                 />
             </SettingsSection>
             <SettingsSection title="Git">
-                <SettingsRow
-                    label="Group changes by folder"
-                    description="Shows changed files in collapsible folders. Off lists them flat with their full path."
-                    control={<Toggle checked={gitTree} onChange={(checked) => update({ gitTree: checked })} label="Group changes by folder" />}
-                />
                 <SettingsRow
                     label="Diff layout"
                     description="Stacked shows one column. Split puts the old and new versions side by side."

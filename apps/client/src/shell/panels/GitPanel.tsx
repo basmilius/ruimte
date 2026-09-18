@@ -77,7 +77,6 @@ export function GitPanel() {
     const selection = useCanvas((s) => s.selection);
     const folder = useProject((s) => s.current?.folder ?? null);
     const scope = useGit((s) => s.scope);
-    const tree = useSettings((s) => s.gitTree);
     const collapsedDirs = useGit((s) => s.collapsedDirs);
     const logHeight = useGit((s) => s.logHeight);
     const tabLimit = useSettings((s) => s.filesTabLimit);
@@ -385,7 +384,7 @@ export function GitPanel() {
             </PanelHeaderSlot>
             {status?.repo && (
                 <div className={FILE_TOOLBAR}>
-                    {tree && status.files.length > 0 && (
+                    {status.files.length > 0 && (
                         <span className={BTN_GROUP}>
                             <Tooltip label="Expand all folders" name>
                                 <button className="icon-btn h-7 w-7" onClick={() => useGit.getState().setCollapsedDirs([])}>
@@ -430,7 +429,6 @@ export function GitPanel() {
             <div ref={bodyRef} className="flex min-h-0 grow flex-col">
                 <GitFileList
                     status={status}
-                    tree={tree}
                     collapsed={collapsedDirs}
                     reading={reading}
                     busy={busy}

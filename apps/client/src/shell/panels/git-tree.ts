@@ -1,75 +1,28 @@
 import type { GitFile } from '@ruimte/contracts';
+import { treeGitStatus } from '@/shell/panels/files-tree';
 import type { TabState } from '@/state/files';
 
-export type GitTreeRow =
-    | {
-          kind: 'directory';
-          /* The whole path from the repository root, which is what a collapse is remembered by. */
-          path: string;
-          /* What the row reads, which is more than one segment for a directory chain nothing branches in. */
-          label: string;
-          depth: number;
-          /* How many files sit under it, however deep. */
-          count: number;
-      }
-    | { kind: 'file'; file: GitFile; depth: number };
-
-interface Node {
-    dirs: Map<string, Node>;
-    files: GitFile[];
+export interface GitTreeRow {
+    path: string;
+    kind: 'directory' | 'file';
+    isExpanded: boolean;
 }
 
-const node = (): Node => ({ dirs: new Map(), files: [] });
-
-const byName = (left: string, right: string): number => left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' });
-
-const countOf = (current: Node): number => current.files.length + [...current.dirs.values()].reduce((total, child) => total + countOf(child), 0);
-
-const walk = (current: Node, prefix: string, depth: number, collapsed: ReadonlySet<string>, rows: GitTreeRow[]): void => {
-    for (const name of [...current.dirs.keys()].sort(byName)) {
-        let child = current.dirs.get(name)!;
-        let label = name;
-        let path = prefix === '' ? name : `${prefix}/${name}`;
-        // A directory that holds nothing but one directory is a step nobody needs a row for.
-        while (child.files.length === 0 && child.dirs.size === 1) {
-            const [only] = [...child.dirs.keys()];
-            label = `${label}/${only!}`;
-            path = `${path}/${only!}`;
-            child = child.dirs.get(only!)!;
-        }
-        rows.push({ kind: 'directory', path, label, depth, count: countOf(child) });
-        if (!collapsed.has(path)) {
-            walk(child, path, depth + 1, collapsed, rows);
-        }
-    }
-    for (const file of [...current.files].sort((left, right) => byName(left.path, right.path))) {
-        rows.push({ kind: 'file', file, depth });
-    }
+/* The colors the whole app gives the same news, which the rows here carry on the letter alone. */
+const STATUS_COLORS: Record<string, string> = {
+    added: 'var(--status-idle)',
+    untracked: 'var(--status-idle)',
+    deleted: 'var(--status-error)',
+    renamed: 'var(--status-running)',
+    modified: 'var(--status-needs-you)',
+    ignored: 'var(--text-faint)'
 };
 
-/*
- * The changed files of one group as a tree of the folders they sit in: directories first, then the
- * files beside them, and a collapsed directory takes its whole subtree with it. It is a list of rows
- * and not a nested structure, because every row draws the same way and the panel only has to know
- * how deep it is.
- */
-export const buildGitRows = (files: readonly GitFile[], collapsed: ReadonlySet<string> = new Set()): GitTreeRow[] => {
-    const root = node();
-    for (const file of files) {
-        const parts = file.path.split('/');
-        parts.pop();
-        let current = root;
-        for (const part of parts) {
-            const child = current.dirs.get(part) ?? node();
-            current.dirs.set(part, child);
-            current = child;
-        }
-        current.files.push(file);
-    }
-    const rows: GitTreeRow[] = [];
-    walk(root, '', 0, collapsed, rows);
-    return rows;
-};
+export const statusColor = (status: string): string => STATUS_COLORS[treeGitStatus(status)] ?? 'var(--text-muted)';
+
+/* Every file under a folder of a group, however deep, which is what staging a whole folder takes. */
+export const pathsUnder = (files: readonly GitFile[], dir: string): string[] =>
+    files.filter((file) => file.path.startsWith(`${dir}/`)).map((file) => file.path);
 
 /*
  * Every folder the groups hold, however deep, as the collapse set names them. It is what "collapse
@@ -88,6 +41,32 @@ export const allDirs = (files: readonly GitFile[]): string[] => {
         }
     }
     return [...dirs];
+};
+
+/* The tree names a directory with a trailing slash and the collapse set does not. */
+export const dirPathOf = (rowPath: string): string => (rowPath.endsWith('/') ? rowPath.slice(0, -1) : rowPath);
+
+/* The folders of a tree that stand folded up, which is what the panel remembers between visits. */
+export const collapsedPathsOf = (rows: readonly GitTreeRow[]): string[] =>
+    rows.filter((row) => row.kind === 'directory' && !row.isExpanded).map((row) => dirPathOf(row.path));
+
+/* Which rows have to move for a tree to stand the way the collapse set says. The set is shared by
+   every group, so it holds folders this tree never heard of. */
+export const expansionChanges = (rows: readonly GitTreeRow[], collapsed: ReadonlySet<string>): { collapse: string[]; expand: string[] } => {
+    const changes: { collapse: string[]; expand: string[] } = { collapse: [], expand: [] };
+    for (const row of rows) {
+        if (row.kind !== 'directory') {
+            continue;
+        }
+        const folded = collapsed.has(dirPathOf(row.path));
+        if (folded && row.isExpanded) {
+            changes.collapse.push(row.path);
+        }
+        if (!folded && !row.isExpanded) {
+            changes.expand.push(row.path);
+        }
+    }
+    return changes;
 };
 
 /*

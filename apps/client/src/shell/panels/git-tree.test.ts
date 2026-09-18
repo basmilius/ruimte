@@ -1,44 +1,47 @@
 import { describe, expect, test } from 'bun:test';
 import type { GitFile } from '@ruimte/contracts';
 import type { TabState } from '@/state/files';
-import { activeDiffPath, buildGitRows } from './git-tree.ts';
+import { activeDiffPath, allDirs, collapsedPathsOf, expansionChanges, pathsUnder, statusColor, type GitTreeRow } from './git-tree.ts';
 
-const file = (path: string): GitFile => ({ path, state: 'unstaged', status: 'M', added: 1, deleted: 0, binary: false });
+const file = (path: string, status = 'M'): GitFile => ({ path, state: 'unstaged', status, added: 1, deleted: 0, binary: false });
 
-const shape = (paths: string[], collapsed: string[] = []): string[] =>
-    buildGitRows(paths.map(file), new Set(collapsed)).map((row) =>
-        row.kind === 'directory' ? `${'  '.repeat(row.depth)}${row.label}/ ${row.count}` : `${'  '.repeat(row.depth)}${row.file.path}`
-    );
+const dir = (path: string, isExpanded: boolean): GitTreeRow => ({ path, kind: 'directory', isExpanded });
 
-describe('buildGitRows', () => {
-    test('files in the root keep their place and directories come first', () => {
-        expect(shape(['readme.md', 'src/main.ts'])).toEqual(['src/ 1', '  src/main.ts', 'readme.md']);
-    });
-
-    test('a directory chain nothing branches in is one row', () => {
-        expect(shape(['apps/client/src/state/git.ts', 'apps/client/src/state/ui.ts'])).toEqual([
-            'apps/client/src/state/ 2',
-            '  apps/client/src/state/git.ts',
-            '  apps/client/src/state/ui.ts'
+describe('what the tree is told about a group', () => {
+    test('a porcelain letter carries the color the app gives that news', () => {
+        expect([statusColor('A'), statusColor('?')]).toEqual(['var(--status-idle)', 'var(--status-idle)']);
+        expect(statusColor('D')).toBe('var(--status-error)');
+        expect(statusColor('R')).toBe('var(--status-running)');
+        // A type change, a copy and a conflict all read as a modification, the way the tree names them.
+        expect([statusColor('M'), statusColor('T'), statusColor('UU')]).toEqual([
+            'var(--status-needs-you)',
+            'var(--status-needs-you)',
+            'var(--status-needs-you)'
         ]);
     });
 
-    test('the chain stops where the tree branches', () => {
-        expect(shape(['apps/client/a.ts', 'apps/server/b.ts'])).toEqual([
-            'apps/ 2',
-            '  client/ 1',
-            '    apps/client/a.ts',
-            '  server/ 1',
-            '    apps/server/b.ts'
-        ]);
+    test('a folder holds the files under it, however deep, and not the ones beside it', () => {
+        const files = [file('src/a.ts'), file('src/deep/b.ts'), file('srcx/c.ts'), file('readme.md')];
+        expect(pathsUnder(files, 'src')).toEqual(['src/a.ts', 'src/deep/b.ts']);
     });
 
-    test('a collapsed directory takes its subtree with it', () => {
-        expect(shape(['src/a.ts', 'src/deep/b.ts', 'readme.md'], ['src'])).toEqual(['src/ 2', 'readme.md']);
+    test('every folder on the way counts as one to fold up', () => {
+        expect(allDirs([file('apps/client/a.ts'), file('readme.md')])).toEqual(['apps', 'apps/client']);
+    });
+});
+
+describe('which folders stand folded up', () => {
+    test('a row that is closed is one, and the trailing slash of a directory is not part of it', () => {
+        expect(collapsedPathsOf([dir('src/', false), dir('apps/client/', true), { path: 'a.ts', kind: 'file', isExpanded: false }])).toEqual(['src']);
     });
 
-    test('rows sort by name, directories and files each among themselves', () => {
-        expect(shape(['b.ts', 'a.ts', 'z/1.ts', 'k/2.ts'])).toEqual(['k/ 1', '  k/2.ts', 'z/ 1', '  z/1.ts', 'a.ts', 'b.ts']);
+    test('only the rows that differ from the set move, and the folders of other groups are left alone', () => {
+        const rows = [dir('src/', true), dir('apps/', false), dir('docs/', false)];
+        expect(expansionChanges(rows, new Set(['src', 'apps', 'elsewhere']))).toEqual({ collapse: ['src/'], expand: ['docs/'] });
+    });
+
+    test('a tree that already stands the way the set says moves nothing', () => {
+        expect(expansionChanges([dir('src/', false), dir('apps/', true)], new Set(['src']))).toEqual({ collapse: [], expand: [] });
     });
 });
 

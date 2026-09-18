@@ -11,7 +11,6 @@ import {
 } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
-import type { FileTree as FileTreeModel, FileTreeDirectoryHandle } from '@pierre/trees';
 import { FileTree, useFileTree } from '@pierre/trees/react';
 import {
     Check,
@@ -49,6 +48,7 @@ import {
     treePathOf,
     type EntryCache
 } from '@/shell/panels/files-tree';
+import { directoryHandle, rowPathOf, PANEL_TREE_CSS, PANEL_TREE_ROW_HEIGHT } from '@/shell/panels/panel-tree';
 import { useFiles } from '@/state/files';
 import { folderWatches } from '@/state/fs-watch';
 import { useGit } from '@/state/git';
@@ -73,13 +73,13 @@ const SEARCH_DEBOUNCE_MS = 150;
 const SEARCH_LIMIT = 200;
 
 /*
- * Two rules over the tree's own stylesheet. The first hides the row that keeps an unloaded
- * directory's chevron. The second turns the letter the git lane draws into a dot, in the color the
- * lane already carries: a directory with changes under it gets a dot of the tree's own, so one
- * shape says "this differs from HEAD" everywhere in the panel. An ignored file leaves that lane
- * empty, which is why it is left out.
+ * Two rules of this panel's own, over the shared ones. The first hides the row that keeps an
+ * unloaded directory's chevron. The second turns the letter the git lane draws into a dot, in the
+ * color the lane already carries: a directory with changes under it gets a dot of the tree's own,
+ * so one shape says "this differs from HEAD" everywhere in the panel. An ignored file leaves that
+ * lane empty, which is why it is left out.
  */
-const TREE_CSS = `
+const FILES_TREE_CSS = `
     [data-item-path$="/${LOADING_NAME}"] { display: none !important; }
     [data-item-git-status]:not([data-item-git-status="ignored"]) > [data-item-section="git"] > * { display: none; }
     [data-item-git-status]:not([data-item-git-status="ignored"]) > [data-item-section="git"]::after {
@@ -89,27 +89,10 @@ const TREE_CSS = `
         border-radius: 9999px;
         background: currentColor;
     }
+    ${PANEL_TREE_CSS}
 `;
 
 const EMPTY_CACHE: EntryCache = new Map();
-
-/* The tree's own handle type is a union whose two halves TypeScript cannot tell apart by method. */
-const directoryHandle = (model: FileTreeModel, path: string): FileTreeDirectoryHandle | null => {
-    const item = model.getItem(path);
-    return item?.isDirectory() ? (item as FileTreeDirectoryHandle) : null;
-};
-
-/* The row a composed event came out of. The rows live in a shadow root, so the path is somewhere on
-   the way up and never on the target React hands over. */
-const rowPathOf = (event: { nativeEvent: Event }): string | null => {
-    for (const node of event.nativeEvent.composedPath()) {
-        const path = node instanceof HTMLElement ? node.dataset.itemPath : undefined;
-        if (path) {
-            return path;
-        }
-    }
-    return null;
-};
 
 /*
  * The folder of the open project as a tree; the file it opens is drawn by the preview panel next to
@@ -153,6 +136,7 @@ export function FilesPanel() {
         paths: [],
         composition: { contextMenu: { enabled: false } },
         density: 'compact',
+        itemHeight: PANEL_TREE_ROW_HEIGHT,
         dragAndDrop: { canDrag: () => true, canDrop: () => false },
         flattenEmptyDirectories: false,
         icons: FILE_TREE_ICONS,
@@ -162,7 +146,7 @@ export function FilesPanel() {
         },
         search: false,
         sort: compareRows,
-        unsafeCSS: TREE_CSS
+        unsafeCSS: FILES_TREE_CSS
     });
 
     /* A search answers with paths and nothing else, so it gets a model of its own: lazy loading and
@@ -171,6 +155,7 @@ export function FilesPanel() {
         paths: [],
         composition: { contextMenu: { enabled: false } },
         density: 'compact',
+        itemHeight: PANEL_TREE_ROW_HEIGHT,
         dragAndDrop: { canDrag: () => true, canDrop: () => false },
         icons: FILE_TREE_ICONS,
         initialExpansion: 'open',
@@ -178,7 +163,8 @@ export function FilesPanel() {
             selectionRef.current = paths;
         },
         search: false,
-        sort: compareRows
+        sort: compareRows,
+        unsafeCSS: FILES_TREE_CSS
     });
 
     const searching = query.trim() !== '';
@@ -557,7 +543,7 @@ export function FilesPanel() {
                         <FileTree
                             key={searching ? 'search' : 'tree'}
                             model={activeModel}
-                            className="files-tree"
+                            className="panel-tree"
                             onClick={onClick}
                             onKeyDown={onKeyDown}
                             onDragStart={onDragStart}

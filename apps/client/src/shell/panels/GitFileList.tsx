@@ -1,20 +1,22 @@
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import clsx from 'clsx';
-import { ChevronRight, ChevronsDownUp, ChevronsUpDown, Copy, CornerUpRight, FileDiff, FileText, Folder, GitBranch, Minus, Plus, Trash2 } from 'lucide-react';
+import type { FileTree as FileTreeModel, FileTreeRowDecoration, FileTreeRowDecorationContext, FileTreeVisibleRow } from '@pierre/trees';
+import { FileTree, useFileTree, useFileTreeSelector } from '@pierre/trees/react';
+import { ChevronsDownUp, ChevronsUpDown, Copy, CornerUpRight, FileDiff, FileText, Folder, GitBranch, Minus, Plus, Trash2 } from 'lucide-react';
 import type { GitFile, GitFileState, GitStatus } from '@ruimte/contracts';
-import { GIT_GROUP, GIT_ROW, GIT_ROW_ACTIONS, GIT_ROW_OPEN } from '@/shell/panels/classes';
-import { basenameOf, revealableInFiles } from '@/shell/panels/files-tree';
-import { buildGitRows, type GitTreeRow } from '@/shell/panels/git-tree';
+import { GIT_GROUP } from '@/shell/panels/classes';
+import { revealableInFiles } from '@/shell/panels/files-tree';
+import { collapsedPathsOf, dirPathOf, expansionChanges, pathsUnder, statusColor, type GitTreeRow } from '@/shell/panels/git-tree';
+import { directoryHandle, rowPathOf, PANEL_TREE_CSS, PANEL_TREE_ROW_HEIGHT } from '@/shell/panels/panel-tree';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
-import { BTN_GROUP, MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
+import { MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { EmptyState } from '@/ui/EmptyState';
-import { FileIcon } from '@/ui/FileIcon';
+import { FILE_TREE_ICONS } from '@/ui/file-icon';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -25,20 +27,32 @@ const GROUPS: ReadonlyArray<{ state: GitFileState; label: string }> = [
     { state: 'untracked', label: 'Untracked' }
 ];
 
-// Every level of the tree is this much further in; the row's own padding is on top of it.
-const INDENT = 12;
+/* Opening a folder brings rows into view that may have to fold up in turn, so folding settles over
+   a few passes; a tree that never settles stops here rather than looping. */
+const EXPANSION_PASSES = 32;
 
-const dirnameOf = (path: string): string => {
-    const cut = path.lastIndexOf('/');
-    return cut < 0 ? '' : path.slice(0, cut);
-};
+/* The tree draws inside a shadow root, which a custom property reaches and a utility class does not. */
+const ADDED_COLOR = 'var(--color-term-green)';
+const DELETED_COLOR = 'var(--color-term-red)';
 
-/* The paths of a whole group, for the button in its header. */
-const pathsOf = (files: readonly GitFile[], state: GitFileState): string[] => files.filter((file) => file.state === state).map((file) => file.path);
+interface DecorationPart {
+    text: string;
+    color?: string;
+}
 
-/* The paths of one folder of a group, however deep, for the menu on its row. */
-const pathsUnder = (files: readonly GitFile[], state: GitFileState, dir: string): string[] =>
-    files.filter((file) => file.state === state && file.path.startsWith(`${dir}/`)).map((file) => file.path);
+/*
+ * This panel's own rules, over the shared ones. Every row here is a change, so the news rides on
+ * the lane at the end and a name keeps the panel's color; the tree left to itself paints every name
+ * and icon in its status. The lane is counts, so it is set in the mono face at the floor this app
+ * puts under type, which keeps a column of them straight and a step behind the names. It keeps its
+ * width and the name gives way, since a count cut in half reads as another number.
+ */
+const GIT_TREE_CSS = `
+    ${PANEL_TREE_CSS}
+    [data-item-section="content"] { flex: 1 1 auto; }
+    [data-item-section="decoration"] { flex: none; font-family: var(--font-mono); font-size: 12px; }
+    [data-item-section="decoration"] > span { display: inline-flex; gap: 6px; align-items: center; }
+`;
 
 /* A file git no longer has on disk: opening it or revealing it would point at nothing. */
 const isGone = (file: GitFile): boolean => file.status.startsWith('D');
@@ -46,10 +60,32 @@ const isGone = (file: GitFile): boolean => file.status.startsWith('D');
 /* The absolute path of a row on the daemon's machine, which is what reveal and copy take. */
 const absolutePathOf = (root: string | null, path: string): string => (root === null ? path : `${root}/${path}`);
 
+/* A chain of folders nothing branches in is one row, which stands for the deepest of them. */
+const pathOfRow = (row: FileTreeVisibleRow): string =>
+    row.isFlattened ? (row.flattenedSegments?.findLast((segment) => segment.isTerminal)?.path ?? row.path) : row.path;
+
+/* Every row the tree shows, which is every row but the ones a folded folder holds. */
+const visibleRows = (model: FileTreeModel): GitTreeRow[] =>
+    model.getVisibleRows(0, model.getVisibleCount()).map((row) => ({ path: pathOfRow(row), kind: row.kind, isExpanded: row.isExpanded }));
+
+/* Folds the tree the way the collapse set says. */
+const applyExpansion = (model: FileTreeModel, collapsed: ReadonlySet<string>): void => {
+    for (let pass = 0; pass < EXPANSION_PASSES; pass++) {
+        const { collapse, expand } = expansionChanges(visibleRows(model), collapsed);
+        if (collapse.length === 0 && expand.length === 0) {
+            return;
+        }
+        for (const path of collapse) {
+            directoryHandle(model, path)?.collapse();
+        }
+        for (const path of expand) {
+            directoryHandle(model, path)?.expand();
+        }
+    }
+};
+
 interface ListProps {
     status: GitStatus | null;
-    /* Whether every group is a tree of the folders its files sit in, the `gitTree` setting. */
-    tree: boolean;
     collapsed: string[];
     /* The path of the change the preview has open, which is the row that reads as selected. */
     reading: string | null;
@@ -63,13 +99,12 @@ interface ListProps {
 
 /*
  * The changed files, grouped the way a person acts on them: conflicts first, then the index, then
- * the working tree, then what git has never seen. A row opens its diff in the preview panel; the
- * buttons on it move the file in and out of the index and, behind a confirm, throw its changes into
- * a stash of their own. A right click offers those and the things a row has no room for: the file
- * itself, the two reveals, the paths.
+ * the working tree, then what git has never seen. Every group is a tree of the folders its files
+ * sit in, the same tree the Files panel draws, so a path reads the same on both sides of the
+ * window. A row opens its diff in the preview panel; a right click stages it, discards it behind a
+ * confirm, and offers the things a row has no room for: the file itself, the two reveals, the paths.
  */
-export function GitFileList({ status, tree, collapsed, reading, busy, onOpen, onOpenFile, onStage, onDiscard }: ListProps) {
-    const folded = useMemo(() => new Set(collapsed), [collapsed]);
+export function GitFileList({ status, collapsed, reading, busy, onOpen, onOpenFile, onStage, onDiscard }: ListProps) {
     const platform = useServer((s) => s.platform);
     const folder = useProject((s) => s.current?.folder ?? null);
 
@@ -97,59 +132,254 @@ export function GitFileList({ status, tree, collapsed, reading, busy, onOpen, on
                 if (files.length === 0) {
                     return null;
                 }
-                const staged = group.state === 'staged';
-                const rows: GitTreeRow[] = tree ? buildGitRows(files, folded) : files.map((file) => ({ kind: 'file', file, depth: 0 }));
                 return (
-                    <section key={group.state}>
-                        <header className={GIT_GROUP}>
-                            <span className={SECTION_LABEL}>{group.label}</span>
-                            <span className="tabular-nums text-text-faint">{files.length}</span>
-                            <span className="grow" />
-                            {group.state !== 'conflicted' && (
-                                <Tooltip label={staged ? `Unstage everything in ${group.label}` : `Stage everything in ${group.label}`} name>
-                                    <button className="icon-btn h-6 w-6" disabled={busy} onClick={() => onStage(pathsOf(status.files, group.state), !staged)}>
-                                        <Icon icon={staged ? Minus : Plus} size={12} />
-                                    </button>
-                                </Tooltip>
-                            )}
-                        </header>
-                        {rows.map((row) =>
-                            row.kind === 'directory' ? (
-                                <GitDirectoryRow
-                                    key={`${group.state}:${row.path}/`}
-                                    row={row}
-                                    collapsed={folded.has(row.path)}
-                                    root={status.root}
-                                    folder={folder}
-                                    platform={platform}
-                                    staged={staged}
-                                    conflicted={group.state === 'conflicted'}
-                                    busy={busy}
-                                    onStage={() => onStage(pathsUnder(status.files, group.state, row.path), !staged)}
-                                />
-                            ) : (
-                                <GitFileRow
-                                    key={`${group.state}:${row.file.path}`}
-                                    file={row.file}
-                                    depth={row.depth}
-                                    showPath={!tree}
-                                    selected={row.file.path === reading}
-                                    root={status.root}
-                                    folder={folder}
-                                    platform={platform}
-                                    busy={busy}
-                                    onOpen={() => onOpen(row.file)}
-                                    onOpenFile={() => onOpenFile(row.file)}
-                                    onStage={() => onStage([row.file.path], !staged)}
-                                    onDiscard={() => onDiscard(row.file)}
-                                />
-                            )
-                        )}
-                    </section>
+                    <GitGroup
+                        key={group.state}
+                        label={group.label}
+                        state={group.state}
+                        files={files}
+                        root={status.root}
+                        folder={folder}
+                        platform={platform}
+                        collapsed={collapsed}
+                        reading={reading}
+                        busy={busy}
+                        onOpen={onOpen}
+                        onOpenFile={onOpenFile}
+                        onStage={onStage}
+                        onDiscard={onDiscard}
+                    />
                 );
             })}
             {status.truncated && <p className="px-3 py-2 text-xs text-text-faint">More files changed than this list holds.</p>}
         </div>
+    );
+}
+
+interface GroupProps extends Omit<ListProps, 'status'> {
+    label: string;
+    state: GitFileState;
+    files: GitFile[];
+    root: string | null;
+    folder: string | null;
+    platform: string | null;
+}
+
+/*
+ * One group as a tree of its own. The trees share the folded-up folders and nothing else: a folder
+ * that is staged and changed again is one folder to a person, so closing it in one group closes it
+ * in the other. Each tree is exactly as tall as its rows, so the four of them scroll as one list.
+ */
+function GitGroup({ label, state, files, root, folder, platform, collapsed, reading, busy, onOpen, onOpenFile, onStage, onDiscard }: GroupProps) {
+    const staged = state === 'staged';
+    const conflicted = state === 'conflicted';
+    const [menuPath, setMenuPath] = useState<string | null>(null);
+    const byPath = useMemo(() => new Map(files.map((file) => [file.path, file])), [files]);
+    const filesRef = useRef<ReadonlyMap<string, GitFile>>(new Map());
+    const collapsedRef = useRef<ReadonlySet<string>>(new Set());
+    /* Set while this component folds the tree, so the folding is not read back as a person's doing. */
+    const applyingRef = useRef(false);
+
+    /* The tree keeps the renderer it was made with, so this reads the files of the moment. */
+    const decorate = useCallback(({ item }: FileTreeRowDecorationContext): FileTreeRowDecoration | null => {
+        if (item.kind === 'directory') {
+            const prefix = item.path.endsWith('/') ? item.path : `${item.path}/`;
+            const count = [...filesRef.current.keys()].filter((path) => path.startsWith(prefix)).length;
+            return count === 0 ? null : { text: String(count) };
+        }
+        const file = filesRef.current.get(item.path);
+        if (file === undefined) {
+            return null;
+        }
+        const parts: DecorationPart[] = [];
+        if (file.added > 0) {
+            parts.push({ text: `+${file.added}`, color: ADDED_COLOR });
+        }
+        if (file.deleted > 0) {
+            parts.push({ text: `-${file.deleted}`, color: DELETED_COLOR });
+        }
+        parts.push({ text: file.status, color: statusColor(file.status) });
+        return { text: parts.map((part) => part.text).join(' '), parts };
+    }, []);
+
+    const { model } = useFileTree({
+        paths: [],
+        composition: { contextMenu: { enabled: false } },
+        density: 'compact',
+        itemHeight: PANEL_TREE_ROW_HEIGHT,
+        dragAndDrop: false,
+        flattenEmptyDirectories: true,
+        icons: FILE_TREE_ICONS,
+        initialExpansion: 'open',
+        renderRowDecoration: decorate,
+        search: false,
+        stickyFolders: false,
+        unsafeCSS: GIT_TREE_CSS
+    });
+
+    const rowCount = useFileTreeSelector(model, (current) => current.getVisibleCount());
+    /* The paths the tree was last built from: a status arrives every few seconds, and rebuilding a
+       tree that did not change would throw away which folders stand folded. */
+    const builtRef = useRef('');
+
+    useEffect(() => {
+        filesRef.current = byPath;
+        collapsedRef.current = new Set(collapsed);
+    }, [byPath, collapsed]);
+
+    useEffect(() => {
+        const paths = files.map((file) => file.path);
+        const key = paths.join('\n');
+        if (builtRef.current === key) {
+            return;
+        }
+        builtRef.current = key;
+        applyingRef.current = true;
+        model.resetPaths(paths);
+        applyExpansion(model, collapsedRef.current);
+        applyingRef.current = false;
+    }, [files, model]);
+
+    useEffect(() => {
+        applyingRef.current = true;
+        applyExpansion(model, new Set(collapsed));
+        applyingRef.current = false;
+    }, [collapsed, model]);
+
+    /*
+     * The tree reports a fold nowhere, so every change of its own is the moment to read back which
+     * folders stand closed. It only answers for the folders it shows: the set is shared, and one
+     * group has nothing to say about a folder that changed in another.
+     */
+    useEffect(
+        () =>
+            model.subscribe(() => {
+                if (applyingRef.current) {
+                    return;
+                }
+                const rows = visibleRows(model);
+                const known = new Set(rows.filter((row) => row.kind === 'directory').map((row) => dirPathOf(row.path)));
+                const folded = collapsedPathsOf(rows);
+                const kept = useGit.getState().collapsedDirs.filter((dir) => !known.has(dir));
+                const next = [...kept, ...folded];
+                const current = useGit.getState().collapsedDirs;
+                if (next.length !== current.length || next.some((dir, index) => dir !== current[index])) {
+                    useGit.getState().setCollapsedDirs(next);
+                }
+            }),
+        [model]
+    );
+
+    /* The tree follows the preview: the file whose diff is open is the row that reads as selected. */
+    useEffect(() => {
+        for (const path of model.getSelectedPaths()) {
+            model.getItem(path)?.deselect();
+        }
+        if (reading !== null) {
+            model.getItem(reading)?.select();
+        }
+    }, [files, model, reading]);
+
+    const onClick = (event: ReactMouseEvent<HTMLElement>): void => {
+        const path = rowPathOf(event);
+        const file = path === null ? undefined : byPath.get(path);
+        if (file !== undefined) {
+            onOpen(file);
+        }
+    };
+
+    const menuFile = menuPath === null ? undefined : byPath.get(menuPath);
+    const menuDir = menuFile === undefined && menuPath !== null ? dirPathOf(menuPath) : null;
+    const height = rowCount * model.getItemHeight();
+
+    return (
+        <section>
+            <header className={GIT_GROUP}>
+                <span className={SECTION_LABEL}>{label}</span>
+                <span className="tabular-nums text-text-faint">{files.length}</span>
+                <span className="grow" />
+                {!conflicted && (
+                    <Tooltip label={staged ? `Unstage everything in ${label}` : `Stage everything in ${label}`} name>
+                        <button
+                            className="icon-btn h-6 w-6"
+                            disabled={busy}
+                            onClick={() =>
+                                onStage(
+                                    files.map((file) => file.path),
+                                    !staged
+                                )
+                            }
+                        >
+                            <Icon icon={staged ? Minus : Plus} size={12} />
+                        </button>
+                    </Tooltip>
+                )}
+            </header>
+            <ContextMenu.Root>
+                <ContextMenu.Trigger render={<div />} style={{ height }} onContextMenu={(event) => setMenuPath(rowPathOf(event))}>
+                    <FileTree model={model} className="panel-tree" onClick={onClick} />
+                </ContextMenu.Trigger>
+                <ContextMenu.Portal>
+                    <ContextMenu.Positioner className="z-(--z-popup)">
+                        <ContextMenu.Popup className="menu-popup">
+                            {menuFile !== undefined && (
+                                <>
+                                    <ContextMenu.Item className="menu-item" onClick={() => onOpen(menuFile)}>
+                                        <Icon icon={FileDiff} size={14} /> Open changes
+                                    </ContextMenu.Item>
+                                    <ContextMenu.Item className="menu-item" disabled={isGone(menuFile)} onClick={() => onOpenFile(menuFile)}>
+                                        <Icon icon={FileText} size={14} /> Open the file itself
+                                    </ContextMenu.Item>
+                                    <ContextMenu.Separator className={MENU_SEPARATOR} />
+                                    <ContextMenu.Item className="menu-item" disabled={busy} onClick={() => onStage([menuFile.path], !staged)}>
+                                        <Icon icon={staged ? Minus : Plus} size={14} />
+                                        {staged ? 'Unstage' : conflicted ? 'Stage as resolved' : 'Stage'}
+                                    </ContextMenu.Item>
+                                    {/* A conflict is resolved by staging it or by a merge tool; discarding one side of it
+                                        silently is the one way out that loses work nobody can name afterwards. */}
+                                    {!conflicted && (
+                                        <ContextMenu.Item className="menu-item" disabled={busy} onClick={() => onDiscard(menuFile)}>
+                                            <Icon icon={Trash2} size={14} /> Discard changes
+                                        </ContextMenu.Item>
+                                    )}
+                                    <ContextMenu.Separator className={MENU_SEPARATOR} />
+                                    <RowPathItems
+                                        absolute={absolutePathOf(root, menuFile.path)}
+                                        relative={menuFile.path}
+                                        folder={folder}
+                                        platform={platform}
+                                        gone={isGone(menuFile)}
+                                    />
+                                </>
+                            )}
+                            {menuDir !== null && (
+                                <>
+                                    <ContextMenu.Item className="menu-item" onClick={() => useGit.getState().toggleDir(menuDir)}>
+                                        <Icon icon={collapsed.includes(menuDir) ? ChevronsUpDown : ChevronsDownUp} size={14} />
+                                        {collapsed.includes(menuDir) ? 'Expand this folder' : 'Collapse this folder'}
+                                    </ContextMenu.Item>
+                                    {/* A conflict is staged file by file, after it has been looked at; a whole
+                                        folder of them at once is not a thing to offer behind one click. */}
+                                    {!conflicted && (
+                                        <ContextMenu.Item className="menu-item" disabled={busy} onClick={() => onStage(pathsUnder(files, menuDir), !staged)}>
+                                            <Icon icon={staged ? Minus : Plus} size={14} /> {staged ? 'Unstage everything here' : 'Stage everything here'}
+                                        </ContextMenu.Item>
+                                    )}
+                                    <ContextMenu.Separator className={MENU_SEPARATOR} />
+                                    <RowPathItems
+                                        absolute={absolutePathOf(root, menuDir)}
+                                        relative={menuDir}
+                                        folder={folder}
+                                        platform={platform}
+                                        gone={false}
+                                    />
+                                </>
+                            )}
+                        </ContextMenu.Popup>
+                    </ContextMenu.Positioner>
+                </ContextMenu.Portal>
+            </ContextMenu.Root>
+        </section>
     );
 }
 
@@ -194,157 +424,5 @@ function RowPathItems({
                 <Icon icon={Copy} size={14} /> Copy relative path
             </ContextMenu.Item>
         </>
-    );
-}
-
-function GitDirectoryRow({
-    row,
-    collapsed,
-    root,
-    folder,
-    platform,
-    staged,
-    conflicted,
-    busy,
-    onStage
-}: {
-    row: Extract<GitTreeRow, { kind: 'directory' }>;
-    collapsed: boolean;
-    root: string | null;
-    folder: string | null;
-    platform: string | null;
-    /* Whether this is the staged group, which is what the menu's one staging item does. */
-    staged: boolean;
-    conflicted: boolean;
-    busy: boolean;
-    onStage(): void;
-}) {
-    const absolute = absolutePathOf(root, row.path);
-    return (
-        <ContextMenu.Root>
-            <ContextMenu.Trigger render={<div />} className={GIT_ROW}>
-                <button
-                    className={GIT_ROW_OPEN}
-                    aria-expanded={!collapsed}
-                    style={{ paddingLeft: 12 + row.depth * INDENT }}
-                    onClick={() => useGit.getState().toggleDir(row.path)}
-                >
-                    <Icon icon={ChevronRight} size={12} className={clsx('shrink-0 text-text-faint transition-transform', !collapsed && 'rotate-90')} />
-                    <span className="truncate text-text">{row.label}</span>
-                    <span className="tabular-nums text-text-faint">{row.count}</span>
-                    <span className="grow" />
-                </button>
-                {/* The columns of a file row end here too, so a directory never shifts them. */}
-                <span className={`${GIT_ROW_ACTIONS} ${BTN_GROUP}`} />
-            </ContextMenu.Trigger>
-            <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-(--z-popup)">
-                    <ContextMenu.Popup className="menu-popup">
-                        <ContextMenu.Item className="menu-item" onClick={() => useGit.getState().toggleDir(row.path)}>
-                            <Icon icon={collapsed ? ChevronsUpDown : ChevronsDownUp} size={14} /> {collapsed ? 'Expand this folder' : 'Collapse this folder'}
-                        </ContextMenu.Item>
-                        {/* A conflict is staged file by file, after it has been looked at; a whole
-                            folder of them at once is not a thing to offer behind one click. */}
-                        {!conflicted && (
-                            <ContextMenu.Item className="menu-item" disabled={busy} onClick={onStage}>
-                                <Icon icon={staged ? Minus : Plus} size={14} /> {staged ? 'Unstage everything here' : 'Stage everything here'}
-                            </ContextMenu.Item>
-                        )}
-                        <ContextMenu.Separator className={MENU_SEPARATOR} />
-                        <RowPathItems absolute={absolute} relative={row.path} folder={folder} platform={platform} gone={false} />
-                    </ContextMenu.Popup>
-                </ContextMenu.Positioner>
-            </ContextMenu.Portal>
-        </ContextMenu.Root>
-    );
-}
-
-function GitFileRow({
-    file,
-    depth,
-    showPath,
-    selected,
-    root,
-    folder,
-    platform,
-    busy,
-    onOpen,
-    onOpenFile,
-    onStage,
-    onDiscard
-}: {
-    file: GitFile;
-    /* The flat list carries the folder next to the name; in a tree the row above says it. */
-    showPath: boolean;
-    depth: number;
-    /* Whether the preview is showing this file's diff right now. */
-    selected: boolean;
-    root: string | null;
-    folder: string | null;
-    platform: string | null;
-    busy: boolean;
-    onOpen(): void;
-    onOpenFile(): void;
-    onStage(): void;
-    onDiscard(): void;
-}) {
-    const dir = dirnameOf(file.path);
-    const staged = file.state === 'staged';
-    const conflicted = file.state === 'conflicted';
-    const gone = isGone(file);
-    return (
-        <ContextMenu.Root>
-            <ContextMenu.Trigger render={<div />} className={GIT_ROW} data-selected={selected || undefined}>
-                <button className={GIT_ROW_OPEN} aria-current={selected} style={{ paddingLeft: 12 + depth * INDENT }} onClick={onOpen}>
-                    <FileIcon path={file.path} size={14} />
-                    <span className="truncate text-text">{basenameOf(file.path)}</span>
-                    {showPath && dir !== '' && <span className="truncate text-text-faint">{dir}</span>}
-                    <span className="grow" />
-                    <span className="w-4 shrink-0 text-right font-mono text-text-faint">{file.status}</span>
-                    <span className="w-8 shrink-0 text-right tabular-nums text-term-green">{file.added > 0 ? `+${file.added}` : ''}</span>
-                    <span className="w-8 shrink-0 text-right tabular-nums text-term-red">{file.deleted > 0 ? `-${file.deleted}` : ''}</span>
-                </button>
-                <span className={`${GIT_ROW_ACTIONS} ${BTN_GROUP}`}>
-                    <Tooltip label={staged ? 'Unstage' : conflicted ? 'Stage as resolved' : 'Stage'} name>
-                        <button className="icon-btn h-6 w-6" disabled={busy} onClick={onStage}>
-                            <Icon icon={staged ? Minus : Plus} size={12} />
-                        </button>
-                    </Tooltip>
-                    {/* A conflict is resolved by staging it or by a merge tool; discarding one side of it
-                        silently is the one way out that loses work nobody can name afterwards. */}
-                    {!conflicted && (
-                        <Tooltip label="Discard" name>
-                            <button className="icon-btn h-6 w-6" disabled={busy} onClick={onDiscard}>
-                                <Icon icon={Trash2} size={12} />
-                            </button>
-                        </Tooltip>
-                    )}
-                </span>
-            </ContextMenu.Trigger>
-            <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-(--z-popup)">
-                    <ContextMenu.Popup className="menu-popup">
-                        <ContextMenu.Item className="menu-item" onClick={onOpen}>
-                            <Icon icon={FileDiff} size={14} /> Open changes
-                        </ContextMenu.Item>
-                        <ContextMenu.Item className="menu-item" disabled={gone} onClick={onOpenFile}>
-                            <Icon icon={FileText} size={14} /> Open the file itself
-                        </ContextMenu.Item>
-                        <ContextMenu.Separator className={MENU_SEPARATOR} />
-                        <ContextMenu.Item className="menu-item" disabled={busy} onClick={onStage}>
-                            <Icon icon={staged ? Minus : Plus} size={14} />
-                            {staged ? 'Unstage' : conflicted ? 'Stage as resolved' : 'Stage'}
-                        </ContextMenu.Item>
-                        {!conflicted && (
-                            <ContextMenu.Item className="menu-item" disabled={busy} onClick={onDiscard}>
-                                <Icon icon={Trash2} size={14} /> Discard changes
-                            </ContextMenu.Item>
-                        )}
-                        <ContextMenu.Separator className={MENU_SEPARATOR} />
-                        <RowPathItems absolute={absolutePathOf(root, file.path)} relative={file.path} folder={folder} platform={platform} gone={gone} />
-                    </ContextMenu.Popup>
-                </ContextMenu.Positioner>
-            </ContextMenu.Portal>
-        </ContextMenu.Root>
     );
 }
