@@ -1,5 +1,14 @@
 import { z } from 'zod';
 import {
+    BrowserCommandPayloadSchema,
+    BrowserInfoSchema,
+    BrowserInputPayloadSchema,
+    BrowserNavigatePayloadSchema,
+    BrowserOpenPayloadSchema,
+    BrowserResizePayloadSchema,
+    BrowserTargetPayloadSchema
+} from './browser.ts';
+import {
     PushSubscribePayloadSchema,
     PushUnsubscribePayloadSchema,
     PushAttentionResultSchema,
@@ -179,6 +188,7 @@ import { UsageChangedEventSchema, UsageLimitsSnapshotSchema, UsageSummaryPayload
 
 export * from './agent.ts';
 export * from './auth.ts';
+export * from './browser.ts';
 export * from './bytes.ts';
 export * from './chat.ts';
 export * from './context.ts';
@@ -227,6 +237,13 @@ export const REQUEST_SCHEMAS = {
     'session.kill': { payload: SessionTargetPayloadSchema, result: EmptySchema },
     'session.clear': { payload: SessionTargetPayloadSchema, result: EmptySchema },
     'session.list': { payload: EmptySchema, result: SessionListResultSchema },
+    'browser.open': { payload: BrowserOpenPayloadSchema, result: BrowserInfoSchema },
+    'browser.detach': { payload: BrowserTargetPayloadSchema, result: EmptySchema },
+    'browser.kill': { payload: BrowserTargetPayloadSchema, result: EmptySchema },
+    'browser.navigate': { payload: BrowserNavigatePayloadSchema, result: BrowserInfoSchema },
+    'browser.command': { payload: BrowserCommandPayloadSchema, result: BrowserInfoSchema },
+    'browser.resize': { payload: BrowserResizePayloadSchema, result: EmptySchema },
+    'browser.input': { payload: BrowserInputPayloadSchema, result: EmptySchema },
     'agent.resume': { payload: AgentResumePayloadSchema, result: EmptySchema },
     'agent.answerApproval': { payload: ApprovalAnswerPayloadSchema, result: ApprovalAnswerResultSchema },
     'agent.setApprovals': { payload: ApprovalPreferencePayloadSchema, result: EmptySchema },
@@ -342,6 +359,7 @@ export const EVENT_SCHEMAS = {
     'session.status': SessionStatusEventSchema,
     'session.approvals': SessionApprovalsEventSchema,
     'session.list-changed': EmptySchema,
+    'browser.status': BrowserInfoSchema,
     'chat.event': ChatEventEnvelopeSchema,
     'chat.subagentChanged': ChatSubagentChangedEventSchema,
     'endpoint.changed': EndpointChangedEventSchema,

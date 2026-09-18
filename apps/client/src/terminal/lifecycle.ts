@@ -4,7 +4,7 @@ import { sessionNodesOf } from '@/project/project-sessions';
 import { endpointKey } from '@/state/keys';
 import { watchNodes, type NodeEnder } from '@/terminal/lifecycle-watch';
 import { forgetScreen } from '@/terminal/registry';
-import { chatClientFor, sessionClientFor } from '@/transport/connections';
+import { browserClientFor, chatClientFor, sessionClientFor } from '@/transport/connections';
 
 const noop = (): void => undefined;
 
@@ -17,6 +17,7 @@ const end: NodeEnder = (endpointId, id, kind) => {
         void chatClientFor(endpointId)?.kill(id).catch(noop);
     } else if (kind === 'browser') {
         browserRegistry.destroy(endpointKey(endpointId, id));
+        void browserClientFor(endpointId)?.kill(id).catch(noop);
     }
 };
 

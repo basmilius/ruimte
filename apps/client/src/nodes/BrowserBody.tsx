@@ -22,6 +22,7 @@ import {
 import { classifyLoadError, type LoadErrorKind } from '@/browser/load-error';
 import { prettyUrl } from '@/browser/pretty-url';
 import { browserRegistry, useBrowserRow } from '@/browser/registry';
+import { BrowserStream } from '@/browser/BrowserStream';
 import { useSwipeOverlay } from '@/browser/swipe-overlay';
 import { endpointKey, useEndpointId } from '@/state/keys';
 import { deriveNodeTitle } from '@/chat/title';
@@ -33,6 +34,7 @@ import { EmptyState } from '@/ui/EmptyState';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 import { formatShortcut, KEY_SHORTCUTS } from '@/ui/shortcut';
+import { browserClientFor } from '@/transport/connections';
 
 export const DEFAULT_URL = 'https://bas.dev';
 
@@ -77,7 +79,22 @@ export const usePage = (id: string): { url: string; available: boolean } => {
 /* Back, forward, the address and reload: in the node's own bar, or in the toolbar for a browser view. */
 export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }) {
     const state = useBrowserRow(id, (row) => row);
-    const key = endpointKey(useEndpointId(), id);
+    const endpointId = useEndpointId();
+    const key = endpointKey(endpointId, id);
+    const native = isDesktop();
+    const command = (action: 'back' | 'forward' | 'reload' | 'stop', ignoreCache?: boolean): void => {
+        if (!native) {
+            browserClientFor(endpointId)?.command(id, action, ignoreCache);
+        } else if (action === 'back') {
+            browserRegistry.back(key);
+        } else if (action === 'forward') {
+            browserRegistry.forward(key);
+        } else if (action === 'reload') {
+            browserRegistry.reload(key, ignoreCache ?? false);
+        } else {
+            browserRegistry.stop(key);
+        }
+    };
     const [draft, setDraft] = useState<string | null>(null);
     // The field reads short until someone puts the keyboard in it, and whole while they edit.
     const [editing, setEditing] = useState(false);
@@ -97,25 +114,25 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
         <>
             <div className={BTN_GROUP}>
                 <Tooltip label="Back" name>
-                    <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!state?.canGoBack} onClick={() => browserRegistry.back(key)}>
+                    <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!state?.canGoBack} onClick={() => command('back')}>
                         <Icon icon={ArrowLeft} size={16} />
                     </button>
                 </Tooltip>
                 <Tooltip label="Forward" name>
-                    <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!state?.canGoForward} onClick={() => browserRegistry.forward(key)}>
+                    <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!state?.canGoForward} onClick={() => command('forward')}>
                         <Icon icon={ArrowRight} size={16} />
                     </button>
                 </Tooltip>
                 {/* While a page is on its way the same square ends it, the way every browser does it. */}
                 {state?.loading ? (
                     <Tooltip label="Stop loading" name>
-                        <button className="icon-btn h-7 w-7" onClick={() => browserRegistry.stop(key)}>
+                        <button className="icon-btn h-7 w-7" onClick={() => command('stop')}>
                             <Icon icon={X} size={16} />
                         </button>
                     </Tooltip>
                 ) : (
                     <Tooltip label="Reload" kbd={`${formatShortcut(KEY_SHORTCUTS.shift, isApplePlatform())} skips the cache`} name>
-                        <button className="icon-btn h-7 w-7" onClick={(e) => browserRegistry.reload(key, e.shiftKey)}>
+                        <button className="icon-btn h-7 w-7" onClick={(e) => command('reload', e.shiftKey)}>
                             <Icon icon={RotateCw} size={16} />
                         </button>
                     </Tooltip>
@@ -148,7 +165,11 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                         }
                         e.stopPropagation();
                         if (e.key === 'Enter') {
-                            browserRegistry.navigate(key, url);
+                            if (native) {
+                                browserRegistry.navigate(key, url);
+                            } else {
+                                browserClientFor(endpointId)?.navigate(id, url);
+                            }
                             setDraft(null);
                             e.currentTarget.blur();
                         }
@@ -160,15 +181,27 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
             </div>
             <div className={BTN_GROUP}>
                 <Tooltip label="Open in the system browser" name>
-                    <button className="icon-btn h-7 w-7" onClick={() => void desktop()?.openExternal(state?.url ?? url)}>
+                    <button
+                        className="icon-btn h-7 w-7"
+                        onClick={() => {
+                            const target = state?.url ?? url;
+                            if (native) {
+                                void desktop()?.openExternal(target);
+                            } else {
+                                window.open(target, '_blank', 'noopener,noreferrer');
+                            }
+                        }}
+                    >
                         <Icon icon={ExternalLink} size={16} />
                     </button>
                 </Tooltip>
-                <Tooltip label="Inspect" name>
-                    <button className="icon-btn h-7 w-7" onClick={() => browserRegistry.inspect(key)}>
-                        <Icon icon={Code} size={16} />
-                    </button>
-                </Tooltip>
+                {native && (
+                    <Tooltip label="Inspect" name>
+                        <button className="icon-btn h-7 w-7" onClick={() => browserRegistry.inspect(key)}>
+                            <Icon icon={Code} size={16} />
+                        </button>
+                    </Tooltip>
+                )}
             </div>
             {/* The bar is the one piece a browser node and a browser view both mount, and the plate
                 it draws lands in the parked host either way, never in the bar itself. */}
@@ -270,18 +303,9 @@ function SwipeArrow({ id }: { id: string }) {
 
 /* What a browser shows where the page cannot be: a link out to the system browser. */
 export function BrowserFallback({ id, className }: { id: string; className?: string }) {
-    const saved = useNodeHost(id)?.url;
+    const saved = useNodeHost(id)?.url ?? DEFAULT_URL;
     if (!isDesktop()) {
-        return (
-            <div className={clsx('flex h-full flex-col items-center justify-center gap-2 bg-surface px-6 text-center text-xs text-text-muted', className)}>
-                <span>Web pages open only in the desktop app.</span>
-                {saved && saved !== DEFAULT_URL && (
-                    <a className="inline-flex items-center gap-1 text-accent" href={saved} target="_blank" rel="noreferrer">
-                        <Icon icon={ExternalLink} size={12} /> {saved}
-                    </a>
-                )}
-            </div>
-        );
+        return <BrowserStream id={id} initialUrl={saved} className={className} />;
     }
     return <div className={clsx('h-full bg-surface-sunken', className)} />;
 }
@@ -291,11 +315,7 @@ export function BrowserFallback({ id, className }: { id: string; className?: str
  * this is the frame around a hole; a browser view puts the same bar in the toolbar instead.
  */
 export function BrowserBody({ id, focused }: { id: string; focused: boolean }) {
-    const { available } = usePage(id);
-
-    if (!available) {
-        return <BrowserFallback id={id} />;
-    }
+    usePage(id);
     return (
         <div className="flex h-full flex-col bg-surface">
             <div className="flex h-[37px] shrink-0 items-center gap-2 border-b border-border bg-surface-raised px-1">

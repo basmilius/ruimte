@@ -42,6 +42,7 @@ export interface ConnectionServices {
     };
     sessions: Attachable & { get(sessionId: string): ScreenSource | undefined };
     chats: Attachable;
+    browsers?: Attachable;
     identity: Subscribable;
     projects: Subscribable;
     drawings: Subscribable;
@@ -93,6 +94,7 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
             services.presence?.observeAttention?.((entry) => sendEvent(client, 'push.attention', entry)) ?? (() => undefined),
             services.sessions.subscribe(clientId, sink),
             services.chats.subscribe(clientId, sink),
+            services.browsers?.subscribe(clientId, sink) ?? (() => undefined),
             services.identity.subscribe(clientId, sink),
             services.projects.subscribe(clientId, sink),
             services.drawings.subscribe(clientId, sink),
@@ -121,6 +123,7 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
             // The sessions keep running; only this client's view of them goes.
             services.sessions.detachAll(clientId);
             services.chats.detachAll(clientId);
+            services.browsers?.detachAll(clientId);
             services.folders.detachAll(clientId);
             services.statuses.detachAll(clientId);
             for (const unsubscribe of unsubscribes) {

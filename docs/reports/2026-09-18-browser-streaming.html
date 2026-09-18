@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Browserstreaming</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #3f38b5;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 760px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 15px; }
+.diagram .label { fill: var(--muted); font-size: 13px; }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .transport { fill: var(--panel); stroke: var(--line); }
+.diagram .edge { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow { fill: var(--accent); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#advies">Naar de inhoud</a>
+<header>
+  <p class="eyebrow">RUIMTE / TECHNISCH ONTWERP / 18 SEPTEMBER 2026</p>
+  <h1>Browserstreaming zonder de besturingsverbinding te belasten</h1>
+  <p class="intro">Houd headless Chromium en CDP als browsermotor, maar stuur beeld niet als base64 door de bestaande JSON-verbinding. Gebruik één kleine livestreammodule voor browser- en deviceframes, met een binaire HTTP-stream voor gewone verbindingen en een apart, onbetrouwbaar WebRTC-datakanaal voor directe verbindingen.</p>
+  <p class="status">Uitgewerkt voorstel, spike nodig voor een besluit</p>
+  <p class="caption">Gebaseerd op <a href="../research/browser-streaming.md">browser-streaming.md</a>, het <a href="2026-09-13-devices.html">deviceonderzoek</a> en de code op <code>a05eb292</code>. Getallen zonder badge zijn doelen voor de spike, geen metingen.</p>
+  <nav aria-label="Inhoud">
+    <a href="#advies">Advies</a>
+    <a href="#correctie">Wat verandert</a>
+    <a href="#seam">Gedeelde module</a>
+    <a href="#transport">Transport</a>
+    <a href="#runtime">Browserruntime</a>
+    <a href="#contracts">Contracts</a>
+    <a href="#fasen">Fasen</a>
+    <a href="#beslissingen">Beslissingen</a>
+    <a href="#risicos">Risico's</a>
+    <a href="#bronnen">Bronnen</a>
+  </nav>
+</header>
+<main>
+
+<section id="advies" class="recommendation">
+  <h2>Advies</h2>
+  <p>De capturekeuze uit het eerdere browseronderzoek blijft goed: één Chromiumproces per daemon, één target per browser-node en <code>Page.startScreencast</code> voor JPEG-frames. De wijziging zit na de capture. Decodeer de base64 van CDP één keer in de daemon en stuur daarna binaire JPEG-bytes over een mediapad dat losstaat van requests, terminal-output en status-events.</p>
+  <p>Maak daarvoor een diepe module <code>LiveStreamHub</code>. De externe interface kent alleen een bron-id, een kijkprofiel, abonneren en loslaten. Browser en devices leveren frames via een interne <code>FrameSource</code>-seam. De module regelt refcounts, het laatste frame, per-kijker backpressure en de keuze tussen HTTP en een direct mediakanaal.</p>
+  <p>Laat besturing op de bestaande betrouwbare verbinding. Voor browserpagina's zijn dat navigatie en CDP-input. Voor simulators zijn dat tikken, slepen, knoppen en draaien. Een vol mediapad mag dus nooit een terminal, input-event of detach vertragen.</p>
+  <div class="stats">
+    <div><strong>0</strong><span>beeldframes op de primaire JSON-verbinding</span></div>
+    <div><strong>1</strong><span>upstream capture per bron</span></div>
+    <div><strong>2</strong><span>media-adapters bij de eerste versie</span></div>
+  </div>
+  <p class="note">Dit vervangt ook het transportdeel van het devicevoorstel. MJPEG over HTTP blijft een geldige spikevariant, maar een <code>&lt;img&gt;</code> dekt geen directe WebRTC-verbinding en geeft de client weinig controle over achterlopende frames. Een binaire fetch-stream en een apart datakanaal kunnen dezelfde frameparser en canvasrenderer gebruiken.</p>
+</section>
+
+<section id="correctie">
+  <h2>Wat verandert ten opzichte van de research note</h2>
+  <div class="table" role="region" aria-label="Wijzigingen ten opzichte van het eerdere voorstel" tabindex="0">
+    <table class="wide">
+      <caption>De browsermotor blijft staan. Transport, lifecycle en runtime-eigenaarschap worden scherper.</caption>
+      <thead>
+        <tr><th scope="col">Onderwerp</th><th scope="col">Eerder voorstel</th><th scope="col">Uitgewerkt voorstel</th><th scope="col">Reden</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">Beeldtransport</th><td>Base64 JPEG in <code>browser.frame</code> over de bestaande socket.</td><td>Binaire frames via HTTP <code>fetch</code> of een apart WebRTC-datakanaal.</td><td>De primaire verbinding is betrouwbaar en geordend. Een verloren beeldpakket mag geen terminal-output of input achter zich vasthouden.</td></tr>
+        <tr><th scope="row">Authenticatie</th><td>De socketauthenticatie dekt alles.</td><td>HTTP gebruikt een bearer-header of een kortlevend, brongebonden ticket. Het directe mediakanaal hoort bij dezelfde geauthenticeerde peerverbinding.</td><td>Een breed sessietoken hoort niet langdurig in een stream-URL of logregel.</td></tr>
+        <tr><th scope="row">Directe verbinding</th><td>Niet apart behandeld.</td><td>Een tweede kanaal <code>ruimte-media-v1</code>, <code>ordered: false</code> en <code>maxRetransmits: 0</code>.</td><td>Een directe verbinding heeft geen bereikbare HTTP-server. <code>bytes.read</code> is geschikt voor eindige bestanden, niet voor live beeld.</td></tr>
+        <tr><th scope="row">Devices</th><td>Los browserpad.</td><td>Dezelfde hub en renderer voor JPEG; H.264 blijft een codec-adapter na de Android-spike.</td><td>Refcounts, culling, tickets, laatste-framegedrag en backpressure zijn hetzelfde probleem.</td></tr>
+        <tr><th scope="row">Lokale webview</th><td>Automatisch webview lokaal, stream remote.</td><td>Geen stille wissel van runtime. Een node is client-lokaal in een webview of daemon-beheerd en deelbaar.</td><td>Automatisch kiezen maakt twee browsesessies onder één node-id. Cookies, formulieren en geschiedenis lopen dan uiteen.</td></tr>
+        <tr><th scope="row">Agents</th><td>Accessibility tree later.</td><td>Screenshot en toegankelijkheidsboom komen uit dezelfde daemonruntime, pas na een edge en een aparte agenttoestemming.</td><td>Dit volgt het deviceplan en voorkomt dat een agent een client-lokale webview probeert te bedienen.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="seam">
+  <h2>De gedeelde seam</h2>
+  <p><code>BrowserManager</code> blijft eigenaar van Chromiumtargets, URL's, navigatie, profielen en CDP-input. <code>DeviceManager</code> blijft eigenaar van discovery, boot, shutdown en platforminput. Alleen de stroom van gecodeerde frames gaat door <code>LiveStreamHub</code>. Dat is genoeg hergebruik om de module zijn plaats te laten verdienen.</p>
+  <pre><code>type Frame = {
+    seq: number;
+    codec: 'jpeg' | 'h264-fmp4';
+    width: number;
+    height: number;
+    capturedAt: number;
+    bytes: Uint8Array;
+};
+
+type FrameSource = {
+    start(profile: CaptureProfile, publish: (frame: Frame) =&gt; void): Promise&lt;() =&gt; void&gt;;
+};
+
+type LiveStreamHub = {
+    attach(sourceId: string, viewer: Viewer, profile: ViewerProfile): Promise&lt;StreamDescriptor&gt;;
+    detach(sourceId: string, viewerId: string): void;
+    latest(sourceId: string): Frame | null;
+};</code></pre>
+  <p>Dit is de interface in ontwerptermen, niet het definitieve TypeScript. De implementatie mag intern adapters hebben voor CDP, de simulatorhelper, HTTP en WebRTC. Callers hoeven niets te weten over framefragmenten, trage kijkers, tickets of de grace-periode.</p>
+  <div class="split">
+    <div class="panel">
+      <h3>Wel gedeeld</h3>
+      <ul>
+        <li>één capture per bron met een refcount;</li>
+        <li>laatste complete frame voor een plaatje;</li>
+        <li>per-kijker backpressure en nieuwste-frame-wint;</li>
+        <li>codec, maat, volgnummer en tijdstip in elk frame;</li>
+        <li>HTTP- en direct-media-adapters;</li>
+        <li>statistieken voor fps, bytes, drops en decodeertijd.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Niet gedeeld</h3>
+      <ul>
+        <li>browsernavigatie, geschiedenis, favicon en profiel;</li>
+        <li>simulator discovery, starten en stoppen;</li>
+        <li>coördinaten en invoersemantiek;</li>
+        <li>browsercrash versus helpercrash;</li>
+        <li>platformbeschikbaarheid en installatie;</li>
+        <li>de Android-keuze tussen MSE en JPEG.</li>
+      </ul>
+    </div>
+  </div>
+
+  <figure class="panel">
+    <div class="table" role="region" aria-label="Architectuur van browser- en devicestreams" tabindex="0">
+      <svg class="diagram plot" width="960" viewBox="0 0 960 390" role="img" aria-labelledby="stream-title stream-desc">
+        <title id="stream-title">Gedeelde livestreamarchitectuur</title>
+        <desc id="stream-desc">BrowserManager en DeviceManager leveren gecodeerde frames aan LiveStreamHub. De hub stuurt ze via een HTTP-adapter of een apart WebRTC-datakanaal naar dezelfde canvasrenderer. Input en status blijven op de betrouwbare besturingsverbinding.</desc>
+        <defs><marker id="stream-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker></defs>
+        <rect class="node" x="20" y="35" width="210" height="95" rx="12"/>
+        <text x="125" y="73" text-anchor="middle" font-weight="600">BrowserManager</text>
+        <text x="125" y="99" text-anchor="middle" class="label">CDP JPEG</text>
+        <rect class="node" x="20" y="200" width="210" height="95" rx="12"/>
+        <text x="125" y="238" text-anchor="middle" font-weight="600">DeviceManager</text>
+        <text x="125" y="264" text-anchor="middle" class="label">JPEG of H.264</text>
+        <rect class="node" x="350" y="115" width="260" height="115" rx="12"/>
+        <text x="480" y="157" text-anchor="middle" font-weight="600">LiveStreamHub</text>
+        <text x="480" y="184" text-anchor="middle" class="label">refcount, laatste frame</text>
+        <text x="480" y="207" text-anchor="middle" class="label">backpressure, statistieken</text>
+        <rect class="transport" x="720" y="35" width="220" height="95" rx="12"/>
+        <text x="830" y="73" text-anchor="middle" font-weight="600">HTTP fetch-stream</text>
+        <text x="830" y="99" text-anchor="middle" class="label">LAN en socketroute</text>
+        <rect class="transport" x="720" y="200" width="220" height="95" rx="12"/>
+        <text x="830" y="238" text-anchor="middle" font-weight="600">Media-datakanaal</text>
+        <text x="830" y="264" text-anchor="middle" class="label">direct en eventueel TURN</text>
+        <rect class="node" x="350" y="320" width="260" height="55" rx="12"/>
+        <text x="480" y="353" text-anchor="middle" font-weight="600">Canvasrenderer</text>
+        <path class="edge" d="M230 82 H290 Q320 82 350 135" marker-end="url(#stream-arrow)"/>
+        <path class="edge" d="M230 247 H290 Q320 247 350 210" marker-end="url(#stream-arrow)"/>
+        <path class="edge" d="M610 145 Q665 82 720 82" marker-end="url(#stream-arrow)"/>
+        <path class="edge" d="M610 200 Q665 247 720 247" marker-end="url(#stream-arrow)"/>
+        <path class="edge" d="M830 130 V330 Q830 347 810 347 H622" marker-end="url(#stream-arrow)"/>
+        <path class="edge" d="M830 295 V330 Q830 347 810 347 H622" marker-end="url(#stream-arrow)"/>
+      </svg>
+    </div>
+    <figcaption>De betrouwbare besturingsverbinding is bewust niet als beeldpad getekend. Hij draagt alleen requests, replies en status-events tussen de client en de twee managers.</figcaption>
+  </figure>
+</section>
+
+<section id="transport">
+  <h2>Transport en framegedrag</h2>
+
+  <h3>Gewone socketroute</h3>
+  <p>De client vraagt met <code>stream.attach</code> een descriptor en opent daarna <code>GET /streams/&lt;streamId&gt;</code> met <code>fetch</code>. Zo kan hij een bearer-header meesturen, de binaire response incrementeel lezen en elk compleet frame zelf decoderen. De route loopt door <code>decideAccess</code>. Een kortlevend ticket blijft nuttig voor clients die geen header kunnen zetten, maar is brongebonden, eenmalig te openen en verloopt als niemand de response binnen bijvoorbeeld 30 seconden opent.</p>
+  <p>De stream is een reeks lengte-voorafgegane frames. De header bevat minimaal protocolversie, volgnummer, codec, maat, capturetijd en payloadlengte. De exacte binaire indeling is onderdeel van de spike. De response gebruikt <code>Cache-Control: no-store</code>, <code>X-Content-Type-Options: nosniff</code> en geen verwijzende URL.</p>
+
+  <h3>Directe WebRTC-route</h3>
+  <p>Ruimte gebruikt voor een directe verbinding al een betrouwbaar, geordend WebRTC-datakanaal. Dat kanaal blijft het controlpad. De client maakt vóór zijn offer ook <code>ruimte-media-v1</code> aan met <code>ordered: false</code> en <code>maxRetransmits: 0</code>. De daemon accepteert dit tweede kanaal alleen op dezelfde peerverbinding en pas nadat het controlkanaal is toegelaten.</p>
+  <p>Een JPEG kan groter zijn dan een veilig SCTP-bericht. De adapter splitst daarom een frame in begrensde fragmenten met hetzelfde stream-id en volgnummer. Ontbreekt een fragment wanneer een nieuwer frame aankomt, dan gooit de client het onvolledige frame weg. Hij vraagt geen herstel. Het volgende beeld is nuttiger dan een oud beeld dat alsnog compleet wordt.</p>
+
+  <h3>Backpressure</h3>
+  <p>Elke kijker heeft een eigen wachtrij van maximaal één frame. Is de HTTP-writer niet klaar of staat er meer dan één frame aan bytes in het mediakanaal, dan vervangt de hub het wachtende frame door het nieuwste complete frame. De upstream capture loopt door zolang minstens één kijker kan volgen. Als alle kijkers achterlopen, kan de bron tijdelijk frames overslaan.</p>
+  <p>CDP vereist een ack. De <code>BrowserManager</code> geeft die pas wanneer <code>LiveStreamHub</code> het frame heeft overgenomen of bewust heeft laten vallen. Dit voorkomt onbeperkte groei tussen Chromium en de daemon. Het controlpad krijgt geen frame-event en hoeft dus geen speciaal herstel zoals <code>session.resync</code>.</p>
+
+  <div class="table" role="region" aria-label="Transportkeuze per verbinding" tabindex="0">
+    <table>
+      <caption>De client kiest een adapter op grond van de bestaande verbinding, niet op grond van een geschatte afstand.</caption>
+      <thead><tr><th scope="col">Verbinding</th><th scope="col">Media</th><th scope="col">Authenticatie</th><th scope="col">Gedrag bij verlies</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">WebSocket naar bereikbare daemon</th><td>Binaire HTTP fetch-stream</td><td>Bearer of scoped ticket via <code>decideAccess</code></td><td>Laat een frame vallen als de writer achterloopt</td></tr>
+        <tr><th scope="row">Directe WebRTC-verbinding</th><td>Apart onbetrouwbaar datakanaal</td><td>Zelfde peer, na toelating van control</td><td>Geen retransmit, onvolledige frames weg</td></tr>
+        <tr><th scope="row">TURN-relay</th><td>Hetzelfde mediakanaal</td><td>DTLS van dezelfde peerverbinding</td><td>Lager profiel na meting, niet via een andere codeweg</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="runtime">
+  <h2>Lifecycle en eigenaarschap van de browserruntime</h2>
+  <p>De browserstreaming-notitie liet de client per kijker kiezen tussen <code>webview</code> en <code>stream</code>. Dat is technisch eenvoudig, maar productmatig dubbelzinnig. Twee clients kunnen dan onder dezelfde node-id verschillende cookies, geschiedenis en formulierstaat hebben.</p>
+  <p>Maak het onderscheid zichtbaar. Een bestaande lokale webview is client-lokaal. Een daemonbrowser is machinegebonden en deelbaar. De gedeelde projectdata bewaart de URL. De runtimekeuze en een eventuele profielbinding horen in <code>&lt;projectId&gt;.local.json</code>, net als de machinebinding van een simulator. Een remote client opent nooit stilletjes een tweede browser voor een lokale-webviewnode.</p>
+  <div class="split">
+    <div class="panel">
+      <h3>Webview blijft voorlopig</h3>
+      <p>Lokale Electron-nodes houden native rendering, nul streamlatency, DevTools en de bestaande <code>persist:ruimte</code>-partitie. Hun z-orderprobleem blijft issue #13 totdat de implementatie verandert.</p>
+    </div>
+    <div class="panel">
+      <h3>Daemonbrowser is deelbaar</h3>
+      <p>Server Edition, station en een client op een andere machine gebruiken één Chromiumtarget op de daemon. Alle kijkers zien dezelfde pagina en dezelfde navigatie. Alleen deze runtime kan later door een gekoppelde agent gelezen worden.</p>
+    </div>
+  </div>
+  <p class="note">Voor productie is nog één productbesluit nodig: blijven beide runtimes bestaan als expliciete keuze, of wordt de daemonbrowser na goede metingen de standaard, ook lokaal? De spike mag dit niet stilzwijgend beslissen.</p>
+
+  <h3>Zichtbaarheid en refcounts</h3>
+  <ul>
+    <li>Een zelfstandige browserview abonneert zolang zijn cel zichtbaar is.</li>
+    <li>Een canvas-node abonneert alleen als hij in beeld staat, boven <code>READABLE_ZOOM</code> van 0,4 zit en niet door een gesloten groep wordt verborgen.</li>
+    <li>Loslaten wacht twee seconden om churn tijdens pannen, viewwissels en layoutwerk te voorkomen. De spike meet of die waarde goed is.</li>
+    <li>Bij nul kijkers stopt <code>Page.stopScreencast</code>. Het Chromiumtarget blijft bestaan, zodat pagina, cookies en geschiedenis niet verdwijnen.</li>
+    <li>De hub bewaart één laatste frame per bron. Een onleesbare of verborgen node toont dit plaatje en opent geen stream.</li>
+    <li>Bij resize kiest de bron één captureprofiel voor alle kijkers. Meerdere profielen vragen re-encoding of meerdere targets en vallen buiten de eerste versie.</li>
+  </ul>
+</section>
+
+<section id="contracts">
+  <h2>Contracts en inpassing</h2>
+  <p>Voeg browsergedrag toe als eigen requestfamilie. De generieke streamrequests regelen alleen transport. Zo blijft een device geen browser met andere velden en blijft de streammodule diep.</p>
+  <div class="table" role="region" aria-label="Voorgestelde contracts" tabindex="0">
+    <table class="wide">
+      <caption>Conceptuele vormen. Namen en optionele velden worden na de spike vastgezet.</caption>
+      <thead><tr><th scope="col">Familie</th><th scope="col">Requests en events</th><th scope="col">Verantwoordelijkheid</th></tr></thead>
+      <tbody>
+        <tr><th scope="row"><code>browser.*</code></th><td><code>open</code>, <code>close</code>, <code>navigate</code>, <code>command</code>, <code>resize</code>, <code>input</code>, <code>status</code></td><td>Target, URL, titel, laadstatus, geschiedenis, viewport en CDP-input.</td></tr>
+        <tr><th scope="row"><code>stream.*</code></th><td><code>attach</code>, <code>detach</code>, optioneel <code>stats</code></td><td>Bron koppelen aan deze client, descriptor geven, profiel en lifecycle beheren.</td></tr>
+        <tr><th scope="row"><code>device.*</code></th><td>De requests uit het deviceplan, met <code>stream.attach</code> voor beeld</td><td>Discovery, capabilities, boot, shutdown en platforminput.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><code>StreamDescriptor</code> noemt <code>streamId</code>, codec, nominale maat, transport en, alleen bij HTTP, de URL of het scoped ticket. Bij een directe verbinding verwijst dezelfde <code>streamId</code> naar berichten op <code>ruimte-media-v1</code>. De clientrenderer ziet na het openen alleen frames.</p>
+  <p>De relevante bestaande plekken zijn <a href="../../apps/client/src/nodes/BrowserBody.tsx"><code>BrowserBody.tsx</code></a>, <a href="../../apps/client/src/browser/registry.ts"><code>browser/registry.ts</code></a>, <a href="../../apps/client/src/transport/machine-url.ts"><code>machine-url.ts</code></a>, <a href="../../apps/client/src/transport/webrtc-link.ts"><code>webrtc-link.ts</code></a>, <a href="../../apps/server/src/connection.ts"><code>connection.ts</code></a>, <a href="../../apps/server/src/pulsar/peers.ts"><code>pulsar/peers.ts</code></a> en <a href="../../apps/server/src/daemon.ts"><code>daemon.ts</code></a>.</p>
+
+  <h3>Beveiligingsregels</h3>
+  <ul>
+    <li>Sta in de eerste versie alleen <code>http:</code>, <code>https:</code> en <code>about:blank</code> toe. Weiger <code>file:</code>, <code>chrome:</code>, <code>devtools:</code> en willekeurige schemes.</li>
+    <li>Start Chromium met een eigen profielmap en zonder <code>--no-sandbox</code>. Een browserprofiel hoort bij de machine, niet bij het projectbestand.</li>
+    <li>Een streamticket benoemt bron, sessie en vervaltijd. Het geeft geen toegang tot een andere browser of een device.</li>
+    <li>Een HTTP-stream eindigt zodra de controlverbinding, de attach of de bron verdwijnt. Een gestolen URL blijft niet zelfstandig leven.</li>
+    <li>Downloads, bestandsuploads, klembord terug naar de client en dialogen vallen buiten de eerste versie.</li>
+    <li>Een agent krijgt geen browsercontrol omdat de mens kan kijken. Daarvoor blijven een edge en een aparte toestemming nodig.</li>
+  </ul>
+</section>
+
+<section id="fasen">
+  <h2>Fasen en meetlat</h2>
+  <ol class="steps">
+    <li class="step"><div>
+      <h3>Transportspike</h3>
+      <p>Start één <code>Bun.WebView</code> met Chrome-backend, neem CDP JPEG-frames af en stuur dezelfde frames naar een canvas via twee routes: een binaire HTTP fetch-stream en een tweede WebRTC-datakanaal op de bestaande directe peerverbinding. Gebruik een kunstmatige 50 ms RTT, 1% en 5% pakketverlies en een doorlopende terminalstream op het controlkanaal.</p>
+      <p><strong>Klaar als:</strong> click-to-paint, fps, bytes per seconde, daemon-CPU, client-decodeertijd, aantal gedropte frames en de wachtrij van beide kanalen zijn gemeten. Tijdens 30 seconden scrollen ontbreken geen terminalbytes en blijven browserinput en een klein request antwoord geven.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Livestreammodule</h3>
+      <p>Bouw <code>LiveStreamHub</code> met een fake framebron, een HTTP-adapter en een directe-media-adapter. Test via de externe interface: eerste attach start één bron, twee kijkers delen die bron, een trage kijker houdt de andere niet op, detach van de laatste stopt de bron en het laatste complete frame blijft beschikbaar.</p>
+      <p><strong>Klaar als:</strong> de tests geen kennis hebben van CDP of simulators en de primaire <code>OutputGate</code> geen enkel beeldframe ziet.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Daemonbrowser</h3>
+      <p>Bouw de minimale CDP-client, <code>BrowserManager</code>, browsercontracts en crashherstel. Forceer één serial queue voor CDP-calls. Houd één Chromiumproces per daemon en één target per daemonbrowser aan.</p>
+      <p><strong>Klaar als:</strong> openen, navigeren, terug, vooruit, herladen, stoppen, resize, muis, wheel, toetsen en tekstinvoer werken. Een Chromiumcrash neemt de daemon niet mee en levert een zichtbare foutstatus op.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Clientrenderer en lifecycle</h3>
+      <p>Vervang <code>BrowserFallback</code> voor daemonbrowsers door een canvasrenderer. Decodeer maar één frame tegelijk en vervang een wachtend frame door het nieuwste. Voeg zichtbaarheid, <code>READABLE_ZOOM</code>, de grace-periode, focus en coördinatenmapping toe.</p>
+      <p><strong>Klaar als:</strong> een view en een canvas-node dezelfde sessie kunnen tonen, een verborgen node na de grace-periode geen frames ontvangt en terugkeren direct het laatste frame laat zien.</p>
+    </div></li>
+    <li class="step"><div>
+      <h3>Devicepad aansluiten</h3>
+      <p>Laat de iOS-helper JPEG-frames aan dezelfde <code>FrameSource</code>-seam leveren. De Android-spike kiest daarna een <code>h264-fmp4</code>-adapter of JPEG-omzetting. Device-input blijft in <code>DeviceManager</code>.</p>
+      <p><strong>Klaar als:</strong> browser en iOS dezelfde twee transportadapters en dezelfde clientdecoder gebruiken, zonder browservelden in devicecontracts of devicevelden in browsercontracts.</p>
+    </div></li>
+  </ol>
+
+  <h3>Voorgestelde go/no-go-doelen</h3>
+  <div class="table" role="region" aria-label="Meetdoelen voor de spike" tabindex="0">
+    <table class="wide">
+      <thead><tr><th scope="col">Meting</th><th scope="col">Doel</th><th scope="col">Waarom</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Click-to-paint lokaal</th><td>p95 onder 150 ms</td><td>De grens uit de eerdere browsernotitie, nu gemeten op het hele pad.</td></tr>
+        <tr><th scope="row">50 ms RTT, 1% verlies</th><td>p95 onder 300 ms en geen stilstand langer dan 500 ms</td><td>Laat zien of nieuwste-frame-wint voldoende is zonder videocodec.</td></tr>
+        <tr><th scope="row">Controlvertraging tijdens scroll</th><td>p95 van klein request onder 100 ms boven de kale route</td><td>Het mediapad mag de bestuurbaarheid niet overnemen.</td></tr>
+        <tr><th scope="row">Primaire kanaalbuffer</th><td>Geen groei door beeld</td><td>Bevestigt de reden voor het aparte pad.</td></tr>
+        <tr><th scope="row">Capture bij nul kijkers</th><td>Stopt binnen de gekozen grace-periode</td><td>Voorkomt CPU- en bandbreedtegebruik buiten beeld.</td></tr>
+        <tr><th scope="row">Twee kijkers</th><td>Eén upstream capture, drops per kijker</td><td>Bevestigt de refcount en isolatie van een trage client.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="beslissingen">
+  <h2>Beslissingen</h2>
+  <ol>
+    <li><span class="badge warning">Voor de spike</span> <strong>Is een apart mediakanaal de extra implementatie waard?</strong> Het rapport zegt ja omdat het directe pad anders ontbreekt en het controlkanaal geordend blijft. De spike moet bewijzen dat werift en de browser een tweede, onbetrouwbaar kanaal stabiel afhandelen.</li>
+    <li><span class="badge warning">Voor productie</span> <strong>Blijft de lokale webview bestaan?</strong> Kies na latency-, CPU- en geheugenmetingen tussen twee expliciete runtimes of één daemonbrowser voor alle clients.</li>
+    <li><span class="badge info">Door de Android-spike</span> <strong>Krijgt de renderer één of twee codecs?</strong> MSE met gefragmenteerde MP4 houdt H.264 efficiënt. Omzetten naar JPEG houdt de eerste client eenvoudiger maar kost daemon-CPU en bandbreedte.</li>
+    <li><span class="badge warning">Voor productie</span> <strong>Hoe groot is het gedeelde captureprofiel?</strong> CDP heeft één screencastprofiel per target. Begin met 1x DPR, maximaal 1280 bij 720 en quality 80, en wijzig dat alleen op meetresultaten.</li>
+    <li><span class="badge confirmed">Uitgangspunt</span> <strong>De primaire verbinding draagt geen live beeld.</strong> Dit geldt voor browser en devices. Alleen status en input blijven daar.</li>
+    <li><span class="badge confirmed">Uitgangspunt</span> <strong>Runtimebinding is machinegebonden.</strong> Een browserprofiel of simulator-id komt niet in het gedeelde <code>project.json</code>.</li>
+  </ol>
+</section>
+
+<section id="risicos">
+  <h2>Risico's en terugval</h2>
+  <ul>
+    <li><code>Page.startScreencast</code> is experimenteel gemarkeerd. De terugval is <code>Page.captureScreenshot</code> op aanvraag of met een begrensde poll, niet een tweede primaire architectuur.</li>
+    <li>Bun's <code>WebView</code> blijft geschikt voor de spike. Productie gebruikt een eigen kleine CDP-client zolang de WebView-interface experimenteel is en overlappende calls niet accepteert.</li>
+    <li>Een tweede datakanaal raakt de offer-, acceptatie- en teardowncode aan beide kanten. Als werift dit niet stabiel doet, is de terugval een apart betrouwbaar mediakanaal met een agressieve bytecap. Dan blijven hoofdcontrole en media nog steeds gescheiden.</li>
+    <li>Onbetrouwbare framefragmenten kunnen vaak incompleet zijn bij verlies. Kleine fragmenten en een keyframe dat ieder JPEG al is beperken de schade tot één frame.</li>
+    <li>Eén captureprofiel voor een groot lokaal venster en een kleine relaykijker verspilt bandbreedte. De eerste versie kiest een gematigd vast profiel. Re-encoding per kijker komt alleen na meting.</li>
+    <li>De daemonbrowser kan bij <code>localhost</code> van de daemon en bij interne netwerkhosts. Dat is juist een productdoel, maar een gekoppelde client krijgt daarmee de netwerkpositie van de machine. Alleen gepairde clients mogen een browser openen en gevaarlijke URL-schemes blijven dicht.</li>
+    <li>IME, dead keys, AltGr, clipboard en bestandsinvoer blijven het lastigste inputdeel. <code>Input.insertText</code> dekt tekstinvoer, maar de spike moet minstens macOS dead keys en één IME-pad controleren.</li>
+    <li>iOS gebruikt JPEG, Android H.264. De gedeelde module mag daarom codecs vervoeren, maar mag geen decoderbeleid of platformspecifieke lifecycle opnemen.</li>
+  </ul>
+</section>
+
+<section id="bronnen">
+  <h2>Bronnen en bewijs</h2>
+  <ul>
+    <li><a href="../research/browser-streaming.md">Live browserpagina in een browser-node zonder <code>&lt;webview&gt;</code></a>, 9 september 2026. Dit levert de capturevergelijking, CDP-details en eerste effortinschatting.</li>
+    <li><a href="2026-09-13-devices.html">Devices: de iOS Simulator in Ruimte</a>, 13 september 2026. Dit levert de HTTP-versus-socketwaarschuwing, refcount, culling, agenttoestemming en Android-codecvraag.</li>
+    <li><a href="../NEXT.md"><code>docs/NEXT.md</code></a>. Browserstreaming en devices zijn nog niet gebouwd. Directe verbindingen en protocolversies bestaan wel.</li>
+    <li><a href="../../apps/server/src/backpressure.ts"><code>apps/server/src/backpressure.ts</code></a>. <code>OutputGate</code> beschermt terminal-output op het primaire kanaal, maar is geen mediaplanner.</li>
+    <li><a href="../../packages/contracts/src/bytes.ts"><code>packages/contracts/src/bytes.ts</code></a> en <a href="../../apps/client/src/transport/machine-url.ts"><code>machine-url.ts</code></a>. Eindige bytes gebruiken HTTP als dat kan en requeststukken over het directe kanaal als dat moet.</li>
+    <li><a href="../../apps/client/src/transport/webrtc-link.ts"><code>apps/client/src/transport/webrtc-link.ts</code></a> en <a href="../../apps/server/src/pulsar/peers.ts"><code>apps/server/src/pulsar/peers.ts</code></a>. De huidige directe peer maakt en accepteert precies één betrouwbaar, geordend datakanaal.</li>
+    <li><a href="https://chromedevtools.github.io/devtools-protocol/tot/Page/">Chrome DevTools Protocol, Page domain</a> en <a href="https://chromedevtools.github.io/devtools-protocol/tot/Input/">Input domain</a>.</li>
+    <li><a href="https://bun.com/docs/runtime/webview">Bun WebView-documentatie</a>.</li>
+  </ul>
+  <details open>
+    <summary>Wat is geverifieerd en wat niet</summary>
+    <p><span class="badge confirmed">Geverifieerd in de code</span> Ruimte gebruikt één JSON-wire over WebSocket of een betrouwbaar WebRTC-datakanaal, <code>OutputGate</code> bewaakt alleen terminal-output, HTTP-routes gebruiken <code>decideAccess</code>, <code>bytes.read</code> is begrensd voor eindige bestanden, en de huidige webclient toont buiten Electron alleen <code>BrowserFallback</code>.</p>
+    <p><span class="badge info">Afgeleid uit de twee onderzoeken</span> CDP-screencast, de Bun-opties, JPEG-grootte en devicecapture. Die claims zijn hier niet opnieuw uitgevoerd.</p>
+    <p><span class="badge warning">Niet geverifieerd</span> Een tweede onbetrouwbaar datakanaal met de huidige werift-versie, binaire fetch-streaming onder alle doelclients, de beste fragmentgrootte, latency, CPU, geheugen, codecgedrag bij pakketverlies en IME. Daarom begint het plan met een spike en staan de prestatiewaarden als doelen, niet als resultaten.</p>
+  </details>
+</section>
+
+</main>
+<footer>
+  <p>Dit rapport werkt een ontwerp uit en verandert geen productiecode. Het vervangt de eerdere browserresearch niet als bronoverzicht. Het scherpt de aanbevolen architectuur aan op basis van de huidige directe verbinding en het deviceplan.</p>
+</footer>
+</body>
+</html>

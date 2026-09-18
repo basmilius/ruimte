@@ -54,6 +54,10 @@ export default defineConfig(({ mode }) => ({
             // And for a file someone attached to a message; the bytes stay on the daemon.
             '/attachments': {
                 target: daemon.replace(/^ws/, 'http')
+            },
+            // Browser and simulator pixels stay off the JSON control socket.
+            '/live-stream': {
+                target: daemon.replace(/^ws/, 'http')
             }
         }
     }

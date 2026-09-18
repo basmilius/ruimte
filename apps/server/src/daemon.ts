@@ -105,6 +105,9 @@ import { SnapshotStore, scheduleSnapshots } from './sessions/snapshot-store.ts';
 import { UsageMonitor } from './usage/limits/monitor.ts';
 import { UsageService } from './usage/usage-service.ts';
 import { errorText } from './error-text.ts';
+import { BrowserManager } from './browser/manager.ts';
+import { registerBrowserHandlers } from './handlers/browser.ts';
+import { handleLiveStreamRequest, LIVE_STREAM_PATH } from './streams/http-stream.ts';
 
 // A client on another origin pairs and signs in from its own page, so the auth routes answer preflights and open CORS.
 // What would end if this daemon restarted, as counts; `service/work.ts` says what counts.
@@ -293,6 +296,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         }
     });
     const folders = new FolderWatcher();
+    const browsers = BrowserManager.withBun(config.home);
     const statuses = new GitStatusWatcher();
     const usage = new UsageService({ home: config.home, allowPriceFetch: config.priceFetch, knownProjects: () => projects.known() });
     const limits = new UsageMonitor({ providers });
@@ -428,6 +432,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerPushHandlers(dispatcher, auth, () => push.synchronizeActivities(), push);
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
     registerSessionHandlers(dispatcher, manager, endChildren.owe);
+    registerBrowserHandlers(dispatcher, browsers);
     const forkDeps = chatForkDeps({ chats, host: canvasHost, titleFor: (id) => projects.index.titleFor(id), lineage, worktrees, checkpoints });
     registerChatHandlers(dispatcher, chats, providers, endChildren.owe, endChildren.stopNode, {
         fork: (payload) => forkChat(forkDeps, payload),
@@ -551,6 +556,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         presence: push,
         sessions: manager,
         chats,
+        browsers,
         identity,
         projects,
         drawings,
@@ -717,6 +723,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                 return handleFsFileRequest(request, url, remote, auth, access);
             }
 
+            if (url.pathname.startsWith(`${LIVE_STREAM_PATH}/`)) {
+                return handleLiveStreamRequest(request, url, remote, auth, access, browsers.streams);
+            }
+
             if (url.pathname.startsWith(`${HOOKS_PATH}/`)) {
                 return handleHookRequest(
                     request,
@@ -841,6 +851,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             console.error('Snapshot on shutdown failed:', errorText(e));
         }
         manager.killAll();
+        browsers.closeAll();
         projects.closeAll();
         drawings.closeAll();
         diagrams.closeAll();

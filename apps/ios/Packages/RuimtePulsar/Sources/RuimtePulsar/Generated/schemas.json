@@ -5496,6 +5496,447 @@
       "sessions"
     ]
   },
+  "request.browser.open.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "browserId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "url": {
+        "type": "string",
+        "maxLength": 8192
+      },
+      "width": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 4096
+      },
+      "height": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 4096
+      }
+    },
+    "required": [
+      "browserId",
+      "url",
+      "width",
+      "height"
+    ]
+  },
+  "request.browser.open.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "browserId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "url": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "loading": {
+        "type": "boolean"
+      },
+      "canGoBack": {
+        "type": "boolean"
+      },
+      "canGoForward": {
+        "type": "boolean"
+      },
+      "error": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "required": [
+      "browserId",
+      "url",
+      "title",
+      "loading",
+      "canGoBack",
+      "canGoForward",
+      "error"
+    ]
+  },
+  "request.browser.detach.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "browserId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "required": [
+      "browserId"
+    ]
+  },
+  "request.browser.detach.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.browser.kill.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "browserId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "required": [
+      "browserId"
+    ]
+  },
+  "request.browser.kill.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.browser.navigate.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "browserId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "url": {
+        "type": "string",
+        "maxLength": 8192
+      }
+    },
+    "required": [
+      "browserId",
+      "url"
+    ]
+  },
+  "request.browser.navigate.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "browserId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "url": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "loading": {
+        "type": "boolean"
+      },
+      "canGoBack": {
+        "type": "boolean"
+      },
+      "canGoForward": {
+        "type": "boolean"
+      },
+      "error": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "required": [
+      "browserId",
+      "url",
+      "title",
+      "loading",
+      "canGoBack",
+      "canGoForward",
+      "error"
+    ]
+  },
+  "request.browser.command.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "browserId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "command": {
+        "type": "string",
+        "enum": [
+          "back",
+          "forward",
+          "reload",
+          "stop"
+        ]
+      },
+      "ignoreCache": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "browserId",
+      "command"
+    ]
+  },
+  "request.browser.command.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "browserId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "url": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "loading": {
+        "type": "boolean"
+      },
+      "canGoBack": {
+        "type": "boolean"
+      },
+      "canGoForward": {
+        "type": "boolean"
+      },
+      "error": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "required": [
+      "browserId",
+      "url",
+      "title",
+      "loading",
+      "canGoBack",
+      "canGoForward",
+      "error"
+    ]
+  },
+  "request.browser.resize.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "browserId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "width": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 4096
+      },
+      "height": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 4096
+      }
+    },
+    "required": [
+      "browserId",
+      "width",
+      "height"
+    ]
+  },
+  "request.browser.resize.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.browser.input.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "browserId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "input": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "pointer"
+              },
+              "phase": {
+                "type": "string",
+                "enum": [
+                  "down",
+                  "move",
+                  "up"
+                ]
+              },
+              "x": {
+                "type": "number",
+                "minimum": -4096,
+                "maximum": 8192
+              },
+              "y": {
+                "type": "number",
+                "minimum": -4096,
+                "maximum": 8192
+              },
+              "button": {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "middle",
+                  "right"
+                ]
+              },
+              "buttons": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 7
+              },
+              "modifiers": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 15
+              }
+            },
+            "required": [
+              "kind",
+              "phase",
+              "x",
+              "y"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "wheel"
+              },
+              "x": {
+                "type": "number",
+                "minimum": -4096,
+                "maximum": 8192
+              },
+              "y": {
+                "type": "number",
+                "minimum": -4096,
+                "maximum": 8192
+              },
+              "deltaX": {
+                "type": "number",
+                "minimum": -10000,
+                "maximum": 10000
+              },
+              "deltaY": {
+                "type": "number",
+                "minimum": -10000,
+                "maximum": 10000
+              },
+              "modifiers": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 15
+              }
+            },
+            "required": [
+              "kind",
+              "x",
+              "y",
+              "deltaX",
+              "deltaY"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "key"
+              },
+              "phase": {
+                "type": "string",
+                "enum": [
+                  "down",
+                  "up"
+                ]
+              },
+              "key": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "code": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "text": {
+                "type": "string",
+                "maxLength": 16
+              },
+              "modifiers": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 15
+              }
+            },
+            "required": [
+              "kind",
+              "phase",
+              "key",
+              "code"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "text"
+              },
+              "text": {
+                "type": "string",
+                "maxLength": 65536
+              }
+            },
+            "required": [
+              "kind",
+              "text"
+            ]
+          }
+        ]
+      }
+    },
+    "required": [
+      "browserId",
+      "input"
+    ]
+  },
+  "request.browser.input.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
   "request.agent.resume.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -27098,6 +27539,47 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
+  },
+  "event.browser.status": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "browserId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "url": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "loading": {
+        "type": "boolean"
+      },
+      "canGoBack": {
+        "type": "boolean"
+      },
+      "canGoForward": {
+        "type": "boolean"
+      },
+      "error": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    "required": [
+      "browserId",
+      "url",
+      "title",
+      "loading",
+      "canGoBack",
+      "canGoForward",
+      "error"
+    ]
   },
   "event.chat.event": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",

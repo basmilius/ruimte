@@ -1,4 +1,5 @@
 import { ChatClient } from '@/chat/chat-client';
+import { BrowserClient } from '@/browser/browser-client';
 import { chatPreferencesPayload, useChatPreferences } from '@/chat/preferences';
 import { DiagramClient } from '@/diagram/diagram-client';
 import { DrawingClient } from '@/drawing/drawing-client';
@@ -33,6 +34,7 @@ export interface Connection {
     transport: Transport;
     sessions: SessionClient;
     chats: ChatClient;
+    browsers: BrowserClient;
     projects: ProjectClient;
     drawings: DrawingClient;
     diagrams: DiagramClient;
@@ -44,6 +46,7 @@ export interface Machine {
     transport: Transport;
     sessions: SessionClient;
     chats: ChatClient;
+    browsers: BrowserClient;
     dispose(): void;
 }
 
@@ -93,17 +96,20 @@ const buildMachine = (endpoint: Endpoint): Machine => {
     // Every machine hears the same answer, since the switch is about this client and not about one of them.
     sessions.setApprovals(useSettings.getState().agentsApprovals);
     const chats = new ChatClient(transport, chatSinkFor(endpoint.id), providerSinkFor(endpoint.id));
+    const browsers = new BrowserClient(endpoint.id, transport);
     chats.setPreferences(chatPreferencesPayload(useChatPreferences.getState()));
     return {
         endpointId: endpoint.id,
         transport,
         sessions,
         chats,
+        browsers,
         dispose(): void {
             stopPushAttention();
             plans.dispose();
             sessions.dispose();
             chats.dispose();
+            browsers.dispose();
         }
     };
 };
@@ -177,6 +183,9 @@ const connect = (endpoint: Endpoint, onLoad: (connection: Connection) => void): 
         },
         get chats(): ChatClient {
             return machineOn(endpointById(connection.endpointId) ?? endpoint).chats;
+        },
+        get browsers(): BrowserClient {
+            return machineOn(endpointById(connection.endpointId) ?? endpoint).browsers;
         },
         projects,
         drawings,
@@ -318,6 +327,8 @@ export const diagramClient = workspaceClient((connection) => connection.diagrams
 export const sessionClientFor = (endpointId: string): SessionClient | null => machineFor(endpointId)?.sessions ?? null;
 
 export const chatClientFor = (endpointId: string): ChatClient | null => machineFor(endpointId)?.chats ?? null;
+
+export const browserClientFor = (endpointId: string): BrowserClient | null => machineFor(endpointId)?.browsers ?? null;
 
 /* A machine this client no longer knows under that id (forgotten, or a row that moved onto its daemon id) keeps no clients. */
 const prune = (): void => {

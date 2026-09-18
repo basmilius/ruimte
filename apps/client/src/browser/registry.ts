@@ -13,7 +13,7 @@ export interface LoadFailure {
     description: string;
 }
 
-interface BrowserState {
+export interface BrowserState {
     url: string;
     title: string;
     loading: boolean;
@@ -24,6 +24,8 @@ interface BrowserState {
     favicon: string | null;
     /* The load that failed, until the next one starts. */
     error: LoadFailure | null;
+    /* A server-rendered page can fail before Chromium has a Chromium error code. */
+    streamError: string | null;
 }
 
 interface BrowserStore {
@@ -81,7 +83,7 @@ export const faviconsOfProject = (byKey: Record<string, BrowserState>, endpointI
     return favicons;
 };
 
-const EMPTY: BrowserState = { url: '', title: '', loading: false, canGoBack: false, canGoForward: false, favicon: null, error: null };
+const EMPTY: BrowserState = { url: '', title: '', loading: false, canGoBack: false, canGoForward: false, favicon: null, error: null, streamError: null };
 
 // Electron's <webview> as far as the registry uses it; the tag has no DOM typings of its own.
 interface WebviewElement extends HTMLElement {
@@ -137,16 +139,16 @@ const originOf = (url: string): string => {
 const ABORTED = -3;
 
 /* Adds a scheme when the person typed a bare host; anything with one is used as is. */
-const normalizeUrl = (input: string): string => {
+export const normalizeUrl = (input: string): string => {
     const trimmed = input.trim();
     if (trimmed === '') {
         return 'about:blank';
     }
-    if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) {
-        return trimmed;
-    }
     if (/^localhost(:\d+)?(\/|$)/.test(trimmed) || /^\d+\.\d+\.\d+\.\d+/.test(trimmed)) {
         return `http://${trimmed}`;
+    }
+    if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) {
+        return trimmed;
     }
     return `https://${trimmed}`;
 };
