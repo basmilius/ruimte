@@ -72,7 +72,8 @@ interface Bounds {
     maxY: number;
 }
 
-const SIDE_NORMAL: Record<Side, Point> = {
+/* Which way a side faces, away from the node: what pushes a port out of it and what a marker there points along. */
+export const SIDE_NORMAL: Record<Side, Point> = {
     top: { x: 0, y: -1 },
     right: { x: 1, y: 0 },
     bottom: { x: 0, y: 1 },

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { isAgentKind, useCanvas, useCanvasStore } from '@/state/canvas';
 import { edgeLines, fixedSides, selectedLine, textRect, type EdgeLine } from '@/canvas/edge-lines';
-import { routeDraft, routeEdge, selfRoute, type Obstacle } from '@/canvas/edge-route';
+import { routeDraft, routeEdge, selfRoute, SIDE_NORMAL, type Obstacle, type Side } from '@/canvas/edge-route';
+import { markerPath, type MarkerShape } from '@/canvas/marker-path';
 import type { Point, Rect } from '@/canvas/math';
 import { useEndpointId } from '@/state/keys';
 import { TASK_EDGE_LABEL, edgeTask, useTasks } from '@/state/tasks';
@@ -61,10 +62,16 @@ function EdgeLabel({
     );
 }
 
-/* Where a line meets a node: it stops a gap short and leaves this hole in the canvas behind, rimmed
-   in its own color, so nothing is ever drawn against a node's border. */
-function PortDot({ at, stroke }: { at: Point; stroke: string }) {
-    return <circle cx={at.x} cy={at.y} r="5" fill="var(--canvas-bg)" stroke={stroke} strokeWidth="2" />;
+/* Where a line meets a node: it stops a gap short and leaves its marker in the gap behind, rimmed in
+   its own color, so nothing is ever drawn against a node's border. An outline is filled with the
+   canvas, so the line ends inside it instead of running through it. */
+function EdgeMarker({ shape, at, side, stroke }: { shape: MarkerShape; at: Point; side: Side; stroke: string }) {
+    const path = markerPath(shape, at, SIDE_NORMAL[side]);
+    if (path === '') {
+        return null;
+    }
+    const fill = shape === 'chevron' ? 'none' : shape === 'arrow' ? stroke : 'var(--canvas-bg)';
+    return <path d={path} fill={fill} stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />;
 }
 
 export function EdgeLayer() {
@@ -149,7 +156,12 @@ export function EdgeLayer() {
                 // A line a task went along says how the task stands, and stays dashed only while it is open.
                 const task = edgeTask(tasks, line.edge.from, line.edge.to) ?? (line.back === null ? null : edgeTask(tasks, line.back.from, line.back.to));
                 const label = task === null ? line.label : TASK_EDGE_LABEL[task.status];
-                const dashed = task === null ? context : task.status === 'open';
+                const dashed = task !== null && task.status === 'open';
+                /* A line that means something reads one way, so its head says so and its tail closes
+                   off. A pair reads both ways, which is a head at either end. */
+                const reads = context || task !== null;
+                const head: MarkerShape = reads ? 'chevron' : 'dot';
+                const tail: MarkerShape = reads && line.back !== null ? 'chevron' : 'dot';
                 return (
                     <g key={key} onPointerEnter={() => setHovered(key)} onPointerLeave={() => setHovered((h) => (h === key ? null : h))}>
                         {/* A wide invisible stroke gives the thin line something to hover and click; a double-click names it. */}
@@ -178,8 +190,8 @@ export function EdgeLayer() {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                         />
-                        <PortDot at={route.from} stroke={stroke} />
-                        <PortDot at={route.to} stroke={stroke} />
+                        <EdgeMarker shape={tail} at={route.from} side={route.fromSide} stroke={stroke} />
+                        <EdgeMarker shape={head} at={route.to} side={route.toSide} stroke={stroke} />
                         <EdgeLabel ids={line.ids} label={label} at={mid} editing={editing === key} onEdit={(on) => setEditing(on ? key : null)} />
                         {active && editing !== key && (
                             <g
@@ -222,7 +234,7 @@ export function EdgeLayer() {
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                             />
-                            <circle cx={route.from.x} cy={route.from.y} r="5" fill="var(--canvas-bg)" stroke="var(--accent)" strokeWidth="2" />
+                            <EdgeMarker shape="dot" at={route.from} side={route.fromSide} stroke="var(--accent)" />
                         </>
                     );
                 })()}
