@@ -1,5 +1,9 @@
-import type { ContextSource } from '@ruimte/contracts';
+import { AgentKindSchema, type ContextSource } from '@ruimte/contracts';
 import { MAX_AGENT_DEPTH, MAX_TEAM_DEPTH } from '../canvas/depth.ts';
+
+/* Asked for a CLI by name, a model that has not read the names goes looking through its own tools
+   for one and reports back that this machine has none, so the verb names them where it is offered. */
+const CLI_NAMES = AgentKindSchema.options.join(', ');
 
 /*
  * What the verb opens, with the reason not to reach for it: a model that reads only what it can do
@@ -7,10 +11,10 @@ import { MAX_AGENT_DEPTH, MAX_TEAM_DEPTH } from '../canvas/depth.ts';
  */
 const opensAt = (depth: number): string | null => {
     if (depth < MAX_TEAM_DEPTH) {
-        return 'It also opens agents (`agent` for one, `team` for several in parallel), which is for work the person asked you to split or that truly runs in parallel: every agent is a node on their canvas until someone removes it, so answer yourself whatever you can.';
+        return `It also opens agents (\`agent <cli>\` for one, \`team\` for several in parallel, with <cli> one of ${CLI_NAMES}), which is for work the person asked you to split or that truly runs in parallel: every agent is a node on their canvas until someone removes it, so answer yourself whatever you can.`;
     }
     if (depth < MAX_AGENT_DEPTH) {
-        return 'It also opens a helper agent with `agent`, which is for work the person asked you to split: that agent is a node on their canvas until someone removes it, so answer yourself whatever you can.';
+        return `It also opens a helper agent with \`agent <cli>\`, with <cli> one of ${CLI_NAMES}, which is for work the person asked you to split: that agent is a node on their canvas until someone removes it, so answer yourself whatever you can.`;
     }
     return null;
 };

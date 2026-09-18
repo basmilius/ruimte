@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ContextSource } from '@ruimte/contracts';
+import { AgentKindSchema, type ContextSource } from '@ruimte/contracts';
 import { chatPrompt, contextChangeNote, contextHint, hookContext, verbsNote } from './context-note.ts';
 
 const VERBS_NOTE = verbsNote({ depth: 0 });
@@ -26,14 +26,19 @@ describe('contextHint', () => {
 
 describe('verbsNote', () => {
     test('offers team and agent at depth 0, only agent at depth 1 and neither below', () => {
-        expect(VERBS_NOTE).toContain('`agent` for one, `team` for several in parallel');
+        expect(VERBS_NOTE).toContain('`agent <cli>` for one, `team` for several in parallel');
         expect(VERBS_NOTE).toContain('answer yourself whatever you can');
         expect(VERBS_NOTE).toContain('end your turn instead of polling');
         const helper = verbsNote({ depth: 1 });
-        expect(helper).toContain('opens a helper agent with `agent`');
+        expect(helper).toContain('opens a helper agent with `agent <cli>`');
         expect(helper).toContain('answer yourself whatever you can');
         expect(helper).not.toContain('`team`');
         expect(helper).toContain('--task');
+        // Named where the verb is offered, since a prompt asks for a CLI by name and never by flag.
+        for (const cli of AgentKindSchema.options) {
+            expect(VERBS_NOTE).toContain(cli);
+            expect(helper).toContain(cli);
+        }
         const deepest = verbsNote({ depth: 2 });
         expect(deepest).not.toContain('`agent`');
         expect(deepest).not.toContain('--task');
