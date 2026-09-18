@@ -68,6 +68,8 @@ let worktrees: string[];
 let installed: AgentKind[];
 let held: Array<{ projectId: string; nodeId: string; prompt: string }>;
 let started: AgentStart[];
+/* Hooked by a test that has to look at the project at the moment an agent is started, and not after. */
+let onStart: ((start: AgentStart) => Promise<void>) | null;
 let lineage: AgentLineageStore;
 let deleteAnyView: boolean;
 let ended: string[];
@@ -137,6 +139,7 @@ beforeEach(async () => {
     installed = ['claude', 'codex', 'gemini', 'copilot'];
     held = [];
     started = [];
+    onStart = null;
     deleteAnyView = false;
     ended = [];
     watching = [];
@@ -196,6 +199,7 @@ const host = (): CanvasHost => ({
     },
     startAgent: async (start) => {
         started.push(start);
+        await onStart?.(start);
     },
     depthOf: (nodeId) => lineage.depthOf(nodeId),
     openedCount: (callerId) => lineage.openedCount(callerId),
@@ -1247,6 +1251,57 @@ describe('agent', () => {
         expect(started).toEqual([]);
         expect(lineage.openedCount('term-1')).toBe(0);
     });
+
+    test('--reads draws a line from every node it names into the new agent', async () => {
+        const { status, lines } = await post('agent', ['claude', '--prompt', 'read the note', '--reads', 'note-1']);
+        expect(status).toBe(200);
+        const [id, , , , edgeId] = lines[0]!.split('\t');
+        const [row, readEdgeId, from, to] = lines[1]!.split('\t');
+        expect([row, from, to]).toEqual(['reads', 'note-1', id!]);
+        // Into the new agent, the direction that makes the note readable to it, and labelled like every line that lands in one.
+        expect((await canvasOnDisk()).edges).toEqual([
+            { id: edgeId!, from: 'term-1', to: id!, label: 'context' },
+            { id: readEdgeId!, from: 'note-1', to: id!, label: 'context' }
+        ]);
+    });
+
+    test('the lines of --reads are on the canvas before the agent is started', async () => {
+        let drawn: string[][] = [];
+        onStart = async () => {
+            drawn = (await canvasOnDisk()).edges.map((edge) => [edge.from, edge.to]);
+        };
+        const { lines } = await post('agent', ['claude', '--prompt', 'read the note', '--reads', 'note-1']);
+        const id = lines[0]!.split('\t')[0]!;
+        // One write for the node, its lines and the start, so no first turn ever runs without them.
+        expect(drawn).toEqual([
+            ['term-1', id],
+            ['note-1', id]
+        ]);
+    });
+
+    test('--reads that names the caller is the line agent draws anyway, once', async () => {
+        const { lines } = await post('agent', ['claude', '--reads', 'term-1']);
+        const [id, , , , edgeId] = lines[0]!.split('\t');
+        expect(lines[1]!.split('\t')).toEqual(['reads', edgeId!, 'term-1', id!]);
+        expect((await canvasOnDisk()).edges).toEqual([{ id: edgeId!, from: 'term-1', to: id!, label: 'context' }]);
+    });
+
+    test('--reads refuses an id that is on no canvas and names the nodes that are', async () => {
+        const { status, lines } = await post('agent', ['claude', '--reads', 'note-1,ghost']);
+        expect(status).toBe(422);
+        expect(lines[0]).toBe('refused\tunknown-node\tghost is not a node on main');
+        expect(lines.slice(1)).toEqual(['node\tterm-1\tterminal\tshell', 'node\tnote-1\tnote\tPlan with a tab']);
+        expect((await onDisk()).rev).toBe(1);
+        expect(started).toEqual([]);
+        expect(held).toEqual([]);
+    });
+
+    test('--reads refuses more than the cap and an empty id', async () => {
+        const many = Array.from({ length: MAX_LINKS + 1 }, (_, i) => `n-${i}`).join(',');
+        expect((await post('agent', ['claude', '--reads', many])).lines[0]).toStartWith('refused\ttoo-many-links\t');
+        expect((await post('agent', ['claude', '--reads', 'note-1,'])).lines[0]).toStartWith('refused\tbad-arguments\t');
+        expect((await onDisk()).rev).toBe(1);
+    });
 });
 
 describe('the mode ceiling', () => {
@@ -1562,6 +1617,27 @@ describe('team', () => {
         // A name of exactly the cap is a name, not a refusal.
         expect((await post('node', ['new', 'note', '--title', 'L'.repeat(MAX_TITLE_LENGTH)])).status).toBe(200);
     });
+
+    test('--reads draws a line from every node it names into every role', async () => {
+        const { lines } = await post('team', [...args(THREE.slice(0, 2)), '--reads', 'note-1']);
+        const ids = lines.slice(1, 3).map((line) => line.split('\t')[0]!);
+        expect(lines.slice(3).map((line) => line.split('\t'))).toEqual([
+            ['reads', expect.any(String), 'note-1', ids[0]!],
+            ['reads', expect.any(String), 'note-1', ids[1]!]
+        ]);
+        const canvas = await canvasOnDisk();
+        expect(canvas.edges.filter((edge) => edge.from === 'note-1')).toEqual(
+            ids.map((id) => ({ id: expect.any(String), from: 'note-1', to: id, label: 'context' }))
+        );
+    });
+
+    test('--reads is refused for a team the same way it is for one agent', async () => {
+        const { status, lines } = await post('team', [...args(THREE), '--reads', 'ghost']);
+        expect(status).toBe(422);
+        expect(lines[0]).toBe('refused\tunknown-node\tghost is not a node on main');
+        expect((await onDisk()).rev).toBe(1);
+        expect(started).toEqual([]);
+    });
 });
 
 describe('the depth limit', () => {
@@ -1740,6 +1816,14 @@ describe('--dry-run', () => {
         expect(lines).toEqual([`dry-run\tchat\tmain\tclaude\tterm-1 -> ${NEW_NODE}`]);
         expect((await onDisk()).rev).toBe(1);
         expect(held).toEqual([]);
+    });
+
+    test('agent names the lines --reads would draw and draws none of them', async () => {
+        const { lines } = await post('agent', ['claude', '--reads', 'note-1', '--dry-run']);
+        expect(lines).toEqual([`dry-run\tchat\tmain\tclaude\tterm-1 -> ${NEW_NODE}`, `dry-run\treads\tnote-1 -> ${NEW_NODE}`]);
+        expect((await onDisk()).rev).toBe(1);
+        // A dry run refuses what a real one would, so an id that names nothing never prints a plan.
+        expect((await post('agent', ['claude', '--reads', 'ghost', '--dry-run'])).lines[0]).toStartWith('refused\tunknown-node\t');
     });
 
     test('a dry run still refuses what a real one would', async () => {

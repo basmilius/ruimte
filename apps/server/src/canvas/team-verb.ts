@@ -6,7 +6,8 @@ import { providerFor } from '../providers/registry.ts';
 import { AGENT_KINDS, agentNode, chatKinds, nameOf, terminalMode } from './agent-verb.ts';
 import { DEPTH_LIMIT_LINES, MAX_OPENED_PER_CALLER, MAX_TEAM_DEPTH, depthForOpening } from './depth.ts';
 import { MODE_LINES, modeFlag, modeForOpening } from './mode.ts';
-import { MAX_CANVAS_NODES, canvasFull, newId } from './node-verb.ts';
+import { readsFlag, readsIds, readsLines } from './link-verb.ts';
+import { MAX_CANVAS_NODES, canvasFull, newId, nodesNamed } from './node-verb.ts';
 import { placeFree, placeTeam, TEAM_COLUMNS } from './placement.ts';
 import { checkCwd } from './project-paths.ts';
 import { MAX_TASK_PROMPT_LENGTH, TASK_LINES, nextLine, requireChatParent, taskBrief } from './task-verbs.ts';
@@ -71,8 +72,10 @@ const TEAM_DETAIL: readonly string[] = [
     `quoting\tThe JSON goes in single quotes, so an apostrophe in a prompt ends the quote early: write it as '\\'' or as \\u0027 inside the JSON string`,
     `example\truimte-context team --label "Parser work" --roles '[{"title":"Lexer","prompt":"Fix the tokenizer in src/lex.ts","provider":"claude"},{"title":"Reviewer","prompt":"Read the Lexer node and review its work","provider":"codex"},{"title":"Shell","prompt":"Run the lexer tests","provider":"claude","terminal":true}]'`,
     'prints\tid\tkind\ttitle\tview\tcli\tedge\ttask\tthe group first, its label in the title column and a dash for the CLI and the edge, then one line per role in the order of --roles, with the id of its task last under --task; the title is what tells two rows of one CLI apart',
+    'prints\treads\tid\tfrom\tto\tone line per --reads node per role, under the roles: the line drawn from that node into that agent',
     'prints\tnext\tthe last line under --task, saying what to do while the tasks run',
     'flag\t--cwd P\toptional\tThe directory every agent starts in; a directory per role is --worktree',
+    'flag\t--reads A,B\toptional\tNodes every role can read from its first turn, by id, separated by commas: a line is drawn from each of them into each role',
     'flag\t--view V\toptional\tThe canvas to add to, by view id; ruimte-context view list lists them. Without it the canvas you are a node on',
     'flag\t--mode M\toptional\tThe permission mode every role runs in: supervised, auto-accept-edits, auto or full-access, never wider than your own',
     'flag\t--worktree\tno value\tStarts every role in a git worktree of its own, on a new branch named after the role; not together with --cwd',
@@ -83,6 +86,7 @@ const TEAM_DETAIL: readonly string[] = [
     "edges\tWithout --task, ruimte-context link new --to <the role's id> draws the line back, which is how you read what a role has done; its id is the first field of that role's row",
     'edges\tWith --task no line back is needed, since the results of the roles arrive as your next message once they all settled',
     'edges\truimte-context link list lists what is drawn on the canvas now',
+    ...readsLines('every role'),
     'where\tThe group lands on the first free spot right of you, or right of everything when you are not on that canvas',
     'where\tA chat that is a view of its own is a node on no canvas: it names one with --view, no edge is drawn, and the edge column of every row shows -',
     `group\tThe agents stand in rows of at most ${TEAM_COLUMNS} inside the frame, and the frame is sized to hold them`,
@@ -133,7 +137,7 @@ const kindOf = (role: Role): 'chat' | 'terminal' => (role.terminal !== true && p
 
 export const teamVerb = defineVerb({
     name: 'team',
-    usage: `--label L --roles '${ROLES_SHAPE}' [--view V] [--cwd P] [--task] [--mode M] [--worktree] [--dry-run]`,
+    usage: `--label L --roles '${ROLES_SHAPE}' [--view V] [--cwd P] [--reads A,B] [--task] [--mode M] [--worktree] [--dry-run]`,
     summary: `Opens up to ${MAX_ROLES} agents at once in a group, each with an edge from you into it when you are a node on that canvas`,
     detail: TEAM_DETAIL,
     dryRun: true,
@@ -143,6 +147,7 @@ export const teamVerb = defineVerb({
         label: titleField('--label', '--label needs a name for the group'),
         roles: z.string().min(1, `--roles needs the roles as JSON, ${ROLES_SHAPE}`),
         cwd: z.string().min(1, '--cwd needs the path of a directory').optional(),
+        reads: readsFlag,
         view: z.string().min(1, '--view needs the id of a canvas').optional(),
         mode: modeFlag
     }),
@@ -159,6 +164,7 @@ export const teamVerb = defineVerb({
         }
         const depth = depthForOpening(call, 'team', roles.length);
         const ceiling = modeForOpening(call, flags.mode);
+        const readIds = readsIds(flags.reads);
         const inWorktrees = switches.has('worktree');
         if (inWorktrees && flags.cwd !== undefined) {
             throw new VerbRefusal('worktree-and-cwd', '--worktree and --cwd both say where the agents start; give one of them');
@@ -209,6 +215,7 @@ export const teamVerb = defineVerb({
                     throw canvasFull(canvas, roles.length + 1);
                 }
 
+                const read = nodesNamed(canvas, readIds);
                 const layout = placeTeam(roles.map((role) => NODE_SIZE[kindOf(role)]));
                 const caller = canvas.nodes.find((node) => node.id === call.caller) ?? null;
                 const origin = placeFree(canvas.nodes, layout.frame, caller);
@@ -231,7 +238,8 @@ export const teamVerb = defineVerb({
                                     caller ? `${caller.id} -> ${newNode(field(role.title))}` : '-',
                                     ...(tasked ? ['<new task>'] : [])
                                 ].join('\t')
-                            )
+                            ),
+                            ...roles.flatMap((role) => read.map((node) => ['dry-run', 'reads', `${node.id} -> ${newNode(field(role.title))}`].join('\t')))
                         ]
                     };
                 }
@@ -250,6 +258,7 @@ export const teamVerb = defineVerb({
                 const nodes: ProjectNode[] = [group];
                 const edges: ProjectEdge[] = [];
                 const lines = [[groupId, 'group', field(label), canvas.id, '-', '-'].join('\t')];
+                const reading: string[] = [];
                 const made: Array<{ id: string; title: string; prompt: string; chat: boolean; provider: AgentKind; line: number; index: number }> = [];
 
                 for (const [index, role] of roles.entries()) {
@@ -272,10 +281,22 @@ export const teamVerb = defineVerb({
                         edgeId = mint('edge');
                         edges.push({ id: edgeId, from: caller.id, to: id, label: 'context' });
                     }
+                    for (const source of read) {
+                        /* Your own line is the one every role already gets: naming yourself in --reads
+                           is that line reported again, never a second one beside it. */
+                        if (caller && source.id === caller.id) {
+                            reading.push(['reads', edgeId, source.id, id].join('\t'));
+                            continue;
+                        }
+                        const readEdgeId = mint('edge');
+                        edges.push({ id: readEdgeId, from: source.id, to: id, label: 'context' });
+                        reading.push(['reads', readEdgeId, source.id, id].join('\t'));
+                    }
                     made.push({ id, title: role.title, prompt: role.prompt, chat, provider: role.provider, line: lines.length, index });
                     lines.push([id, chat ? 'chat' : 'terminal', field(role.title), canvas.id, role.provider, edgeId].join('\t'));
                 }
 
+                lines.push(...reading);
                 if (tasked) {
                     lines.push(nextLine(true));
                 }

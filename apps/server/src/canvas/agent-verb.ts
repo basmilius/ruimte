@@ -5,7 +5,8 @@ import { DEFAULT_RUNTIME_MODE } from '../providers/launch.ts';
 import { providerFor } from '../providers/registry.ts';
 import { DEPTH_LIMIT_LINES, depthForOpening } from './depth.ts';
 import { MODE_LINES, modeFlag, modeForOpening, narrowerMode } from './mode.ts';
-import { MAX_CANVAS_NODES, canvasFull, newId, nodeLines } from './node-verb.ts';
+import { readsFlag, readsIds, readsLines } from './link-verb.ts';
+import { MAX_CANVAS_NODES, canvasFull, newId, nodeLines, nodesNamed } from './node-verb.ts';
 import { groupMembers, placeBeside, placeFree, placeInGroup, type Rect } from './placement.ts';
 import { checkCwd, readPromptFile } from './project-paths.ts';
 import { MAX_TASK_PROMPT_LENGTH, TASK_LINES, nextLine, requireChatParent, taskBrief } from './task-verbs.ts';
@@ -39,11 +40,13 @@ const KIND_MESSAGE = `agent needs a CLI: ${AGENT_KINDS.join(', ')}`;
 const AGENT_DETAIL: readonly string[] = [
     `argument\t<cli>\trequired\t${AGENT_KINDS.join(', ')}`,
     'prints\tid\tkind\tview\tcli\tedge\ttask\tthe new node, its kind (chat or terminal), the canvas it landed on, the CLI it runs, the id of the edge drawn into it (- when none was drawn) and, with --task, the id of the task',
+    'prints\treads\tid\tfrom\tto\tone line per --reads node, under the first: the line drawn from it into the new agent',
     'prints\tnext\tthe last line under --task, saying what to do while the task runs',
     `flag\t--terminal\tno value\tMakes a terminal node instead of a chat node; a CLI without a chat backend is a terminal anyway (only ${chatKinds().join(', ')} have one)`,
     `flag\t--prompt T\toptional\tWhat the agent starts working on; \\n, \\t and \\\\ are read as escapes, at most ${MAX_PROMPT_LENGTH} characters`,
     'flag\t--prompt-file F\toptional\tThe same prompt out of a file, for one with exact bytes; not together with --prompt',
     'flag\t--cwd P\toptional\tThe directory the agent starts in',
+    'flag\t--reads A,B\toptional\tNodes the new agent can read from its first turn, by id, separated by commas: a line is drawn from each of them into it',
     'flag\t--view V\toptional\tThe canvas to add to, by view id; ruimte-context view list lists them',
     'flag\t--beside N\toptional\tPuts the node directly right of node N, top edges level',
     'flag\t--group G\toptional\tPuts the node inside group node G of that canvas; not together with --beside',
@@ -59,6 +62,7 @@ const AGENT_DETAIL: readonly string[] = [
     'edge\tOnly a node on that canvas gets one: a chat that is a view of its own, or a node of another canvas, gets no edge and the edge column shows -',
     'edge\tOne way only: you do not read the new agent through it. ruimte-context link new --to <its id> draws the line back when you want that too',
     'edge\truimte-context link list lists what is drawn on the canvas now',
+    ...readsLines('the new agent'),
     'without a prompt\tLeave --prompt out and the node opens with the CLI waiting, so the person types the first thing themselves',
     'groups\truimte-context node list lists the nodes of a canvas; a row of kind group is what --group takes',
     'where\tWithout --view the canvas you are a node on; a chat that is a view of its own is a node on no canvas, so it names one with --view and no edge is drawn',
@@ -142,7 +146,7 @@ const promptOf = async (flags: { prompt?: string; 'prompt-file'?: string }, call
 
 export const agentVerb = defineVerb({
     name: 'agent',
-    usage: `<${AGENT_KINDS.join('|')}> [--terminal] [--prompt T | --prompt-file F] [--cwd P] [--view V] [--beside N] [--group G] [--title T] [--task T] [--mode M] [--worktree [--branch B]] [--dry-run]`,
+    usage: `<${AGENT_KINDS.join('|')}> [--terminal] [--prompt T | --prompt-file F] [--cwd P] [--reads A,B] [--view V] [--beside N] [--group G] [--title T] [--task T] [--mode M] [--worktree [--branch B]] [--dry-run]`,
     summary: 'Opens an agent node that starts working, with an edge from you into it when you are a node on that canvas, so it can read what you have',
     detail: AGENT_DETAIL,
     dryRun: true,
@@ -154,6 +158,7 @@ export const agentVerb = defineVerb({
         prompt: z.string().optional(),
         'prompt-file': z.string().min(1, '--prompt-file needs the path of a file').optional(),
         cwd: z.string().min(1, '--cwd needs the path of a directory').optional(),
+        reads: readsFlag,
         view: z.string().min(1, '--view needs the id of a canvas').optional(),
         beside: z.string().min(1, '--beside needs the id of a node on that canvas').optional(),
         group: z.string().min(1, '--group needs the id of a group node on that canvas').optional(),
@@ -177,6 +182,7 @@ export const agentVerb = defineVerb({
         if (flags.beside !== undefined && flags.group !== undefined) {
             throw new VerbRefusal('two-places', '--beside and --group both say where the node goes; give one of them');
         }
+        const readIds = readsIds(flags.reads);
 
         const installed = await call.host.installedAgents();
         if (!installed.includes(kind)) {
@@ -230,6 +236,7 @@ export const agentVerb = defineVerb({
                 if (flags.group !== undefined && !group) {
                     throw new VerbRefusal('unknown-group', `${flags.group} is not a group on ${canvas.id}`, groupLines(canvas));
                 }
+                const read = nodesNamed(canvas, readIds);
 
                 const size = NODE_SIZE[chat ? 'chat' : 'terminal'];
                 const caller = canvas.nodes.find((node) => node.id === call.caller) ?? null;
@@ -241,15 +248,38 @@ export const agentVerb = defineVerb({
                     const edge = caller ? `${caller.id} -> ${NEW_NODE}` : '-';
                     return {
                         content: null,
-                        result: [['dry-run', chat ? 'chat' : 'terminal', canvas.id, kind, edge, ...(flags.task === undefined ? [] : ['<new task>'])].join('\t')]
+                        result: [
+                            ['dry-run', chat ? 'chat' : 'terminal', canvas.id, kind, edge, ...(flags.task === undefined ? [] : ['<new task>'])].join('\t'),
+                            ...read.map((node) => ['dry-run', 'reads', `${node.id} -> ${NEW_NODE}`].join('\t'))
+                        ]
                     };
                 }
 
                 const id = newId(chat ? 'chat' : 'terminal', content);
+                const taken = [id];
+                const mint = (): string => {
+                    const fresh = newId('edge', content, taken);
+                    taken.push(fresh);
+                    return fresh;
+                };
                 const node = agentNode({ id, chat, kind, title: flags.title ?? flags.task, rect, cwd, ...(runtimeMode === undefined ? {} : { runtimeMode }) });
-                const edge: ProjectEdge | null = caller ? { id: newId('edge', content, [id]), from: caller.id, to: id, label: 'context' } : null;
+                const edge: ProjectEdge | null = caller ? { id: mint(), from: caller.id, to: id, label: 'context' } : null;
+                const reading: ProjectEdge[] = [];
+                const readRows = read.map((source) => {
+                    /* Your own line is the one drawn above: naming yourself in --reads is that line
+                       reported again, never a second one beside it. */
+                    const line = edge && edge.from === source.id ? edge : { id: mint(), from: source.id, to: id, label: 'context' };
+                    if (line !== edge) {
+                        reading.push(line);
+                    }
+                    return ['reads', line.id, source.id, id].join('\t');
+                });
                 const nodes = [...canvas.nodes.map((candidate) => (group && candidate.id === group.id ? grownGroup(candidate, inGroup, id) : candidate)), node];
-                const result = [[id, node.kind, canvas.id, kind, edge?.id ?? '-'].join('\t'), ...(flags.task === undefined ? [] : [nextLine(false)])];
+                const result = [
+                    [id, node.kind, canvas.id, kind, edge?.id ?? '-'].join('\t'),
+                    ...readRows,
+                    ...(flags.task === undefined ? [] : [nextLine(false)])
+                ];
 
                 return {
                     landed: async () => {
@@ -284,7 +314,7 @@ export const agentVerb = defineVerb({
                     content: {
                         ...content,
                         views: content.views.map((view) =>
-                            view.id === canvas.id ? { ...canvas, nodes, edges: edge ? [...canvas.edges, edge] : canvas.edges } : view
+                            view.id === canvas.id ? { ...canvas, nodes, edges: [...canvas.edges, ...(edge ? [edge] : []), ...reading] } : view
                         )
                     },
                     result

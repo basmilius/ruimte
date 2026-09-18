@@ -1,10 +1,39 @@
 import { EDGE_ROLES, isAgentKind, type ProjectCanvasView, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
 import { z } from 'zod';
-import { newId, nodeLines } from './node-verb.ts';
+import { idList, newId, nodeLines } from './node-verb.ts';
 import { MAX_TITLE_LENGTH, SCOPE_LINE, VerbRefusal, canvasFor, defineAction, field, orNote, placeOf, titleField, type VerbCall } from './verb.ts';
 
 // Lines drawn per call. Past this it is not linking any more, it is an agent in a loop.
 export const MAX_LINKS = 20;
+
+/* The flag `agent` and `team` take for the nodes their new agent has to be able to read at once. */
+export const readsFlag = z.string().min(1, '--reads needs one or more node ids, separated by commas').optional();
+
+/*
+ * The ids of --reads, read before the lock: a bad one should refuse the call before it cuts a
+ * worktree. Which nodes they are is only known once the call knows which canvas it lands on.
+ */
+export const readsIds = (raw: string | undefined): string[] => {
+    if (raw === undefined) {
+        return [];
+    }
+    const ids = idList(raw, '--reads');
+    if (ids.length > MAX_LINKS) {
+        throw new VerbRefusal('too-many-links', `--reads names ${ids.length} nodes and at most ${MAX_LINKS} may be linked at once`);
+    }
+    return ids;
+};
+
+/* What --reads does, said the same way by every verb that takes it; `head` is what its lines run into. */
+export const readsLines = (head: string): readonly string[] => [
+    `reads\tThe line runs from the node you name into ${head}, the direction that makes that node readable: it can run ruimte-context read on the id`,
+    'reads\tNo role and the label context, like every other line this verb draws into an agent',
+    'reads\tThe node, its lines and the start of the agent are one write, so a line is there before the first turn runs; this is how you open an agent on a note you just put down',
+    'reads\tOnly nodes that are on that canvas already, so never an agent this same call opens; an id that names none of them is refused with the ids that do',
+    'reads\tNaming yourself is the line this verb draws from you anyway, which is reported once and never drawn twice',
+    'reads\tUnder --dry-run every line it would draw is a row of its own, as <the node> -> <the agent it would run into>',
+    `limit\tAt most ${MAX_LINKS} ids in --reads`
+];
 
 /* What each role is for, offered whenever a call names one this version does not have. */
 const ROLE_LINES: readonly string[] = [
