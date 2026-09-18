@@ -16578,6 +16578,9 @@
                               "bottom",
                               "left"
                             ]
+                          },
+                          "role": {
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -18727,6 +18730,9 @@
                               "bottom",
                               "left"
                             ]
+                          },
+                          "role": {
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -33253,6 +33259,9 @@
                               "bottom",
                               "left"
                             ]
+                          },
+                          "role": {
+                            "type": "string"
                           }
                         },
                         "required": [

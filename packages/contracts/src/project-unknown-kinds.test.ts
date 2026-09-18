@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { isOpenableView, isUnknownNode, isUnknownView, ProjectDocumentSchema, storedContentOf, type ProjectCanvasView } from './project.ts';
+import { edgeRole, isOpenableView, isUnknownNode, isUnknownView, ProjectDocumentSchema, storedContentOf, type ProjectCanvasView } from './project.ts';
 import { duplicateIdIn, migrateDocument, withoutCrossViewEdges } from './project-migrate.ts';
 import { withDuplicatedView, withRenamedView, withViewIcon } from './project-views.ts';
 
@@ -27,13 +27,15 @@ const NEWER_FILE = {
     ]
 };
 
-const parsed = () => {
-    const document = migrateDocument(structuredClone(NEWER_FILE));
+const parsedFrom = (file: unknown) => {
+    const document = migrateDocument(structuredClone(file));
     if (!document) {
         throw new Error('the newer file was refused');
     }
     return document;
 };
+
+const parsed = () => parsedFrom(NEWER_FILE);
 
 const canvasOf = (views: readonly unknown[]): ProjectCanvasView => views[0] as ProjectCanvasView;
 
@@ -127,6 +129,25 @@ describe('kinds this version does not know', () => {
         // The wire is parsed on both ends, so a field that only survives one of the two is still lost.
         const again = ProjectDocumentSchema.parse(JSON.parse(JSON.stringify(document)));
         expect(JSON.stringify(canvasOf(storedContentOf(again).views).edges)).toBe(JSON.stringify(NEWER_FILE.views[0]!.edges));
+    });
+
+    test('a role this version does not know keeps its line, and reads as no role', () => {
+        const file = structuredClone(NEWER_FILE) as { views: { edges: Record<string, unknown>[] }[] };
+        file.views[0]!.edges[0]!.role = 'beams';
+        const edges = canvasOf(parsedFrom(file).views).edges;
+
+        // The whole edge would be gone had the word been checked against an enum, line and label with it.
+        expect(edges).toHaveLength(1);
+        expect(edges[0]!.role).toBe('beams');
+        expect(edgeRole(edges[0]!)).toBeNull();
+        // A known key is rewritten in the order of the schema, so only the fields themselves may be compared.
+        expect(canvasOf(storedContentOf(parsedFrom(file)).views).edges).toEqual(file.views[0]!.edges as never);
+    });
+
+    test('a role this version knows is read off the line', () => {
+        const file = structuredClone(NEWER_FILE) as { views: { edges: Record<string, unknown>[] }[] };
+        file.views[0]!.edges[0]!.role = 'target';
+        expect(edgeRole(canvasOf(parsedFrom(file).views).edges[0]!)).toBe('target');
     });
 
     test('an unknown node counts for its edges and its id', () => {

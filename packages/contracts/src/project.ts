@@ -184,9 +184,32 @@ export const ProjectEdgeSchema = z.looseObject({
     /* The port a person drew this line from, which it keeps whatever the two nodes do afterwards.
        An end without one is free: the canvas puts it on the side that reads best. */
     fromSide: NodeSideSchema.optional(),
-    toSide: NodeSideSchema.optional()
+    toSide: NodeSideSchema.optional(),
+    /* What the line means; see `EDGE_ROLES`. A plain string and not an enum, or a word a newer
+       Ruimte wrote would fail the parse and take the whole edge with it. Read it with `edgeRole`. */
+    role: z.string().optional()
 });
 export type ProjectEdge = z.infer<typeof ProjectEdgeSchema>;
+
+/*
+ * What a line is for. `context` is the one every version has drawn: the head reads the tail with
+ * `ruimte-context read` and may notify along it. `target` runs from an agent into something it can
+ * drive. `origin` is drawn by the daemon when one node opened another and carries no permission of
+ * its own, only where the node came from.
+ */
+export const EDGE_ROLES = ['context', 'target', 'origin'] as const;
+export const EdgeRoleSchema = z.enum(EDGE_ROLES);
+export type EdgeRole = z.infer<typeof EdgeRoleSchema>;
+
+const KNOWN_EDGE_ROLES: ReadonlySet<string> = new Set(EDGE_ROLES);
+
+/*
+ * The role of a line as this version understands it. A role it does not know reads as none, so the
+ * line falls back to what a line without a role has always been, while the word itself stays on the
+ * edge for the Ruimte that wrote it. Same rule as a node or a view of an unknown kind.
+ */
+export const edgeRole = (edge: Pick<ProjectEdge, 'role'>): EdgeRole | null =>
+    edge.role !== undefined && KNOWN_EDGE_ROLES.has(edge.role) ? (edge.role as EdgeRole) : null;
 
 // A named arrangement: where every node and text sat when it was saved.
 export const ProjectLayoutSchema = z.object({
