@@ -109,8 +109,10 @@ import { BrowserManager } from './browser/manager.ts';
 import { registerBrowserHandlers } from './handlers/browser.ts';
 import { handleLiveStreamRequest, LIVE_STREAM_PATH } from './streams/http-stream.ts';
 import { DeviceManager } from './devices/manager.ts';
+import { IosPhysicalBackend } from './devices/ios-physical.ts';
 import { IosSimulatorBackend } from './devices/ios-simulator.ts';
 import { createDeviceHelperLauncher } from './devices/helper-source.ts';
+import { createPhysicalStreamSourceFactory, physicalStreamHelperPath } from './devices/physical-stream-source.ts';
 import { registerDeviceHandlers } from './handlers/device.ts';
 import { LiveStreamHub } from './streams/live-stream.ts';
 
@@ -304,8 +306,14 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     const liveStreams = new LiveStreamHub();
     const browsers = BrowserManager.withBun(config.home, liveStreams);
     const deviceHelperCommand = compiled ? [process.execPath, 'device-helper'] : [process.execPath, resolve(import.meta.dir, 'main.ts'), 'device-helper'];
+    const physicalStreamSource = createPhysicalStreamSourceFactory(physicalStreamHelperPath(compiled, process.execPath, resolve(import.meta.dir, '../..')));
     const devices = new DeviceManager(
-        process.platform === 'darwin' ? [new IosSimulatorBackend(undefined, createDeviceHelperLauncher(deviceHelperCommand))] : [],
+        process.platform === 'darwin'
+            ? [
+                  new IosSimulatorBackend(undefined, createDeviceHelperLauncher(deviceHelperCommand)),
+                  new IosPhysicalBackend(undefined, undefined, physicalStreamSource)
+              ]
+            : [],
         liveStreams
     );
     const statuses = new GitStatusWatcher();

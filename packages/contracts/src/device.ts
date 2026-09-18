@@ -161,6 +161,7 @@ export const DeviceFrameSchema = z.object({
     sequence: z.number().int().min(0).max(0xffffffff),
     width: DeviceFrameSizeSchema,
     height: DeviceFrameSizeSchema,
+    format: z.enum(['jpeg', 'hevc']).optional(),
     data: z.string().max(11 * 1024 * 1024)
 });
 

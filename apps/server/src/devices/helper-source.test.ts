@@ -92,6 +92,21 @@ describe('DeviceHelperSource', () => {
         await expect(started).rejects.toEqual(new DeviceHelperFailure('device-helper-exited', 'CoreSimulator could not be loaded'));
     });
 
+    test('marks frames from a native physical stream as HEVC', async () => {
+        const process = new FakeHelperProcess();
+        const source = new DeviceHelperSource('phone-1', () => process, 500, 'hevc');
+        const frames: LiveStreamFrame[] = [];
+        const started = source.start((frame) => frames.push(frame));
+        process.emit({ type: 'ready', width: 1, height: 1 });
+        await started;
+        process.emitAfterPreamble({ type: 'frame', frame: { sequence: 1, width: 1, height: 1, data: new Uint8Array([0, 0, 0, 1]) } });
+        await Bun.sleep(0);
+
+        expect(frames).toEqual([{ sequence: 1, width: 1, height: 1, format: 'hevc', data: new Uint8Array([0, 0, 0, 1]) }]);
+        process.exit(0);
+        await source.stop();
+    });
+
     test('kills a helper that ignores stop', async () => {
         const process = new FakeHelperProcess();
         const source = new DeviceHelperSource('phone-1', () => process, 0);
@@ -102,5 +117,4 @@ describe('DeviceHelperSource', () => {
 
         expect(process.signals).toEqual(['SIGKILL']);
     });
-
 });

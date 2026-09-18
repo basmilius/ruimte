@@ -1,4 +1,4 @@
-import { LIVE_STREAM_CONTENT_TYPE, LIVE_STREAM_MAGIC, encodeLiveStreamFrame } from '@ruimte/contracts';
+import { HEVC_STREAM_CONTENT_TYPE, LIVE_STREAM_CONTENT_TYPE, LIVE_STREAM_MAGIC, encodeLiveStreamFrame } from '@ruimte/contracts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import { decideAccess, originAllowed, type AccessOptions } from '../auth/access.ts';
 import type { LiveStreamHub } from './live-stream.ts';
@@ -50,6 +50,7 @@ export const handleLiveStreamRequest = async (
     if (!hub.has(sourceId)) {
         return new Response('Live stream not found', { status: 404, headers });
     }
+    const format = hub.format(sourceId);
 
     let unsubscribe: (() => void) | null = null;
     let pending: Uint8Array | null = null;
@@ -100,7 +101,7 @@ export const handleLiveStreamRequest = async (
     return new Response(stream, {
         headers: {
             ...headers,
-            'content-type': LIVE_STREAM_CONTENT_TYPE,
+            'content-type': format === 'hevc' ? HEVC_STREAM_CONTENT_TYPE : LIVE_STREAM_CONTENT_TYPE,
             'cache-control': 'no-store',
             'x-content-type-options': 'nosniff'
         }

@@ -1,4 +1,5 @@
 export const LIVE_STREAM_CONTENT_TYPE = 'application/x-ruimte-jpeg-stream; version=1';
+export const HEVC_STREAM_CONTENT_TYPE = 'application/x-ruimte-hevc-stream; version=1';
 export const LIVE_STREAM_MAGIC = new Uint8Array([0x52, 0x53, 0x54, 0x4d, 0x01, 0x00, 0x00, 0x00]);
 export const LIVE_STREAM_FRAME_HEADER_BYTES = 12;
 export const LIVE_STREAM_MAX_FRAME_BYTES = 8 * 1024 * 1024;
@@ -8,6 +9,7 @@ export interface LiveStreamFrame {
     width: number;
     height: number;
     data: Uint8Array;
+    format?: 'jpeg' | 'hevc';
 }
 
 export const encodeLiveStreamFrame = (frame: LiveStreamFrame): Uint8Array => {

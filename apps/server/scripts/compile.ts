@@ -68,6 +68,15 @@ if (values.os === 'mac') {
     const middleware = Bun.resolveSync('serve-sim/middleware', root);
     const nativeDir = join(outDir, 'native');
     await mkdir(nativeDir, { recursive: true });
+    const rustTarget = `${values.arch === 'arm64' ? 'aarch64' : 'x86_64'}-apple-darwin`;
+    const deviceBridge = join(nativeDir, 'ios-device-bridge');
+    const bridgeBuild = Bun.spawnSync(['bun', resolve(root, '../ios-device-bridge/scripts/build.ts'), '--target', rustTarget, '--outfile', deviceBridge], {
+        cwd: root,
+        stdio: ['ignore', 'inherit', 'inherit']
+    });
+    if (bridgeBuild.exitCode !== 0) {
+        process.exit(bridgeBuild.exitCode);
+    }
     await copyFile(join(dirname(middleware), 'native', 'serve-sim-native.node'), join(nativeDir, 'serve-sim-native.node'));
     const axHelper = join(nativeDir, 'serve-sim-ax-settings');
     await copyFile(join(dirname(middleware), 'simax', 'serve-sim-ax-settings'), axHelper);

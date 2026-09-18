@@ -5,6 +5,14 @@ import { LiveStreamHub, type LiveFrameSource } from './live-stream.ts';
 const frame = (sequence: number): LiveStreamFrame => ({ sequence, width: 2, height: 2, data: new Uint8Array([sequence]) });
 
 describe('LiveStreamHub', () => {
+    test('reports the registered source format', () => {
+        const hub = new LiveStreamHub();
+        hub.register('device:one', { format: 'hevc', async start() {}, async stop() {} });
+
+        expect(hub.format('device:one')).toBe('hevc');
+        expect(hub.format('missing')).toBeNull();
+    });
+
     test('starts on the first viewer and stops after the last one', async () => {
         let publish: ((next: LiveStreamFrame) => void) | null = null;
         let starts = 0;

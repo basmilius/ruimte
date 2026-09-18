@@ -49,6 +49,7 @@ export const createDeviceHelperLauncher =
     };
 
 export class DeviceHelperSource implements LiveFrameSource {
+    readonly format: 'jpeg' | 'hevc';
     private readonly deviceId: string;
     private readonly launch: DeviceHelperLauncher;
     private readonly stopGraceMs: number;
@@ -57,10 +58,11 @@ export class DeviceHelperSource implements LiveFrameSource {
     private ready = false;
     private stderr = '';
 
-    constructor(deviceId: string, launch: DeviceHelperLauncher, stopGraceMs = 500) {
+    constructor(deviceId: string, launch: DeviceHelperLauncher, stopGraceMs = 500, format: 'jpeg' | 'hevc' = 'jpeg') {
         this.deviceId = deviceId;
         this.launch = launch;
         this.stopGraceMs = stopGraceMs;
+        this.format = format;
     }
 
     async start(publish: (frame: LiveStreamFrame) => void): Promise<void> {
@@ -182,7 +184,7 @@ export class DeviceHelperSource implements LiveFrameSource {
                     if (!this.ready) {
                         throw new DeviceHelperFailure('device-helper-protocol', 'The device capture helper sent a frame before it was ready');
                     }
-                    publish(message.frame);
+                    publish(this.format === 'hevc' ? { ...message.frame, format: 'hevc' } : message.frame);
                 } else if (message.type === 'error') {
                     throw new DeviceHelperFailure(message.code, message.message);
                 } else {

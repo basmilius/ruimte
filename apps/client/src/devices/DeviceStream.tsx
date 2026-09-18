@@ -1,12 +1,20 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject, type WheelEvent as ReactWheelEvent } from 'react';
 import { CircleAlert, LoaderCircle } from 'lucide-react';
-import { LiveStreamDecoder, LIVE_STREAM_CONTENT_TYPE, type DeviceInfo, type DeviceInput, type LiveStreamFrame } from '@ruimte/contracts';
+import {
+    HEVC_STREAM_CONTENT_TYPE,
+    LiveStreamDecoder,
+    LIVE_STREAM_CONTENT_TYPE,
+    type DeviceInfo,
+    type DeviceInput,
+    type LiveStreamFrame
+} from '@ruimte/contracts';
 import { credentialFor } from '@/endpoint/credentials';
 import {
     approachGestureTotal,
     boundedGestureDelta,
     deviceScrollDelta,
     dominantGestureAxis,
+    hevcKeyFrame,
     pinchPoints,
     positionInContainedFrame,
     trackpadGesturePoint
@@ -52,6 +60,7 @@ class FramePainter {
     private readonly failed: (message: string) => void;
     private readonly painted: () => void;
     private pending: LiveStreamFrame | null = null;
+    private videoDecoder: VideoDecoder | null = null;
 
     constructor(canvas: RefObject<HTMLCanvasElement | null>, painted: () => void, failed: (message: string) => void) {
         this.canvas = canvas;
@@ -60,10 +69,50 @@ class FramePainter {
     }
 
     push(frame: LiveStreamFrame): void {
+        if (frame.format === 'hevc') {
+            this.decodeVideo(frame);
+            return;
+        }
         this.pending = frame;
         if (!this.drawing) {
             void this.draw();
         }
+    }
+
+    close(): void {
+        this.pending = null;
+        this.videoDecoder?.close();
+        this.videoDecoder = null;
+    }
+
+    private decodeVideo(frame: LiveStreamFrame): void {
+        if (!('VideoDecoder' in window)) {
+            this.failed('This browser cannot decode the device video stream');
+            return;
+        }
+        if (!this.videoDecoder || this.videoDecoder.state === 'closed') {
+            this.videoDecoder = new VideoDecoder({
+                output: (videoFrame) => {
+                    const canvas = this.canvas.current;
+                    if (canvas) {
+                        canvas.width = videoFrame.displayWidth;
+                        canvas.height = videoFrame.displayHeight;
+                        canvas.getContext('2d', { alpha: false })?.drawImage(videoFrame, 0, 0, canvas.width, canvas.height);
+                        this.painted();
+                    }
+                    videoFrame.close();
+                },
+                error: (error) => this.failed(error.message)
+            });
+            this.videoDecoder.configure({ codec: 'hev1.1.6.L93.B0', hardwareAcceleration: 'prefer-hardware', optimizeForLatency: true });
+        }
+        const keyFrame = hevcKeyFrame(frame.data);
+        if (this.videoDecoder.decodeQueueSize > 8 && !keyFrame) {
+            return;
+        }
+        this.videoDecoder.decode(
+            new EncodedVideoChunk({ type: keyFrame ? 'key' : 'delta', timestamp: frame.sequence * 16_667, data: frame.data.slice().buffer })
+        );
     }
 
     private async draw(): Promise<void> {
@@ -178,7 +227,9 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
                     if (!response.ok || !response.body) {
                         throw new Error(response.status === 404 ? 'The simulator stream is not ready yet' : `The simulator stream returned ${response.status}`);
                     }
-                    if (!response.headers.get('content-type')?.startsWith(LIVE_STREAM_CONTENT_TYPE.split(';')[0]!)) {
+                    const contentType = response.headers.get('content-type') ?? '';
+                    const hevc = contentType.startsWith(HEVC_STREAM_CONTENT_TYPE.split(';')[0]!);
+                    if (!hevc && !contentType.startsWith(LIVE_STREAM_CONTENT_TYPE.split(';')[0]!)) {
                         throw new Error('The machine returned an unknown stream format');
                     }
                     const decoder = new LiveStreamDecoder();
@@ -189,7 +240,7 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
                             break;
                         }
                         for (const frame of decoder.push(next.value)) {
-                            framePainter.push(frame);
+                            framePainter.push(hevc ? { ...frame, format: 'hevc' } : frame);
                         }
                     }
                 } catch (error) {
@@ -206,6 +257,7 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
 
     useEffect(
         () => () => {
+            framePainter.close();
             if (trackpad.current.frame !== null) {
                 window.cancelAnimationFrame(trackpad.current.frame);
             }
@@ -219,14 +271,18 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
                 window.clearTimeout(pinch.current.timer);
             }
         },
-        [endpointId, target]
+        [endpointId, framePainter, target]
     );
 
     const position = (event: { clientX: number; clientY: number }): { x: number; y: number } => {
         const element = canvas.current!;
         return positionInContainedFrame(event, element.getBoundingClientRect(), element);
     };
-    const sendInput = (input: DeviceInput): void => deviceClientFor(endpointId)?.input(target, input);
+    const sendInput = (input: DeviceInput): void => {
+        if (device.capabilities.input) {
+            deviceClientFor(endpointId)?.input(target, input);
+        }
+    };
     const releaseTrackpadGesture = (flush = false): void => {
         const state = trackpad.current;
         if (state.frame !== null) {

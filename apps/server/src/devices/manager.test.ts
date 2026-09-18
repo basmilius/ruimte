@@ -76,6 +76,20 @@ describe('DeviceManager', () => {
         );
     });
 
+    test('keeps devices from healthy backends when another discovery backend fails', async () => {
+        const unavailable: DeviceBackend = {
+            id: 'coredevice',
+            platform: 'ios',
+            list: () => Promise.reject(new DeviceError('devicectl-unavailable', 'CoreDevice is unavailable'))
+        };
+        const manager = new DeviceManager([new FakeBackend(), unavailable]);
+
+        expect(await manager.list()).toEqual([phone]);
+        await expect(manager.boot('coredevice', 'ios', 'physical-1')).rejects.toEqual(
+            new DeviceError('device-action-unavailable', 'This device cannot be started by Ruimte')
+        );
+    });
+
     test('shares one capture between event viewers and stops after the last detach', async () => {
         const backend = new FakeBackend();
         backend.info = { ...phone, state: 'booted' };

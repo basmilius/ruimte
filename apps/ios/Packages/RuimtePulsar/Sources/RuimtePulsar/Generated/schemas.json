@@ -29921,6 +29921,13 @@
         "minimum": 1,
         "maximum": 8192
       },
+      "format": {
+        "type": "string",
+        "enum": [
+          "jpeg",
+          "hevc"
+        ]
+      },
       "data": {
         "type": "string",
         "maxLength": 11534336

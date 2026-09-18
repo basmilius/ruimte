@@ -4,10 +4,19 @@ import {
     boundedGestureDelta,
     deviceScrollDelta,
     dominantGestureAxis,
+    hevcKeyFrame,
     pinchPoints,
     positionInContainedFrame,
     trackpadGesturePoint
 } from './device-layout';
+
+describe('hevcKeyFrame', () => {
+    test('recognizes IRAP units in three and four byte Annex-B framing', () => {
+        expect(hevcKeyFrame(new Uint8Array([0, 0, 0, 1, 19 << 1, 1]))).toBe(true);
+        expect(hevcKeyFrame(new Uint8Array([0, 0, 1, 21 << 1, 1, 2]))).toBe(true);
+        expect(hevcKeyFrame(new Uint8Array([0, 0, 0, 1, 1 << 1, 1]))).toBe(false);
+    });
+});
 
 describe('positionInContainedFrame', () => {
     test('maps a portrait device inside a landscape viewport', () => {

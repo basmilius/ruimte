@@ -243,6 +243,7 @@ export class DeviceClient {
             sequence: frame.sequence,
             width: frame.width,
             height: frame.height,
+            ...(frame.format ? { format: frame.format } : {}),
             data: Uint8Array.from(binary, (character) => character.charCodeAt(0))
         };
         this.latestFrames.set(key, decoded);

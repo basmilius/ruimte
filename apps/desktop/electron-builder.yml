@@ -36,6 +36,7 @@ mac:
   # The daemon is not a helper Electron knows about, so name it here or it ships unsigned and Apple refuses the notarization.
   binaries:
     - Contents/Resources/bin/ruimte
+    - Contents/Resources/bin/native/ios-device-bridge
   # `bun scripts/icon.ts` writes both out of `assets/AppIcon.icon`. The catalog is what macOS 26 reads
   # for the light, dark, tinted and clear renderings; the icns only serves whoever asks for a file.
   icon: build/icon/AppIcon.icns

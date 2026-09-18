@@ -12,8 +12,8 @@ export interface DeviceBackend {
     readonly id: string;
     readonly platform: DevicePlatform;
     list(): Promise<DeviceInfo[]>;
-    boot(deviceId: string): Promise<DeviceInfo>;
-    shutdown(deviceId: string): Promise<DeviceInfo>;
+    boot?(deviceId: string): Promise<DeviceInfo>;
+    shutdown?(deviceId: string): Promise<DeviceInfo>;
     detail?(deviceId: string): Promise<DeviceSettings>;
     action?(deviceId: string, action: DeviceAction): Promise<DeviceSettings>;
     createSource?(deviceId: string): DeviceSource;
@@ -60,17 +60,30 @@ export class DeviceManager {
     }
 
     async list(): Promise<DeviceInfo[]> {
-        const lists = await Promise.all([...this.backends.values()].map((backend) => backend.list()));
-        return lists.flat().sort((left, right) => left.name.localeCompare(right.name) || left.runtime.localeCompare(right.runtime));
+        const results = await Promise.allSettled([...this.backends.values()].map((backend) => backend.list()));
+        const devices = results.flatMap((result) => (result.status === 'fulfilled' ? result.value : []));
+        const failure = results.find((result) => result.status === 'rejected');
+        if (devices.length === 0 && results.length > 0 && results.every((result) => result.status === 'rejected') && failure?.status === 'rejected') {
+            throw failure.reason;
+        }
+        return devices.sort((left, right) => left.name.localeCompare(right.name) || left.runtime.localeCompare(right.runtime));
     }
 
     async boot(backendId: string, platform: DevicePlatform, deviceId: string): Promise<DeviceInfo> {
-        return this.backend(backendId, platform).boot(deviceId);
+        const backend = this.backend(backendId, platform);
+        if (!backend.boot) {
+            throw new DeviceError('device-action-unavailable', 'This device cannot be started by Ruimte');
+        }
+        return backend.boot(deviceId);
     }
 
     async shutdown(backendId: string, platform: DevicePlatform, deviceId: string): Promise<DeviceInfo> {
+        const backend = this.backend(backendId, platform);
+        if (!backend.shutdown) {
+            throw new DeviceError('device-action-unavailable', 'This device cannot be shut down by Ruimte');
+        }
         this.destroy(sessionKey(backendId, deviceId));
-        return this.backend(backendId, platform).shutdown(deviceId);
+        return backend.shutdown(deviceId);
     }
 
     async detail(backendId: string, platform: DevicePlatform, deviceId: string): Promise<DeviceSettings> {
@@ -241,5 +254,6 @@ const eventFrame = (device: DeviceInfo, frame: LiveStreamFrame): DeviceFrame => 
     sequence: frame.sequence,
     width: frame.width,
     height: frame.height,
+    ...(frame.format ? { format: frame.format } : {}),
     data: Buffer.from(frame.data).toString('base64')
 });

@@ -1,6 +1,7 @@
 import type { LiveStreamFrame } from '@ruimte/contracts';
 
 export interface LiveFrameSource {
+    readonly format?: 'jpeg' | 'hevc';
     start(publish: (frame: LiveStreamFrame) => void): Promise<void>;
     stop(): Promise<void>;
 }
@@ -33,6 +34,11 @@ export class LiveStreamHub {
 
     has(id: string): boolean {
         return this.entries.has(id);
+    }
+
+    format(id: string): 'jpeg' | 'hevc' | null {
+        const entry = this.entries.get(id);
+        return entry ? (entry.source.format ?? 'jpeg') : null;
     }
 
     async subscribe(id: string, viewer: (frame: LiveStreamFrame) => void): Promise<() => void> {

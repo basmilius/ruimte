@@ -37,7 +37,12 @@ const referenceOf = (device: DeviceInfo): DeviceReference => ({ platform: device
 const sameReference = (left: DeviceReference, right: DeviceReference): boolean =>
     left.platform === right.platform && left.kind === right.kind && left.name === right.name && left.runtime === right.runtime;
 
-const stateText: Record<DeviceInfo['state'], string> = { booted: 'Running', shutdown: 'Stopped', transitioning: 'Changing state' };
+const stateText = (device: DeviceInfo): string => {
+    if (device.kind === 'physical') {
+        return device.state === 'booted' ? 'Paired' : device.state === 'shutdown' ? 'Unavailable' : 'Connecting';
+    }
+    return device.state === 'booted' ? 'Running' : device.state === 'shutdown' ? 'Stopped' : 'Changing state';
+};
 
 interface DeviceGroup {
     key: string;
@@ -121,7 +126,7 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
             <div className="min-w-0 grow">
                 <h3 className="truncate text-sm font-medium text-text">{device.name}</h3>
                 <p className="mt-0.5 truncate text-xs text-text-muted">
-                    {displayRuntime(device)} · {stateText[device.state]}
+                    {displayRuntime(device)} · {stateText(device)}
                 </p>
             </div>
             <div className={BTN_GROUP}>
@@ -149,7 +154,7 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
                     </span>
                 )}
                 {canOpen && (
-                    <Tooltip label="Open in device panel" name>
+                    <Tooltip label={device.kind === 'physical' ? 'Open read-only preview' : 'Open in device panel'} name>
                         <button className="icon-btn h-7 w-7" disabled={changing !== null} onClick={() => onOpen(device)}>
                             <Icon icon={ChevronRight} size={14} />
                         </button>
@@ -164,7 +169,7 @@ function DeviceSection({ group, onOpen }: { group: DeviceGroup; onOpen: (device:
     return (
         <section>
             <h2 className="mb-2 flex items-center gap-2 px-1 text-xs font-medium text-text-muted">
-                {group.platform === 'ios' && group.kind === 'simulator' ? <SignInMark provider="apple" size={15} /> : <Icon icon={Smartphone} size={15} />}
+                {group.platform === 'ios' ? <SignInMark provider="apple" size={15} /> : <Icon icon={Smartphone} size={15} />}
                 {group.title}
             </h2>
             <div className="min-w-0 divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">

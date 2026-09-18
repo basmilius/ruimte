@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { LiveStreamDecoder } from '@ruimte/contracts';
+import { HEVC_STREAM_CONTENT_TYPE, LiveStreamDecoder } from '@ruimte/contracts';
 import { AuthStore } from '../auth/auth-store.ts';
 import { handleLiveStreamRequest, LIVE_STREAM_PATH } from './http-stream.ts';
 import { LiveStreamHub } from './live-stream.ts';
@@ -59,6 +59,17 @@ describe('the live stream route', () => {
         const response = await handleLiveStreamRequest(preflight, url, '127.0.0.1', auth, OPTIONS, hub);
         expect(response.status).toBe(204);
         expect(response.headers.get('access-control-allow-headers')).toBe('authorization');
+    });
+
+    test('announces an HEVC source without changing its bounded frame envelope', async () => {
+        const hub = new LiveStreamHub();
+        hub.register('device:phone-1', { format: 'hevc', async start() {}, async stop() {} });
+        const url = new URL(`http://127.0.0.1:4210${LIVE_STREAM_PATH}/device%3Aphone-1`);
+        const request = new Request(url, { headers: { authorization: `Bearer ${LOCAL_SECRET}` } });
+        const response = await handleLiveStreamRequest(request, url, '127.0.0.1', auth, OPTIONS, hub);
+
+        expect(response.headers.get('content-type')).toBe(HEVC_STREAM_CONTENT_TYPE);
+        await response.body?.cancel();
     });
 
     test('refuses an authenticated stream when the machine disabled streaming', async () => {
