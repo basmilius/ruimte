@@ -1,9 +1,18 @@
 import { AgentKindSchema, type ContextSource } from '@ruimte/contracts';
 import { MAX_AGENT_DEPTH, MAX_TEAM_DEPTH } from '../canvas/depth.ts';
+import { NODE_VERB_KINDS } from '../canvas/node-verb.ts';
 
 /* Asked for a CLI by name, a model that has not read the names goes looking through its own tools
    for one and reports back that this machine has none, so the verb names them where it is offered. */
 const CLI_NAMES = AgentKindSchema.options.join(', ');
+
+/* Told only that it places "nodes", a model asked for a note writes a file with its own tools and
+   the canvas stays empty, so the kinds `node new` opens are named where the command is introduced. */
+const NODE_KINDS = NODE_VERB_KINDS.join(', ');
+
+/* The brake below reads as "use your own means" exactly when the person asked for a second agent
+   beside this one, so the difference between answering yourself and hiding the work is spelled out. */
+const NOT_A_SUBAGENT = 'An agent the person asks for is one of these, never a subagent of your own.';
 
 /*
  * What the verb opens, with the reason not to reach for it: a model that reads only what it can do
@@ -11,10 +20,10 @@ const CLI_NAMES = AgentKindSchema.options.join(', ');
  */
 const opensAt = (depth: number): string | null => {
     if (depth < MAX_TEAM_DEPTH) {
-        return `It also opens agents (\`agent <cli>\` for one, \`team\` for several in parallel, with <cli> one of ${CLI_NAMES}), which is for work the person asked you to split or that truly runs in parallel: every agent is a node on their canvas until someone removes it, so answer yourself whatever you can.`;
+        return `It also opens agents (\`agent <cli>\` for one, \`team\` for several in parallel, with <cli> one of ${CLI_NAMES}), which is for work the person asked you to split or that truly runs in parallel: every agent is a node on their canvas until someone removes it, so answer yourself whatever you can. ${NOT_A_SUBAGENT}`;
     }
     if (depth < MAX_AGENT_DEPTH) {
-        return `It also opens a helper agent with \`agent <cli>\`, with <cli> one of ${CLI_NAMES}, which is for work the person asked you to split: that agent is a node on their canvas until someone removes it, so answer yourself whatever you can.`;
+        return `It also opens a helper agent with \`agent <cli>\`, with <cli> one of ${CLI_NAMES}, which is for work the person asked you to split: that agent is a node on their canvas until someone removes it, so answer yourself whatever you can. ${NOT_A_SUBAGENT}`;
     }
     return null;
 };
@@ -23,7 +32,7 @@ const opensAt = (depth: number): string | null => {
 export const verbsNote = ({ depth }: { depth: number }): string => {
     const parts = [
         // A model with a tool search otherwise goes looking for a tool of that name and gives up.
-        'Ruimte: `ruimte-context` is a command you run in your shell, not a tool. It reads context linked to you and places nodes on the canvas.',
+        `Ruimte: \`ruimte-context\` is a command you run in your shell, not a tool. It reads context linked to you and opens nodes on the person's canvas (\`node new\`): ${NODE_KINDS}. A note or drawing they ask for is one of those, not a file you write.`,
         '`ruimte-context help` lists the verbs and nouns, and `ruimte-context help <verb or noun>` details one.'
     ];
     const opens = opensAt(depth);
@@ -37,20 +46,10 @@ export const verbsNote = ({ depth }: { depth: number }): string => {
     return parts.join(' ');
 };
 
-export const CONTEXT_PROMPT =
-    'The person linked context to this chat on their canvas. Run `ruimte-context` to list it and `ruimte-context read <id>` to read one item, whenever it could help.';
-
-/*
- * What an agent is told once at the start of a chat process, so it knows the CLI without being
- * nagged every turn. Claude Code takes it as a system prompt and Codex as a thread's developer instructions.
- */
-export const chatPrompt = ({ hasContext, depth }: { hasContext: boolean; depth: number }): string => {
-    const note = verbsNote({ depth });
-    return hasContext ? `${note} ${CONTEXT_PROMPT}` : note;
-};
-
 // Past this many, a busy canvas would flood a prompt line; the rest becomes a count.
 const MAX_NAMED = 5;
+
+export const CONTEXT_LEAD = 'Ruimte: linked context is available with ruimte-context (list, read <id>): ';
 
 const quote = (source: ContextSource): string => `"${source.title}" (${source.kind})`;
 
@@ -69,7 +68,29 @@ export const contextHint = (sources: ContextSource[]): string | null => {
     if (sources.length === 0) {
         return null;
     }
-    return `Ruimte: linked context is available with ruimte-context (list, read <id>): ${nameSources(sources)}.`;
+    return `${CONTEXT_LEAD}${nameSources(sources)}.`;
+};
+
+/*
+ * The same line for a chat, with the reason to trust it: a model that hears only that context exists
+ * answers a question about "the device" from whatever its own tools happen to name, and sounds sure of it.
+ */
+export const contextPrompt = (sources: ContextSource[]): string | null => {
+    const hint = contextHint(sources);
+    if (hint === null) {
+        return null;
+    }
+    return `${hint} This is what the person means, so prefer it over anything your own tools or servers turn up.`;
+};
+
+/*
+ * What an agent is told once at the start of a chat process, so it knows the CLI without being
+ * nagged every turn. Claude Code takes it as a system prompt and Codex as a thread's developer instructions.
+ */
+export const chatPrompt = ({ sources, depth }: { sources: ContextSource[]; depth: number }): string => {
+    const note = verbsNote({ depth });
+    const prompt = contextPrompt(sources);
+    return prompt === null ? note : `${note} ${prompt}`;
 };
 
 /*

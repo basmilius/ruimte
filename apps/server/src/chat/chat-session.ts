@@ -35,10 +35,8 @@ interface ChatSessionOptions {
     command: string[];
     env: Record<string, string>;
     spawn?: SpawnChatProcess;
-    // Whether the person linked something to this chat; the CLI is told where to look when so.
-    hasContext(): boolean;
     depth?(): number;
-    // The links as they are now; a change between two turns is put in front of the next prompt.
+    // The links as they are now: named in the CLI's first prompt, and a change between two turns put in front of the next one.
     contextSources?(): ContextSource[];
     // What another node left for this chat, taken as it is handed over: delivered once, in front of the next prompt.
     messages?(): string[];
@@ -846,7 +844,7 @@ export class ChatSession {
             runtimeMode: info.runtimeMode,
             resume: info.agentSessionId,
             generation,
-            hasContext: this.options.hasContext(),
+            context: this.options.contextSources?.() ?? [],
             depth: this.options.depth?.() ?? 0,
             ...(this.options.spawn ? { spawn: this.options.spawn } : {})
         };

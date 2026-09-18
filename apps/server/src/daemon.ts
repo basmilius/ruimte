@@ -225,7 +225,6 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         checkpoints,
         contextUrl,
         binDir,
-        hasContext: (chatId) => context.has(chatId),
         depthOf: (chatId) => lineage.depthOf(chatId),
         contextSources: (chatId) => context.list(chatId),
         messages: messagesFor,

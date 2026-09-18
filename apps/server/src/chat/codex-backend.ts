@@ -1,6 +1,6 @@
 import { accessSync, constants } from 'node:fs';
 import { attachmentImageMime, type ChatSkill } from '@ruimte/contracts';
-import { CONTEXT_PROMPT, chatPrompt } from '../context/context-note.ts';
+import { chatPrompt, contextPrompt } from '../context/context-note.ts';
 import { codexServiceTier, codexThreadOptions } from '../providers/codex.ts';
 import type { ApprovalDecision, BackendEvent, BackendHost, BackendLaunch, ChatBackend, TurnInput } from './backend.ts';
 import { CodexProtocol } from './codex-protocol.ts';
@@ -54,7 +54,7 @@ export class CodexBackend implements ChatBackend {
      * Codex 0.154 ignores developer instructions on `thread/resume` (measured), so a thread started
      * before anything was linked would never hear of its links; the first prompt of a resumed process says so instead.
      */
-    private contextPending = false;
+    private contextPending: string | null = null;
     private imageInputSupported: boolean | null = null;
 
     constructor(launch: BackendLaunch, host: BackendHost) {
@@ -94,12 +94,12 @@ export class CodexBackend implements ChatBackend {
             ...(tier === null ? {} : { serviceTier: tier }),
             ...codexThreadOptions(this.launch.runtimeMode)
         };
-        const developerInstructions = chatPrompt({ hasContext: this.launch.hasContext, depth: this.launch.depth });
+        const developerInstructions = chatPrompt({ sources: this.launch.context, depth: this.launch.depth });
         let result: unknown;
         if (this.launch.resume) {
             try {
                 result = await transport.request('thread/resume', { threadId: this.launch.resume, excludeTurns: true, ...params });
-                this.contextPending = this.launch.hasContext;
+                this.contextPending = contextPrompt(this.launch.context);
             } catch (error) {
                 // The thread is gone from Codex's store; a fresh one keeps the chat usable.
                 this.emit({ type: 'note', level: 'warning', text: `Codex could not resume its thread (${reason(error)}). Started a new one.` });
@@ -130,9 +130,9 @@ export class CodexBackend implements ChatBackend {
             }
         }
         const parts: string[] = [];
-        if (this.contextPending) {
-            this.contextPending = false;
-            parts.push(`${CONTEXT_PROMPT}\n\n`);
+        if (this.contextPending !== null) {
+            parts.push(`${this.contextPending}\n\n`);
+            this.contextPending = null;
         }
         if (input.preamble !== null) {
             parts.push(`${input.preamble}\n\n`);

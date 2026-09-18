@@ -2,7 +2,7 @@
  * Network-free `codex app-server` fake. Prompt commands exercise approvals, edits, questions,
  * interrupts, failures, names, subagents, pagination and forks through the real JSON-RPC shapes.
  */
-import { CONTEXT_PROMPT } from '../context/context-note.ts';
+import { CONTEXT_LEAD } from '../context/context-note.ts';
 import { runOverStdio, type FakeCli } from './fake-cli.ts';
 
 type Frame = Record<string, unknown>;
@@ -126,11 +126,12 @@ export const fakeCodex: FakeCli = (io) => {
         const input = Array.isArray(params.input) ? (params.input[0] as { text?: string } | undefined) : undefined;
         const raw = input?.text ?? '';
         // A resumed process puts the sentence about links in front of its first prompt; `pasted?` asks for it back.
-        const noted = raw.startsWith(`${CONTEXT_PROMPT}\n\n`);
+        const gap = raw.indexOf('\n\n');
+        const noted = raw.startsWith(CONTEXT_LEAD) && gap !== -1;
         if (noted) {
-            pasted = CONTEXT_PROMPT;
+            pasted = raw.slice(0, gap);
         }
-        const text = noted ? raw.slice(CONTEXT_PROMPT.length + 2) : raw;
+        const text = noted ? raw.slice(gap + 2) : raw;
         if (text === 'name?') {
             turnStarted();
             agentMessage(threadName ?? 'unnamed');

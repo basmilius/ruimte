@@ -1,12 +1,16 @@
 import { describe, expect, test } from 'bun:test';
 import { AgentKindSchema, type ContextSource } from '@ruimte/contracts';
-import { chatPrompt, contextChangeNote, contextHint, hookContext, verbsNote } from './context-note.ts';
+import { NODE_VERB_KINDS } from '../canvas/node-verb.ts';
+import { chatPrompt, contextChangeNote, contextHint, contextPrompt, hookContext, verbsNote } from './context-note.ts';
 
 const VERBS_NOTE = verbsNote({ depth: 0 });
 
 const text: ContextSource = { id: 'text-1', kind: 'text', title: 'Sprint goals' };
 const terminal: ContextSource = { id: 'term-1', kind: 'terminal', title: 'dev server' };
 const chat: ContextSource = { id: 'chat-1', kind: 'chat', title: 'planner' };
+const device: ContextSource = { id: 'dev-1', kind: 'device', title: 'iPhone 18 Pro Max' };
+
+const many = Array.from({ length: 8 }, (_, i): ContextSource => ({ id: `t${i}`, kind: 'text', title: `Note ${i}` }));
 
 describe('contextHint', () => {
     test('is silent without links and names each source with its kind', () => {
@@ -17,7 +21,6 @@ describe('contextHint', () => {
     });
 
     test('caps the names and counts the rest', () => {
-        const many = Array.from({ length: 8 }, (_, i): ContextSource => ({ id: `t${i}`, kind: 'text', title: `Note ${i}` }));
         const hint = contextHint(many);
         expect(hint).toContain('"Note 4" (text) and 3 more.');
         expect(hint).not.toContain('Note 5');
@@ -39,10 +42,20 @@ describe('verbsNote', () => {
             expect(VERBS_NOTE).toContain(cli);
             expect(helper).toContain(cli);
         }
+        for (const note of [VERBS_NOTE, helper]) {
+            // A person asking for a second agent wants a node, so the note must not read as a nudge to delegate inside the CLI.
+            expect(note).toContain('never a subagent of your own');
+        }
         const deepest = verbsNote({ depth: 2 });
         expect(deepest).not.toContain('`agent`');
         expect(deepest).not.toContain('--task');
+        expect(deepest).not.toContain('subagent');
         for (const note of [VERBS_NOTE, helper, deepest]) {
+            // Named at every depth, since a model told only about "nodes" writes the note the person asked for as a file.
+            for (const kind of NODE_VERB_KINDS) {
+                expect(note).toContain(kind);
+            }
+            expect(note).toContain('not a file you write');
             expect(note).toContain('`ruimte-context help <verb or noun>`');
             expect(note).toContain('a command you run in your shell, not a tool');
             expect(note).toEndWith('never by id.');
@@ -51,11 +64,27 @@ describe('verbsNote', () => {
     });
 });
 
+describe('contextPrompt', () => {
+    test('names the sources a chat has and says the canvas comes first', () => {
+        expect(contextPrompt([])).toBeNull();
+        expect(contextPrompt([device])).toBe(
+            'Ruimte: linked context is available with ruimte-context (list, read <id>): "iPhone 18 Pro Max" (device). This is what the person means, so prefer it over anything your own tools or servers turn up.'
+        );
+    });
+
+    test('caps the names the way a shell hint does', () => {
+        const prompt = contextPrompt(many);
+        expect(prompt).toContain('"Note 4" (text) and 3 more.');
+        expect(prompt).not.toContain('Note 5');
+    });
+});
+
 describe('chatPrompt', () => {
-    test('always names the verbs for its depth, and the links only when there are some', () => {
-        expect(chatPrompt({ hasContext: false, depth: 0 })).toBe(VERBS_NOTE);
-        expect(chatPrompt({ hasContext: false, depth: 2 })).toBe(verbsNote({ depth: 2 }));
-        expect(chatPrompt({ hasContext: true, depth: 0 })).toStartWith(`${VERBS_NOTE} The person linked context to this chat`);
+    test('always names the verbs for its depth, and the links by name only when there are some', () => {
+        expect(chatPrompt({ sources: [], depth: 0 })).toBe(VERBS_NOTE);
+        expect(chatPrompt({ sources: [], depth: 2 })).toBe(verbsNote({ depth: 2 }));
+        expect(chatPrompt({ sources: [device, terminal], depth: 0 })).toBe(`${VERBS_NOTE} ${contextPrompt([device, terminal])}`);
+        expect(chatPrompt({ sources: [device], depth: 0 })).toContain('"iPhone 18 Pro Max" (device)');
     });
 });
 

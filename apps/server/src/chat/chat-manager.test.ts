@@ -3,7 +3,7 @@ import { appendFile, cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatCheckpointDiff, ChatInfo, ChatItem, ChatSubagentItem, ContextSource } from '@ruimte/contracts';
-import { verbsNote } from '../context/context-note.ts';
+import { chatPrompt, verbsNote } from '../context/context-note.ts';
 import { deliverNotice, noticeNote, NoticeStore, renderNotice, showNotices, type Notice } from '../context/notices.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { AttachmentStore } from './attachment-store.ts';
@@ -54,6 +54,9 @@ afterEach(async () => {
     await retire(manager);
     await rm(home, { recursive: true, force: true });
 });
+
+// The device of the session this line was written for; both CLIs are asserted against it.
+const LINKED: ContextSource[] = [{ id: 'dev-1', kind: 'device', title: 'iPhone 18 Pro Max' }];
 
 const idle = () => recorder.info?.status === 'idle' && recorder.info.running && recorder.info.activeTurnId === null;
 
@@ -269,7 +272,7 @@ describe('ChatManager', () => {
         expect(recorder.ofKind('compaction')[0]).toMatchObject({ preTokens: 5000 });
     });
 
-    test('the system prompt names the verbs always and the links only when there are some', async () => {
+    test('the system prompt names the verbs always and the linked sources by name when there are some', async () => {
         await manager.create({ chatId: 'chat-sys', cwd: home });
         manager.attach('chat-sys', 'c1');
         await manager.send('chat-sys', 'system?');
@@ -277,14 +280,16 @@ describe('ChatManager', () => {
         expect(recorder.ofKind('assistant')[0]?.text).toBe(verbsNote({ depth: 0 }));
 
         await retire(manager);
-        manager = makeManager({ hasContext: () => true, depthOf: () => 2 });
+        manager = makeManager({ contextSources: () => LINKED, depthOf: () => 2 });
         const linked = new ChatRecorder();
         manager.subscribe('c2', linked.sink());
         await manager.create({ chatId: 'chat-sys-2', cwd: home });
         manager.attach('chat-sys-2', 'c2');
         await manager.send('chat-sys-2', 'system?');
         await linked.until(() => linked.ofKind('assistant').length === 1 && linked.info?.activeTurnId === null);
-        expect(linked.ofKind('assistant')[0]?.text).toStartWith(`${verbsNote({ depth: 2 })} The person linked context to this chat on their canvas.`);
+        // The same sentence a Codex thread is started with, asserted there against the same call.
+        expect(linked.ofKind('assistant')[0]?.text).toBe(chatPrompt({ sources: LINKED, depth: 2 }));
+        expect(linked.ofKind('assistant')[0]?.text).toContain('"iPhone 18 Pro Max" (device)');
     });
 
     test('a link made between turns is put in front of the next prompt, once, as a note', async () => {

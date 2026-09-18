@@ -3,7 +3,8 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatInfo, ChatItem, ChatSubagentItem } from '@ruimte/contracts';
-import { CONTEXT_PROMPT, chatPrompt, verbsNote } from '../context/context-note.ts';
+import type { ContextSource } from '@ruimte/contracts';
+import { chatPrompt, contextPrompt, verbsNote } from '../context/context-note.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { AttachmentStore } from './attachment-store.ts';
 import { ChatManager } from './chat-manager.ts';
@@ -23,6 +24,9 @@ let modelPage: ((params: Record<string, unknown>) => unknown) | null;
 
 const png = { name: 'shot.png', mime: 'image/png', data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=' };
 const turnInputs = () => requests.filter((request) => request.method === 'turn/start').map((request) => request.params.input as Array<Record<string, unknown>>);
+
+// The device of the session this line was written for; the Claude test asserts against the same call.
+const LINKED: ContextSource[] = [{ id: 'dev-1', kind: 'device', title: 'iPhone 18 Pro Max' }];
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
@@ -393,13 +397,26 @@ describe('ChatManager with Codex', () => {
         expect(turnInputs().map((input) => input[0]!.text)).toEqual(['note?', 'hi']);
     });
 
+    test('a thread with links names them in its developer instructions, the way Claude hears them', async () => {
+        await retire(manager);
+        manager = makeManager({ contextSources: () => LINKED, depthOf: () => 2 });
+        manager.subscribe('c1', recorder.sink());
+        await open('chat-linked-note');
+        await manager.send('chat-linked-note', 'note?');
+        await recorder.until(idle);
+        expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual([chatPrompt({ sources: LINKED, depth: 2 })]);
+        expect(recorder.ofKind('assistant')[0]?.text).toContain('"iPhone 18 Pro Max" (device)');
+        // A start already carries the names, so nothing is pasted in front of the prompt as well.
+        expect(turnInputs().map((input) => input[0]!.text)).toEqual(['note?']);
+    });
+
     test('a resumed thread keeps its instructions and hears about its links in front of the first prompt only', async () => {
         await open('chat-resumed-note');
         await manager.send('chat-resumed-note', 'first');
         await recorder.until(idle);
         await retire(manager);
 
-        manager = makeManager({ hasContext: () => true });
+        manager = makeManager({ contextSources: () => LINKED });
         const again = new ChatRecorder();
         manager.subscribe('c2', again.sink());
         await manager.create({ chatId: 'chat-resumed-note' });
@@ -408,7 +425,7 @@ describe('ChatManager with Codex', () => {
         await again.until(() => again.ofKind('assistant').length === 1 && again.info?.activeTurnId === null);
         await manager.send('chat-resumed-note', 'pasted?');
         await again.until(() => again.ofKind('assistant').length === 2 && again.info?.activeTurnId === null);
-        expect(again.ofKind('assistant').map((item) => item.text)).toEqual([chatPrompt({ hasContext: false, depth: 0 }), CONTEXT_PROMPT]);
+        expect(again.ofKind('assistant').map((item) => item.text)).toEqual([chatPrompt({ sources: [], depth: 0 }), contextPrompt(LINKED)!]);
         expect(requests.filter((request) => request.method === 'thread/resume').map((request) => request.params.developerInstructions)).toEqual([undefined]);
         expect(turnInputs().at(-1)![0]!.text).toBe('pasted?');
     });

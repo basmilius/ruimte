@@ -1,4 +1,4 @@
-import type { ChatAttachment, ChatFileChange, ChatQuestion, ChatSkill, ChatSubagentUsage, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type { ChatAttachment, ChatFileChange, ChatQuestion, ChatSkill, ChatSubagentUsage, ContextSource, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import type { LimitsUpdate } from '../usage/limits/normalize.ts';
 import type { SpawnChatProcess } from './chat-process.ts';
 
@@ -20,8 +20,8 @@ export interface BackendLaunch {
     // How often this chat started a CLI; a protocol that numbers its own requests from zero
     // needs it to keep the ids of one process apart from those of the one before.
     generation: number;
-    // Whether the person linked context to this chat; the backend decides how to tell the CLI.
-    hasContext: boolean;
+    // What the person linked to this chat, named for the CLI; empty when nothing is linked.
+    context: ContextSource[];
     // How deep in a chain of agents this chat sits, which decides what the note about the verbs offers it.
     depth: number;
     // How the CLI is started; a test runs a fake in the same process, everything else spawns it.
