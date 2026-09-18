@@ -7,6 +7,7 @@ import {
     deliverNotice,
     MAX_NOTICES,
     NOTICE_MAX_AGE_MS,
+    NO_REPLY_NOTICE,
     noticeNote,
     NoticeStore,
     renderNotice,
@@ -161,6 +162,9 @@ describe('deliverNotice', () => {
         ...overrides
     });
 
+    /* Where the message went, plus the tail every answer carries. */
+    const answer = (detail: string): string => `${detail}; ${NO_REPLY_NOTICE}`;
+
     test('a shell with no agent in it gets the line on its screen at once', async () => {
         const printed: string[] = [];
         const deps = targets({ terminal: () => ({ agent: null, notice: (text) => printed.push(text) }) });
@@ -177,7 +181,7 @@ describe('deliverNotice', () => {
         expect(delivery).toEqual({
             at: 'waiting',
             wake: false,
-            detail: 'its agent reads it at the start of its next turn, which nothing here starts (1 waiting)'
+            detail: answer('its agent reads it at the start of its next turn, which nothing here starts (1 waiting)')
         });
         expect(printed).toEqual([]);
         expect(store.waiting('term-2')).toHaveLength(1);
@@ -194,14 +198,18 @@ describe('deliverNotice', () => {
 
     test('a chat between turns is owed one, and hears the message in it', async () => {
         const delivery = await deliverNotice(store, targets({ chat: async () => 'idle' }), left('the build is green', 'chat-2'));
-        expect(delivery).toEqual({ at: 'now', wake: true, detail: 'that chat takes a turn on it, and reads it there' });
+        expect(delivery).toEqual({ at: 'now', wake: true, detail: answer('that chat takes a turn on it, and reads it there') });
         // The message stays in the queue; the turn's preamble is what takes it.
         expect(store.waiting('chat-2')).toHaveLength(1);
     });
 
     test('a chat in a turn keeps it, and a node that runs nothing waits to start', async () => {
         const busy = await deliverNotice(store, targets({ chat: async () => 'running' }), left('the build is green', 'chat-2'));
-        expect(busy).toEqual({ at: 'waiting', wake: false, detail: 'that chat is in a turn; it reads the message in front of its next one (1 waiting)' });
+        expect(busy).toEqual({
+            at: 'waiting',
+            wake: false,
+            detail: answer('that chat is in a turn; it reads the message in front of its next one (1 waiting)')
+        });
         const cold = await deliverNotice(store, targets(), left('and another', 'term-3'));
         expect(cold.detail).toStartWith('nothing runs in that node yet');
         expect(cold.wake).toBe(false);
@@ -216,8 +224,26 @@ describe('deliverNotice', () => {
         expect(delivery).toEqual({
             at: 'waiting',
             wake: false,
-            detail: 'a message started the turn you are in, and a message starts one turn and no further; that chat reads this one in front of its next turn (1 waiting)'
+            detail: answer(
+                'a message started the turn you are in, and a message starts one turn and no further; that chat reads this one in front of its next turn (1 waiting)'
+            )
         });
         expect(store.waiting('chat-2')).toHaveLength(1);
+    });
+
+    /* The sender reads this line at the one moment it decides whether to wait, so every road out says it. */
+    test('every answer tells the sender that nothing comes back, and what does', async () => {
+        const deliveries = [
+            await deliverNotice(store, targets({ chat: async () => 'idle' }), left('the build is green', 'chat-2')),
+            await deliverNotice(store, targets({ chat: async () => 'running' }), left('and the tests', 'chat-3')),
+            await deliverNotice(store, targets({ chat: async () => 'idle', fromMessage: () => true }), left('and the docs', 'chat-4')),
+            await deliverNotice(store, targets(), left('and the types', 'chat-5')),
+            await deliverNotice(store, targets({ terminal: () => ({ agent: null, notice: () => {} }) }), left('and the lint', 'term-9')),
+            await deliverNotice(store, targets({ terminal: () => ({ agent: agent('claude'), notice: () => {} }) }), left('and the rest', 'term-8'))
+        ];
+        for (const delivery of deliveries) {
+            expect(delivery.detail).toEndWith(`; ${NO_REPLY_NOTICE}`);
+        }
+        expect(NO_REPLY_NOTICE).toBe('nothing comes back to you, and ruimte-context task new is what brings a result back');
     });
 });

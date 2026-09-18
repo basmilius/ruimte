@@ -199,6 +199,16 @@ export interface NoticeDelivery {
     wake: boolean;
 }
 
+/*
+ * The tail of every answer to a notify. The sender reads it at the one moment it decides whether to
+ * wait for something back, and nothing here ever sends it one: without this a model polls the node
+ * it wrote to until it gives up.
+ */
+export const NO_REPLY_NOTICE = 'nothing comes back to you, and ruimte-context task new is what brings a result back';
+
+/* One delivery line: where the message went, and the tail that says not to wait for an answer. */
+const delivered = (at: NoticeDelivery['at'], wake: boolean, detail: string): NoticeDelivery => ({ at, wake, detail: `${detail}; ${NO_REPLY_NOTICE}` });
+
 export interface NoticeTargets {
     /* The terminal running under this node id, when the daemon has one that has not exited. */
     terminal(id: string): { agent: AgentInfo | null; notice(text: string): void } | null;
@@ -223,35 +233,34 @@ export const deliverNotice = async (store: NoticeStore, targets: NoticeTargets, 
     const agent = terminal?.agent ?? null;
     if (terminal && !(agent?.live === true && takesHookContext(agent.kind))) {
         terminal.notice(renderNotice({ ...notice, createdAt: Date.now() }));
-        return {
-            at: 'now',
-            wake: false,
-            detail:
-                agent?.live === true
-                    ? `printed on its screen; ${agent.kind} takes nothing between its turns, so its agent may not read it`
-                    : 'printed on the screen of that terminal'
-        };
+        return delivered(
+            'now',
+            false,
+            agent?.live === true
+                ? `printed on its screen; ${agent.kind} takes nothing between its turns, so its agent may not read it`
+                : 'printed on the screen of that terminal'
+        );
     }
     const waiting = await store.put(notice);
     const count = waiting === 1 ? '1 waiting' : `${waiting} waiting`;
     if (terminal) {
-        return { at: 'waiting', wake: false, detail: `its agent reads it at the start of its next turn, which nothing here starts (${count})` };
+        return delivered('waiting', false, `its agent reads it at the start of its next turn, which nothing here starts (${count})`);
     }
     const chat = await targets.chat(notice.targetId);
     if (chat === 'none') {
-        return { at: 'waiting', wake: false, detail: `nothing runs in that node yet; it reads the message when it starts (${count})` };
+        return delivered('waiting', false, `nothing runs in that node yet; it reads the message when it starts (${count})`);
     }
     if (chat === 'running') {
-        return { at: 'waiting', wake: false, detail: `that chat is in a turn; it reads the message in front of its next one (${count})` };
+        return delivered('waiting', false, `that chat is in a turn; it reads the message in front of its next one (${count})`);
     }
     if (targets.fromMessage(notice.from)) {
-        return {
-            at: 'waiting',
-            wake: false,
-            detail: `a message started the turn you are in, and a message starts one turn and no further; that chat reads this one in front of its next turn (${count})`
-        };
+        return delivered(
+            'waiting',
+            false,
+            `a message started the turn you are in, and a message starts one turn and no further; that chat reads this one in front of its next turn (${count})`
+        );
     }
-    return { at: 'now', wake: true, detail: 'that chat takes a turn on it, and reads it there' };
+    return delivered('now', true, 'that chat takes a turn on it, and reads it there');
 };
 
 /* The chat a message was left for, as the two things showing it needs: whether it is there, and a line in its thread. */

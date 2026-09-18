@@ -1,6 +1,6 @@
 import { isAgentKind } from '@ruimte/contracts';
 import { z } from 'zod';
-import { MAX_NOTICE_LENGTH, MAX_NOTICES, NOTICE_MAX_AGE_MS } from '../context/notices.ts';
+import { MAX_NOTICE_LENGTH, MAX_NOTICES, NO_REPLY_NOTICE, NOTICE_MAX_AGE_MS } from '../context/notices.ts';
 import { refuseMissingNodes } from './own-view.ts';
 import { unescapeText } from './text-escapes.ts';
 import { VerbRefusal, canvasFor, defineVerb, field, lengthOf, orNote, placeOf } from './verb.ts';
@@ -27,7 +27,7 @@ const NOTIFY_DETAIL: readonly string[] = [
     `waiting\tAt most ${MAX_NOTICES} messages wait per node, the oldest dropped first, and one nobody picks up in ${NOTICE_HOURS} hours is dropped; each is delivered once`,
     'not\tThis is a message, not a command: nothing is typed into a shell, and what the node does with it is its own call',
     'not\tYou never hear that it was read: the answer says where it went and nothing after that, and waiting means it sits there until that agent takes its next turn',
-    'reply\tThere is no reply channel; the other node answers with a notify of its own, which needs a line running the other way, or you read what it did with ruimte-context read',
+    `reply\tThere is no reply channel: ${NO_REPLY_NOTICE}. Do not wait on the node you wrote to; it answers only by sending a notify of its own, which needs a line running the other way, and what it did you read with ruimte-context read`,
     'see\truimte-context task new\ta task comes back to you with its result and settles, a message does not: ask with a task when you need the answer, send a message when the other agent needs to know',
     'refusals\tnot-linked\tself-notify\tnot-an-agent\tunknown-node\tnot-on-a-canvas\tthe whole set this verb refuses with',
     'ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs'

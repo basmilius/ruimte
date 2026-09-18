@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { ChatItem, ChatTurnItem, ProjectContent } from '@ruimte/contracts';
 import { ManualClock } from '../outbox/manual-clock.ts';
+import { NO_REPLY_NOTICE } from './notices.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
 
@@ -86,6 +87,13 @@ const link = async (daemon: TestDaemon, from: string, to: string): Promise<void>
 
 const notify = async (daemon: TestDaemon, from: string, to: string, text: string): Promise<string[]> => runVerb(daemon, from, 'notify', [to, '--text', text]);
 
+/* The line notify prints, which every answer ends with the same way. */
+const notified = (id: string, at: string, detail: string): string => `notified\t${id}\t${at}\t${detail}; ${NO_REPLY_NOTICE}`;
+
+/* What a person reads in the thread about a message, wherever it was written. */
+const linesAbout = (daemon: TestDaemon, chatId: string, text: string): string[] =>
+    itemsOf(daemon, chatId).flatMap((item) => (item.kind === 'note' && item.text.includes(text) ? [item.text] : []));
+
 describe('a message to a chat', () => {
     test('gives a chat between turns a turn of its own, and the agent reads the message in it', async () => {
         const daemon = await boot();
@@ -94,17 +102,20 @@ describe('a message to a chat', () => {
         await link(daemon, 'chat-lead', 'chat-other');
 
         const lines = await notify(daemon, 'chat-lead', 'chat-other', 'what is the secret word');
-        expect(lines).toEqual(['notified\tchat-other\tnow\tthat chat takes a turn on it, and reads it there']);
+        expect(lines).toEqual([notified('chat-other', 'now', 'that chat takes a turn on it, and reads it there')]);
 
         await daemon.until(() => turnsOf(daemon, 'chat-other').some((turn) => (turn.messageFrom ?? []).length > 0 && turn.state === 'done'));
         const turn = turnsOf(daemon, 'chat-other').find((candidate) => (candidate.messageFrom ?? []).length > 0)!;
         expect(turn.messageFrom).toEqual(['chat-lead']);
         expect(turn.origin).toBe('agent');
         expect(turn.label).toBe('Message from Lead');
-        // The turn's own prompt carried the message, so the agent saw it and not only the thread.
+        /* One line for a person: the one written as the message landed, outside any turn. The turn it
+           opened says nothing more about it, and the label above it already names who wrote. */
+        expect(linesAbout(daemon, 'chat-other', 'what is the secret word')).toEqual(['Lead sent a message: what is the secret word']);
+        expect(itemsOf(daemon, 'chat-other').some((item) => item.kind === 'note' && item.text.startsWith('Woken by'))).toBe(false);
+        /* And the model heard it once, in the prompt of that turn: the fake echoes what it was given. */
+        expect(repliesOf(daemon, 'chat-other').filter((text) => text.includes('sent you a message: what is the secret word'))).toHaveLength(1);
         expect(repliesOf(daemon, 'chat-other').at(-1)).toContain('node chat-lead ("Lead") sent you a message: what is the secret word');
-        // A note above the turn says what woke the chat, and the message is out of the queue.
-        expect(itemsOf(daemon, 'chat-other').some((item) => item.kind === 'note' && item.text === 'Woken by a message')).toBe(true);
         expect(daemon.notices.waiting('chat-other')).toEqual([]);
         expect(daemon.outbox.list()).toEqual([]);
     });
@@ -122,7 +133,11 @@ describe('a message to a chat', () => {
 
         const lines = await notify(daemon, 'chat-other', 'chat-lead', 'the word is walnut');
         expect(lines).toEqual([
-            'notified\tchat-lead\twaiting\ta message started the turn you are in, and a message starts one turn and no further; that chat reads this one in front of its next turn (1 waiting)'
+            notified(
+                'chat-lead',
+                'waiting',
+                'a message started the turn you are in, and a message starts one turn and no further; that chat reads this one in front of its next turn (1 waiting)'
+            )
         ]);
         // The lead is between turns and still gets none: this is the step the daemon does not take.
         expect(daemon.chats.get('chat-lead')?.info.activeTurnId).toBeNull();
@@ -146,7 +161,7 @@ describe('a message to a chat', () => {
         const before = turnsOf(daemon, 'chat-other').length;
 
         const lines = await notify(daemon, 'chat-lead', 'chat-other', 'the build is green');
-        expect(lines).toEqual(['notified\tchat-other\twaiting\tthat chat is in a turn; it reads the message in front of its next one (1 waiting)']);
+        expect(lines).toEqual([notified('chat-other', 'waiting', 'that chat is in a turn; it reads the message in front of its next one (1 waiting)')]);
         expect(daemon.outbox.list().filter((entry) => entry.kind === 'deliver-message')).toEqual([]);
         expect(turnsOf(daemon, 'chat-other')).toHaveLength(before);
 
@@ -165,7 +180,7 @@ describe('a message to a chat', () => {
         await daemon.until(() => daemon.sessions.get(termId) !== undefined);
 
         const lines = await notify(daemon, 'chat-lead', termId, 'the build is green');
-        expect(lines).toEqual([`notified\t${termId}\tnow\tprinted on the screen of that terminal`]);
+        expect(lines).toEqual([notified(termId, 'now', 'printed on the screen of that terminal')]);
         expect(daemon.outbox.list().filter((entry) => entry.kind === 'deliver-message')).toEqual([]);
         // A shell with no agent in it reads the line off its screen, so nothing is left waiting either.
         expect(daemon.notices.waiting(termId)).toEqual([]);

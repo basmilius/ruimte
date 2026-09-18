@@ -18,8 +18,6 @@ export const messageLabel = (notices: readonly Notice[]): string => {
     return names.length === 1 ? `Message from ${names[0]}` : `Messages from ${names.join(', ')}`;
 };
 
-export const messageNote = (count: number): string => `Woken by ${count === 1 ? 'a message' : `${count} messages`}`;
-
 /*
  * Whether the turn a chat is running was itself opened by a message. This is the whole of the stop:
  * two agents that read each other would otherwise wake each other for as long as they kept writing,
@@ -65,10 +63,14 @@ export const deliverMessageHandler =
         if (chat === null) {
             return;
         }
+        /*
+         * No note of its own, and the preamble stays off the thread. A person read the message as it
+         * landed (`showNotices`), so anything the turn adds about it only says the same thing again;
+         * the label on the turn already names who it came from.
+         */
         chat.wake({
             text: messageText(waiting.length),
             label: messageLabel(waiting),
-            note: messageNote(waiting.length),
             taskIds: [],
             messageFrom: [...new Set(waiting.map((notice) => notice.from))]
         });

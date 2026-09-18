@@ -4,7 +4,7 @@ import type { ChatManager } from './chat-manager.ts';
 /* A chat the daemon may open a turn in, as the outbox handlers see it: what its thread holds, and the one call that opens one. */
 export interface WakeChat {
     items(): ChatItem[];
-    wake(wake: { text: string; label: string; note: string; taskIds: string[]; messageFrom?: string[] }): boolean;
+    wake(wake: { text: string; label: string; note?: string; taskIds: string[]; messageFrom?: string[] }): boolean;
 }
 
 export interface ChatOpenerDeps {

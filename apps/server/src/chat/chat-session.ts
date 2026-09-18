@@ -231,11 +231,11 @@ export class ChatSession {
 
     private dispatch(text: string, extras: ChatSendExtras, requestedTurnId?: string): void {
         this.settleAgentTurn();
-        const note = this.contextNote(text);
+        const { preamble, note } = this.contextNote(text);
         const turnId = this.openTurn(text, note, extras, requestedTurnId);
         const input = {
             text,
-            preamble: note,
+            preamble,
             attachments: extras.attachments ?? [],
             mentions: extras.mentions ?? [],
             skills: extras.skills ?? []
@@ -431,17 +431,19 @@ export class ChatSession {
 
     /*
      * Opens a turn nobody typed a prompt for (tasks that settled, a message another node left), with
-     * a note saying what woke the chat and the turn carrying what it was: the task ids, or the nodes
-     * the messages came from, which is what keeps a turn a message opened from waking anyone itself.
+     * the turn carrying what woke it: the task ids, or the nodes the messages came from, which is
+     * what keeps a turn a message opened from waking anyone itself. A caller whose news is not in
+     * the thread yet passes a `note` saying what woke the chat; one whose news was written there as
+     * it landed leaves it out rather than saying it twice.
      * Checked and opened in one step, so null means a turn is in the way (or the daemon is going
      * down) and nothing happened. Never through `send`: that steps on a turn with `origin: 'agent'`,
      * so a second wake would close the first.
      */
-    wake(wake: { text: string; label: string; note: string; taskIds: string[]; summaryFor?: string; messageFrom?: string[] }): string | null {
+    wake(wake: { text: string; label: string; note?: string; taskIds: string[]; summaryFor?: string; messageFrom?: string[] }): string | null {
         if (this.frozen || this.thread.info.activeTurnId !== null) {
             return null;
         }
-        const preamble = this.contextNote(wake.text);
+        const { preamble, note } = this.contextNote(wake.text);
         const turnId = newId('turn');
         const now = Date.now();
         this.emit([
@@ -459,8 +461,10 @@ export class ChatSession {
                 endedAt: null,
                 costUsd: 0
             }),
-            this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'info', text: wake.note }),
-            ...(preamble === null ? [] : [this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'info', text: preamble })]),
+            ...(wake.note === undefined
+                ? []
+                : [this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'info', text: wake.note })]),
+            ...(note === null ? [] : [this.thread.upsert({ id: newId('note'), kind: 'note', createdAt: now, turnId, level: 'info', text: note })]),
             this.thread.patchInfo({ status: 'running', activeTurnId: turnId })
         ]);
         this.options.persist();
@@ -793,11 +797,15 @@ export class ChatSession {
     /*
      * What the agent has to hear before this prompt: a link made or removed between turns, and any
      * message another node left for it. Each is said once, and only in front of a real prompt.
+     *
+     * The thread gets less of it than the CLI. A message is written there as it lands, by whichever
+     * channel got it first, so repeating it above the turn it opened tells a person the same thing
+     * twice; the rest nobody has read yet.
      */
-    private contextNote(text: string): string | null {
+    private contextNote(text: string): { preamble: string | null; note: string | null } {
         // A slash command must stay the first thing the CLI reads; the rest waits for a real prompt.
         if (text.startsWith('/')) {
-            return null;
+            return { preamble: null, note: null };
         }
         const current = this.options.contextSources?.() ?? [];
         const previous = this.lastSources;
@@ -805,10 +813,10 @@ export class ChatSession {
         // Every caller persists right after opening its turn, so the record forgets them along with the turn it writes.
         const preambles = this.pendingPreambles;
         this.pendingPreambles = [];
-        const parts = [...preambles, ...(previous === null ? [] : [contextChangeNote(previous, current)]), ...(this.options.messages?.() ?? [])].filter(
-            (part): part is string => part !== null
-        );
-        return parts.length === 0 ? null : parts.join('\n\n');
+        const read = [...preambles, ...(previous === null ? [] : [contextChangeNote(previous, current)])].filter((part): part is string => part !== null);
+        const messages = this.options.messages?.() ?? [];
+        const joined = (parts: string[]): string | null => (parts.length === 0 ? null : parts.join('\n\n'));
+        return { preamble: joined([...read, ...messages]), note: joined(read) };
     }
 
     /* Runs one turn against the backend; a backend that will not start ends the turn with the reason. */

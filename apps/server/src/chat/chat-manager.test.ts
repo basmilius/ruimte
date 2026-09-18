@@ -951,11 +951,9 @@ describe('a message another node left', () => {
 
         // The fake echoes its prompt, so the reply shows what the CLI was given.
         expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: first', `echo: ${heard}\n\nsecond`, 'echo: third']);
-        /* The prompt that carried it shows its preamble, the way every preamble is shown: a person
-           reads when the message landed on the first line and when the model heard it on the second. */
-        const notes = recorder.ofKind('note');
-        expect(notes).toHaveLength(2);
-        expect(notes[1]).toMatchObject({ turnId: recorder.ofKind('turn')[1]?.id, text: heard });
+        /* One line for a person, written when the message landed. The turn that carried it to the
+           model adds none of its own: a preamble that only repeats what the thread already says. */
+        expect(recorder.ofKind('note')).toHaveLength(1);
     });
 
     test('waits for a chat nobody has started, and is in the thread before its first prompt', async () => {
