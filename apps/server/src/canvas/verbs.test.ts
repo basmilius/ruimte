@@ -1709,6 +1709,28 @@ describe('link new', () => {
         expect(lines[1]).toBe(['roles', ...EDGE_ROLES].join('\t'));
         expect((await onDisk()).rev).toBe(1);
     });
+
+    test('a --role that is not the one on the line is written onto it and says updated', async () => {
+        const drawn = await post('link', ['new', '--to', 'note-1']);
+        const edgeId = drawn.lines[0]!.split('\t')[0]!;
+        expect(drawn.lines[0]!.split('\t')[3]).toBe('new');
+
+        const set = await post('link', ['new', '--to', 'note-1', '--role', 'target']);
+        expect(set.lines[0]!.split('\t')).toEqual([edgeId, 'term-1', 'note-1', 'updated', 'out']);
+        expect((await canvasOnDisk()).edges).toEqual([{ id: edgeId, from: 'term-1', to: 'note-1', role: 'target' }]);
+    });
+
+    test('the same role again, or none at all, leaves the line alone and says existing', async () => {
+        await post('link', ['new', '--to', 'note-1', '--role', 'target']);
+        const rev = (await onDisk()).rev;
+
+        expect((await post('link', ['new', '--to', 'note-1', '--role', 'target'])).lines[0]!.split('\t')[3]).toBe('existing');
+        // Nothing changed, so nothing was written and the rev a second call reads is the one it leaves.
+        expect((await onDisk()).rev).toBe(rev);
+        expect((await post('link', ['new', '--to', 'note-1'])).lines[0]!.split('\t')[3]).toBe('existing');
+        expect((await canvasOnDisk()).edges[0]!.role).toBe('target');
+        expect((await onDisk()).rev).toBe(rev);
+    });
 });
 
 describe('--dry-run', () => {

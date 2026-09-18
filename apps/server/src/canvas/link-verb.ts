@@ -20,13 +20,14 @@ const LINK_DETAIL: readonly string[] = [
     `flag\t--label L\toptional\tWhat the line is called on the canvas, at most ${MAX_TITLE_LENGTH} characters; a line into an agent is called "context" without one`,
     `flag\t--role R\toptional\tWhat the line is for: ${EDGE_ROLES.join(', ')}; without it a line into a terminal or a chat is context and any other line is only a line`,
     'flag\t--view V\toptional\tThe canvas both ends are on, by view id; without it the one you are on',
-    'prints\tid\tfrom\tto\tstate\tway\tone line per edge, where state is new for one that was drawn and existing for one that was there already',
+    'prints\tid\tfrom\tto\tstate\tway\tone line per edge, where state is new for one that was drawn, updated for one that was there and took the --role you named, and existing for one nothing happened to',
     'way\tout for the line you asked for, back for the one this verb drew the other way by itself, so two rows for one --to is not a mistake',
     'context\tAn edge into a terminal or a chat node is what lets that agent read the other end with ruimte-context read; a line between two other nodes is only a line',
     'both ways\tA --to that names a terminal or a chat, from a terminal or a chat, is two edges and two rows: each of them then reads the other, and either may notify the other',
     'both ways\tInto anything else it is one edge and one row, since only an agent node reads what a line brings it',
     'both ways\tA --role of target or origin is one edge and one row whatever the two ends are, since either only reads one way',
     'again\tAn edge that is already there is left alone and reported as existing, so running the same link new twice changes nothing',
+    'again\tA --role that is not the role on that edge is written onto it and the row says updated; the role it already has, or no --role at all, leaves it as it is',
     `limit\tAt most ${MAX_LINKS} ids in --to`,
     'ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs',
     'see\truimte-context link list\twhat is drawn on that canvas now, so you can tell a line that is missing from one that is only the other way round',
@@ -98,12 +99,20 @@ export const linkNewAction = defineAction('link', {
             }
 
             const made: ProjectEdge[] = [];
+            const reroled = new Map<string, ProjectEdge>();
             const lines: string[] = [];
             /* `way` is what tells the two rows of one --to apart: the line that was asked for, and
                the one this verb draws back by itself between two agents. */
             const draw = (start: string, end: ProjectNode, way: 'out' | 'back'): void => {
                 const already = [...canvas.edges, ...made].find((edge) => edge.from === start && edge.to === end.id);
                 if (already) {
+                    /* A --role that is not the one on the line is a different line asked for, not the
+                       same call run twice, so it is written rather than dropped without a word. */
+                    if (role !== undefined && already.role !== role) {
+                        reroled.set(already.id, { ...already, role });
+                        lines.push([already.id, start, end.id, 'updated', way].join('\t'));
+                        return;
+                    }
                     lines.push([already.id, start, end.id, 'existing', way].join('\t'));
                     return;
                 }
@@ -130,13 +139,14 @@ export const linkNewAction = defineAction('link', {
                     draw(id, source, 'back');
                 }
             }
-            if (made.length === 0) {
+            if (made.length === 0 && reroled.size === 0) {
                 return { content: null, result: lines };
             }
+            const edges = [...canvas.edges.map((edge) => reroled.get(edge.id) ?? edge), ...made];
             return {
                 content: {
                     ...content,
-                    views: content.views.map((view) => (view.id === canvas.id ? { ...canvas, edges: [...canvas.edges, ...made] } : view))
+                    views: content.views.map((view) => (view.id === canvas.id ? { ...canvas, edges } : view))
                 },
                 result: lines
             };
