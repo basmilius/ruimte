@@ -1,8 +1,9 @@
-import { DEFAULT_TITLES, NODE_ACCENT_NAMES, groupFrame, type ProjectNode } from '@ruimte/contracts';
+import { DEFAULT_TITLES, NODE_ACCENT_NAMES, groupFrame, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
 import { z } from 'zod';
-import { MAX_CANVAS_NODES, NOT_A_GROUP, canvasFull, idList, newId, nodesNamed } from './node-verb.ts';
+import { ownEnd } from './link-verb.ts';
+import { MAX_CANVAS_NODES, NOT_A_GROUP, canvasFull, idList, newId, nodesNamed, openingEdge } from './node-verb.ts';
 import { containersOf, groupMembers } from './placement.ts';
-import { MAX_TITLE_LENGTH, TITLE_LINE, VerbRefusal, canvasFor, defineAction, field, placeOf, requiredField, titleField } from './verb.ts';
+import { MAX_TITLE_LENGTH, TITLE_LINE, VerbRefusal, canvasFor, defineAction, field, placeOf, requiredField, titleField, type VerbCall } from './verb.ts';
 
 /* The set is closed and short enough to print whole, unlike the sixty Lucide names a view picks from. */
 const COLOR_LINES: readonly string[] = [['colors', ...NODE_ACCENT_NAMES].join('\t')];
@@ -15,8 +16,13 @@ const GROUP_DETAIL: readonly string[] = [
     'flag\t--view V\toptional\tThe canvas the nodes are on, by view id; ruimte-context view list lists them',
     'prints\tid\tgroup\tlabel\tview\tmembers\tthe new group, its label, the canvas it landed on, and how many nodes stand inside the frame',
     'prints\talso\tid\tkind\ttitle\tone line per node you did not name that the frame ended up around',
+    'prints\tedges\tcount\tid\tthe lines of your own that went with the frame and the id of the one line into the group that came instead; the row is there only when a line went',
     'where\tThe frame is the box your nodes already occupy, with room on every side and a title band above it, snapped to the canvas grid, which is where a person grouping a selection would have put it',
     'members\tA group holds whatever has its center inside it, so a node standing between the ones you named goes in with them; that is what the also rows are for',
+    'lines\tThe frame takes your own lines into what it now holds along with it: a line into a group makes everything inside it readable at once, each under its own title, so a line per node says nothing more',
+    'lines\tOne line is drawn back, from you into the group, the same line node new draws into what it makes; nothing is drawn where nothing went, so a frame you had no line into is left without one',
+    'lines\tOnly a line whose ends are both yours, the rule link delete follows: a line a person drew stays, because that is the context that person gave you',
+    'lines\tEither way round counts, since a line between you and a node that is not an agent reads the same in both directions',
     'rule\tEvery node has to stand in the same place already: all of them on the canvas itself, or all of them inside one and the same group',
     'rule\tA group is never one of --nodes; a frame is drawn around nodes, and the client leaves a group out of a selection for the same reason',
     'collapsed\tInside a group that is folded shut the new frame joins its members in the file, so it is folded away with the rest',
@@ -26,13 +32,29 @@ const GROUP_DETAIL: readonly string[] = [
     TITLE_LINE
 ];
 
+/*
+ * The lines between the caller and what the frame now holds, which the one line into the group says
+ * in their place: a line into a group makes everything inside it readable at once, and a node that
+ * arrives twice is read once. Both ends have to be the caller's, the rule `link delete` follows,
+ * since a line a person drew is the context that person gave. Which way a line runs is not part of
+ * it: a line between an agent and a node that is not one reads the same in both directions.
+ */
+const ownLinesInto = (edges: readonly ProjectEdge[], held: ReadonlySet<string>, call: VerbCall): ProjectEdge[] =>
+    edges.filter(
+        (edge) =>
+            ((edge.from === call.caller && held.has(edge.to)) || (edge.to === call.caller && held.has(edge.from))) &&
+            ownEnd(edge.from, call) &&
+            ownEnd(edge.to, call)
+    );
+
 /* Where a node stands, said in the words a refusal needs: a frame by id, or the canvas itself. */
 const placeName = (container: ProjectNode | undefined): string => (container === undefined ? 'on the canvas itself' : `in group ${container.id}`);
 
 export const groupAction = defineAction('node', {
     name: 'group',
     usage: '--nodes A,B [--label L] [--color C] [--view V]',
-    summary: 'Draws a frame around nodes that already stand together and prints id, group, label, view, members',
+    summary:
+        'Draws a frame around nodes that already stand together and prints id, group, label, view, members; your own lines into them become one line into the group',
     detail: GROUP_DETAIL,
     positionals: z.tuple([], { error: 'node group takes no arguments, only flags; the nodes go in --nodes' }),
     flags: z.object({
@@ -86,16 +108,26 @@ export const groupAction = defineAction('node', {
             };
             const inside = groupMembers(group, [...canvas.nodes, group]);
             const named = new Set(ids);
+            const held = new Set(inside.map((node) => node.id));
+            /* A caller the frame ends up around keeps every line it has, since a line from inside a
+               frame into that same frame tells nobody anything; so does one that is not on this canvas. */
+            const framesCaller = held.has(call.caller) || !canvas.nodes.some((node) => node.id === call.caller);
+            const replaced = framesCaller ? [] : ownLinesInto(canvas.edges, held, call);
+            // Only where something went: a frame nobody had a line into is not given one out of nowhere.
+            const opening = replaced.length === 0 ? null : openingEdge(call.caller, group, content);
+            const gone = new Set(replaced.map((edge) => edge.id));
+            const edges = opening === null ? canvas.edges : [...canvas.edges.filter((edge) => !gone.has(edge.id)), opening];
             /* A collapsed frame keeps its members in the file, so the new group has to be written into
                them: by geometry it is inside, and while the container is shut nothing reads geometry. */
             const nodes = canvas.nodes.map((node) =>
                 container !== undefined && node.id === container.id && node.collapsed === true ? { ...node, memberIds: [...(node.memberIds ?? []), id] } : node
             );
             return {
-                content: { ...content, views: content.views.map((view) => (view.id === canvas.id ? { ...canvas, nodes: [...nodes, group] } : view)) },
+                content: { ...content, views: content.views.map((view) => (view.id === canvas.id ? { ...canvas, nodes: [...nodes, group], edges } : view)) },
                 result: [
                     [id, 'group', field(group.title), canvas.id, String(inside.length)].join('\t'),
-                    ...inside.filter((node) => !named.has(node.id)).map((node) => ['also', node.id, node.kind, field(node.title)].join('\t'))
+                    ...inside.filter((node) => !named.has(node.id)).map((node) => ['also', node.id, node.kind, field(node.title)].join('\t')),
+                    ...(opening === null ? [] : [['edges', String(replaced.length), opening.id].join('\t')])
                 ]
             };
         });

@@ -233,7 +233,7 @@ const edgeLines = (canvas: ProjectCanvasView, takes: (edge: ProjectEdge) => bool
  * for a node: an end is yours when it is you or a node you made. Both ends have to be, since a line a
  * person drew into an agent is the context that person gave it.
  */
-const ownEnd = (id: string, call: VerbCall): boolean => id === call.caller || call.host.madeBy(id) === call.caller;
+export const ownEnd = (id: string, call: VerbCall): boolean => id === call.caller || call.host.madeBy(id) === call.caller;
 
 export const linkDeleteAction = defineAction('link', {
     name: 'delete',

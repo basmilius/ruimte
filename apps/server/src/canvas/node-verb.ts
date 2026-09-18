@@ -218,7 +218,7 @@ export const checkUrl = (url: string): string => {
  * what a line brings it, so it gets the context line `agent` draws, label and all; nothing else
  * reads, so its line carries the role that says who put the node there and nothing more.
  */
-const openingEdge = (from: string, node: ProjectNode, content: ProjectContent): ProjectEdge => {
+export const openingEdge = (from: string, node: ProjectNode, content: ProjectContent): ProjectEdge => {
     const id = newId('edge', content, [node.id]);
     if (isAgentKind(node.kind)) {
         return { id, from, to: node.id, label: 'context' };

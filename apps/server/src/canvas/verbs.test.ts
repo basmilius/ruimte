@@ -23,6 +23,7 @@ import {
     type ProjectCanvasView,
     type ProjectContent,
     type ProjectDocument,
+    type ProjectEdge,
     type ProjectNode,
     type ProjectView,
     type RuntimeMode,
@@ -2342,6 +2343,79 @@ describe('node group', () => {
         const { lines } = await post('node', ['group', '--nodes', 'far', '--view', 'board']);
         expect(lines[0]!.split('\t')[3]).toBe('board');
     });
+
+    /* A note the caller opened, which is what node new draws a line from the caller into. */
+    const newNote = async (token = 'term', argv: string[] = []): Promise<string> =>
+        (await post('node', ['new', 'note', ...argv], token)).lines[0]!.split('\t')[0]!;
+
+    const edgesOnDisk = async (): Promise<ProjectEdge[]> => (await canvasOnDisk()).edges;
+
+    test('the lines it had into the nodes become one line into the group', async () => {
+        const notes = [await newNote(), await newNote(), await newNote()];
+        expect(await edgesOnDisk()).toHaveLength(3);
+
+        const { lines } = await post('node', ['group', '--nodes', notes.join(','), '--label', 'Roles']);
+        const edges = await edgesOnDisk();
+        expect(edges).toHaveLength(1);
+        // The line node new draws into a note, drawn into the group that stands for all three.
+        expect(edges[0]).toMatchObject({ from: 'term-1', to: lines[0]!.split('\t')[0]!, role: 'origin' });
+        expect(lines.at(-1)).toBe(`edges\t3\t${edges[0]!.id}`);
+    });
+
+    test('a line a person drew stays, because that is the context they gave', async () => {
+        await seed(box('theirs', 2000, 2000));
+        const mine = await newNote('term', ['--beside', 'theirs']);
+        const drawn = (await post('link', ['new', '--to', 'theirs'])).lines[0]!.split('\t')[0]!;
+
+        const { lines } = await post('node', ['group', '--nodes', `${mine},theirs`]);
+        const edges = await edgesOnDisk();
+        expect(edges).toHaveLength(2);
+        expect(edges[0]!.id).toBe(drawn);
+        expect(edges[1]).toMatchObject({ from: 'term-1', to: lines[0]!.split('\t')[0]! });
+        expect(lines.at(-1)).toBe(`edges\t1\t${edges[1]!.id}`);
+    });
+
+    test('nodes it had no line into get no line into their frame either', async () => {
+        await seed(box('a', 400, 400), box('b', 800, 600));
+        const { lines } = await post('node', ['group', '--nodes', 'a,b']);
+        expect(await edgesOnDisk()).toEqual([]);
+        expect(lines.some((line) => line.startsWith('edges\t'))).toBe(false);
+    });
+
+    test('the line another agent drew into the same node stays where it is', async () => {
+        const shared = await newNote();
+        // A chat that is a view of its own gets no line into what it adds, so it draws one itself.
+        const theirs = await newNote('chat', ['--view', 'main']);
+        const drawn = (await post('link', ['new', '--from', theirs, '--to', shared, '--view', 'main'], 'chat')).lines[0]!.split('\t')[0]!;
+
+        const { lines } = await post('node', ['group', '--nodes', shared]);
+        const edges = await edgesOnDisk();
+        expect(edges).toHaveLength(2);
+        expect(edges[0]!.id).toBe(drawn);
+        expect(edges[1]).toMatchObject({ from: 'term-1', to: lines[0]!.split('\t')[0]! });
+        expect(lines.at(-1)).toBe(`edges\t1\t${edges[1]!.id}`);
+    });
+
+    test('a frame inside a frame leaves the line into the frame around it alone', async () => {
+        await seed(box('far', 4000, 0));
+        const one = await newNote();
+        const two = await newNote('term', ['--beside', 'far']);
+        const outer = (await post('node', ['group', '--nodes', `${one},${two}`])).lines[0]!.split('\t')[0]!;
+        const around = (await edgesOnDisk())[0]!.id;
+
+        // A line drawn again into a node that stands in a frame, which the frame inside it replaces.
+        const again = (await post('link', ['new', '--to', one])).lines[0]!.split('\t')[0]!;
+        const { lines } = await post('node', ['group', '--nodes', one]);
+        const inner = lines[0]!.split('\t')[0]!;
+        const edges = await edgesOnDisk();
+        expect(edges.map((edge) => edge.id)).not.toContain(again);
+        expect(edges[0]!.id).toBe(around);
+        expect(edges[1]).toMatchObject({ from: 'term-1', to: inner });
+        expect(lines.at(-1)).toBe(`edges\t1\t${edges[1]!.id}`);
+        // The new frame stands in the old one, whose own line says nothing about what is inside it.
+        const row = (await post('node', ['list'])).lines.find((line) => line.startsWith(`${inner}\t`))!;
+        expect(row.split('\t').at(-1)).toBe(outer);
+    });
 });
 
 describe('node arrange', () => {
@@ -2659,7 +2733,8 @@ describe('node delete', () => {
         const second = (await post('node', ['new', 'note', '--title', 'Two'])).lines[0]!.split('\t')[0]!;
         const group = (await post('node', ['group', '--nodes', `${first},${second}`, '--label', 'Work'])).lines[0]!.split('\t')[0]!;
         const { lines } = await post('node', ['delete', group]);
-        expect(lines).toEqual([`deleted\t${group}\tgroup\tWork`, 'edges\t0', 'members\t2\tleft where they stand']);
+        // The one line node group drew in place of the two into the notes goes with the frame.
+        expect(lines).toEqual([`deleted\t${group}\tgroup\tWork`, 'edges\t1', 'members\t2\tleft where they stand']);
         const nodes = (await canvasOnDisk()).nodes.map((node) => node.id);
         expect(nodes).toContain(first);
         expect(nodes).toContain(second);
