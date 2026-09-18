@@ -13,5 +13,6 @@ tokio = { version = "1", features = ["full"] }
 block2 = "0.6.2"
 idevice = { version = "0.1.68", default-features = false, features = ["ring", "usbmuxd", "core_device_proxy", "display_stream", "tcp", "tunnel_tcp_stack"] }
 plist = "1"
+ruimte_core = { path = "../ruimte_core" }
 serde = { version = "1", features = ["derive"] }
 uuid = { version = "1", features = ["v4"] }

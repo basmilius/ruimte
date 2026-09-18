@@ -11,10 +11,7 @@ use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
     process::Stdio,
-    sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-    },
+    sync::{Arc, Mutex as StdMutex},
 };
 
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
@@ -22,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use sha1::{Digest, Sha1};
 use tokio::{
-    io::{AsyncRead, AsyncReadExt},
+    io::{AsyncRead, AsyncReadExt, AsyncWriteExt},
     process::Command,
     sync::Mutex,
     task::{AbortHandle, JoinHandle},
@@ -66,6 +63,24 @@ pub struct GitService {
 struct GitWatch {
     _watcher: RecommendedWatcher,
     cancel: CancellationToken,
+}
+
+#[derive(Default)]
+struct GitWatchRefresh {
+    scheduled: bool,
+    running: bool,
+    touched: Vec<PathBuf>,
+    fingerprint: Option<Value>,
+}
+
+impl GitWatchRefresh {
+    fn publish(&mut self, status: &Value) -> bool {
+        if self.fingerprint.as_ref() == Some(status) {
+            return false;
+        }
+        self.fingerprint = Some(status.clone());
+        true
+    }
 }
 
 impl GitService {
@@ -432,37 +447,40 @@ impl GitService {
         let client_id = context.client_id.clone();
         let watched_cwd = cwd.clone();
         let runtime = tokio::runtime::Handle::current();
-        let scheduled = Arc::new(AtomicBool::new(false));
+        let refresh = Arc::new(StdMutex::new(GitWatchRefresh::default()));
         let cancel = CancellationToken::new();
         let callback_cancel = cancel.clone();
+        let watched_root = root.clone();
         let mut watcher = RecommendedWatcher::new(
             move |result: notify::Result<notify::Event>| {
-                if result.is_err() {
+                let Ok(event) = result else {
                     return;
-                }
-                if scheduled.swap(true, Ordering::AcqRel) {
+                };
+                let should_schedule = {
+                    let mut refresh = refresh.lock().expect("git watch refresh lock poisoned");
+                    refresh.touched.extend(event.paths);
+                    if refresh.scheduled || refresh.running {
+                        false
+                    } else {
+                        refresh.scheduled = true;
+                        true
+                    }
+                };
+                if !should_schedule {
                     return;
                 }
                 let events = events.clone();
                 let client_id = client_id.clone();
                 let cwd = watched_cwd.clone();
-                let scheduled = scheduled.clone();
+                let root = watched_root.clone();
+                let refresh = refresh.clone();
                 let cancel = callback_cancel.clone();
                 runtime.spawn(async move {
                     tokio::select! {
                         _ = tokio::time::sleep(std::time::Duration::from_millis(150)) => {}
                         _ = cancel.cancelled() => return,
                     }
-                    scheduled.store(false, Ordering::Release);
-                    if let Ok(current) = status(&cwd).await {
-                        if !cancel.is_cancelled() {
-                            events.send(
-                                &client_id,
-                                "git.status",
-                                json!({ "cwd": cwd, "status": current }),
-                            );
-                        }
-                    }
+                    refresh_git_watch(events, client_id, cwd, root, cancel, refresh).await;
                 });
             },
             Config::default(),
@@ -1508,6 +1526,110 @@ async fn abort_merge_state(cwd: &Path) -> Result<(), RpcError> {
         "git-failed",
         "No merge waits halfway in this checkout.",
     ))
+}
+
+async fn refresh_git_watch(
+    events: EventBus,
+    client_id: String,
+    cwd: PathBuf,
+    root: PathBuf,
+    cancel: CancellationToken,
+    refresh: Arc<StdMutex<GitWatchRefresh>>,
+) {
+    loop {
+        let touched = {
+            let mut refresh = refresh.lock().expect("git watch refresh lock poisoned");
+            refresh.scheduled = false;
+            refresh.running = true;
+            std::mem::take(&mut refresh.touched)
+        };
+        if cancel.is_cancelled() {
+            break;
+        }
+        if watch_paths_matter(&root, &touched).await {
+            if let Ok(current) = status(&cwd).await {
+                let publish = refresh
+                    .lock()
+                    .expect("git watch refresh lock poisoned")
+                    .publish(&current);
+                if publish && !cancel.is_cancelled() {
+                    events.send(
+                        &client_id,
+                        "git.status",
+                        json!({ "cwd": cwd, "status": current }),
+                    );
+                }
+            }
+        }
+        let finished = {
+            let mut refresh = refresh.lock().expect("git watch refresh lock poisoned");
+            if refresh.touched.is_empty() {
+                refresh.running = false;
+                true
+            } else {
+                false
+            }
+        };
+        if finished {
+            break;
+        }
+    }
+}
+
+async fn watch_paths_matter(root: &Path, touched: &[PathBuf]) -> bool {
+    if touched.is_empty() {
+        return true;
+    }
+    let mut relative = Vec::new();
+    for path in touched {
+        let text = path.to_string_lossy().replace('\\', "/");
+        if text.ends_with('~') || text.ends_with(".lock") || text.contains("/.git/objects/") {
+            continue;
+        }
+        let Ok(path) = path.strip_prefix(root) else {
+            return true;
+        };
+        if path.as_os_str().is_empty() || path.starts_with(".git") {
+            return true;
+        }
+        relative.push(path.to_string_lossy().into_owned());
+    }
+    if relative.is_empty() {
+        return false;
+    }
+    let Some(ignored) = ignored_watch_paths(root, &relative).await else {
+        return true;
+    };
+    relative.iter().any(|path| !ignored.contains(path))
+}
+
+async fn ignored_watch_paths(root: &Path, paths: &[String]) -> Option<HashSet<String>> {
+    let mut child = Command::new("git")
+        .args(["check-ignore", "-z", "--stdin"])
+        .current_dir(root)
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .ok()?;
+    let mut stdin = child.stdin.take()?;
+    let input = paths.join("\0") + "\0";
+    let writer = tokio::spawn(async move { stdin.write_all(input.as_bytes()).await });
+    let output = child.wait_with_output().await.ok()?;
+    if writer.await.ok()?.is_err() {
+        return None;
+    }
+    if !matches!(output.status.code(), Some(0 | 1)) {
+        return None;
+    }
+    Some(
+        String::from_utf8_lossy(&output.stdout)
+            .split('\0')
+            .filter(|path| !path.is_empty())
+            .map(ToOwned::to_owned)
+            .collect(),
+    )
 }
 
 async fn status(cwd: &Path) -> RpcResult {
@@ -3397,6 +3519,72 @@ async fn create_symlink(source: PathBuf, target: PathBuf) -> Result<(), RpcError
     .await
     .map_err(|error| RpcError::new("worktree-share-failed", error.to_string()))?
     .map_err(|error| RpcError::new("worktree-share-failed", error.to_string()))
+}
+
+#[cfg(test)]
+mod watch_tests {
+    use super::*;
+
+    async fn init_repository() -> tempfile::TempDir {
+        let temporary = tempfile::tempdir().unwrap();
+        assert!(
+            Command::new("git")
+                .args(["init", "--quiet", "--initial-branch=main"])
+                .current_dir(temporary.path())
+                .status()
+                .await
+                .unwrap()
+                .success()
+        );
+        temporary
+    }
+
+    #[tokio::test]
+    async fn unchanged_status_is_not_published_again_but_a_real_change_is() {
+        let repository = init_repository().await;
+        let mut refresh = GitWatchRefresh::default();
+        let initial = status(repository.path()).await.unwrap();
+
+        assert!(refresh.publish(&initial));
+        assert!(!refresh.publish(&status(repository.path()).await.unwrap()));
+
+        tokio::fs::write(repository.path().join("new.txt"), "new\n")
+            .await
+            .unwrap();
+        assert!(refresh.publish(&status(repository.path()).await.unwrap()));
+    }
+
+    #[tokio::test]
+    async fn ignored_and_git_noise_do_not_trigger_status_but_a_source_change_does() {
+        let repository = init_repository().await;
+        tokio::fs::write(repository.path().join(".gitignore"), "build/\n")
+            .await
+            .unwrap();
+        tokio::fs::create_dir(repository.path().join("build"))
+            .await
+            .unwrap();
+        let generated = repository.path().join("build/output.js");
+        tokio::fs::write(&generated, "generated\n").await.unwrap();
+
+        assert!(!watch_paths_matter(repository.path(), &[generated]).await);
+        assert!(
+            !watch_paths_matter(
+                repository.path(),
+                &[repository.path().join(".git/objects/ab/cdef")]
+            )
+            .await
+        );
+        assert!(
+            !watch_paths_matter(
+                repository.path(),
+                &[repository.path().join(".git/index.lock")]
+            )
+            .await
+        );
+        assert!(
+            watch_paths_matter(repository.path(), &[repository.path().join("src/main.rs")]).await
+        );
+    }
 }
 
 #[cfg(test)]

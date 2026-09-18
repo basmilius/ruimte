@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
 
 use tokio::sync::{Semaphore, mpsc, watch};
 use tokio_util::sync::CancellationToken;
@@ -53,10 +56,17 @@ pub struct OrderedLiveSender {
     sender: mpsc::Sender<OrderedFrame>,
     bytes: Arc<Semaphore>,
     overflow: CancellationToken,
+    awaiting_key_frame: Arc<AtomicBool>,
 }
 
 impl OrderedLiveSender {
     pub fn try_send(&self, frame: LiveFrame) -> bool {
+        if frame.format == LiveFormat::Hevc && self.awaiting_key_frame.load(Ordering::Acquire) {
+            if !hevc_key_frame(&frame.data) {
+                return true;
+            }
+            self.awaiting_key_frame.store(false, Ordering::Release);
+        }
         let byte_count = u32::try_from(frame.data.len().max(1));
         let permit = byte_count
             .ok()
@@ -117,6 +127,7 @@ impl LiveSubscription {
                 sender,
                 bytes: Arc::new(Semaphore::new(byte_capacity)),
                 overflow: overflow.clone(),
+                awaiting_key_frame: Arc::new(AtomicBool::new(format == LiveFormat::Hevc)),
             },
             Self {
                 receiver: LiveReceiver::Ordered { receiver, overflow },
@@ -152,6 +163,24 @@ impl LiveSubscription {
             }
         }
     }
+}
+
+pub fn hevc_key_frame(data: &[u8]) -> bool {
+    for index in 0..data.len() {
+        let header = if data.get(index..index + 4) == Some(&[0, 0, 0, 1]) {
+            index + 4
+        } else if data.get(index..index + 3) == Some(&[0, 0, 1]) {
+            index + 3
+        } else {
+            continue;
+        };
+        if let Some(first_header_byte) = data.get(header)
+            && (16..=23).contains(&((first_header_byte >> 1) & 0x3f))
+        {
+            return true;
+        }
+    }
+    false
 }
 
 impl Drop for LiveSubscription {
@@ -195,6 +224,44 @@ mod tests {
         );
     }
 
+    #[test]
+    fn hevc_key_frame_recognizes_irap_nal_units() {
+        assert!(hevc_key_frame(&[0, 0, 0, 1, 19 << 1, 1]));
+        assert!(hevc_key_frame(&[0, 0, 1, 21 << 1, 1]));
+        assert!(!hevc_key_frame(&[0, 0, 0, 1, 1 << 1, 1]));
+        assert!(!hevc_key_frame(&[0, 0, 1]));
+    }
+
+    #[tokio::test]
+    async fn ordered_hevc_subscription_starts_at_a_key_frame() {
+        let (sender, mut subscription) =
+            LiveSubscription::ordered(LiveFormat::Hevc, 32, 1024, || {});
+        assert!(sender.try_send(LiveFrame {
+            sequence: 0,
+            width: 1,
+            height: 1,
+            data: Arc::new(vec![0, 0, 0, 1, 1 << 1, 1]),
+            format: LiveFormat::Hevc,
+        }));
+        assert!(sender.try_send(LiveFrame {
+            sequence: 1,
+            width: 1,
+            height: 1,
+            data: Arc::new(vec![0, 0, 0, 1, 19 << 1, 1]),
+            format: LiveFormat::Hevc,
+        }));
+        assert!(sender.try_send(LiveFrame {
+            sequence: 2,
+            width: 1,
+            height: 1,
+            data: Arc::new(vec![0, 0, 0, 1, 1 << 1, 1]),
+            format: LiveFormat::Hevc,
+        }));
+
+        assert_eq!(subscription.recv().await.unwrap().sequence, 1);
+        assert_eq!(subscription.recv().await.unwrap().sequence, 2);
+    }
+
     #[tokio::test]
     async fn ordered_hevc_subscription_keeps_bursts_and_closes_on_byte_overflow() {
         let (sender, mut subscription) = LiveSubscription::ordered(LiveFormat::Hevc, 32, 16, || {});
@@ -203,7 +270,11 @@ mod tests {
                 sequence,
                 width: 1,
                 height: 1,
-                data: Arc::new(vec![sequence as u8; 4]),
+                data: Arc::new(if sequence == 0 {
+                    vec![0, 0, 0, 1, 19 << 1, 1]
+                } else {
+                    vec![sequence as u8; 4]
+                }),
                 format: LiveFormat::Hevc,
             }));
         }

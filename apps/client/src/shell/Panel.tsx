@@ -23,14 +23,14 @@ const MIN_CANVAS_WIDTH = 360;
 // How long the open and close motion takes; the same number as `.panel-shell` in `styles.css`.
 const TRANSITION_MS = 200;
 
-function PanelBody({ kind }: { kind: PanelKind }) {
+function PanelBody({ kind, active }: { kind: PanelKind; active: boolean }) {
     switch (kind) {
         case 'files':
             return <FilesPanel />;
         case 'git':
             return <GitPanel />;
         case 'processes':
-            return <ProcessesPanel />;
+            return <ProcessesPanel active={active} />;
         case 'devices':
             return <DevicesPanel />;
     }
@@ -115,7 +115,7 @@ export function Panel() {
                     </header>
                     <PanelHeaderProvider hosts={{ leading: leadingHeaderSlot, titleSignal, trailing: headerSlot }}>
                         <ErrorBoundary label="This panel failed to render" resetKeys={[panel.kind]} className="min-h-0 grow">
-                            <PanelBody kind={panel.kind} />
+                            <PanelBody kind={panel.kind} active={open} />
                         </ErrorBoundary>
                     </PanelHeaderProvider>
                 </div>

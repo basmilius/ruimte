@@ -30,6 +30,7 @@ use self::{
     stuck::{AgentState, Observation, ObservedGroup, ObservedProcess, StrayProcess, StuckJudge},
 };
 
+const ACTIVE_INTERVAL_MS: u64 = 1_000;
 const FINE_INTERVAL_MS: u64 = 2_000;
 const COARSE_INTERVAL_MS: u64 = 5 * 60_000;
 const FINE_POINTS: usize = 300;
@@ -440,7 +441,7 @@ impl ProcessesService {
     async fn rhythm_delay(&self) -> Duration {
         let state = self.inner.state.lock().await;
         if !state.followers.is_empty() {
-            return Duration::from_millis(FINE_INTERVAL_MS);
+            return Duration::from_millis(ACTIVE_INTERVAL_MS);
         }
         let Some(previous) = state.coarse_previous.as_ref() else {
             return Duration::from_secs(1);
@@ -533,13 +534,16 @@ impl ProcessesService {
             rates: process_rates,
             machine,
         };
-        let fine = if add_fine && !state.followers.is_empty() {
-            let point = state
-                .fine_previous
-                .as_ref()
-                .filter(|previous| {
-                    raw.awake_ms.saturating_sub(previous.awake_ms) <= FINE_INTERVAL_MS * 3
-                })
+        let fine_elapsed = state
+            .fine_previous
+            .as_ref()
+            .map(|previous| raw.awake_ms.saturating_sub(previous.awake_ms));
+        let fine = if add_fine
+            && !state.followers.is_empty()
+            && fine_elapsed.is_none_or(|elapsed| elapsed >= FINE_INTERVAL_MS)
+        {
+            let point = fine_elapsed
+                .filter(|elapsed| *elapsed <= FINE_INTERVAL_MS * 3)
                 .map(|_| point(&latest, &roots, self.inner.daemon_pid));
             state.fine_previous = Some(raw.clone());
             if let Some(point) = point.as_ref() {
@@ -866,6 +870,94 @@ fn work_of(
     }
     agents += chats.iter().filter(|chat| chat.active_turn).count();
     (terminals, agents)
+}
+
+#[cfg(test)]
+mod sampling_rhythm_tests {
+    use super::sampler::MachineCounters;
+    use super::*;
+    use crate::rpc::ClientAccess;
+
+    fn context(client_id: &str, events: &EventBus) -> RequestContext {
+        RequestContext {
+            client_id: client_id.into(),
+            access: ClientAccess {
+                reachability: "loopback".into(),
+                session_id: None,
+            },
+            events: events.clone(),
+        }
+    }
+
+    fn empty_sample(at: u64) -> RawSample {
+        RawSample {
+            at,
+            awake_ms: at,
+            asleep_ms: 0,
+            processes: Vec::new(),
+            machine: MachineCounters {
+                cores: 1,
+                cpu_busy: None,
+                cpu_total: None,
+                memory_used: None,
+                memory_total: 1,
+                disk_free: None,
+                disk_total: None,
+            },
+        }
+    }
+
+    #[tokio::test]
+    async fn open_subscription_uses_live_rhythm_and_both_cleanup_paths_restore_idle_rhythm() {
+        let events = EventBus::default();
+        let service =
+            ProcessesService::new_with_sampler(events.clone(), None, StuckJudge::default(), false)
+                .await
+                .unwrap();
+        service.inner.state.lock().await.coarse_previous = Some(empty_sample(now_ms()));
+
+        let idle_delay = service.rhythm_delay().await;
+        assert!(idle_delay > Duration::from_secs(4 * 60));
+
+        let panel = context("panel", &events);
+        service
+            .dispatch(
+                "processes.subscribe",
+                json!({ "scope": "ruimte", "sort": "cpu" }),
+                &panel,
+            )
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            service.rhythm_delay().await,
+            Duration::from_millis(ACTIVE_INTERVAL_MS)
+        );
+
+        service
+            .dispatch("processes.unsubscribe", json!({}), &panel)
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(service.rhythm_delay().await > Duration::from_secs(4 * 60));
+
+        let disconnected = context("disconnected", &events);
+        service
+            .dispatch(
+                "processes.subscribe",
+                json!({ "scope": "all", "sort": "memory" }),
+                &disconnected,
+            )
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            service.rhythm_delay().await,
+            Duration::from_millis(ACTIVE_INTERVAL_MS)
+        );
+        service.detach(&disconnected.client_id).await;
+        assert!(service.rhythm_delay().await > Duration::from_secs(4 * 60));
+    }
 }
 
 #[cfg(test)]

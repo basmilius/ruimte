@@ -36,7 +36,7 @@ const message = (kind: number, payload: Uint8Array): Uint8Array => {
 
 const jsonMessage = (kind: number, value: unknown): Uint8Array => message(kind, new TextEncoder().encode(JSON.stringify(value)));
 const frame = (sequence: number): Uint8Array => {
-    const data = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+    const data = process.env.RUIMTE_DEVICE_TEST_FORMAT === 'hevc' ? new Uint8Array([0, 0, 0, 1, 19 << 1, 1]) : new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
     const payload = new Uint8Array(12 + data.byteLength);
     const view = new DataView(payload.buffer);
     view.setUint32(0, data.byteLength);

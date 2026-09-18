@@ -3470,6 +3470,7 @@ dependencies = [
  "block2",
  "idevice",
  "plist",
+ "ruimte_core",
  "serde",
  "serde_json",
  "tokio",

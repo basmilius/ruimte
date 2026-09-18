@@ -15,6 +15,7 @@ use idevice::{
     tcp::handle::UdpSocketHandle,
     usbmuxd::{UsbmuxdAddr, UsbmuxdConnection},
 };
+use ruimte_core::streams::hevc_key_frame;
 use serde::Deserialize;
 use tokio::io::{AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::UdpSocket;
@@ -321,6 +322,8 @@ async fn start_physical_ios(
                 .context("the display stream closed before its first frame")?;
             if let Some(frame) =
                 depacketize_rtp(datagram.as_ref(), &mut depacketizer, &mut access_unit)
+                && depacketizer.has_parameter_sets()
+                && hevc_key_frame(&frame)
             {
                 return Ok::<Vec<u8>, anyhow::Error>(frame);
             }

@@ -84,13 +84,16 @@ const signalable = (row: ProcessRow): boolean => row.readable && row.startTime !
  * Keeps this client subscribed while the panel is on screen. The subscription is per socket on the
  * daemon, so a socket that comes back asks again, and a change of scope or sort is a fresh ask.
  */
-const useProcessesFeed = (): void => {
+const useProcessesFeed = (active: boolean): void => {
     const transport = useTransport();
     const endpointId = useEndpointId();
     const scope = useProcesses((s) => s.scope);
     const sort = useProcesses((s) => s.sort);
 
     useEffect(() => {
+        if (!active) {
+            return;
+        }
         const subscribe = (): void => {
             transport
                 .request('processes.subscribe', { scope, sort })
@@ -113,14 +116,16 @@ const useProcessesFeed = (): void => {
             offStatus();
             offSample();
         };
-    }, [transport, endpointId, scope, sort]);
+    }, [transport, endpointId, scope, sort, active]);
 
-    useEffect(
-        () => () => {
+    useEffect(() => {
+        if (!active) {
+            return;
+        }
+        return () => {
             void transport.request('processes.unsubscribe', {}).catch(() => undefined);
-        },
-        [transport]
-    );
+        };
+    }, [transport, active]);
 };
 
 function Numbers({ row }: { row: { cpu: number | null; memory: number | null; diskRead: number | null; diskWrite: number | null } }) {
@@ -185,8 +190,8 @@ function AlertLine({ alert, now, onAction, onDismiss }: { alert: ProcessAlert; n
  * with the button that fits; every signal goes through the daemon, which checks that the pid still
  * names the process this row showed.
  */
-export function ProcessesPanel() {
-    useProcessesFeed();
+export function ProcessesPanel({ active }: { active: boolean }) {
+    useProcessesFeed(active);
     const transport = useTransport();
     const endpointId = useEndpointId();
     const connection = useEndpointConnection(endpointId);
