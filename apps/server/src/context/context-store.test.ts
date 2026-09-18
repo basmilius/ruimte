@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatItem, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan } from '@ruimte/contracts';
+import type { ChatItem, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
 import { ContextStore, MAX_SCREEN_LINES, renderTranscript } from './context-store.ts';
 
 const items: ChatItem[] = [
@@ -45,6 +45,20 @@ const diagram: DiagramDocument = {
 // Stands in for the project index: what each target's document links into it.
 const linked = new Map<string, ContextSource[]>();
 
+/* The canvas the agent stands on, so a refused read can say what the id it was given is. */
+const canvas: ProjectCanvasView = {
+    id: 'main',
+    name: 'Canvas',
+    kind: 'canvas',
+    nodes: [
+        { id: 'agent', kind: 'chat', title: 'planner', x: 0, y: 0, w: 400, h: 300 },
+        { id: 'term', kind: 'terminal', title: 'dev server', x: 0, y: 0, w: 400, h: 300 }
+    ],
+    texts: [],
+    edges: [{ id: 'edge-1', from: 'agent', to: 'term' }],
+    layouts: []
+};
+
 const phone: DeviceInfo = {
     deviceId: 'C0FFEE-1234',
     backendId: 'ios-simulator',
@@ -65,6 +79,7 @@ const store = new ContextStore({
     drawingElements: async (id) => (id === 'view-1' ? drawing : null),
     // Only the agent of the project that holds it reads the diagram, which is what the daemon's reader does too.
     diagramDocument: async (targetId, id) => (targetId === 'agent' && id === 'flow-1' ? diagram : null),
+    canvasOf: (targetId) => (targetId === 'agent' ? canvas : null),
     targetForToken: (token) => (token === 'tok' ? 'agent' : null)
 });
 
@@ -180,6 +195,17 @@ describe('ContextStore', () => {
         expect(await (await get('/context/note?tail=1', 'tok')).text()).toBe('two');
         expect((await get('/context/note?tail=0', 'tok')).status).toBe(400);
         expect((await get('/context/note?tail=two', 'tok')).status).toBe(400);
+    });
+
+    test('a read that finds nothing answers why, from the canvas the CLI cannot see', async () => {
+        linked.set('agent', [{ id: 'note', kind: 'text', title: 'Sprint', text: 'ship it' }]);
+        const refused = await get('/context/term', 'tok');
+        expect(refused.status).toBe(404);
+        const body = await refused.text();
+        expect(body.split('\n')[0]).toStartWith('not-linked\tterm is a terminal node on main with a line from you into it');
+        expect(body).toInclude('ruimte-context link new --from term --to agent');
+        // An id the canvas does not carry either keeps the answer the CLI would have written itself.
+        expect(await (await get('/context/other', 'tok')).text()).toStartWith('unknown-source\tother is not linked to this session');
     });
 
     test('a linked chat reads its plans above the thread, and a tail never cuts them off', async () => {

@@ -1,6 +1,7 @@
-import type { ChatItem, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan } from '@ruimte/contracts';
+import type { ChatItem, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan, ProjectCanvasView } from '@ruimte/contracts';
 import { renderPlanText } from '@ruimte/plan';
 import { contextChangeNote } from './context-note.ts';
+import { refuseRead } from './read-refusal.ts';
 import { renderPage } from './context-browser.ts';
 import { renderDevice } from './context-device.ts';
 import { renderDiagram } from './context-diagram.ts';
@@ -39,6 +40,9 @@ interface ContextReaders {
     chatPlans?(chatId: string): Promise<Plan[]>;
     /* The whole conversation of one subagent of a chat; throws when the CLI kept none for it. */
     subagentItems?(chatId: string, toolUseId: string): Promise<ChatItem[]>;
+    /* The canvas this agent is a node on, for saying why a read of a neighbor is refused; null when
+       it is a view of its own, or when no known project places it. */
+    canvasOf?(targetId: string): ProjectCanvasView | null;
     /* The target a bearer token speaks for: a terminal session or a chat. */
     targetForToken(token: string): string | null;
 }
@@ -242,9 +246,10 @@ export class ContextStore {
         if (tail !== null && (!Number.isInteger(tail) || tail < 1)) {
             return new Response('tail takes a positive whole number of lines', { status: 400 });
         }
+        const sourceId = decodeURIComponent(rest);
         let text: string | null;
         try {
-            text = await this.read(targetId, decodeURIComponent(rest), tail, query.get('subagent') || null);
+            text = await this.read(targetId, sourceId, tail, query.get('subagent') || null);
         } catch (e) {
             if (e instanceof SubagentUnreadable) {
                 // 422 rather than 404: the source is linked, what is missing is the subagent inside it.
@@ -253,7 +258,10 @@ export class ContextStore {
             throw e;
         }
         if (text === null) {
-            return new Response('No such source', { status: 404 });
+            /* Why, rather than only no: a line drawn the other way round is on the canvas, which the
+               CLI never sees, so the sentence it prints under `refused` is written here. */
+            const refusal = refuseRead(targetId, sourceId, this.readers.sources(targetId), this.readers.canvasOf?.(targetId) ?? null);
+            return new Response(refusal, { status: 404 });
         }
         return new Response(text, { headers: { 'content-type': 'text/plain; charset=utf-8' } });
     }

@@ -64,7 +64,10 @@ export const runContext = async (args: string[], env: Environment = process.env,
             return 2;
         }
         if (response.status === 404) {
-            return refuse('unknown-source', `${id} is not linked to this session`, await linkedLines(url, headers, env));
+            /* The daemon says which no this is, since only it has the canvas the id may be a node on:
+               a line running the other way is a different answer from an id nobody has drawn. */
+            const { code, message, lines } = readRefusal(await response.text(), id);
+            return refuse(code, message, [...(await linkedLines(url, headers, env)), ...lines]);
         }
         if (response.status === 422) {
             return refuse('unknown-subagent', await response.text(), [READ_USAGE, 'detail\truimte-context help read']);
@@ -181,6 +184,20 @@ const linkedLines = async (url: string, headers: Record<string, string>, env: En
         return ['note\tNothing is linked to this session'];
     }
     return sources.map((source) => `${source.id}\t${source.kind}\t${source.title}`);
+};
+
+/*
+ * A refused read, as the daemon wrote it: its code and sentence on the first line, what to do about
+ * it under that. A daemon that answers something else leaves the sentence this side has always
+ * written, so an older one still refuses a read rather than printing a body nobody can read.
+ */
+const readRefusal = (body: string, id: string): { code: string; message: string; lines: string[] } => {
+    const [first = '', ...lines] = body.split('\n').filter((line) => line.trim() !== '');
+    const [code, message] = first.split('\t');
+    if (!code || !message) {
+        return { code: 'unknown-source', message: `${id} is not linked to this session`, lines: [] };
+    }
+    return { code, message, lines };
 };
 
 /* `list` and `read` are the CLI's own, so it writes the refusal the daemon would have written for a verb. */

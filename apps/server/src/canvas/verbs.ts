@@ -154,6 +154,8 @@ const readVerb: ContextVerb = {
         'kind\tbrowser\tThe address of the page and, under it, the text of that page as this machine has it open, read the moment you ask; the address alone when no page of it is open here\t--tail counts lines of the page text and keeps the address',
         'kind\tdevice\tWhich device the node points at: its name, platform, kind and runtime, and the state, deviceId and backendId this machine knows it by, or a line saying the device is not here right now\t--tail does nothing here',
         'cheap\tThe last fifteen lines of a neighbour is usually the whole answer; read the source whole only when it is not',
+        'direction\tA line runs one way: the one you draw into another agent lets it read you, and reading it back takes a line from it into you, which ruimte-context link new --from <id> --to <you> draws',
+        'refusals\tnot-linked\tunreadable\tunknown-source\tunknown-subagent\tbad-arguments\tthe whole set this verb refuses with',
         SCOPE_LINE
     ]
 };

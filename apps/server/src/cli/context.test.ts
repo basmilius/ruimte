@@ -39,6 +39,16 @@ const daemon = {
         if (url.pathname === '/context/boom') {
             return new Response('no', { status: 500 });
         }
+        // A neighbour the line runs the wrong way into: the daemon is the side that can tell.
+        if (url.pathname === '/context/term') {
+            return new Response(
+                [
+                    'not-linked\tterm is a terminal node on main with a line from you into it',
+                    'see\truimte-context link new --from term --to chat-1\tdraws it'
+                ].join('\n'),
+                { status: 404 }
+            );
+        }
         if (!url.pathname.startsWith('/canvas/')) {
             return new Response('Not found', { status: 404 });
         }
@@ -170,6 +180,18 @@ describe('runContext', () => {
     test('a source that is not linked is a refusal that names the ones that are', async () => {
         expect(await runContext(['read', 'nonsense'], env)).toBe(3);
         expect(stderr).toBe(['refused\tunknown-source\tnonsense is not linked to this session', 'n1\ttext\tPlan'].join('\n') + '\n');
+        expect(stdout).toBe('');
+    });
+
+    test('a refused read carries the code, the sentence and the call the daemon wrote for it', async () => {
+        expect(await runContext(['read', 'term'], env)).toBe(3);
+        expect(stderr).toBe(
+            [
+                'refused\tnot-linked\tterm is a terminal node on main with a line from you into it',
+                'n1\ttext\tPlan',
+                'see\truimte-context link new --from term --to chat-1\tdraws it'
+            ].join('\n') + '\n'
+        );
         expect(stdout).toBe('');
     });
 

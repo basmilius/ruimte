@@ -63,4 +63,13 @@ describe('ProjectIndex', () => {
         expect(index.locate('sketch')).toBeNull();
         expect(index.locate('main')).toBeNull();
     });
+
+    test('hands out the canvas a node stands on, lines and all, and nothing for a view of its own', () => {
+        const index = new ProjectIndex();
+        index.set('p1', '/repo', { views: views('x') });
+        expect(index.canvasOf('agent')?.id).toBe('main');
+        expect(index.canvasOf('agent')?.edges.map((edge) => edge.id)).toEqual(['e1', 'e2']);
+        expect(index.canvasOf('solo-chat')).toBeNull();
+        expect(index.canvasOf('nobody')).toBeNull();
+    });
 });

@@ -210,6 +210,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             const place = projects.index.locate(targetId);
             return place ? diagrams.read(place.projectId, viewId) : null;
         },
+        canvasOf: (targetId) => projects.index.canvasOf(targetId),
         targetForToken
     });
     const attachments = new AttachmentStore(config.home);

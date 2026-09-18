@@ -1,4 +1,4 @@
-import { deriveProjectContextSources, isCanvasView, isSessionView, type ContextSource, type ProjectContent } from '@ruimte/contracts';
+import { deriveProjectContextSources, isCanvasView, isSessionView, type ContextSource, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
 
 /* Where an id sits: the project it belongs to, and the canvas it is a node on (null for a chat,
    terminal or browser that is a view of its own). */
@@ -76,6 +76,20 @@ export class ProjectIndex {
                     }
                 }
             }
+        }
+        return null;
+    }
+
+    /* The canvas an id is a node on, with its nodes and lines; null for a view of its own and for an
+       id no known project places. What a refusal reads to tell a missing line from a missing node. */
+    canvasOf(id: string): ProjectCanvasView | null {
+        for (const project of this.projects.values()) {
+            const canvasId = project.places.get(id);
+            if (canvasId === undefined) {
+                continue;
+            }
+            const view = project.content.views.find((candidate) => candidate.id === canvasId);
+            return view && isCanvasView(view) ? view : null;
         }
         return null;
     }
