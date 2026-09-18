@@ -4,7 +4,17 @@ import type { ProjectSummary } from '@ruimte/contracts';
 import { useEndpoints, type Endpoint } from '../state/endpoints';
 import { useProjectList } from '../state/project-list';
 import { pool } from '../transport';
-import { listProjects, menuProjects, primeCachedLists, recentProjects, readCachedList, watchOpenLists, writeCachedList, type OpenListSource } from './list';
+import {
+    listProjects,
+    menuProjects,
+    openableRows,
+    primeCachedLists,
+    recentProjects,
+    readCachedList,
+    watchOpenLists,
+    writeCachedList,
+    type OpenListSource
+} from './list';
 
 const summary = (projectId: string, lastOpenedAt = 0, closedAt: number | null = null): ProjectSummary => ({
     projectId,
@@ -130,6 +140,27 @@ describe('the switcher as one list', () => {
             { endpointId: 'local', summary: summary('p1', 10) }
         ];
         expect(menuProjects(rows, endpoints, []).open.map((row) => row.summary.projectId)).toEqual(['p1']);
+    });
+});
+
+describe('the rows worth offering', () => {
+    const endpoints = [endpoint('local', 'This machine')];
+    const gone = (projectId: string): ProjectSummary => ({ ...summary(projectId, 10), available: false });
+
+    test('a project whose file its machine no longer finds is left out', () => {
+        const rows = [
+            { endpointId: 'local', summary: gone('p1') },
+            { endpointId: 'local', summary: summary('p2', 20) }
+        ];
+        const { open } = menuProjects(rows, endpoints, ['local']);
+        expect(openableRows(open).map((row) => row.summary.projectId)).toEqual(['p2']);
+    });
+
+    test('the project that is open keeps its row, so it can still be closed', () => {
+        const rows = [{ endpointId: 'local', summary: gone('p1') }];
+        const { open } = menuProjects(rows, endpoints, ['local']);
+        expect(openableRows(open, 'local:p1').map((row) => row.summary.projectId)).toEqual(['p1']);
+        expect(openableRows(open, 'other:p1')).toEqual([]);
     });
 });
 

@@ -128,6 +128,11 @@ const touchedAt = (summary: ProjectSummary): number => Math.max(summary.lastOpen
 export const recentProjects = (rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRow[] =>
     knownRows(rows, endpoints, connected).sort((a, b) => touchedAt(b.summary) - touchedAt(a.summary));
 
+/* The rows worth offering: a project whose file its machine no longer finds cannot be opened. The
+   one that is open keeps its row, or its settings and the way to close it would go with it. */
+export const openableRows = (rows: readonly ProjectMenuRow[], currentKey: string | null = null): ProjectMenuRow[] =>
+    rows.filter((row) => row.summary.available || `${row.endpointId}:${row.summary.projectId}` === currentKey);
+
 /* What the list reads of the pool, so a test can hand it one of its own. */
 export interface OpenListSource {
     ids(): string[];

@@ -5,7 +5,7 @@ import { Menu } from '@base-ui-components/react/menu';
 import { ChevronDown, ChevronRight, ExternalLink, FolderOpen, History, MoreHorizontal, Plus, Settings2, X } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { projectClient } from '@/project';
-import { menuProjects, type ProjectMenuRow } from '@/project/list';
+import { menuProjects, openableRows, type ProjectMenuRow } from '@/project/list';
 import { closeProject, createProjectOn, openProject } from '@/project/open';
 import { closeWarning, sessionNodesOf } from '@/project/project-sessions';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
@@ -127,7 +127,11 @@ export function ProjectMenu() {
     const [newOpen, setNewOpen] = useState(false);
     const [settingsTarget, setSettingsTarget] = useState<ProjectMenuRow | null>(null);
     const [closing, setClosing] = useState<{ name: string; sessions: number } | null>(null);
-    const { open, recent } = useMemo(() => menuProjects(rows, endpoints, connected), [rows, endpoints, connected]);
+    const currentKey = current !== null && currentEndpointId !== null ? `${currentEndpointId}:${current.projectId}` : null;
+    const { open, recent } = useMemo(() => {
+        const lists = menuProjects(rows, endpoints, connected);
+        return { open: openableRows(lists.open, currentKey), recent: openableRows(lists.recent, currentKey) };
+    }, [rows, endpoints, connected, currentKey]);
     const showMachine = endpoints.length > 1;
     const machineId = currentEndpointId ?? activeId;
     const machine = machineId === LOCAL_ENDPOINT_ID ? null : (endpoints.find((endpoint) => endpoint.id === machineId) ?? null);

@@ -5,7 +5,7 @@ import { FolderOpen, LogIn, MonitorSmartphone, Plus, RotateCw } from 'lucide-rea
 import { isDesktop } from '@/desktop/bridge';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { recentProjects, type ProjectMenuRow } from '@/project/list';
+import { openableRows, recentProjects, type ProjectMenuRow } from '@/project/list';
 import { createProjectOn, openProject } from '@/project/open';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { usePulsarAccount } from '@/pulsar/account';
@@ -70,16 +70,11 @@ function MachineRow({ entry }: { entry: MachineEntry }) {
 /* A project to go back to. A row of a machine that is not connected is what that machine last answered, so it says so. */
 function RecentRow({ row }: { row: ProjectMenuRow }) {
     const { summary } = row;
-    const where = [
-        row.machineLabel,
-        row.connected ? null : 'not connected',
-        summary.available ? null : 'folder is gone',
-        isRecentProject(summary) ? 'closed' : null
-    ]
+    const where = [row.machineLabel, row.connected ? null : 'not connected', isRecentProject(summary) ? 'closed' : null]
         .filter((part) => part !== null)
         .join(' · ');
     return (
-        <button className={ROW} disabled={!summary.available} onClick={() => void openProject(row.endpointId, summary.projectId)}>
+        <button className={ROW} onClick={() => void openProject(row.endpointId, summary.projectId)}>
             <ProjectGlyph projectId={summary.projectId} endpointId={row.endpointId} icon={summary.icon} color={summary.color} size={16} />
             <span className="flex min-w-0 grow flex-col">
                 <span className={clsx('truncate text-sm', row.connected ? 'text-text' : 'text-text-muted')}>{summary.name}</span>
@@ -175,7 +170,8 @@ function StartContent() {
     );
     const failedRow =
         failure === null ? null : (recent.find((row) => row.endpointId === failure.endpointId && row.summary.projectId === failure.projectId) ?? null);
-    const listed = failedRow === null ? recent : recent.filter((row) => row !== failedRow);
+    /* The row that failed is already on top with its reason, and one nobody can open is left out. */
+    const listed = openableRows(failedRow === null ? recent : recent.filter((row) => row !== failedRow));
 
     // The web client waits for the account: without it there is no machine to open anything on.
     const waiting = boot !== null && boot !== 'machines';
@@ -183,7 +179,7 @@ function StartContent() {
     // On the desktop signing in is one way in among the others, offered only while it can be done.
     const offerSignIn = boot === null && accountStatus === 'signed-out';
     // A fresh desktop install: nothing to go back to and only this machine, so there is one thing to do.
-    const firstStart = boot === null && recent.length === 0 && failure === null && machines.length <= 1;
+    const firstStart = boot === null && listed.length === 0 && failure === null && machines.length <= 1;
 
     const openFolder = (): void => useUi.getState().openFolderBrowser();
 
