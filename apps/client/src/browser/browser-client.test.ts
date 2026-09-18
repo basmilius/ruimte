@@ -3,7 +3,7 @@ import type { EventMap, EventType, RequestMap, RequestType } from '@ruimte/contr
 import { endpointKey } from '@/state/keys';
 import type { Transport, TransportStatus } from '@/transport/transport';
 import { BrowserClient } from './browser-client';
-import { normalizeUrl, useBrowser } from './registry';
+import { initialStreamUrl, normalizeUrl, useBrowser } from './registry';
 
 const info = (browserId: string, url = 'https://example.com') => ({
     browserId,
@@ -12,7 +12,8 @@ const info = (browserId: string, url = 'https://example.com') => ({
     loading: false,
     canGoBack: false,
     canGoForward: false,
-    error: null
+    error: null,
+    favicon: null
 });
 
 class FakeTransport implements Transport {
@@ -59,6 +60,11 @@ class FakeTransport implements Transport {
 beforeEach(() => useBrowser.setState({ byKey: {} }));
 
 describe('BrowserClient', () => {
+    test('restores the project URL when the previous remote page only reports about:blank', () => {
+        expect(initialStreamUrl('https://tweakers.net', 'about:blank')).toBe('https://tweakers.net');
+        expect(initialStreamUrl('https://tweakers.net', 'https://tweakers.net/nieuws')).toBe('https://tweakers.net/nieuws');
+    });
+
     test('treats a localhost port as a host instead of a URL scheme', () => {
         expect(normalizeUrl('localhost:3000/demo')).toBe('http://localhost:3000/demo');
     });
@@ -83,7 +89,11 @@ describe('BrowserClient', () => {
         const transport = new FakeTransport();
         const client = new BrowserClient('machine-1', transport);
         await client.open('node-1', 'https://example.com', 800, 600);
-        transport.emit('browser.status', { ...info('node-1'), title: 'Changed', canGoBack: true });
+        transport.emit('browser.status', {
+            ...info('node-1'),
+            title: 'Changed',
+            canGoBack: true
+        });
 
         expect(useBrowser.getState().byKey[endpointKey('machine-1', 'node-1')]).toMatchObject({ title: 'Changed', canGoBack: true });
 
@@ -93,8 +103,108 @@ describe('BrowserClient', () => {
         await Promise.resolve();
         expect(transport.calls.at(-1)).toEqual({
             type: 'browser.open',
-            payload: { browserId: 'node-1', url: 'https://example.com/inside', width: 800, height: 600 }
+            payload: {
+                browserId: 'node-1',
+                url: 'https://example.com/inside',
+                width: 800,
+                height: 600,
+                deviceScaleFactor: 1
+            }
         });
+        client.dispose();
+    });
+
+    test('does not turn a restored page into a reconnecting blank page', async () => {
+        const transport = new FakeTransport();
+        const client = new BrowserClient('machine-1', transport);
+        await client.open('node-1', 'https://tweakers.net/', 800, 600);
+
+        transport.emit('browser.status', info('node-1', 'about:blank'));
+        expect(useBrowser.getState().byKey[endpointKey('machine-1', 'node-1')]?.url).toBe('https://tweakers.net/');
+
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        await Promise.resolve();
+        expect(transport.calls.at(-1)).toEqual({
+            type: 'browser.open',
+            payload: {
+                browserId: 'node-1',
+                url: 'https://tweakers.net/',
+                width: 800,
+                height: 600,
+                deviceScaleFactor: 1
+            }
+        });
+        client.dispose();
+    });
+
+    test('accepts about:blank when it was explicitly requested', async () => {
+        const transport = new FakeTransport();
+        const client = new BrowserClient('machine-1', transport);
+        await client.open('node-1', 'https://example.com', 800, 600);
+
+        client.navigate('node-1', 'about:blank');
+        await Promise.resolve();
+
+        expect(useBrowser.getState().byKey[endpointKey('machine-1', 'node-1')]?.url).toBe('about:blank');
+        client.dispose();
+    });
+
+    test('uses the favicon proxied by the machine and lets a later page clear it', async () => {
+        const transport = new FakeTransport();
+        const client = new BrowserClient('machine-1', transport);
+        await client.open('node-1', 'https://example.com', 800, 600);
+
+        transport.emit('browser.status', {
+            ...info('node-1'),
+            favicon: 'data:image/png;base64,AQID'
+        });
+        expect(useBrowser.getState().byKey[endpointKey('machine-1', 'node-1')]?.favicon).toBe('data:image/png;base64,AQID');
+
+        transport.emit('browser.status', info('node-1'));
+        expect(useBrowser.getState().byKey[endpointKey('machine-1', 'node-1')]?.favicon).toBeNull();
+
+        transport.emit('browser.status', {
+            ...info('node-1'),
+            favicon: 'data:image/png;base64,AQID'
+        });
+        const { favicon: _favicon, ...legacyStatus } = info('node-1');
+        transport.emit('browser.status', legacyStatus);
+        expect(useBrowser.getState().byKey[endpointKey('machine-1', 'node-1')]?.favicon).toBe('data:image/png;base64,AQID');
+        client.dispose();
+    });
+
+    test('delivers event frames for a direct browser and keeps that mode on reconnect', async () => {
+        const transport = new FakeTransport();
+        const client = new BrowserClient('machine-1', transport);
+        const frames: number[][] = [];
+        const stop = client.onFrame('node-1', (frame) => frames.push([...frame.data]));
+
+        await client.open('node-1', 'https://example.com', 800, 600, 'events', 2);
+        transport.emit('browser.frame', {
+            browserId: 'node-1',
+            sequence: 1,
+            width: 800,
+            height: 600,
+            data: 'AQID'
+        });
+        expect(frames).toEqual([[1, 2, 3]]);
+
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        await Promise.resolve();
+        expect(transport.calls.at(-1)).toEqual({
+            type: 'browser.open',
+            payload: {
+                browserId: 'node-1',
+                url: 'https://example.com',
+                width: 800,
+                height: 600,
+                deviceScaleFactor: 2,
+                stream: 'events'
+            }
+        });
+        stop();
         client.dispose();
     });
 });

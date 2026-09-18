@@ -5,7 +5,7 @@ import { browserStorage, readLastProject, type LastProjectStorage } from '@/proj
 import { listProjects } from '@/project/list';
 import { ProjectSwitch, type SwitchOutcome, type SwitchRun, type SwitchState, type SwitchTarget } from '@/project/project-switch';
 import { useEndpoints } from '@/state/endpoints';
-import { isRealMachine } from '@/state/local-machine';
+import { hasLocalMachine, isRealMachine } from '@/state/local-machine';
 import { useProject } from '@/state/project';
 import { useProjectList } from '@/state/project-list';
 import { useWindow, windowWorkspace } from '@/state/window';
@@ -175,10 +175,12 @@ export const deleteProject = async (endpointId: string, projectId: string, remov
  */
 export const bootWindow = async (
     storage: LastProjectStorage | null = browserStorage(),
-    open: (endpointId: string, projectId: string) => Promise<SwitchOutcome> = openProject
+    open: (endpointId: string, projectId: string) => Promise<SwitchOutcome> = openProject,
+    local = hasLocalMachine()
 ): Promise<SwitchOutcome | null> => {
     const last = readLastProject(storage);
-    const known = last !== null && isRealMachine(last.endpointId) && useEndpoints.getState().endpoints.some((endpoint) => endpoint.id === last.endpointId);
+    const known =
+        last !== null && isRealMachine(last.endpointId, local) && useEndpoints.getState().endpoints.some((endpoint) => endpoint.id === last.endpointId);
     try {
         if (!known) {
             return null;

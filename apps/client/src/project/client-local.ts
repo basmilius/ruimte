@@ -76,8 +76,8 @@ const writeRows = (storage: ClientLocalStorage | null, rows: ClientLocalRows, ke
     }
 };
 
-/* The favicons are a cache of pages the machine loaded, not something about this screen. */
-const withoutFavicons = (local: ProjectLocal): ProjectLocal => {
+/* Page identity follows this browser client; it must never become the starting point of another one. */
+export const withoutClientBrowserState = (local: ProjectLocal): ProjectLocal => {
     if (!local.panels?.favicons) {
         return local;
     }
@@ -92,7 +92,7 @@ export const readClientLocal = (storage: ClientLocalStorage | null, endpointId: 
 export const writeClientLocal = (storage: ClientLocalStorage | null, endpointId: string, projectId: string, local: ProjectLocal, now = Date.now()): void => {
     const rows = readRows(storage);
     const key = endpointKey(endpointId, projectId);
-    rows[key] = { at: now, local: withoutFavicons(local) };
+    rows[key] = { at: now, local };
     while (Object.keys(rows).length > CLIENT_LOCAL_LIMIT) {
         delete rows[oldestKey(rows, key)!];
     }
@@ -141,12 +141,12 @@ export const rekeyClientLocal = (storage: ClientLocalStorage | null, oldId: stri
 /*
  * What this client has wins, and what it never saw comes from the machine. A record for the project
  * brings the grid, the panels and the open view along, even a grid that is one cell; a view is
- * looked up on its own, because one made on another screen has no camera here. The favicons are
- * always the machine's.
+ * looked up on its own, because one made on another screen has no camera here. A favicon follows
+ * the client that loaded the page; an old machine-local favicon is discarded during migration.
  */
 export const overlayLocal = (machine: ProjectLocal, client: ProjectLocal | null): ProjectLocal => {
     if (client === null) {
-        return machine;
+        return withoutClientBrowserState(machine);
     }
     const views: Record<string, ProjectViewLocal> = { ...machine.views };
     for (const [viewId, view] of Object.entries(client.views)) {
@@ -154,13 +154,10 @@ export const overlayLocal = (machine: ProjectLocal, client: ProjectLocal | null)
             views[viewId] = view;
         }
     }
-    const { favicons: _favicons, ...clientPanels } = client.panels ?? {};
-    const favicons = machine.panels?.favicons;
-    const panels = client.panels || favicons ? { ...clientPanels, ...(favicons ? { favicons } : {}) } : undefined;
     return {
         activeViewId: client.activeViewId,
         views,
-        ...(panels ? { panels } : {}),
+        ...(client.panels ? { panels: client.panels } : {}),
         ...(client.layout ? { layout: client.layout } : {})
     };
 };

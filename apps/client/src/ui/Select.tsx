@@ -31,6 +31,7 @@ interface SelectProps<T extends string> {
     variant?: 'outlined' | 'ghost';
     disabled?: boolean;
     align?: 'start' | 'end';
+    truncateValue?: boolean;
     className?: string;
 }
 
@@ -81,6 +82,7 @@ export function Select<T extends string>({
     variant = 'outlined',
     disabled,
     align = 'start',
+    truncateValue = true,
     className
 }: SelectProps<T>) {
     const groups = items.length > 0 && isGroup(items[0]!) ? (items as SelectGroup<T>[]) : null;
@@ -105,7 +107,7 @@ export function Select<T extends string>({
                 )}
             >
                 {selected?.icon}
-                <BaseSelect.Value className="truncate">{() => selected?.label ?? placeholder}</BaseSelect.Value>
+                <BaseSelect.Value className={clsx(truncateValue && 'truncate')}>{() => selected?.label ?? placeholder}</BaseSelect.Value>
                 <BaseSelect.Icon className="ml-auto flex shrink-0 pl-1">
                     <Icon icon={ChevronDown} size={14} />
                 </BaseSelect.Icon>

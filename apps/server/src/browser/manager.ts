@@ -1,6 +1,14 @@
 import { Buffer } from 'node:buffer';
+import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import type { BrowserInfo, BrowserInput } from '@ruimte/contracts';
+import {
+    BROWSER_FAVICON_MAX_BYTES,
+    BROWSER_FAVICON_MAX_DATA_URL_LENGTH,
+    type BrowserFrame,
+    type BrowserInfo,
+    type BrowserInput,
+    type LiveStreamFrame
+} from '@ruimte/contracts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { LiveStreamHub, type LiveFrameSource } from '../streams/live-stream.ts';
 
@@ -13,6 +21,10 @@ interface ScreencastFrame {
     data: string;
     metadata?: { deviceWidth?: number; deviceHeight?: number };
     sessionId: number;
+}
+
+interface CapturedFrame {
+    data: string;
 }
 
 export interface BrowserPage {
@@ -28,11 +40,17 @@ export interface BrowserPage {
     forward(): Promise<void>;
     reload(): Promise<void>;
     type(text: string): Promise<void>;
+    evaluate<T = unknown>(expression: string): Promise<T>;
     cdp<T = unknown>(method: string, params?: Record<string, unknown>): Promise<T>;
     close(): void;
 }
 
 export type BrowserPageFactory = (width: number, height: number) => BrowserPage;
+
+interface FrameSubscription {
+    cancelled: boolean;
+    release: (() => void) | null;
+}
 
 export class BrowserError extends Error {
     readonly code: string;
@@ -63,21 +81,55 @@ const normalizeUrl = (input: string): string => {
     return value;
 };
 
+const FAVICON_DATA_URL = /^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/]+=*$/i;
+const LOCATION_EXPRESSION = 'location.href';
+const USER_AGENT_EXPRESSION = 'navigator.userAgent';
+const FAVICON_EXPRESSION = `
+(async () => {
+    const declared = [...document.querySelectorAll('link[rel~="icon"]')].at(-1)?.href;
+    const href = declared && declared !== 'data:,' ? declared : new URL('/favicon.ico', location.href).href;
+    const response = await fetch(href, { credentials: 'include' });
+    if (!response.ok) return null;
+    let type = (response.headers.get('content-type') || '').split(';', 1)[0].trim().toLowerCase();
+    if ((!type || type === 'application/octet-stream') && new URL(href).pathname.toLowerCase().endsWith('.ico')) type = 'image/x-icon';
+    if (!/^image\\/[a-z0-9.+-]+$/.test(type)) return null;
+    const buffer = await response.arrayBuffer();
+    if (buffer.byteLength > ${BROWSER_FAVICON_MAX_BYTES}) return null;
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+    }
+    return 'data:' + type + ';base64,' + btoa(binary);
+})()
+`;
+
+const validFavicon = (value: unknown): string | null =>
+    typeof value === 'string' && value.length <= BROWSER_FAVICON_MAX_DATA_URL_LENGTH && FAVICON_DATA_URL.test(value) ? value : null;
+
 class BrowserSession implements LiveFrameSource {
     readonly clients = new Set<string>();
     readonly id: string;
+    readonly clientId: string;
+    readonly streamId: string;
     private readonly page: BrowserPage;
     private readonly changed: (state: BrowserInfo) => void;
     private width: number;
     private height: number;
+    private deviceScaleFactor = 1;
     private state: BrowserInfo;
-    private cdpTail = Promise.resolve<unknown>(undefined);
+    private pageTail = Promise.resolve<unknown>(undefined);
+    private resizeTail = Promise.resolve<unknown>(undefined);
     private publish: ((frame: { sequence: number; width: number; height: number; data: Uint8Array }) => void) | null = null;
     private sequence = 0;
     private streaming = false;
+    private bootstrapping = false;
+    private capturingHighDensityFrame = false;
 
-    constructor(id: string, page: BrowserPage, width: number, height: number, changed: (state: BrowserInfo) => void) {
+    constructor(id: string, clientId: string, streamId: string, page: BrowserPage, width: number, height: number, changed: (state: BrowserInfo) => void) {
         this.id = id;
+        this.clientId = clientId;
+        this.streamId = streamId;
         this.page = page;
         this.width = width;
         this.height = height;
@@ -89,35 +141,73 @@ class BrowserSession implements LiveFrameSource {
             loading: page.loading,
             canGoBack: false,
             canGoForward: false,
-            error: null
+            error: null,
+            favicon: null,
+            streamId
         };
         page.onNavigated = (url, title) => {
-            this.state = { ...this.state, url, title: title ?? page.title ?? '', loading: false, error: null };
+            if (this.bootstrapping) {
+                return;
+            }
+            const reportedUrl = url === 'about:blank' && this.state.loading && this.state.url !== 'about:blank' ? this.state.url : url;
+            this.state = {
+                ...this.state,
+                url: reportedUrl,
+                title: title ?? page.title ?? '',
+                loading: false,
+                error: null
+            };
             this.changed(this.info());
             queueMicrotask(() => {
-                this.state = { ...this.state, url: page.url || url, title: page.title ?? '', loading: page.loading };
-                this.changed(this.info());
-                void this.refreshHistory();
+                void this.refreshPage(reportedUrl);
             });
         };
         page.onNavigationFailed = (error) => {
-            this.state = { ...this.state, loading: false, error: error.message };
+            if (this.bootstrapping) {
+                return;
+            }
+            this.state = {
+                ...this.state,
+                loading: false,
+                error: error.message
+            };
             this.changed(this.info());
         };
         page.addEventListener('Page.screencastFrame', (event) => {
             const frame = event.data;
-            this.enqueueCdp('Page.screencastFrameAck', { sessionId: frame.sessionId }).catch(() => undefined);
-            if (!this.publish) {
+            const publish = this.publish;
+            if (publish && this.deviceScaleFactor > 1) {
+                this.captureHighDensityFrame(publish, frame.sessionId);
                 return;
             }
-            this.sequence = (this.sequence + 1) >>> 0;
-            this.publish({
-                sequence: this.sequence,
-                width: Math.round(frame.metadata?.deviceWidth ?? this.width),
-                height: Math.round(frame.metadata?.deviceHeight ?? this.height),
-                data: Buffer.from(frame.data, 'base64')
-            });
+            this.enqueueCdp('Page.screencastFrameAck', {
+                sessionId: frame.sessionId
+            }).catch(() => undefined);
+            if (!publish) {
+                return;
+            }
+            this.emitFrame(
+                publish,
+                Buffer.from(frame.data, 'base64'),
+                Math.round(frame.metadata?.deviceWidth ?? this.width),
+                Math.round(frame.metadata?.deviceHeight ?? this.height)
+            );
         });
+    }
+
+    async prepare(): Promise<void> {
+        this.bootstrapping = true;
+        try {
+            await this.enqueuePage(() => this.page.navigate('about:blank'));
+            const current = await this.enqueuePage(() => this.page.evaluate<unknown>(USER_AGENT_EXPRESSION)).catch(() => null);
+            if (typeof current === 'string' && current.includes('HeadlessChrome/')) {
+                await this.enqueueCdp('Network.setUserAgentOverride', {
+                    userAgent: current.replace('HeadlessChrome/', 'Chrome/')
+                }).catch(() => undefined);
+            }
+        } finally {
+            this.bootstrapping = false;
+        }
     }
 
     info(): BrowserInfo {
@@ -126,41 +216,79 @@ class BrowserSession implements LiveFrameSource {
 
     async navigate(input: string): Promise<void> {
         const url = normalizeUrl(input);
-        this.state = { ...this.state, url, loading: true, error: null };
+        this.state = {
+            ...this.state,
+            url,
+            loading: true,
+            error: null,
+            favicon: null
+        };
         this.changed(this.info());
         try {
-            await this.page.navigate(url);
-            this.state = { ...this.state, url: this.page.url, title: this.page.title ?? '', loading: this.page.loading, error: null };
+            await this.enqueuePage(() => this.page.navigate(url));
+            this.state = {
+                ...this.state,
+                url: await this.currentUrl(url),
+                title: this.page.title ?? '',
+                loading: this.page.loading,
+                error: null
+            };
             this.changed(this.info());
             await this.refreshHistory();
         } catch (error) {
             if (this.state.loading) {
-                this.state = { ...this.state, loading: false, error: error instanceof Error ? error.message : 'Page failed to load' };
+                this.state = {
+                    ...this.state,
+                    loading: false,
+                    error: error instanceof Error ? error.message : 'Page failed to load'
+                };
                 this.changed(this.info());
             }
         }
     }
 
-    async resize(width: number, height: number): Promise<void> {
+    resize(width: number, height: number, deviceScaleFactor = 1): Promise<void> {
+        const next = this.resizeTail.then(() => this.performResize(width, height, deviceScaleFactor));
+        this.resizeTail = next.catch(() => undefined);
+        return next;
+    }
+
+    private async performResize(width: number, height: number, deviceScaleFactor: number): Promise<void> {
+        if (this.width === width && this.height === height && this.deviceScaleFactor === deviceScaleFactor) {
+            return;
+        }
+        const publish = this.publish;
+        if (this.streaming) {
+            await this.stop();
+        }
         this.width = width;
         this.height = height;
-        await this.page.resize(width, height);
-        if (this.streaming) {
-            const publish = this.publish!;
-            await this.stop();
+        this.deviceScaleFactor = deviceScaleFactor;
+        await this.enqueuePage(() => this.page.resize(width, height));
+        await this.enqueueCdp('Emulation.setDeviceMetricsOverride', {
+            width,
+            height,
+            deviceScaleFactor,
+            mobile: false
+        });
+        if (publish) {
             await this.start(publish);
         }
     }
 
     async command(command: 'back' | 'forward' | 'reload' | 'stop', ignoreCache = false): Promise<void> {
-        this.state = { ...this.state, loading: command !== 'stop', error: null };
+        this.state = {
+            ...this.state,
+            loading: command !== 'stop',
+            error: null
+        };
         this.changed(this.info());
         if (command === 'back') {
-            await this.page.back();
+            await this.enqueuePage(() => this.page.back());
         } else if (command === 'forward') {
-            await this.page.forward();
+            await this.enqueuePage(() => this.page.forward());
         } else if (command === 'reload' && !ignoreCache) {
-            await this.page.reload();
+            await this.enqueuePage(() => this.page.reload());
         } else if (command === 'reload') {
             await this.enqueueCdp('Page.reload', { ignoreCache: true });
         } else {
@@ -172,7 +300,7 @@ class BrowserSession implements LiveFrameSource {
 
     async input(input: BrowserInput): Promise<void> {
         if (input.kind === 'text') {
-            await this.page.type(input.text);
+            await this.enqueuePage(() => this.page.type(input.text));
             return;
         }
         if (input.kind === 'wheel') {
@@ -216,8 +344,8 @@ class BrowserSession implements LiveFrameSource {
         await this.enqueueCdp('Page.startScreencast', {
             format: 'jpeg',
             quality: 78,
-            maxWidth: this.width,
-            maxHeight: this.height,
+            maxWidth: Math.round(this.width * this.deviceScaleFactor),
+            maxHeight: Math.round(this.height * this.deviceScaleFactor),
             everyNthFrame: 1
         });
         this.streaming = true;
@@ -237,9 +365,55 @@ class BrowserSession implements LiveFrameSource {
         this.page.close();
     }
 
+    private emitFrame(
+        publish: (frame: { sequence: number; width: number; height: number; data: Uint8Array }) => void,
+        data: Uint8Array,
+        width: number,
+        height: number
+    ): void {
+        this.sequence = (this.sequence + 1) >>> 0;
+        publish({ sequence: this.sequence, width, height, data });
+    }
+
+    private captureHighDensityFrame(
+        publish: (frame: { sequence: number; width: number; height: number; data: Uint8Array }) => void,
+        screencastSessionId: number
+    ): void {
+        if (this.capturingHighDensityFrame) {
+            this.enqueueCdp('Page.screencastFrameAck', { sessionId: screencastSessionId }).catch(() => undefined);
+            return;
+        }
+        this.capturingHighDensityFrame = true;
+        const width = Math.round(this.width * this.deviceScaleFactor);
+        const height = Math.round(this.height * this.deviceScaleFactor);
+        // Chrome's screencast stays at 1x DPR; captureScreenshot preserves the emulated DPR.
+        void this.enqueuePage(async () => {
+            await this.page.cdp('Page.screencastFrameAck', { sessionId: screencastSessionId });
+            return this.page.cdp<CapturedFrame>('Page.captureScreenshot', {
+                format: 'jpeg',
+                quality: 78,
+                fromSurface: true,
+                captureBeyondViewport: false
+            });
+        })
+            .then((captured) => {
+                if (this.publish === publish) {
+                    this.emitFrame(publish, Buffer.from(captured.data, 'base64'), width, height);
+                }
+            })
+            .catch(() => undefined)
+            .finally(() => {
+                this.capturingHighDensityFrame = false;
+            });
+    }
+
     private enqueueCdp<T = unknown>(method: string, params?: Record<string, unknown>): Promise<T> {
-        const next = this.cdpTail.then(() => this.page.cdp<T>(method, params));
-        this.cdpTail = next.catch(() => undefined);
+        return this.enqueuePage(() => this.page.cdp<T>(method, params));
+    }
+
+    private enqueuePage<T>(operation: () => Promise<T>): Promise<T> {
+        const next = this.pageTail.then(operation);
+        this.pageTail = next.catch(() => undefined);
         return next;
     }
 
@@ -253,14 +427,53 @@ class BrowserSession implements LiveFrameSource {
             };
             this.changed(this.info());
         } catch {
-            this.state = { ...this.state, canGoBack: false, canGoForward: false };
+            this.state = {
+                ...this.state,
+                canGoBack: false,
+                canGoForward: false
+            };
         }
+    }
+
+    private async currentUrl(fallback: string): Promise<string> {
+        const value = await this.enqueuePage(() => this.page.evaluate<unknown>(LOCATION_EXPRESSION)).catch(() => null);
+        if (typeof value !== 'string') {
+            return fallback;
+        }
+        try {
+            return normalizeUrl(value);
+        } catch {
+            return fallback;
+        }
+    }
+
+    private async refreshPage(fallbackUrl: string): Promise<void> {
+        this.state = {
+            ...this.state,
+            url: await this.currentUrl(fallbackUrl),
+            title: this.page.title ?? '',
+            loading: this.page.loading
+        };
+        this.changed(this.info());
+        void this.refreshHistory();
+        void this.refreshFavicon();
+    }
+
+    private async refreshFavicon(): Promise<void> {
+        const url = this.state.url;
+        const favicon = validFavicon(await this.enqueuePage(() => this.page.evaluate(FAVICON_EXPRESSION)).catch(() => null));
+        if (this.state.url !== url || this.state.favicon === favicon) {
+            return;
+        }
+        this.state = { ...this.state, favicon };
+        this.changed(this.info());
     }
 }
 
 export class BrowserManager {
     private readonly sessions = new Map<string, BrowserSession>();
     private readonly sinks = new Map<string, SessionSink>();
+    private readonly frameSubscriptions = new Map<string, Map<string, FrameSubscription>>();
     private readonly unregisterStreams = new Map<string, () => void>();
     readonly streams: LiveStreamHub;
     private readonly createPage: BrowserPageFactory;
@@ -290,8 +503,17 @@ export class BrowserManager {
         return () => this.sinks.delete(clientId);
     }
 
-    async open(browserId: string, clientId: string, url: string, width: number, height: number): Promise<BrowserInfo> {
-        let session = this.sessions.get(browserId);
+    async open(
+        browserId: string,
+        clientId: string,
+        url: string,
+        width: number,
+        height: number,
+        stream: 'http' | 'events' = 'http',
+        deviceScaleFactor = 1
+    ): Promise<BrowserInfo> {
+        const key = sessionKey(browserId, clientId);
+        let session = this.sessions.get(key);
         if (!session) {
             let page: BrowserPage;
             try {
@@ -299,68 +521,78 @@ export class BrowserManager {
             } catch (error) {
                 throw new BrowserError('browser-unavailable', error instanceof Error ? error.message : 'Headless Chrome is not available');
             }
-            session = new BrowserSession(browserId, page, width, height, (info) => this.broadcast(session!, info));
-            this.sessions.set(browserId, session);
-            this.unregisterStreams.set(browserId, this.streams.register(`browser:${browserId}`, session));
+            session = new BrowserSession(browserId, clientId, `browser:${randomUUID()}`, page, width, height, (info) => this.broadcast(session!, info));
+            this.sessions.set(key, session);
+            this.unregisterStreams.set(key, this.streams.register(session.streamId, session));
             session.clients.add(clientId);
+            await session.prepare();
             await session.navigate(url);
-            await session.resize(width, height);
+            await session.resize(width, height, deviceScaleFactor);
         } else {
             session.clients.add(clientId);
-            await session.resize(width, height);
+            if (session.info().url === 'about:blank' && normalizeUrl(url) !== 'about:blank') {
+                await session.navigate(url);
+            }
+            await session.resize(width, height, deviceScaleFactor);
+        }
+        if (stream === 'events') {
+            await this.startFrameEvents(browserId, clientId);
+        } else {
+            this.stopFrameEvents(browserId, clientId);
         }
         return session.info();
     }
 
     detach(browserId: string, clientId: string): void {
-        this.sessions.get(browserId)?.clients.delete(clientId);
+        this.sessions.get(sessionKey(browserId, clientId))?.clients.delete(clientId);
+        this.stopFrameEvents(browserId, clientId);
     }
 
     detachAll(clientId: string): void {
-        for (const session of this.sessions.values()) {
-            session.clients.delete(clientId);
+        for (const [key, session] of [...this.sessions]) {
+            if (session.clientId === clientId) {
+                this.destroy(key, session);
+            }
         }
     }
 
-    async navigate(browserId: string, url: string): Promise<BrowserInfo> {
-        const session = this.require(browserId);
+    async navigate(browserId: string, clientId: string, url: string): Promise<BrowserInfo> {
+        const session = this.require(browserId, clientId);
         await session.navigate(url);
         return session.info();
     }
 
-    async command(browserId: string, command: 'back' | 'forward' | 'reload' | 'stop', ignoreCache?: boolean): Promise<BrowserInfo> {
-        const session = this.require(browserId);
+    async command(browserId: string, clientId: string, command: 'back' | 'forward' | 'reload' | 'stop', ignoreCache?: boolean): Promise<BrowserInfo> {
+        const session = this.require(browserId, clientId);
         await session.command(command, ignoreCache);
         return session.info();
     }
 
-    async resize(browserId: string, width: number, height: number): Promise<void> {
-        await this.require(browserId).resize(width, height);
+    async resize(browserId: string, clientId: string, width: number, height: number, deviceScaleFactor = 1): Promise<void> {
+        await this.require(browserId, clientId).resize(width, height, deviceScaleFactor);
     }
 
-    async input(browserId: string, input: BrowserInput): Promise<void> {
-        await this.require(browserId).input(input);
+    async input(browserId: string, clientId: string, input: BrowserInput): Promise<void> {
+        await this.require(browserId, clientId).input(input);
     }
 
-    kill(browserId: string): void {
-        const session = this.sessions.get(browserId);
+    kill(browserId: string, clientId: string): void {
+        const key = sessionKey(browserId, clientId);
+        const session = this.sessions.get(key);
         if (!session) {
             return;
         }
-        this.sessions.delete(browserId);
-        this.unregisterStreams.get(browserId)?.();
-        this.unregisterStreams.delete(browserId);
-        session.close();
+        this.destroy(key, session);
     }
 
     closeAll(): void {
-        for (const browserId of [...this.sessions.keys()]) {
-            this.kill(browserId);
+        for (const [key, session] of [...this.sessions]) {
+            this.destroy(key, session);
         }
     }
 
-    private require(browserId: string): BrowserSession {
-        const session = this.sessions.get(browserId);
+    private require(browserId: string, clientId: string): BrowserSession {
+        const session = this.sessions.get(sessionKey(browserId, clientId));
         if (!session) {
             throw new BrowserError('browser-not-found', 'This browser page is not running');
         }
@@ -369,7 +601,67 @@ export class BrowserManager {
 
     private broadcast(session: BrowserSession, info: BrowserInfo): void {
         for (const clientId of session.clients) {
-            this.sinks.get(clientId)?.({ event: 'browser.status', payload: info });
+            this.sinks.get(clientId)?.({
+                event: 'browser.status',
+                payload: info
+            });
         }
     }
+
+    private async startFrameEvents(browserId: string, clientId: string): Promise<void> {
+        this.stopFrameEvents(browserId, clientId);
+        const session = this.require(browserId, clientId);
+        const subscription: FrameSubscription = {
+            cancelled: false,
+            release: null
+        };
+        const byClient = this.frameSubscriptions.get(browserId) ?? new Map<string, FrameSubscription>();
+        byClient.set(clientId, subscription);
+        this.frameSubscriptions.set(browserId, byClient);
+        const release = await this.streams.subscribe(session.streamId, (frame) => {
+            if (!subscription.cancelled) {
+                this.sinks.get(clientId)?.({
+                    event: 'browser.frame',
+                    payload: eventFrame(browserId, frame)
+                });
+            }
+        });
+        if (subscription.cancelled) {
+            release();
+        } else {
+            subscription.release = release;
+        }
+    }
+
+    private stopFrameEvents(browserId: string, clientId: string): void {
+        const byClient = this.frameSubscriptions.get(browserId);
+        const subscription = byClient?.get(clientId);
+        if (!byClient || !subscription) {
+            return;
+        }
+        subscription.cancelled = true;
+        subscription.release?.();
+        byClient.delete(clientId);
+        if (byClient.size === 0) {
+            this.frameSubscriptions.delete(browserId);
+        }
+    }
+
+    private destroy(key: string, session: BrowserSession): void {
+        this.sessions.delete(key);
+        this.stopFrameEvents(session.id, session.clientId);
+        this.unregisterStreams.get(key)?.();
+        this.unregisterStreams.delete(key);
+        session.close();
+    }
 }
+
+const sessionKey = (browserId: string, clientId: string): string => JSON.stringify([clientId, browserId]);
+
+const eventFrame = (browserId: string, frame: LiveStreamFrame): BrowserFrame => ({
+    browserId,
+    sequence: frame.sequence,
+    width: frame.width,
+    height: frame.height,
+    data: Buffer.from(frame.data).toString('base64')
+});

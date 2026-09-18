@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { isCanvasView } from '@ruimte/contracts';
 import { BrowserContextMenu } from '@/browser/BrowserContextMenu';
+import { isDesktop } from '@/desktop/bridge';
 import { focusCellOfView, watchGuestFocus } from '@/browser/guest-focus';
 import { browserRegistry, useBrowser } from '@/browser/registry';
 import { cellElement, subscribeCells } from '@/shell/cell-rects';
@@ -14,6 +15,10 @@ const TOOLBAR_PX = 37;
 
 // Chromium discards a <webview> removed from the DOM, so hosts stay mounted and move in screen coordinates.
 export function WebviewParking() {
+    return isDesktop() ? <DesktopWebviewParking /> : null;
+}
+
+function DesktopWebviewParking() {
     // Selecting the object and deriving the keys: a selector that builds an array loops forever.
     const byKey = useBrowser((s) => s.byKey);
     const keys = useMemo(() => Object.keys(byKey), [byKey]);

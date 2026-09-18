@@ -228,10 +228,14 @@ describe('the cold start', () => {
 
     test("the bare project id of the first versions was this machine's", async () => {
         const opened: string[] = [];
-        await bootWindow(fakeStorage(new Map([['ruimte.lastProject', 'p7']])), async (endpointId, projectId) => {
-            opened.push(`${endpointId}:${projectId}`);
-            return 'done';
-        });
+        await bootWindow(
+            fakeStorage(new Map([['ruimte.lastProject', 'p7']])),
+            async (endpointId, projectId) => {
+                opened.push(`${endpointId}:${projectId}`);
+                return 'done';
+            },
+            true
+        );
         expect(opened).toEqual(['local:p7']);
     });
 });

@@ -219,6 +219,7 @@
     "session.status",
     "session.approvals",
     "session.list-changed",
+    "browser.frame",
     "browser.status",
     "chat.event",
     "chat.subagentChanged",

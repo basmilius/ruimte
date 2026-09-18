@@ -42,7 +42,7 @@ export const mergeMachines = ({ endpoints, accountMachines, showLocal }: MergeIn
         if (known) {
             known.machine = machine;
             known.onAccount = true;
-        } else if (!(local && !showLocal && local.daemonId === machine.id)) {
+        } else {
             entries.push({ id: machine.id, endpoint: null, machine, local: false, paired: false, onAccount: true });
         }
     }

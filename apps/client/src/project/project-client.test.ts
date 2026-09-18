@@ -275,7 +275,7 @@ describe('ProjectClient', () => {
         dispose();
     });
 
-    test("what this client had of a project wins over the machine, and the favicons stay the machine's", async () => {
+    test('what this client had of a project wins over the machine, including its favicons', async () => {
         const storage = new Map<string, string>();
         const layout = {
             columns: [
@@ -287,7 +287,7 @@ describe('ProjectClient', () => {
         const mine: ProjectLocal = {
             activeViewId: 'second',
             views: { second: { camera: { center: { x: 40, y: 50 }, zoom: 2 }, focusedNodeId: null }, gone: { camera: null, focusedNodeId: null } },
-            panels: { panel: { open: true, kind: 'git' } },
+            panels: { panel: { open: true, kind: 'git' }, favicons: { 'browser-1': 'mine' } },
             layout
         };
         storage.set('ruimte.local', JSON.stringify({ 'daemon-a:p1': { at: 1, local: mine } }));
@@ -307,9 +307,9 @@ describe('ProjectClient', () => {
         await tick(10);
         const written = JSON.parse(storage.get('ruimte.local')!) as Record<string, { local: ProjectLocal }>;
         expect(written['daemon-a:p1']!.local.views.gone).toBeUndefined();
-        expect(written['daemon-a:p1']!.local.panels?.favicons).toBeUndefined();
+        expect(written['daemon-a:p1']!.local.panels?.favicons).toEqual({ 'browser-1': 'mine' });
         const sent = transport.of('project.save-local').at(-1)?.payload as { local: ProjectLocal };
-        expect(sent.local.panels?.favicons).toEqual({ 'browser-1': 'icon' });
+        expect(sent.local.panels?.favicons).toBeUndefined();
         dispose();
     });
 

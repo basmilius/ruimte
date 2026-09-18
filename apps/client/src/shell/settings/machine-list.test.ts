@@ -70,8 +70,9 @@ describe('mergeMachines', () => {
         expect(reachLabel(mergeMachines({ endpoints: [opened], accountMachines: null, showLocal: true })[0]!)).toBe('Opened through your account');
     });
 
-    test('the web client leaves out its local row, and the account entry that would be it', () => {
+    test('the web client leaves out its local row but keeps that machine from the account', () => {
         const entries = mergeMachines({ endpoints: [local('home'), row('studio')], accountMachines: [machine('home')], showLocal: false });
-        expect(entries.map((entry) => entry.id)).toEqual(['studio']);
+        expect(entries.map((entry) => entry.id)).toEqual(['studio', 'home']);
+        expect(entries[1]?.endpoint).toBeNull();
     });
 });

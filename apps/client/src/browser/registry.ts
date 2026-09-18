@@ -19,13 +19,14 @@ export interface BrowserState {
     loading: boolean;
     canGoBack: boolean;
     canGoForward: boolean;
-    /* The page's own icon, kept per node and written to the project's local file, so a row shows it
-       again before the page is back. Null while the page has none. */
+    /* The page's own icon, kept per node and written to this client's project state, so a row shows
+       it again before the page is back. Null while the page has none. */
     favicon: string | null;
     /* The load that failed, until the next one starts. */
     error: LoadFailure | null;
     /* A server-rendered page can fail before Chromium has a Chromium error code. */
     streamError: string | null;
+    streamId: string | null;
 }
 
 interface BrowserStore {
@@ -33,7 +34,7 @@ interface BrowserStore {
     byKey: Record<string, BrowserState>;
     patch(key: string, patch: Partial<BrowserState>): void;
     forget(key: string): void;
-    /* The favicons the project's local file remembers, put back before any page has loaded. */
+    /* The favicons this client remembers for the project, put back before any page has loaded. */
     loadFavicons(endpointId: string, favicons: Record<string, string>): void;
     /* A machine that is forgotten takes its pages with it. */
     clear(endpointId: string): void;
@@ -72,7 +73,7 @@ export const useBrowserRow = <T>(nodeId: string, select: (row: BrowserState | un
     return useBrowser((s) => select(s.byKey[endpointKey(endpointId, nodeId)]));
 };
 
-/* What the project's local file keeps of the pages: one icon per node of this machine, and only the ones there are. */
+/* What this client keeps of the pages: one icon per node of this endpoint, and only the ones there are. */
 export const faviconsOfProject = (byKey: Record<string, BrowserState>, endpointId: string): Record<string, string> => {
     const favicons: Record<string, string> = {};
     for (const [key, state] of Object.entries(byKey)) {
@@ -83,11 +84,20 @@ export const faviconsOfProject = (byKey: Record<string, BrowserState>, endpointI
     return favicons;
 };
 
-const EMPTY: BrowserState = { url: '', title: '', loading: false, canGoBack: false, canGoForward: false, favicon: null, error: null, streamError: null };
+const EMPTY: BrowserState = {
+    url: '',
+    title: '',
+    loading: false,
+    canGoBack: false,
+    canGoForward: false,
+    favicon: null,
+    error: null,
+    streamError: null,
+    streamId: null
+};
 
 // Electron's <webview> as far as the registry uses it; the tag has no DOM typings of its own.
 interface WebviewElement extends HTMLElement {
-    src: string;
     partition: string;
     getURL(): string;
     getTitle(): string;
@@ -153,6 +163,16 @@ export const normalizeUrl = (input: string): string => {
     return `https://${trimmed}`;
 };
 
+export const initialStreamUrl = (savedUrl: string, observedUrl?: string): string => (observedUrl && observedUrl !== 'about:blank' ? observedUrl : savedUrl);
+
+/* A webview is a custom element. Before it is connected, assigning its `src` property can shadow
+   Electron's property setter; an attribute survives the upgrade and starts the first navigation. */
+export const setInitialWebviewUrl = (element: Pick<HTMLElement, 'setAttribute'>, initialUrl: string): string => {
+    const url = normalizeUrl(initialUrl);
+    element.setAttribute('src', url);
+    return url;
+};
+
 /*
  * The webview elements, one per browser node, created once and never re-parented: Chromium
  * throws the page away when a <webview> leaves the DOM, so a project switch, a view switch and a
@@ -187,11 +207,11 @@ class BrowserRegistry {
         element.style.height = '100%';
         // What shows until the page paints. A page with a background of its own covers it at once.
         element.style.backgroundColor = 'var(--bg)';
-        element.src = normalizeUrl(initialUrl);
+        const url = setInitialWebviewUrl(element, initialUrl);
         this.watchSwipeSetting();
         this.listen(key, element);
         this.elements.set(key, element);
-        useBrowser.getState().patch(key, { url: element.src, loading: true });
+        useBrowser.getState().patch(key, { url, loading: true });
         return element;
     }
 

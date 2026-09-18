@@ -55,6 +55,7 @@ import { UnseenMark } from '@/attention/UnseenMark';
 import { TaskMark } from '@/tasks/TaskMark';
 import { childTask, useTasks } from '@/state/tasks';
 import { Favicon } from '@/browser/Favicon';
+import { useBrowserDisplayTitle } from '@/browser/title';
 import { resetTitle } from '@/nodes/node-host';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
@@ -174,6 +175,7 @@ function ProcessWarningMark() {
 
 function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarNodeRow }) {
     const { node } = row;
+    const title = useBrowserDisplayTitle(node.id, node.title, node.titleSource);
     const picked = useCanvas((s) => s.selection.includes(node.id));
     // The selection belongs to the canvas store, so the row pairs on the view that store holds, not
     // on the active one, which flips a tick before the canvas follows.
@@ -226,7 +228,7 @@ function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarN
                 <span className={ICON_SLOT}>
                     <RowIcon id={node.id} kind={node.kind} provider={node.provider} />
                 </span>
-                <span className="min-w-0 truncate">{node.title}</span>
+                <span className="min-w-0 truncate">{node.kind === 'browser' ? title : node.title}</span>
                 {/* A row that stands outside its own view says where the node is, so the jump is no surprise. */}
                 {row.viewName && <span className="min-w-0 shrink truncate text-xs text-text-faint">{row.viewName}</span>}
                 <span className="grow" />
@@ -343,6 +345,7 @@ function UnknownViewRow({ row, tabbable, onFocus, onArrow, onDelete }: Omit<View
 
 function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }: ViewRowProps) {
     const { view } = row;
+    const title = useBrowserDisplayTitle(view.id, view.name, view.titleSource);
     const [renaming, setRenaming] = useState(false);
     if (renaming) {
         return (
@@ -425,7 +428,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                         />
                     )}
                 </span>
-                <span className="min-w-0 truncate">{view.name}</span>
+                <span className="min-w-0 truncate">{view.kind === 'browser' ? title : view.name}</span>
                 {/* Colour alone would say nothing to a screen reader, and a view standing in another
                     cell is not the same as one that is closed. */}
                 {row.beside && <span className="sr-only">, open in another cell</span>}
@@ -503,9 +506,10 @@ export function Sidebar() {
                 // The canvas store owns the view it holds, so its nodes are the fresher ones. It pairs on
                 // the store's own view, not on the active one, which flips a tick before the canvas follows.
                 const live = isCanvasView(view) ? (view.id === source.canvasViewId ? source.order.map((id) => source.nodes[id]!) : view.nodes) : [];
-                const asRow = (node: StatusOf & { title: string; provider?: AgentKind }): SidebarNode => ({
+                const asRow = (node: StatusOf & { title: string; titleSource?: SidebarNode['titleSource']; provider?: AgentKind }): SidebarNode => ({
                     id: node.id,
                     title: node.title,
+                    titleSource: node.titleSource,
                     kind: node.kind,
                     provider: node.provider ?? null,
                     status: nodeStatus(node, sessions, chats, endpointId) ?? null,
@@ -518,13 +522,14 @@ export function Sidebar() {
                 return {
                     id: view.id,
                     name: view.name ?? '',
+                    titleSource: 'titleSource' in view ? view.titleSource : undefined,
                     kind: view.kind,
                     icon: viewIconOf(view),
                     provider: provider ?? null,
                     path: view.kind === 'file' ? view.path : null,
                     nodes: live.filter((node) => isSessionKind(node.kind)).map(asRow),
                     // Only a session view is a node of its own; a separator and a drawing have no status.
-                    self: isSessionView(view) ? asRow({ id: view.id, kind: view.kind, title: view.name, provider }) : null
+                    self: isSessionView(view) ? asRow({ id: view.id, kind: view.kind, title: view.name, titleSource: view.titleSource, provider }) : null
                 };
             })
         }),

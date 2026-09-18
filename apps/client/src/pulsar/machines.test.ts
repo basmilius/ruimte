@@ -31,10 +31,11 @@ describe('machines on the account', () => {
         expect(endpointForAccountMachine(machine({ brokerUrl: null }))).toBeNull();
     });
 
-    test('a machine this client already has is found under its own id, or as the daemon behind the local row', () => {
+    test('a native client may reuse its local row, while a browser opens the account machine separately', () => {
         const local = { id: 'local', daemonId: 'studio' } as Endpoint;
         const other = { id: 'server', daemonId: 'server' } as Endpoint;
-        expect(rowForAccountMachine('studio', [other, local])).toBe(local);
+        expect(rowForAccountMachine('studio', [other, local], true)).toBe(local);
+        expect(rowForAccountMachine('studio', [other, local])).toBeNull();
         expect(rowForAccountMachine('server', [other, local])).toBe(other);
         expect(rowForAccountMachine('nowhere', [other, local])).toBeNull();
     });

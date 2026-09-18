@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { LiveStreamDecoder, LIVE_STREAM_CONTENT_TYPE, type BrowserInput, type LiveStreamFrame } from '@ruimte/contracts';
-import { CircleAlert, MonitorUp } from 'lucide-react';
+import { CircleAlert } from 'lucide-react';
 import { browserClientFor } from '@/transport/connections';
 import { credentialFor } from '@/endpoint/credentials';
 import { useEndpointId } from '@/state/keys';
 import { useEndpoints } from '@/state/endpoints';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
-import { useBrowserRow } from './registry';
+import { initialStreamUrl, useBrowserRow } from './registry';
+import { browserStreamScaleLimit, clampBrowserStreamScale, useBrowserStreamQuality } from './stream-quality';
 
 const RETRY_MS = 1_000;
 
@@ -31,20 +32,83 @@ const wait = (ms: number, signal: AbortSignal): Promise<void> =>
         );
     });
 
+class FramePainter {
+    private readonly canvas: RefObject<HTMLCanvasElement | null>;
+    private drawing = false;
+    private readonly failed: (message: string) => void;
+    private readonly painted: () => void;
+    private pending: LiveStreamFrame | null = null;
+
+    constructor(canvas: RefObject<HTMLCanvasElement | null>, painted: () => void, failed: (message: string) => void) {
+        this.canvas = canvas;
+        this.painted = painted;
+        this.failed = failed;
+    }
+
+    push(frame: LiveStreamFrame): void {
+        this.pending = frame;
+        if (!this.drawing) {
+            void this.draw();
+        }
+    }
+
+    private async draw(): Promise<void> {
+        this.drawing = true;
+        try {
+            while (this.pending) {
+                const frame = this.pending;
+                this.pending = null;
+                const bitmap = await createImageBitmap(new Blob([frame.data.slice().buffer], { type: 'image/jpeg' }));
+                const canvas = this.canvas.current;
+                if (canvas) {
+                    canvas.width = frame.width;
+                    canvas.height = frame.height;
+                    canvas.getContext('2d', { alpha: false })?.drawImage(bitmap, 0, 0, frame.width, frame.height);
+                    this.painted();
+                }
+                bitmap.close();
+            }
+        } catch (error) {
+            this.failed(error instanceof Error ? error.message : 'A frame could not be drawn');
+        } finally {
+            this.drawing = false;
+            if (this.pending) {
+                void this.draw();
+            }
+        }
+    }
+}
+
 export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: string; initialUrl: string; className?: string }) {
     const endpointId = useEndpointId();
     const endpoint = useEndpoints((state) => state.endpoints.find((entry) => entry.id === endpointId) ?? null);
     const row = useBrowserRow(id, (state) => state);
     const host = useRef<HTMLDivElement>(null);
     const canvas = useRef<HTMLCanvasElement>(null);
-    const frameSize = useRef({ width: 1, height: 1 });
+    const viewportSize = useRef({ width: 1, height: 1 });
     const moveFrame = useRef<number | null>(null);
     const pendingMove = useRef<BrowserInput | null>(null);
-    const initialUrl = useRef(row?.url || savedUrl);
+    const initialUrl = useRef(initialStreamUrl(savedUrl, row?.url));
+    const preferredScale = useBrowserStreamQuality((state) => state.scale);
+    const scale = clampBrowserStreamScale(preferredScale, browserStreamScaleLimit());
+    const scaleRef = useRef(scale);
+    const appliedScale = useRef(scale);
     const [ready, setReady] = useState(false);
     const [imageReady, setImageReady] = useState(false);
     const [streamError, setStreamError] = useState<string | null>(null);
     const direct = endpoint?.direct === true;
+    const streamId = row?.streamId ?? `browser:${id}`;
+    const [framePainter] = useState(
+        () =>
+            new FramePainter(
+                canvas,
+                () => {
+                    setImageReady(true);
+                    setStreamError(null);
+                },
+                setStreamError
+            )
+    );
 
     useEffect(
         () => () => {
@@ -56,9 +120,6 @@ export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: str
     );
 
     useEffect(() => {
-        if (direct) {
-            return;
-        }
         const client = browserClientFor(endpointId);
         const element = host.current;
         if (!client || !element) {
@@ -67,8 +128,13 @@ export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: str
         const rect = element.getBoundingClientRect();
         const width = Math.max(1, Math.round(rect.width || 800));
         const height = Math.max(1, Math.round(rect.height || 600));
+        viewportSize.current = { width, height };
         let mounted = true;
-        void client.open(id, initialUrl.current, width, height).then(
+        setReady(false);
+        setImageReady(false);
+        setStreamError(null);
+        appliedScale.current = scaleRef.current;
+        void client.open(id, initialUrl.current, width, height, direct ? 'events' : 'http', scaleRef.current).then(
             () => mounted && setReady(true),
             (error) => mounted && setStreamError(error instanceof Error ? error.message : 'The browser could not start')
         );
@@ -78,7 +144,8 @@ export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: str
             }
             const nextWidth = Math.max(1, Math.round(entry.contentRect.width));
             const nextHeight = Math.max(1, Math.round(entry.contentRect.height));
-            void client.resize(id, nextWidth, nextHeight);
+            viewportSize.current = { width: nextWidth, height: nextHeight };
+            void client.resize(id, nextWidth, nextHeight, scaleRef.current);
         });
         observer.observe(element);
         return () => {
@@ -89,45 +156,34 @@ export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: str
     }, [direct, endpointId, id]);
 
     useEffect(() => {
+        scaleRef.current = scale;
+        if (appliedScale.current === scale) {
+            return;
+        }
+        appliedScale.current = scale;
+        const { width, height } = viewportSize.current;
+        void browserClientFor(endpointId)?.resize(id, width, height, scale);
+    }, [endpointId, id, scale]);
+
+    useEffect(() => {
+        if (!direct) {
+            return;
+        }
+        return browserClientFor(endpointId)?.onFrame(id, (frame) => framePainter.push(frame));
+    }, [direct, endpointId, framePainter, id]);
+
+    useEffect(() => {
         if (!ready || direct || !endpoint) {
             return;
         }
         const controller = new AbortController();
-        let pending: LiveStreamFrame | null = null;
-        let decoding = false;
-
-        const paint = async (): Promise<void> => {
-            if (decoding) {
-                return;
-            }
-            decoding = true;
-            try {
-                while (pending && !controller.signal.aborted) {
-                    const frame = pending;
-                    pending = null;
-                    const bitmap = await createImageBitmap(new Blob([frame.data.slice().buffer], { type: 'image/jpeg' }));
-                    const surface = canvas.current;
-                    if (surface) {
-                        surface.width = frame.width;
-                        surface.height = frame.height;
-                        frameSize.current = { width: frame.width, height: frame.height };
-                        surface.getContext('2d', { alpha: false })?.drawImage(bitmap, 0, 0, frame.width, frame.height);
-                        setImageReady(true);
-                        setStreamError(null);
-                    }
-                    bitmap.close();
-                }
-            } finally {
-                decoding = false;
-            }
-        };
 
         const consume = async (): Promise<void> => {
             while (!controller.signal.aborted) {
                 try {
                     const credential = credentialFor(endpoint);
                     const headers = credential ? { Authorization: `Bearer ${credential}` } : undefined;
-                    const response = await fetch(`${endpoint.httpBaseUrl}/live-stream/${encodeURIComponent(`browser:${id}`)}`, {
+                    const response = await fetch(`${endpoint.httpBaseUrl}/live-stream/${encodeURIComponent(streamId)}`, {
                         headers,
                         signal: controller.signal
                     });
@@ -145,9 +201,8 @@ export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: str
                             break;
                         }
                         for (const frame of decoder.push(next.value)) {
-                            pending = frame;
+                            framePainter.push(frame);
                         }
-                        void paint().catch((error) => setStreamError(error instanceof Error ? error.message : 'A frame could not be drawn'));
                     }
                 } catch (error) {
                     if (!controller.signal.aborted) {
@@ -159,24 +214,16 @@ export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: str
         };
         void consume();
         return () => controller.abort();
-    }, [direct, endpoint, id, ready]);
+    }, [direct, endpoint, framePainter, id, ready, streamId]);
 
     const send = (input: BrowserInput): void => browserClientFor(endpointId)?.input(id, input);
     const position = (event: { clientX: number; clientY: number }): { x: number; y: number } => {
         const rect = canvas.current!.getBoundingClientRect();
         return {
-            x: ((event.clientX - rect.left) / Math.max(1, rect.width)) * frameSize.current.width,
-            y: ((event.clientY - rect.top) / Math.max(1, rect.height)) * frameSize.current.height
+            x: ((event.clientX - rect.left) / Math.max(1, rect.width)) * viewportSize.current.width,
+            y: ((event.clientY - rect.top) / Math.max(1, rect.height)) * viewportSize.current.height
         };
     };
-
-    if (direct) {
-        return (
-            <div ref={host} className={`flex h-full items-center justify-center bg-surface px-6 text-center ${className ?? ''}`}>
-                <EmptyState icon={<Icon icon={MonitorUp} size={24} />}>Live pages over a direct connection are not available yet.</EmptyState>
-            </div>
-        );
-    }
 
     const visibleError = row?.streamError ?? streamError;
     return (

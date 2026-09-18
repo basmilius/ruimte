@@ -31,6 +31,8 @@ const outputSessionId = (frame: ServerFrame): string | null => {
     return (frame.payload as SessionOutputEvent).sessionId;
 };
 
+const replaceableFrame = (frame: ServerFrame): boolean => 'event' in frame && frame.event === 'browser.frame';
+
 /*
  * Drops terminal output above the socket's high-water mark to bound memory. Once drained, each
  * affected session receives a fresh screen before streaming resumes.
@@ -59,6 +61,10 @@ export class OutputGate {
 
     send(frame: ServerFrame): void {
         const sessionId = outputSessionId(frame);
+        if (replaceableFrame(frame) && (this.paused || this.socket.getBufferedAmount() > this.highWaterMark)) {
+            this.paused = true;
+            return;
+        }
         if (sessionId !== null && (this.paused || this.stale.has(sessionId))) {
             this.stale.add(sessionId);
             return;

@@ -2,7 +2,7 @@ import type { ProjectContent, ProjectDocument, ProjectIconChoice, ProjectLocal, 
 import type { StoreApi } from 'zustand';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
-import { overlayLocal, readClientLocal, writeClientLocal } from './client-local';
+import { overlayLocal, readClientLocal, withoutClientBrowserState, writeClientLocal } from './client-local';
 import { browserStorage, rememberProject, type LastProjectStorage } from './last-project';
 import { mergeProject, type CanvasPatch } from './merge';
 import type { PanelsPort } from './panels-port';
@@ -441,7 +441,7 @@ export class ProjectClient {
         // This client's own copy first: the machine only has to be where a client that never saw the project starts.
         writeClientLocal(this.storage, this.endpointId(), current.projectId, local);
         if (this.transport.status === 'open') {
-            void this.transport.request('project.save-local', { projectId: current.projectId, local }).catch(() => undefined);
+            void this.transport.request('project.save-local', { projectId: current.projectId, local: withoutClientBrowserState(local) }).catch(() => undefined);
         }
     }
 

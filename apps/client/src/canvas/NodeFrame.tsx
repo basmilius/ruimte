@@ -56,6 +56,7 @@ import { FileNode, FilePlate } from '@/canvas/nodes/FileNode';
 import { UnknownNodePlate } from '@/canvas/nodes/UnknownNode';
 import { noteColorClass } from '@/canvas/note-colors';
 import { Favicon } from '@/browser/Favicon';
+import { useBrowserDisplayTitle } from '@/browser/title';
 import { FileIcon } from '@/ui/FileIcon';
 import { fixedSlot, FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { resetTitle } from '@/nodes/node-host';
@@ -199,6 +200,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     const nodeWorktree = useWorktreeOf(node?.kind === 'terminal' || node?.kind === 'chat' ? node.cwd : undefined);
     const groupWorktrees = useGroupWorktrees(node?.kind === 'group' && !node.worktree ? id : null);
     const hidden = useCanvas((s) => s.hidden.has(id));
+    const browserTitle = useBrowserDisplayTitle(id, node?.title ?? '', node?.titleSource);
 
     if (!node || hidden) {
         return null;
@@ -211,6 +213,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
     // A newer Ruimte's node: it moves, resizes and goes away like any other, and nothing else about it is this version's to change.
     const isUnknown = node.kind === 'unknown';
     const collapsed = isGroup && node.collapsed === true;
+    const visibleTitle = node.kind === 'browser' && !renaming ? browserTitle : node.title;
     const remove = (): void => {
         canvasStore.getState().select([id]);
         void deleteSelectionAsking(canvasStore, transport);
@@ -286,10 +289,10 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     <span className={clsx('flex min-w-0 items-center', !inSubagents && 'grow')} onDoubleClick={() => setRenaming(!isUnknown)}>
                         {node.kind === 'chat' && !renaming ? (
                             <SubagentTitleCrumb chatId={id}>
-                                <Title id={id} title={node.title} editing={false} muted={inSubagents} onDone={() => setRenaming(false)} />
+                                <Title id={id} title={visibleTitle} editing={false} muted={inSubagents} onDone={() => setRenaming(false)} />
                             </SubagentTitleCrumb>
                         ) : (
-                            <Title id={id} title={node.title} editing={renaming} muted={false} onDone={() => setRenaming(false)} />
+                            <Title id={id} title={visibleTitle} editing={renaming} muted={false} onDone={() => setRenaming(false)} />
                         )}
                     </span>
                     {node.kind === 'chat' && !renaming && <SubagentBreadcrumb chatId={id} className="grow" />}

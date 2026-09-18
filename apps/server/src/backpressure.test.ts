@@ -29,6 +29,11 @@ class FakeSocket implements BackpressuredSocket {
 }
 
 const output = (sessionId: string, data: string): ServerFrame => ({ type: 'event', event: 'session.output', payload: { sessionId, data } });
+const browserFrame = (sequence: number): ServerFrame => ({
+    type: 'event',
+    event: 'browser.frame',
+    payload: { browserId: 'browser-1', sequence, width: 800, height: 600, data: 'jpeg' }
+});
 
 const setup = (screens: Record<string, string | null> = { a: 'screen-a', b: 'screen-b' }) => {
     const socket = new FakeSocket();
@@ -85,6 +90,20 @@ describe('OutputGate', () => {
         gate.send({ type: 'event', event: 'session.exit', payload: { sessionId: 'a', exitCode: 0 } });
 
         expect(socket.events).toEqual(['session.output', 'reply', 'session.exit']);
+    });
+
+    test('browser frames are dropped while the client is behind and resume after drain', async () => {
+        const { socket, gate } = setup();
+        socket.buffered = HIGH_WATER_MARK + 1;
+        gate.send(browserFrame(1));
+        gate.send(browserFrame(2));
+        expect(socket.of('browser.frame')).toEqual([]);
+
+        socket.buffered = 0;
+        gate.onDrain();
+        await flush();
+        gate.send(browserFrame(3));
+        expect(socket.of('browser.frame').map((payload) => payload.sequence)).toEqual([3]);
     });
 
     test('a drain sends one resync per marked session and then streams again', async () => {

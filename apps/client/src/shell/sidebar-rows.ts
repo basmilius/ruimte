@@ -1,8 +1,9 @@
-import type { AgentKind, AgentStatus, CanvasNodeKind, ProjectIconChoice, ProjectViewKind, Task } from '@ruimte/contracts';
+import type { AgentKind, AgentStatus, CanvasNodeKind, NodeTitleSource, ProjectIconChoice, ProjectViewKind, Task } from '@ruimte/contracts';
 
 export interface SidebarNode {
     id: string;
     title: string;
+    titleSource?: NodeTitleSource;
     kind: CanvasNodeKind;
     /* The CLI behind a chat or an agent terminal, whose mark the row wears instead of the kind's. */
     provider: AgentKind | null;
@@ -21,6 +22,7 @@ export interface SidebarView {
     id: string;
     /* Empty for a separator, which is a bare line with nothing on it. */
     name: string;
+    titleSource?: NodeTitleSource;
     kind: ProjectViewKind;
     /* What a person picked for it, which outranks the mark of its kind. */
     icon: ProjectIconChoice | null;

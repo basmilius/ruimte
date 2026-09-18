@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
     BrowserCommandPayloadSchema,
+    BrowserFrameSchema,
     BrowserInfoSchema,
     BrowserInputPayloadSchema,
     BrowserNavigatePayloadSchema,
@@ -361,6 +362,7 @@ export const EVENT_SCHEMAS = {
     'session.status': SessionStatusEventSchema,
     'session.approvals': SessionApprovalsEventSchema,
     'session.list-changed': EmptySchema,
+    'browser.frame': BrowserFrameSchema,
     'browser.status': BrowserInfoSchema,
     'chat.event': ChatEventEnvelopeSchema,
     'chat.subagentChanged': ChatSubagentChangedEventSchema,

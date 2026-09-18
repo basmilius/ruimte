@@ -36,11 +36,11 @@ const machine: ProjectLocal = {
 };
 
 describe('overlayLocal', () => {
-    test('a project this client never saw opens the way the machine had it', () => {
-        expect(overlayLocal(machine, null)).toBe(machine);
+    test('a project this client never saw uses the machine layout without its legacy favicons', () => {
+        expect(overlayLocal(machine, null)).toEqual({ ...machine, panels: { panel: { open: true, kind: 'git' } } });
     });
 
-    test("the grid, the panels and the open view of the client win, the favicons stay the machine's", () => {
+    test('the grid, panels, open view and favicons of the client win', () => {
         const client: ProjectLocal = {
             activeViewId: 'b',
             views: { b: { camera: { center: { x: 20, y: 20 }, zoom: 2 }, focusedNodeId: null } },
@@ -50,7 +50,7 @@ describe('overlayLocal', () => {
         const overlaid = overlayLocal(machine, client);
         expect(overlaid.activeViewId).toBe('b');
         expect(overlaid.layout).toEqual(layout);
-        expect(overlaid.panels).toEqual({ panel: { open: false, kind: 'files' }, favicons: { 'browser-1': 'data:image/png;base64,AA' } });
+        expect(overlaid.panels).toEqual({ panel: { open: false, kind: 'files' }, favicons: { 'browser-1': 'stale' } });
         expect(overlaid.views.b).toEqual(client.views.b);
     });
 
@@ -58,7 +58,7 @@ describe('overlayLocal', () => {
         const overlaid = overlayLocal({ ...machine, layout }, { activeViewId: 'c', views: {} });
         expect(overlaid.layout).toBeUndefined();
         expect(overlaid.activeViewId).toBe('c');
-        expect(overlaid.panels).toEqual({ favicons: machine.panels!.favicons });
+        expect(overlaid.panels).toBeUndefined();
     });
 
     test('a view this client has no camera for takes the one of the machine', () => {
@@ -74,10 +74,10 @@ describe('overlayLocal', () => {
 });
 
 describe("the client's own copy", () => {
-    test('is kept per machine and project, without the favicons', () => {
+    test('is kept per machine and project, including its favicons', () => {
         const storage = memory();
         writeClientLocal(storage, 'daemon-a', 'p1', machine);
-        expect(readClientLocal(storage, 'daemon-a', 'p1')).toEqual({ ...machine, panels: { panel: { open: true, kind: 'git' } } });
+        expect(readClientLocal(storage, 'daemon-a', 'p1')).toEqual(machine);
         expect(readClientLocal(storage, 'daemon-b', 'p1')).toBeNull();
         expect(Object.keys(JSON.parse(storage.map.get('ruimte.local')!))).toEqual(['daemon-a:p1']);
     });

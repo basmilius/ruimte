@@ -131,6 +131,7 @@ public enum WireEvent: String, CaseIterable, Sendable {
     case `sessionStatus` = "session.status"
     case `sessionApprovals` = "session.approvals"
     case `sessionListChanged` = "session.list-changed"
+    case `browserFrame` = "browser.frame"
     case `browserStatus` = "browser.status"
     case `chatEvent` = "chat.event"
     case `chatSubagentChanged` = "chat.subagentChanged"

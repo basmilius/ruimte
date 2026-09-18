@@ -43,6 +43,10 @@ export default defineConfig(({ mode }) => ({
                 target: daemon,
                 ws: true
             },
+            // A browser signs in over HTTP before opening its authenticated socket.
+            '/auth': {
+                target: daemon.replace(/^ws/, 'http')
+            },
             // A project's icon is bytes on the daemon, never a data URL on the wire.
             '/projects': {
                 target: daemon.replace(/^ws/, 'http')

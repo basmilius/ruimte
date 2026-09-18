@@ -13,6 +13,7 @@ import type { CellAt } from '@/shell/split';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
+import { useBrowserDisplayTitle } from '@/browser/title';
 
 /* What the bar holds that is not the bar: a press on one of these is not the start of a drag. */
 const CONTROLS = 'input, textarea, select, button, a, [contenteditable=""], [contenteditable="true"], [role="button"]';
@@ -82,6 +83,8 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
     const hasViewToolbar = useHasViewToolbar(view);
     const folded = useFolded(bar, actions, hasViewToolbar);
     const inSubagents = useShowsSubagents(view);
+    const title = useBrowserDisplayTitle(view.id, view.name ?? '', 'titleSource' in view ? view.titleSource : undefined);
+    const visibleTitle = view.kind === 'browser' ? title : view.name;
 
     const controls = <ViewToolbar view={view} focused={focused && bodyFocused} />;
     return (
@@ -92,7 +95,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
             <header
                 ref={bar}
                 draggable={grabbable}
-                aria-label={`${view.name ?? 'View'}, drag to move it to another cell`}
+                aria-label={`${visibleTitle ?? 'View'}, drag to move it to another cell`}
                 className={clsx(
                     'flex h-10 shrink-0 cursor-grab items-center gap-2 overflow-hidden border-b border-border pr-1.5 pl-2 text-xs active:cursor-grabbing',
                     focused ? 'bg-surface text-text' : 'bg-surface-idle text-text-muted'
@@ -117,7 +120,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                         path={view.kind === 'file' ? view.path : null}
                     />
                     <SubagentTitleCrumb chatId={view.id} className="text-text-muted hover:text-text">
-                        <span className="min-w-0 truncate font-medium">{view.name}</span>
+                        <span className="min-w-0 truncate font-medium">{visibleTitle}</span>
                     </SubagentTitleCrumb>
                 </span>
                 {hasViewToolbar && !folded && (

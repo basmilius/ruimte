@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Machine } from '@ruimte/pulsar';
+import { hasLocalMachine, listedEndpoints } from '@/state/local-machine';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { pool, transportFor } from '@/transport';
 import { messageOf, usePulsarAccount, withAccessToken } from './account';
@@ -19,8 +20,8 @@ interface MachinesState {
 export const usePulsarMachines = create<MachinesState>(() => ({ machines: null, removedMachineIds: [], reclaiming: [], error: null }));
 
 /* The row this client keeps for a machine on the account, whatever id the row is under. */
-export const rowForAccountMachine = (machineId: string, endpoints: readonly Endpoint[]): Endpoint | null =>
-    endpoints.find((endpoint) => endpoint.id === machineId || endpoint.daemonId === machineId) ?? null;
+export const rowForAccountMachine = (machineId: string, endpoints: readonly Endpoint[], local = hasLocalMachine()): Endpoint | null =>
+    listedEndpoints(endpoints, local).find((endpoint) => endpoint.id === machineId || endpoint.daemonId === machineId) ?? null;
 
 /*
  * A row for a machine this client has never reached. There is no address to try, so the broker is the

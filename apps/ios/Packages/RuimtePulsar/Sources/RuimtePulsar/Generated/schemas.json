@@ -5518,6 +5518,18 @@
         "type": "integer",
         "minimum": 1,
         "maximum": 4096
+      },
+      "deviceScaleFactor": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 2
+      },
+      "stream": {
+        "type": "string",
+        "enum": [
+          "http",
+          "events"
+        ]
       }
     },
     "required": [
@@ -5555,6 +5567,23 @@
         "type": [
           "string",
           "null"
+        ]
+      },
+      "streamId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "favicon": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 180000,
+            "pattern": "^data:image\\/[a-z0-9.+-]+;base64,[a-z0-9+/]+=*$"
+          },
+          {
+            "type": "null"
+          }
         ]
       }
     },
@@ -5654,6 +5683,23 @@
           "string",
           "null"
         ]
+      },
+      "streamId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "favicon": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 180000,
+            "pattern": "^data:image\\/[a-z0-9.+-]+;base64,[a-z0-9+/]+=*$"
+          },
+          {
+            "type": "null"
+          }
+        ]
       }
     },
     "required": [
@@ -5722,6 +5768,23 @@
           "string",
           "null"
         ]
+      },
+      "streamId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "favicon": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 180000,
+            "pattern": "^data:image\\/[a-z0-9.+-]+;base64,[a-z0-9+/]+=*$"
+          },
+          {
+            "type": "null"
+          }
+        ]
       }
     },
     "required": [
@@ -5752,6 +5815,11 @@
         "type": "integer",
         "minimum": 1,
         "maximum": 4096
+      },
+      "deviceScaleFactor": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 2
       }
     },
     "required": [
@@ -27857,6 +27925,43 @@
     "type": "object",
     "properties": {}
   },
+  "event.browser.frame": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "browserId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "sequence": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 4294967295
+      },
+      "width": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 8192
+      },
+      "height": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 8192
+      },
+      "data": {
+        "type": "string",
+        "maxLength": 11534336
+      }
+    },
+    "required": [
+      "browserId",
+      "sequence",
+      "width",
+      "height",
+      "data"
+    ]
+  },
   "event.browser.status": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -27885,6 +27990,23 @@
         "type": [
           "string",
           "null"
+        ]
+      },
+      "streamId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "favicon": {
+        "anyOf": [
+          {
+            "type": "string",
+            "maxLength": 180000,
+            "pattern": "^data:image\\/[a-z0-9.+-]+;base64,[a-z0-9+/]+=*$"
+          },
+          {
+            "type": "null"
+          }
         ]
       }
     },

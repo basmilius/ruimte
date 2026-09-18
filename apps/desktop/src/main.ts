@@ -324,8 +324,7 @@ interface AppTheme {
 /*
  * The preload of every browser page (`guest.ts`): the wheel samples a swipe is read from, the side
  * buttons of a mouse and Cmd+[ inside a page, all sent to the webview element. Registered on the
- * session so the client names no path; a main frame runs it and a subframe does not. Never on the
- * preview partition, which is sealed and has no history to walk.
+ * session so the client names no path; a main frame runs it and a subframe does not.
  */
 const registerGuestPreload = (): void => {
     session.fromPartition(BROWSER_PARTITION).registerPreloadScript({ type: 'frame', id: 'ruimte-guest', filePath: join(here, 'guest.cjs') });
@@ -348,17 +347,10 @@ const applyTheme = (theme: AppTheme): void => {
     }
 };
 
-// The partition the file preview in the client's panel loads a page into; `apps/client/src/shell/panels/HtmlFile.tsx`.
 const PREVIEW_PARTITION = 'preview';
-
-// A scheme the page carries itself, which never leaves the machine.
 const LOCAL_SCHEMES = ['file:', 'data:', 'blob:', 'about:'];
 
-/*
- * A previewed HTML file is a plain local document: it may pull in the assets beside it and nothing
- * else. Without this a script in the file could call any server on this machine and hand what it
- * reads to any host it likes.
- */
+/* A previewed file may load adjacent assets, but cannot use its scripts to reach a server. */
 const sealPreviewSession = (): void => {
     const preview = session.fromPartition(PREVIEW_PARTITION);
     preview.webRequest.onBeforeRequest((details, callback) => callback({ cancel: !LOCAL_SCHEMES.some((scheme) => details.url.startsWith(scheme)) }));
@@ -368,13 +360,9 @@ const sealPreviewSession = (): void => {
 const isPreviewGuest = (contents: Electron.WebContents): boolean =>
     contents.getType() === 'webview' && contents.session === session.fromPartition(PREVIEW_PARTITION);
 
-// What a link in a previewed page may hand to the system: a web page or a mail, never a scheme that starts an app.
 const isExternalLink = (url: string): boolean => /^(https?:\/\/|mailto:)/.test(url);
 
-/*
- * The sealed session cancels a link to the web, so the click would do nothing at all: it goes to the
- * system browser instead. A link to a file beside the page still opens in place.
- */
+/* Network links leave the sealed preview instead of failing silently inside it. */
 const routePreviewLinks = (contents: Electron.WebContents): void => {
     contents.on('will-navigate', (event) => {
         if (isExternalLink(event.url)) {
@@ -1096,17 +1084,15 @@ if (!app.requestSingleInstanceLock()) {
     app.quit();
 } else {
     app.on('web-contents-created', (_event, contents) => {
-        /* Every guest page, the preview of an HTML file included, says when it takes the focus: a
-           press inside one never reaches the client's page, and the grid has to know which cell
-           the keyboard went to. */
+        /* Every webview says when it takes the focus: a press inside one never reaches the
+           client's page, and the grid has to know which cell the keyboard went to. */
         if (contents.getType() === 'webview') {
             contents.on('focus', () => mainWindow?.webContents.send('guest:focus', contents.id));
         }
         if (isPreviewGuest(contents)) {
             routePreviewLinks(contents);
         }
-        /* Only the pages of browser nodes get a menu. The preview partition is sealed on purpose: it
-           renders a local file the panel opened, with nothing to inspect. */
+        /* Only the pages of browser nodes get a menu. */
         if (!isBrowserGuest(contents)) {
             return;
         }

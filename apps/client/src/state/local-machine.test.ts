@@ -4,9 +4,9 @@ import { hasLocalMachine, isRealMachine, listedEndpoints } from './local-machine
 const rows = [{ id: 'local' }, { id: 'studio' }, { id: 'attic' }];
 
 describe('the machine that served the page', () => {
-    test('is a machine wherever a daemon serves the page, and not on the web client', () => {
-        expect(hasLocalMachine(false)).toBe(true);
-        expect(hasLocalMachine(true)).toBe(false);
+    test('exists only behind a native shell that can read its secret', () => {
+        expect(hasLocalMachine(true)).toBe(true);
+        expect(hasLocalMachine(false)).toBe(false);
     });
 
     test('is listed with the rest where it is a machine', () => {

@@ -23,30 +23,29 @@ import { classifyLoadError, type LoadErrorKind } from '@/browser/load-error';
 import { prettyUrl } from '@/browser/pretty-url';
 import { browserRegistry, useBrowserRow } from '@/browser/registry';
 import { BrowserStream } from '@/browser/BrowserStream';
+import { browserStreamScaleLimit, browserStreamScaleOptions, clampBrowserStreamScale, useBrowserStreamQuality } from '@/browser/stream-quality';
 import { useSwipeOverlay } from '@/browser/swipe-overlay';
 import { endpointKey, useEndpointId } from '@/state/keys';
-import { deriveNodeTitle } from '@/chat/title';
 import { desktop, isApplePlatform, isDesktop } from '@/desktop/bridge';
-import { renameHost, updateHost, useNodeHost } from '@/nodes/node-host';
+import { useNodeHost } from '@/nodes/node-host';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
+import { Select } from '@/ui/Select';
 import { formatShortcut, KEY_SHORTCUTS } from '@/ui/shortcut';
 import { browserClientFor } from '@/transport/connections';
 
 export const DEFAULT_URL = 'https://bas.dev';
 
 /*
- * Keeps one page alive for this id and writes back the address it ends up on, so the node or the
- * view opens where it was left. The page itself is a <webview> in the parking layer, never here.
+ * Keeps one page alive for this client. The view's address starts it; navigation stays in the
+ * client runtime. The page itself is a <webview> in the parking layer, never here.
  */
 export const usePage = (id: string): { url: string; available: boolean } => {
     const host = useNodeHost(id);
     const savedUrl = host?.url;
-    const named = host?.titleSource === 'user';
-    const title = host?.title;
     const state = useBrowserRow(id, (row) => row);
     const key = endpointKey(useEndpointId(), id);
     const available = isDesktop();
@@ -58,27 +57,14 @@ export const usePage = (id: string): { url: string; available: boolean } => {
         // The page stays when this unmounts (culling, a view switch); only a delete destroys it.
     }, [key, available, savedUrl]);
 
-    useEffect(() => {
-        // The last address a page reached is what it opens with next time.
-        if (state?.url && state.url !== 'about:blank' && state.url !== savedUrl) {
-            updateHost(id, { url: state.url });
-        }
-    }, [id, state?.url, savedUrl]);
-
-    useEffect(() => {
-        // A page may auto-name an unnamed node, but Chromium's error-page title may not.
-        const next = state?.title ? deriveNodeTitle(state.title) : null;
-        if (!named && !state?.error && next && next !== title) {
-            renameHost(id, next, 'auto');
-        }
-    }, [id, named, title, state?.title, state?.error]);
-
     return { url: state?.url ?? savedUrl ?? DEFAULT_URL, available };
 };
 
 /* Back, forward, the address and reload: in the node's own bar, or in the toolbar for a browser view. */
 export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }) {
     const state = useBrowserRow(id, (row) => row);
+    const preferredScale = useBrowserStreamQuality((store) => store.scale);
+    const setScale = useBrowserStreamQuality((store) => store.setScale);
     const endpointId = useEndpointId();
     const key = endpointKey(endpointId, id);
     const native = isDesktop();
@@ -102,6 +88,9 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
     const saved = useNodeHost(id)?.url;
     const url = draft ?? state?.url ?? saved ?? DEFAULT_URL;
     const secure = url.startsWith('https://');
+    const scaleLimit = browserStreamScaleLimit();
+    const scale = clampBrowserStreamScale(preferredScale, scaleLimit);
+    const scaleItems = browserStreamScaleOptions(scaleLimit).map((value) => ({ value: String(value), label: `${value}×` }));
 
     // The whole address arrives with the render that follows the focus, so it is selected after it.
     useEffect(() => {
@@ -180,6 +169,19 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                 {state?.loading && <div className="progress-line absolute inset-x-0 bottom-0" role="progressbar" aria-label="Loading the page" />}
             </div>
             <div className={BTN_GROUP}>
+                {!native && (
+                    <Select<string>
+                        value={String(scale)}
+                        onValueChange={(value) => setScale(Number(value))}
+                        items={scaleItems}
+                        label="Browser stream DPI"
+                        size="sm"
+                        variant="ghost"
+                        align="end"
+                        truncateValue={false}
+                        className="w-[76px] justify-center tabular-nums"
+                    />
+                )}
                 <Tooltip label="Open in the system browser" name>
                     <button
                         className="icon-btn h-7 w-7"

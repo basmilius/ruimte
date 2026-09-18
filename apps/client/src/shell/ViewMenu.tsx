@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
 import { Check, ChevronDown, FileText, Frame, Globe, Minus, PanelBottom, PanelRight, Pencil, PenTool, Workflow, Smile, Terminal, Trash, X } from 'lucide-react';
-import { isDiagramView, isDrawingView, isFileView, isOpenableView, isSessionView, viewIconOf } from '@ruimte/contracts';
+import { isDiagramView, isDrawingView, isFileView, isOpenableView, isSessionView, viewIconOf, type ProjectView } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentView } from '@/agents/nodes';
@@ -31,6 +31,12 @@ import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { CANVAS_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
 import { Kbd } from '@/ui/Kbd';
+import { useBrowserDisplayTitle } from '@/browser/title';
+
+function ViewName({ view, className }: { view: ProjectView; className: string }) {
+    const title = useBrowserDisplayTitle(view.id, view.name ?? '', 'titleSource' in view ? view.titleSource : undefined);
+    return <span className={className}>{view.kind === 'browser' ? title : view.name}</span>;
+}
 
 /*
  * The same choices as tiles, for a project without any view: an empty sidebar with nothing to click
@@ -153,7 +159,7 @@ export function ViewMenu() {
                     provider={active.kind === 'chat' || active.kind === 'terminal' ? active.node.provider : null}
                     path={active.kind === 'file' ? active.path : null}
                 />
-                <span className="truncate text-sm text-text">{active.name}</span>
+                <ViewName view={active} className="truncate text-sm text-text" />
                 <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
             </Menu.Trigger>
             <Menu.Portal>
@@ -169,7 +175,7 @@ export function ViewMenu() {
                                     provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
                                     path={view.kind === 'file' ? view.path : null}
                                 />
-                                <span className="truncate">{view.name}</span>
+                                <ViewName view={view} className="truncate" />
                                 {view.id === activeViewId && (
                                     <span className="ml-auto flex shrink-0 items-center">
                                         <Icon icon={Check} size={14} />
