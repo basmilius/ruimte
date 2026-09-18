@@ -5,7 +5,7 @@ export type SettingsSectionId = 'appearance' | 'keyboard' | 'views' | 'files' | 
 
 export type PanelKind = ProjectPanelKind;
 
-const PANEL_KINDS: readonly PanelKind[] = ['files', 'git', 'processes'];
+const PANEL_KINDS: readonly PanelKind[] = ['files', 'git', 'processes', 'devices'];
 
 const SIDEBAR_STORAGE_KEY = 'ruimte.sidebar';
 

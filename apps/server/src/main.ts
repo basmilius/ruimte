@@ -22,7 +22,17 @@ process.on('unhandledRejection', fail);
  * context` is the agent-side CLI. The daemon is imported only when it is needed, so the CLI commands
  * do not pay for loading the terminal emulator.
  */
-const config = parseServerArgs(process.argv.slice(2));
+const arguments_ = process.argv.slice(2);
+if (arguments_[0] === 'device-helper') {
+    const deviceId = arguments_[1];
+    if (!deviceId || arguments_.length !== 2) {
+        fail(new Error('Usage: ruimte device-helper <device-id>'));
+    }
+    const { runDeviceHelper } = await import('./devices/native-helper.ts');
+    process.exit(await runDeviceHelper(deviceId));
+}
+
+const config = parseServerArgs(arguments_);
 
 if (config.command === 'version') {
     const { VERSION } = await import('./version.ts');

@@ -184,6 +184,18 @@ describe('a node and a view of its own', () => {
         expect((result.views[0] as ProjectCanvasView).nodes.map((each) => each.id)).toEqual(['term']);
     });
 
+    test('a simulator moves between canvas and view without storing its local device id', () => {
+        const device = { platform: 'ios' as const, kind: 'simulator' as const, name: 'iPhone 18 Pro', runtime: 'iOS 27.0' };
+        const source = canvas('a', [{ ...node('phone', 'device'), device }]);
+        const promoted = withNodeAsView([source], 'phone')!;
+
+        expect(promoted.view).toEqual({ kind: 'device', id: 'phone', name: 'phone', device });
+        expect(JSON.stringify(promoted.view)).not.toContain('deviceId');
+
+        const restored = withViewAsNode(promoted.views, 'phone', 'a', { x: 20, y: 30 })!;
+        expect(restored.node).toMatchObject({ id: 'phone', kind: 'device', device, x: 20, y: 30, w: 360, h: 720 });
+    });
+
     test('a drawing is a file, so it is never put on a canvas as itself', () => {
         const views: ProjectView[] = [canvas('a'), { kind: 'drawing', id: 'd', name: 'Sketch' }];
         expect(withViewAsNode(views, 'd', 'a', { x: 0, y: 0 })).toBeNull();
@@ -219,9 +231,12 @@ describe('what a view keeps running', () => {
         ]);
     });
 
-    test('a view of its own is the one node it is; a browser, a drawing and a separator are none', () => {
+    test('a view of its own is the one daemon session it is; browsers, devices and files are none', () => {
         expect(sessionNodesOfView({ kind: 'chat', id: 'c1', name: 'Planner', node: {} })).toEqual([{ id: 'c1', kind: 'chat' }]);
         expect(sessionNodesOfView({ kind: 'browser', id: 'p1', name: 'Page', url: 'https://bas.dev' })).toEqual([]);
+        expect(
+            sessionNodesOfView({ kind: 'device', id: 'phone', name: 'iPhone', device: { platform: 'ios', kind: 'simulator', name: 'iPhone', runtime: 'iOS 27.0' } })
+        ).toEqual([]);
         expect(sessionNodesOfView({ kind: 'drawing', id: 'd1', name: 'Sketch' })).toEqual([]);
         expect(sessionNodesOfView({ kind: 'separator', id: 'sep' })).toEqual([]);
     });
@@ -236,6 +251,13 @@ describe('who made a view', () => {
             { kind: 'drawing', id: 'd1', name: 'Sketch', createdBy: 'term-1' },
             { kind: 'file', id: 'f1', name: 'main.ts', path: 'src/main.ts', createdBy: 'term-1' },
             { kind: 'browser', id: 'p1', name: 'Page', url: 'https://bas.dev', createdBy: 'term-1' },
+            {
+                kind: 'device',
+                id: 'phone',
+                name: 'iPhone',
+                device: { platform: 'ios', kind: 'simulator', name: 'iPhone', runtime: 'iOS 27.0' },
+                createdBy: 'term-1'
+            },
             { kind: 'terminal', id: 't1', name: 'Shell', node: {}, createdBy: 'term-1' }
         ];
         const parsed = ProjectDocumentSchema.parse({ version: 2, rev: 1, name: 'repo', color: '#123456', views });

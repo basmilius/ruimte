@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { isSessionView, type AgentKind, type CanvasNodeKind, type NodeTitleSource, type ProjectView, type RuntimeMode } from '@ruimte/contracts';
+import { isSessionView, type AgentKind, type CanvasNodeKind, type DeviceReference, type NodeTitleSource, type ProjectView, type RuntimeMode } from '@ruimte/contracts';
 import { suggestedTitleFor } from '@/chat/title';
 import { canvasOfNode, DEFAULT_TITLES, useCanvas, type CanvasNode } from '@/state/canvas';
 import { useDocument } from '@/state/document';
@@ -24,6 +24,7 @@ export interface NodeHost {
     providerFixed?: boolean;
     runtimeMode?: RuntimeMode;
     url?: string;
+    device?: DeviceReference;
     /* False when this is a view of its own: no frame around it, no canvas under it. */
     onCanvas: boolean;
 }
@@ -40,6 +41,7 @@ const hostOfNode = (node: CanvasNode): NodeHost => ({
     providerFixed: node.providerFixed,
     runtimeMode: node.runtimeMode,
     url: node.url,
+    device: node.device,
     onCanvas: true
 });
 
@@ -49,6 +51,9 @@ const hostOfView = (view: ProjectView): NodeHost | null => {
     }
     if (view.kind === 'browser') {
         return { id: view.id, kind: 'browser', title: view.name, titleSource: view.titleSource, url: view.url, onCanvas: false };
+    }
+    if (view.kind === 'device') {
+        return { id: view.id, kind: 'device', title: view.name, titleSource: view.titleSource, device: view.device, onCanvas: false };
     }
     return { id: view.id, kind: view.kind, title: view.name, titleSource: view.titleSource, ...view.node, onCanvas: false };
 };

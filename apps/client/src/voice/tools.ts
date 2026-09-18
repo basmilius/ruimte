@@ -341,6 +341,7 @@ const manageCanvas = async (args: Record<string, unknown>): Promise<VoiceToolExe
             terminal: 'terminal',
             chat: 'AI Chat',
             browser: 'browser',
+            device: 'device',
             group: 'group',
             note: 'note',
             drawing: 'drawing',

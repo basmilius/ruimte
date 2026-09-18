@@ -3,13 +3,13 @@ import { z } from 'zod';
 export const ACTION_ACTOR_KINDS = ['person', 'voice', 'agent', 'automation'] as const;
 export const ActionActorKindSchema = z.enum(ACTION_ACTOR_KINDS);
 
-export const VIEW_KINDS = ['canvas', 'drawing', 'diagram', 'file', 'terminal', 'browser', 'chat', 'separator', 'unknown'] as const;
+export const VIEW_KINDS = ['canvas', 'drawing', 'diagram', 'file', 'terminal', 'browser', 'device', 'chat', 'separator', 'unknown'] as const;
 export const ActionViewKindSchema = z.enum(VIEW_KINDS);
 
 export const CREATABLE_VIEW_KINDS = ['canvas', 'drawing', 'diagram', 'terminal', 'browser', 'chat'] as const;
 export const ActionCreatableViewKindSchema = z.enum(CREATABLE_VIEW_KINDS);
 
-export const CANVAS_NODE_KINDS = ['terminal', 'chat', 'browser', 'group', 'note', 'drawing', 'diagram', 'file', 'unknown'] as const;
+export const CANVAS_NODE_KINDS = ['terminal', 'chat', 'browser', 'device', 'group', 'note', 'drawing', 'diagram', 'file', 'unknown'] as const;
 export const ActionCanvasNodeKindSchema = z.enum(CANVAS_NODE_KINDS);
 
 export const CREATABLE_CANVAS_NODE_KINDS = ['terminal', 'chat', 'browser', 'group', 'note'] as const;

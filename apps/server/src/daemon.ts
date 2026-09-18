@@ -108,6 +108,11 @@ import { errorText } from './error-text.ts';
 import { BrowserManager } from './browser/manager.ts';
 import { registerBrowserHandlers } from './handlers/browser.ts';
 import { handleLiveStreamRequest, LIVE_STREAM_PATH } from './streams/http-stream.ts';
+import { DeviceManager } from './devices/manager.ts';
+import { IosSimulatorBackend } from './devices/ios-simulator.ts';
+import { createDeviceHelperLauncher } from './devices/helper-source.ts';
+import { registerDeviceHandlers } from './handlers/device.ts';
+import { LiveStreamHub } from './streams/live-stream.ts';
 
 // A client on another origin pairs and signs in from its own page, so the auth routes answer preflights and open CORS.
 // What would end if this daemon restarted, as counts; `service/work.ts` says what counts.
@@ -296,7 +301,13 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         }
     });
     const folders = new FolderWatcher();
-    const browsers = BrowserManager.withBun(config.home);
+    const liveStreams = new LiveStreamHub();
+    const browsers = BrowserManager.withBun(config.home, liveStreams);
+    const deviceHelperCommand = compiled ? [process.execPath, 'device-helper'] : [process.execPath, resolve(import.meta.dir, 'main.ts'), 'device-helper'];
+    const devices = new DeviceManager(
+        process.platform === 'darwin' ? [new IosSimulatorBackend(undefined, createDeviceHelperLauncher(deviceHelperCommand))] : [],
+        liveStreams
+    );
     const statuses = new GitStatusWatcher();
     const usage = new UsageService({ home: config.home, allowPriceFetch: config.priceFetch, knownProjects: () => projects.known() });
     const limits = new UsageMonitor({ providers });
@@ -433,6 +444,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
     registerSessionHandlers(dispatcher, manager, endChildren.owe);
     registerBrowserHandlers(dispatcher, browsers, () => identity.streamingAllowed);
+    registerDeviceHandlers(dispatcher, devices, () => identity.streamingAllowed);
     const forkDeps = chatForkDeps({ chats, host: canvasHost, titleFor: (id) => projects.index.titleFor(id), lineage, worktrees, checkpoints });
     registerChatHandlers(dispatcher, chats, providers, endChildren.owe, endChildren.stopNode, {
         fork: (payload) => forkChat(forkDeps, payload),
@@ -452,6 +464,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         streamingChanged: (allowed) => {
             if (!allowed) {
                 browsers.closeAll();
+                devices.closeAll();
             }
         },
         disconnect: (sessionId) => {
@@ -562,6 +575,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         sessions: manager,
         chats,
         browsers,
+        devices,
         identity,
         projects,
         drawings,
@@ -730,7 +744,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }
 
             if (url.pathname.startsWith(`${LIVE_STREAM_PATH}/`)) {
-                return handleLiveStreamRequest(request, url, remote, auth, access, browsers.streams, () => identity.streamingAllowed);
+                return handleLiveStreamRequest(request, url, remote, auth, access, liveStreams, () => identity.streamingAllowed);
             }
 
             if (url.pathname.startsWith(`${HOOKS_PATH}/`)) {
@@ -858,6 +872,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         }
         manager.killAll();
         browsers.closeAll();
+        devices.closeAll();
         projects.closeAll();
         drawings.closeAll();
         diagrams.closeAll();

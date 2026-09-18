@@ -626,6 +626,7 @@
     .panel-shell { transition: width 200ms cubic-bezier(0, 0, 0.2, 1); }
     .panel-shell[data-resizing],
     .panel-shell[data-instant] { transition: none; }
+    .panel-title-signal:not(:empty) + .panel-title { display: none; }
 
     /* A 2px line that says "something is on its way" without knowing how far along it is: a bar of
        a third of the width sweeping across, which is a pseudo-element and a keyframe. Used under

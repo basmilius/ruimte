@@ -166,10 +166,10 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
 <a class="skip" href="#advies">Naar de inhoud</a>
 <header>
   <p class="eyebrow">RUIMTE / TECHNISCH ONTWERP / 18 SEPTEMBER 2026</p>
-  <h1>Browserstreaming zonder de besturingsverbinding te belasten</h1>
-  <p class="intro">Houd headless Chromium en CDP als browsermotor, maar stuur beeld niet als base64 door de bestaande JSON-verbinding. Gebruik één kleine livestreammodule voor browser- en deviceframes, met een binaire HTTP-stream voor gewone verbindingen en een apart, onbetrouwbaar WebRTC-datakanaal voor directe verbindingen.</p>
-  <p class="status">Uitgewerkt voorstel, spike nodig voor een besluit</p>
-  <p class="caption">Gebaseerd op <a href="../research/browser-streaming.md">browser-streaming.md</a>, het <a href="2026-09-13-devices.html">deviceonderzoek</a> en de code op <code>a05eb292</code>. Getallen zonder badge zijn doelen voor de spike, geen metingen.</p>
+  <h1>Browserstreaming is de basis voor devices</h1>
+  <p class="intro">Ruimte streamt daemonbrowsers inmiddels met CDP JPEG-frames naar dezelfde canvasrenderer op desktop, web en iOS. Bereikbare machines gebruiken een binaire HTTP-stream. Een directe verbinding gebruikt voorlopig vervangbare <code>browser.frame</code>-events op de bestaande verbinding.</p>
+  <p class="status">Browserpad gebouwd, devicepad gestart</p>
+  <p class="caption">Bijgewerkt op 18 september 2026 op basis van <code>main</code> bij <code>3b46403e</code> en de aansluitende devicewerkkopie. Prestatiegetallen in dit rapport blijven doelen totdat ze gemeten zijn.</p>
   <nav aria-label="Inhoud">
     <a href="#advies">Advies</a>
     <a href="#correctie">Wat verandert</a>
@@ -186,33 +186,33 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
 <main>
 
 <section id="advies" class="recommendation">
-  <h2>Advies</h2>
-  <p>De capturekeuze uit het eerdere browseronderzoek blijft goed: één Chromiumproces per daemon, één target per browser-node en <code>Page.startScreencast</code> voor JPEG-frames. De wijziging zit na de capture. Decodeer de base64 van CDP één keer in de daemon en stuur daarna binaire JPEG-bytes over een mediapad dat losstaat van requests, terminal-output en status-events.</p>
-  <p>Maak daarvoor een diepe module <code>LiveStreamHub</code>. De externe interface kent alleen een bron-id, een kijkprofiel, abonneren en loslaten. Browser en devices leveren frames via een interne <code>FrameSource</code>-seam. De module regelt refcounts, het laatste frame, per-kijker backpressure en de keuze tussen HTTP en een direct mediakanaal.</p>
-  <p>Laat besturing op de bestaande betrouwbare verbinding. Voor browserpagina's zijn dat navigatie en CDP-input. Voor simulators zijn dat tikken, slepen, knoppen en draaien. Een vol mediapad mag dus nooit een terminal, input-event of detach vertragen.</p>
+  <h2>Huidige uitkomst</h2>
+  <p><code>BrowserManager</code> bezit de Chromiumtargets, serialiseert CDP-operaties en registreert per browser één bron bij <code>LiveStreamHub</code>. De hub start capture bij de eerste kijker en stopt bij de laatste. De HTTP-adapter begrenst elke kijker tot één wachtend frame, zodat een trage client de bron of andere kijkers niet ophoudt.</p>
+  <p><code>BrowserStream</code> leest het binaire formaat, decodeert maximaal één JPEG tegelijk en tekent op canvas. Dezelfde component vertaalt pointer-, wheel-, toets- en tekstinvoer terug naar de betrouwbare requestverbinding. Remote clients openen daardoor dezelfde daemonbrowser in plaats van een tweede lokale webview.</p>
+  <p>Gebruik deze stroomkern nu voor de iOS Simulator. Houd discovery, boot, shutdown en HID in <code>DeviceManager</code>. Alleen JPEG-frames gaan door <code>LiveStreamHub</code>. Het binaire formaat staat sinds deze device-start in een eigen <code>live-stream.ts</code> en is niet meer eigendom van browsercontracts.</p>
   <div class="stats">
-    <div><strong>0</strong><span>beeldframes op de primaire JSON-verbinding</span></div>
     <div><strong>1</strong><span>upstream capture per bron</span></div>
-    <div><strong>2</strong><span>media-adapters bij de eerste versie</span></div>
+    <div><strong>1</strong><span>wachtend frame per HTTP-kijker</span></div>
+    <div><strong>2</strong><span>werkende transportroutes</span></div>
   </div>
-  <p class="note">Dit vervangt ook het transportdeel van het devicevoorstel. MJPEG over HTTP blijft een geldige spikevariant, maar een <code>&lt;img&gt;</code> dekt geen directe WebRTC-verbinding en geeft de client weinig controle over achterlopende frames. Een binaire fetch-stream en een apart datakanaal kunnen dezelfde frameparser en canvasrenderer gebruiken.</p>
+  <p class="note">De directe route wijkt af van het eerdere ontwerp. Er is nog geen tweede onbetrouwbaar WebRTC-datakanaal. Directe clients krijgen base64 JPEG via vervangbare <code>browser.frame</code>-events. Dit werkt, maar legt beeld en besturing op dezelfde betrouwbare verbinding. Voor simulatorframes hergebruiken we dit eerst; een apart mediakanaal blijft een latere optimalisatie die met metingen moet worden verdiend.</p>
 </section>
 
 <section id="correctie">
   <h2>Wat verandert ten opzichte van de research note</h2>
   <div class="table" role="region" aria-label="Wijzigingen ten opzichte van het eerdere voorstel" tabindex="0">
     <table class="wide">
-      <caption>De browsermotor blijft staan. Transport, lifecycle en runtime-eigenaarschap worden scherper.</caption>
+      <caption>Het voorstel naast wat op 18 september daadwerkelijk in de code staat.</caption>
       <thead>
-        <tr><th scope="col">Onderwerp</th><th scope="col">Eerder voorstel</th><th scope="col">Uitgewerkt voorstel</th><th scope="col">Reden</th></tr>
+        <tr><th scope="col">Onderwerp</th><th scope="col">Eerder voorstel</th><th scope="col">Gebouwd</th><th scope="col">Gevolg voor devices</th></tr>
       </thead>
       <tbody>
-        <tr><th scope="row">Beeldtransport</th><td>Base64 JPEG in <code>browser.frame</code> over de bestaande socket.</td><td>Binaire frames via HTTP <code>fetch</code> of een apart WebRTC-datakanaal.</td><td>De primaire verbinding is betrouwbaar en geordend. Een verloren beeldpakket mag geen terminal-output of input achter zich vasthouden.</td></tr>
-        <tr><th scope="row">Authenticatie</th><td>De socketauthenticatie dekt alles.</td><td>HTTP gebruikt een bearer-header of een kortlevend, brongebonden ticket. Het directe mediakanaal hoort bij dezelfde geauthenticeerde peerverbinding.</td><td>Een breed sessietoken hoort niet langdurig in een stream-URL of logregel.</td></tr>
-        <tr><th scope="row">Directe verbinding</th><td>Niet apart behandeld.</td><td>Een tweede kanaal <code>ruimte-media-v1</code>, <code>ordered: false</code> en <code>maxRetransmits: 0</code>.</td><td>Een directe verbinding heeft geen bereikbare HTTP-server. <code>bytes.read</code> is geschikt voor eindige bestanden, niet voor live beeld.</td></tr>
-        <tr><th scope="row">Devices</th><td>Los browserpad.</td><td>Dezelfde hub en renderer voor JPEG; H.264 blijft een codec-adapter na de Android-spike.</td><td>Refcounts, culling, tickets, laatste-framegedrag en backpressure zijn hetzelfde probleem.</td></tr>
-        <tr><th scope="row">Lokale webview</th><td>Automatisch webview lokaal, stream remote.</td><td>Geen stille wissel van runtime. Een node is client-lokaal in een webview of daemon-beheerd en deelbaar.</td><td>Automatisch kiezen maakt twee browsesessies onder één node-id. Cookies, formulieren en geschiedenis lopen dan uiteen.</td></tr>
-        <tr><th scope="row">Agents</th><td>Accessibility tree later.</td><td>Screenshot en toegankelijkheidsboom komen uit dezelfde daemonruntime, pas na een edge en een aparte agenttoestemming.</td><td>Dit volgt het deviceplan en voorkomt dat een agent een client-lokale webview probeert te bedienen.</td></tr>
+        <tr><th scope="row">Beeldtransport</th><td>Base64 JPEG in <code>browser.frame</code> over de bestaande socket.</td><td>Binaire HTTP-frames als de daemon bereikbaar is, events als alleen de directe verbinding beschikbaar is.</td><td>De simulatorhelper publiceert dezelfde <code>LiveStreamFrame</code> en kiest geen transport.</td></tr>
+        <tr><th scope="row">Authenticatie</th><td>De socketauthenticatie dekt alles.</td><td><code>/streams/&lt;id&gt;</code> gebruikt <code>decideAccess</code> en weigert streams als streaming op de machine uitstaat.</td><td>Devices vallen onder dezelfde machine-instelling en autorisatie.</td></tr>
+        <tr><th scope="row">Directe verbinding</th><td>Een tweede onbetrouwbaar mediakanaal.</td><td>Vervangbare events op de bestaande betrouwbare verbinding.</td><td>Eerst functioneel hergebruik. Een tweede kanaal volgt alleen bij aantoonbare druk op terminal- of inputverkeer.</td></tr>
+        <tr><th scope="row">Devices</th><td>Een los browserpad.</td><td><code>LiveStreamHub</code>, HTTP-framing en de decoder zijn al generiek. Het contractbestand is nu ook losgetrokken.</td><td>De resterende nieuwe delen zijn de simulatorbron, input en device-UI.</td></tr>
+        <tr><th scope="row">Lokale webview</th><td>Automatisch webview lokaal, stream remote.</td><td>Lokale Electron-browsernodes houden hun webview. Remote nodes gebruiken de daemonbrowser en behouden hun runtimebinding.</td><td>Een simulator is altijd daemon-beheerd en kent deze tweedeling niet.</td></tr>
+        <tr><th scope="row">Agents</th><td>Accessibility tree later.</td><td>Browsercontrol voor agents valt nog buiten dit pad.</td><td>Devicecontext en bediening blijven een eigen, latere fase met edge-toestemming.</td></tr>
       </tbody>
     </table>
   </div>
@@ -269,7 +269,7 @@ type LiveStreamHub = {
     <div class="table" role="region" aria-label="Architectuur van browser- en devicestreams" tabindex="0">
       <svg class="diagram plot" width="960" viewBox="0 0 960 390" role="img" aria-labelledby="stream-title stream-desc">
         <title id="stream-title">Gedeelde livestreamarchitectuur</title>
-        <desc id="stream-desc">BrowserManager en DeviceManager leveren gecodeerde frames aan LiveStreamHub. De hub stuurt ze via een HTTP-adapter of een apart WebRTC-datakanaal naar dezelfde canvasrenderer. Input en status blijven op de betrouwbare besturingsverbinding.</desc>
+        <desc id="stream-desc">BrowserManager en straks DeviceManager leveren JPEG-frames aan LiveStreamHub. De hub stuurt ze via een HTTP-adapter of als vervangbare events naar dezelfde canvasrenderer. Input en status blijven op de betrouwbare besturingsverbinding.</desc>
         <defs><marker id="stream-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker></defs>
         <rect class="node" x="20" y="35" width="210" height="95" rx="12"/>
         <text x="125" y="73" text-anchor="middle" font-weight="600">BrowserManager</text>
@@ -285,8 +285,8 @@ type LiveStreamHub = {
         <text x="830" y="73" text-anchor="middle" font-weight="600">HTTP fetch-stream</text>
         <text x="830" y="99" text-anchor="middle" class="label">LAN en socketroute</text>
         <rect class="transport" x="720" y="200" width="220" height="95" rx="12"/>
-        <text x="830" y="238" text-anchor="middle" font-weight="600">Media-datakanaal</text>
-        <text x="830" y="264" text-anchor="middle" class="label">direct en eventueel TURN</text>
+        <text x="830" y="238" text-anchor="middle" font-weight="600">Frame-events</text>
+        <text x="830" y="264" text-anchor="middle" class="label">direct of TURN</text>
         <rect class="node" x="350" y="320" width="260" height="55" rx="12"/>
         <text x="480" y="353" text-anchor="middle" font-weight="600">Canvasrenderer</text>
         <path class="edge" d="M230 82 H290 Q320 82 350 135" marker-end="url(#stream-arrow)"/>
@@ -297,33 +297,33 @@ type LiveStreamHub = {
         <path class="edge" d="M830 295 V330 Q830 347 810 347 H622" marker-end="url(#stream-arrow)"/>
       </svg>
     </div>
-    <figcaption>De betrouwbare besturingsverbinding is bewust niet als beeldpad getekend. Hij draagt alleen requests, replies en status-events tussen de client en de twee managers.</figcaption>
+    <figcaption>HTTP houdt beeld weg van de besturingsverbinding. Op de directe route delen vervangbare frame-events die verbinding voorlopig wel met requests en status.</figcaption>
   </figure>
 </section>
 
 <section id="transport">
   <h2>Transport en framegedrag</h2>
 
-  <h3>Gewone socketroute</h3>
-  <p>De client vraagt met <code>stream.attach</code> een descriptor en opent daarna <code>GET /streams/&lt;streamId&gt;</code> met <code>fetch</code>. Zo kan hij een bearer-header meesturen, de binaire response incrementeel lezen en elk compleet frame zelf decoderen. De route loopt door <code>decideAccess</code>. Een kortlevend ticket blijft nuttig voor clients die geen header kunnen zetten, maar is brongebonden, eenmalig te openen en verloopt als niemand de response binnen bijvoorbeeld 30 seconden opent.</p>
-  <p>De stream is een reeks lengte-voorafgegane frames. De header bevat minimaal protocolversie, volgnummer, codec, maat, capturetijd en payloadlengte. De exacte binaire indeling is onderdeel van de spike. De response gebruikt <code>Cache-Control: no-store</code>, <code>X-Content-Type-Options: nosniff</code> en geen verwijzende URL.</p>
+  <h3>Bereikbare HTTP-route</h3>
+  <p><code>browser.open</code> antwoordt met een <code>streamId</code>. De client opent <code>GET /live-stream/&lt;streamId&gt;</code> met een bearer-header en leest de binaire response incrementeel. De route loopt door <code>decideAccess</code> en door de machine-instelling voor browser- en devicestreaming.</p>
+  <p>De stream begint met een vaste magic en bevat daarna lengte-voorafgegane frames. De header van 12 bytes bevat payloadlengte, volgnummer, breedte en hoogte. De payload is JPEG. De response gebruikt <code>Cache-Control: no-store</code> en <code>X-Content-Type-Options: nosniff</code>.</p>
 
   <h3>Directe WebRTC-route</h3>
-  <p>Ruimte gebruikt voor een directe verbinding al een betrouwbaar, geordend WebRTC-datakanaal. Dat kanaal blijft het controlpad. De client maakt vóór zijn offer ook <code>ruimte-media-v1</code> aan met <code>ordered: false</code> en <code>maxRetransmits: 0</code>. De daemon accepteert dit tweede kanaal alleen op dezelfde peerverbinding en pas nadat het controlkanaal is toegelaten.</p>
-  <p>Een JPEG kan groter zijn dan een veilig SCTP-bericht. De adapter splitst daarom een frame in begrensde fragmenten met hetzelfde stream-id en volgnummer. Ontbreekt een fragment wanneer een nieuwer frame aankomt, dan gooit de client het onvolledige frame weg. Hij vraagt geen herstel. Het volgende beeld is nuttiger dan een oud beeld dat alsnog compleet wordt.</p>
+  <p>Een directe verbinding heeft geen bereikbare HTTP-server. <code>BrowserClient</code> vraagt daarom streamtype <code>events</code>. De daemon verstuurt dan een begrensde base64 JPEG als <code>browser.frame</code> over het bestaande betrouwbare datakanaal.</p>
+  <p>De connectionlaag behandelt frame-events als vervangbaar. De client bewaart alleen het laatste frame per browser en decodeert er maximaal één tegelijk. Een apart onbetrouwbaar mediakanaal blijft mogelijk, maar is niet nodig om devices functioneel aan te sluiten.</p>
 
   <h3>Backpressure</h3>
-  <p>Elke kijker heeft een eigen wachtrij van maximaal één frame. Is de HTTP-writer niet klaar of staat er meer dan één frame aan bytes in het mediakanaal, dan vervangt de hub het wachtende frame door het nieuwste complete frame. De upstream capture loopt door zolang minstens één kijker kan volgen. Als alle kijkers achterlopen, kan de bron tijdelijk frames overslaan.</p>
-  <p>CDP vereist een ack. De <code>BrowserManager</code> geeft die pas wanneer <code>LiveStreamHub</code> het frame heeft overgenomen of bewust heeft laten vallen. Dit voorkomt onbeperkte groei tussen Chromium en de daemon. Het controlpad krijgt geen frame-event en hoeft dus geen speciaal herstel zoals <code>session.resync</code>.</p>
+  <p>Elke HTTP-kijker heeft een wachtrij van maximaal één frame. Is de writer niet klaar, dan vervangt de adapter het wachtende frame door het nieuwste complete frame. De eventroute stuurt alleen zolang een client eraan vastzit en laat eerdere frames in de client overschrijven.</p>
+  <p>CDP vereist een ack. De <code>BrowserManager</code> geeft die nadat de hub of eventroute het frame heeft overgenomen. Dit voorkomt onbeperkte groei tussen Chromium en de daemon.</p>
 
   <div class="table" role="region" aria-label="Transportkeuze per verbinding" tabindex="0">
     <table>
       <caption>De client kiest een adapter op grond van de bestaande verbinding, niet op grond van een geschatte afstand.</caption>
       <thead><tr><th scope="col">Verbinding</th><th scope="col">Media</th><th scope="col">Authenticatie</th><th scope="col">Gedrag bij verlies</th></tr></thead>
       <tbody>
-        <tr><th scope="row">WebSocket naar bereikbare daemon</th><td>Binaire HTTP fetch-stream</td><td>Bearer of scoped ticket via <code>decideAccess</code></td><td>Laat een frame vallen als de writer achterloopt</td></tr>
-        <tr><th scope="row">Directe WebRTC-verbinding</th><td>Apart onbetrouwbaar datakanaal</td><td>Zelfde peer, na toelating van control</td><td>Geen retransmit, onvolledige frames weg</td></tr>
-        <tr><th scope="row">TURN-relay</th><td>Hetzelfde mediakanaal</td><td>DTLS van dezelfde peerverbinding</td><td>Lager profiel na meting, niet via een andere codeweg</td></tr>
+        <tr><th scope="row">WebSocket naar bereikbare daemon</th><td>Binaire HTTP fetch-stream</td><td>Bearer via <code>decideAccess</code></td><td>Vervangt het wachtende frame als de writer achterloopt</td></tr>
+        <tr><th scope="row">Directe WebRTC-verbinding</th><td>Vervangbare <code>browser.frame</code>-events</td><td>Zelfde toegelaten peer</td><td>Betrouwbaar en geordend; de client schildert alleen het nieuwste frame</td></tr>
+        <tr><th scope="row">TURN-relay</th><td>Dezelfde eventroute</td><td>DTLS van dezelfde peerverbinding</td><td>Lager profiel pas na meting</td></tr>
       </tbody>
     </table>
   </div>
@@ -388,29 +388,29 @@ type LiveStreamHub = {
   <h2>Fasen en meetlat</h2>
   <ol class="steps">
     <li class="step"><div>
-      <h3>Transportspike</h3>
-      <p>Start één <code>Bun.WebView</code> met Chrome-backend, neem CDP JPEG-frames af en stuur dezelfde frames naar een canvas via twee routes: een binaire HTTP fetch-stream en een tweede WebRTC-datakanaal op de bestaande directe peerverbinding. Gebruik een kunstmatige 50 ms RTT, 1% en 5% pakketverlies en een doorlopende terminalstream op het controlkanaal.</p>
-      <p><strong>Klaar als:</strong> click-to-paint, fps, bytes per seconde, daemon-CPU, client-decodeertijd, aantal gedropte frames en de wachtrij van beide kanalen zijn gemeten. Tijdens 30 seconden scrollen ontbreken geen terminalbytes en blijven browserinput en een klein request antwoord geven.</p>
+      <h3>Browserpad afronden <span class="badge confirmed">gebouwd</span></h3>
+      <p>CDP-capture, binaire HTTP-framing, eventfallback, canvasweergave, invoer, lifecycle en remote browserbinding staan op <code>main</code>. Unit tests dekken contracts, framing, refcounts, managergedrag en clientherstel.</p>
+      <p><strong>Open:</strong> click-to-paint, fps, bytes per seconde, CPU en gedrag onder netwerkverlies zijn nog niet gemeten.</p>
     </div></li>
     <li class="step"><div>
-      <h3>Livestreammodule</h3>
-      <p>Bouw <code>LiveStreamHub</code> met een fake framebron, een HTTP-adapter en een directe-media-adapter. Test via de externe interface: eerste attach start één bron, twee kijkers delen die bron, een trage kijker houdt de andere niet op, detach van de laatste stopt de bron en het laatste complete frame blijft beschikbaar.</p>
-      <p><strong>Klaar als:</strong> de tests geen kennis hebben van CDP of simulators en de primaire <code>OutputGate</code> geen enkel beeldframe ziet.</p>
+      <h3>Streamkern delen <span class="badge confirmed">gestart</span></h3>
+      <p><code>LiveStreamHub</code> en de HTTP-adapter zijn zelfstandig. Het binaire contract staat nu in <code>packages/contracts/src/live-stream.ts</code>. De volgende stap is de JPEG-bron uit de simulatorhelper registreren onder <code>device:&lt;udid&gt;</code>.</p>
+      <p><strong>Klaar als:</strong> browser en simulator dezelfde hub, framing en decoder gebruiken en de laatste detach beide captures stopt.</p>
     </div></li>
     <li class="step"><div>
-      <h3>Daemonbrowser</h3>
-      <p>Bouw de minimale CDP-client, <code>BrowserManager</code>, browsercontracts en crashherstel. Forceer één serial queue voor CDP-calls. Houd één Chromiumproces per daemon en één target per daemonbrowser aan.</p>
-      <p><strong>Klaar als:</strong> openen, navigeren, terug, vooruit, herladen, stoppen, resize, muis, wheel, toetsen en tekstinvoer werken. Een Chromiumcrash neemt de daemon niet mee en levert een zichtbare foutstatus op.</p>
+      <h3>Simulator lifecycle <span class="badge confirmed">gestart</span></h3>
+      <p><code>DeviceManager</code>, iOS-backend en de requests <code>device.list</code>, <code>device.boot</code> en <code>device.shutdown</code> zijn aangelegd. De backend leest alleen beschikbare iOS-devices uit <code>simctl</code> en houdt het platform uit de manager.</p>
+      <p><strong>Volgende:</strong> helperprotocol, capturebron, stream attach en detach.</p>
     </div></li>
     <li class="step"><div>
-      <h3>Clientrenderer en lifecycle</h3>
-      <p>Vervang <code>BrowserFallback</code> voor daemonbrowsers door een canvasrenderer. Decodeer maar één frame tegelijk en vervang een wachtend frame door het nieuwste. Voeg zichtbaarheid, <code>READABLE_ZOOM</code>, de grace-periode, focus en coördinatenmapping toe.</p>
-      <p><strong>Klaar als:</strong> een view en een canvas-node dezelfde sessie kunnen tonen, een verborgen node na de grace-periode geen frames ontvangt en terugkeren direct het laatste frame laat zien.</p>
+      <h3>Simulator input en viewer</h3>
+      <p>Voeg tik, sleep, Home en draaien toe. Bouw daarna eerst een deviceview op de bestaande streamdecoder. Het panel en de canvas-node volgen wanneer capture en input samen stabiel zijn.</p>
+      <p><strong>Klaar als:</strong> een gestarte iOS-simulator in een view minstens 30 fps haalt, bediening klopt en sluiten de capture loslaat.</p>
     </div></li>
     <li class="step"><div>
-      <h3>Devicepad aansluiten</h3>
-      <p>Laat de iOS-helper JPEG-frames aan dezelfde <code>FrameSource</code>-seam leveren. De Android-spike kiest daarna een <code>h264-fmp4</code>-adapter of JPEG-omzetting. Device-input blijft in <code>DeviceManager</code>.</p>
-      <p><strong>Klaar als:</strong> browser en iOS dezelfde twee transportadapters en dezelfde clientdecoder gebruiken, zonder browservelden in devicecontracts of devicevelden in browsercontracts.</p>
+      <h3>Meten en daarna Android</h3>
+      <p>Meet de browser- en simulatorroute lokaal, via HTTP en via de directe eventroute. Start daarna de Android-spike. Die beslist of de renderer een tweede codec krijgt of dat de daemon naar JPEG omzet.</p>
+      <p><strong>Klaar als:</strong> de transportkeuze op gemeten latency, CPU, bytes en invloed op het controlpad rust.</p>
     </div></li>
   </ol>
 
@@ -433,11 +433,11 @@ type LiveStreamHub = {
 <section id="beslissingen">
   <h2>Beslissingen</h2>
   <ol>
-    <li><span class="badge warning">Voor de spike</span> <strong>Is een apart mediakanaal de extra implementatie waard?</strong> Het rapport zegt ja omdat het directe pad anders ontbreekt en het controlkanaal geordend blijft. De spike moet bewijzen dat werift en de browser een tweede, onbetrouwbaar kanaal stabiel afhandelen.</li>
+    <li><span class="badge warning">Na meting</span> <strong>Is een apart mediakanaal de extra implementatie waard?</strong> De werkende eventroute blijft staan totdat terminal- of inputmetingen aantonen dat een tweede WebRTC-kanaal nodig is.</li>
     <li><span class="badge warning">Voor productie</span> <strong>Blijft de lokale webview bestaan?</strong> Kies na latency-, CPU- en geheugenmetingen tussen twee expliciete runtimes of één daemonbrowser voor alle clients.</li>
     <li><span class="badge info">Door de Android-spike</span> <strong>Krijgt de renderer één of twee codecs?</strong> MSE met gefragmenteerde MP4 houdt H.264 efficiënt. Omzetten naar JPEG houdt de eerste client eenvoudiger maar kost daemon-CPU en bandbreedte.</li>
     <li><span class="badge warning">Voor productie</span> <strong>Hoe groot is het gedeelde captureprofiel?</strong> CDP heeft één screencastprofiel per target. Begin met 1x DPR, maximaal 1280 bij 720 en quality 80, en wijzig dat alleen op meetresultaten.</li>
-    <li><span class="badge confirmed">Uitgangspunt</span> <strong>De primaire verbinding draagt geen live beeld.</strong> Dit geldt voor browser en devices. Alleen status en input blijven daar.</li>
+    <li><span class="badge confirmed">Huidige keuze</span> <strong>HTTP heeft voorrang, events zijn de directe terugval.</strong> Frames op de primaire verbinding zijn vervangbaar en worden niet als gewone statusgeschiedenis behandeld.</li>
     <li><span class="badge confirmed">Uitgangspunt</span> <strong>Runtimebinding is machinegebonden.</strong> Een browserprofiel of simulator-id komt niet in het gedeelde <code>project.json</code>.</li>
   </ol>
 </section>
@@ -461,7 +461,7 @@ type LiveStreamHub = {
   <ul>
     <li><a href="../research/browser-streaming.md">Live browserpagina in een browser-node zonder <code>&lt;webview&gt;</code></a>, 9 september 2026. Dit levert de capturevergelijking, CDP-details en eerste effortinschatting.</li>
     <li><a href="2026-09-13-devices.html">Devices: de iOS Simulator in Ruimte</a>, 13 september 2026. Dit levert de HTTP-versus-socketwaarschuwing, refcount, culling, agenttoestemming en Android-codecvraag.</li>
-    <li><a href="../NEXT.md"><code>docs/NEXT.md</code></a>. Browserstreaming en devices zijn nog niet gebouwd. Directe verbindingen en protocolversies bestaan wel.</li>
+    <li><a href="../../apps/server/src/browser/manager.ts"><code>BrowserManager</code></a>, <a href="../../apps/server/src/streams/live-stream.ts"><code>LiveStreamHub</code></a>, <a href="../../apps/server/src/streams/http-stream.ts"><code>http-stream.ts</code></a> en <a href="../../apps/client/src/browser/BrowserStream.tsx"><code>BrowserStream</code></a>. Dit is het gebouwde browserpad.</li>
     <li><a href="../../apps/server/src/backpressure.ts"><code>apps/server/src/backpressure.ts</code></a>. <code>OutputGate</code> beschermt terminal-output op het primaire kanaal, maar is geen mediaplanner.</li>
     <li><a href="../../packages/contracts/src/bytes.ts"><code>packages/contracts/src/bytes.ts</code></a> en <a href="../../apps/client/src/transport/machine-url.ts"><code>machine-url.ts</code></a>. Eindige bytes gebruiken HTTP als dat kan en requeststukken over het directe kanaal als dat moet.</li>
     <li><a href="../../apps/client/src/transport/webrtc-link.ts"><code>apps/client/src/transport/webrtc-link.ts</code></a> en <a href="../../apps/server/src/pulsar/peers.ts"><code>apps/server/src/pulsar/peers.ts</code></a>. De huidige directe peer maakt en accepteert precies één betrouwbaar, geordend datakanaal.</li>
@@ -470,15 +470,15 @@ type LiveStreamHub = {
   </ul>
   <details open>
     <summary>Wat is geverifieerd en wat niet</summary>
-    <p><span class="badge confirmed">Geverifieerd in de code</span> Ruimte gebruikt één JSON-wire over WebSocket of een betrouwbaar WebRTC-datakanaal, <code>OutputGate</code> bewaakt alleen terminal-output, HTTP-routes gebruiken <code>decideAccess</code>, <code>bytes.read</code> is begrensd voor eindige bestanden, en de huidige webclient toont buiten Electron alleen <code>BrowserFallback</code>.</p>
-    <p><span class="badge info">Afgeleid uit de twee onderzoeken</span> CDP-screencast, de Bun-opties, JPEG-grootte en devicecapture. Die claims zijn hier niet opnieuw uitgevoerd.</p>
-    <p><span class="badge warning">Niet geverifieerd</span> Een tweede onbetrouwbaar datakanaal met de huidige werift-versie, binaire fetch-streaming onder alle doelclients, de beste fragmentgrootte, latency, CPU, geheugen, codecgedrag bij pakketverlies en IME. Daarom begint het plan met een spike en staan de prestatiewaarden als doelen, niet als resultaten.</p>
+    <p><span class="badge confirmed">Geverifieerd in de code</span> CDP-screencast, HTTP-framing, eventframes, refcount, canvasdecode, remote runtimebinding, invoer en reconnect bestaan en hebben gerichte tests. De HTTP-route loopt via <code>decideAccess</code>.</p>
+    <p><span class="badge confirmed">Geverifieerd op deze Mac</span> <code>simctl</code> meldt 24 beschikbare iOS-simulators onder iOS 26.4 en 27.0. Ze stonden tijdens de controle allemaal uit.</p>
+    <p><span class="badge warning">Niet gemeten</span> Latency, fps, CPU, geheugen, bandbreedte en invloed van eventframes op terminalverkeer. Ook een tweede onbetrouwbaar datakanaal en de native simulatorcapture zijn nog niet geverifieerd.</p>
   </details>
 </section>
 
 </main>
 <footer>
-  <p>Dit rapport werkt een ontwerp uit en verandert geen productiecode. Het vervangt de eerdere browserresearch niet als bronoverzicht. Het scherpt de aanbevolen architectuur aan op basis van de huidige directe verbinding en het deviceplan.</p>
+  <p>Bijgewerkt na de browserimplementatie en de eerste devicebouwstap. Het eerdere ontwerp blijft staan waar nog metingen of een native capturehelper ontbreken.</p>
 </footer>
 </body>
 </html>

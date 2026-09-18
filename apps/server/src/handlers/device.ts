@@ -1,0 +1,60 @@
+import { DeviceError, type DeviceManager } from '../devices/manager.ts';
+import { RequestError, type Dispatcher } from '../dispatcher.ts';
+
+const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
+    Promise.resolve()
+        .then(work)
+        .catch((error: unknown) => {
+            if (error instanceof DeviceError) {
+                throw new RequestError(error.code, error.message);
+            }
+            throw error;
+        });
+
+export const registerDeviceHandlers = (dispatcher: Dispatcher, devices: DeviceManager, streamingAllowed: () => boolean): void => {
+    const requireStreaming = (): void => {
+        if (!streamingAllowed()) {
+            throw new RequestError('streaming-disabled', 'Browser and device streaming is disabled on this machine');
+        }
+    };
+
+    dispatcher.register('device.list', () => {
+        requireStreaming();
+        return translate(async () => ({ devices: await devices.list() }));
+    });
+    dispatcher.register('device.boot', (payload) => {
+        requireStreaming();
+        return translate(() => devices.boot(payload.backendId, payload.platform, payload.deviceId));
+    });
+    dispatcher.register('device.shutdown', (payload) => {
+        requireStreaming();
+        return translate(() => devices.shutdown(payload.backendId, payload.platform, payload.deviceId));
+    });
+    dispatcher.register('device.open', (payload, client) => {
+        requireStreaming();
+        return translate(() => devices.open(payload.backendId, payload.platform, payload.deviceId, client.id, payload.stream));
+    });
+    dispatcher.register('device.detach', (payload, client) => {
+        devices.detach(payload.backendId, payload.deviceId, client.id);
+        return {};
+    });
+    dispatcher.register('device.input', (payload, client) =>
+        translate(async () => {
+            await devices.input(payload.backendId, payload.deviceId, client.id, payload.input);
+            return {};
+        })
+    );
+    dispatcher.register('device.detail', (payload) => {
+        requireStreaming();
+        return translate(async () => ({ ...payload, settings: await devices.detail(payload.backendId, payload.platform, payload.deviceId) }));
+    });
+    dispatcher.register('device.action', (payload) => {
+        requireStreaming();
+        return translate(async () => ({
+            backendId: payload.backendId,
+            platform: payload.platform,
+            deviceId: payload.deviceId,
+            settings: await devices.action(payload)
+        }));
+    });
+};

@@ -1,17 +1,30 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
-/* The element in the panel's header a panel may put controls in; null while no panel is mounted. */
-const PanelHeaderContext = createContext<HTMLElement | null>(null);
+interface PanelHeaderHosts {
+    leading: HTMLElement | null;
+    titleSignal: HTMLElement | null;
+    trailing: HTMLElement | null;
+}
 
-export const PanelHeaderProvider = PanelHeaderContext.Provider;
+const PanelHeaderContext = createContext<PanelHeaderHosts>({ leading: null, titleSignal: null, trailing: null });
 
-/*
- * Controls of a panel that belong in the panel's own header, next to its name. The header is drawn
- * by `Panel.tsx` above the body, so a panel that has to fill it would otherwise need its state in
- * two components; this puts the markup where the state already is and portals it up.
- */
+export function PanelHeaderProvider({ hosts, children }: { hosts: PanelHeaderHosts; children: ReactNode }) {
+    return <PanelHeaderContext.Provider value={hosts}>{children}</PanelHeaderContext.Provider>;
+}
+
+/* Portal panel-owned controls into the shell header without lifting panel state. */
 export function PanelHeaderSlot({ children }: { children: ReactNode }) {
-    const host = useContext(PanelHeaderContext);
+    const host = useContext(PanelHeaderContext).trailing;
     return host === null ? null : createPortal(children, host);
+}
+
+export function PanelHeaderLeadingSlot({ children }: { children: ReactNode }) {
+    const host = useContext(PanelHeaderContext).leading;
+    return host === null ? null : createPortal(children, host);
+}
+
+export function PanelHeaderTitleHidden() {
+    const host = useContext(PanelHeaderContext).titleSignal;
+    return host === null ? null : createPortal(<span />, host);
 }

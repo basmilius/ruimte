@@ -157,7 +157,7 @@ export const withoutView = (views: readonly ProjectView[], id: string): { views:
 
 /*
  * A node lifted off its canvas into a view of its own, keeping its id and so its session. Only a
- * chat, a terminal or a browser can stand on its own; the lines the node was part of stay behind,
+ * chat, a terminal, a browser or a device can stand on its own; the lines the node was part of stay behind,
  * because an edge lives on the canvas it was drawn on and the node is leaving that canvas.
  */
 export const withNodeAsView = (views: readonly ProjectView[], nodeId: string): { views: ProjectView[]; view: ProjectView } | null => {
@@ -166,26 +166,33 @@ export const withNodeAsView = (views: readonly ProjectView[], nodeId: string): {
         return null;
     }
     const node = source.nodes.find((candidate) => candidate.id === nodeId)!;
-    if (node.kind !== 'chat' && node.kind !== 'terminal' && node.kind !== 'browser') {
+    if (node.kind !== 'chat' && node.kind !== 'terminal' && node.kind !== 'browser' && node.kind !== 'device') {
         return null;
     }
-    const view: ProjectView =
-        node.kind === 'browser'
-            ? { kind: 'browser', id: node.id, name: node.title, url: node.url ?? '' }
-            : {
-                  kind: node.kind,
-                  id: node.id,
-                  name: node.title,
-                  node: {
-                      cwd: node.cwd,
-                      command: node.command,
-                      resume: node.resume,
-                      provider: node.provider,
-                      providerFixed: node.providerFixed,
-                      runtimeMode: node.runtimeMode,
-                      accent: node.accent
-                  }
-              };
+    let view: ProjectView;
+    if (node.kind === 'browser') {
+        view = { kind: 'browser', id: node.id, name: node.title, url: node.url ?? '' };
+    } else if (node.kind === 'device') {
+        if (!node.device) {
+            return null;
+        }
+        view = { kind: 'device', id: node.id, name: node.title, device: node.device };
+    } else {
+        view = {
+            kind: node.kind,
+            id: node.id,
+            name: node.title,
+            node: {
+                cwd: node.cwd,
+                command: node.command,
+                resume: node.resume,
+                provider: node.provider,
+                providerFixed: node.providerFixed,
+                runtimeMode: node.runtimeMode,
+                accent: node.accent
+            }
+        };
+    }
     const stripped = withoutNode(source, nodeId);
     return {
         views: withView(
@@ -219,7 +226,7 @@ export const withViewAsNode = (
         title: source.name,
         ...at,
         ...NODE_SIZE[source.kind],
-        ...(source.kind === 'browser' ? { url: source.url } : source.node)
+        ...(source.kind === 'browser' ? { url: source.url } : source.kind === 'device' ? { device: source.device } : source.node)
     };
     const next = views
         .filter((view) => view.id !== viewId)

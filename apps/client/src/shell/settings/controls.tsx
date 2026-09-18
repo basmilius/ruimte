@@ -19,12 +19,14 @@ export function Segmented<T extends string>({
     value,
     options,
     onChange,
-    label
+    label,
+    disabled
 }: {
     value: T;
     options: readonly Option<T>[];
     onChange(id: T): void;
     label: string;
+    disabled?: boolean;
 }) {
     return (
         <div className="flex h-8 items-center rounded-lg bg-surface-sunken p-0.5 text-xs font-medium" role="radiogroup" aria-label={label}>
@@ -33,8 +35,9 @@ export function Segmented<T extends string>({
                     key={option.id}
                     role="radio"
                     aria-checked={value === option.id}
+                    disabled={disabled}
                     className={clsx(
-                        'h-7 rounded-md px-3 transition-colors',
+                        'h-7 rounded-md px-3 transition-colors disabled:opacity-50',
                         value === option.id ? 'bg-surface-raised text-text shadow-node' : 'text-text-muted hover:text-text'
                     )}
                     onClick={() => onChange(option.id)}

@@ -10,6 +10,18 @@ import {
     BrowserTargetPayloadSchema
 } from './browser.ts';
 import {
+    DeviceActionPayloadSchema,
+    DeviceDetailPayloadSchema,
+    DeviceDetailSchema,
+    DeviceFrameSchema,
+    DeviceInfoSchema,
+    DeviceInputPayloadSchema,
+    DeviceListResultSchema,
+    DeviceOpenPayloadSchema,
+    DeviceOpenResultSchema,
+    DeviceTargetPayloadSchema
+} from './device.ts';
+import {
     PushSubscribePayloadSchema,
     PushUnsubscribePayloadSchema,
     PushAttentionResultSchema,
@@ -196,6 +208,7 @@ export * from './chat.ts';
 export * from './context.ts';
 export * from './direct.ts';
 export * from './direct-liveness.ts';
+export * from './device.ts';
 export * from './context-sources.ts';
 export * from './diagram.ts';
 export * from './drawing.ts';
@@ -203,6 +216,7 @@ export * from './envelope.ts';
 export * from './fs.ts';
 export * from './git.ts';
 export * from './ids.ts';
+export * from './live-stream.ts';
 export * from './model.ts';
 export * from './node-defaults.ts';
 export * from './plan.ts';
@@ -246,6 +260,14 @@ export const REQUEST_SCHEMAS = {
     'browser.command': { payload: BrowserCommandPayloadSchema, result: BrowserInfoSchema },
     'browser.resize': { payload: BrowserResizePayloadSchema, result: EmptySchema },
     'browser.input': { payload: BrowserInputPayloadSchema, result: EmptySchema },
+    'device.list': { payload: EmptySchema, result: DeviceListResultSchema },
+    'device.boot': { payload: DeviceTargetPayloadSchema, result: DeviceInfoSchema },
+    'device.shutdown': { payload: DeviceTargetPayloadSchema, result: DeviceInfoSchema },
+    'device.open': { payload: DeviceOpenPayloadSchema, result: DeviceOpenResultSchema },
+    'device.detach': { payload: DeviceTargetPayloadSchema, result: EmptySchema },
+    'device.input': { payload: DeviceInputPayloadSchema, result: EmptySchema },
+    'device.detail': { payload: DeviceDetailPayloadSchema, result: DeviceDetailSchema },
+    'device.action': { payload: DeviceActionPayloadSchema, result: DeviceDetailSchema },
     'agent.resume': { payload: AgentResumePayloadSchema, result: EmptySchema },
     'agent.answerApproval': { payload: ApprovalAnswerPayloadSchema, result: ApprovalAnswerResultSchema },
     'agent.setApprovals': { payload: ApprovalPreferencePayloadSchema, result: EmptySchema },
@@ -364,6 +386,7 @@ export const EVENT_SCHEMAS = {
     'session.list-changed': EmptySchema,
     'browser.frame': BrowserFrameSchema,
     'browser.status': BrowserInfoSchema,
+    'device.frame': DeviceFrameSchema,
     'chat.event': ChatEventEnvelopeSchema,
     'chat.subagentChanged': ChatSubagentChangedEventSchema,
     'endpoint.changed': EndpointChangedEventSchema,

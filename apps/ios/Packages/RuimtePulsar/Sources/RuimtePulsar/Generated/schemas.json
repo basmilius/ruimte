@@ -6008,6 +6008,1415 @@
     "type": "object",
     "properties": {}
   },
+  "request.device.list.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.device.list.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "devices": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "deviceId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "backendId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "platform": {
+              "type": "string",
+              "enum": [
+                "ios",
+                "android"
+              ]
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "simulator",
+                "physical"
+              ]
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "runtime": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "booted",
+                "shutdown",
+                "transitioning"
+              ]
+            },
+            "capabilities": {
+              "type": "object",
+              "properties": {
+                "boot": {
+                  "type": "boolean"
+                },
+                "shutdown": {
+                  "type": "boolean"
+                },
+                "stream": {
+                  "type": "boolean"
+                },
+                "input": {
+                  "type": "boolean"
+                },
+                "screenshot": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "boot",
+                "shutdown",
+                "stream",
+                "input",
+                "screenshot"
+              ]
+            }
+          },
+          "required": [
+            "deviceId",
+            "backendId",
+            "platform",
+            "kind",
+            "name",
+            "runtime",
+            "state",
+            "capabilities"
+          ]
+        }
+      }
+    },
+    "required": [
+      "devices"
+    ]
+  },
+  "request.device.boot.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "deviceId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "backendId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "platform": {
+        "type": "string",
+        "enum": [
+          "ios",
+          "android"
+        ]
+      }
+    },
+    "required": [
+      "deviceId",
+      "backendId",
+      "platform"
+    ]
+  },
+  "request.device.boot.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "deviceId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "backendId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "platform": {
+        "type": "string",
+        "enum": [
+          "ios",
+          "android"
+        ]
+      },
+      "kind": {
+        "type": "string",
+        "enum": [
+          "simulator",
+          "physical"
+        ]
+      },
+      "name": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "runtime": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "state": {
+        "type": "string",
+        "enum": [
+          "booted",
+          "shutdown",
+          "transitioning"
+        ]
+      },
+      "capabilities": {
+        "type": "object",
+        "properties": {
+          "boot": {
+            "type": "boolean"
+          },
+          "shutdown": {
+            "type": "boolean"
+          },
+          "stream": {
+            "type": "boolean"
+          },
+          "input": {
+            "type": "boolean"
+          },
+          "screenshot": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "boot",
+          "shutdown",
+          "stream",
+          "input",
+          "screenshot"
+        ]
+      }
+    },
+    "required": [
+      "deviceId",
+      "backendId",
+      "platform",
+      "kind",
+      "name",
+      "runtime",
+      "state",
+      "capabilities"
+    ]
+  },
+  "request.device.shutdown.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "deviceId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "backendId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "platform": {
+        "type": "string",
+        "enum": [
+          "ios",
+          "android"
+        ]
+      }
+    },
+    "required": [
+      "deviceId",
+      "backendId",
+      "platform"
+    ]
+  },
+  "request.device.shutdown.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "deviceId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "backendId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "platform": {
+        "type": "string",
+        "enum": [
+          "ios",
+          "android"
+        ]
+      },
+      "kind": {
+        "type": "string",
+        "enum": [
+          "simulator",
+          "physical"
+        ]
+      },
+      "name": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "runtime": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "state": {
+        "type": "string",
+        "enum": [
+          "booted",
+          "shutdown",
+          "transitioning"
+        ]
+      },
+      "capabilities": {
+        "type": "object",
+        "properties": {
+          "boot": {
+            "type": "boolean"
+          },
+          "shutdown": {
+            "type": "boolean"
+          },
+          "stream": {
+            "type": "boolean"
+          },
+          "input": {
+            "type": "boolean"
+          },
+          "screenshot": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "boot",
+          "shutdown",
+          "stream",
+          "input",
+          "screenshot"
+        ]
+      }
+    },
+    "required": [
+      "deviceId",
+      "backendId",
+      "platform",
+      "kind",
+      "name",
+      "runtime",
+      "state",
+      "capabilities"
+    ]
+  },
+  "request.device.open.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "deviceId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "backendId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "platform": {
+        "type": "string",
+        "enum": [
+          "ios",
+          "android"
+        ]
+      },
+      "stream": {
+        "type": "string",
+        "enum": [
+          "http",
+          "events"
+        ]
+      }
+    },
+    "required": [
+      "deviceId",
+      "backendId",
+      "platform"
+    ]
+  },
+  "request.device.open.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "deviceId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "backendId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "platform": {
+        "type": "string",
+        "enum": [
+          "ios",
+          "android"
+        ]
+      },
+      "kind": {
+        "type": "string",
+        "enum": [
+          "simulator",
+          "physical"
+        ]
+      },
+      "name": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "runtime": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "state": {
+        "type": "string",
+        "enum": [
+          "booted",
+          "shutdown",
+          "transitioning"
+        ]
+      },
+      "capabilities": {
+        "type": "object",
+        "properties": {
+          "boot": {
+            "type": "boolean"
+          },
+          "shutdown": {
+            "type": "boolean"
+          },
+          "stream": {
+            "type": "boolean"
+          },
+          "input": {
+            "type": "boolean"
+          },
+          "screenshot": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "boot",
+          "shutdown",
+          "stream",
+          "input",
+          "screenshot"
+        ]
+      },
+      "streamId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      }
+    },
+    "required": [
+      "deviceId",
+      "backendId",
+      "platform",
+      "kind",
+      "name",
+      "runtime",
+      "state",
+      "capabilities",
+      "streamId"
+    ]
+  },
+  "request.device.detach.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "deviceId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "backendId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "platform": {
+        "type": "string",
+        "enum": [
+          "ios",
+          "android"
+        ]
+      }
+    },
+    "required": [
+      "deviceId",
+      "backendId",
+      "platform"
+    ]
+  },
+  "request.device.detach.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.device.input.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "deviceId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "backendId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "platform": {
+        "type": "string",
+        "enum": [
+          "ios",
+          "android"
+        ]
+      },
+      "input": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "pointer"
+              },
+              "phase": {
+                "type": "string",
+                "enum": [
+                  "down",
+                  "move",
+                  "up"
+                ]
+              },
+              "x": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "y": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "edge": {
+                "type": "string",
+                "enum": [
+                  "bottom"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "phase",
+              "x",
+              "y"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "multiPointer"
+              },
+              "phase": {
+                "type": "string",
+                "enum": [
+                  "down",
+                  "move",
+                  "up"
+                ]
+              },
+              "first": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "x",
+                  "y"
+                ]
+              },
+              "second": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "x",
+                  "y"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "phase",
+              "first",
+              "second"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "scroll"
+              },
+              "deltaX": {
+                "type": "number",
+                "minimum": -1000000,
+                "maximum": 1000000
+              },
+              "deltaY": {
+                "type": "number",
+                "minimum": -1000000,
+                "maximum": 1000000
+              },
+              "x": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "y": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "kind",
+              "deltaX",
+              "deltaY",
+              "x",
+              "y"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "button"
+              },
+              "button": {
+                "type": "string",
+                "enum": [
+                  "home",
+                  "swipeHome",
+                  "appSwitcher",
+                  "lock",
+                  "siri"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "button"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "rotate"
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "right"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "direction"
+            ]
+          }
+        ]
+      }
+    },
+    "required": [
+      "deviceId",
+      "backendId",
+      "platform",
+      "input"
+    ]
+  },
+  "request.device.input.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.device.detail.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "deviceId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "backendId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "platform": {
+        "type": "string",
+        "enum": [
+          "ios",
+          "android"
+        ]
+      }
+    },
+    "required": [
+      "deviceId",
+      "backendId",
+      "platform"
+    ]
+  },
+  "request.device.detail.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "deviceId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "backendId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "platform": {
+        "type": "string",
+        "enum": [
+          "ios",
+          "android"
+        ]
+      },
+      "settings": {
+        "type": "object",
+        "properties": {
+          "appearance": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark"
+            ]
+          },
+          "textSize": {
+            "type": "string",
+            "enum": [
+              "small",
+              "default",
+              "large",
+              "extra-large"
+            ]
+          },
+          "reduceMotion": {
+            "type": "boolean"
+          },
+          "increaseContrast": {
+            "type": "boolean"
+          },
+          "reduceTransparency": {
+            "type": "boolean"
+          },
+          "showBorders": {
+            "type": "boolean"
+          },
+          "voiceOver": {
+            "type": "boolean"
+          },
+          "liquidGlass": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "tinted"
+            ]
+          },
+          "colorFilter": {
+            "type": "string",
+            "enum": [
+              "none",
+              "grayscale",
+              "red-green",
+              "green-red",
+              "blue-yellow"
+            ]
+          }
+        }
+      }
+    },
+    "required": [
+      "deviceId",
+      "backendId",
+      "platform",
+      "settings"
+    ]
+  },
+  "request.device.action.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "backendId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "const": "setAppearance"
+          },
+          "value": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark"
+            ]
+          }
+        },
+        "required": [
+          "deviceId",
+          "backendId",
+          "platform",
+          "action",
+          "value"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "backendId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "const": "setTextSize"
+          },
+          "value": {
+            "type": "string",
+            "enum": [
+              "small",
+              "default",
+              "large",
+              "extra-large"
+            ]
+          }
+        },
+        "required": [
+          "deviceId",
+          "backendId",
+          "platform",
+          "action",
+          "value"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "backendId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "const": "setToggle"
+          },
+          "setting": {
+            "type": "string",
+            "enum": [
+              "reduceMotion",
+              "increaseContrast",
+              "reduceTransparency",
+              "showBorders",
+              "voiceOver"
+            ]
+          },
+          "value": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "deviceId",
+          "backendId",
+          "platform",
+          "action",
+          "setting",
+          "value"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "backendId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "const": "setLiquidGlass"
+          },
+          "value": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "tinted"
+            ]
+          }
+        },
+        "required": [
+          "deviceId",
+          "backendId",
+          "platform",
+          "action",
+          "value"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "backendId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "const": "setColorFilter"
+          },
+          "value": {
+            "type": "string",
+            "enum": [
+              "none",
+              "grayscale",
+              "red-green",
+              "green-red",
+              "blue-yellow"
+            ]
+          }
+        },
+        "required": [
+          "deviceId",
+          "backendId",
+          "platform",
+          "action",
+          "value"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "backendId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "const": "setLocation"
+          },
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          }
+        },
+        "required": [
+          "deviceId",
+          "backendId",
+          "platform",
+          "action",
+          "latitude",
+          "longitude"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "backendId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "const": "clearLocation"
+          }
+        },
+        "required": [
+          "deviceId",
+          "backendId",
+          "platform",
+          "action"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "backendId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "const": "setPermission"
+          },
+          "appId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "permission": {
+            "type": "string",
+            "enum": [
+              "camera",
+              "microphone",
+              "photos",
+              "contacts",
+              "calendar",
+              "reminders",
+              "location",
+              "motion",
+              "media-library",
+              "faceid"
+            ]
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "grant",
+              "revoke",
+              "reset"
+            ]
+          }
+        },
+        "required": [
+          "deviceId",
+          "backendId",
+          "platform",
+          "action",
+          "appId",
+          "permission",
+          "decision"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "backendId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "const": "openUrl"
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          }
+        },
+        "required": [
+          "deviceId",
+          "backendId",
+          "platform",
+          "action",
+          "url"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "backendId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "const": "launchApp"
+          },
+          "appId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "deviceId",
+          "backendId",
+          "platform",
+          "action",
+          "appId"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "backendId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "const": "terminateApp"
+          },
+          "appId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "deviceId",
+          "backendId",
+          "platform",
+          "action",
+          "appId"
+        ]
+      },
+      {
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "backendId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "const": "sendPush"
+          },
+          "appId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "payload": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16384
+          }
+        },
+        "required": [
+          "deviceId",
+          "backendId",
+          "platform",
+          "action",
+          "appId",
+          "payload"
+        ]
+      }
+    ]
+  },
+  "request.device.action.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "deviceId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "backendId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "platform": {
+        "type": "string",
+        "enum": [
+          "ios",
+          "android"
+        ]
+      },
+      "settings": {
+        "type": "object",
+        "properties": {
+          "appearance": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark"
+            ]
+          },
+          "textSize": {
+            "type": "string",
+            "enum": [
+              "small",
+              "default",
+              "large",
+              "extra-large"
+            ]
+          },
+          "reduceMotion": {
+            "type": "boolean"
+          },
+          "increaseContrast": {
+            "type": "boolean"
+          },
+          "reduceTransparency": {
+            "type": "boolean"
+          },
+          "showBorders": {
+            "type": "boolean"
+          },
+          "voiceOver": {
+            "type": "boolean"
+          },
+          "liquidGlass": {
+            "type": "string",
+            "enum": [
+              "clear",
+              "tinted"
+            ]
+          },
+          "colorFilter": {
+            "type": "string",
+            "enum": [
+              "none",
+              "grayscale",
+              "red-green",
+              "green-red",
+              "blue-yellow"
+            ]
+          }
+        }
+      }
+    },
+    "required": [
+      "deviceId",
+      "backendId",
+      "platform",
+      "settings"
+    ]
+  },
   "request.agent.resume.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -14891,6 +16300,7 @@
                                   "terminal",
                                   "chat",
                                   "browser",
+                                  "device",
                                   "group",
                                   "note",
                                   "drawing",
@@ -14964,6 +16374,41 @@
                           "url": {
                             "type": "string"
                           },
+                          "device": {
+                            "type": "object",
+                            "properties": {
+                              "platform": {
+                                "type": "string",
+                                "enum": [
+                                  "ios",
+                                  "android"
+                                ]
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "simulator",
+                                  "physical"
+                                ]
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 256
+                              },
+                              "runtime": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 256
+                              }
+                            },
+                            "required": [
+                              "platform",
+                              "kind",
+                              "name",
+                              "runtime"
+                            ]
+                          },
                           "collapsed": {
                             "type": "boolean"
                           },
@@ -15026,6 +16471,7 @@
                             "terminal",
                             "chat",
                             "browser",
+                            "device",
                             "group",
                             "note",
                             "drawing",
@@ -15794,6 +17240,175 @@
                     },
                     "kind": {
                       "type": "string",
+                      "const": "device"
+                    },
+                    "device": {
+                      "type": "object",
+                      "properties": {
+                        "platform": {
+                          "type": "string",
+                          "enum": [
+                            "ios",
+                            "android"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "simulator",
+                            "physical"
+                          ]
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        },
+                        "runtime": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        }
+                      },
+                      "required": [
+                        "platform",
+                        "kind",
+                        "name",
+                        "runtime"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "kind",
+                    "device"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "titleSource": {
+                      "type": "string",
+                      "enum": [
+                        "auto",
+                        "user"
+                      ]
+                    },
+                    "icon": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "emoji"
+                            },
+                            "value": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 16
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "value"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "lucide"
+                            },
+                            "value": {
+                              "type": "string",
+                              "enum": [
+                                "box",
+                                "boxes",
+                                "package",
+                                "layers",
+                                "code",
+                                "terminal",
+                                "cpu",
+                                "circuit-board",
+                                "memory-stick",
+                                "pc-case",
+                                "laptop",
+                                "monitor",
+                                "smartphone",
+                                "tablet",
+                                "webcam",
+                                "printer",
+                                "hard-drive",
+                                "usb",
+                                "database",
+                                "server",
+                                "container",
+                                "network",
+                                "router",
+                                "ethernet-port",
+                                "cable",
+                                "plug",
+                                "wifi",
+                                "radio-tower",
+                                "satellite-dish",
+                                "cloud",
+                                "globe",
+                                "rocket",
+                                "zap",
+                                "flame",
+                                "sparkles",
+                                "star",
+                                "heart",
+                                "flag",
+                                "bookmark",
+                                "folder",
+                                "file-text",
+                                "book",
+                                "puzzle",
+                                "palette",
+                                "brush",
+                                "camera",
+                                "music",
+                                "video",
+                                "gamepad-2",
+                                "bot",
+                                "brain",
+                                "beaker",
+                                "wrench",
+                                "hammer",
+                                "shield",
+                                "key",
+                                "compass",
+                                "map",
+                                "leaf",
+                                "coffee"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "value"
+                          ]
+                        }
+                      ]
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "kind": {
+                      "type": "string",
                       "const": "drawing"
                     }
                   },
@@ -16140,6 +17755,7 @@
                   "chat",
                   "terminal",
                   "browser",
+                  "device",
                   "drawing",
                   "diagram",
                   "file",
@@ -16280,7 +17896,8 @@
                     "enum": [
                       "files",
                       "git",
-                      "processes"
+                      "processes",
+                      "devices"
                     ]
                   }
                 },
@@ -16799,6 +18416,7 @@
                                   "terminal",
                                   "chat",
                                   "browser",
+                                  "device",
                                   "group",
                                   "note",
                                   "drawing",
@@ -16872,6 +18490,41 @@
                           "url": {
                             "type": "string"
                           },
+                          "device": {
+                            "type": "object",
+                            "properties": {
+                              "platform": {
+                                "type": "string",
+                                "enum": [
+                                  "ios",
+                                  "android"
+                                ]
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "simulator",
+                                  "physical"
+                                ]
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 256
+                              },
+                              "runtime": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 256
+                              }
+                            },
+                            "required": [
+                              "platform",
+                              "kind",
+                              "name",
+                              "runtime"
+                            ]
+                          },
                           "collapsed": {
                             "type": "boolean"
                           },
@@ -16934,6 +18587,7 @@
                             "terminal",
                             "chat",
                             "browser",
+                            "device",
                             "group",
                             "note",
                             "drawing",
@@ -17702,6 +19356,175 @@
                     },
                     "kind": {
                       "type": "string",
+                      "const": "device"
+                    },
+                    "device": {
+                      "type": "object",
+                      "properties": {
+                        "platform": {
+                          "type": "string",
+                          "enum": [
+                            "ios",
+                            "android"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "simulator",
+                            "physical"
+                          ]
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        },
+                        "runtime": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        }
+                      },
+                      "required": [
+                        "platform",
+                        "kind",
+                        "name",
+                        "runtime"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "kind",
+                    "device"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "titleSource": {
+                      "type": "string",
+                      "enum": [
+                        "auto",
+                        "user"
+                      ]
+                    },
+                    "icon": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "emoji"
+                            },
+                            "value": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 16
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "value"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "lucide"
+                            },
+                            "value": {
+                              "type": "string",
+                              "enum": [
+                                "box",
+                                "boxes",
+                                "package",
+                                "layers",
+                                "code",
+                                "terminal",
+                                "cpu",
+                                "circuit-board",
+                                "memory-stick",
+                                "pc-case",
+                                "laptop",
+                                "monitor",
+                                "smartphone",
+                                "tablet",
+                                "webcam",
+                                "printer",
+                                "hard-drive",
+                                "usb",
+                                "database",
+                                "server",
+                                "container",
+                                "network",
+                                "router",
+                                "ethernet-port",
+                                "cable",
+                                "plug",
+                                "wifi",
+                                "radio-tower",
+                                "satellite-dish",
+                                "cloud",
+                                "globe",
+                                "rocket",
+                                "zap",
+                                "flame",
+                                "sparkles",
+                                "star",
+                                "heart",
+                                "flag",
+                                "bookmark",
+                                "folder",
+                                "file-text",
+                                "book",
+                                "puzzle",
+                                "palette",
+                                "brush",
+                                "camera",
+                                "music",
+                                "video",
+                                "gamepad-2",
+                                "bot",
+                                "brain",
+                                "beaker",
+                                "wrench",
+                                "hammer",
+                                "shield",
+                                "key",
+                                "compass",
+                                "map",
+                                "leaf",
+                                "coffee"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "value"
+                          ]
+                        }
+                      ]
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "kind": {
+                      "type": "string",
                       "const": "drawing"
                     }
                   },
@@ -18048,6 +19871,7 @@
                   "chat",
                   "terminal",
                   "browser",
+                  "device",
                   "drawing",
                   "diagram",
                   "file",
@@ -18206,7 +20030,8 @@
                     "enum": [
                       "files",
                       "git",
-                      "processes"
+                      "processes",
+                      "devices"
                     ]
                   }
                 },
@@ -28032,6 +29857,57 @@
       "error"
     ]
   },
+  "event.device.frame": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "deviceId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "backendId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "platform": {
+        "type": "string",
+        "enum": [
+          "ios",
+          "android"
+        ]
+      },
+      "sequence": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 4294967295
+      },
+      "width": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 8192
+      },
+      "height": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 8192
+      },
+      "data": {
+        "type": "string",
+        "maxLength": 11534336
+      }
+    },
+    "required": [
+      "deviceId",
+      "backendId",
+      "platform",
+      "sequence",
+      "width",
+      "height",
+      "data"
+    ]
+  },
   "event.chat.event": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
@@ -31026,6 +32902,7 @@
                                   "terminal",
                                   "chat",
                                   "browser",
+                                  "device",
                                   "group",
                                   "note",
                                   "drawing",
@@ -31099,6 +32976,41 @@
                           "url": {
                             "type": "string"
                           },
+                          "device": {
+                            "type": "object",
+                            "properties": {
+                              "platform": {
+                                "type": "string",
+                                "enum": [
+                                  "ios",
+                                  "android"
+                                ]
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "simulator",
+                                  "physical"
+                                ]
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 256
+                              },
+                              "runtime": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 256
+                              }
+                            },
+                            "required": [
+                              "platform",
+                              "kind",
+                              "name",
+                              "runtime"
+                            ]
+                          },
                           "collapsed": {
                             "type": "boolean"
                           },
@@ -31161,6 +33073,7 @@
                             "terminal",
                             "chat",
                             "browser",
+                            "device",
                             "group",
                             "note",
                             "drawing",
@@ -31929,6 +33842,175 @@
                     },
                     "kind": {
                       "type": "string",
+                      "const": "device"
+                    },
+                    "device": {
+                      "type": "object",
+                      "properties": {
+                        "platform": {
+                          "type": "string",
+                          "enum": [
+                            "ios",
+                            "android"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "simulator",
+                            "physical"
+                          ]
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        },
+                        "runtime": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256
+                        }
+                      },
+                      "required": [
+                        "platform",
+                        "kind",
+                        "name",
+                        "runtime"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "kind",
+                    "device"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "titleSource": {
+                      "type": "string",
+                      "enum": [
+                        "auto",
+                        "user"
+                      ]
+                    },
+                    "icon": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "emoji"
+                            },
+                            "value": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 16
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "value"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "lucide"
+                            },
+                            "value": {
+                              "type": "string",
+                              "enum": [
+                                "box",
+                                "boxes",
+                                "package",
+                                "layers",
+                                "code",
+                                "terminal",
+                                "cpu",
+                                "circuit-board",
+                                "memory-stick",
+                                "pc-case",
+                                "laptop",
+                                "monitor",
+                                "smartphone",
+                                "tablet",
+                                "webcam",
+                                "printer",
+                                "hard-drive",
+                                "usb",
+                                "database",
+                                "server",
+                                "container",
+                                "network",
+                                "router",
+                                "ethernet-port",
+                                "cable",
+                                "plug",
+                                "wifi",
+                                "radio-tower",
+                                "satellite-dish",
+                                "cloud",
+                                "globe",
+                                "rocket",
+                                "zap",
+                                "flame",
+                                "sparkles",
+                                "star",
+                                "heart",
+                                "flag",
+                                "bookmark",
+                                "folder",
+                                "file-text",
+                                "book",
+                                "puzzle",
+                                "palette",
+                                "brush",
+                                "camera",
+                                "music",
+                                "video",
+                                "gamepad-2",
+                                "bot",
+                                "brain",
+                                "beaker",
+                                "wrench",
+                                "hammer",
+                                "shield",
+                                "key",
+                                "compass",
+                                "map",
+                                "leaf",
+                                "coffee"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "value"
+                          ]
+                        }
+                      ]
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "kind": {
+                      "type": "string",
                       "const": "drawing"
                     }
                   },
@@ -32275,6 +34357,7 @@
                   "chat",
                   "terminal",
                   "browser",
+                  "device",
                   "drawing",
                   "diagram",
                   "file",

@@ -275,7 +275,7 @@ export const viewIsBusy = (view: ProjectView): boolean => {
 };
 
 /* Which nodes can leave a canvas for a view of their own: the ones that are a session, not a frame. */
-export const canOpenAsView = (kind: string): boolean => kind === 'chat' || kind === 'terminal' || kind === 'browser';
+export const canOpenAsView = (kind: string): boolean => kind === 'chat' || kind === 'terminal' || kind === 'browser' || kind === 'device';
 
 /*
  * A node becomes a view of its own, keeping its id and so its session. The lines drawn into it stay

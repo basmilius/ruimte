@@ -1,5 +1,6 @@
 import { ChatClient } from '@/chat/chat-client';
 import { BrowserClient } from '@/browser/browser-client';
+import { DeviceClient } from '@/devices/device-client';
 import { chatPreferencesPayload, useChatPreferences } from '@/chat/preferences';
 import { DiagramClient } from '@/diagram/diagram-client';
 import { DrawingClient } from '@/drawing/drawing-client';
@@ -35,6 +36,7 @@ export interface Connection {
     sessions: SessionClient;
     chats: ChatClient;
     browsers: BrowserClient;
+    devices: DeviceClient;
     projects: ProjectClient;
     drawings: DrawingClient;
     diagrams: DiagramClient;
@@ -47,6 +49,7 @@ export interface Machine {
     sessions: SessionClient;
     chats: ChatClient;
     browsers: BrowserClient;
+    devices: DeviceClient;
     dispose(): void;
 }
 
@@ -97,6 +100,7 @@ const buildMachine = (endpoint: Endpoint): Machine => {
     sessions.setApprovals(useSettings.getState().agentsApprovals);
     const chats = new ChatClient(transport, chatSinkFor(endpoint.id), providerSinkFor(endpoint.id));
     const browsers = new BrowserClient(endpoint.id, transport);
+    const devices = new DeviceClient(endpoint.id, transport);
     chats.setPreferences(chatPreferencesPayload(useChatPreferences.getState()));
     return {
         endpointId: endpoint.id,
@@ -104,12 +108,14 @@ const buildMachine = (endpoint: Endpoint): Machine => {
         sessions,
         chats,
         browsers,
+        devices,
         dispose(): void {
             stopPushAttention();
             plans.dispose();
             sessions.dispose();
             chats.dispose();
             browsers.dispose();
+            devices.dispose();
         }
     };
 };
@@ -186,6 +192,9 @@ const connect = (endpoint: Endpoint, onLoad: (connection: Connection) => void): 
         },
         get browsers(): BrowserClient {
             return machineOn(endpointById(connection.endpointId) ?? endpoint).browsers;
+        },
+        get devices(): DeviceClient {
+            return machineOn(endpointById(connection.endpointId) ?? endpoint).devices;
         },
         projects,
         drawings,
@@ -329,6 +338,8 @@ export const sessionClientFor = (endpointId: string): SessionClient | null => ma
 export const chatClientFor = (endpointId: string): ChatClient | null => machineFor(endpointId)?.chats ?? null;
 
 export const browserClientFor = (endpointId: string): BrowserClient | null => machineFor(endpointId)?.browsers ?? null;
+
+export const deviceClientFor = (endpointId: string): DeviceClient | null => machineFor(endpointId)?.devices ?? null;
 
 /* A machine this client no longer knows under that id (forgotten, or a row that moved onto its daemon id) keeps no clients. */
 const prune = (): void => {

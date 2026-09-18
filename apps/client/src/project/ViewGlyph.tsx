@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { CircleQuestionMark, FileText, Frame, Globe, MessageSquare, Minus, PenTool, Terminal, Workflow, type LucideIcon } from 'lucide-react';
+import { CircleQuestionMark, FileText, Frame, Globe, MessageSquare, Minus, PenTool, Smartphone, Terminal, Workflow, type LucideIcon } from 'lucide-react';
 import type { AgentKind, ProjectIconChoice, ProjectViewKind } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { Favicon } from '@/browser/Favicon';
@@ -13,6 +13,7 @@ const VIEW_KIND_GLYPHS: Record<ProjectViewKind, LucideIcon> = {
     chat: MessageSquare,
     terminal: Terminal,
     browser: Globe,
+    device: Smartphone,
     drawing: PenTool,
     diagram: Workflow,
     file: FileText,

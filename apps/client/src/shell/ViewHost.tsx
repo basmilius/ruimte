@@ -7,6 +7,7 @@ import { DrawingView } from '@/drawing/DrawingView';
 import { useDiagram } from '@/state/diagram';
 import { drawingHasSomethingToClear, useDrawing, useDrawingStore } from '@/state/drawing';
 import { BrowserFallback, usePage } from '@/nodes/BrowserBody';
+import { DeviceBody } from '@/devices/DeviceBody';
 import { ChatBody } from '@/nodes/ChatBody';
 import { TerminalBody } from '@/nodes/TerminalBody';
 import { FileSurface } from '@/shell/panels/FileSurface';
@@ -68,6 +69,7 @@ function StandaloneView({ view }: { view: ProjectView }) {
             )}
             {view.kind === 'terminal' && <TerminalBody id={view.id} focused={focused} />}
             {view.kind === 'browser' && <BrowserViewSurface id={view.id} />}
+            {view.kind === 'device' && <DeviceBody id={view.id} />}
             {view.kind === 'drawing' && <DrawingView id={view.id} />}
             {view.kind === 'diagram' && <DiagramView id={view.id} />}
             {/* No column around it: prose centers itself at 768px inside its own renderer, and

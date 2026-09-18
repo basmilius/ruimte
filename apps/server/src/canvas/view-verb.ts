@@ -32,8 +32,8 @@ export const MAX_PROJECT_VIEWS = 100;
 // A canvas with more nodes than this would bury the one line that says the view is gone.
 const DELETED_NODE_LINES = 20;
 
-/* Straight from the union in contracts, so a kind added there is one this verb makes on its own. */
-export const VIEW_KINDS = PROJECT_VIEW_KINDS;
+/* A device view needs a local discovery result, so agents may inspect it but cannot invent one. */
+export const VIEW_KINDS = PROJECT_VIEW_KINDS.filter((kind): kind is Exclude<(typeof PROJECT_VIEW_KINDS)[number], 'device'> => kind !== 'device');
 
 type ViewFlag = 'path' | 'url';
 

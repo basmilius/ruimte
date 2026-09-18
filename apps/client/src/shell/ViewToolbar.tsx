@@ -6,6 +6,7 @@ import { PlanPill } from '@/plan/PlanPill';
 import { SubagentBreadcrumb, SubagentButton } from '@/chat/ui/SubagentControls';
 import { useChatRow } from '@/state/chats';
 import { BrowserToolbar } from '@/nodes/BrowserBody';
+import { DeviceToolbar } from '@/devices/DeviceBody';
 import { useNodeHost, type NodeHost } from '@/nodes/node-host';
 import { useFileToolbarSlot } from '@/shell/panels/file-toolbar-slot';
 import { activeViewOf, useDocument } from '@/state/document';
@@ -15,7 +16,7 @@ import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
 
 /* The kinds that put something in the toolbar; the bar draws its separators around that part. */
-const KINDS_WITH_TOOLBAR = new Set<ProjectViewKind>(['browser', 'terminal', 'file', 'diagram', 'chat']);
+const KINDS_WITH_TOOLBAR = new Set<ProjectViewKind>(['browser', 'device', 'terminal', 'file', 'diagram', 'chat']);
 
 const modeOf = (host: NodeHost | null) => RUNTIME_MODES.find((entry) => entry.id === host?.runtimeMode);
 
@@ -33,7 +34,7 @@ export const useHasViewToolbar = (view: ProjectView | null): boolean => {
     if (view.kind === 'chat') {
         return subagents || forked || planned;
     }
-    return view.kind === 'browser' || view.kind === 'file' || view.kind === 'diagram' || modeOf(host) !== undefined;
+    return view.kind === 'browser' || view.kind === 'device' || view.kind === 'file' || view.kind === 'diagram' || modeOf(host) !== undefined;
 };
 
 const useIsFork = (view: ProjectView | null): boolean => useChatRow(view?.kind === 'chat' ? view.id : '', (row) => row?.info.forkOf !== undefined);
@@ -70,6 +71,9 @@ export function ViewToolbar({
                 <BrowserToolbar id={view.id} focused={focused} />
             </div>
         );
+    }
+    if (view.kind === 'device') {
+        return <div className="flex min-w-0 grow items-center justify-end"><DeviceToolbar id={view.id} /></div>;
     }
     if (view.kind === 'file' || view.kind === 'diagram') {
         // The active renderer portals its controls here after the body mounts.

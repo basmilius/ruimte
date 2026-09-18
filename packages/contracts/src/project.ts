@@ -2,11 +2,12 @@ import { z } from 'zod';
 import { AgentKindSchema } from './agent.ts';
 import { GitDiffScopeSchema } from './git.ts';
 import { RuntimeModeSchema } from './model.ts';
+import { DeviceReferenceSchema } from './device.ts';
 
 export const ProjectIdSchema = z.string().min(1);
 export type ProjectId = z.infer<typeof ProjectIdSchema>;
 
-export const NodeKindSchema = z.enum(['terminal', 'chat', 'browser', 'group', 'note', 'drawing', 'diagram', 'file']);
+export const NodeKindSchema = z.enum(['terminal', 'chat', 'browser', 'device', 'group', 'note', 'drawing', 'diagram', 'file']);
 export type NodeKind = z.infer<typeof NodeKindSchema>;
 
 /*
@@ -97,6 +98,8 @@ export const ProjectNodeSchema = z.object({
     runtimeMode: RuntimeModeSchema.optional(),
     // Browser only: the page it shows.
     url: z.string().optional(),
+    // Device only: a portable identity resolved to a local simulator when it is shown.
+    device: DeviceReferenceSchema.optional(),
     // Group only: folded to its header, with the nodes it held out of sight until it opens again.
     collapsed: z.boolean().optional(),
     memberIds: z.array(z.string()).optional(),
@@ -338,6 +341,9 @@ export type ProjectTerminalView = z.infer<typeof ProjectTerminalViewSchema>;
 export const ProjectBrowserViewSchema = ViewBaseSchema.extend({ kind: z.literal('browser'), url: z.string() });
 export type ProjectBrowserView = z.infer<typeof ProjectBrowserViewSchema>;
 
+export const ProjectDeviceViewSchema = ViewBaseSchema.extend({ kind: z.literal('device'), device: DeviceReferenceSchema });
+export type ProjectDeviceView = z.infer<typeof ProjectDeviceViewSchema>;
+
 /* A sketch of its own. The elements live in `.ruimte/drawings/<id>.json`, never in this file. */
 export const ProjectDrawingViewSchema = ViewBaseSchema.extend({ kind: z.literal('drawing') });
 export type ProjectDrawingView = z.infer<typeof ProjectDrawingViewSchema>;
@@ -356,6 +362,7 @@ const KNOWN_VIEW_SCHEMAS = [
     ProjectChatViewSchema,
     ProjectTerminalViewSchema,
     ProjectBrowserViewSchema,
+    ProjectDeviceViewSchema,
     ProjectDrawingViewSchema,
     ProjectDiagramViewSchema,
     ProjectFileViewSchema,
@@ -421,8 +428,8 @@ export const viewIconOf = (view: ProjectView): ProjectIconChoice | null =>
  * it. A separator holds nothing, and a drawing, a diagram and a file are all read off disk, so none
  * of them has a session to attach to.
  */
-export const isSessionView = (view: ProjectView): view is ProjectChatView | ProjectTerminalView | ProjectBrowserView =>
-    view.kind === 'chat' || view.kind === 'terminal' || view.kind === 'browser';
+export const isSessionView = (view: ProjectView): view is ProjectChatView | ProjectTerminalView | ProjectBrowserView | ProjectDeviceView =>
+    view.kind === 'chat' || view.kind === 'terminal' || view.kind === 'browser' || view.kind === 'device';
 
 /* The views a person can put on screen. A separator is a line in the list, not a place to go, and
    this version has nothing to draw a view of an unknown kind with. */
@@ -504,7 +511,7 @@ export const ProjectSettingsUpdatePayloadSchema = z.object({
 export type ProjectSettingsUpdatePayload = z.infer<typeof ProjectSettingsUpdatePayloadSchema>;
 
 // The surfaces beside the canvas that can be up; the toolbar has a button per kind.
-export const ProjectPanelKindSchema = z.enum(['files', 'git', 'processes']);
+export const ProjectPanelKindSchema = z.enum(['files', 'git', 'processes', 'devices']);
 export type ProjectPanelKind = z.infer<typeof ProjectPanelKindSchema>;
 
 // A tab that shows the file's diff instead of the file itself, so both can be open at once.

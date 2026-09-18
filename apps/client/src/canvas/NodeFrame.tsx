@@ -16,6 +16,7 @@ import {
     PenTool,
     Workflow,
     StickyNote,
+    Smartphone,
     Terminal,
     X
 } from 'lucide-react';
@@ -49,6 +50,7 @@ import { PlanPill } from '@/plan/PlanPill';
 import { SubagentBreadcrumb, SubagentButton, SubagentTitleCrumb } from '@/chat/ui/SubagentControls';
 import { useSubagentTrail } from '@/chat/subagent-view';
 import { BrowserBody } from '@/nodes/BrowserBody';
+import { DeviceBody, DevicePlate, DeviceToolbar } from '@/devices/DeviceBody';
 import { NoteNode } from '@/canvas/nodes/NoteNode';
 import { DiagramNode, DiagramPlate } from '@/canvas/nodes/DiagramNode';
 import { DrawingNode } from '@/canvas/nodes/DrawingNode';
@@ -66,6 +68,7 @@ const ICONS: Record<CanvasNodeKind, ReactNode> = {
     terminal: <Icon icon={Terminal} size={14} />,
     chat: <Icon icon={MessageSquare} size={14} />,
     browser: <Icon icon={Globe} size={14} />,
+    device: <Icon icon={Smartphone} size={14} />,
     group: <Icon icon={LayoutGrid} size={14} />,
     note: <Icon icon={StickyNote} size={14} />,
     drawing: <Icon icon={PenTool} size={14} />,
@@ -336,6 +339,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                     {unseen && !renaming && <UnseenMark />}
                     {!renaming && <ProcessAlertMark alerts={processAlerts} />}
                     {node.kind === 'file' && <span ref={setFileControls} className={`${BTN_GROUP} shrink-0`} />}
+                    {node.kind === 'device' && <DeviceToolbar id={id} />}
                     <div className={`${BTN_GROUP} shrink-0`}>
                         {node.kind === 'chat' && <SubagentButton chatId={id} />}
                         <Tooltip label="Zoom to node" name>
@@ -369,6 +373,7 @@ export const NodeFrame = memo(function NodeFrame({ id }: { id: string }) {
                             {node.kind === 'terminal' && (live ? <TerminalBody id={id} focused={takesKeyboard} /> : <TerminalPlate id={id} />)}
                             {node.kind === 'chat' && <ChatBody id={id} focused={takesKeyboard} onCanvas />}
                             {node.kind === 'browser' && <BrowserBody id={id} focused={focused} />}
+                            {node.kind === 'device' && (live && readable ? <DeviceBody id={id} /> : <DevicePlate id={id} />)}
                             {node.kind === 'note' && <NoteNode id={id} focused={focused} />}
                             {node.kind === 'drawing' && <DrawingNode id={id} />}
                             {node.kind === 'diagram' && (live && readable ? <DiagramNode id={id} /> : <DiagramPlate id={id} />)}

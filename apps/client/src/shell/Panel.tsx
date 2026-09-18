@@ -7,6 +7,7 @@ import { PanelHeaderProvider } from '@/shell/PanelHeaderSlot';
 import { FilesPanel } from '@/shell/panels/FilesPanel';
 import { GitPanel } from '@/shell/panels/GitPanel';
 import { ProcessesPanel } from '@/shell/panels/ProcessesPanel';
+import { DevicesPanel } from '@/shell/panels/DevicesPanel';
 import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { useUi, type PanelKind } from '@/state/ui';
@@ -30,6 +31,8 @@ function PanelBody({ kind }: { kind: PanelKind }) {
             return <GitPanel />;
         case 'processes':
             return <ProcessesPanel />;
+        case 'devices':
+            return <DevicesPanel />;
     }
 }
 
@@ -37,8 +40,8 @@ function PanelBody({ kind }: { kind: PanelKind }) {
 export function Panel() {
     const panel = useUi((s) => s.panel);
     const open = panel.open;
-    /* Where a panel hangs its own header controls; a callback ref, so the portal has an element
-       the first time the panel body renders and not one commit later. */
+    const [leadingHeaderSlot, setLeadingHeaderSlot] = useState<HTMLElement | null>(null);
+    const [titleSignal, setTitleSignal] = useState<HTMLElement | null>(null);
     const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
     const stored = useUi((s) => s.panelWidth);
     /* Closed and done animating. Until then the contents stay mounted, so a close plays out. */
@@ -99,7 +102,9 @@ export function Panel() {
                             open && hasOverlayControls() && 'toolbar-overlay-inset'
                         )}
                     >
-                        <span className={`${SECTION_LABEL} shrink-0`}>{label}</span>
+                        <div ref={setLeadingHeaderSlot} className="contents" />
+                        <div ref={setTitleSignal} className="panel-title-signal hidden" />
+                        <span className={`${SECTION_LABEL} panel-title shrink-0`}>{label}</span>
                         {/* The panel's own controls, between its name and the close button. */}
                         <div ref={setHeaderSlot} className="flex min-w-0 grow items-center gap-2" />
                         <Tooltip label={`Close ${label}`} kbd={CANVAS_SHORTCUTS.togglePanel} name>
@@ -108,7 +113,7 @@ export function Panel() {
                             </button>
                         </Tooltip>
                     </header>
-                    <PanelHeaderProvider value={headerSlot}>
+                    <PanelHeaderProvider hosts={{ leading: leadingHeaderSlot, titleSignal, trailing: headerSlot }}>
                         <ErrorBoundary label="This panel failed to render" resetKeys={[panel.kind]} className="min-h-0 grow">
                             <PanelBody kind={panel.kind} />
                         </ErrorBoundary>

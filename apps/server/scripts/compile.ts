@@ -1,5 +1,5 @@
 import { chmod, copyFile, mkdir, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
 /*
@@ -64,6 +64,14 @@ if (values.os === 'mac') {
     if (sign.exitCode !== 0) {
         process.exit(sign.exitCode);
     }
+
+    const middleware = Bun.resolveSync('serve-sim/middleware', root);
+    const nativeDir = join(outDir, 'native');
+    await mkdir(nativeDir, { recursive: true });
+    await copyFile(join(dirname(middleware), 'native', 'serve-sim-native.node'), join(nativeDir, 'serve-sim-native.node'));
+    const axHelper = join(nativeDir, 'serve-sim-ax-settings');
+    await copyFile(join(dirname(middleware), 'simax', 'serve-sim-ax-settings'), axHelper);
+    await chmod(axHelper, 0o755);
 }
 
 await copyFile(join(root, 'bin', 'ruimte-context'), join(outDir, 'ruimte-context'));

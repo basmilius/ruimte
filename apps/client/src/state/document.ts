@@ -23,6 +23,7 @@ import {
     type ProjectLocal,
     type ProjectView,
     type ProjectViewLocal,
+    type DeviceReference,
     type StandaloneNode
 } from '@ruimte/contracts';
 import type { CanvasPatch } from '@/project/merge';
@@ -156,7 +157,8 @@ export interface ViewNotice {
 /* What a new standalone view needs: a chat and a terminal carry a node, a browser carries a page. */
 export type StandaloneRequest =
     | { kind: 'chat' | 'terminal'; name: string; id?: string; node: StandaloneNode }
-    | { kind: 'browser'; name: string; id?: string; url: string };
+    | { kind: 'browser'; name: string; id?: string; url: string }
+    | { kind: 'device'; name: string; id?: string; device: DeviceReference };
 
 /*
  * The editors of the project, handed in rather than imported, so a test with stores of its own moves
@@ -515,8 +517,10 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             addStandaloneView(request) {
                 const id = request.id ?? nextId(request.kind);
                 return addView(
-                    request.kind === 'browser'
-                        ? { kind: 'browser', id, name: request.name, url: request.url }
+                    request.kind === 'browser' || request.kind === 'device'
+                        ? request.kind === 'browser'
+                            ? { kind: 'browser', id, name: request.name, url: request.url }
+                            : { kind: 'device', id, name: request.name, device: request.device }
                         : { kind: request.kind, id, name: request.name, node: request.node },
                     true
                 );
@@ -592,6 +596,9 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                         }
                         if (view.kind === 'browser') {
                             return patch.url === undefined ? view : { ...view, url: patch.url };
+                        }
+                        if (view.kind === 'device') {
+                            return view;
                         }
                         const { url: _url, ...node } = patch;
                         return { ...view, node: { ...view.node, ...node } };

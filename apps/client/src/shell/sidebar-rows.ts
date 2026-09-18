@@ -91,7 +91,7 @@ export interface SidebarInput {
 }
 
 /* Groups, notes and drawings are frames, paper and files; the list is about what runs. */
-export const isSessionKind = (kind: CanvasNodeKind): boolean => kind === 'terminal' || kind === 'chat' || kind === 'browser';
+export const isSessionKind = (kind: CanvasNodeKind): boolean => kind === 'terminal' || kind === 'chat' || kind === 'browser' || kind === 'device';
 
 const WEIGHT: Record<AgentStatus, number> = { 'needs-you': 3, error: 2, exited: 2, running: 1, idle: 0 };
 

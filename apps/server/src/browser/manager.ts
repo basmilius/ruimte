@@ -483,10 +483,10 @@ export class BrowserManager {
         this.createPage = createPage;
     }
 
-    static withBun(home: string): BrowserManager {
+    static withBun(home: string, streams = new LiveStreamHub()): BrowserManager {
         const profile = join(home, 'browser');
         return new BrowserManager(
-            new LiveStreamHub(),
+            streams,
             (width, height) =>
                 new Bun.WebView({
                     backend: { type: 'chrome', url: false },

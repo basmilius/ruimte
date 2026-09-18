@@ -51,6 +51,22 @@ describe('kinds this version does not know', () => {
         expect(node).toMatchObject({ kind: 'diagram', viewId: 'flow-1' });
     });
 
+    test('a device node and view are known only with a portable reference', () => {
+        const reference = { platform: 'ios', kind: 'simulator', name: 'iPhone 18 Pro', runtime: 'iOS 27.0' };
+        const file = structuredClone(NEWER_FILE) as { views: Record<string, unknown>[] };
+        const main = file.views[0] as { nodes: unknown[] };
+        main.nodes.push({ id: 'phone-node', kind: 'device', title: 'Phone', x: 0, y: 400, w: 360, h: 720, device: reference });
+        file.views.push({ id: 'phone-view', kind: 'device', name: 'Phone', device: reference });
+
+        const document = migrateDocument(file)!;
+        expect(isUnknownNode(canvasOf(document.views).nodes.at(-1)!)).toBe(false);
+        expect(isUnknownView(document.views.at(-1)!)).toBe(false);
+
+        const missing = structuredClone(file);
+        delete (missing.views.at(-1) as Record<string, unknown>).device;
+        expect(migrateDocument(missing)).toBeNull();
+    });
+
     test('a view and a node of an unknown kind are read and written back byte for byte', () => {
         const document = parsed();
         expect(isUnknownView(document.views[1]!)).toBe(true);
