@@ -71,6 +71,8 @@ targets:
         RuimtePushKeychainGroup: $(AppIdentifierPrefix)app.ruimte.mobile.push
         UIBackgroundModes: [remote-notification]
         NSSupportsLiveActivities: true
+        ITSAppUsesNonExemptEncryption: false
+        NSCameraUsageDescription: Ruimte does not access your camera. Camera support is included in the connection framework.
         NSLocalNetworkUsageDescription: Connect directly to your machines on the same Wi-Fi network.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoadsInWebContent: true
