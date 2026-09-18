@@ -50,11 +50,17 @@ larger ones becomes a GitHub issue when it starts.
    (`docs/reports/2026-09-16-resume-compaction.html`, designed, nothing built). Two small ones:
    a question in a finished turn stays outside its fold, since it explains the answer below it, and
    after Stop an empty composer offers "Continue" in place of the send button.
-9. **Settings and keyboard**: one binding table with `when` contexts, read by the handlers and the
-   Keyboard pane (which lists them read-only today), then overrides with press-to-record, conflict
-   labels and reset. A "restore defaults" action, a canvas font size for chat and text elements,
-   and settings search that the palette reads.
-10. **Per-project settings** in `.ruimte/settings.json`: the file, `project.settings` and its first
+9. **The action registry** (`packages/actions`): one typed layer under everything a person can do,
+   so voice, the UI, shortcuts, the palette and `ruimte-context` become adapters on the same
+   execution. The registry and its catalog stand, with the sidebar, the view dialogs, the daemon's
+   view actions and the voice tools on it. The keyboard handlers, the command palette and the verbs
+   each still carry their own path; moving them over is the rest of it, and the binding table in 10
+   hangs on it.
+10. **Settings and keyboard**: one binding table with `when` contexts, read by the handlers and the
+    Keyboard pane (which lists them read-only today), then overrides with press-to-record, conflict
+    labels and reset. A "restore defaults" action, a canvas font size for chat and text elements,
+    and settings search that the palette reads.
+11. **Per-project settings** in `.ruimte/settings.json`: the file, `project.settings` and its first
     field (`worktrees.share`) are there; the terminal agent mode is next, then clone a repository as a
     project. Worktrees are done in all five phases: the register and safe removal, a tab of everything a worktree holds against the branch it
     came from, merging from the git panel, a node's menu and a group's menu (squash by default, loose
@@ -64,7 +70,7 @@ larger ones becomes a GitHub issue when it starts.
     removing a clean worktree from the delete question of its node. Still open from the design: the
     iOS app shows none of it, and a merge into a branch checked out nowhere is refused rather than
     offered as a ref-only merge.
-11. **The editor and the diff node**, the half of this the file node does not cover. Saving is the
+12. **The editor and the diff node**, the half of this the file node does not cover. Saving is the
     whole of it: there is no `fs.write` on the wire, and adding one is a decision about what a
     client may change on a machine, with a conflict question under it (an agent rewrote the file
     meanwhile). Plus a PDF renderer, a diff node that reuses the git panel's scopes, a line number
@@ -72,37 +78,39 @@ larger ones becomes a GitHub issue when it starts.
     `path:line`, used from menus, diff rows and paths in terminal output. Still unmeasured: what a
     canvas of ten file nodes on the largest files of a repository costs, now that the plate and the
     highlighting cap are the two things standing between it and the thirty-node goal.
-12. **A test floor**: a dev-only 30-node palette command and whatever it finds; a DOM setup for
+13. **A test floor**: a dev-only 30-node palette command and whatever it finds; a DOM setup for
     `bun test` with first specs for the composer and the canvas wiring.
-13. **Usage v2**: a Days table, price and plan overrides, a currency setting, and an export.
-14. **More than one window**: a window shows a start screen or one project, and two projects side by
+14. **Usage v2**: a Days table, price and plan overrides, a currency setting, and an export.
+15. **More than one window**: a window shows a start screen or one project, and two projects side by
     side never share one (decided 16 September). A second project opens in a window of its own;
     `docs/research/windows.md` is the design. The empty states that stay a sentence: the Files and Git
     panels of a project without a folder, since linking a folder to a project needs a request the
     wire does not have.
-15. **Smaller ones**: a color or an arrowhead per plain line; a note's title as the first heading
+16. **Smaller ones**: a color or an arrowhead per plain line; a note's title as the first heading
     of its body; "Clear" in a chat node's menu (`chat.clear` exists, only the composer offers it);
     what happens to a chat's background subagents when its backend goes away on a clear; lazy
     loading the composer's CodeMirror (~98 kB gzip), only if a measurement shows startup gains.
-16. **Remote access leftovers**: a production broker on a server of its own, after which the test
+17. **Remote access leftovers**: a production broker on a server of its own, after which the test
     droplet goes; TURN for phones behind carrier-grade NAT, measured on real networks; a window of
     accepted protocol versions (`docs/reports/2026-09-15-protocol-versions.html`, not decided);
     the desktop app overwriting a service `ruimte service install` set up; an expired login on
     station showing an error on the start screen; the daemon installing hooks before its port check.
-17. **Devices** (`docs/reports/2026-09-13-devices.html`, nothing built): the iOS Simulator, and
-    Android right after, as a panel, a view and a node. Decided: no UDID in `project.json` (the
-    shared file names platform, device type and runtime, the binding lives per machine in the local
-    file with matching); no keyboard input in the first version; installing in two steps (device
-    support, then agent tools), both after consent; order spike iOS and Android, MVP iOS, MVP
-    Android, node, agents, apps, with a platform field in contracts from the start. First step is
-    the spike of the simulator addon under Bun.
-18. **Plugins** (`docs/reports/2026-09-14-plugins.html`, nothing built, decisions pending): internal
+18. **Devices** (`docs/reports/2026-09-13-devices.html`): the iOS Simulator and physical iPhones and
+    iPads run as a panel, a view and a node, on the stream hub a browser page uses. What is left is
+    the acceptance on a real device: that device visible over the network again, and stream and
+    control together in all three places. Unmeasured: LAN bandwidth, two viewers at once, rotation,
+    click to paint, and a helper that crashes under an open view. The one local measurement was
+    17.4 fps against a goal of 30. Android is the value `android` in `DevicePlatformSchema` and
+    nothing more; the backend on `adb`, the emulator and a pinned scrcpy server is the next build.
+    The iPhone app knows a device from the generated schema and draws none of it. Out on purpose:
+    the iOS keyboard, installing an app, logs and agent control of a device.
+19. **Plugins** (`docs/reports/2026-09-14-plugins.html`, nothing built, decisions pending): internal
     registries first, then a compatibility release in contracts, then declarative plugins from
     `$RUIMTE_HOME/plugins`, isolated code last. The report's alternative, plugins that only feed
     context to agents, is still to be weighed. Unproven: whether a compiled binary can `import()`
     plugin code; ad-hoc compiled binaries get SIGKILL on this Mac, so test it in the signed app and
     never as an agent experiment (one hung for four hours).
-19. **Several accounts per CLI** (`docs/reports/2026-09-10-accounts.html`, not decided): one config
+20. **Several accounts per CLI** (`docs/reports/2026-09-10-accounts.html`, not decided): one config
     folder per login passed as `CLAUDE_CONFIG_DIR` or `CODEX_HOME` at spawn, the CLI logs in
     itself and Ruimte never writes credentials. The account choice belongs in the local file, not
     in `project.json`.
@@ -115,6 +123,5 @@ per-session cap, so one very loud shell can still be the reason a client is drop
 `view delete` leaves the drawing or diagram file behind: `ProjectStore.mutate` updates the ids
 without asking the stores, so orphans only go when a person saves the project.
 
-Research that is written but not built: `docs/research/browser-streaming.md` (a headless Chromium
-on the daemon, streamed over the socket; it and a relay wait until a remote daemon is in daily
-use), `docs/research/windows.md`, and the reports under `docs/reports` for accounts and remote access.
+Research that is written but not built: `docs/research/windows.md`, and the reports under
+`docs/reports` for accounts and remote access.
