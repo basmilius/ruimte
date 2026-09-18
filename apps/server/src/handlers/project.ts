@@ -66,6 +66,8 @@ export const registerProjectHandlers = (dispatcher: Dispatcher, store: ProjectSt
 
     dispatcher.register('project.setIcon', (payload) => translate(async () => ({ summary: await store.setIcon(payload) })));
 
+    dispatcher.register('project.setIdentity', (payload) => translate(async () => ({ summary: await store.setIdentity(payload) })));
+
     dispatcher.register('project.delete', (payload) =>
         translate(async () => {
             await store.delete(payload.projectId, payload.removeFiles);

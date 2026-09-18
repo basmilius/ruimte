@@ -2,11 +2,9 @@ import { useRef, useState } from 'react';
 import clsx from 'clsx';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { FolderSearch, ImageUp } from 'lucide-react';
-import { PROJECT_ICON_NAMES, type ProjectSummary } from '@ruimte/contracts';
-import { projectClient } from '@/project';
+import { PROJECT_ICON_NAMES, type ProjectIconChoice, type ProjectSummary } from '@ruimte/contracts';
 import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
-import { useProject } from '@/state/project';
 import { Button } from '@/ui/Button';
 import { SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
@@ -31,12 +29,19 @@ const readAsBase64 = (file: File): Promise<string> =>
 
 interface ProjectSettingsDialogProps {
     project: ProjectSummary;
+    endpointId: string;
     open: boolean;
     onOpenChange(open: boolean): void;
+    actions: {
+        rename(name: string): Promise<void>;
+        setChosenIcon(icon: ProjectIconChoice): Promise<void>;
+        uploadIcon(mime: string, base64: string): Promise<void>;
+        useFolderIcon(): Promise<void>;
+    };
 }
 
-function ProjectSettingsForm({ project, onOpenChange }: Pick<ProjectSettingsDialogProps, 'project' | 'onOpenChange'>) {
-    const chosen = useProject((s) => s.chosenIcon);
+function ProjectSettingsForm({ project, endpointId, onOpenChange, actions }: Omit<ProjectSettingsDialogProps, 'open'>) {
+    const chosen = project.icon.kind === 'emoji' || project.icon.kind === 'lucide' ? project.icon : null;
     const fileRef = useRef<HTMLInputElement>(null);
     const [name, setName] = useState(project.name);
     const [emoji, setEmoji] = useState('');
@@ -66,14 +71,14 @@ function ProjectSettingsForm({ project, onOpenChange }: Pick<ProjectSettingsDial
             setFailure('That image is larger than 256 KB');
             return;
         }
-        await run(async () => projectClient.uploadIcon(file.type, await readAsBase64(file)));
+        await run(async () => actions.uploadIcon(file.type, await readAsBase64(file)));
     };
 
     const save = async (): Promise<void> => {
         if (trimmedName === '') {
             return;
         }
-        if (trimmedName !== project.name && !(await run(() => projectClient.rename(trimmedName)))) {
+        if (trimmedName !== project.name && !(await run(() => actions.rename(trimmedName)))) {
             return;
         }
         onOpenChange(false);
@@ -98,7 +103,7 @@ function ProjectSettingsForm({ project, onOpenChange }: Pick<ProjectSettingsDial
 
             <div className={`${SECTION_LABEL} mt-5 mb-1.5`}>Icon</div>
             <div className="flex items-center gap-3">
-                <ProjectGlyph projectId={project.projectId} icon={project.icon} color={project.color} size={32} />
+                <ProjectGlyph projectId={project.projectId} endpointId={endpointId} icon={project.icon} color={project.color} size={32} />
                 <div className="flex min-w-0 flex-col">
                     <span className="truncate text-sm text-text">{project.name}</span>
                     <span className="truncate text-sm text-text-faint">
@@ -118,10 +123,7 @@ function ProjectSettingsForm({ project, onOpenChange }: Pick<ProjectSettingsDial
                     onChange={(event) => setEmoji(event.target.value)}
                     onKeyDown={(event) => event.stopPropagation()}
                 />
-                <Button
-                    disabled={busy || emoji.trim() === ''}
-                    onClick={() => void run(() => projectClient.setChosenIcon({ kind: 'emoji', value: emoji.trim() }))}
-                >
+                <Button disabled={busy || emoji.trim() === ''} onClick={() => void run(() => actions.setChosenIcon({ kind: 'emoji', value: emoji.trim() }))}>
                     Use emoji
                 </Button>
             </div>
@@ -137,7 +139,7 @@ function ProjectSettingsForm({ project, onOpenChange }: Pick<ProjectSettingsDial
                                 'flex h-7 w-7 items-center justify-center rounded-md hover:bg-surface-hover',
                                 chosen?.kind === 'lucide' && chosen.value === iconName ? 'bg-surface-active text-text' : 'text-text-muted'
                             )}
-                            onClick={() => void run(() => projectClient.setChosenIcon({ kind: 'lucide', value: iconName }))}
+                            onClick={() => void run(() => actions.setChosenIcon({ kind: 'lucide', value: iconName }))}
                         >
                             <Icon icon={PROJECT_ICON_GLYPHS[iconName]} size={16} />
                         </button>
@@ -166,7 +168,7 @@ function ProjectSettingsForm({ project, onOpenChange }: Pick<ProjectSettingsDial
                 <Button disabled={busy || !project.folder} onClick={() => fileRef.current?.click()}>
                     <Icon icon={ImageUp} size={12} /> Choose image…
                 </Button>
-                <Button disabled={busy || !project.folder} onClick={() => void run(() => projectClient.useFolderIcon())}>
+                <Button disabled={busy || !project.folder} onClick={() => void run(actions.useFolderIcon)}>
                     <Icon icon={FolderSearch} size={12} /> Use folder's icon
                 </Button>
                 <span className="grow" />
@@ -179,14 +181,14 @@ function ProjectSettingsForm({ project, onOpenChange }: Pick<ProjectSettingsDial
     );
 }
 
-export function ProjectSettingsDialog({ project, open, onOpenChange }: ProjectSettingsDialogProps) {
+export function ProjectSettingsDialog({ project, endpointId, open, onOpenChange, actions }: ProjectSettingsDialogProps) {
     return (
         <Dialog.Root open={open} onOpenChange={onOpenChange}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
                 <Dialog.Popup className="dialog-popup w-[420px] p-5">
                     <Dialog.Title className="text-base font-semibold text-text">Project settings</Dialog.Title>
-                    <ProjectSettingsForm project={project} onOpenChange={onOpenChange} />
+                    <ProjectSettingsForm project={project} endpointId={endpointId} onOpenChange={onOpenChange} actions={actions} />
                 </Dialog.Popup>
             </Dialog.Portal>
         </Dialog.Root>

@@ -351,6 +351,15 @@ describe('project', () => {
         expect(payload.safeParse({ projectId: 'p1' }).success).toBe(false);
     });
 
+    test('project.setIdentity changes a name or chosen icon without opening the project', () => {
+        const { payload } = REQUEST_SCHEMAS['project.setIdentity'];
+        expect(payload.safeParse({ projectId: 'p1', name: 'Renamed' }).success).toBe(true);
+        expect(payload.safeParse({ projectId: 'p1', icon: { kind: 'lucide', value: 'rocket' } }).success).toBe(true);
+        expect(payload.safeParse({ projectId: 'p1', icon: null }).success).toBe(true);
+        expect(payload.safeParse({ projectId: 'p1', icon: { kind: 'lucide', value: 'unicorn' } }).success).toBe(false);
+        expect(payload.safeParse({ projectId: '', name: 'Renamed' }).success).toBe(false);
+    });
+
     test('project.showView names the view and who asked, and is an event rather than a request', () => {
         const event = EVENT_SCHEMAS['project.showView'];
         expect(event.safeParse({ projectId: 'p1', viewId: 'board', by: 'term-1' }).success).toBe(true);

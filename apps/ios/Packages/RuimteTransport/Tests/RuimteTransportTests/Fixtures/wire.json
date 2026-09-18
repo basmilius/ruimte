@@ -146,6 +146,7 @@
     "project.close",
     "project.release",
     "project.setIcon",
+    "project.setIdentity",
     "project.settings",
     "project.settings-update",
     "project.delete",

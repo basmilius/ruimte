@@ -155,3 +155,23 @@ describe('a save in one client', () => {
         expect(kinds).toEqual(['project.changed', 'reply']);
     });
 });
+
+describe('project identity', () => {
+    test('changes a released project without opening it again', async () => {
+        const clients = twoClients();
+        const opened = await request<{ summary: { projectId: string; lastOpenedAt: number } }>(clients.a, 'project.open', { folder });
+        const { projectId, lastOpenedAt } = opened.summary;
+        await request(clients.a, 'project.release', { projectId });
+        clients.a.channel.frames.length = 0;
+
+        const { summary } = await request<{ summary: { name: string; icon: { kind: string; value: string }; lastOpenedAt: number } }>(
+            clients.a,
+            'project.setIdentity',
+            { projectId, name: 'Renamed', icon: { kind: 'emoji', value: '🚀' } }
+        );
+
+        expect(summary).toMatchObject({ name: 'Renamed', icon: { kind: 'emoji', value: '🚀' }, lastOpenedAt });
+        expect(store.openProjectIds()).toEqual([]);
+        expect(changesIn(clients.a.channel).at(-1)).toMatchObject({ name: 'Renamed', icon: { kind: 'emoji', value: '🚀' } });
+    });
+});

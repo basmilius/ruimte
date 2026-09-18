@@ -18,6 +18,7 @@ import {
     type ProjectOpenPayload,
     type ProjectOpenResult,
     type ProjectSetIconPayload,
+    type ProjectSetIdentityPayload,
     type ProjectSummary,
     type ProjectView
 } from '@ruimte/contracts';
@@ -390,36 +391,49 @@ export class ProjectStore {
      * then. Throwing from `apply` writes nothing.
      */
     mutate<T>(projectId: string, apply: (content: ProjectContent) => ProjectMutation<T> | Promise<ProjectMutation<T>>): Promise<T> {
-        return this.locked(async () => {
-            const { entry, path, rev, content } = await this.readCurrent(projectId);
-            const mutation = await apply(content);
-            if (mutation.content === null) {
-                return mutation.result;
-            }
-            const parsed = ProjectDocumentSchema.safeParse({ version: 2, rev: rev + 1, ...toPortable(mutation.content, entry.folder) });
-            if (!parsed.success) {
-                throw new ProjectError('project-invalid', `The change would not make a valid canvas: ${parsed.error.issues[0]?.message ?? 'unknown'}`);
-            }
-            const document = parsed.data;
-            const duplicate = duplicateIdIn(document.views);
-            if (duplicate) {
-                throw new ProjectError('project-invalid', `The change would give two things the id "${duplicate}"`);
-            }
-            const text = await writeDocument(path, document);
-            const state = this.open.get(projectId);
-            if (state) {
-                state.lastText = text;
-                state.rev = document.rev;
-                state.drawingIds = drawingIdsIn(document.views);
-                state.diagramIds = diagramIdsIn(document.views);
-            }
-            const daemonSide = fromPortable(document, entry.folder);
-            this.index.set(projectId, entry.folder, daemonSide);
-            await mutation.landed?.();
-            // Every sink, open or not: a client that released the project may still have it on screen in another workspace.
-            this.emit({ event: 'project.changed', payload: { projectId, document: daemonSide } });
+        return this.locked(() => this.mutateUnlocked(projectId, apply));
+    }
+
+    private async mutateUnlocked<T>(projectId: string, apply: (content: ProjectContent) => ProjectMutation<T> | Promise<ProjectMutation<T>>): Promise<T> {
+        const { entry, path, rev, content } = await this.readCurrent(projectId);
+        const mutation = await apply(content);
+        if (mutation.content === null) {
             return mutation.result;
-        });
+        }
+        const parsed = ProjectDocumentSchema.safeParse({ version: 2, rev: rev + 1, ...toPortable(mutation.content, entry.folder) });
+        if (!parsed.success) {
+            throw new ProjectError('project-invalid', `The change would not make a valid canvas: ${parsed.error.issues[0]?.message ?? 'unknown'}`);
+        }
+        const document = parsed.data;
+        const duplicate = duplicateIdIn(document.views);
+        if (duplicate) {
+            throw new ProjectError('project-invalid', `The change would give two things the id "${duplicate}"`);
+        }
+        const text = await writeDocument(path, document);
+        const icon = mutation.content.icon ?? null;
+        const identityChanged = mutation.content.name !== entry.name || mutation.content.color !== entry.color || !sameIcon(icon, entry.icon ?? null);
+        const nextEntry = identityChanged ? { ...entry, name: mutation.content.name, color: mutation.content.color, icon } : entry;
+        if (identityChanged) {
+            const entries = await this.loadRegistry();
+            await this.saveRegistry(entries.map((candidate) => (candidate.projectId === projectId ? nextEntry : candidate)));
+        }
+        const state = this.open.get(projectId);
+        if (state) {
+            state.entry = nextEntry;
+            state.lastText = text;
+            state.rev = document.rev;
+            state.drawingIds = drawingIdsIn(document.views);
+            state.diagramIds = diagramIdsIn(document.views);
+        }
+        const daemonSide = fromPortable(document, entry.folder);
+        this.index.set(projectId, entry.folder, daemonSide);
+        await mutation.landed?.();
+        if (identityChanged) {
+            this.publish(nextEntry);
+        }
+        // Every sink, open or not: a client that released the project may still have it on screen in another workspace.
+        this.emit({ event: 'project.changed', payload: { projectId, document: daemonSide } });
+        return mutation.result;
     }
 
     /*
@@ -487,6 +501,30 @@ export class ProjectStore {
      */
     setIcon(payload: ProjectSetIconPayload): Promise<ProjectSummary> {
         return this.locked(() => this.setIconUnlocked(payload));
+    }
+
+    setIdentity(payload: ProjectSetIdentityPayload): Promise<ProjectSummary> {
+        return this.locked(async () => {
+            await this.mutateUnlocked(payload.projectId, (current) => {
+                const name = payload.name ?? current.name;
+                const icon = payload.icon === undefined ? (current.icon ?? null) : payload.icon;
+                if (name === current.name && sameIcon(icon, current.icon ?? null)) {
+                    return { content: null, result: null };
+                }
+                const next: ProjectContent = { ...current, name };
+                if (icon === null) {
+                    delete next.icon;
+                } else {
+                    next.icon = icon;
+                }
+                return { content: next, result: null };
+            });
+            const entry = (await this.loadRegistry()).find((candidate) => candidate.projectId === payload.projectId);
+            if (!entry) {
+                throw new ProjectError('project-not-found', `No project ${payload.projectId}`);
+            }
+            return this.summarize(entry);
+        });
     }
 
     private async setIconUnlocked(payload: ProjectSetIconPayload): Promise<ProjectSummary> {

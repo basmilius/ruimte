@@ -18653,6 +18653,323 @@
       "summary"
     ]
   },
+  "request.project.setIdentity.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "name": {
+        "type": "string",
+        "minLength": 1
+      },
+      "icon": {
+        "anyOf": [
+          {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "emoji"
+                  },
+                  "value": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 16
+                  }
+                },
+                "required": [
+                  "kind",
+                  "value"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "lucide"
+                  },
+                  "value": {
+                    "type": "string",
+                    "enum": [
+                      "box",
+                      "boxes",
+                      "package",
+                      "layers",
+                      "code",
+                      "terminal",
+                      "cpu",
+                      "circuit-board",
+                      "memory-stick",
+                      "pc-case",
+                      "laptop",
+                      "monitor",
+                      "smartphone",
+                      "tablet",
+                      "webcam",
+                      "printer",
+                      "hard-drive",
+                      "usb",
+                      "database",
+                      "server",
+                      "container",
+                      "network",
+                      "router",
+                      "ethernet-port",
+                      "cable",
+                      "plug",
+                      "wifi",
+                      "radio-tower",
+                      "satellite-dish",
+                      "cloud",
+                      "globe",
+                      "rocket",
+                      "zap",
+                      "flame",
+                      "sparkles",
+                      "star",
+                      "heart",
+                      "flag",
+                      "bookmark",
+                      "folder",
+                      "file-text",
+                      "book",
+                      "puzzle",
+                      "palette",
+                      "brush",
+                      "camera",
+                      "music",
+                      "video",
+                      "gamepad-2",
+                      "bot",
+                      "brain",
+                      "beaker",
+                      "wrench",
+                      "hammer",
+                      "shield",
+                      "key",
+                      "compass",
+                      "map",
+                      "leaf",
+                      "coffee"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "value"
+                ]
+              }
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "projectId"
+    ]
+  },
+  "request.project.setIdentity.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "summary": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "folder": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lastOpenedAt": {
+            "type": "number"
+          },
+          "closedAt": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "icon": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "emoji"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "value"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "lucide"
+                  },
+                  "value": {
+                    "type": "string",
+                    "enum": [
+                      "box",
+                      "boxes",
+                      "package",
+                      "layers",
+                      "code",
+                      "terminal",
+                      "cpu",
+                      "circuit-board",
+                      "memory-stick",
+                      "pc-case",
+                      "laptop",
+                      "monitor",
+                      "smartphone",
+                      "tablet",
+                      "webcam",
+                      "printer",
+                      "hard-drive",
+                      "usb",
+                      "database",
+                      "server",
+                      "container",
+                      "network",
+                      "router",
+                      "ethernet-port",
+                      "cable",
+                      "plug",
+                      "wifi",
+                      "radio-tower",
+                      "satellite-dish",
+                      "cloud",
+                      "globe",
+                      "rocket",
+                      "zap",
+                      "flame",
+                      "sparkles",
+                      "star",
+                      "heart",
+                      "flag",
+                      "bookmark",
+                      "folder",
+                      "file-text",
+                      "book",
+                      "puzzle",
+                      "palette",
+                      "brush",
+                      "camera",
+                      "music",
+                      "video",
+                      "gamepad-2",
+                      "bot",
+                      "brain",
+                      "beaker",
+                      "wrench",
+                      "hammer",
+                      "shield",
+                      "key",
+                      "compass",
+                      "map",
+                      "leaf",
+                      "coffee"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "value"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "image"
+                  },
+                  "value": {
+                    "type": "string"
+                  },
+                  "version": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "value",
+                  "version"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "initial"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "value"
+                ]
+              }
+            ]
+          },
+          "nameSource": {
+            "type": "string",
+            "enum": [
+              "chosen",
+              "folder"
+            ]
+          }
+        },
+        "required": [
+          "projectId",
+          "name",
+          "color",
+          "folder",
+          "lastOpenedAt",
+          "available",
+          "icon",
+          "nameSource"
+        ]
+      }
+    },
+    "required": [
+      "summary"
+    ]
+  },
   "request.project.settings.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

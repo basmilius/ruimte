@@ -4,10 +4,12 @@ import { Dialog } from '@base-ui-components/react/dialog';
 import { Menu } from '@base-ui-components/react/menu';
 import { ChevronDown, ChevronRight, ExternalLink, FolderOpen, History, MoreHorizontal, Plus, Settings2, X } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
+import { projectClient } from '@/project';
 import { menuProjects, type ProjectMenuRow } from '@/project/list';
 import { closeProject, createProjectOn, openProject } from '@/project/open';
 import { closeWarning, sessionNodesOf } from '@/project/project-sessions';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
+import { setProjectFolderIcon, setProjectIdentity, uploadProjectIcon, type ProjectSettingsResult } from '@/project/settings';
 import { ProjectSettingsDialog } from '@/shell/ProjectSettingsDialog';
 import { ProjectNameDialog } from '@/shell/ProjectNameDialog';
 import { useDocument } from '@/state/document';
@@ -18,7 +20,7 @@ import { useProject } from '@/state/project';
 import { fileManagerName, useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
-import { useOpenEndpoints } from '@/transport/status';
+import { useMachineHold, useOpenEndpoints } from '@/transport/status';
 import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
@@ -123,7 +125,7 @@ export function ProjectMenu() {
     const activeId = useEndpoints((s) => s.activeId);
     const connected = useOpenEndpoints();
     const [newOpen, setNewOpen] = useState(false);
-    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [settingsTarget, setSettingsTarget] = useState<ProjectMenuRow | null>(null);
     const [closing, setClosing] = useState<{ name: string; sessions: number } | null>(null);
     const { open, recent } = useMemo(() => menuProjects(rows, endpoints, connected), [rows, endpoints, connected]);
     const showMachine = endpoints.length > 1;
@@ -133,6 +135,16 @@ export function ProjectMenu() {
     const machineIcon = servers[machineId]?.icon ?? null;
 
     const isCurrent = (row: ProjectMenuRow): boolean => row.summary.projectId === current?.projectId && row.endpointId === currentEndpointId;
+    const settingsIsCurrent = settingsTarget !== null && isCurrent(settingsTarget);
+    const settingsProject =
+        settingsTarget === null
+            ? null
+            : settingsIsCurrent
+              ? current
+              : (rows.find((row) => row.endpointId === settingsTarget.endpointId && row.summary.projectId === settingsTarget.summary.projectId)?.summary ??
+                settingsTarget.summary);
+    const settingsEndpoint = settingsTarget === null ? null : (endpoints.find((endpoint) => endpoint.id === settingsTarget.endpointId) ?? null);
+    useMachineHold(settingsEndpoint);
 
     const activate = async (row: ProjectMenuRow): Promise<boolean> => {
         if (isCurrent(row)) {
@@ -141,10 +153,10 @@ export function ProjectMenu() {
         return (await openProject(row.endpointId, row.summary.projectId)) === 'done';
     };
 
-    const showSettings = async (row: ProjectMenuRow): Promise<void> => {
-        if (await activate(row)) {
-            setSettingsOpen(true);
-        }
+    const rememberSettings = (result: ProjectSettingsResult): void => {
+        setSettingsTarget((target) =>
+            target?.summary.projectId === result.summary.projectId ? { ...target, endpointId: result.endpointId, summary: result.summary } : target
+        );
     };
 
     const askClose = async (row: ProjectMenuRow): Promise<void> => {
@@ -188,7 +200,7 @@ export function ProjectMenu() {
                                     showMachine={showMachine}
                                     actions={{
                                         platform: servers[row.endpointId]?.platform ?? null,
-                                        onSettings: () => void showSettings(row),
+                                        onSettings: () => setSettingsTarget(row),
                                         onClose: () => void askClose(row)
                                     }}
                                 />
@@ -237,7 +249,44 @@ export function ProjectMenu() {
                 }}
             />
 
-            {current && <ProjectSettingsDialog project={current} open={settingsOpen} onOpenChange={setSettingsOpen} />}
+            {settingsTarget && settingsProject && (
+                <ProjectSettingsDialog
+                    project={settingsProject}
+                    endpointId={settingsTarget.endpointId}
+                    open
+                    onOpenChange={(open) => !open && setSettingsTarget(null)}
+                    actions={{
+                        rename: async (name) => {
+                            if (settingsIsCurrent) {
+                                await projectClient.rename(name);
+                                return;
+                            }
+                            rememberSettings(await setProjectIdentity(settingsTarget.endpointId, settingsTarget.summary.projectId, { name }));
+                        },
+                        setChosenIcon: async (icon) => {
+                            if (settingsIsCurrent) {
+                                await projectClient.setChosenIcon(icon);
+                                return;
+                            }
+                            rememberSettings(await setProjectIdentity(settingsTarget.endpointId, settingsTarget.summary.projectId, { icon }));
+                        },
+                        uploadIcon: async (mime, base64) => {
+                            if (settingsIsCurrent) {
+                                await projectClient.uploadIcon(mime, base64);
+                                return;
+                            }
+                            rememberSettings(await uploadProjectIcon(settingsTarget.endpointId, settingsTarget.summary.projectId, mime, base64));
+                        },
+                        useFolderIcon: async () => {
+                            if (settingsIsCurrent) {
+                                await projectClient.useFolderIcon();
+                                return;
+                            }
+                            rememberSettings(await setProjectFolderIcon(settingsTarget.endpointId, settingsTarget.summary.projectId));
+                        }
+                    }}
+                />
+            )}
 
             <Dialog.Root open={closing !== null} onOpenChange={(next) => !next && setClosing(null)}>
                 <Dialog.Portal>

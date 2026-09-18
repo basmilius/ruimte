@@ -750,6 +750,13 @@ export const ProjectSetIconPayloadSchema = z.object({
 });
 export type ProjectSetIconPayload = z.infer<typeof ProjectSetIconPayloadSchema>;
 
+export const ProjectSetIdentityPayloadSchema = z.object({
+    projectId: ProjectIdSchema,
+    name: z.string().min(1).optional(),
+    icon: ProjectIconChoiceSchema.nullable().optional()
+});
+export type ProjectSetIdentityPayload = z.infer<typeof ProjectSetIdentityPayloadSchema>;
+
 export const ProjectSummaryResultSchema = z.object({
     summary: ProjectSummarySchema
 });
