@@ -92,6 +92,24 @@ describe('ProjectStore', () => {
         expect(canvas(again.document).nodes[0]?.cwd).toBe(join(folder, 'apps', 'server'));
     });
 
+    test('a field a newer Ruimte put on an edge is written back and read again', async () => {
+        const edge = { id: 'e1', from: 'n1', to: 'n2', label: 'context', relation: 'origin' };
+        const base = content();
+        const view = canvas(base);
+        const withEdge: ProjectContent = {
+            ...base,
+            views: [{ ...view, nodes: [...view.nodes, { id: 'n2', kind: 'chat', title: 'chat', x: 600, y: 0, w: 560, h: 360 }], edges: [edge] }]
+        };
+
+        const opened = await store.openProject({ folder });
+        await store.save(opened.summary.projectId, 0, withEdge);
+        const onDisk = JSON.parse(await readFile(documentPathInFolder(folder), 'utf8')) as ProjectDocument;
+        expect(canvas(onDisk).edges).toEqual([edge]);
+
+        const again = await store.openProject({ projectId: opened.summary.projectId });
+        expect(canvas(again.document).edges).toEqual([edge]);
+    });
+
     test('a save based on an older rev is refused', async () => {
         const opened = await store.openProject({ folder });
         await store.save(opened.summary.projectId, 0, content());

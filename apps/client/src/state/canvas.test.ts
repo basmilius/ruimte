@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { groupFrame, type ProjectCanvasView } from '@ruimte/contracts';
+import { groupFrame, ProjectCanvasViewSchema, type ProjectCanvasView } from '@ruimte/contracts';
 import { toWorld } from '@/canvas/math';
 import { carriedByGroups, createCanvasStore, focusedCanvas, isNodeActive, type CanvasNode } from './canvas';
 
@@ -80,6 +80,24 @@ describe('edges', () => {
         expect(s.addEdge('page', 'page')).toBeNull();
         expect(s.addEdge('page', 'missing')).toBeNull();
         expect(canvas().edges).toHaveLength(1);
+    });
+
+    test('a field a newer Ruimte put on an edge is still on it when the canvas is handed back', () => {
+        const edge = { id: 'edge-1', from: 'shell', to: 'page', label: 'context', relation: 'origin' };
+        // Through the schema the client checks a reply with, so this is the canvas as it arrives from the daemon.
+        const view = ProjectCanvasViewSchema.parse({
+            kind: 'canvas',
+            id: 'view',
+            name: 'Canvas',
+            nodes: [node('shell', 0, 0), node('page', 400, 0, 'browser')],
+            texts: [],
+            edges: [edge],
+            layouts: []
+        });
+        const store = createCanvasStore();
+        store.getState().loadView(view, null);
+        store.getState().setEdgeLabel('edge-1', 'reads');
+        expect(store.getState().exportContent().edges).toEqual([{ ...edge, label: 'reads' }]);
     });
 
     test('"Connect to..." aims a draft from the node until a target is added', () => {

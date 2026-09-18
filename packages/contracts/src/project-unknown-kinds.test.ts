@@ -19,7 +19,7 @@ const NEWER_FILE = {
                 { kind: 'hologram', id: 'holo', title: 'Hologram', x: 600, y: 40, w: 480, h: 360, beam: { color: 'teal', lumens: [1, 2] }, path: 42 }
             ],
             texts: [],
-            edges: [{ id: 'edge-1', from: 'holo', to: 'term', label: 'context' }],
+            edges: [{ id: 'edge-1', from: 'holo', to: 'term', label: 'context', relation: 'origin' }],
             layouts: []
         },
         { name: 'Flow', kind: 'timeline', id: 'timeline-1', createdBy: 'term', tracks: [{ at: 0 }], zoom: 'wide' },
@@ -117,6 +117,16 @@ describe('kinds this version does not know', () => {
         const nodes = canvasOf([stored.views[1]]).nodes as unknown as { id: string }[];
         expect(nodes.map((node) => node.id)).toEqual(['terminal-copy', 'unknown-copy']);
         expect(duplicateIdIn(ProjectDocumentSchema.parse({ ...stored, version: 2, rev: 5 }).views)).toBeNull();
+    });
+
+    test('a field a newer Ruimte put on an edge is read, sent and written back with it', () => {
+        const document = parsed();
+        expect(canvasOf(document.views).edges[0]!.relation).toBe('origin');
+        expect(JSON.stringify(canvasOf(storedContentOf(document).views).edges)).toBe(JSON.stringify(NEWER_FILE.views[0]!.edges));
+
+        // The wire is parsed on both ends, so a field that only survives one of the two is still lost.
+        const again = ProjectDocumentSchema.parse(JSON.parse(JSON.stringify(document)));
+        expect(JSON.stringify(canvasOf(storedContentOf(again).views).edges)).toBe(JSON.stringify(NEWER_FILE.views[0]!.edges));
     });
 
     test('an unknown node counts for its edges and its id', () => {

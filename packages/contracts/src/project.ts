@@ -170,7 +170,13 @@ export type ProjectText = z.infer<typeof ProjectTextSchema>;
 export const NodeSideSchema = z.enum(['top', 'right', 'bottom', 'left']);
 export type NodeSide = z.infer<typeof NodeSideSchema>;
 
-export const ProjectEdgeSchema = z.object({
+/*
+ * Loose, so a field a newer Ruimte put on an edge is read, carried and written back untouched, the
+ * way an entry of an unknown kind is. An edge is flat and has no `kind` to hang a wrapper on, so
+ * keeping the extra keys where they already sit is all it takes; nothing here may rebuild an edge
+ * out of the fields this version knows.
+ */
+export const ProjectEdgeSchema = z.looseObject({
     id: z.string().min(1),
     from: z.string().min(1),
     to: z.string().min(1),

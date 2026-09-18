@@ -16584,7 +16584,8 @@
                           "id",
                           "from",
                           "to"
-                        ]
+                        ],
+                        "additionalProperties": {}
                       }
                     },
                     "layouts": {
@@ -18732,7 +18733,8 @@
                           "id",
                           "from",
                           "to"
-                        ]
+                        ],
+                        "additionalProperties": {}
                       }
                     },
                     "layouts": {
@@ -33257,7 +33259,8 @@
                           "id",
                           "from",
                           "to"
-                        ]
+                        ],
+                        "additionalProperties": {}
                       }
                     },
                     "layouts": {

@@ -28,6 +28,7 @@ import type {
     NodeSide,
     NodeTitleSource,
     ProjectCanvasView,
+    ProjectEdge,
     ProjectLayout,
     ProjectNode,
     ProjectText,
@@ -67,15 +68,9 @@ export interface AddNodeOptions {
 /* A label on the canvas. Style belongs to the whole element; the text itself holds no runs. */
 export type TextElement = ProjectText;
 
-export interface Edge {
-    id: string;
-    from: string;
-    to: string;
-    label?: string;
-    /* The port a person drew the line from; an end without one lands wherever the route reads best. */
-    fromSide?: NodeSide;
-    toSide?: NodeSide;
-}
+/* A line as the project file holds it, extra fields and all: a shape of its own here would drop
+   whatever a newer Ruimte wrote on an edge the moment this store handed the canvas back. */
+export type Edge = ProjectEdge;
 
 /*
  * An edge being drawn: from a node or text to wherever the pointer is, in world units. Started from
