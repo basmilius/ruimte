@@ -261,7 +261,7 @@ export const ACTION_DEFINITIONS = {
             chatId: z.string().min(1),
             chat: z.string(),
             queued: z.boolean(),
-            turnId: z.string().min(1)
+            turnId: z.string().min(1).optional()
         })
     },
     'chat.read': {

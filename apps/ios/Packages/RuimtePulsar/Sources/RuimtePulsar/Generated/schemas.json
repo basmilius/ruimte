@@ -11272,8 +11272,7 @@
       }
     },
     "required": [
-      "queued",
-      "turnId"
+      "queued"
     ]
   },
   "request.chat.unqueue.payload": {

@@ -509,12 +509,17 @@ const communicate = async (args: Record<string, unknown>): Promise<VoiceToolExec
     if (result.status !== 'completed') {
         return failureOf(result);
     }
-    const execution = ok(`${result.output.queued ? 'Queued' : 'Submitted'} the prompt in “${result.output.chat}”.`, result.output, {
-        kind: 'chat',
-        label: result.output.queued ? 'Queued AI Chat prompt' : 'Prompted AI Chat',
-        detail: `${result.output.chat}: ${prompt.slice(0, 120)}`
-    });
-    return notifyOnCompletion
+    const cannotFollow = notifyOnCompletion && result.output.turnId === undefined;
+    const execution = ok(
+        `${result.output.queued ? 'Queued' : 'Submitted'} the prompt in “${result.output.chat}”.${cannotFollow ? ' Update Ruimte on this machine before asking for a completion notification.' : ''}`,
+        result.output,
+        {
+            kind: 'chat',
+            label: result.output.queued ? 'Queued AI Chat prompt' : 'Prompted AI Chat',
+            detail: `${result.output.chat}: ${prompt.slice(0, 120)}`
+        }
+    );
+    return notifyOnCompletion && result.output.turnId !== undefined
         ? {
               ...execution,
               followUp: {

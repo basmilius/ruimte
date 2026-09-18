@@ -543,8 +543,8 @@ export const ChatSendPayloadSchema = z
     .refine((payload) => payload.text.trim() !== '' || (payload.attachments?.length ?? 0) > 0, { message: 'A message needs text or an attachment' });
 export type ChatSendPayload = z.infer<typeof ChatSendPayloadSchema>;
 
-// The turn id is reserved before queueing, so callers can follow this exact request until it settles.
-export const ChatSendResultSchema = z.object({ queued: z.boolean(), turnId: z.string().min(1) });
+// Daemons before completion follow-ups omit `turnId`; keeping it optional lets newer clients finish the send.
+export const ChatSendResultSchema = z.object({ queued: z.boolean(), turnId: z.string().min(1).optional() });
 export type ChatSendResult = z.infer<typeof ChatSendResultSchema>;
 
 export const ChatQueuePayloadSchema = z.object({

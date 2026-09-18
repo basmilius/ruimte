@@ -130,8 +130,8 @@ export class ChatClient {
         }
     }
 
-    /* Returns the stable turn id even when the message first has to wait in the queue. */
-    async send(chatId: string, text: string, extras: ChatSendExtras = {}): Promise<{ queued: boolean; turnId: string }> {
+    /* Current daemons return the stable turn id; older compatible ones only report whether the message queued. */
+    async send(chatId: string, text: string, extras: ChatSendExtras = {}): Promise<{ queued: boolean; turnId?: string }> {
         return this.transport.request('chat.send', {
             chatId,
             text,

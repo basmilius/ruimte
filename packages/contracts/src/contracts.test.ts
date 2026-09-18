@@ -74,7 +74,7 @@ describe('chat.send', () => {
         expect(payload.safeParse({ chatId: 'c1', text: 'see', mentions: ['src/a.ts'], skills: ['unslop'], attachments: [png] }).success).toBe(true);
         expect(payload.safeParse({ chatId: 'c1', text: '  ' }).success).toBe(false);
         expect(result.safeParse({ queued: true, turnId: 'turn-1' }).success).toBe(true);
-        expect(result.safeParse({ queued: true }).success).toBe(false);
+        expect(result.safeParse({ queued: true }).success).toBe(true);
         // Any file type is welcome now, but it still needs a name, a type and bytes.
         expect(payload.safeParse({ chatId: 'c1', text: 'x', attachments: [{ ...png, mime: 'application/zip' }] }).success).toBe(true);
         expect(payload.safeParse({ chatId: 'c1', text: 'x', attachments: [{ ...png, mime: '' }] }).success).toBe(false);
