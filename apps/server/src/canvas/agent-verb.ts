@@ -14,6 +14,7 @@ import { WORKTREE_LINES, branchSlug, branchesForWorktrees, freeBranch, makeWorkt
 import {
     DRY_RUN_PREVIEW,
     MAX_TITLE_LENGTH,
+    NEW_NODE,
     OPENING_OFF_CANVAS,
     TITLE_LINE,
     VerbRefusal,
@@ -27,12 +28,6 @@ import {
 } from './verb.ts';
 
 export const AGENT_KINDS = AgentKindSchema.options;
-
-/* What a dry run calls the node it is not making, so the edge it names still has two ends; a team
-   puts the role's title in it, since its rows are otherwise the same for two roles of one CLI. */
-export const newNode = (name = 'new node'): string => `<${name}>`;
-
-export const NEW_NODE = newNode();
 
 /* The CLIs with a chat backend; the rest only ever runs in a shell, so an agent of theirs is always a terminal. */
 export const chatKinds = (): AgentKind[] => AGENT_KINDS.filter((kind) => providerFor(kind).capabilities.chat);

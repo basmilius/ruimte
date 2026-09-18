@@ -39,7 +39,7 @@ import { DIAGRAM_EXAMPLE } from './diagram-verb.ts';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
 import { CANVAS_PATH, handleCanvasRequest } from './canvas-route.ts';
 import { MAX_AGENT_DEPTH, MAX_OPENED_PER_CALLER, MAX_TEAM_DEPTH } from './depth.ts';
-import { AGENT_KINDS, NEW_NODE } from './agent-verb.ts';
+import { AGENT_KINDS } from './agent-verb.ts';
 import { MAX_LINKS } from './link-verb.ts';
 import { MAX_CANVAS_NODES } from './node-verb.ts';
 import { PLACEMENT_GAP, TEAM_COLUMNS } from './placement.ts';
@@ -47,7 +47,7 @@ import { MAX_ROLES, ROLES_SHAPE } from './team-verb.ts';
 import { MAX_PROJECT_VIEWS, VIEW_KINDS } from './view-verb.ts';
 import { MAX_NOTICE_LENGTH } from '../context/notices.ts';
 import type { Notice, NoticeDelivery } from '../context/notices.ts';
-import { MAX_TITLE_LENGTH, type AgentStart, type CanvasHost, type Noun } from './verb.ts';
+import { MAX_TITLE_LENGTH, NEW_NODE, OPENING_OFF_CANVAS, type AgentStart, type CanvasHost, type Noun } from './verb.ts';
 import { VERBS } from './verbs.ts';
 import { TaskStore } from '../tasks/task-store.ts';
 import { MAX_TASK_PROMPT_LENGTH, nextLine, taskBrief } from './task-verbs.ts';
@@ -491,7 +491,9 @@ describe('help', () => {
 
     test('help node new says what it prints, which flag goes with which kind, and where a node lands', async () => {
         const { lines } = await post('help', ['node', 'new']);
-        expect(lines).toContain('prints\tid\tkind\tview\tthe id of the new node, its kind, and the canvas it landed on');
+        expect(lines).toContain(
+            'prints\tid\tkind\tview\tedge\tthe id of the new node, its kind, the canvas it landed on and the id of the line drawn from you into it (- when none was drawn)'
+        );
         expect(lines).toContain('kind\tnote\t--text\tcalled "Note" without --title');
         expect(lines).toContain('kind\tbrowser\t--url (required)\tcalled "Browser" without --title');
         expect(lines).toContain('kind\tevery kind\t--title T, --view V, --beside N');
@@ -501,6 +503,11 @@ describe('help', () => {
         expect(lines.filter((line) => line.startsWith('where\t')).length).toBe(2);
         expect(lines.filter((line) => line.startsWith('paths\t')).length).toBe(2);
         expect(lines.some((line) => line.includes('--text - takes the body from stdin'))).toBe(true);
+        // What the line into a new node means, which differs per kind and is on no canvas to read.
+        expect(lines.some((line) => line.startsWith('edge\t') && line.includes('that line is context'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('edge\t') && line.includes('an origin line'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('edge\t') && line.includes('the edge column shows -'))).toBe(true);
+        expect(lines.some((line) => line.startsWith('flag\t--dry-run\t') && line.includes('<from> -> <new node>'))).toBe(true);
     });
 
     test('help agent covers what a first-time caller cannot see from the canvas', async () => {
@@ -746,10 +753,7 @@ describe('a closed set that is empty', () => {
         empty.views = [{ kind: 'chat', id: 'chat-1', name: 'Planner', node: {} }];
         await store.mutate(projectId, () => ({ content: empty, result: null }));
         const noCanvas = await post('node', ['new', 'note', '--text', 'x'], 'chat');
-        expect(noCanvas.lines).toEqual([
-            'refused\tview-required\tThis session is not on a canvas; name one with --view',
-            'note\tThis project has no canvas; a node only ever lands on one'
-        ]);
+        expect(noCanvas.lines).toEqual([`refused\tview-required\t${OPENING_OFF_CANVAS}`, 'note\tThis project has no canvas; a node only ever lands on one']);
     });
 
     test('a --source with no drawing view in the project says that too', async () => {
@@ -881,6 +885,56 @@ describe('node new', () => {
         const node = (await canvasOnDisk()).nodes.find((candidate) => candidate.id === id);
         expect(node).toEqual({ id: id!, kind: 'note', title: 'Note', x: 560 + PLACEMENT_GAP, y: 0, ...NODE_SIZE.note, body: 'hello' });
         expect(store.index.locate(id!)).toEqual({ projectId, folder, canvasId: 'main' });
+    });
+
+    test('draws a line from the caller into what it made, context into an agent node and origin into anything else', async () => {
+        const withFlow = content();
+        withFlow.views.push({ kind: 'diagram', id: 'flow-1', name: 'Flow' });
+        await store.mutate(projectId, () => ({ content: withFlow, result: null }));
+
+        const cases: Array<{ argv: string[]; label?: string; role?: string }> = [
+            { argv: ['note'], role: 'origin' },
+            { argv: ['browser', '--url', 'https://example.com'], role: 'origin' },
+            { argv: ['file', '--path', 'src/main.ts'], role: 'origin' },
+            { argv: ['drawing', '--source', 'sketch-1'], role: 'origin' },
+            { argv: ['diagram', '--source', 'flow-1'], role: 'origin' },
+            { argv: ['terminal'], label: 'context' },
+            { argv: ['chat'], label: 'context' }
+        ];
+        for (const { argv, label, role } of cases) {
+            const [id, kind, view, edgeId] = (await post('node', ['new', ...argv])).lines[0]!.split('\t');
+            expect({ argv, kind, view }).toEqual({ argv, kind: argv[0]!, view: 'main' });
+            const edge = (await canvasOnDisk()).edges.find((candidate) => candidate.id === edgeId);
+            // A line into a terminal or a chat is the one agent draws, label and all and no role of its own.
+            expect({ argv, edge }).toEqual({
+                argv,
+                edge: {
+                    id: edgeId!,
+                    from: 'term-1',
+                    to: id!,
+                    ...(label === undefined ? {} : { label }),
+                    ...(role === undefined ? {} : { role })
+                }
+            });
+        }
+    });
+
+    test('a caller that is not a node on that canvas gets no line, and the edge column says so', async () => {
+        const elsewhere = await post('node', ['new', 'note', '--view', 'board']);
+        expect(elsewhere.lines[0]!.split('\t').slice(1)).toEqual(['note', 'board', '-']);
+
+        // A chat that is a view of its own is a node on no canvas at all.
+        const ofItsOwn = await post('node', ['new', 'note', '--view', 'board'], 'chat');
+        expect(ofItsOwn.status).toBe(200);
+        expect(ofItsOwn.lines[0]!.split('\t').slice(1)).toEqual(['note', 'board', '-']);
+        expect((await canvasOnDisk('board')).edges).toEqual([]);
+    });
+
+    test('--dry-run names the line it would draw and leaves the canvas alone', async () => {
+        expect((await post('node', ['new', 'terminal', '--dry-run'])).lines).toEqual([`dry-run\tterminal\tmain\tterm-1 -> ${NEW_NODE}`]);
+        const canvas = await canvasOnDisk();
+        expect(canvas.edges).toEqual([]);
+        expect(canvas.nodes.map((node) => node.id)).toEqual(['term-1', 'note-1']);
     });
 
     test('--beside places right of a named node, and refuses one that is not on the canvas', async () => {
@@ -1674,7 +1728,9 @@ describe('--dry-run', () => {
     });
 
     test('node says which kind it would have made', async () => {
-        expect((await post('node', ['new', 'note', '--text', 'x', '--dry-run'])).lines).toEqual(['dry-run\tnote\tmain']);
+        expect((await post('node', ['new', 'note', '--text', 'x', '--dry-run'])).lines).toEqual([`dry-run\tnote\tmain\tterm-1 -> ${NEW_NODE}`]);
+        // A caller that is a node on no canvas names one, and the edge column says no line would be drawn.
+        expect((await post('node', ['new', 'note', '--view', 'board', '--dry-run'], 'chat')).lines).toEqual(['dry-run\tnote\tboard\t-']);
         expect((await onDisk()).rev).toBe(1);
     });
 
@@ -2331,7 +2387,9 @@ describe('node rename', () => {
 
 describe('notify', () => {
     test('a message travels along a line from the caller and nowhere else', async () => {
-        const target = (await post('node', ['new', 'terminal', '--title', 'builder'])).lines[0]!.split('\t')[0]!;
+        const [target, , , drawn] = (await post('node', ['new', 'terminal', '--title', 'builder'])).lines[0]!.split('\t') as [string, string, string, string];
+        // node new drew the line this travels along, so it goes again: without one there is nothing to notify along.
+        expect((await post('link', ['delete', drawn])).lines[0]).toStartWith('deleted\t');
         const refused = await post('notify', [target, '--text', 'the build is green']);
         expect(refused.status).toBe(422);
         expect(refused.lines[0]).toBe(
@@ -2419,7 +2477,8 @@ describe('node delete', () => {
     test('a terminal node it made stops before the canvas lets go of it', async () => {
         const made = (await post('node', ['new', 'terminal', '--title', 'runner'])).lines[0]!.split('\t')[0]!;
         const { lines } = await post('node', ['delete', made]);
-        expect(lines).toEqual([`deleted\t${made}\tterminal\trunner`, `ended\t${made}\tterminal`, 'edges\t0']);
+        // The line node new drew from the caller goes with it.
+        expect(lines).toEqual([`deleted\t${made}\tterminal\trunner`, `ended\t${made}\tterminal`, 'edges\t1']);
         expect(ended).toEqual([`terminal\t${made}`]);
     });
 
@@ -2465,13 +2524,15 @@ describe('link delete', () => {
 
     const edgeIds = async (id = 'main'): Promise<string[]> => (await canvasOnDisk(id)).edges.map((edge) => edge.id);
 
-    test('removes a line from the caller into a node it made, and prints the line that went', async () => {
+    test('removes a line between nodes the caller made, and prints the line that went', async () => {
         const note = await newNode('note');
-        const edge = (await post('link', ['new', '--to', note, '--label', 'plan'])).lines[0]!.split('\t')[0]!;
+        const other = await newNode('note');
+        const edge = (await post('link', ['new', '--from', note, '--to', other, '--label', 'plan'])).lines[0]!.split('\t')[0]!;
         const { status, lines } = await post('link', ['delete', edge]);
         expect(status).toBe(200);
-        expect(lines).toEqual([`deleted\t${edge}\tterm-1\t${note}\tplan`]);
-        expect(await edgeIds()).toEqual([]);
+        expect(lines).toEqual([`deleted\t${edge}\t${note}\t${other}\tplan`]);
+        // What node new drew from the caller into each of them stays; only the line this named went.
+        expect(await edgeIds()).toHaveLength(2);
         // Both ends stay.
         expect((await canvasOnDisk()).nodes.map((node) => node.id)).toContain(note);
     });

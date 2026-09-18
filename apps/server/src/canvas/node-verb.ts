@@ -3,6 +3,7 @@ import { basename } from 'node:path';
 import {
     DEFAULT_TITLES,
     NODE_SIZE,
+    isAgentKind,
     isCanvasView,
     isDiagramView,
     isDrawingView,
@@ -11,6 +12,7 @@ import {
     type ProjectContent,
     type ProjectDiagramView,
     type ProjectDrawingView,
+    type ProjectEdge,
     type ProjectNode,
     type ProjectView
 } from '@ruimte/contracts';
@@ -19,7 +21,21 @@ import type { IndexedPlace } from '../projects/project-index.ts';
 import { containersOf, groupMembers, placeBeside, placeFree } from './placement.ts';
 import { checkCwd, checkPath, isInside } from './project-paths.ts';
 import { unescapeText } from './text-escapes.ts';
-import { DRY_RUN_PREVIEW, MAX_TITLE_LENGTH, SCOPE_LINE, TITLE_LINE, VerbRefusal, canvasFor, defineAction, field, orNote, placeOf, titleField } from './verb.ts';
+import {
+    DRY_RUN_PREVIEW,
+    MAX_TITLE_LENGTH,
+    NEW_NODE,
+    OPENING_OFF_CANVAS,
+    SCOPE_LINE,
+    TITLE_LINE,
+    VerbRefusal,
+    canvasFor,
+    defineAction,
+    field,
+    orNote,
+    placeOf,
+    titleField
+} from './verb.ts';
 
 export const NODE_VERB_KINDS = ['note', 'browser', 'drawing', 'diagram', 'file', 'terminal', 'chat'] as const;
 type NodeVerbKind = (typeof NODE_VERB_KINDS)[number];
@@ -70,19 +86,25 @@ const KIND_MESSAGE = `node new needs a kind: ${NODE_VERB_KINDS.join(', ')}`;
 
 const NODE_DETAIL: readonly string[] = [
     `argument\t<kind>\trequired\t${NODE_VERB_KINDS.join(', ')}`,
-    'prints\tid\tkind\tview\tthe id of the new node, its kind, and the canvas it landed on',
+    'prints\tid\tkind\tview\tedge\tthe id of the new node, its kind, the canvas it landed on and the id of the line drawn from you into it (- when none was drawn)',
     ...NODE_VERB_KINDS.map(kindLine),
     EVERY_KIND_LINE,
     `flag\t--title T\tevery kind\tThe title, at most ${MAX_TITLE_LENGTH} characters; one set here is the node's for good, the session never renames over it`,
     'flag\t--view V\tevery kind\tThe canvas to add to, by view id; ruimte-context view list lists them',
     'flag\t--beside N\tevery kind\tPuts the node directly right of node N, top edges level, whatever is there already',
-    `flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field is dry-run instead of the id the node would have got; ${DRY_RUN_PREVIEW}`,
+    `flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field is dry-run instead of the id the node would have got and the last names the line it would draw, as <from> -> <new node>; ${DRY_RUN_PREVIEW}`,
     `flag\t--text B\t${kindsFor('text')}\tThe body; \\n, \\t and \\\\ are read as escapes, and --text - takes the body from stdin, byte for byte`,
     `flag\t--url U\t${kindsFor('url')}\tAn http or https address`,
     `flag\t--source V\t${kindsFor('source')}\tThe id of a view of this project of the same kind as the node, a drawing for a drawing and a diagram for a diagram; ruimte-context view list lists them`,
     `flag\t--path P\t${kindsFor('path')}\tThe file to show; it has to exist`,
     `flag\t--cwd P\t${kindsFor('cwd')}\tThe directory the shell starts in`,
-    'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one',
+    'edge\tA line is drawn from you into the new node, so the canvas says where it came from and not only that it is there',
+    'edge\tInto a terminal or a chat that line is context, the direction that makes you readable to it: it can run ruimte-context read on your id',
+    'edge\tInto a note, a browser, a file, a drawing or a diagram it is an origin line, which says you put the node there and nothing else; it gives you nothing over it',
+    'edge\tOnly a node on that canvas gets one: a chat that is a view of its own, or a node of another canvas, gets no line and the edge column shows -',
+    'edge\tOne way only: you do not read the new node through it. ruimte-context link new --to <its id> draws the line back when you want that too',
+    'edge\truimte-context link list lists what is drawn on the canvas now',
+    'where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one, and what it adds gets no line',
     'where\tWithout --beside the first free spot right of the caller, or right of everything when the caller is not on that canvas',
     'paths\t--path and --cwd are resolved against the project folder, never against your own directory; both may also be absolute',
     'paths\t--cwd has to stay inside the project folder or a worktree of its repository; --path may point outside and is then stored absolute',
@@ -193,11 +215,24 @@ export const checkUrl = (url: string): string => {
     return parsed.href;
 };
 
+/*
+ * The line `node new` draws from whoever called it into what it made. A terminal or a chat reads
+ * what a line brings it, so it gets the context line `agent` draws, label and all; nothing else
+ * reads, so its line carries the role that says who put the node there and nothing more.
+ */
+const openingEdge = (from: string, node: ProjectNode, content: ProjectContent): ProjectEdge => {
+    const id = newId('edge', content, [node.id]);
+    if (isAgentKind(node.kind)) {
+        return { id, from, to: node.id, label: 'context' };
+    }
+    return { id, from, to: node.id, role: 'origin' };
+};
+
 export const nodeNewAction = defineAction('node', {
     name: 'new',
     usage: `<${NODE_VERB_KINDS.join('|')}> [--title T] [--text B] [--url U] [--path P] [--source V] [--cwd P] [--view V] [--beside N] [--dry-run]`,
     // The required flags are in the summary too: without them the first thing a first-time caller meets is a refusal.
-    summary: `Adds one node to a canvas and prints id, kind, view; ${Object.entries(REQUIRED_FLAG)
+    summary: `Adds one node to a canvas, with a line from you into it, and prints id, kind, view, edge; ${Object.entries(REQUIRED_FLAG)
         .map(([kind, flag]) => `a ${kind} needs --${flag}`)
         .join(', ')}`,
     detail: NODE_DETAIL,
@@ -234,7 +269,7 @@ export const nodeNewAction = defineAction('node', {
         const cwd = flags.cwd === undefined ? undefined : await checkCwd(place.folder, flags.cwd, (folder) => call.host.worktreePaths(folder));
 
         return call.host.mutate(place.projectId, async (content) => {
-            const canvas = canvasFor(content, place, flags.view);
+            const canvas = canvasFor(content, place, flags.view, OPENING_OFF_CANVAS);
             if (canvas.nodes.length + 1 > MAX_CANVAS_NODES) {
                 throw canvasFull(canvas, 1);
             }
@@ -264,9 +299,11 @@ export const nodeNewAction = defineAction('node', {
             if (flags.beside !== undefined && !anchor) {
                 throw new VerbRefusal('unknown-node', `${flags.beside} is not a node on ${canvas.id}`, nodeLines(canvas));
             }
-            const rect = anchor ? placeBeside(anchor, size) : placeFree(canvas.nodes, size, canvas.nodes.find((node) => node.id === call.caller) ?? null);
+            const caller = canvas.nodes.find((node) => node.id === call.caller) ?? null;
+            const rect = anchor ? placeBeside(anchor, size) : placeFree(canvas.nodes, size, caller);
             if (dryRun) {
-                return { content: null, result: [`dry-run\t${kind}\t${canvas.id}`] };
+                // The ends rather than the word "edge": the direction is the thing to check before anything is made.
+                return { content: null, result: [`dry-run\t${kind}\t${canvas.id}\t${caller ? `${caller.id} -> ${NEW_NODE}` : '-'}`] };
             }
 
             const id = newId(kind, content);
@@ -286,9 +323,15 @@ export const nodeNewAction = defineAction('node', {
                 ...(flags.source === undefined ? {} : { viewId: flags.source }),
                 ...(cwd === undefined ? {} : { cwd })
             };
+            const edge = caller ? openingEdge(caller.id, node, content) : null;
             return {
-                content: { ...content, views: content.views.map((view) => (view.id === canvas.id ? { ...canvas, nodes: [...canvas.nodes, node] } : view)) },
-                result: [`${id}\t${kind}\t${canvas.id}`]
+                content: {
+                    ...content,
+                    views: content.views.map((view) =>
+                        view.id === canvas.id ? { ...canvas, nodes: [...canvas.nodes, node], edges: edge ? [...canvas.edges, edge] : canvas.edges } : view
+                    )
+                },
+                result: [`${id}\t${kind}\t${canvas.id}\t${edge?.id ?? '-'}`]
             };
         });
     }

@@ -173,6 +173,12 @@ export const DRY_RUN_FLAG = 'dry-run';
 /* Agents dry-run every call before the real one to be safe, which doubles what each costs them. */
 export const DRY_RUN_PREVIEW = 'a refused call makes nothing either, so it is only a preview and never needed for safety';
 
+/* What a dry run calls the node it is not making, so the edge it names still has two ends; a team
+   puts the role's title in it, since its rows are otherwise the same for two roles of one CLI. */
+export const newNode = (name = 'new node'): string => `<${name}>`;
+
+export const NEW_NODE = newNode();
+
 /*
  * What takes `--dry-run`, filled as each is defined. Everything else refuses the flag by name and
  * points at these, so an agent never gets a silent nothing from a dry run that was never dry.
@@ -358,7 +364,7 @@ export const canvasLines = (content: ProjectContent): string[] =>
         'This project has no canvas; a node only ever lands on one'
     );
 
-/* What `agent` and `team` say when the caller is on no canvas: where the node goes is not all that changes. */
+/* What `node new`, `agent` and `team` say when the caller is on no canvas: where the node goes is not all that changes. */
 export const OPENING_OFF_CANVAS =
     'You are not a node on a canvas; name the canvas with --view, and what you open lands there without an edge from you, so the edge column shows -';
 

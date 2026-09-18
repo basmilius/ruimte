@@ -3,7 +3,7 @@ import { NODE_SIZE, type AgentKind, type ProjectEdge, type ProjectNode } from '@
 import { z } from 'zod';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
 import { providerFor } from '../providers/registry.ts';
-import { AGENT_KINDS, agentNode, chatKinds, nameOf, newNode, terminalMode } from './agent-verb.ts';
+import { AGENT_KINDS, agentNode, chatKinds, nameOf, terminalMode } from './agent-verb.ts';
 import { DEPTH_LIMIT_LINES, MAX_OPENED_PER_CALLER, MAX_TEAM_DEPTH, depthForOpening } from './depth.ts';
 import { MODE_LINES, modeFlag, modeForOpening } from './mode.ts';
 import { MAX_CANVAS_NODES, canvasFull, newId } from './node-verb.ts';
@@ -20,6 +20,7 @@ import {
     defineVerb,
     field,
     lengthOf,
+    newNode,
     placeOf,
     titleField
 } from './verb.ts';
