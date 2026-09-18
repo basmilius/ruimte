@@ -5,14 +5,18 @@ use clap::{Parser, Subcommand, ValueEnum};
 use idevice::{
     IdeviceService, ReadWrite, RsdService,
     core_device::{
-        CallInfoBlob, DisplayServiceClient, HevcDepacketizer, RtpPacket, build_screen_audio_offer,
-        build_screen_video_offer, build_start_audio_parameters, build_start_video_parameters,
+        ButtonState, CallInfoBlob, DisplayServiceClient, HevcDepacketizer, IndigoHidClient,
+        OrientationServiceClient, RotationDirection, RtpPacket, TOUCHSCREEN_STATE_CONTACT,
+        TOUCHSCREEN_STATE_RELEASE, TouchscreenContact, UniversalHidServiceClient,
+        build_screen_audio_offer, build_screen_video_offer, build_start_audio_parameters,
+        build_start_video_parameters,
     },
     core_device_proxy::CoreDeviceProxy,
     rsd::RsdHandshake,
     tcp::handle::UdpSocketHandle,
     usbmuxd::{UsbmuxdAddr, UsbmuxdConnection},
 };
+use serde::Deserialize;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UdpSocket;
 
@@ -22,6 +26,7 @@ use native_remoted::{NativeRemotedTunnel, connect_rsd};
 
 const MAGIC: [u8; 8] = [0x52, 0x44, 0x45, 0x56, 0x01, 0x00, 0x00, 0x00];
 const CLIENT_SUPPORTED_FEATURES: u64 = 140;
+const CONTROL_MESSAGE_BYTES_MAXIMUM: usize = 64 * 1024;
 const MAX_FRAME_BYTES: usize = 8 * 1024 * 1024;
 
 #[derive(Parser)]
@@ -51,6 +56,65 @@ enum Command {
 enum ProbeTransport {
     Wireless,
     Usb,
+}
+
+#[derive(Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+enum DeviceInput {
+    Pointer {
+        phase: PointerPhase,
+        x: f64,
+        y: f64,
+    },
+    MultiPointer {
+        phase: PointerPhase,
+        first: InputPoint,
+        second: InputPoint,
+    },
+    Scroll,
+    Button {
+        button: DeviceButton,
+    },
+    Rotate {
+        direction: Rotation,
+    },
+}
+
+#[derive(Clone, Copy, Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum PointerPhase {
+    Down,
+    Move,
+    Up,
+}
+
+#[derive(Clone, Copy, Deserialize)]
+struct InputPoint {
+    x: f64,
+    y: f64,
+}
+
+#[derive(Clone, Copy, Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum DeviceButton {
+    Home,
+    SwipeHome,
+    AppSwitcher,
+    Lock,
+    Siri,
+}
+
+#[derive(Clone, Copy, Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum Rotation {
+    Left,
+    Right,
+}
+
+enum ControlMessage {
+    Input(DeviceInput),
+    Stop,
+    Ignored,
 }
 
 enum MediaUdp {
@@ -110,10 +174,22 @@ impl MediaUdp {
 
 struct ScreenMediaStream {
     client: DisplayServiceClient<Box<dyn ReadWrite>>,
+    input: Option<DeviceInputClients>,
     _audio_udp: MediaUdp,
     video_udp: MediaUdp,
     _native_tunnel: Option<NativeRemotedTunnel>,
     transport: &'static str,
+}
+
+struct DeviceInputClients {
+    touch: UniversalHidServiceClient<Box<dyn ReadWrite>>,
+    buttons: IndigoHidClient<Box<dyn ReadWrite>>,
+    orientation: OrientationServiceClient<Box<dyn ReadWrite>>,
+}
+
+struct DeviceServices {
+    display: DisplayServiceClient<Box<dyn ReadWrite>>,
+    input: Option<DeviceInputClients>,
 }
 
 struct ProtocolWriter {
@@ -214,8 +290,8 @@ async fn probe_stream(
     transport: ProbeTransport,
 ) -> Result<()> {
     let mut session = match transport {
-        ProbeTransport::Wireless => open_wireless_stream(udid).await?,
-        ProbeTransport::Usb => open_direct_stream(udid).await?,
+        ProbeTransport::Wireless => open_wireless_stream(udid, false).await?,
+        ProbeTransport::Usb => open_direct_stream(udid, false).await?,
     };
     let mut depacketizer = HevcDepacketizer::new();
     let mut access_unit = Vec::new();
@@ -259,9 +335,9 @@ async fn stream_physical_ios(
     input: tokio::io::Stdin,
     protocol: &mut ProtocolWriter,
 ) -> Result<()> {
-    let session = match open_wireless_stream(udid).await {
+    let session = match open_wireless_stream(udid, true).await {
         Ok(session) => session,
-        Err(wireless_error) => match open_direct_stream(udid).await {
+        Err(wireless_error) => match open_direct_stream(udid, true).await {
             Ok(session) => session,
             Err(direct_error) => {
                 bail!(
@@ -274,14 +350,20 @@ async fn stream_physical_ios(
 
     let mut client = session.client;
     let mut udp = session.video_udp;
-    let mut stop = Box::pin(wait_for_stop(input));
+    let input_clients = session
+        .input
+        .context("the physical device does not expose its input services")?;
+    let mut controls = Box::pin(handle_control_messages(input, input_clients));
     let mut depacketizer = HevcDepacketizer::new();
     let mut access_unit = Vec::new();
     let mut sequence = 0_u32;
 
     loop {
         tokio::select! {
-            _ = &mut stop => break,
+            result = &mut controls => {
+                result?;
+                break;
+            },
             datagram = tokio::time::timeout(Duration::from_secs(5), udp.recv()) => {
                 let datagram = match datagram {
                     Ok(result) => result.context("the display stream closed")?,
@@ -298,7 +380,7 @@ async fn stream_physical_ios(
     Ok(())
 }
 
-async fn open_direct_stream(udid: Option<&str>) -> Result<ScreenMediaStream> {
+async fn open_direct_stream(udid: Option<&str>, connect_input: bool) -> Result<ScreenMediaStream> {
     let address = UsbmuxdAddr::from_env_var().context("invalid usbmuxd address")?;
     let mut usbmuxd = UsbmuxdConnection::default()
         .await
@@ -344,8 +426,11 @@ async fn open_direct_stream(udid: Option<&str>) -> Result<ScreenMediaStream> {
             .await
             .context("could not bind the video receiver")?,
     );
-    negotiate_screen_media(
-        client,
+    let mut stream = negotiate_screen_media(
+        DeviceServices {
+            display: client,
+            input: None,
+        },
         audio_udp,
         video_udp,
         adapter.host_ip().to_string(),
@@ -353,10 +438,23 @@ async fn open_direct_stream(udid: Option<&str>) -> Result<ScreenMediaStream> {
         None,
         "usbmuxd-coredevice-proxy",
     )
-    .await
+    .await?;
+    if connect_input {
+        match connect_input_services(&mut adapter, &mut handshake).await {
+            Ok(input) => stream.input = Some(input),
+            Err(error) => {
+                let _ = stream.client.stop_media_stream().await;
+                return Err(error);
+            }
+        }
+    }
+    Ok(stream)
 }
 
-async fn open_wireless_stream(udid: Option<&str>) -> Result<ScreenMediaStream> {
+async fn open_wireless_stream(
+    udid: Option<&str>,
+    connect_input: bool,
+) -> Result<ScreenMediaStream> {
     let session = connect_rsd(udid).await?;
     let mut provider = session.device_ip;
     let mut handshake = session.handshake;
@@ -377,8 +475,11 @@ async fn open_wireless_stream(udid: Option<&str>) -> Result<ScreenMediaStream> {
             .await
             .context("could not bind the wireless video receiver")?,
     );
-    negotiate_screen_media(
-        client,
+    let mut stream = negotiate_screen_media(
+        DeviceServices {
+            display: client,
+            input: None,
+        },
         audio_udp,
         video_udp,
         session.host_ip.to_string(),
@@ -386,7 +487,17 @@ async fn open_wireless_stream(udid: Option<&str>) -> Result<ScreenMediaStream> {
         Some(session.tunnel),
         "remotepairingd",
     )
-    .await
+    .await?;
+    if connect_input {
+        match connect_input_services(&mut provider, &mut handshake).await {
+            Ok(input) => stream.input = Some(input),
+            Err(error) => {
+                let _ = stream.client.stop_media_stream().await;
+                return Err(error);
+            }
+        }
+    }
+    Ok(stream)
 }
 
 async fn publish_rtp(
@@ -415,22 +526,178 @@ fn depacketize_rtp(
     (marker && !access_unit.is_empty()).then(|| std::mem::take(access_unit))
 }
 
-async fn wait_for_stop(mut input: tokio::io::Stdin) {
+async fn connect_input_services(
+    provider: &mut impl idevice::provider::RsdProvider,
+    handshake: &mut RsdHandshake,
+) -> Result<DeviceInputClients> {
+    let touch = UniversalHidServiceClient::connect_rsd(provider, handshake)
+        .await
+        .context("the device does not expose its touchscreen service")?;
+    let buttons = IndigoHidClient::connect_rsd(provider, handshake)
+        .await
+        .context("the device does not expose its hardware-button service")?;
+    let orientation = OrientationServiceClient::connect_rsd(provider, handshake)
+        .await
+        .context("the device does not expose its orientation service")?;
+    Ok(DeviceInputClients {
+        touch,
+        buttons,
+        orientation,
+    })
+}
+
+async fn handle_control_messages(
+    mut input: tokio::io::Stdin,
+    mut clients: DeviceInputClients,
+) -> Result<()> {
     loop {
-        let mut header = [0_u8; 5];
-        if input.read_exact(&mut header).await.is_err() {
-            return;
-        }
-        let length = u32::from_be_bytes(header[1..5].try_into().unwrap()) as usize;
-        let mut payload = vec![0_u8; length];
-        if input.read_exact(&mut payload).await.is_err() || header[0] == 18 {
-            return;
+        match read_control_message(&mut input).await? {
+            ControlMessage::Input(device_input) => {
+                apply_device_input(&mut clients, device_input).await?
+            }
+            ControlMessage::Stop => return Ok(()),
+            ControlMessage::Ignored => {}
         }
     }
 }
 
+async fn read_control_message(input: &mut tokio::io::Stdin) -> Result<ControlMessage> {
+    let mut header = [0_u8; 5];
+    if input.read_exact(&mut header).await.is_err() {
+        return Ok(ControlMessage::Stop);
+    }
+    let length = u32::from_be_bytes(header[1..5].try_into().unwrap()) as usize;
+    if length > CONTROL_MESSAGE_BYTES_MAXIMUM {
+        bail!("device input exceeds the control-message limit");
+    }
+    let mut payload = vec![0_u8; length];
+    input
+        .read_exact(&mut payload)
+        .await
+        .context("the device input message ended early")?;
+    match header[0] {
+        17 => Ok(ControlMessage::Input(
+            serde_json::from_slice(&payload).context("the device input message is invalid")?,
+        )),
+        18 if payload.is_empty() => Ok(ControlMessage::Stop),
+        _ => Ok(ControlMessage::Ignored),
+    }
+}
+
+async fn apply_device_input(clients: &mut DeviceInputClients, input: DeviceInput) -> Result<()> {
+    match input {
+        DeviceInput::Pointer { phase, x, y } => {
+            clients
+                .touch
+                .send_touchscreen(
+                    touch_state(phase),
+                    normalized_touch_coordinate(x),
+                    normalized_touch_coordinate(y),
+                    None,
+                )
+                .await?;
+        }
+        DeviceInput::MultiPointer {
+            phase,
+            first,
+            second,
+        } => {
+            let touching = !matches!(phase, PointerPhase::Up);
+            clients
+                .touch
+                .send_multitouch(
+                    &[
+                        touchscreen_contact(0, touching, first),
+                        touchscreen_contact(1, touching, second),
+                    ],
+                    None,
+                )
+                .await?;
+        }
+        DeviceInput::Scroll => {}
+        DeviceInput::Button { button } => match button {
+            DeviceButton::Home => press_button(&mut clients.buttons, 0x40, 50).await?,
+            DeviceButton::Lock => press_button(&mut clients.buttons, 0x30, 500).await?,
+            DeviceButton::Siri => press_button(&mut clients.buttons, 0xCF, 1_000).await?,
+            DeviceButton::SwipeHome => system_gesture(&mut clients.touch, false).await?,
+            DeviceButton::AppSwitcher => system_gesture(&mut clients.touch, true).await?,
+        },
+        DeviceInput::Rotate { direction } => {
+            clients
+                .orientation
+                .rotate(match direction {
+                    Rotation::Left => RotationDirection::Left,
+                    Rotation::Right => RotationDirection::Right,
+                })
+                .await?;
+        }
+    }
+    Ok(())
+}
+
+fn touch_state(phase: PointerPhase) -> u8 {
+    match phase {
+        PointerPhase::Down | PointerPhase::Move => TOUCHSCREEN_STATE_CONTACT,
+        PointerPhase::Up => TOUCHSCREEN_STATE_RELEASE,
+    }
+}
+
+fn normalized_touch_coordinate(value: f64) -> u16 {
+    (value.clamp(0.0, 1.0) * f64::from(u16::MAX)).round() as u16
+}
+
+fn touchscreen_contact(identity: u8, touching: bool, point: InputPoint) -> TouchscreenContact {
+    TouchscreenContact {
+        identity,
+        touching,
+        x: normalized_touch_coordinate(point.x),
+        y: normalized_touch_coordinate(point.y),
+    }
+}
+
+async fn press_button(
+    client: &mut IndigoHidClient<Box<dyn ReadWrite>>,
+    usage_code: u64,
+    hold_ms: u64,
+) -> Result<()> {
+    client
+        .send_button(0x0C, usage_code, ButtonState::Down)
+        .await?;
+    tokio::time::sleep(Duration::from_millis(hold_ms)).await;
+    client
+        .send_button(0x0C, usage_code, ButtonState::Up)
+        .await?;
+    Ok(())
+}
+
+async fn system_gesture(
+    client: &mut UniversalHidServiceClient<Box<dyn ReadWrite>>,
+    app_switcher: bool,
+) -> Result<()> {
+    let x = normalized_touch_coordinate(0.5);
+    let start_y = normalized_touch_coordinate(0.985);
+    let end_y = normalized_touch_coordinate(if app_switcher { 0.58 } else { 0.3 });
+    let steps = 12_u32;
+    for step in 0..=steps {
+        let progress = f64::from(step) / f64::from(steps);
+        let y = (f64::from(start_y) + (f64::from(end_y) - f64::from(start_y)) * progress).round()
+            as u16;
+        client
+            .send_touchscreen(TOUCHSCREEN_STATE_CONTACT, x, y, None)
+            .await?;
+        tokio::time::sleep(Duration::from_millis(8)).await;
+    }
+    if app_switcher {
+        tokio::time::sleep(Duration::from_millis(350)).await;
+    }
+    client
+        .send_touchscreen(TOUCHSCREEN_STATE_RELEASE, x, end_y, None)
+        .await?;
+    Ok(())
+}
+
 async fn negotiate_screen_media(
-    mut client: DisplayServiceClient<Box<dyn ReadWrite>>,
+    mut services: DeviceServices,
     audio_udp: MediaUdp,
     video_udp: MediaUdp,
     receiver_ip: String,
@@ -460,7 +727,8 @@ async fn negotiate_screen_media(
         CLIENT_SUPPORTED_FEATURES,
         client_session_id,
     );
-    client
+    services
+        .display
         .start_media_stream(audio_parameters)
         .await
         .context("the device refused the screen session")?;
@@ -479,12 +747,14 @@ async fn negotiate_screen_media(
         1,
         client_session_id,
     );
-    client
+    services
+        .display
         .start_media_stream(video_parameters)
         .await
         .context("the device refused the video stream")?;
     Ok(ScreenMediaStream {
-        client,
+        client: services.display,
+        input: services.input,
         _audio_udp: audio_udp,
         video_udp,
         _native_tunnel: native_tunnel,
@@ -494,7 +764,10 @@ async fn negotiate_screen_media(
 
 #[cfg(test)]
 mod tests {
-    use super::{Arguments, Command};
+    use super::{
+        Arguments, Command, DeviceButton, DeviceInput, PointerPhase, normalized_touch_coordinate,
+        touch_state,
+    };
     use clap::Parser;
 
     #[test]
@@ -513,5 +786,40 @@ mod tests {
         };
         assert_eq!(udid.as_deref(), Some("hardware-udid"));
         assert_eq!(device_id, "daemon-device-id");
+    }
+
+    #[test]
+    fn device_input_matches_the_daemon_protocol() {
+        let pointer: DeviceInput = serde_json::from_str(
+            r#"{"kind":"pointer","phase":"move","x":0.25,"y":0.75,"edge":"bottom"}"#,
+        )
+        .unwrap();
+        let DeviceInput::Pointer { phase, x, y } = pointer else {
+            panic!("pointer input should be parsed");
+        };
+        assert!(matches!(phase, PointerPhase::Move));
+        assert_eq!(normalized_touch_coordinate(x), 16_384);
+        assert_eq!(normalized_touch_coordinate(y), 49_151);
+        assert_eq!(touch_state(PointerPhase::Up), 0x02);
+
+        let button: DeviceInput =
+            serde_json::from_str(r#"{"kind":"button","button":"appSwitcher"}"#).unwrap();
+        assert!(matches!(
+            button,
+            DeviceInput::Button {
+                button: DeviceButton::AppSwitcher
+            }
+        ));
+
+        let messages = [
+            r#"{"kind":"multiPointer","phase":"down","first":{"x":0.2,"y":0.3},"second":{"x":0.8,"y":0.7}}"#,
+            r#"{"kind":"scroll","deltaX":12,"deltaY":-30,"x":0.5,"y":0.5}"#,
+            r#"{"kind":"rotate","direction":"right"}"#,
+        ];
+        assert!(
+            messages
+                .iter()
+                .all(|message| serde_json::from_str::<DeviceInput>(message).is_ok())
+        );
     }
 }

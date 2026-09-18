@@ -37,7 +37,7 @@ export function DeviceControls({ device }: { device: DeviceInfo }) {
                 </button>
             </Tooltip>
             <Menu.Root>
-                <Tooltip label="Simulator gestures" name>
+                <Tooltip label="Device gestures" name>
                     <Menu.Trigger className="icon-btn">
                         <Icon icon={Hand} size={16} />
                     </Menu.Trigger>
@@ -45,7 +45,7 @@ export function DeviceControls({ device }: { device: DeviceInfo }) {
                 <Menu.Portal>
                     <Menu.Positioner className="z-(--z-popup)" sideOffset={6} align="end">
                         <Menu.Popup className="menu-popup">
-                            <div className={MENU_LABEL}>Simulator gestures</div>
+                            <div className={MENU_LABEL}>Device gestures</div>
                             <Menu.Item className="menu-item" onClick={() => send({ kind: 'button', button: 'swipeHome' })}>
                                 <Icon icon={Hand} size={14} /> Swipe home
                             </Menu.Item>
@@ -63,7 +63,7 @@ export function DeviceControls({ device }: { device: DeviceInfo }) {
                 </Menu.Portal>
             </Menu.Root>
             <Menu.Root>
-                <Tooltip label="Rotate simulator" name>
+                <Tooltip label="Rotate device" name>
                     <Menu.Trigger className="icon-btn">
                         <Icon icon={RotateCw} size={16} />
                     </Menu.Trigger>
@@ -71,7 +71,7 @@ export function DeviceControls({ device }: { device: DeviceInfo }) {
                 <Menu.Portal>
                     <Menu.Positioner className="z-(--z-popup)" sideOffset={6} align="end">
                         <Menu.Popup className="menu-popup">
-                            <div className={MENU_LABEL}>Rotate simulator</div>
+                            <div className={MENU_LABEL}>Rotate device</div>
                             <Menu.Item className="menu-item" onClick={() => send({ kind: 'rotate', direction: 'left' })}>
                                 <Icon icon={RotateCcw} size={14} /> Left
                             </Menu.Item>

@@ -225,7 +225,7 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
                     const headers = credential ? { Authorization: `Bearer ${credential}` } : undefined;
                     const response = await fetch(`${endpoint.httpBaseUrl}/live-stream/${encodeURIComponent(streamId)}`, { headers, signal: controller.signal });
                     if (!response.ok || !response.body) {
-                        throw new Error(response.status === 404 ? 'The simulator stream is not ready yet' : `The simulator stream returned ${response.status}`);
+                        throw new Error(response.status === 404 ? 'The device stream is not ready yet' : `The device stream returned ${response.status}`);
                     }
                     const contentType = response.headers.get('content-type') ?? '';
                     const hevc = contentType.startsWith(HEVC_STREAM_CONTENT_TYPE.split(';')[0]!);
@@ -500,7 +500,7 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
             <canvas
                 ref={canvas}
                 className="block h-auto max-h-full w-auto max-w-full touch-none outline-none"
-                aria-label={`${device.name} simulator screen`}
+                aria-label={`${device.name} screen`}
                 tabIndex={0}
                 onContextMenu={(event) => event.preventDefault()}
                 onPointerDown={onPointerDown}
@@ -512,7 +512,7 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
             {!imageReady && !streamError && (
                 <div className="absolute inset-0 grid place-items-center text-xs text-text-muted">
                     <span className="flex items-center gap-2">
-                        <Icon icon={LoaderCircle} size={14} className="animate-spin" /> Starting simulator...
+                        <Icon icon={LoaderCircle} size={14} className="animate-spin" /> Starting device...
                     </span>
                 </div>
             )}

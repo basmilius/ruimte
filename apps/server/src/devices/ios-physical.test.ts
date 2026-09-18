@@ -19,7 +19,7 @@ const listOutput = JSON.stringify({
 });
 
 describe('IosPhysicalBackend', () => {
-    test('maps paired physical iOS devices without exposing lifecycle or input controls', async () => {
+    test('maps paired physical iOS devices without exposing lifecycle controls', async () => {
         const calls: string[][] = [];
         const backend = new IosPhysicalBackend(
             async (arguments_) => {
@@ -85,5 +85,6 @@ describe('IosPhysicalBackend', () => {
 
         expect(backend.createSource('coredevice-phone-1')).toBe(source);
         expect(targets).toEqual([['coredevice-phone-1', 'hardware-phone-1']]);
+        expect(await backend.list()).toMatchObject([{ capabilities: { input: true } }]);
     });
 });

@@ -22,9 +22,8 @@ test('the HEVC source is only offered when the Rust helper exists', async () => 
     const directory = await mkdtemp(join(tmpdir(), 'ruimte-physical-stream-'));
     directories.push(directory);
     const helper = join(directory, 'ios-device-bridge');
-    const create = createPhysicalStreamSourceFactory(helper);
-    expect(create('device-1', 'hardware-1')).toBeNull();
+    expect(createPhysicalStreamSourceFactory(helper)).toBeNull();
 
     await writeFile(helper, '');
-    expect(create('device-1', 'hardware-1')?.format).toBe('hevc');
+    expect(createPhysicalStreamSourceFactory(helper)?.('device-1', 'hardware-1').format).toBe('hevc');
 });

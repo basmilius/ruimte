@@ -3,13 +3,13 @@ import { dirname, join } from 'node:path';
 import { createDeviceHelperLauncher, DeviceHelperSource } from './helper-source.ts';
 import type { DeviceSource } from './manager.ts';
 
-export type PhysicalStreamSourceFactory = (deviceId: string, udid: string) => DeviceSource | null;
+export type PhysicalStreamSourceFactory = (deviceId: string, udid: string) => DeviceSource;
 
-export const createPhysicalStreamSourceFactory = (helper: string): PhysicalStreamSourceFactory => {
+export const createPhysicalStreamSourceFactory = (helper: string): PhysicalStreamSourceFactory | null => {
+    if (!existsSync(helper)) {
+        return null;
+    }
     return (deviceId, udid) => {
-        if (!existsSync(helper)) {
-            return null;
-        }
         const launch = createDeviceHelperLauncher([helper, 'physical-ios', '--udid', udid]);
         return new DeviceHelperSource(deviceId, launch, 1_500, 'hevc');
     };

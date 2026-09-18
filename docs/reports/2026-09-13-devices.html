@@ -191,7 +191,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
   <p class="eyebrow">RUIMTE / ONDERZOEK EN UITVOERING / BIJGEWERKT 18 SEPTEMBER 2026</p>
   <h1>Devices in Ruimte</h1>
   <p class="intro">Browserstreaming heeft het transportprobleem al opgelost. Simulators en fysieke iOS-devices gebruiken dezelfde <code>LiveStreamHub</code>, binaire HTTP-framing, eventfallback en canvasdecoder. De simulator levert JPEG; de nieuwe Rust-bridge levert rechtstreeks HEVC uit CoreDevice.</p>
-  <p class="status">Simulator compleet; draadloze fysieke HEVC-route geverifieerd, UI-acceptatie open</p>
+  <p class="status">Simulator compleet; draadloze fysieke HEVC en HID gebouwd, toestelacceptatie open</p>
   <p class="caption">Gebaseerd op <code>main</code> bij <code>3b46403e</code> en de devicewerkkopie van 18 september. <span class="badge confirmed">Geverifieerd</span> betekent: gecontroleerd in code, test of lokale CLI. <span class="badge info">Afgeleid</span> betekent: nog niet uitgevoerd.</p>
   <nav aria-label="Inhoud">
     <a href="#advies">Advies</a>
@@ -297,8 +297,8 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
   </div>
   <p><span class="badge confirmed">De draadloze Rust-route werkt</span> De zelfstandige probe op 18 september opende zonder USB een <code>remotepairingd</code>-assertion, voltooide de RSD- en Display Stream-handshakes en ontving na 31 RTP-pakketten een compleet HEVC-frame van 34.597 bytes. Een eerdere proef via dezelfde route leverde in vijf seconden 1.025 RTP-pakketten en 282 HEVC-frames op 1296 × 2816.</p>
   <p><span class="badge confirmed">Publieke fallback blijft beschikbaar</span> Als de Rust-helper niet aanwezig is, maakt Ruimte screenshots met <code>devicectl</code>, zet de PNG lokaal met <code>sips</code> om naar JPEG en publiceert die via dezelfde hub. Eén echte capture leverde 1320 × 2868 pixels en 61.187 JPEG-bytes. Xcode 27 heeft inmiddels ook een publieke opdracht voor schermopnames, maar die schrijft een MP4-bestand en is geen geschikte bron voor de live-viewer.</p>
-  <p><span class="badge warning">Bediening volgt later</span> <code>idevice</code> heeft ook een CoreDevice HID-service, maar de eerste fysieke versie blijft bewust read-only. WebDriverAgent blijft een bruikbare alternatieve route voor bediening wanneer signing en een blijvende XCTest-runner acceptabel zijn.</p>
-  <p><span class="badge confirmed">Backendseam verdiept</span> <code>DeviceManager</code> accepteert meerdere iOS-backends. Lifecycle-methodes zijn optioneel en capabilities bepalen de UI. Een CoreDevice-fout verbergt de simulatorlijst niet. Fysieke apparaten krijgen geen start-, stop-, tools- of inputknoppen. Pointerevents worden al in de client tegengehouden.</p>
+  <p><span class="badge confirmed">Bediening gebouwd</span> De bridge opent na de displaystream de CoreDevice-services <code>universalhidservice</code>, <code>hid.indigo</code> en <code>devicecontrol</code>. Touch en multitouch gebruiken genormaliseerde 16-bits coördinaten. Home, Lock en Siri gebruiken Indigo-knoppen; draaien gebruikt Device Control. Swipe Home en App Switcher zijn echte touchreeksen vanaf de homebar. iOS accepteert deze HID-events alleen zolang dezelfde bridge een displaystream openhoudt.</p>
+  <p><span class="badge confirmed">Capabilities blijven eerlijk</span> <code>DeviceManager</code> accepteert meerdere iOS-backends. Lifecycle-methodes zijn optioneel en capabilities bepalen de UI. Een CoreDevice-fout verbergt de simulatorlijst niet. Fysieke apparaten krijgen geen start- of stopknop. De inputknoppen verschijnen alleen als de Rust-helper aanwezig is; de screenshotfallback blijft read-only.</p>
 </section>
 
 <section id="inpassing">
@@ -393,9 +393,9 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
       <p><strong>Nog te accepteren en meten:</strong> click-to-paint, clientdecode, LAN-bandbreedte, twee echte viewers, draaien en gedrag bij een echte helpercrash tijdens een open view.</p>
     </div></li>
     <li class="step"><div>
-      <h3>Fysiek read-only <span class="badge confirmed">gebouwd; toesteltest open</span></h3>
-      <p><code>devicectl</code>-discovery, capabilityfiltering, hardware-UDID, de Rust Display Stream-helper en de periodieke screenshotfallback staan. Fysieke iPhones en iPads verschijnen apart en kunnen dezelfde panel-, view- en canvasviewer openen. WebCodecs decodeert de HEVC-frames rechtstreeks; de preview accepteert nog geen input.</p>
-      <p><strong>Volgende:</strong> verbind het testtoestel opnieuw en accepteer de volledige Rust-route in panel, view en canvas. Voeg daarna CoreDevice HID toe voor tikken, slepen, Home en gestures. Bouw vervolgens Android met <code>adb</code>, emulator en een gepinde scrcpy-server. Devicecontext, agentcommando's, appinstallatie en logs volgen later.</p>
+      <h3>Fysiek iOS <span class="badge confirmed">gebouwd; toesteltest open</span></h3>
+      <p><code>devicectl</code>-discovery, capabilityfiltering, hardware-UDID, de Rust Display Stream-helper en de periodieke screenshotfallback staan. Fysieke iPhones en iPads verschijnen apart en kunnen dezelfde panel-, view- en canvasviewer openen. WebCodecs decodeert HEVC. Het bestaande inputprotocol stuurt touch, multitouch, Home, Lock, Siri, homebargebaren en rotatie naar de CoreDevice-services.</p>
+      <p><strong>Volgende:</strong> maak het testtoestel weer draadloos zichtbaar en accepteer stream en bediening samen in panel, view en canvas. Bouw daarna Android met <code>adb</code>, emulator en een gepinde scrcpy-server. Devicecontext, agentcommando's, appinstallatie en logs volgen later.</p>
     </div></li>
   </ol>
   <p>De vloeiende fysieke stream gebruikt dezelfde private CoreDevice-diensten als de open Device Hub-implementaties. Dat is passend voor privégebruik, maar het is geen stabiele publieke Apple-API. WebDriverAgent blijft als fallback voor input beschikbaar. iOS-toetsenbord, appinstallatie, logs en agentbediening vallen buiten deze fase. Een Mac op afstand vraagt geen apart deviceprotocol, want die draait een eigen gepairde daemon.</p>
@@ -412,7 +412,7 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
     <li><strong>Is een edge genoeg toestemming voor een agent?</strong> Voorstel, te bevestigen vóór de agentfase: ja, want de tweede installatiestap (agent-tools) is al een toestemming per machine. Een edge bepaalt daarna welk device een agent mag bedienen.</li>
     <li><strong>Bandbreedte op afstand.</strong> De lokale meting kwam met 354,2 KiB per frame en 17,4 fps uit op ongeveer 6,0 MiB/s. LAN en directe eventroute zijn nog niet gemeten. Begin met het browserprofiel en voeg pas daarna een lagere kwaliteitsstand toe.</li>
     <li><span class="badge confirmed">Besloten 13 september</span> <strong>Android direct na de iOS-MVP,</strong> met het platform al in de contracts van fase 1 en Android in de spike.</li>
-    <li><span class="badge confirmed">Gebouwd 18 september</span> <strong>Fysieke iPhones beginnen read-only met HEVC.</strong> Discovery loopt via Apple's <code>devicectl</code>. Een Rust-helper leest de private CoreDevice Display Stream en de client decodeert HEVC met WebCodecs. De screenshotbron blijft fallback. Touchinput volgt pas na een aparte HID-implementatie.</li>
+    <li><span class="badge confirmed">Gebouwd 18 september</span> <strong>Fysieke iPhones gebruiken HEVC en CoreDevice HID.</strong> Discovery loopt via Apple's <code>devicectl</code>. Een Rust-helper leest de private Display Stream en stuurt input via Universal HID, Indigo HID en Device Control. De client decodeert HEVC met WebCodecs. De screenshotbron blijft een read-only fallback.</li>
     <li><span class="badge confirmed">Gebouwd 18 september</span> <strong>Het panel is de standaardviewer.</strong> De lijst verzorgt discovery en lifecycle. Een geopend device blijft in het panel en heeft daar terug, Home, draaien, tools, plaatsing en uitschakelen. Het panel zelf houdt één sluitknop. Wie meer ruimte nodig heeft opent het als view of zet het op een canvas.</li>
   </ol>
 </section>
@@ -453,12 +453,10 @@ input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent)
 Volgende volgorde:
 1. Accepteer de UI op een echte simulator: starten, openen, tikken, slepen, Home, draaien, canvas en sluiten.
 2. Meet click-to-paint, LAN-bandbreedte, twee echte viewers en herstel na een echte helpercrash.
-3. Voeg fysieke iPhones read-only toe via devicectl-discovery en bewaar ook de hardware-UDID.
-4. Accepteer de gebouwde Rust-bridge voor Apples draadloze <code>remoted</code>-tunnel in panel, view en canvas. Houd usbmuxd beschikbaar als secundaire route voor een aangesloten toestel.
-5. Decodeer HEVC hardwarematig met WebCodecs en houd devicectl-screenshots als fallback wanneer de helper ontbreekt.
-6. Verbind het testtoestel opnieuw en accepteer de stream in panel, view en canvas.
-7. Voeg CoreDevice HID toe voor fysieke bediening.
-8. Bouw Android en kies tijdens die spike H.264 in de client of omzetting op de daemon.
+3. Accepteer de gebouwde Rust-bridge voor Apples draadloze <code>remoted</code>-tunnel in panel, view en canvas. Houd usbmuxd beschikbaar als secundaire route voor een aangesloten toestel.
+4. Decodeer HEVC hardwarematig met WebCodecs en houd devicectl-screenshots als fallback wanneer de helper ontbreekt.
+5. Verbind het testtoestel opnieuw en accepteer stream, touch, homebargebaren, hardwareknoppen en rotatie samen.
+6. Bouw Android en kies tijdens die spike H.264 in de client of omzetting op de daemon.
 
 iOS-toetsenbordinput blijft buiten de eerste versie.</code></pre>
   </div>
@@ -486,7 +484,7 @@ iOS-toetsenbordinput blijft buiten de eerste versie.</code></pre>
 
 </main>
 <footer>
-  <p>Bijgewerkt op 18 september tegen de browserstreamingimplementatie, de complete eerste simulatorversie en de fysieke iOS-preview. Geverifieerd: contracts, manager, multi-backendrouting, simulator- en CoreDevice-discovery, handlers, helperprotocol, procesadapter, gecompileerde en gesigneerde Rust-bridge, HEVC RTP-depacketizing, WebCodecs-ondersteuning, fysieke screenshotfallback, Home-input, trackpad-naar-touchvertaling, multi-touch, toolacties, clientmodel, reconnect, gedeelde attaches, view- en nodeconversie, typechecks en 3.710 tests. De gesigneerde distributiebinary streamde zonder USB een compleet HEVC-frame van de geselecteerde iPhone. Panel, losse view en canvas wachten nog op visuele acceptatie. Nog niet gebouwd: fysieke bediening en Android.</p>
+  <p>Bijgewerkt op 18 september tegen de browserstreamingimplementatie, de complete simulatorversie en fysieke iOS. Geverifieerd: contracts, manager, multi-backendrouting, simulator- en CoreDevice-discovery, handlers, helperprotocol, procesadapter, gecompileerde en gesigneerde Rust-bridge, HEVC RTP-depacketizing, WebCodecs, screenshotfallback, fysieke HID-protocoltests, simulatorinput, clientmodel, reconnect, gedeelde attaches, view- en nodeconversie en typechecks. De gesigneerde distributiebinary streamde eerder zonder USB een compleet HEVC-frame. Het toestel was bij de HID-acceptatietest niet draadloos vindbaar, dus fysieke touch en knoppen wachten nog op een live toesteltest. Android is nog niet gebouwd.</p>
 </footer>
 <script>
 {

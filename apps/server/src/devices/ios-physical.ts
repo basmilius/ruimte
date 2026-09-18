@@ -107,7 +107,13 @@ export class IosPhysicalBackend implements DeviceBackend {
                 name: properties.state.name ?? properties.hardware.marketingName ?? 'iOS Device',
                 runtime: properties.software?.osVersionNumber?.stringValue ? `iOS ${properties.software.osVersionNumber.stringValue}` : 'iOS',
                 state: paired && properties.state.bootState === 'booted' ? ('booted' as const) : ('shutdown' as const),
-                capabilities: { boot: false, shutdown: false, stream: paired && developerMode, input: false, screenshot: paired && developerMode }
+                capabilities: {
+                    boot: false,
+                    shutdown: false,
+                    stream: paired && developerMode,
+                    input: paired && developerMode && this.createLiveSource !== null,
+                    screenshot: paired && developerMode
+                }
             };
         });
     }
@@ -115,10 +121,7 @@ export class IosPhysicalBackend implements DeviceBackend {
     createSource(deviceId: string): DeviceSource {
         const udid = this.udids.get(deviceId);
         if (udid && this.createLiveSource) {
-            const source = this.createLiveSource(deviceId, udid);
-            if (source) {
-                return source;
-            }
+            return this.createLiveSource(deviceId, udid);
         }
         return new PhysicalScreenshotSource(deviceId, this.capture);
     }
