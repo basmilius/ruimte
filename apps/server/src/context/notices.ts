@@ -225,11 +225,16 @@ export const deliverNotice = async (store: NoticeStore, targets: NoticeTargets, 
     }
     const waiting = await store.put(notice);
     const count = waiting === 1 ? '1 waiting' : `${waiting} waiting`;
+    /* What a message is not: a turn. Every line says so, because the answer to a notify is the last
+       thing an agent reads before it decides whether to wait for a reply that is never coming. */
     if (terminal) {
-        return { at: 'waiting', detail: `its agent reads it at the start of its next turn (${count})` };
+        return { at: 'waiting', detail: `its agent reads it at the start of its next turn, which nothing here starts (${count})` };
     }
     if (targets.hasChat(notice.targetId)) {
-        return { at: 'waiting', detail: `the chat reads it in front of its next prompt (${count})` };
+        return {
+            at: 'waiting',
+            detail: `the chat reads it in front of its next prompt, which this does not start; ruimte-context task new does (${count})`
+        };
     }
     return { at: 'waiting', detail: `nothing runs in that node yet; it reads the message when it starts (${count})` };
 };

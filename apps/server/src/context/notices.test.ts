@@ -173,7 +173,7 @@ describe('deliverNotice', () => {
         const printed: string[] = [];
         const deps = targets({ terminal: () => ({ agent: agent('claude'), notice: (text) => printed.push(text) }) });
         const delivery = await deliverNotice(store, deps, left('the build is green'));
-        expect(delivery).toEqual({ at: 'waiting', detail: 'its agent reads it at the start of its next turn (1 waiting)' });
+        expect(delivery).toEqual({ at: 'waiting', detail: 'its agent reads it at the start of its next turn, which nothing here starts (1 waiting)' });
         expect(printed).toEqual([]);
         expect(store.waiting('term-2')).toHaveLength(1);
     });
@@ -189,7 +189,10 @@ describe('deliverNotice', () => {
 
     test('a chat waits for its next prompt, and a node that runs nothing waits to start', async () => {
         const chat = await deliverNotice(store, targets({ hasChat: () => true }), left('the build is green'));
-        expect(chat).toEqual({ at: 'waiting', detail: 'the chat reads it in front of its next prompt (1 waiting)' });
+        expect(chat).toEqual({
+            at: 'waiting',
+            detail: 'the chat reads it in front of its next prompt, which this does not start; ruimte-context task new does (1 waiting)'
+        });
         const cold = await deliverNotice(store, targets(), left('and another', 'term-3'));
         expect(cold.detail).toStartWith('nothing runs in that node yet');
     });

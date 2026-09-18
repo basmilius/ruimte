@@ -186,7 +186,8 @@ const viewNoun = defineNoun({
 
 const taskNoun = defineNoun({
     name: 'task',
-    summary: 'Lists the tasks you gave and the task you were given, and gives one to an agent you opened; done reports the result of yours',
+    summary:
+        'Gives a task to an agent you opened, which wakes you with its result, and lists the tasks you gave and the one you were given; done reports the result of yours',
     detail: [
         'see\truimte-context agent --task\tgiving a task to an agent that is not open yet, which opens it',
         'see\truimte-context done\treporting the result of the task you were opened with'
