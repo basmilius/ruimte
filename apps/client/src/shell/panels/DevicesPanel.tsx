@@ -305,9 +305,7 @@ export function DevicesPanel() {
         selection?.endpointId === endpointId ? (row.devices.find((device) => sameReference(referenceOf(device), selection.device)) ?? null) : null;
     useEffect(() => {
         if (connection.status === 'open' && streamingAllowed !== false) {
-            void deviceClientFor(endpointId)
-                ?.refresh()
-                .catch(() => undefined);
+            return deviceClientFor(endpointId)?.watch();
         }
     }, [connection.status, endpointId, streamingAllowed]);
 

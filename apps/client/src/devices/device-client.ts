@@ -10,6 +10,7 @@ interface MountedDevice {
     streamId: string | null;
 }
 
+const DEVICE_REFRESH_MS = 1_000;
 const disconnected = (error: unknown): boolean => error instanceof TransportError && (error.code === 'not-connected' || error.code === 'disconnected');
 export type DeviceTarget = Pick<DeviceInfo, 'backendId' | 'platform' | 'deviceId'>;
 
@@ -20,8 +21,11 @@ export class DeviceClient {
     private readonly frameHandlers = new Map<string, Set<(frame: LiveStreamFrame) => void>>();
     private readonly latestFrames = new Map<string, LiveStreamFrame>();
     private readonly mounted = new Map<string, MountedDevice>();
+    private refreshInFlight: Promise<DeviceInfo[]> | null = null;
+    private refreshTimer: ReturnType<typeof setInterval> | null = null;
     private readonly streamHandlers = new Map<string, Set<(streamId: string) => void>>();
     private readonly unsubscribe: Array<() => void>;
+    private watchers = 0;
     readonly endpointId: string;
     private readonly transport: Transport;
 
@@ -31,18 +35,40 @@ export class DeviceClient {
         this.unsubscribe = [transport.on('device.frame', (frame) => this.receiveFrame(frame)), transport.subscribeStatus((status) => this.onStatus(status))];
     }
 
-    async refresh(): Promise<DeviceInfo[]> {
-        useDevices.getState().setLoading(this.endpointId);
-        try {
-            const { devices } = await this.transport.request('device.list', {});
-            useDevices.getState().receive(this.endpointId, devices);
-            return devices;
-        } catch (error) {
-            if (!disconnected(error)) {
-                useDevices.getState().fail(this.endpointId, messageOf(error, 'The devices could not be read'));
-            }
-            throw error;
+    async refresh(background = false): Promise<DeviceInfo[]> {
+        if (this.refreshInFlight) {
+            return this.refreshInFlight;
         }
+        const task = this.readDevices(background);
+        this.refreshInFlight = task;
+        try {
+            return await task;
+        } finally {
+            if (this.refreshInFlight === task) {
+                this.refreshInFlight = null;
+            }
+        }
+    }
+
+    watch(): () => void {
+        this.watchers += 1;
+        if (this.watchers === 1) {
+            const loaded = useDevices.getState().byEndpoint[this.endpointId]?.loaded === true;
+            void this.refresh(loaded).catch(() => undefined);
+            this.refreshTimer = setInterval(() => void this.refresh(true).catch(() => undefined), DEVICE_REFRESH_MS);
+        }
+        let watching = true;
+        return () => {
+            if (!watching) {
+                return;
+            }
+            watching = false;
+            this.watchers = Math.max(0, this.watchers - 1);
+            if (this.watchers === 0 && this.refreshTimer !== null) {
+                clearInterval(this.refreshTimer);
+                this.refreshTimer = null;
+            }
+        };
     }
 
     async boot(device: DeviceInfo): Promise<DeviceInfo> {
@@ -144,11 +170,32 @@ export class DeviceClient {
         for (const unsubscribe of this.unsubscribe) {
             unsubscribe();
         }
+        if (this.refreshTimer !== null) {
+            clearInterval(this.refreshTimer);
+            this.refreshTimer = null;
+        }
+        this.watchers = 0;
         this.mounted.clear();
         this.frameHandlers.clear();
         this.latestFrames.clear();
         this.streamHandlers.clear();
         useDevices.getState().forget(this.endpointId);
+    }
+
+    private async readDevices(background: boolean): Promise<DeviceInfo[]> {
+        if (!background) {
+            useDevices.getState().setLoading(this.endpointId);
+        }
+        try {
+            const { devices } = await this.transport.request('device.list', {});
+            useDevices.getState().receive(this.endpointId, devices);
+            return devices;
+        } catch (error) {
+            if (!disconnected(error)) {
+                useDevices.getState().fail(this.endpointId, messageOf(error, 'The devices could not be read'));
+            }
+            throw error;
+        }
     }
 
     private async attach(mounted: MountedDevice): Promise<string> {

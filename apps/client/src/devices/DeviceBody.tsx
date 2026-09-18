@@ -19,11 +19,7 @@ const useDeviceFor = (reference: DeviceReference | undefined): { device: DeviceI
     const endpointId = useEndpointId();
     const row = useDeviceList(endpointId);
     const device = useResolvedDevice(endpointId, reference);
-    useEffect(() => {
-        if (!device && !row.loaded && !row.loading) {
-            void deviceClientFor(endpointId)?.refresh().catch(() => undefined);
-        }
-    }, [device, endpointId, row.loaded, row.loading]);
+    useEffect(() => deviceClientFor(endpointId)?.watch(), [endpointId]);
     return { device, loading: row.loading, error: row.error };
 };
 
@@ -36,34 +32,52 @@ export function DeviceControls({ device }: { device: DeviceInfo }) {
     return (
         <div className={BTN_GROUP}>
             <Tooltip label="Home" name>
-                <button className="icon-btn" onClick={() => send({ kind: 'button', button: 'home' })}><Icon icon={House} size={16} /></button>
+                <button className="icon-btn" onClick={() => send({ kind: 'button', button: 'home' })}>
+                    <Icon icon={House} size={16} />
+                </button>
             </Tooltip>
             <Menu.Root>
                 <Tooltip label="Simulator gestures" name>
-                    <Menu.Trigger className="icon-btn"><Icon icon={Hand} size={16} /></Menu.Trigger>
+                    <Menu.Trigger className="icon-btn">
+                        <Icon icon={Hand} size={16} />
+                    </Menu.Trigger>
                 </Tooltip>
                 <Menu.Portal>
                     <Menu.Positioner className="z-(--z-popup)" sideOffset={6} align="end">
                         <Menu.Popup className="menu-popup">
                             <div className={MENU_LABEL}>Simulator gestures</div>
-                            <Menu.Item className="menu-item" onClick={() => send({ kind: 'button', button: 'swipeHome' })}><Icon icon={Hand} size={14} /> Swipe home</Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => send({ kind: 'button', button: 'appSwitcher' })}><Icon icon={Smartphone} size={14} /> App switcher</Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => send({ kind: 'button', button: 'lock' })}><Icon icon={Lock} size={14} /> Lock</Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => send({ kind: 'button', button: 'siri' })}><Icon icon={Mic} size={14} /> Siri</Menu.Item>
+                            <Menu.Item className="menu-item" onClick={() => send({ kind: 'button', button: 'swipeHome' })}>
+                                <Icon icon={Hand} size={14} /> Swipe home
+                            </Menu.Item>
+                            <Menu.Item className="menu-item" onClick={() => send({ kind: 'button', button: 'appSwitcher' })}>
+                                <Icon icon={Smartphone} size={14} /> App switcher
+                            </Menu.Item>
+                            <Menu.Item className="menu-item" onClick={() => send({ kind: 'button', button: 'lock' })}>
+                                <Icon icon={Lock} size={14} /> Lock
+                            </Menu.Item>
+                            <Menu.Item className="menu-item" onClick={() => send({ kind: 'button', button: 'siri' })}>
+                                <Icon icon={Mic} size={14} /> Siri
+                            </Menu.Item>
                         </Menu.Popup>
                     </Menu.Positioner>
                 </Menu.Portal>
             </Menu.Root>
             <Menu.Root>
                 <Tooltip label="Rotate simulator" name>
-                    <Menu.Trigger className="icon-btn"><Icon icon={RotateCw} size={16} /></Menu.Trigger>
+                    <Menu.Trigger className="icon-btn">
+                        <Icon icon={RotateCw} size={16} />
+                    </Menu.Trigger>
                 </Tooltip>
                 <Menu.Portal>
                     <Menu.Positioner className="z-(--z-popup)" sideOffset={6} align="end">
                         <Menu.Popup className="menu-popup">
                             <div className={MENU_LABEL}>Rotate simulator</div>
-                            <Menu.Item className="menu-item" onClick={() => send({ kind: 'rotate', direction: 'left' })}><Icon icon={RotateCcw} size={14} /> Left</Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => send({ kind: 'rotate', direction: 'right' })}><Icon icon={RotateCw} size={14} /> Right</Menu.Item>
+                            <Menu.Item className="menu-item" onClick={() => send({ kind: 'rotate', direction: 'left' })}>
+                                <Icon icon={RotateCcw} size={14} /> Left
+                            </Menu.Item>
+                            <Menu.Item className="menu-item" onClick={() => send({ kind: 'rotate', direction: 'right' })}>
+                                <Icon icon={RotateCw} size={14} /> Right
+                            </Menu.Item>
                         </Menu.Popup>
                     </Menu.Positioner>
                 </Menu.Portal>
@@ -89,17 +103,19 @@ export function DeviceSurface({ device }: { device: DeviceInfo }) {
                 message={`${device.name} is ${stateLabel(device).toLowerCase()}.`}
                 action={
                     canBoot ? (
-                    <Button
-                        variant="primary"
-                        size="sm"
-                        disabled={changing}
-                        onClick={() => {
-                            setChanging(true);
-                            void deviceClientFor(endpointId)?.boot(device).finally(() => setChanging(false));
-                        }}
-                    >
-                        {changing && <Icon icon={LoaderCircle} size={12} className="animate-spin" />} Start simulator
-                    </Button>
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            disabled={changing}
+                            onClick={() => {
+                                setChanging(true);
+                                void deviceClientFor(endpointId)
+                                    ?.boot(device)
+                                    .finally(() => setChanging(false));
+                            }}
+                        >
+                            {changing && <Icon icon={LoaderCircle} size={12} className="animate-spin" />} Start simulator
+                        </Button>
                     ) : undefined
                 }
             />
@@ -121,7 +137,12 @@ export function DeviceBody({ id }: { id: string }) {
         if (loading) {
             return <DeviceMessage icon={LoaderCircle} spin message={`Finding ${reference.name}...`} />;
         }
-        return <DeviceMessage icon={error ? CircleAlert : Smartphone} message={error ?? `${reference.name} with ${reference.runtime} is not installed on this machine.`} />;
+        return (
+            <DeviceMessage
+                icon={error ? CircleAlert : Smartphone}
+                message={error ?? `${reference.name} with ${reference.runtime} is not installed on this machine.`}
+            />
+        );
     }
     return <DeviceSurface device={device} />;
 }

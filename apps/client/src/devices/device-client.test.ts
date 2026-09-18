@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import type { DeviceInfo, EventMap, EventType, RequestMap, RequestType } from '@ruimte/contracts';
 import type { Transport, TransportStatus } from '@/transport/transport';
 import { DeviceClient } from './device-client';
@@ -37,7 +37,12 @@ class FakeTransport implements Transport {
             return { ...phone, state: 'shutdown' } as RequestMap[T]['result'];
         }
         if (type === 'device.detail' || type === 'device.action') {
-            return { backendId: phone.backendId, platform: phone.platform, deviceId: phone.deviceId, settings: { appearance: 'dark' } } as RequestMap[T]['result'];
+            return {
+                backendId: phone.backendId,
+                platform: phone.platform,
+                deviceId: phone.deviceId,
+                settings: { appearance: 'dark' }
+            } as RequestMap[T]['result'];
         }
         return {} as RequestMap[T]['result'];
     }
@@ -69,6 +74,7 @@ class FakeTransport implements Transport {
 }
 
 beforeEach(() => useDevices.setState({ byEndpoint: {} }));
+afterEach(() => jest.useRealTimers());
 
 describe('DeviceClient', () => {
     test('discovers devices and applies lifecycle changes to the machine row', async () => {
@@ -79,6 +85,32 @@ describe('DeviceClient', () => {
         expect(useDevices.getState().byEndpoint['machine-1']?.devices).toEqual([phone]);
         await client.shutdown(phone);
         expect(useDevices.getState().byEndpoint['machine-1']?.devices[0]?.state).toBe('shutdown');
+        client.dispose();
+    });
+
+    test('polls external lifecycle changes while watched and stops after the last watcher', async () => {
+        jest.useFakeTimers();
+        const transport = new FakeTransport();
+        const client = new DeviceClient('machine-1', transport);
+        const settle = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+        const stopFirst = client.watch();
+        const stopSecond = client.watch();
+        await settle();
+        expect(transport.calls.filter((call) => call.type === 'device.list')).toHaveLength(1);
+
+        jest.advanceTimersByTime(1_000);
+        await settle();
+        expect(transport.calls.filter((call) => call.type === 'device.list')).toHaveLength(2);
+
+        stopFirst();
+        jest.advanceTimersByTime(1_000);
+        await settle();
+        expect(transport.calls.filter((call) => call.type === 'device.list')).toHaveLength(3);
+
+        stopSecond();
+        jest.advanceTimersByTime(1_000);
+        await settle();
+        expect(transport.calls.filter((call) => call.type === 'device.list')).toHaveLength(3);
         client.dispose();
     });
 
@@ -103,7 +135,15 @@ describe('DeviceClient', () => {
         const stop = client.onFrame(phone, (frame) => frames.push([...frame.data]));
 
         await client.open(phone, 'events');
-        transport.emit('device.frame', { deviceId: phone.deviceId, backendId: phone.backendId, platform: phone.platform, sequence: 1, width: 1179, height: 2556, data: 'AQID' });
+        transport.emit('device.frame', {
+            deviceId: phone.deviceId,
+            backendId: phone.backendId,
+            platform: phone.platform,
+            sequence: 1,
+            width: 1179,
+            height: 2556,
+            data: 'AQID'
+        });
         expect(frames).toEqual([[1, 2, 3]]);
 
         transport.setStatus('closed');
