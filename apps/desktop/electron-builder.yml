@@ -1,5 +1,4 @@
-# Packaging for the desktop shell. The daemon is a Bun executable compiled by `apps/server/scripts/compile.ts`
-# and rides along as a resource, outside the asar, next to the built client it serves.
+# Packaging for the desktop shell. The native daemon rides along outside the asar, next to the built client it serves.
 appId: app.ruimte.desktop
 productName: Ruimte
 copyright: Copyright © 2026 Bas Milius
@@ -12,7 +11,7 @@ files:
 extraResources:
   - from: ../client/dist
     to: client
-  - from: ../server/dist/${os}-${arch}
+  - from: ../server-rust/dist/${os}-${arch}
     to: bin
 asar: true
 afterPack: build/after-pack.cjs
@@ -36,7 +35,10 @@ mac:
   # The daemon is not a helper Electron knows about, so name it here or it ships unsigned and Apple refuses the notarization.
   binaries:
     - Contents/Resources/bin/ruimte
-    - Contents/Resources/bin/native/ios-device-bridge
+    - Contents/Resources/bin/ruimte-context
+    - Contents/Resources/bin/ruimte-simulator-helper
+    - Contents/Resources/bin/native/serve-sim-ax-settings
+    - Contents/Resources/bin/native/serve-sim-native.node
   # `bun scripts/icon.ts` writes both out of `assets/AppIcon.icon`. The catalog is what macOS 26 reads
   # for the light, dark, tinted and clear renderings; the icns only serves whoever asks for a file.
   icon: build/icon/AppIcon.icns

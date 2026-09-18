@@ -3,6 +3,7 @@ import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import clsx from 'clsx';
 import type { ChatSubagentItem } from '@ruimte/contracts';
+import { chatClient } from '@/chat';
 import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
 import { crumbOf, openFromMain, useSubagentTrail } from '@/chat/subagent-view';
 import { registerMessageStepper, registerTimeline, setTimelineAtEnd } from '@/chat/timeline-scroll';
@@ -21,6 +22,7 @@ import { useContextSources } from '@/context/sources';
 import { SECTION_LABEL } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
+import { Button } from '@/ui/Button';
 
 /* Below this distance from the bottom the thread follows new content; above it the reader scrolled back on purpose. */
 const FOLLOW_THRESHOLD_PX = 40;
@@ -71,6 +73,8 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
     const items = useChatRow(chatId, (row) => row?.structure);
     const activeTurnId = useChatRow(chatId, (row) => row?.info.activeTurnId ?? null);
     const info = useChatRow(chatId, (row) => row?.info ?? null);
+    const historyCursor = useChatRow(chatId, (row) => row?.historyCursor ?? null);
+    const loadingHistory = useChatRow(chatId, (row) => row?.loadingHistory ?? false);
     const endpointId = useEndpointId();
     // Read when the menu opens rather than subscribed to, for the same reason the rows use the structure.
     const fullItems = () => useChats.getState().byKey[endpointKey(endpointId, chatId)]?.items;
@@ -81,6 +85,7 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
     const threadRef = useRef<HTMLDivElement>(null);
     const followRef = useRef(true);
     const scrollGeometry = useRef({ top: 0, height: 0, viewport: 0 });
+    const historyHeightBefore = useRef<number | null>(null);
     const [target, setTarget] = useState<TimelineTarget>(EMPTY_TARGET);
     const { trail, show } = useSubagentTrail(chatId);
     const frameRef = useRef<HTMLDivElement>(null);
@@ -173,6 +178,15 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
     const totalSize = virtualizer.getTotalSize();
     useLayoutEffect(() => {
         const element = scrollRef.current;
+        if (element === null || historyHeightBefore.current === null) {
+            return;
+        }
+        element.scrollTop += element.scrollHeight - historyHeightBefore.current;
+        historyHeightBefore.current = null;
+        scrollGeometry.current = { top: element.scrollTop, height: element.scrollHeight, viewport: element.clientHeight };
+    }, [rows.length]);
+    useLayoutEffect(() => {
+        const element = scrollRef.current;
         if (!followRef.current || rows.length === 0 || element === null) {
             return;
         }
@@ -256,6 +270,14 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
         show(openFromMain(crumbOf(item)));
     };
 
+    const loadEarlier = (): void => {
+        followRef.current = false;
+        historyHeightBefore.current = scrollRef.current?.scrollHeight ?? null;
+        void chatClient.loadEarlier(chatId).catch(() => {
+            historyHeightBefore.current = null;
+        });
+    };
+
     /* The header of a turn a sub-agent woke: it points at the row that agent worked in. */
     const openSubagent = (toolUseId: string): void => {
         const index = rows.findIndex((row) => row.kind === 'subagent' && row.item.toolUseId === toolUseId);
@@ -302,6 +324,13 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                                     setTarget(readTimelineTarget(e.target as HTMLElement, threadRef.current, withCurrentText(rows, fullItems())))
                                 }
                             >
+                                {historyCursor !== null && (
+                                    <div className="flex justify-center pb-2">
+                                        <Button size="sm" disabled={loadingHistory} onClick={loadEarlier}>
+                                            {loadingHistory ? 'Loading...' : 'Load earlier'}
+                                        </Button>
+                                    </div>
+                                )}
                                 {empty ? (
                                     <EmptyThread chatId={chatId} />
                                 ) : (

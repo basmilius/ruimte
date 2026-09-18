@@ -1,0 +1,18 @@
+[package]
+name = "ruimte_devices"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+base64.workspace = true
+libc.workspace = true
+ruimte_core = { path = "../ruimte_core" }
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

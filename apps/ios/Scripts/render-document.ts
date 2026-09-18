@@ -1,4 +1,4 @@
-import { renderDiagram, renderDrawing } from '../../server/src/render/scenes.ts';
+import { renderDiagram, renderDrawing } from '@ruimte/render';
 import type { DiagramDocument, DrawingDocument } from '@ruimte/contracts';
 
 (globalThis as typeof globalThis & { ruimteRenderDocument: (kind: string, json: string) => string }).ruimteRenderDocument = (kind, json) => {

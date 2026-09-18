@@ -1,0 +1,27 @@
+[package]
+name = "ruimte_workspace"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+base64.workspace = true
+libc.workspace = true
+notify.workspace = true
+percent-encoding.workspace = true
+perfect_freehand.workspace = true
+rand.workspace = true
+regex.workspace = true
+roughr.workspace = true
+ruimte_core = { path = "../ruimte_core" }
+ruimte_runtime = { path = "../ruimte_runtime" }
+serde.workspace = true
+serde_json.workspace = true
+sha1.workspace = true
+tempfile.workspace = true
+time.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+uuid.workspace = true
+walkdir.workspace = true

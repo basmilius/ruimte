@@ -1,0 +1,5266 @@
+[
+  {
+    "name": "session merging",
+    "initialInfo": {
+      "chatId": "c",
+      "provider": "claude",
+      "cwd": "/",
+      "agentSessionId": null,
+      "model": null,
+      "selection": {
+        "model": "claude-sonnet-5",
+        "options": {}
+      },
+      "runtimeMode": "full-access",
+      "status": "running",
+      "running": true,
+      "activeTurnId": "turn-1",
+      "slashCommands": [],
+      "usage": {
+        "contextTokens": 0,
+        "contextWindow": null,
+        "costUsd": 0,
+        "turns": 0
+      },
+      "createdAt": 0
+    },
+    "initialItems": [
+      {
+        "id": "turn-1",
+        "kind": "turn",
+        "createdAt": 0,
+        "turnId": "turn-1",
+        "state": "running",
+        "origin": "user",
+        "endedAt": null,
+        "costUsd": 0
+      }
+    ],
+    "generation": 1,
+    "clockStart": 1000,
+    "random": 0.42,
+    "steps": [
+      {
+        "input": {
+          "type": "session",
+          "agentSessionId": "sid",
+          "model": "sonnet",
+          "slashCommands": [
+            "compact"
+          ],
+          "skills": [
+            "review"
+          ]
+        },
+        "events": [
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": "sid",
+              "model": "sonnet",
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "running",
+              "running": true,
+              "activeTurnId": "turn-1",
+              "slashCommands": [
+                "compact"
+              ],
+              "usage": {
+                "contextTokens": 0,
+                "contextWindow": null,
+                "costUsd": 0,
+                "turns": 0
+              },
+              "createdAt": 0,
+              "skills": [
+                "review"
+              ]
+            }
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": "sid",
+          "model": "sonnet",
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [
+            "compact"
+          ],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0,
+          "skills": [
+            "review"
+          ]
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "session",
+          "agentSessionId": null,
+          "model": null,
+          "slashCommands": [],
+          "skills": []
+        },
+        "events": [
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": "sid",
+              "model": "sonnet",
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "running",
+              "running": true,
+              "activeTurnId": "turn-1",
+              "slashCommands": [
+                "compact"
+              ],
+              "usage": {
+                "contextTokens": 0,
+                "contextWindow": null,
+                "costUsd": 0,
+                "turns": 0
+              },
+              "createdAt": 0,
+              "skills": [
+                "review"
+              ]
+            }
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": "sid",
+          "model": "sonnet",
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [
+            "compact"
+          ],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0,
+          "skills": [
+            "review"
+          ]
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "model",
+          "model": "opus"
+        },
+        "events": [
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": "sid",
+              "model": "opus",
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "running",
+              "running": true,
+              "activeTurnId": "turn-1",
+              "slashCommands": [
+                "compact"
+              ],
+              "usage": {
+                "contextTokens": 0,
+                "contextWindow": null,
+                "costUsd": 0,
+                "turns": 0
+              },
+              "createdAt": 0,
+              "skills": [
+                "review"
+              ]
+            }
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": "sid",
+          "model": "opus",
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [
+            "compact"
+          ],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0,
+          "skills": [
+            "review"
+          ]
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "streamed text and complete replacement",
+    "initialInfo": {
+      "chatId": "c",
+      "provider": "claude",
+      "cwd": "/",
+      "agentSessionId": null,
+      "model": null,
+      "selection": {
+        "model": "claude-sonnet-5",
+        "options": {}
+      },
+      "runtimeMode": "full-access",
+      "status": "running",
+      "running": true,
+      "activeTurnId": "turn-1",
+      "slashCommands": [],
+      "usage": {
+        "contextTokens": 0,
+        "contextWindow": null,
+        "costUsd": 0,
+        "turns": 0
+      },
+      "createdAt": 0
+    },
+    "initialItems": [
+      {
+        "id": "turn-1",
+        "kind": "turn",
+        "createdAt": 0,
+        "turnId": "turn-1",
+        "state": "running",
+        "origin": "user",
+        "endedAt": null,
+        "costUsd": 0
+      }
+    ],
+    "generation": 1,
+    "clockStart": 1000,
+    "random": 0.42,
+    "steps": [
+      {
+        "input": {
+          "type": "text.delta",
+          "ref": "m",
+          "text": ""
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:m",
+              "kind": "assistant",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "text": "",
+              "streaming": true
+            },
+            "historyIndex": 1
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:m",
+            "kind": "assistant",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "text": "",
+            "streaming": true
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "text.delta",
+          "ref": "m",
+          "text": "ca"
+        },
+        "events": [
+          {
+            "type": "delta",
+            "itemId": "1:m",
+            "text": "ca"
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:m",
+            "kind": "assistant",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "text": "ca",
+            "streaming": true
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "text.delta",
+          "ref": "m",
+          "text": "fé 界"
+        },
+        "events": [
+          {
+            "type": "delta",
+            "itemId": "1:m",
+            "text": "fé 界"
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:m",
+            "kind": "assistant",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "text": "café 界",
+            "streaming": true
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "text.done",
+          "ref": "m",
+          "text": "café 界"
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:m",
+              "kind": "assistant",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "text": "café 界",
+              "streaming": false
+            },
+            "historyIndex": 1
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:m",
+            "kind": "assistant",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "text": "café 界",
+            "streaming": false
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "turn.done",
+          "state": "done",
+          "costUsd": 0.1
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "turn-1",
+              "kind": "turn",
+              "createdAt": 0,
+              "turnId": "turn-1",
+              "state": "done",
+              "origin": "user",
+              "endedAt": 1001,
+              "costUsd": 0.1
+            },
+            "historyIndex": 0
+          },
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": null,
+              "model": null,
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "idle",
+              "running": true,
+              "activeTurnId": null,
+              "slashCommands": [],
+              "usage": {
+                "contextTokens": 0,
+                "contextWindow": null,
+                "costUsd": 0.1,
+                "turns": 1
+              },
+              "createdAt": 0
+            }
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": true,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0.1,
+            "turns": 1
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "done",
+            "origin": "user",
+            "endedAt": 1001,
+            "costUsd": 0.1
+          },
+          {
+            "id": "1:m",
+            "kind": "assistant",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "text": "café 界",
+            "streaming": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "thinking ref coalescing and duplicate completion",
+    "initialInfo": {
+      "chatId": "c",
+      "provider": "claude",
+      "cwd": "/",
+      "agentSessionId": null,
+      "model": null,
+      "selection": {
+        "model": "claude-sonnet-5",
+        "options": {}
+      },
+      "runtimeMode": "full-access",
+      "status": "running",
+      "running": true,
+      "activeTurnId": "turn-1",
+      "slashCommands": [],
+      "usage": {
+        "contextTokens": 0,
+        "contextWindow": null,
+        "costUsd": 0,
+        "turns": 0
+      },
+      "createdAt": 0
+    },
+    "initialItems": [
+      {
+        "id": "turn-1",
+        "kind": "turn",
+        "createdAt": 0,
+        "turnId": "turn-1",
+        "state": "running",
+        "origin": "user",
+        "endedAt": null,
+        "costUsd": 0
+      }
+    ],
+    "generation": 1,
+    "clockStart": 1000,
+    "random": 0.42,
+    "steps": [
+      {
+        "input": {
+          "type": "thinking.delta",
+          "ref": "t1",
+          "text": "one"
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:t1:think",
+              "kind": "thinking",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "text": "one",
+              "streaming": true,
+              "endedAt": null
+            },
+            "historyIndex": 1
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:t1:think",
+            "kind": "thinking",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "text": "one",
+            "streaming": true,
+            "endedAt": null
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "thinking.done",
+          "ref": "t1",
+          "text": "one"
+        },
+        "events": [],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:t1:think",
+            "kind": "thinking",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "text": "one",
+            "streaming": true,
+            "endedAt": null
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "thinking.done",
+          "ref": "t2",
+          "text": "two"
+        },
+        "events": [
+          {
+            "type": "delta",
+            "itemId": "1:t1:think",
+            "text": "\n\ntwo"
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:t1:think",
+            "kind": "thinking",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "text": "one\n\ntwo",
+            "streaming": true,
+            "endedAt": null
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "text.delta",
+          "ref": "m",
+          "text": "answer"
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:t1:think",
+              "kind": "thinking",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "text": "one\n\ntwo",
+              "streaming": false,
+              "endedAt": 1001
+            },
+            "historyIndex": 1
+          },
+          {
+            "type": "item",
+            "item": {
+              "id": "1:m",
+              "kind": "assistant",
+              "createdAt": 1002,
+              "turnId": "turn-1",
+              "text": "answer",
+              "streaming": true
+            },
+            "historyIndex": 2
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:t1:think",
+            "kind": "thinking",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "text": "one\n\ntwo",
+            "streaming": false,
+            "endedAt": 1001
+          },
+          {
+            "id": "1:m",
+            "kind": "assistant",
+            "createdAt": 1002,
+            "turnId": "turn-1",
+            "text": "answer",
+            "streaming": true
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "thinking.delta",
+          "ref": "t3",
+          "text": "again"
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:t3:think",
+              "kind": "thinking",
+              "createdAt": 1003,
+              "turnId": "turn-1",
+              "text": "again",
+              "streaming": true,
+              "endedAt": null
+            },
+            "historyIndex": 3
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:t1:think",
+            "kind": "thinking",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "text": "one\n\ntwo",
+            "streaming": false,
+            "endedAt": 1001
+          },
+          {
+            "id": "1:m",
+            "kind": "assistant",
+            "createdAt": 1002,
+            "turnId": "turn-1",
+            "text": "answer",
+            "streaming": true
+          },
+          {
+            "id": "1:t3:think",
+            "kind": "thinking",
+            "createdAt": 1003,
+            "turnId": "turn-1",
+            "text": "again",
+            "streaming": true,
+            "endedAt": null
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "turn.done",
+          "state": "aborted",
+          "costUsd": 0
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:m",
+              "kind": "assistant",
+              "createdAt": 1002,
+              "turnId": "turn-1",
+              "text": "answer",
+              "streaming": false
+            },
+            "historyIndex": 2
+          },
+          {
+            "type": "item",
+            "item": {
+              "id": "1:t3:think",
+              "kind": "thinking",
+              "createdAt": 1003,
+              "turnId": "turn-1",
+              "text": "again",
+              "streaming": false,
+              "endedAt": 1004
+            },
+            "historyIndex": 3
+          },
+          {
+            "type": "item",
+            "item": {
+              "id": "turn-1",
+              "kind": "turn",
+              "createdAt": 0,
+              "turnId": "turn-1",
+              "state": "aborted",
+              "origin": "user",
+              "endedAt": 1005,
+              "costUsd": 0
+            },
+            "historyIndex": 0
+          },
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": null,
+              "model": null,
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "idle",
+              "running": true,
+              "activeTurnId": null,
+              "slashCommands": [],
+              "usage": {
+                "contextTokens": 0,
+                "contextWindow": null,
+                "costUsd": 0,
+                "turns": 1
+              },
+              "createdAt": 0
+            }
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": true,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 1
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "aborted",
+            "origin": "user",
+            "endedAt": 1005,
+            "costUsd": 0
+          },
+          {
+            "id": "1:t1:think",
+            "kind": "thinking",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "text": "one\n\ntwo",
+            "streaming": false,
+            "endedAt": 1001
+          },
+          {
+            "id": "1:m",
+            "kind": "assistant",
+            "createdAt": 1002,
+            "turnId": "turn-1",
+            "text": "answer",
+            "streaming": false
+          },
+          {
+            "id": "1:t3:think",
+            "kind": "thinking",
+            "createdAt": 1003,
+            "turnId": "turn-1",
+            "text": "again",
+            "streaming": false,
+            "endedAt": 1004
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "tool progress and settling",
+    "initialInfo": {
+      "chatId": "c",
+      "provider": "claude",
+      "cwd": "/",
+      "agentSessionId": null,
+      "model": null,
+      "selection": {
+        "model": "claude-sonnet-5",
+        "options": {}
+      },
+      "runtimeMode": "full-access",
+      "status": "running",
+      "running": true,
+      "activeTurnId": "turn-1",
+      "slashCommands": [],
+      "usage": {
+        "contextTokens": 0,
+        "contextWindow": null,
+        "costUsd": 0,
+        "turns": 0
+      },
+      "createdAt": 0
+    },
+    "initialItems": [
+      {
+        "id": "turn-1",
+        "kind": "turn",
+        "createdAt": 0,
+        "turnId": "turn-1",
+        "state": "running",
+        "origin": "user",
+        "endedAt": null,
+        "costUsd": 0
+      }
+    ],
+    "generation": 1,
+    "clockStart": 1000,
+    "random": 0.42,
+    "steps": [
+      {
+        "input": {
+          "type": "tool.started",
+          "ref": "tool",
+          "name": "Bash",
+          "input": {
+            "command": "sleep 1"
+          },
+          "parentRef": null
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:tool",
+              "kind": "tool",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "toolUseId": "tool",
+              "name": "Bash",
+              "input": {
+                "command": "sleep 1"
+              },
+              "output": null,
+              "state": "running",
+              "parentToolUseId": null
+            },
+            "historyIndex": 1
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:tool",
+            "kind": "tool",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "tool",
+            "name": "Bash",
+            "input": {
+              "command": "sleep 1"
+            },
+            "output": null,
+            "state": "running",
+            "parentToolUseId": null
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "tool.progress",
+          "ref": "tool",
+          "startedAt": null,
+          "description": "waiting"
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:tool",
+              "kind": "tool",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "toolUseId": "tool",
+              "name": "Bash",
+              "input": {
+                "command": "sleep 1"
+              },
+              "output": null,
+              "state": "running",
+              "parentToolUseId": null,
+              "progress": {
+                "startedAt": null,
+                "description": "waiting",
+                "output": null
+              }
+            },
+            "historyIndex": 1
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:tool",
+            "kind": "tool",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "tool",
+            "name": "Bash",
+            "input": {
+              "command": "sleep 1"
+            },
+            "output": null,
+            "state": "running",
+            "parentToolUseId": null,
+            "progress": {
+              "startedAt": null,
+              "description": "waiting",
+              "output": null
+            }
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "tool.output",
+          "ref": "tool",
+          "text": "line1\n"
+        },
+        "events": [
+          {
+            "type": "delta",
+            "itemId": "1:tool",
+            "text": "line1\n"
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:tool",
+            "kind": "tool",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "tool",
+            "name": "Bash",
+            "input": {
+              "command": "sleep 1"
+            },
+            "output": null,
+            "state": "running",
+            "parentToolUseId": null,
+            "progress": {
+              "startedAt": null,
+              "description": "waiting",
+              "output": "line1\n"
+            }
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "tool.progress",
+          "ref": "tool",
+          "startedAt": 1000,
+          "description": null
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:tool",
+              "kind": "tool",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "toolUseId": "tool",
+              "name": "Bash",
+              "input": {
+                "command": "sleep 1"
+              },
+              "output": null,
+              "state": "running",
+              "parentToolUseId": null,
+              "progress": {
+                "startedAt": 1000,
+                "description": "waiting",
+                "output": "line1\n"
+              }
+            },
+            "historyIndex": 1
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:tool",
+            "kind": "tool",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "tool",
+            "name": "Bash",
+            "input": {
+              "command": "sleep 1"
+            },
+            "output": null,
+            "state": "running",
+            "parentToolUseId": null,
+            "progress": {
+              "startedAt": 1000,
+              "description": "waiting",
+              "output": "line1\n"
+            }
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "tool.output",
+          "ref": "tool",
+          "text": "line2"
+        },
+        "events": [
+          {
+            "type": "delta",
+            "itemId": "1:tool",
+            "text": "line2"
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:tool",
+            "kind": "tool",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "tool",
+            "name": "Bash",
+            "input": {
+              "command": "sleep 1"
+            },
+            "output": null,
+            "state": "running",
+            "parentToolUseId": null,
+            "progress": {
+              "startedAt": 1000,
+              "description": "waiting",
+              "output": "line1\nline2"
+            }
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "tool.done",
+          "ref": "tool",
+          "output": "done",
+          "state": "done",
+          "changes": [
+            {
+              "path": "a.ts",
+              "kind": "update",
+              "diff": "-a\n+b\n"
+            }
+          ]
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:tool",
+              "kind": "tool",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "toolUseId": "tool",
+              "name": "Bash",
+              "input": {
+                "command": "sleep 1"
+              },
+              "output": "done",
+              "state": "done",
+              "parentToolUseId": null,
+              "changes": [
+                {
+                  "path": "a.ts",
+                  "kind": "update",
+                  "diff": "-a\n+b\n"
+                }
+              ]
+            },
+            "historyIndex": 1
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:tool",
+            "kind": "tool",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "tool",
+            "name": "Bash",
+            "input": {
+              "command": "sleep 1"
+            },
+            "output": "done",
+            "state": "done",
+            "parentToolUseId": null,
+            "changes": [
+              {
+                "path": "a.ts",
+                "kind": "update",
+                "diff": "-a\n+b\n"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "tool.progress",
+          "ref": "tool",
+          "startedAt": 2000,
+          "description": "late"
+        },
+        "events": [],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:tool",
+            "kind": "tool",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "tool",
+            "name": "Bash",
+            "input": {
+              "command": "sleep 1"
+            },
+            "output": "done",
+            "state": "done",
+            "parentToolUseId": null,
+            "changes": [
+              {
+                "path": "a.ts",
+                "kind": "update",
+                "diff": "-a\n+b\n"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "tool.done",
+          "ref": "unknown",
+          "output": "x",
+          "state": "done"
+        },
+        "events": [],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:tool",
+            "kind": "tool",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "tool",
+            "name": "Bash",
+            "input": {
+              "command": "sleep 1"
+            },
+            "output": "done",
+            "state": "done",
+            "parentToolUseId": null,
+            "changes": [
+              {
+                "path": "a.ts",
+                "kind": "update",
+                "diff": "-a\n+b\n"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "approval and question withdrawal",
+    "initialInfo": {
+      "chatId": "c",
+      "provider": "claude",
+      "cwd": "/",
+      "agentSessionId": null,
+      "model": null,
+      "selection": {
+        "model": "claude-sonnet-5",
+        "options": {}
+      },
+      "runtimeMode": "full-access",
+      "status": "running",
+      "running": true,
+      "activeTurnId": "turn-1",
+      "slashCommands": [],
+      "usage": {
+        "contextTokens": 0,
+        "contextWindow": null,
+        "costUsd": 0,
+        "turns": 0
+      },
+      "createdAt": 0
+    },
+    "initialItems": [
+      {
+        "id": "turn-1",
+        "kind": "turn",
+        "createdAt": 0,
+        "turnId": "turn-1",
+        "state": "running",
+        "origin": "user",
+        "endedAt": null,
+        "costUsd": 0
+      }
+    ],
+    "generation": 1,
+    "clockStart": 1000,
+    "random": 0.42,
+    "steps": [
+      {
+        "input": {
+          "type": "approval.requested",
+          "requestId": "r1",
+          "ref": "tool",
+          "toolName": "Edit",
+          "input": {
+            "file_path": "a.ts"
+          },
+          "description": "Change file",
+          "canAllowAlways": false
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "approval-r1",
+              "kind": "approval",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "requestId": "r1",
+              "toolUseId": "tool",
+              "toolName": "Edit",
+              "input": {
+                "file_path": "a.ts"
+              },
+              "description": "Change file",
+              "canAllowAlways": false,
+              "decision": "pending"
+            },
+            "historyIndex": 1
+          },
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": null,
+              "model": null,
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "needs-you",
+              "running": true,
+              "activeTurnId": "turn-1",
+              "slashCommands": [],
+              "usage": {
+                "contextTokens": 0,
+                "contextWindow": null,
+                "costUsd": 0,
+                "turns": 0
+              },
+              "createdAt": 0
+            }
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "needs-you",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "approval-r1",
+            "kind": "approval",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "requestId": "r1",
+            "toolUseId": "tool",
+            "toolName": "Edit",
+            "input": {
+              "file_path": "a.ts"
+            },
+            "description": "Change file",
+            "canAllowAlways": false,
+            "decision": "pending"
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "request.withdrawn",
+          "requestId": "r1"
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "approval-r1",
+              "kind": "approval",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "requestId": "r1",
+              "toolUseId": "tool",
+              "toolName": "Edit",
+              "input": {
+                "file_path": "a.ts"
+              },
+              "description": "Change file",
+              "canAllowAlways": false,
+              "decision": "cancelled"
+            },
+            "historyIndex": 1
+          },
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": null,
+              "model": null,
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "running",
+              "running": true,
+              "activeTurnId": "turn-1",
+              "slashCommands": [],
+              "usage": {
+                "contextTokens": 0,
+                "contextWindow": null,
+                "costUsd": 0,
+                "turns": 0
+              },
+              "createdAt": 0
+            }
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "approval-r1",
+            "kind": "approval",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "requestId": "r1",
+            "toolUseId": "tool",
+            "toolName": "Edit",
+            "input": {
+              "file_path": "a.ts"
+            },
+            "description": "Change file",
+            "canAllowAlways": false,
+            "decision": "cancelled"
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "question.requested",
+          "requestId": "q1",
+          "async": true,
+          "questions": [
+            {
+              "id": "q",
+              "header": "Choice",
+              "question": "Pick?",
+              "choices": [
+                {
+                  "label": "A",
+                  "description": "First"
+                }
+              ],
+              "multiSelect": false
+            }
+          ]
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "question-q1",
+              "kind": "question",
+              "createdAt": 1001,
+              "turnId": "turn-1",
+              "requestId": "q1",
+              "questions": [
+                {
+                  "id": "q",
+                  "header": "Choice",
+                  "question": "Pick?",
+                  "choices": [
+                    {
+                      "label": "A",
+                      "description": "First"
+                    }
+                  ],
+                  "multiSelect": false
+                }
+              ],
+              "async": true,
+              "answers": null,
+              "state": "pending"
+            },
+            "historyIndex": 2
+          },
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": null,
+              "model": null,
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "needs-you",
+              "running": true,
+              "activeTurnId": "turn-1",
+              "slashCommands": [],
+              "usage": {
+                "contextTokens": 0,
+                "contextWindow": null,
+                "costUsd": 0,
+                "turns": 0
+              },
+              "createdAt": 0
+            }
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "needs-you",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "approval-r1",
+            "kind": "approval",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "requestId": "r1",
+            "toolUseId": "tool",
+            "toolName": "Edit",
+            "input": {
+              "file_path": "a.ts"
+            },
+            "description": "Change file",
+            "canAllowAlways": false,
+            "decision": "cancelled"
+          },
+          {
+            "id": "question-q1",
+            "kind": "question",
+            "createdAt": 1001,
+            "turnId": "turn-1",
+            "requestId": "q1",
+            "questions": [
+              {
+                "id": "q",
+                "header": "Choice",
+                "question": "Pick?",
+                "choices": [
+                  {
+                    "label": "A",
+                    "description": "First"
+                  }
+                ],
+                "multiSelect": false
+              }
+            ],
+            "async": true,
+            "answers": null,
+            "state": "pending"
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "request.withdrawn",
+          "requestId": "q1"
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "question-q1",
+              "kind": "question",
+              "createdAt": 1001,
+              "turnId": "turn-1",
+              "requestId": "q1",
+              "questions": [
+                {
+                  "id": "q",
+                  "header": "Choice",
+                  "question": "Pick?",
+                  "choices": [
+                    {
+                      "label": "A",
+                      "description": "First"
+                    }
+                  ],
+                  "multiSelect": false
+                }
+              ],
+              "async": true,
+              "answers": null,
+              "state": "cancelled"
+            },
+            "historyIndex": 2
+          },
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": null,
+              "model": null,
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "running",
+              "running": true,
+              "activeTurnId": "turn-1",
+              "slashCommands": [],
+              "usage": {
+                "contextTokens": 0,
+                "contextWindow": null,
+                "costUsd": 0,
+                "turns": 0
+              },
+              "createdAt": 0
+            }
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "approval-r1",
+            "kind": "approval",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "requestId": "r1",
+            "toolUseId": "tool",
+            "toolName": "Edit",
+            "input": {
+              "file_path": "a.ts"
+            },
+            "description": "Change file",
+            "canAllowAlways": false,
+            "decision": "cancelled"
+          },
+          {
+            "id": "question-q1",
+            "kind": "question",
+            "createdAt": 1001,
+            "turnId": "turn-1",
+            "requestId": "q1",
+            "questions": [
+              {
+                "id": "q",
+                "header": "Choice",
+                "question": "Pick?",
+                "choices": [
+                  {
+                    "label": "A",
+                    "description": "First"
+                  }
+                ],
+                "multiSelect": false
+              }
+            ],
+            "async": true,
+            "answers": null,
+            "state": "cancelled"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "usage compaction and cumulative turn cost",
+    "initialInfo": {
+      "chatId": "c",
+      "provider": "claude",
+      "cwd": "/",
+      "agentSessionId": null,
+      "model": null,
+      "selection": {
+        "model": "claude-sonnet-5",
+        "options": {}
+      },
+      "runtimeMode": "full-access",
+      "status": "running",
+      "running": true,
+      "activeTurnId": "turn-1",
+      "slashCommands": [],
+      "usage": {
+        "contextTokens": 0,
+        "contextWindow": null,
+        "costUsd": 1,
+        "turns": 2
+      },
+      "createdAt": 0
+    },
+    "initialItems": [
+      {
+        "id": "turn-1",
+        "kind": "turn",
+        "createdAt": 0,
+        "turnId": "turn-1",
+        "state": "running",
+        "origin": "user",
+        "endedAt": null,
+        "costUsd": 0
+      }
+    ],
+    "generation": 1,
+    "clockStart": 1000,
+    "random": 0.42,
+    "steps": [
+      {
+        "input": {
+          "type": "usage",
+          "contextTokens": 1234,
+          "contextWindow": 100000
+        },
+        "events": [
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": null,
+              "model": null,
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "running",
+              "running": true,
+              "activeTurnId": "turn-1",
+              "slashCommands": [],
+              "usage": {
+                "contextTokens": 1234,
+                "contextWindow": 100000,
+                "costUsd": 1,
+                "turns": 2
+              },
+              "createdAt": 0
+            }
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 1234,
+            "contextWindow": 100000,
+            "costUsd": 1,
+            "turns": 2
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "usage",
+          "contextTokens": 2000
+        },
+        "events": [
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": null,
+              "model": null,
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "running",
+              "running": true,
+              "activeTurnId": "turn-1",
+              "slashCommands": [],
+              "usage": {
+                "contextTokens": 2000,
+                "contextWindow": 100000,
+                "costUsd": 1,
+                "turns": 2
+              },
+              "createdAt": 0
+            }
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 2000,
+            "contextWindow": 100000,
+            "costUsd": 1,
+            "turns": 2
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "compaction",
+          "preTokens": null
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "compaction-1000",
+              "kind": "compaction",
+              "createdAt": 1001,
+              "turnId": "turn-1",
+              "preTokens": 2000
+            },
+            "historyIndex": 1
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 2000,
+            "contextWindow": 100000,
+            "costUsd": 1,
+            "turns": 2
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "compaction-1000",
+            "kind": "compaction",
+            "createdAt": 1001,
+            "turnId": "turn-1",
+            "preTokens": 2000
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "compaction",
+          "preTokens": 900
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "compaction-1002",
+              "kind": "compaction",
+              "createdAt": 1003,
+              "turnId": "turn-1",
+              "preTokens": 900
+            },
+            "historyIndex": 2
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 2000,
+            "contextWindow": 100000,
+            "costUsd": 1,
+            "turns": 2
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "compaction-1000",
+            "kind": "compaction",
+            "createdAt": 1001,
+            "turnId": "turn-1",
+            "preTokens": 2000
+          },
+          {
+            "id": "compaction-1002",
+            "kind": "compaction",
+            "createdAt": 1003,
+            "turnId": "turn-1",
+            "preTokens": 900
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "turn.done",
+          "state": "done",
+          "costUsd": 1.25,
+          "native": {
+            "turnId": "native-turn",
+            "lastUuid": "uuid"
+          }
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "turn-1",
+              "kind": "turn",
+              "createdAt": 0,
+              "turnId": "turn-1",
+              "state": "done",
+              "origin": "user",
+              "endedAt": 1004,
+              "costUsd": 0.25,
+              "native": {
+                "turnId": "native-turn",
+                "lastUuid": "uuid"
+              }
+            },
+            "historyIndex": 0
+          },
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": null,
+              "model": null,
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "idle",
+              "running": true,
+              "activeTurnId": null,
+              "slashCommands": [],
+              "usage": {
+                "contextTokens": 2000,
+                "contextWindow": 100000,
+                "costUsd": 1.25,
+                "turns": 3
+              },
+              "createdAt": 0
+            }
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": true,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 2000,
+            "contextWindow": 100000,
+            "costUsd": 1.25,
+            "turns": 3
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "done",
+            "origin": "user",
+            "endedAt": 1004,
+            "costUsd": 0.25,
+            "native": {
+              "turnId": "native-turn",
+              "lastUuid": "uuid"
+            }
+          },
+          {
+            "id": "compaction-1000",
+            "kind": "compaction",
+            "createdAt": 1001,
+            "turnId": "turn-1",
+            "preTokens": 2000
+          },
+          {
+            "id": "compaction-1002",
+            "kind": "compaction",
+            "createdAt": 1003,
+            "turnId": "turn-1",
+            "preTokens": 900
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "foreground subagent child output and footer",
+    "initialInfo": {
+      "chatId": "c",
+      "provider": "claude",
+      "cwd": "/",
+      "agentSessionId": null,
+      "model": null,
+      "selection": {
+        "model": "claude-sonnet-5",
+        "options": {}
+      },
+      "runtimeMode": "full-access",
+      "status": "running",
+      "running": true,
+      "activeTurnId": "turn-1",
+      "slashCommands": [],
+      "usage": {
+        "contextTokens": 0,
+        "contextWindow": null,
+        "costUsd": 0,
+        "turns": 0
+      },
+      "createdAt": 0
+    },
+    "initialItems": [
+      {
+        "id": "turn-1",
+        "kind": "turn",
+        "createdAt": 0,
+        "turnId": "turn-1",
+        "state": "running",
+        "origin": "user",
+        "endedAt": null,
+        "costUsd": 0
+      }
+    ],
+    "generation": 1,
+    "clockStart": 1000,
+    "random": 0.42,
+    "steps": [
+      {
+        "input": {
+          "type": "tool.started",
+          "ref": "agent",
+          "name": "Agent",
+          "input": {
+            "description": "Research",
+            "prompt": "inspect",
+            "subagent_type": "Explore"
+          },
+          "parentRef": null
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:agent",
+              "kind": "subagent",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "toolUseId": "agent",
+              "description": "Research",
+              "subagentType": "Explore",
+              "prompt": "inspect",
+              "background": false,
+              "status": "running",
+              "startedAt": 1000,
+              "finishedAt": null,
+              "summary": null,
+              "result": null,
+              "usage": null,
+              "lastTool": null,
+              "itemsTruncated": false
+            },
+            "historyIndex": 1
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:agent",
+            "kind": "subagent",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "agent",
+            "description": "Research",
+            "subagentType": "Explore",
+            "prompt": "inspect",
+            "background": false,
+            "status": "running",
+            "startedAt": 1000,
+            "finishedAt": null,
+            "summary": null,
+            "result": null,
+            "usage": null,
+            "lastTool": null,
+            "itemsTruncated": false
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "tool.started",
+          "ref": "inner",
+          "name": "Read",
+          "input": {
+            "file_path": "a"
+          },
+          "parentRef": "agent"
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:inner",
+              "kind": "tool",
+              "createdAt": 1001,
+              "turnId": "turn-1",
+              "toolUseId": "inner",
+              "name": "Read",
+              "input": {
+                "file_path": "a"
+              },
+              "output": null,
+              "state": "running",
+              "parentToolUseId": "agent"
+            },
+            "historyIndex": 2
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:agent",
+            "kind": "subagent",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "agent",
+            "description": "Research",
+            "subagentType": "Explore",
+            "prompt": "inspect",
+            "background": false,
+            "status": "running",
+            "startedAt": 1000,
+            "finishedAt": null,
+            "summary": null,
+            "result": null,
+            "usage": null,
+            "lastTool": null,
+            "itemsTruncated": false
+          },
+          {
+            "id": "1:inner",
+            "kind": "tool",
+            "createdAt": 1001,
+            "turnId": "turn-1",
+            "toolUseId": "inner",
+            "name": "Read",
+            "input": {
+              "file_path": "a"
+            },
+            "output": null,
+            "state": "running",
+            "parentToolUseId": "agent"
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "text.done",
+          "ref": "inner-text",
+          "parentRef": "agent",
+          "text": "child text"
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:inner-text",
+              "kind": "assistant",
+              "createdAt": 1002,
+              "turnId": "turn-1",
+              "text": "child text",
+              "streaming": false,
+              "parentToolUseId": "agent"
+            },
+            "historyIndex": 3
+          },
+          {
+            "type": "item",
+            "item": {
+              "id": "1:agent",
+              "kind": "subagent",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "toolUseId": "agent",
+              "description": "Research",
+              "subagentType": "Explore",
+              "prompt": "inspect",
+              "background": false,
+              "status": "running",
+              "startedAt": 1000,
+              "finishedAt": null,
+              "summary": null,
+              "result": "child text",
+              "usage": null,
+              "lastTool": null,
+              "itemsTruncated": false
+            },
+            "historyIndex": 1
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:agent",
+            "kind": "subagent",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "agent",
+            "description": "Research",
+            "subagentType": "Explore",
+            "prompt": "inspect",
+            "background": false,
+            "status": "running",
+            "startedAt": 1000,
+            "finishedAt": null,
+            "summary": null,
+            "result": "child text",
+            "usage": null,
+            "lastTool": null,
+            "itemsTruncated": false
+          },
+          {
+            "id": "1:inner",
+            "kind": "tool",
+            "createdAt": 1001,
+            "turnId": "turn-1",
+            "toolUseId": "inner",
+            "name": "Read",
+            "input": {
+              "file_path": "a"
+            },
+            "output": null,
+            "state": "running",
+            "parentToolUseId": "agent"
+          },
+          {
+            "id": "1:inner-text",
+            "kind": "assistant",
+            "createdAt": 1002,
+            "turnId": "turn-1",
+            "text": "child text",
+            "streaming": false,
+            "parentToolUseId": "agent"
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "tool.done",
+          "ref": "inner",
+          "output": "source",
+          "state": "done"
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:inner",
+              "kind": "tool",
+              "createdAt": 1001,
+              "turnId": "turn-1",
+              "toolUseId": "inner",
+              "name": "Read",
+              "input": {
+                "file_path": "a"
+              },
+              "output": "source",
+              "state": "done",
+              "parentToolUseId": "agent"
+            },
+            "historyIndex": 2
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:agent",
+            "kind": "subagent",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "agent",
+            "description": "Research",
+            "subagentType": "Explore",
+            "prompt": "inspect",
+            "background": false,
+            "status": "running",
+            "startedAt": 1000,
+            "finishedAt": null,
+            "summary": null,
+            "result": "child text",
+            "usage": null,
+            "lastTool": null,
+            "itemsTruncated": false
+          },
+          {
+            "id": "1:inner",
+            "kind": "tool",
+            "createdAt": 1001,
+            "turnId": "turn-1",
+            "toolUseId": "inner",
+            "name": "Read",
+            "input": {
+              "file_path": "a"
+            },
+            "output": "source",
+            "state": "done",
+            "parentToolUseId": "agent"
+          },
+          {
+            "id": "1:inner-text",
+            "kind": "assistant",
+            "createdAt": 1002,
+            "turnId": "turn-1",
+            "text": "child text",
+            "streaming": false,
+            "parentToolUseId": "agent"
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "tool.done",
+          "ref": "agent",
+          "output": "Report\nagentId: a1\n<usage>subagent_tokens: 120\ntool_uses: 2\nduration_ms: 400</usage>",
+          "state": "done"
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:agent",
+              "kind": "subagent",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "toolUseId": "agent",
+              "description": "Research",
+              "subagentType": "Explore",
+              "prompt": "inspect",
+              "background": false,
+              "status": "done",
+              "startedAt": 1000,
+              "finishedAt": 1003,
+              "summary": null,
+              "result": "Report",
+              "usage": {
+                "totalTokens": 120,
+                "toolUses": 2,
+                "durationMs": 400
+              },
+              "lastTool": null,
+              "itemsTruncated": false
+            },
+            "historyIndex": 1
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:agent",
+            "kind": "subagent",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "agent",
+            "description": "Research",
+            "subagentType": "Explore",
+            "prompt": "inspect",
+            "background": false,
+            "status": "done",
+            "startedAt": 1000,
+            "finishedAt": 1003,
+            "summary": null,
+            "result": "Report",
+            "usage": {
+              "totalTokens": 120,
+              "toolUses": 2,
+              "durationMs": 400
+            },
+            "lastTool": null,
+            "itemsTruncated": false
+          },
+          {
+            "id": "1:inner",
+            "kind": "tool",
+            "createdAt": 1001,
+            "turnId": "turn-1",
+            "toolUseId": "inner",
+            "name": "Read",
+            "input": {
+              "file_path": "a"
+            },
+            "output": "source",
+            "state": "done",
+            "parentToolUseId": "agent"
+          },
+          {
+            "id": "1:inner-text",
+            "kind": "assistant",
+            "createdAt": 1002,
+            "turnId": "turn-1",
+            "text": "child text",
+            "streaming": false,
+            "parentToolUseId": "agent"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "background subagent survives turn then settles",
+    "initialInfo": {
+      "chatId": "c",
+      "provider": "claude",
+      "cwd": "/",
+      "agentSessionId": null,
+      "model": null,
+      "selection": {
+        "model": "claude-sonnet-5",
+        "options": {}
+      },
+      "runtimeMode": "full-access",
+      "status": "running",
+      "running": true,
+      "activeTurnId": "turn-1",
+      "slashCommands": [],
+      "usage": {
+        "contextTokens": 0,
+        "contextWindow": null,
+        "costUsd": 0,
+        "turns": 0
+      },
+      "createdAt": 0
+    },
+    "initialItems": [
+      {
+        "id": "turn-1",
+        "kind": "turn",
+        "createdAt": 0,
+        "turnId": "turn-1",
+        "state": "running",
+        "origin": "user",
+        "endedAt": null,
+        "costUsd": 0
+      }
+    ],
+    "generation": 1,
+    "clockStart": 1000,
+    "random": 0.42,
+    "steps": [
+      {
+        "input": {
+          "type": "tool.started",
+          "ref": "agent",
+          "name": "Agent",
+          "input": {
+            "description": "Research",
+            "run_in_background": true
+          },
+          "parentRef": null
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:agent",
+              "kind": "subagent",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "toolUseId": "agent",
+              "description": "Research",
+              "subagentType": null,
+              "prompt": null,
+              "background": true,
+              "status": "running",
+              "startedAt": 1000,
+              "finishedAt": null,
+              "summary": null,
+              "result": null,
+              "usage": null,
+              "lastTool": null,
+              "itemsTruncated": false
+            },
+            "historyIndex": 1
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:agent",
+            "kind": "subagent",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "agent",
+            "description": "Research",
+            "subagentType": null,
+            "prompt": null,
+            "background": true,
+            "status": "running",
+            "startedAt": 1000,
+            "finishedAt": null,
+            "summary": null,
+            "result": null,
+            "usage": null,
+            "lastTool": null,
+            "itemsTruncated": false
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "tool.done",
+          "ref": "agent",
+          "output": "Async agent launched successfully\noutput_file: /tmp/report",
+          "state": "done"
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:agent",
+              "kind": "subagent",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "toolUseId": "agent",
+              "description": "Research",
+              "subagentType": null,
+              "prompt": null,
+              "background": true,
+              "status": "running",
+              "startedAt": 1000,
+              "finishedAt": null,
+              "summary": null,
+              "result": null,
+              "usage": null,
+              "lastTool": null,
+              "itemsTruncated": false,
+              "outputFile": "/tmp/report"
+            },
+            "historyIndex": 1
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:agent",
+            "kind": "subagent",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "agent",
+            "description": "Research",
+            "subagentType": null,
+            "prompt": null,
+            "background": true,
+            "status": "running",
+            "startedAt": 1000,
+            "finishedAt": null,
+            "summary": null,
+            "result": null,
+            "usage": null,
+            "lastTool": null,
+            "itemsTruncated": false,
+            "outputFile": "/tmp/report"
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "turn.done",
+          "state": "done",
+          "costUsd": 0
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "turn-1",
+              "kind": "turn",
+              "createdAt": 0,
+              "turnId": "turn-1",
+              "state": "done",
+              "origin": "user",
+              "endedAt": 1001,
+              "costUsd": 0
+            },
+            "historyIndex": 0
+          },
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": null,
+              "model": null,
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "idle",
+              "running": true,
+              "activeTurnId": null,
+              "slashCommands": [],
+              "usage": {
+                "contextTokens": 0,
+                "contextWindow": null,
+                "costUsd": 0,
+                "turns": 1
+              },
+              "createdAt": 0
+            }
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": true,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 1
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "done",
+            "origin": "user",
+            "endedAt": 1001,
+            "costUsd": 0
+          },
+          {
+            "id": "1:agent",
+            "kind": "subagent",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "agent",
+            "description": "Research",
+            "subagentType": null,
+            "prompt": null,
+            "background": true,
+            "status": "running",
+            "startedAt": 1000,
+            "finishedAt": null,
+            "summary": null,
+            "result": null,
+            "usage": null,
+            "lastTool": null,
+            "itemsTruncated": false,
+            "outputFile": "/tmp/report"
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "task.progress",
+          "ref": "agent",
+          "summary": "Searching",
+          "lastTool": "Read",
+          "usage": {
+            "totalTokens": 10,
+            "toolUses": 1,
+            "durationMs": 50
+          }
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:agent",
+              "kind": "subagent",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "toolUseId": "agent",
+              "description": "Research",
+              "subagentType": null,
+              "prompt": null,
+              "background": true,
+              "status": "running",
+              "startedAt": 1000,
+              "finishedAt": null,
+              "summary": "Searching",
+              "result": null,
+              "usage": {
+                "totalTokens": 10,
+                "toolUses": 1,
+                "durationMs": 50
+              },
+              "lastTool": "Read",
+              "itemsTruncated": false,
+              "outputFile": "/tmp/report"
+            },
+            "historyIndex": 1
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": true,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 1
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "done",
+            "origin": "user",
+            "endedAt": 1001,
+            "costUsd": 0
+          },
+          {
+            "id": "1:agent",
+            "kind": "subagent",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "agent",
+            "description": "Research",
+            "subagentType": null,
+            "prompt": null,
+            "background": true,
+            "status": "running",
+            "startedAt": 1000,
+            "finishedAt": null,
+            "summary": "Searching",
+            "result": null,
+            "usage": {
+              "totalTokens": 10,
+              "toolUses": 1,
+              "durationMs": 50
+            },
+            "lastTool": "Read",
+            "itemsTruncated": false,
+            "outputFile": "/tmp/report"
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "task.done",
+          "ref": "agent",
+          "summary": "Report ready\nDetails",
+          "ok": true
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:agent",
+              "kind": "subagent",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "toolUseId": "agent",
+              "description": "Research",
+              "subagentType": null,
+              "prompt": null,
+              "background": true,
+              "status": "done",
+              "startedAt": 1000,
+              "finishedAt": 1002,
+              "summary": "Report ready",
+              "result": "Report ready\nDetails",
+              "usage": {
+                "totalTokens": 10,
+                "toolUses": 1,
+                "durationMs": 50
+              },
+              "lastTool": "Read",
+              "itemsTruncated": false,
+              "outputFile": "/tmp/report"
+            },
+            "historyIndex": 1
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": true,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 1
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "done",
+            "origin": "user",
+            "endedAt": 1001,
+            "costUsd": 0
+          },
+          {
+            "id": "1:agent",
+            "kind": "subagent",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "agent",
+            "description": "Research",
+            "subagentType": null,
+            "prompt": null,
+            "background": true,
+            "status": "done",
+            "startedAt": 1000,
+            "finishedAt": 1002,
+            "summary": "Report ready",
+            "result": "Report ready\nDetails",
+            "usage": {
+              "totalTokens": 10,
+              "toolUses": 1,
+              "durationMs": 50
+            },
+            "lastTool": "Read",
+            "itemsTruncated": false,
+            "outputFile": "/tmp/report"
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "text.done",
+          "ref": "wake",
+          "text": "It is ready"
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "turn-1003-f4bipx",
+              "kind": "turn",
+              "createdAt": 1003,
+              "turnId": "turn-1003-f4bipx",
+              "state": "running",
+              "origin": "agent",
+              "label": "Report ready",
+              "taskToolUseId": "agent",
+              "endedAt": null,
+              "costUsd": 0
+            },
+            "historyIndex": 2
+          },
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": null,
+              "model": null,
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "running",
+              "running": true,
+              "activeTurnId": "turn-1003-f4bipx",
+              "slashCommands": [],
+              "usage": {
+                "contextTokens": 0,
+                "contextWindow": null,
+                "costUsd": 0,
+                "turns": 1
+              },
+              "createdAt": 0
+            }
+          },
+          {
+            "type": "item",
+            "item": {
+              "id": "1:wake",
+              "kind": "assistant",
+              "createdAt": 1004,
+              "turnId": "turn-1003-f4bipx",
+              "text": "It is ready",
+              "streaming": false
+            },
+            "historyIndex": 3
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1003-f4bipx",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 1
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "done",
+            "origin": "user",
+            "endedAt": 1001,
+            "costUsd": 0
+          },
+          {
+            "id": "1:agent",
+            "kind": "subagent",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "agent",
+            "description": "Research",
+            "subagentType": null,
+            "prompt": null,
+            "background": true,
+            "status": "done",
+            "startedAt": 1000,
+            "finishedAt": 1002,
+            "summary": "Report ready",
+            "result": "Report ready\nDetails",
+            "usage": {
+              "totalTokens": 10,
+              "toolUses": 1,
+              "durationMs": 50
+            },
+            "lastTool": "Read",
+            "itemsTruncated": false,
+            "outputFile": "/tmp/report"
+          },
+          {
+            "id": "turn-1003-f4bipx",
+            "kind": "turn",
+            "createdAt": 1003,
+            "turnId": "turn-1003-f4bipx",
+            "state": "running",
+            "origin": "agent",
+            "label": "Report ready",
+            "taskToolUseId": "agent",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:wake",
+            "kind": "assistant",
+            "createdAt": 1004,
+            "turnId": "turn-1003-f4bipx",
+            "text": "It is ready",
+            "streaming": false
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "turn.done",
+          "state": "done",
+          "costUsd": 0
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "turn-1003-f4bipx",
+              "kind": "turn",
+              "createdAt": 1003,
+              "turnId": "turn-1003-f4bipx",
+              "state": "done",
+              "origin": "agent",
+              "label": "Report ready",
+              "taskToolUseId": "agent",
+              "endedAt": 1005,
+              "costUsd": 0
+            },
+            "historyIndex": 2
+          },
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": null,
+              "model": null,
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "idle",
+              "running": true,
+              "activeTurnId": null,
+              "slashCommands": [],
+              "usage": {
+                "contextTokens": 0,
+                "contextWindow": null,
+                "costUsd": 0,
+                "turns": 2
+              },
+              "createdAt": 0
+            }
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": true,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 2
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "done",
+            "origin": "user",
+            "endedAt": 1001,
+            "costUsd": 0
+          },
+          {
+            "id": "1:agent",
+            "kind": "subagent",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "agent",
+            "description": "Research",
+            "subagentType": null,
+            "prompt": null,
+            "background": true,
+            "status": "done",
+            "startedAt": 1000,
+            "finishedAt": 1002,
+            "summary": "Report ready",
+            "result": "Report ready\nDetails",
+            "usage": {
+              "totalTokens": 10,
+              "toolUses": 1,
+              "durationMs": 50
+            },
+            "lastTool": "Read",
+            "itemsTruncated": false,
+            "outputFile": "/tmp/report"
+          },
+          {
+            "id": "turn-1003-f4bipx",
+            "kind": "turn",
+            "createdAt": 1003,
+            "turnId": "turn-1003-f4bipx",
+            "state": "done",
+            "origin": "agent",
+            "label": "Report ready",
+            "taskToolUseId": "agent",
+            "endedAt": 1005,
+            "costUsd": 0
+          },
+          {
+            "id": "1:wake",
+            "kind": "assistant",
+            "createdAt": 1004,
+            "turnId": "turn-1003-f4bipx",
+            "text": "It is ready",
+            "streaming": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "process failure settles open items",
+    "initialInfo": {
+      "chatId": "c",
+      "provider": "claude",
+      "cwd": "/",
+      "agentSessionId": null,
+      "model": null,
+      "selection": {
+        "model": "claude-sonnet-5",
+        "options": {}
+      },
+      "runtimeMode": "full-access",
+      "status": "running",
+      "running": true,
+      "activeTurnId": "turn-1",
+      "slashCommands": [],
+      "usage": {
+        "contextTokens": 0,
+        "contextWindow": null,
+        "costUsd": 0,
+        "turns": 0
+      },
+      "createdAt": 0
+    },
+    "initialItems": [
+      {
+        "id": "turn-1",
+        "kind": "turn",
+        "createdAt": 0,
+        "turnId": "turn-1",
+        "state": "running",
+        "origin": "user",
+        "endedAt": null,
+        "costUsd": 0
+      }
+    ],
+    "generation": 1,
+    "clockStart": 1000,
+    "random": 0.42,
+    "steps": [
+      {
+        "input": {
+          "type": "tool.started",
+          "ref": "tool",
+          "name": "Bash",
+          "input": {
+            "command": "sleep 1"
+          },
+          "parentRef": null
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:tool",
+              "kind": "tool",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "toolUseId": "tool",
+              "name": "Bash",
+              "input": {
+                "command": "sleep 1"
+              },
+              "output": null,
+              "state": "running",
+              "parentToolUseId": null
+            },
+            "historyIndex": 1
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:tool",
+            "kind": "tool",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "tool",
+            "name": "Bash",
+            "input": {
+              "command": "sleep 1"
+            },
+            "output": null,
+            "state": "running",
+            "parentToolUseId": null
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "text.delta",
+          "ref": "m",
+          "text": "partial"
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:m",
+              "kind": "assistant",
+              "createdAt": 1001,
+              "turnId": "turn-1",
+              "text": "partial",
+              "streaming": true
+            },
+            "historyIndex": 2
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:tool",
+            "kind": "tool",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "tool",
+            "name": "Bash",
+            "input": {
+              "command": "sleep 1"
+            },
+            "output": null,
+            "state": "running",
+            "parentToolUseId": null
+          },
+          {
+            "id": "1:m",
+            "kind": "assistant",
+            "createdAt": 1001,
+            "turnId": "turn-1",
+            "text": "partial",
+            "streaming": true
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "approval.requested",
+          "requestId": "r",
+          "ref": "tool",
+          "toolName": "Bash",
+          "description": null,
+          "canAllowAlways": false
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "approval-r",
+              "kind": "approval",
+              "createdAt": 1002,
+              "turnId": "turn-1",
+              "requestId": "r",
+              "toolUseId": "tool",
+              "toolName": "Bash",
+              "input": {},
+              "description": null,
+              "canAllowAlways": false,
+              "decision": "pending"
+            },
+            "historyIndex": 3
+          },
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": null,
+              "model": null,
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "needs-you",
+              "running": true,
+              "activeTurnId": "turn-1",
+              "slashCommands": [],
+              "usage": {
+                "contextTokens": 0,
+                "contextWindow": null,
+                "costUsd": 0,
+                "turns": 0
+              },
+              "createdAt": 0
+            }
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "needs-you",
+          "running": true,
+          "activeTurnId": "turn-1",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "running",
+            "origin": "user",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:tool",
+            "kind": "tool",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "tool",
+            "name": "Bash",
+            "input": {
+              "command": "sleep 1"
+            },
+            "output": null,
+            "state": "running",
+            "parentToolUseId": null
+          },
+          {
+            "id": "1:m",
+            "kind": "assistant",
+            "createdAt": 1001,
+            "turnId": "turn-1",
+            "text": "partial",
+            "streaming": true
+          },
+          {
+            "id": "approval-r",
+            "kind": "approval",
+            "createdAt": 1002,
+            "turnId": "turn-1",
+            "requestId": "r",
+            "toolUseId": "tool",
+            "toolName": "Bash",
+            "input": {},
+            "description": null,
+            "canAllowAlways": false,
+            "decision": "pending"
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "exit",
+          "exitCode": 7
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:tool",
+              "kind": "tool",
+              "createdAt": 1000,
+              "turnId": "turn-1",
+              "toolUseId": "tool",
+              "name": "Bash",
+              "input": {
+                "command": "sleep 1"
+              },
+              "output": null,
+              "state": "error",
+              "parentToolUseId": null
+            },
+            "historyIndex": 1
+          },
+          {
+            "type": "item",
+            "item": {
+              "id": "1:m",
+              "kind": "assistant",
+              "createdAt": 1001,
+              "turnId": "turn-1",
+              "text": "partial",
+              "streaming": false
+            },
+            "historyIndex": 2
+          },
+          {
+            "type": "item",
+            "item": {
+              "id": "approval-r",
+              "kind": "approval",
+              "createdAt": 1002,
+              "turnId": "turn-1",
+              "requestId": "r",
+              "toolUseId": "tool",
+              "toolName": "Bash",
+              "input": {},
+              "description": null,
+              "canAllowAlways": false,
+              "decision": "cancelled"
+            },
+            "historyIndex": 3
+          },
+          {
+            "type": "item",
+            "item": {
+              "id": "note-1003-f4bipx",
+              "kind": "note",
+              "createdAt": 1004,
+              "turnId": "turn-1",
+              "level": "error",
+              "text": "Test CLI exited with code 7"
+            },
+            "historyIndex": 4
+          },
+          {
+            "type": "item",
+            "item": {
+              "id": "turn-1",
+              "kind": "turn",
+              "createdAt": 0,
+              "turnId": "turn-1",
+              "state": "error",
+              "origin": "user",
+              "endedAt": 1005,
+              "costUsd": 0
+            },
+            "historyIndex": 0
+          },
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": null,
+              "model": null,
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "error",
+              "running": false,
+              "activeTurnId": null,
+              "slashCommands": [],
+              "usage": {
+                "contextTokens": 0,
+                "contextWindow": null,
+                "costUsd": 0,
+                "turns": 0
+              },
+              "createdAt": 0
+            }
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "error",
+          "running": false,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1",
+            "kind": "turn",
+            "createdAt": 0,
+            "turnId": "turn-1",
+            "state": "error",
+            "origin": "user",
+            "endedAt": 1005,
+            "costUsd": 0
+          },
+          {
+            "id": "1:tool",
+            "kind": "tool",
+            "createdAt": 1000,
+            "turnId": "turn-1",
+            "toolUseId": "tool",
+            "name": "Bash",
+            "input": {
+              "command": "sleep 1"
+            },
+            "output": null,
+            "state": "error",
+            "parentToolUseId": null
+          },
+          {
+            "id": "1:m",
+            "kind": "assistant",
+            "createdAt": 1001,
+            "turnId": "turn-1",
+            "text": "partial",
+            "streaming": false
+          },
+          {
+            "id": "approval-r",
+            "kind": "approval",
+            "createdAt": 1002,
+            "turnId": "turn-1",
+            "requestId": "r",
+            "toolUseId": "tool",
+            "toolName": "Bash",
+            "input": {},
+            "description": null,
+            "canAllowAlways": false,
+            "decision": "cancelled"
+          },
+          {
+            "id": "note-1003-f4bipx",
+            "kind": "note",
+            "createdAt": 1004,
+            "turnId": "turn-1",
+            "level": "error",
+            "text": "Test CLI exited with code 7"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "idle subagent output opens no turn",
+    "initialInfo": {
+      "chatId": "c",
+      "provider": "claude",
+      "cwd": "/",
+      "agentSessionId": null,
+      "model": null,
+      "selection": {
+        "model": "claude-sonnet-5",
+        "options": {}
+      },
+      "runtimeMode": "full-access",
+      "status": "idle",
+      "running": true,
+      "activeTurnId": null,
+      "slashCommands": [],
+      "usage": {
+        "contextTokens": 0,
+        "contextWindow": null,
+        "costUsd": 0,
+        "turns": 0
+      },
+      "createdAt": 0
+    },
+    "initialItems": [],
+    "generation": 1,
+    "clockStart": 1000,
+    "random": 0.42,
+    "steps": [
+      {
+        "input": {
+          "type": "tool.started",
+          "ref": "inner",
+          "name": "Read",
+          "input": {},
+          "parentRef": "agent"
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:inner",
+              "kind": "tool",
+              "createdAt": 1000,
+              "turnId": null,
+              "toolUseId": "inner",
+              "name": "Read",
+              "input": {},
+              "output": null,
+              "state": "running",
+              "parentToolUseId": "agent"
+            },
+            "historyIndex": 0
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": true,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "1:inner",
+            "kind": "tool",
+            "createdAt": 1000,
+            "turnId": null,
+            "toolUseId": "inner",
+            "name": "Read",
+            "input": {},
+            "output": null,
+            "state": "running",
+            "parentToolUseId": "agent"
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "text.done",
+          "ref": "child",
+          "parentRef": "agent",
+          "text": "orphan text"
+        },
+        "events": [],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": true,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "1:inner",
+            "kind": "tool",
+            "createdAt": 1000,
+            "turnId": null,
+            "toolUseId": "inner",
+            "name": "Read",
+            "input": {},
+            "output": null,
+            "state": "running",
+            "parentToolUseId": "agent"
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "tool.done",
+          "ref": "inner",
+          "output": "x",
+          "state": "done"
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:inner",
+              "kind": "tool",
+              "createdAt": 1000,
+              "turnId": null,
+              "toolUseId": "inner",
+              "name": "Read",
+              "input": {},
+              "output": "x",
+              "state": "done",
+              "parentToolUseId": "agent"
+            },
+            "historyIndex": 0
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": true,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "1:inner",
+            "kind": "tool",
+            "createdAt": 1000,
+            "turnId": null,
+            "toolUseId": "inner",
+            "name": "Read",
+            "input": {},
+            "output": "x",
+            "state": "done",
+            "parentToolUseId": "agent"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "idle wakeup and late process exit",
+    "initialInfo": {
+      "chatId": "c",
+      "provider": "claude",
+      "cwd": "/",
+      "agentSessionId": null,
+      "model": null,
+      "selection": {
+        "model": "claude-sonnet-5",
+        "options": {}
+      },
+      "runtimeMode": "full-access",
+      "status": "idle",
+      "running": true,
+      "activeTurnId": null,
+      "slashCommands": [],
+      "usage": {
+        "contextTokens": 0,
+        "contextWindow": null,
+        "costUsd": 0,
+        "turns": 0
+      },
+      "createdAt": 0
+    },
+    "initialItems": [],
+    "generation": 1,
+    "clockStart": 1000,
+    "random": 0.42,
+    "steps": [
+      {
+        "input": {
+          "type": "task.done",
+          "ref": null,
+          "summary": "Ready now",
+          "ok": true
+        },
+        "events": [],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": true,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": []
+      },
+      {
+        "input": {
+          "type": "text.delta",
+          "ref": "m",
+          "text": "wake"
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "turn-1000-f4bipx",
+              "kind": "turn",
+              "createdAt": 1000,
+              "turnId": "turn-1000-f4bipx",
+              "state": "running",
+              "origin": "agent",
+              "label": "Ready now",
+              "endedAt": null,
+              "costUsd": 0
+            },
+            "historyIndex": 0
+          },
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": null,
+              "model": null,
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "running",
+              "running": true,
+              "activeTurnId": "turn-1000-f4bipx",
+              "slashCommands": [],
+              "usage": {
+                "contextTokens": 0,
+                "contextWindow": null,
+                "costUsd": 0,
+                "turns": 0
+              },
+              "createdAt": 0
+            }
+          },
+          {
+            "type": "item",
+            "item": {
+              "id": "1:m",
+              "kind": "assistant",
+              "createdAt": 1001,
+              "turnId": "turn-1000-f4bipx",
+              "text": "wake",
+              "streaming": true
+            },
+            "historyIndex": 1
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": true,
+          "activeTurnId": "turn-1000-f4bipx",
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1000-f4bipx",
+            "kind": "turn",
+            "createdAt": 1000,
+            "turnId": "turn-1000-f4bipx",
+            "state": "running",
+            "origin": "agent",
+            "label": "Ready now",
+            "endedAt": null,
+            "costUsd": 0
+          },
+          {
+            "id": "1:m",
+            "kind": "assistant",
+            "createdAt": 1001,
+            "turnId": "turn-1000-f4bipx",
+            "text": "wake",
+            "streaming": true
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "turn.done",
+          "state": "done",
+          "costUsd": 0.2
+        },
+        "events": [
+          {
+            "type": "item",
+            "item": {
+              "id": "1:m",
+              "kind": "assistant",
+              "createdAt": 1001,
+              "turnId": "turn-1000-f4bipx",
+              "text": "wake",
+              "streaming": false
+            },
+            "historyIndex": 1
+          },
+          {
+            "type": "item",
+            "item": {
+              "id": "turn-1000-f4bipx",
+              "kind": "turn",
+              "createdAt": 1000,
+              "turnId": "turn-1000-f4bipx",
+              "state": "done",
+              "origin": "agent",
+              "label": "Ready now",
+              "endedAt": 1002,
+              "costUsd": 0.2
+            },
+            "historyIndex": 0
+          },
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": null,
+              "model": null,
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "idle",
+              "running": true,
+              "activeTurnId": null,
+              "slashCommands": [],
+              "usage": {
+                "contextTokens": 0,
+                "contextWindow": null,
+                "costUsd": 0.2,
+                "turns": 1
+              },
+              "createdAt": 0
+            }
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": true,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0.2,
+            "turns": 1
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1000-f4bipx",
+            "kind": "turn",
+            "createdAt": 1000,
+            "turnId": "turn-1000-f4bipx",
+            "state": "done",
+            "origin": "agent",
+            "label": "Ready now",
+            "endedAt": 1002,
+            "costUsd": 0.2
+          },
+          {
+            "id": "1:m",
+            "kind": "assistant",
+            "createdAt": 1001,
+            "turnId": "turn-1000-f4bipx",
+            "text": "wake",
+            "streaming": false
+          }
+        ]
+      },
+      {
+        "input": {
+          "type": "exit",
+          "exitCode": 0
+        },
+        "events": [
+          {
+            "type": "info",
+            "info": {
+              "chatId": "c",
+              "provider": "claude",
+              "cwd": "/",
+              "agentSessionId": null,
+              "model": null,
+              "selection": {
+                "model": "claude-sonnet-5",
+                "options": {}
+              },
+              "runtimeMode": "full-access",
+              "status": "idle",
+              "running": false,
+              "activeTurnId": null,
+              "slashCommands": [],
+              "usage": {
+                "contextTokens": 0,
+                "contextWindow": null,
+                "costUsd": 0.2,
+                "turns": 1
+              },
+              "createdAt": 0
+            }
+          }
+        ],
+        "info": {
+          "chatId": "c",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": false,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0.2,
+            "turns": 1
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "turn-1000-f4bipx",
+            "kind": "turn",
+            "createdAt": 1000,
+            "turnId": "turn-1000-f4bipx",
+            "state": "done",
+            "origin": "agent",
+            "label": "Ready now",
+            "endedAt": 1002,
+            "costUsd": 0.2
+          },
+          {
+            "id": "1:m",
+            "kind": "assistant",
+            "createdAt": 1001,
+            "turnId": "turn-1000-f4bipx",
+            "text": "wake",
+            "streaming": false
+          }
+        ]
+      }
+    ]
+  }
+]

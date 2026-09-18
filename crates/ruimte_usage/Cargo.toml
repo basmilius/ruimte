@@ -1,0 +1,20 @@
+[package]
+name = "ruimte_usage"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+chrono.workspace = true
+chrono-tz.workspace = true
+regex.workspace = true
+reqwest.workspace = true
+ruimte_core = { path = "../ruimte_core" }
+ruimte_workspace = { path = "../ruimte_workspace" }
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

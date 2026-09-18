@@ -1,0 +1,25 @@
+[package]
+name = "ruimte_identity"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+aes-gcm.workspace = true
+anyhow.workspace = true
+base64.workspace = true
+ed25519-dalek.workspace = true
+hkdf.workspace = true
+libc.workspace = true
+rand.workspace = true
+reqwest.workspace = true
+ruimte_core = { path = "../ruimte_core" }
+ruimte_schema = { path = "../ruimte_schema" }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+subtle.workspace = true
+tokio.workspace = true
+x25519-dalek.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

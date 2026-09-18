@@ -3,8 +3,8 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig, type Plugin } from 'vite';
 
-// The dev daemon sits on 4211 so an installed Ruimte can keep 4210.
-const daemon = process.env.RUIMTE_DAEMON ?? 'ws://localhost:4211';
+// The Rust experiment keeps its daemon, Vite server and home separate from the main checkout.
+const daemon = process.env.RUIMTE_DAEMON_URL ?? 'ws://localhost:4221';
 
 /*
  * The web client at `station.ruimte.app` (`vite build --mode station`). It is the same page, plus what
@@ -37,8 +37,10 @@ export default defineConfig(({ mode }) => ({
         }
     },
     server: {
+        port: Number(process.env.RUIMTE_VITE_PORT ?? 5183),
+        strictPort: true,
         proxy: {
-            // Keep the client same-origin in development; `RUIMTE_DAEMON` can target another daemon.
+            // Keep the client same-origin in development; the daemon URL may target another host.
             '/ws': {
                 target: daemon,
                 ws: true

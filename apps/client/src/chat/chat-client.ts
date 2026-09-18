@@ -37,6 +37,8 @@ interface Mounted extends ChatOpenOptions {
     attached: boolean;
     // The last place in the chat's stream the store holds, so a reattach asks only for what came after.
     seq?: number;
+    historyCursor?: string | null;
+    loadingHistory?: boolean;
 }
 
 interface ProviderSink {
@@ -44,6 +46,7 @@ interface ProviderSink {
 }
 
 const isConnectionError = (e: unknown): boolean => e instanceof TransportError && (e.code === 'not-connected' || e.code === 'disconnected');
+const CHAT_PAGE = 60;
 
 /*
  * One daemon chat per node id. Like the terminal's session client: a node opens on mount and
@@ -218,6 +221,36 @@ export class ChatClient {
         }
     }
 
+    async loadEarlier(chatId: string): Promise<void> {
+        const entry = this.mounted.get(chatId);
+        const cursor = entry?.historyCursor;
+        if (!entry || !cursor || entry.loadingHistory) {
+            return;
+        }
+        entry.loadingHistory = true;
+        this.sink.setHistoryLoading(chatId, true);
+        try {
+            const page = await this.transport.request('chat.history', { chatId, cursor, limit: CHAT_PAGE });
+            if (this.mounted.get(chatId) !== entry) {
+                return;
+            }
+            entry.historyCursor = page.history.cursor;
+            this.sink.prepend(chatId, page.items, page.history.cursor);
+        } catch (error) {
+            if (error instanceof TransportError && error.code === 'history-expired' && this.mounted.get(chatId) === entry) {
+                entry.seq = undefined;
+                await this.attach(chatId);
+                return;
+            }
+            throw error;
+        } finally {
+            if (this.mounted.get(chatId) === entry) {
+                entry.loadingHistory = false;
+                this.sink.setHistoryLoading(chatId, false);
+            }
+        }
+    }
+
     isMounted(chatId: string): boolean {
         return this.mounted.has(chatId);
     }
@@ -248,7 +281,11 @@ export class ChatClient {
             runtimeMode: entry?.runtimeMode
         });
         const since = entry?.seq;
-        const result = await this.transport.request('chat.attach', { chatId, ...(since === undefined ? {} : { since }) });
+        const result = await this.transport.request('chat.attach', {
+            chatId,
+            historyLimit: CHAT_PAGE,
+            ...(since === undefined ? {} : { since })
+        });
         const current = this.mounted.get(chatId);
         if (!current) {
             return;
@@ -263,7 +300,15 @@ export class ChatClient {
             }
             return;
         }
-        this.sink.reset(chatId, result.info, result.items);
+        current.historyCursor = result.history?.cursor ?? null;
+        const items = [...result.items];
+        const known = new Set(items.map((item) => item.id));
+        for (const pending of result.pending ?? []) {
+            if (!known.has(pending.id)) {
+                items.push(pending);
+            }
+        }
+        this.sink.reset(chatId, result.info, items, current.historyCursor);
     }
 
     private sendPreferences(): void {

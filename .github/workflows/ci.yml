@@ -14,10 +14,15 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
+      - run: rustup show active-toolchain
+      - uses: Swatinem/rust-cache@v2
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - run: cargo test --locked --workspace --lib
       - run: bun run check
       - run: bun run format:check
       - run: bun run build

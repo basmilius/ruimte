@@ -1,0 +1,5422 @@
+[
+  {
+    "method": "server.hello",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "server.hello",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "server.hello",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "server.hello",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "server.hello",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "server.hello",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "server.hello",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "server.ping",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "server.ping",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "server.ping",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "server.ping",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "server.ping",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "server.ping",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "server.ping",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "session.create",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "session.create",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "session.create",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "session.create",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "session.create",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "session.create",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "session.create",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "push.attention",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "push.attention",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "push.attention",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "push.attention",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "push.attention",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "push.attention",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "push.attention",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "push.read",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "push.read",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "push.read",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "push.read",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "push.read",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "push.read",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "push.read",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "push.subscribe",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "push.subscribe",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "push.subscribe",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "push.subscribe",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "push.subscribe",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "push.subscribe",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "push.subscribe",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "push.unsubscribe",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "push.unsubscribe",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "push.unsubscribe",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "push.unsubscribe",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "push.unsubscribe",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "push.unsubscribe",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "push.unsubscribe",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "session.attach",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "session.attach",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "session.attach",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "session.attach",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "session.attach",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "session.attach",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "session.attach",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "session.detach",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "session.detach",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "session.detach",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "session.detach",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "session.detach",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "session.detach",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "session.detach",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "session.write",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "session.write",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "session.write",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "session.write",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "session.write",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "session.write",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "session.write",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "session.resize",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "session.resize",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "session.resize",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "session.resize",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "session.resize",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "session.resize",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "session.resize",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "session.kill",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "session.kill",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "session.kill",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "session.kill",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "session.kill",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "session.kill",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "session.kill",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "session.clear",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "session.clear",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "session.clear",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "session.clear",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "session.clear",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "session.clear",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "session.clear",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "session.list",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "session.list",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "session.list",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "session.list",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "session.list",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "session.list",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "session.list",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "browser.open",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "browser.open",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "browser.open",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "browser.open",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "browser.open",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "browser.open",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "browser.open",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "browser.detach",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "browser.detach",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "browser.detach",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "browser.detach",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "browser.detach",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "browser.detach",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "browser.detach",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "browser.kill",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "browser.kill",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "browser.kill",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "browser.kill",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "browser.kill",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "browser.kill",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "browser.kill",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "browser.navigate",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "browser.navigate",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "browser.navigate",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "browser.navigate",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "browser.navigate",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "browser.navigate",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "browser.navigate",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "browser.command",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "browser.command",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "browser.command",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "browser.command",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "browser.command",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "browser.command",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "browser.command",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "browser.resize",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "browser.resize",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "browser.resize",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "browser.resize",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "browser.resize",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "browser.resize",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "browser.resize",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "browser.input",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "browser.input",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "browser.input",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "browser.input",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "browser.input",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "browser.input",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "browser.input",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "device.list",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "device.list",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "device.list",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "device.list",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "device.list",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "device.list",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "device.list",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "device.boot",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "device.boot",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "device.boot",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "device.boot",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "device.boot",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "device.boot",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "device.boot",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "device.shutdown",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "device.shutdown",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "device.shutdown",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "device.shutdown",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "device.shutdown",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "device.shutdown",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "device.shutdown",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "device.open",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "device.open",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "device.open",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "device.open",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "device.open",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "device.open",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "device.open",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "device.detach",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "device.detach",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "device.detach",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "device.detach",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "device.detach",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "device.detach",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "device.detach",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "device.input",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "device.input",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "device.input",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "device.input",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "device.input",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "device.input",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "device.input",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "device.detail",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "device.detail",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "device.detail",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "device.detail",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "device.detail",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "device.detail",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "device.detail",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "device.action",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "device.action",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "device.action",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "device.action",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "device.action",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "device.action",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "device.action",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "agent.resume",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "agent.resume",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "agent.resume",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "agent.resume",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "agent.resume",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "agent.resume",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "agent.resume",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "agent.answerApproval",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "agent.answerApproval",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "agent.answerApproval",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "agent.answerApproval",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "agent.answerApproval",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "agent.answerApproval",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "agent.answerApproval",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "agent.setApprovals",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "agent.setApprovals",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "agent.setApprovals",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "agent.setApprovals",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "agent.setApprovals",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "agent.setApprovals",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "agent.setApprovals",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.create",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.create",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.create",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.create",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.create",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.create",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.create",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.history",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.history",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.history",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.history",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.history",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.history",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.history",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.attach",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.attach",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.attach",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.attach",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.attach",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.attach",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.attach",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.detach",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.detach",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.detach",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.detach",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.detach",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.detach",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.detach",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.send",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.send",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.send",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.send",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.send",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.send",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.send",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.unqueue",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.unqueue",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.unqueue",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.unqueue",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.unqueue",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.unqueue",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.unqueue",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.sendNow",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.sendNow",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.sendNow",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.sendNow",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.sendNow",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.sendNow",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.sendNow",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.cancel",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.cancel",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.cancel",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.cancel",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.cancel",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.cancel",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.cancel",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.approve",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.approve",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.approve",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.approve",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.approve",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.approve",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.approve",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.answer",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.answer",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.answer",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.answer",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.answer",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.answer",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.answer",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.dismiss",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.dismiss",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.dismiss",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.dismiss",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.dismiss",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.dismiss",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.dismiss",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.configure",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.configure",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.configure",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.configure",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.configure",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.configure",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.configure",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.setPreferences",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "chat.setPreferences",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "chat.setPreferences",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.setPreferences",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.setPreferences",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.setPreferences",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.setPreferences",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.compact",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.compact",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.compact",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.compact",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.compact",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.compact",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.compact",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.clear",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.clear",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.clear",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.clear",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.clear",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.clear",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.clear",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.turnDiff",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.turnDiff",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.turnDiff",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.turnDiff",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.turnDiff",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.turnDiff",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.turnDiff",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.fork",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.fork",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.fork",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.fork",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.fork",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.fork",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.fork",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.forkInfo",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.forkInfo",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.forkInfo",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.forkInfo",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.forkInfo",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.forkInfo",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.forkInfo",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.summarize",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.summarize",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.summarize",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.summarize",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.summarize",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.summarize",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.summarize",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.subagent",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.subagent",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.subagent",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.subagent",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.subagent",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.subagent",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.subagent",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.stopSubagent",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.stopSubagent",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.stopSubagent",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.stopSubagent",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.stopSubagent",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.stopSubagent",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.stopSubagent",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "skills.list",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "skills.list",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "skills.list",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "skills.list",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "skills.list",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "skills.list",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "skills.list",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "provider.list",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "provider.list",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "provider.list",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "provider.list",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "provider.list",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "provider.list",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "provider.list",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "project.list",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "project.list",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "project.list",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "project.list",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "project.list",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "project.list",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "project.list",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "project.open",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "project.open",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "project.open",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "project.open",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "project.open",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "project.open",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "project.open",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "project.save",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "project.save",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "project.save",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "project.save",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "project.save",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "project.save",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "project.save",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "project.save-local",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "project.save-local",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "project.save-local",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "project.save-local",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "project.save-local",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "project.save-local",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "project.save-local",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "project.close",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "project.close",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "project.close",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "project.close",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "project.close",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "project.close",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "project.close",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "project.release",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "project.release",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "project.release",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "project.release",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "project.release",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "project.release",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "project.release",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "project.setIcon",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "project.setIcon",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "project.setIcon",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "project.setIcon",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "project.setIcon",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "project.setIcon",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "project.setIcon",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "project.setIdentity",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "project.setIdentity",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "project.setIdentity",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "project.setIdentity",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "project.setIdentity",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "project.setIdentity",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "project.setIdentity",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "project.settings",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "project.settings",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "project.settings",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "project.settings",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "project.settings",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "project.settings",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "project.settings",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "project.settings-update",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "project.settings-update",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "project.settings-update",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "project.settings-update",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "project.settings-update",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "project.settings-update",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "project.settings-update",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "project.delete",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "project.delete",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "project.delete",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "project.delete",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "project.delete",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "project.delete",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "project.delete",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "drawing.paths",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "drawing.paths",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "drawing.paths",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "drawing.paths",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "drawing.paths",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "drawing.paths",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "drawing.paths",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "drawing.open",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "drawing.open",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "drawing.open",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "drawing.open",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "drawing.open",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "drawing.open",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "drawing.open",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "drawing.save",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "drawing.save",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "drawing.save",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "drawing.save",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "drawing.save",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "drawing.save",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "drawing.save",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "drawing.close",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "drawing.close",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "drawing.close",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "drawing.close",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "drawing.close",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "drawing.close",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "drawing.close",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "drawing.copy",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "drawing.copy",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "drawing.copy",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "drawing.copy",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "drawing.copy",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "drawing.copy",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "drawing.copy",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "diagram.layout",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "diagram.layout",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "diagram.layout",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "diagram.layout",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "diagram.layout",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "diagram.layout",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "diagram.layout",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "diagram.open",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "diagram.open",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "diagram.open",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "diagram.open",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "diagram.open",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "diagram.open",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "diagram.open",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "diagram.save",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "diagram.save",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "diagram.save",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "diagram.save",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "diagram.save",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "diagram.save",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "diagram.save",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "diagram.close",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "diagram.close",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "diagram.close",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "diagram.close",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "diagram.close",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "diagram.close",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "diagram.close",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "diagram.copy",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "diagram.copy",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "diagram.copy",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "diagram.copy",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "diagram.copy",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "diagram.copy",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "diagram.copy",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "fs.browse",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "fs.browse",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "fs.browse",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "fs.browse",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "fs.browse",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "fs.browse",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "fs.browse",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "fs.reveal",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "fs.reveal",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "fs.reveal",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "fs.reveal",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "fs.reveal",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "fs.reveal",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "fs.reveal",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "fs.search",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "fs.search",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "fs.search",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "fs.search",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "fs.search",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "fs.search",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "fs.search",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "fs.grep",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "fs.grep",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "fs.grep",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "fs.grep",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "fs.grep",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "fs.grep",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "fs.grep",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "fs.list",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "fs.list",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "fs.list",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "fs.list",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "fs.list",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "fs.list",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "fs.list",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "fs.read",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "fs.read",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "fs.read",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "fs.read",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "fs.read",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "fs.read",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "fs.read",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "fs.watch",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "fs.watch",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "fs.watch",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "fs.watch",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "fs.watch",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "fs.watch",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "fs.watch",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "fs.unwatch",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "fs.unwatch",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "fs.unwatch",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "fs.unwatch",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "fs.unwatch",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "fs.unwatch",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "fs.unwatch",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "bytes.read",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "bytes.read",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "bytes.read",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "bytes.read",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "bytes.read",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "bytes.read",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "bytes.read",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "git.worktree-add",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "git.worktree-add",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "git.worktree-add",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "git.worktree-add",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "git.worktree-add",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "git.worktree-add",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "git.worktree-add",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "git.worktree-list",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "git.worktree-list",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "git.worktree-list",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "git.worktree-list",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "git.worktree-list",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "git.worktree-list",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "git.worktree-list",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "git.worktree-remove",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "git.worktree-remove",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "git.worktree-remove",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "git.worktree-remove",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "git.worktree-remove",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "git.worktree-remove",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "git.worktree-remove",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "git.worktree-merge",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "git.worktree-merge",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "git.worktree-merge",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "git.worktree-merge",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "git.worktree-merge",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "git.worktree-merge",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "git.worktree-merge",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "git.worktree-abort",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "git.worktree-abort",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "git.worktree-abort",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "git.worktree-abort",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "git.worktree-abort",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "git.worktree-abort",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "git.worktree-abort",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "git.status",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "git.status",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "git.status",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "git.status",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "git.status",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "git.status",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "git.status",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "git.watch",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "git.watch",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "git.watch",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "git.watch",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "git.watch",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "git.watch",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "git.watch",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "git.unwatch",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "git.unwatch",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "git.unwatch",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "git.unwatch",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "git.unwatch",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "git.unwatch",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "git.unwatch",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "git.diff",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "git.diff",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "git.diff",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "git.diff",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "git.diff",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "git.diff",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "git.diff",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "git.stage",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "git.stage",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "git.stage",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "git.stage",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "git.stage",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "git.stage",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "git.stage",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "git.discard",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "git.discard",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "git.discard",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "git.discard",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "git.discard",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "git.discard",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "git.discard",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "git.refs",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "git.refs",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "git.refs",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "git.refs",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "git.refs",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "git.refs",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "git.refs",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "git.log",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "git.log",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "git.log",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "git.log",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "git.log",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "git.log",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "git.log",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "git.action",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "git.action",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "git.action",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "git.action",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "git.action",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "git.action",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "git.action",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "git.cancel",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "git.cancel",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "git.cancel",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "git.cancel",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "git.cancel",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "git.cancel",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "git.cancel",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "git.capabilities",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "git.capabilities",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "git.capabilities",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "git.capabilities",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "git.capabilities",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "git.capabilities",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "git.capabilities",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "git.suggestMessage",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "git.suggestMessage",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "git.suggestMessage",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "git.suggestMessage",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "git.suggestMessage",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "git.suggestMessage",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "git.suggestMessage",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "usage.summary",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "usage.summary",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "usage.summary",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "usage.summary",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "usage.summary",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "usage.summary",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "usage.summary",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "usage.subscribe",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "usage.subscribe",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "usage.subscribe",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "usage.subscribe",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "usage.subscribe",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "usage.subscribe",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "usage.subscribe",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "usage.unsubscribe",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "usage.unsubscribe",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "usage.unsubscribe",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "usage.unsubscribe",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "usage.unsubscribe",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "usage.unsubscribe",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "usage.unsubscribe",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "usage.limits",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "usage.limits",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "usage.limits",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "usage.limits",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "usage.limits",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "usage.limits",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "usage.limits",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "usage.refreshLimits",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "usage.refreshLimits",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "usage.refreshLimits",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "usage.refreshLimits",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "usage.refreshLimits",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "usage.refreshLimits",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "usage.refreshLimits",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "processes.subscribe",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "processes.subscribe",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "processes.subscribe",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "processes.subscribe",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "processes.subscribe",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "processes.subscribe",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "processes.subscribe",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "processes.unsubscribe",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "processes.unsubscribe",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "processes.unsubscribe",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "processes.unsubscribe",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "processes.unsubscribe",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "processes.unsubscribe",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "processes.unsubscribe",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "processes.signal",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "processes.signal",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "processes.signal",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "processes.signal",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "processes.signal",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "processes.signal",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "processes.signal",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "processes.listAlerts",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "processes.listAlerts",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "processes.listAlerts",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "processes.listAlerts",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "processes.listAlerts",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "processes.listAlerts",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "processes.listAlerts",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "processes.dismiss",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "processes.dismiss",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "processes.dismiss",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "processes.dismiss",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "processes.dismiss",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "processes.dismiss",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "processes.dismiss",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "endpoint.info",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "endpoint.info",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "endpoint.info",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "endpoint.info",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "endpoint.info",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "endpoint.info",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "endpoint.info",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "endpoint.setIdentity",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "endpoint.setIdentity",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "endpoint.setIdentity",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "endpoint.setIdentity",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "endpoint.setIdentity",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "endpoint.setIdentity",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "endpoint.setIdentity",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "endpoint.signRegistration",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "endpoint.signRegistration",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "endpoint.signRegistration",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "endpoint.signRegistration",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "endpoint.signRegistration",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "endpoint.signRegistration",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "endpoint.signRegistration",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "auth.sessions",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "auth.sessions",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "auth.sessions",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "auth.sessions",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "auth.sessions",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "auth.sessions",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "auth.sessions",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "auth.revoke",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "auth.revoke",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "auth.revoke",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "auth.revoke",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "auth.revoke",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "auth.revoke",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "auth.revoke",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "auth.pairingToken",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "auth.pairingToken",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "auth.pairingToken",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "auth.pairingToken",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "auth.pairingToken",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "auth.pairingToken",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "auth.pairingToken",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "auth.registerKey",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "auth.registerKey",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "auth.registerKey",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "auth.registerKey",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "auth.registerKey",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "auth.registerKey",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "auth.registerKey",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "direct.signal",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "direct.signal",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "direct.signal",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "direct.signal",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "direct.signal",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "direct.signal",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "direct.signal",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.kill",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "chat.kill",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.kill",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.kill",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.kill",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.kill",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.kill",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "chat.list",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "chat.list",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "chat.list",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "chat.list",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "chat.list",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "chat.list",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "chat.list",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "task.list",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "task.list",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "task.list",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "task.list",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "task.list",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "task.list",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "task.list",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "agent.children",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "agent.children",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "agent.children",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "agent.children",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "agent.children",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "agent.children",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "agent.children",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "plan.list",
+    "input": {},
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "plan.list",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": true,
+    "output": {}
+  },
+  {
+    "method": "plan.list",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "plan.list",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "plan.list",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "plan.list",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "plan.list",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "plan.apply",
+    "input": {},
+    "ok": false
+  },
+  {
+    "method": "plan.apply",
+    "input": {
+      "extra": "strip me"
+    },
+    "ok": false
+  },
+  {
+    "method": "plan.apply",
+    "input": null,
+    "ok": false
+  },
+  {
+    "method": "plan.apply",
+    "input": [],
+    "ok": false
+  },
+  {
+    "method": "plan.apply",
+    "input": true,
+    "ok": false
+  },
+  {
+    "method": "plan.apply",
+    "input": 0,
+    "ok": false
+  },
+  {
+    "method": "plan.apply",
+    "input": "",
+    "ok": false
+  },
+  {
+    "method": "session.attach",
+    "input": {
+      "sessionId": "s",
+      "follow": true
+    },
+    "ok": true,
+    "output": {
+      "sessionId": "s",
+      "follow": true
+    }
+  },
+  {
+    "method": "session.attach",
+    "input": {
+      "sessionId": "s",
+      "follow": false
+    },
+    "ok": false
+  },
+  {
+    "method": "session.attach",
+    "input": {
+      "sessionId": "s",
+      "cols": 80,
+      "rows": 24
+    },
+    "ok": true,
+    "output": {
+      "sessionId": "s",
+      "cols": 80,
+      "rows": 24
+    }
+  },
+  {
+    "method": "session.attach",
+    "input": {
+      "sessionId": "s",
+      "cols": null,
+      "rows": null,
+      "follow": true
+    },
+    "ok": false
+  },
+  {
+    "method": "session.attach",
+    "input": {
+      "sessionId": "s",
+      "cols": 80,
+      "follow": true
+    },
+    "ok": false
+  },
+  {
+    "method": "session.attach",
+    "input": {
+      "sessionId": "s",
+      "cols": 80,
+      "rows": 24,
+      "extra": true
+    },
+    "ok": true,
+    "output": {
+      "sessionId": "s",
+      "cols": 80,
+      "rows": 24
+    }
+  },
+  {
+    "method": "session.attach",
+    "input": {
+      "sessionId": "s",
+      "cols": 0,
+      "rows": 24
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.send",
+    "input": {
+      "chatId": "c",
+      "text": ""
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.send",
+    "input": {
+      "chatId": "c",
+      "text": "   "
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.send",
+    "input": {
+      "chatId": "c",
+      "text": "hello"
+    },
+    "ok": true,
+    "output": {
+      "chatId": "c",
+      "text": "hello"
+    }
+  },
+  {
+    "method": "chat.send",
+    "input": {
+      "chatId": "c",
+      "text": "hello",
+      "attachments": null
+    },
+    "ok": false
+  },
+  {
+    "method": "chat.send",
+    "input": {
+      "chatId": "c",
+      "text": "hello",
+      "attachments": [],
+      "extra": 1
+    },
+    "ok": true,
+    "output": {
+      "chatId": "c",
+      "text": "hello",
+      "attachments": []
+    }
+  },
+  {
+    "method": "project.save",
+    "input": {
+      "projectId": "p",
+      "baseRev": 0,
+      "content": {
+        "name": "P",
+        "color": "#112233",
+        "views": []
+      }
+    },
+    "ok": false
+  },
+  {
+    "method": "project.save",
+    "input": {
+      "projectId": "p",
+      "baseRev": 0,
+      "content": {
+        "name": "P",
+        "color": "#112233",
+        "views": [
+          {
+            "kind": "canvas",
+            "id": "v",
+            "name": "V",
+            "nodes": [],
+            "texts": [],
+            "edges": []
+          }
+        ]
+      }
+    },
+    "ok": true,
+    "output": {
+      "projectId": "p",
+      "baseRev": 0,
+      "content": {
+        "name": "P",
+        "color": "#112233",
+        "views": [
+          {
+            "id": "v",
+            "name": "V",
+            "kind": "canvas",
+            "nodes": [],
+            "texts": [],
+            "edges": [],
+            "layouts": []
+          }
+        ]
+      }
+    }
+  },
+  {
+    "method": "project.save",
+    "input": {
+      "projectId": "p",
+      "baseRev": 0,
+      "content": {
+        "name": "P",
+        "color": "#112233",
+        "views": [
+          {
+            "kind": "future-view",
+            "id": "v",
+            "name": "V",
+            "future": {
+              "preserved": true
+            }
+          }
+        ]
+      }
+    },
+    "ok": true,
+    "output": {
+      "projectId": "p",
+      "baseRev": 0,
+      "content": {
+        "name": "P",
+        "color": "#112233",
+        "views": [
+          {
+            "kind": "unknown",
+            "id": "v",
+            "name": "V",
+            "raw": {
+              "kind": "future-view",
+              "id": "v",
+              "name": "V",
+              "future": {
+                "preserved": true
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "method": "project.save",
+    "input": {
+      "projectId": "p",
+      "baseRev": 0,
+      "content": {
+        "name": "P",
+        "color": "#112233",
+        "views": [
+          {
+            "kind": "canvas",
+            "id": "v",
+            "name": "V",
+            "nodes": [
+              {
+                "kind": "future-node",
+                "id": "n",
+                "future": true
+              }
+            ],
+            "texts": [],
+            "edges": []
+          }
+        ]
+      }
+    },
+    "ok": true,
+    "output": {
+      "projectId": "p",
+      "baseRev": 0,
+      "content": {
+        "name": "P",
+        "color": "#112233",
+        "views": [
+          {
+            "id": "v",
+            "name": "V",
+            "kind": "canvas",
+            "nodes": [
+              {
+                "id": "n",
+                "kind": "unknown",
+                "title": "future-node",
+                "x": 0,
+                "y": 0,
+                "w": 320,
+                "h": 200,
+                "raw": {
+                  "kind": "future-node",
+                  "id": "n",
+                  "future": true
+                }
+              }
+            ],
+            "texts": [],
+            "edges": [],
+            "layouts": []
+          }
+        ]
+      }
+    }
+  },
+  {
+    "method": "endpoint.setIdentity",
+    "input": {
+      "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "ok": false
+  },
+  {
+    "method": "endpoint.setIdentity",
+    "input": {
+      "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "ok": false
+  },
+  {
+    "method": "endpoint.setIdentity",
+    "input": {
+      "name": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+    },
+    "ok": false
+  },
+  {
+    "method": "endpoint.setIdentity",
+    "input": {
+      "name": "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
+    },
+    "ok": false
+  },
+  {
+    "method": "endpoint.setIdentity",
+    "input": {
+      "name": "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
+    },
+    "ok": false
+  },
+  {
+    "method": "device.open",
+    "input": {
+      "backendId": "simctl",
+      "platform": "ios",
+      "deviceId": "phone-1"
+    },
+    "ok": true,
+    "output": {
+      "deviceId": "phone-1",
+      "backendId": "simctl",
+      "platform": "ios"
+    }
+  },
+  {
+    "method": "device.open",
+    "input": {
+      "backendId": "simctl",
+      "platform": "ios",
+      "deviceId": "phone-1",
+      "stream": "http"
+    },
+    "ok": true,
+    "output": {
+      "deviceId": "phone-1",
+      "backendId": "simctl",
+      "platform": "ios",
+      "stream": "http"
+    }
+  },
+  {
+    "method": "device.open",
+    "input": {
+      "backendId": "simctl",
+      "platform": "ios",
+      "deviceId": "phone-1",
+      "stream": "events",
+      "extra": true
+    },
+    "ok": true,
+    "output": {
+      "deviceId": "phone-1",
+      "backendId": "simctl",
+      "platform": "ios",
+      "stream": "events"
+    }
+  },
+  {
+    "method": "device.open",
+    "input": {
+      "backendId": "simctl",
+      "platform": "ios",
+      "deviceId": "phone-1",
+      "stream": "video"
+    },
+    "ok": false
+  },
+  {
+    "method": "device.input",
+    "input": {
+      "backendId": "simctl",
+      "platform": "ios",
+      "deviceId": "phone-1",
+      "input": {
+        "kind": "pointer",
+        "phase": "down",
+        "x": 0.5,
+        "y": 0.25,
+        "edge": "bottom",
+        "extra": true
+      }
+    },
+    "ok": true,
+    "output": {
+      "deviceId": "phone-1",
+      "backendId": "simctl",
+      "platform": "ios",
+      "input": {
+        "kind": "pointer",
+        "phase": "down",
+        "x": 0.5,
+        "y": 0.25,
+        "edge": "bottom"
+      }
+    }
+  },
+  {
+    "method": "device.input",
+    "input": {
+      "backendId": "simctl",
+      "platform": "ios",
+      "deviceId": "phone-1",
+      "input": {
+        "kind": "multiPointer",
+        "phase": "move",
+        "first": {
+          "x": 0,
+          "y": 1
+        },
+        "second": {
+          "x": 1,
+          "y": 0
+        }
+      }
+    },
+    "ok": true,
+    "output": {
+      "deviceId": "phone-1",
+      "backendId": "simctl",
+      "platform": "ios",
+      "input": {
+        "kind": "multiPointer",
+        "phase": "move",
+        "first": {
+          "x": 0,
+          "y": 1
+        },
+        "second": {
+          "x": 1,
+          "y": 0
+        }
+      }
+    }
+  },
+  {
+    "method": "device.input",
+    "input": {
+      "backendId": "simctl",
+      "platform": "ios",
+      "deviceId": "phone-1",
+      "input": {
+        "kind": "scroll",
+        "deltaX": 10,
+        "deltaY": -20,
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "ok": true,
+    "output": {
+      "deviceId": "phone-1",
+      "backendId": "simctl",
+      "platform": "ios",
+      "input": {
+        "kind": "scroll",
+        "deltaX": 10,
+        "deltaY": -20,
+        "x": 0.5,
+        "y": 0.5
+      }
+    }
+  },
+  {
+    "method": "device.input",
+    "input": {
+      "backendId": "simctl",
+      "platform": "ios",
+      "deviceId": "phone-1",
+      "input": {
+        "kind": "pointer",
+        "phase": "down",
+        "x": -0.1,
+        "y": 0.25
+      }
+    },
+    "ok": false
+  },
+  {
+    "method": "device.input",
+    "input": {
+      "backendId": "simctl",
+      "platform": "ios",
+      "deviceId": "phone-1",
+      "input": {
+        "kind": "button",
+        "button": "unknown"
+      }
+    },
+    "ok": false
+  },
+  {
+    "method": "device.action",
+    "input": {
+      "backendId": "simctl",
+      "platform": "ios",
+      "deviceId": "phone-1",
+      "action": "setAppearance",
+      "value": "dark",
+      "extra": true
+    },
+    "ok": true,
+    "output": {
+      "deviceId": "phone-1",
+      "backendId": "simctl",
+      "platform": "ios",
+      "action": "setAppearance",
+      "value": "dark"
+    }
+  },
+  {
+    "method": "device.action",
+    "input": {
+      "backendId": "simctl",
+      "platform": "ios",
+      "deviceId": "phone-1",
+      "action": "setPermission",
+      "appId": "  com.example.app  ",
+      "permission": "camera",
+      "decision": "grant"
+    },
+    "ok": true,
+    "output": {
+      "deviceId": "phone-1",
+      "backendId": "simctl",
+      "platform": "ios",
+      "action": "setPermission",
+      "appId": "com.example.app",
+      "permission": "camera",
+      "decision": "grant"
+    }
+  },
+  {
+    "method": "device.action",
+    "input": {
+      "backendId": "simctl",
+      "platform": "ios",
+      "deviceId": "phone-1",
+      "action": "openUrl",
+      "url": "  https://example.test/path  "
+    },
+    "ok": true,
+    "output": {
+      "deviceId": "phone-1",
+      "backendId": "simctl",
+      "platform": "ios",
+      "action": "openUrl",
+      "url": "https://example.test/path"
+    }
+  },
+  {
+    "method": "device.action",
+    "input": {
+      "backendId": "simctl",
+      "platform": "ios",
+      "deviceId": "phone-1",
+      "action": "launchApp",
+      "appId": "   "
+    },
+    "ok": false
+  },
+  {
+    "method": "device.action",
+    "input": {
+      "backendId": "simctl",
+      "platform": "ios",
+      "deviceId": "phone-1",
+      "action": "setLocation",
+      "latitude": 91,
+      "longitude": 0
+    },
+    "ok": false
+  },
+  {
+    "method": "project.save",
+    "input": {
+      "projectId": "p",
+      "baseRev": 0,
+      "content": {
+        "name": "P",
+        "color": "#112233",
+        "views": [
+          {
+            "kind": "canvas",
+            "id": "v",
+            "name": "V",
+            "nodes": [
+              {
+                "id": "phone",
+                "kind": "device",
+                "title": "Phone",
+                "x": 0,
+                "y": 0,
+                "w": 360,
+                "h": 720,
+                "device": {
+                  "platform": "ios",
+                  "kind": "simulator",
+                  "name": "iPhone",
+                  "runtime": "iOS 27.0"
+                }
+              }
+            ],
+            "texts": [
+              {
+                "id": "text",
+                "x": 2,
+                "y": 3,
+                "text": "hello",
+                "size": 16,
+                "font": "mono",
+                "bold": true
+              }
+            ],
+            "edges": [
+              {
+                "id": "edge",
+                "from": "phone",
+                "to": "text",
+                "fromSide": "right",
+                "toSide": "left"
+              }
+            ]
+          },
+          {
+            "id": "phone-view",
+            "kind": "device",
+            "name": "Phone",
+            "device": {
+              "platform": "ios",
+              "kind": "simulator",
+              "name": "iPhone",
+              "runtime": "iOS 27.0"
+            }
+          }
+        ]
+      }
+    },
+    "ok": true,
+    "output": {
+      "projectId": "p",
+      "baseRev": 0,
+      "content": {
+        "name": "P",
+        "color": "#112233",
+        "views": [
+          {
+            "id": "v",
+            "name": "V",
+            "kind": "canvas",
+            "nodes": [
+              {
+                "id": "phone",
+                "kind": "device",
+                "title": "Phone",
+                "x": 0,
+                "y": 0,
+                "w": 360,
+                "h": 720,
+                "device": {
+                  "platform": "ios",
+                  "kind": "simulator",
+                  "name": "iPhone",
+                  "runtime": "iOS 27.0"
+                }
+              }
+            ],
+            "texts": [
+              {
+                "id": "text",
+                "x": 2,
+                "y": 3,
+                "text": "hello",
+                "size": 16,
+                "font": "mono",
+                "bold": true
+              }
+            ],
+            "edges": [
+              {
+                "id": "edge",
+                "from": "phone",
+                "to": "text",
+                "fromSide": "right",
+                "toSide": "left"
+              }
+            ],
+            "layouts": []
+          },
+          {
+            "id": "phone-view",
+            "name": "Phone",
+            "kind": "device",
+            "device": {
+              "platform": "ios",
+              "kind": "simulator",
+              "name": "iPhone",
+              "runtime": "iOS 27.0"
+            }
+          }
+        ]
+      }
+    }
+  }
+]

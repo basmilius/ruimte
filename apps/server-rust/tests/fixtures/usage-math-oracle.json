@@ -1,0 +1,4046 @@
+{
+  "prices": {
+    "document": {
+      "anthropic/claude-opus-4-5": {
+        "litellm_provider": "anthropic",
+        "mode": "chat",
+        "input_cost_per_token": 0.000005,
+        "output_cost_per_token": 0.000025
+      },
+      "openai/gpt-5": {
+        "litellm_provider": "openai",
+        "mode": "responses",
+        "input_cost_per_token": 0.00000125,
+        "output_cost_per_token": 0.00001,
+        "cache_read_input_token_cost": 1.25e-7
+      },
+      "gpt-5-mini": {
+        "litellm_provider": "openai",
+        "mode": "chat",
+        "input_cost_per_token": 2.5e-7,
+        "output_cost_per_token": 0.000002
+      },
+      "other/provider": {
+        "litellm_provider": "other",
+        "mode": "chat",
+        "input_cost_per_token": 1,
+        "output_cost_per_token": 1
+      },
+      "half": {
+        "litellm_provider": "anthropic",
+        "mode": "chat",
+        "input_cost_per_token": 1,
+        "output_cost_per_token": null
+      },
+      "negative": {
+        "litellm_provider": "anthropic",
+        "mode": "chat",
+        "input_cost_per_token": -1,
+        "output_cost_per_token": 2
+      },
+      "embedding": {
+        "litellm_provider": "anthropic",
+        "mode": "embedding",
+        "input_cost_per_token": 1,
+        "output_cost_per_token": 2
+      },
+      "bad": null,
+      "prefix/conflict": {
+        "litellm_provider": "anthropic",
+        "mode": "chat",
+        "input_cost_per_token": 1,
+        "output_cost_per_token": 2
+      },
+      "conflict": {
+        "litellm_provider": "anthropic",
+        "mode": "chat",
+        "input_cost_per_token": 3,
+        "output_cost_per_token": 4
+      }
+    },
+    "parsed": [
+      [
+        "anthropic/claude-opus-4-5",
+        {
+          "input": 0.000005,
+          "output": 0.000025,
+          "cacheRead": 5.000000000000001e-7,
+          "cacheWrite": 0.00000625,
+          "cacheWrite1h": 0.00001
+        }
+      ],
+      [
+        "claude-opus-4-5",
+        {
+          "input": 0.000005,
+          "output": 0.000025,
+          "cacheRead": 5.000000000000001e-7,
+          "cacheWrite": 0.00000625,
+          "cacheWrite1h": 0.00001
+        }
+      ],
+      [
+        "openai/gpt-5",
+        {
+          "input": 0.00000125,
+          "output": 0.00001,
+          "cacheRead": 1.25e-7,
+          "cacheWrite": 0.0000015625,
+          "cacheWrite1h": 0.0000025
+        }
+      ],
+      [
+        "gpt-5",
+        {
+          "input": 0.00000125,
+          "output": 0.00001,
+          "cacheRead": 1.25e-7,
+          "cacheWrite": 0.0000015625,
+          "cacheWrite1h": 0.0000025
+        }
+      ],
+      [
+        "gpt-5-mini",
+        {
+          "input": 2.5e-7,
+          "output": 0.000002,
+          "cacheRead": 2.5e-8,
+          "cacheWrite": 3.1249999999999997e-7,
+          "cacheWrite1h": 5e-7
+        }
+      ],
+      [
+        "prefix/conflict",
+        {
+          "input": 1,
+          "output": 2,
+          "cacheRead": 0.1,
+          "cacheWrite": 1.25,
+          "cacheWrite1h": 2
+        }
+      ],
+      [
+        "conflict",
+        {
+          "input": 3,
+          "output": 4,
+          "cacheRead": 0.30000000000000004,
+          "cacheWrite": 3.75,
+          "cacheWrite1h": 6
+        }
+      ]
+    ],
+    "lookups": [
+      {
+        "model": "claude-opus-4-5",
+        "expected": {
+          "price": {
+            "input": 0.000005,
+            "output": 0.000025,
+            "cacheRead": 5.000000000000001e-7,
+            "cacheWrite": 0.00000625,
+            "cacheWrite1h": 0.00001
+          },
+          "basis": "exact",
+          "pricedAs": null
+        }
+      },
+      {
+        "model": "Claude-Opus-4-5-20251101",
+        "expected": {
+          "price": {
+            "input": 0.000005,
+            "output": 0.000025,
+            "cacheRead": 5.000000000000001e-7,
+            "cacheWrite": 0.00000625,
+            "cacheWrite1h": 0.00001
+          },
+          "basis": "exact",
+          "pricedAs": "claude-opus-4-5"
+        }
+      },
+      {
+        "model": "vendor/claude-opus-4-5-20251101",
+        "expected": {
+          "price": {
+            "input": 0.000005,
+            "output": 0.000025,
+            "cacheRead": 5.000000000000001e-7,
+            "cacheWrite": 0.00000625,
+            "cacheWrite1h": 0.00001
+          },
+          "basis": "exact",
+          "pricedAs": "claude-opus-4-5"
+        }
+      },
+      {
+        "model": "gpt-5-mini-new",
+        "expected": {
+          "price": {
+            "input": 2.5e-7,
+            "output": 0.000002,
+            "cacheRead": 2.5e-8,
+            "cacheWrite": 3.1249999999999997e-7,
+            "cacheWrite1h": 5e-7
+          },
+          "basis": "family",
+          "pricedAs": "gpt-5-mini"
+        }
+      },
+      {
+        "model": "gpt-5[1m]",
+        "expected": {
+          "price": {
+            "input": 0.00000125,
+            "output": 0.00001,
+            "cacheRead": 1.25e-7,
+            "cacheWrite": 0.0000015625,
+            "cacheWrite1h": 0.0000025
+          },
+          "basis": "exact",
+          "pricedAs": null
+        }
+      },
+      {
+        "model": "gpt-5-pro",
+        "expected": {
+          "price": {
+            "input": 0.00000125,
+            "output": 0.00001,
+            "cacheRead": 1.25e-7,
+            "cacheWrite": 0.0000015625,
+            "cacheWrite1h": 0.0000025
+          },
+          "basis": "family",
+          "pricedAs": "gpt-5"
+        }
+      },
+      {
+        "model": "opus",
+        "expected": {
+          "price": null,
+          "basis": "unknown",
+          "pricedAs": null
+        }
+      },
+      {
+        "model": "synthetic",
+        "expected": {
+          "price": null,
+          "basis": "unknown",
+          "pricedAs": null
+        }
+      },
+      {
+        "model": "unknown",
+        "expected": {
+          "price": null,
+          "basis": "unknown",
+          "pricedAs": null
+        }
+      },
+      {
+        "model": "  OPENAI/GPT-5  ",
+        "expected": {
+          "price": {
+            "input": 0.00000125,
+            "output": 0.00001,
+            "cacheRead": 1.25e-7,
+            "cacheWrite": 0.0000015625,
+            "cacheWrite1h": 0.0000025
+          },
+          "basis": "exact",
+          "pricedAs": null
+        }
+      },
+      {
+        "model": "conflict",
+        "expected": {
+          "price": {
+            "input": 3,
+            "output": 4,
+            "cacheRead": 0.30000000000000004,
+            "cacheWrite": 3.75,
+            "cacheWrite1h": 6
+          },
+          "basis": "exact",
+          "pricedAs": null
+        }
+      },
+      {
+        "model": "prefix/conflict",
+        "expected": {
+          "price": {
+            "input": 1,
+            "output": 2,
+            "cacheRead": 0.1,
+            "cacheWrite": 1.25,
+            "cacheWrite1h": 2
+          },
+          "basis": "exact",
+          "pricedAs": null
+        }
+      }
+    ],
+    "costs": [
+      {
+        "totals": {
+          "calls": 1,
+          "input": 1000,
+          "cacheRead": 800,
+          "cacheWrite": 200,
+          "cacheWrite1h": 100,
+          "output": 400,
+          "reasoning": 300
+        },
+        "price": {
+          "input": 0.00000125,
+          "output": 0.00001,
+          "cacheRead": 1.25e-7,
+          "cacheWrite": 0.0000015625,
+          "cacheWrite1h": 0.0000025
+        },
+        "cost": 0.00575625,
+        "savings": 0.0009
+      },
+      {
+        "totals": {
+          "calls": 1,
+          "input": 1000,
+          "cacheRead": 800,
+          "cacheWrite": 200,
+          "cacheWrite1h": 300,
+          "output": 400,
+          "reasoning": 300
+        },
+        "price": {
+          "input": 0.00000125,
+          "output": 0.00001,
+          "cacheRead": 1.25e-7,
+          "cacheWrite": 0.0000015625,
+          "cacheWrite1h": 0.0000025
+        },
+        "cost": 0.0061,
+        "savings": 0.0009
+      },
+      {
+        "totals": {
+          "calls": 1,
+          "input": 1000,
+          "cacheRead": 800,
+          "cacheWrite": 200,
+          "cacheWrite1h": 100,
+          "output": 400,
+          "reasoning": 0
+        },
+        "price": {
+          "input": 0.00000125,
+          "output": 0.00001,
+          "cacheRead": 1.25e-7,
+          "cacheWrite": 0.0000015625,
+          "cacheWrite1h": 0.0000025
+        },
+        "cost": 0.00575625,
+        "savings": 0.0009
+      }
+    ]
+  },
+  "records": [
+    {
+      "provider": "claude",
+      "timestampMs": 1774745999000,
+      "model": "claude-opus-4-5",
+      "sessionId": "same",
+      "cwd": "",
+      "totals": {
+        "calls": 1,
+        "input": 1000,
+        "cacheRead": 800,
+        "cacheWrite": 200,
+        "cacheWrite1h": 100,
+        "output": 400,
+        "reasoning": 300
+      },
+      "dedupeKey": null
+    },
+    {
+      "provider": "codex",
+      "timestampMs": 1774745999100,
+      "model": "gpt-5-mini",
+      "sessionId": "same",
+      "cwd": "",
+      "totals": {
+        "calls": 2,
+        "input": 1000,
+        "cacheRead": 800,
+        "cacheWrite": 200,
+        "cacheWrite1h": 300,
+        "output": 400,
+        "reasoning": 300
+      },
+      "dedupeKey": null
+    },
+    {
+      "provider": "claude",
+      "timestampMs": 1774746000000,
+      "model": "claude-opus-4-5",
+      "sessionId": "same",
+      "cwd": "",
+      "totals": {
+        "calls": 1,
+        "input": 1000,
+        "cacheRead": 800,
+        "cacheWrite": 200,
+        "cacheWrite1h": 100,
+        "output": 400,
+        "reasoning": 300
+      },
+      "dedupeKey": null
+    },
+    {
+      "provider": "codex",
+      "timestampMs": 1774746000100,
+      "model": "unknown",
+      "sessionId": "",
+      "cwd": "",
+      "totals": {
+        "calls": 2,
+        "input": 1000,
+        "cacheRead": 800,
+        "cacheWrite": 200,
+        "cacheWrite1h": 300,
+        "output": 400,
+        "reasoning": 300
+      },
+      "dedupeKey": null
+    },
+    {
+      "provider": "claude",
+      "timestampMs": 1792888200000,
+      "model": "claude-opus-4-5",
+      "sessionId": "same",
+      "cwd": "",
+      "totals": {
+        "calls": 1,
+        "input": 1000,
+        "cacheRead": 800,
+        "cacheWrite": 200,
+        "cacheWrite1h": 100,
+        "output": 400,
+        "reasoning": 300
+      },
+      "dedupeKey": null
+    },
+    {
+      "provider": "codex",
+      "timestampMs": 1792888200100,
+      "model": "gpt-5-mini",
+      "sessionId": "same",
+      "cwd": "",
+      "totals": {
+        "calls": 2,
+        "input": 1000,
+        "cacheRead": 800,
+        "cacheWrite": 200,
+        "cacheWrite1h": 300,
+        "output": 400,
+        "reasoning": 300
+      },
+      "dedupeKey": null
+    },
+    {
+      "provider": "claude",
+      "timestampMs": 1792891800000,
+      "model": "claude-opus-4-5",
+      "sessionId": "same",
+      "cwd": "",
+      "totals": {
+        "calls": 1,
+        "input": 1000,
+        "cacheRead": 800,
+        "cacheWrite": 200,
+        "cacheWrite1h": 100,
+        "output": 400,
+        "reasoning": 300
+      },
+      "dedupeKey": null
+    },
+    {
+      "provider": "codex",
+      "timestampMs": 1792891800100,
+      "model": "unknown",
+      "sessionId": "",
+      "cwd": "",
+      "totals": {
+        "calls": 2,
+        "input": 1000,
+        "cacheRead": 800,
+        "cacheWrite": 200,
+        "cacheWrite1h": 300,
+        "output": 400,
+        "reasoning": 300
+      },
+      "dedupeKey": null
+    },
+    {
+      "provider": "claude",
+      "timestampMs": 1789774200000,
+      "model": "claude-opus-4-5",
+      "sessionId": "same",
+      "cwd": "",
+      "totals": {
+        "calls": 1,
+        "input": 1000,
+        "cacheRead": 800,
+        "cacheWrite": 200,
+        "cacheWrite1h": 100,
+        "output": 400,
+        "reasoning": 300
+      },
+      "dedupeKey": null
+    },
+    {
+      "provider": "codex",
+      "timestampMs": 1789774200100,
+      "model": "gpt-5-mini",
+      "sessionId": "same",
+      "cwd": "",
+      "totals": {
+        "calls": 2,
+        "input": 1000,
+        "cacheRead": 800,
+        "cacheWrite": 200,
+        "cacheWrite1h": 300,
+        "output": 400,
+        "reasoning": 300
+      },
+      "dedupeKey": null
+    }
+  ],
+  "aggregations": [
+    {
+      "payload": {
+        "from": "2026-03-29",
+        "to": "2026-10-25",
+        "timeZone": "UTC",
+        "resolution": "hour"
+      },
+      "expected": {
+        "buckets": [
+          {
+            "slot": "2026-03-29T00",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29T00",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29T01",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29T01",
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "cacheSavingsUsd": 0,
+            "sessions": 0
+          },
+          {
+            "slot": "2026-09-18T23",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-09-18T23",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25T00",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25T00",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25T01",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25T01",
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "cacheSavingsUsd": 0,
+            "sessions": 0
+          }
+        ],
+        "models": [
+          {
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 5,
+              "input": 5000,
+              "cacheRead": 4000,
+              "cacheWrite": 1000,
+              "cacheWrite1h": 500,
+              "output": 2000,
+              "reasoning": 1500
+            },
+            "costUsd": 0.08512499999999999,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 6,
+              "input": 3000,
+              "cacheRead": 2400,
+              "cacheWrite": 600,
+              "cacheWrite1h": 900,
+              "output": 1200,
+              "reasoning": 900
+            },
+            "costUsd": 0.00366,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 4,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 600,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": null,
+            "priceBasis": "unknown",
+            "pricedAs": null
+          }
+        ],
+        "projects": [
+          {
+            "folder": "",
+            "name": "Elsewhere",
+            "projectId": null,
+            "byProvider": {
+              "claude": {
+                "costUsd": 0.08512499999999999,
+                "tokens": 12000
+              },
+              "codex": {
+                "costUsd": 0.00366,
+                "tokens": 12000
+              }
+            },
+            "totals": {
+              "calls": 15,
+              "input": 10000,
+              "cacheRead": 8000,
+              "cacheWrite": 2000,
+              "cacheWrite1h": 2000,
+              "output": 4000,
+              "reasoning": 3000
+            },
+            "costUsd": 0.08878499999999999
+          }
+        ],
+        "sessions": 2
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-09-18",
+        "to": "2026-09-18",
+        "timeZone": "UTC",
+        "resolution": "hour"
+      },
+      "expected": {
+        "buckets": [
+          {
+            "slot": "2026-09-18T23",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-09-18T23",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          }
+        ],
+        "models": [
+          {
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "priceBasis": "exact",
+            "pricedAs": null
+          }
+        ],
+        "projects": [
+          {
+            "folder": "",
+            "name": "Elsewhere",
+            "projectId": null,
+            "byProvider": {
+              "claude": {
+                "costUsd": 0.017025,
+                "tokens": 2400
+              },
+              "codex": {
+                "costUsd": 0.00122,
+                "tokens": 2400
+              }
+            },
+            "totals": {
+              "calls": 3,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 400,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.018244999999999997
+          }
+        ],
+        "sessions": 2
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-03-29",
+        "to": "2026-10-25",
+        "timeZone": "UTC",
+        "resolution": "day"
+      },
+      "expected": {
+        "buckets": [
+          {
+            "slot": "2026-03-29",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 2,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 200,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.03405,
+            "cacheSavingsUsd": 0.0072,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29",
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "cacheSavingsUsd": 0,
+            "sessions": 0
+          },
+          {
+            "slot": "2026-09-18",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-09-18",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 2,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 200,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.03405,
+            "cacheSavingsUsd": 0.0072,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25",
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "cacheSavingsUsd": 0,
+            "sessions": 0
+          }
+        ],
+        "models": [
+          {
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 5,
+              "input": 5000,
+              "cacheRead": 4000,
+              "cacheWrite": 1000,
+              "cacheWrite1h": 500,
+              "output": 2000,
+              "reasoning": 1500
+            },
+            "costUsd": 0.08512499999999999,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 6,
+              "input": 3000,
+              "cacheRead": 2400,
+              "cacheWrite": 600,
+              "cacheWrite1h": 900,
+              "output": 1200,
+              "reasoning": 900
+            },
+            "costUsd": 0.00366,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 4,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 600,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": null,
+            "priceBasis": "unknown",
+            "pricedAs": null
+          }
+        ],
+        "projects": [
+          {
+            "folder": "",
+            "name": "Elsewhere",
+            "projectId": null,
+            "byProvider": {
+              "claude": {
+                "costUsd": 0.08512499999999999,
+                "tokens": 12000
+              },
+              "codex": {
+                "costUsd": 0.00366,
+                "tokens": 12000
+              }
+            },
+            "totals": {
+              "calls": 15,
+              "input": 10000,
+              "cacheRead": 8000,
+              "cacheWrite": 2000,
+              "cacheWrite1h": 2000,
+              "output": 4000,
+              "reasoning": 3000
+            },
+            "costUsd": 0.08878499999999999
+          }
+        ],
+        "sessions": 2
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-09-18",
+        "to": "2026-09-18",
+        "timeZone": "UTC",
+        "resolution": "day"
+      },
+      "expected": {
+        "buckets": [
+          {
+            "slot": "2026-09-18",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-09-18",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          }
+        ],
+        "models": [
+          {
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "priceBasis": "exact",
+            "pricedAs": null
+          }
+        ],
+        "projects": [
+          {
+            "folder": "",
+            "name": "Elsewhere",
+            "projectId": null,
+            "byProvider": {
+              "claude": {
+                "costUsd": 0.017025,
+                "tokens": 2400
+              },
+              "codex": {
+                "costUsd": 0.00122,
+                "tokens": 2400
+              }
+            },
+            "totals": {
+              "calls": 3,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 400,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.018244999999999997
+          }
+        ],
+        "sessions": 2
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-03-29",
+        "to": "2026-10-25",
+        "timeZone": "Europe/Amsterdam",
+        "resolution": "hour"
+      },
+      "expected": {
+        "buckets": [
+          {
+            "slot": "2026-03-29T01",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29T01",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29T03",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29T03",
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "cacheSavingsUsd": 0,
+            "sessions": 0
+          },
+          {
+            "slot": "2026-09-19T01",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-09-19T01",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25T02",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 2,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 200,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.03405,
+            "cacheSavingsUsd": 0.0072,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25T02",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25T02",
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "cacheSavingsUsd": 0,
+            "sessions": 0
+          }
+        ],
+        "models": [
+          {
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 5,
+              "input": 5000,
+              "cacheRead": 4000,
+              "cacheWrite": 1000,
+              "cacheWrite1h": 500,
+              "output": 2000,
+              "reasoning": 1500
+            },
+            "costUsd": 0.08512499999999999,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 6,
+              "input": 3000,
+              "cacheRead": 2400,
+              "cacheWrite": 600,
+              "cacheWrite1h": 900,
+              "output": 1200,
+              "reasoning": 900
+            },
+            "costUsd": 0.00366,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 4,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 600,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": null,
+            "priceBasis": "unknown",
+            "pricedAs": null
+          }
+        ],
+        "projects": [
+          {
+            "folder": "",
+            "name": "Elsewhere",
+            "projectId": null,
+            "byProvider": {
+              "claude": {
+                "costUsd": 0.08512499999999999,
+                "tokens": 12000
+              },
+              "codex": {
+                "costUsd": 0.00366,
+                "tokens": 12000
+              }
+            },
+            "totals": {
+              "calls": 15,
+              "input": 10000,
+              "cacheRead": 8000,
+              "cacheWrite": 2000,
+              "cacheWrite1h": 2000,
+              "output": 4000,
+              "reasoning": 3000
+            },
+            "costUsd": 0.08878499999999999
+          }
+        ],
+        "sessions": 2
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-09-18",
+        "to": "2026-09-18",
+        "timeZone": "Europe/Amsterdam",
+        "resolution": "hour"
+      },
+      "expected": {
+        "buckets": [],
+        "models": [],
+        "projects": [],
+        "sessions": 0
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-03-29",
+        "to": "2026-10-25",
+        "timeZone": "Europe/Amsterdam",
+        "resolution": "day"
+      },
+      "expected": {
+        "buckets": [
+          {
+            "slot": "2026-03-29",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 2,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 200,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.03405,
+            "cacheSavingsUsd": 0.0072,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29",
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "cacheSavingsUsd": 0,
+            "sessions": 0
+          },
+          {
+            "slot": "2026-09-19",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-09-19",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 2,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 200,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.03405,
+            "cacheSavingsUsd": 0.0072,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25",
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "cacheSavingsUsd": 0,
+            "sessions": 0
+          }
+        ],
+        "models": [
+          {
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 5,
+              "input": 5000,
+              "cacheRead": 4000,
+              "cacheWrite": 1000,
+              "cacheWrite1h": 500,
+              "output": 2000,
+              "reasoning": 1500
+            },
+            "costUsd": 0.08512499999999999,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 6,
+              "input": 3000,
+              "cacheRead": 2400,
+              "cacheWrite": 600,
+              "cacheWrite1h": 900,
+              "output": 1200,
+              "reasoning": 900
+            },
+            "costUsd": 0.00366,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 4,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 600,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": null,
+            "priceBasis": "unknown",
+            "pricedAs": null
+          }
+        ],
+        "projects": [
+          {
+            "folder": "",
+            "name": "Elsewhere",
+            "projectId": null,
+            "byProvider": {
+              "claude": {
+                "costUsd": 0.08512499999999999,
+                "tokens": 12000
+              },
+              "codex": {
+                "costUsd": 0.00366,
+                "tokens": 12000
+              }
+            },
+            "totals": {
+              "calls": 15,
+              "input": 10000,
+              "cacheRead": 8000,
+              "cacheWrite": 2000,
+              "cacheWrite1h": 2000,
+              "output": 4000,
+              "reasoning": 3000
+            },
+            "costUsd": 0.08878499999999999
+          }
+        ],
+        "sessions": 2
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-09-18",
+        "to": "2026-09-18",
+        "timeZone": "Europe/Amsterdam",
+        "resolution": "day"
+      },
+      "expected": {
+        "buckets": [],
+        "models": [],
+        "projects": [],
+        "sessions": 0
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-03-29",
+        "to": "2026-10-25",
+        "timeZone": "America/New_York",
+        "resolution": "hour"
+      },
+      "expected": {
+        "buckets": [
+          {
+            "slot": "2026-09-18T19",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-09-18T19",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-24T20",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-24T20",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-24T21",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-24T21",
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "cacheSavingsUsd": 0,
+            "sessions": 0
+          }
+        ],
+        "models": [
+          {
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 3,
+              "input": 3000,
+              "cacheRead": 2400,
+              "cacheWrite": 600,
+              "cacheWrite1h": 300,
+              "output": 1200,
+              "reasoning": 900
+            },
+            "costUsd": 0.051074999999999995,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 4,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 600,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.00244,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "priceBasis": "unknown",
+            "pricedAs": null
+          }
+        ],
+        "projects": [
+          {
+            "folder": "",
+            "name": "Elsewhere",
+            "projectId": null,
+            "byProvider": {
+              "claude": {
+                "costUsd": 0.051074999999999995,
+                "tokens": 7200
+              },
+              "codex": {
+                "costUsd": 0.00244,
+                "tokens": 7200
+              }
+            },
+            "totals": {
+              "calls": 9,
+              "input": 6000,
+              "cacheRead": 4800,
+              "cacheWrite": 1200,
+              "cacheWrite1h": 1200,
+              "output": 2400,
+              "reasoning": 1800
+            },
+            "costUsd": 0.05351499999999999
+          }
+        ],
+        "sessions": 2
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-09-18",
+        "to": "2026-09-18",
+        "timeZone": "America/New_York",
+        "resolution": "hour"
+      },
+      "expected": {
+        "buckets": [
+          {
+            "slot": "2026-09-18T19",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-09-18T19",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          }
+        ],
+        "models": [
+          {
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "priceBasis": "exact",
+            "pricedAs": null
+          }
+        ],
+        "projects": [
+          {
+            "folder": "",
+            "name": "Elsewhere",
+            "projectId": null,
+            "byProvider": {
+              "claude": {
+                "costUsd": 0.017025,
+                "tokens": 2400
+              },
+              "codex": {
+                "costUsd": 0.00122,
+                "tokens": 2400
+              }
+            },
+            "totals": {
+              "calls": 3,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 400,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.018244999999999997
+          }
+        ],
+        "sessions": 2
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-03-29",
+        "to": "2026-10-25",
+        "timeZone": "America/New_York",
+        "resolution": "day"
+      },
+      "expected": {
+        "buckets": [
+          {
+            "slot": "2026-09-18",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-09-18",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-24",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 2,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 200,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.03405,
+            "cacheSavingsUsd": 0.0072,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-24",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-24",
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "cacheSavingsUsd": 0,
+            "sessions": 0
+          }
+        ],
+        "models": [
+          {
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 3,
+              "input": 3000,
+              "cacheRead": 2400,
+              "cacheWrite": 600,
+              "cacheWrite1h": 300,
+              "output": 1200,
+              "reasoning": 900
+            },
+            "costUsd": 0.051074999999999995,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 4,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 600,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.00244,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "priceBasis": "unknown",
+            "pricedAs": null
+          }
+        ],
+        "projects": [
+          {
+            "folder": "",
+            "name": "Elsewhere",
+            "projectId": null,
+            "byProvider": {
+              "claude": {
+                "costUsd": 0.051074999999999995,
+                "tokens": 7200
+              },
+              "codex": {
+                "costUsd": 0.00244,
+                "tokens": 7200
+              }
+            },
+            "totals": {
+              "calls": 9,
+              "input": 6000,
+              "cacheRead": 4800,
+              "cacheWrite": 1200,
+              "cacheWrite1h": 1200,
+              "output": 2400,
+              "reasoning": 1800
+            },
+            "costUsd": 0.05351499999999999
+          }
+        ],
+        "sessions": 2
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-09-18",
+        "to": "2026-09-18",
+        "timeZone": "America/New_York",
+        "resolution": "day"
+      },
+      "expected": {
+        "buckets": [
+          {
+            "slot": "2026-09-18",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-09-18",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          }
+        ],
+        "models": [
+          {
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "priceBasis": "exact",
+            "pricedAs": null
+          }
+        ],
+        "projects": [
+          {
+            "folder": "",
+            "name": "Elsewhere",
+            "projectId": null,
+            "byProvider": {
+              "claude": {
+                "costUsd": 0.017025,
+                "tokens": 2400
+              },
+              "codex": {
+                "costUsd": 0.00122,
+                "tokens": 2400
+              }
+            },
+            "totals": {
+              "calls": 3,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 400,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.018244999999999997
+          }
+        ],
+        "sessions": 2
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-03-29",
+        "to": "2026-10-25",
+        "timeZone": "Asia/Kathmandu",
+        "resolution": "hour"
+      },
+      "expected": {
+        "buckets": [
+          {
+            "slot": "2026-03-29T06",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 2,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 200,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.03405,
+            "cacheSavingsUsd": 0.0072,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29T06",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29T06",
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "cacheSavingsUsd": 0,
+            "sessions": 0
+          },
+          {
+            "slot": "2026-09-19T05",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-09-19T05",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25T06",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25T06",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25T07",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25T07",
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "cacheSavingsUsd": 0,
+            "sessions": 0
+          }
+        ],
+        "models": [
+          {
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 5,
+              "input": 5000,
+              "cacheRead": 4000,
+              "cacheWrite": 1000,
+              "cacheWrite1h": 500,
+              "output": 2000,
+              "reasoning": 1500
+            },
+            "costUsd": 0.08512499999999999,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 6,
+              "input": 3000,
+              "cacheRead": 2400,
+              "cacheWrite": 600,
+              "cacheWrite1h": 900,
+              "output": 1200,
+              "reasoning": 900
+            },
+            "costUsd": 0.00366,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 4,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 600,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": null,
+            "priceBasis": "unknown",
+            "pricedAs": null
+          }
+        ],
+        "projects": [
+          {
+            "folder": "",
+            "name": "Elsewhere",
+            "projectId": null,
+            "byProvider": {
+              "claude": {
+                "costUsd": 0.08512499999999999,
+                "tokens": 12000
+              },
+              "codex": {
+                "costUsd": 0.00366,
+                "tokens": 12000
+              }
+            },
+            "totals": {
+              "calls": 15,
+              "input": 10000,
+              "cacheRead": 8000,
+              "cacheWrite": 2000,
+              "cacheWrite1h": 2000,
+              "output": 4000,
+              "reasoning": 3000
+            },
+            "costUsd": 0.08878499999999999
+          }
+        ],
+        "sessions": 2
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-09-18",
+        "to": "2026-09-18",
+        "timeZone": "Asia/Kathmandu",
+        "resolution": "hour"
+      },
+      "expected": {
+        "buckets": [],
+        "models": [],
+        "projects": [],
+        "sessions": 0
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-03-29",
+        "to": "2026-10-25",
+        "timeZone": "Asia/Kathmandu",
+        "resolution": "day"
+      },
+      "expected": {
+        "buckets": [
+          {
+            "slot": "2026-03-29",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 2,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 200,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.03405,
+            "cacheSavingsUsd": 0.0072,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29",
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "cacheSavingsUsd": 0,
+            "sessions": 0
+          },
+          {
+            "slot": "2026-09-19",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-09-19",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 2,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 200,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.03405,
+            "cacheSavingsUsd": 0.0072,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25",
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "cacheSavingsUsd": 0,
+            "sessions": 0
+          }
+        ],
+        "models": [
+          {
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 5,
+              "input": 5000,
+              "cacheRead": 4000,
+              "cacheWrite": 1000,
+              "cacheWrite1h": 500,
+              "output": 2000,
+              "reasoning": 1500
+            },
+            "costUsd": 0.08512499999999999,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 6,
+              "input": 3000,
+              "cacheRead": 2400,
+              "cacheWrite": 600,
+              "cacheWrite1h": 900,
+              "output": 1200,
+              "reasoning": 900
+            },
+            "costUsd": 0.00366,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 4,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 600,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": null,
+            "priceBasis": "unknown",
+            "pricedAs": null
+          }
+        ],
+        "projects": [
+          {
+            "folder": "",
+            "name": "Elsewhere",
+            "projectId": null,
+            "byProvider": {
+              "claude": {
+                "costUsd": 0.08512499999999999,
+                "tokens": 12000
+              },
+              "codex": {
+                "costUsd": 0.00366,
+                "tokens": 12000
+              }
+            },
+            "totals": {
+              "calls": 15,
+              "input": 10000,
+              "cacheRead": 8000,
+              "cacheWrite": 2000,
+              "cacheWrite1h": 2000,
+              "output": 4000,
+              "reasoning": 3000
+            },
+            "costUsd": 0.08878499999999999
+          }
+        ],
+        "sessions": 2
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-09-18",
+        "to": "2026-09-18",
+        "timeZone": "Asia/Kathmandu",
+        "resolution": "day"
+      },
+      "expected": {
+        "buckets": [],
+        "models": [],
+        "projects": [],
+        "sessions": 0
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-03-29",
+        "to": "2026-10-25",
+        "timeZone": "Invalid/Zone",
+        "resolution": "hour"
+      },
+      "expected": {
+        "buckets": [
+          {
+            "slot": "2026-03-29T00",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29T00",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29T01",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29T01",
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "cacheSavingsUsd": 0,
+            "sessions": 0
+          },
+          {
+            "slot": "2026-09-18T23",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-09-18T23",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25T00",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25T00",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25T01",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25T01",
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "cacheSavingsUsd": 0,
+            "sessions": 0
+          }
+        ],
+        "models": [
+          {
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 5,
+              "input": 5000,
+              "cacheRead": 4000,
+              "cacheWrite": 1000,
+              "cacheWrite1h": 500,
+              "output": 2000,
+              "reasoning": 1500
+            },
+            "costUsd": 0.08512499999999999,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 6,
+              "input": 3000,
+              "cacheRead": 2400,
+              "cacheWrite": 600,
+              "cacheWrite1h": 900,
+              "output": 1200,
+              "reasoning": 900
+            },
+            "costUsd": 0.00366,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 4,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 600,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": null,
+            "priceBasis": "unknown",
+            "pricedAs": null
+          }
+        ],
+        "projects": [
+          {
+            "folder": "",
+            "name": "Elsewhere",
+            "projectId": null,
+            "byProvider": {
+              "claude": {
+                "costUsd": 0.08512499999999999,
+                "tokens": 12000
+              },
+              "codex": {
+                "costUsd": 0.00366,
+                "tokens": 12000
+              }
+            },
+            "totals": {
+              "calls": 15,
+              "input": 10000,
+              "cacheRead": 8000,
+              "cacheWrite": 2000,
+              "cacheWrite1h": 2000,
+              "output": 4000,
+              "reasoning": 3000
+            },
+            "costUsd": 0.08878499999999999
+          }
+        ],
+        "sessions": 2
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-09-18",
+        "to": "2026-09-18",
+        "timeZone": "Invalid/Zone",
+        "resolution": "hour"
+      },
+      "expected": {
+        "buckets": [
+          {
+            "slot": "2026-09-18T23",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-09-18T23",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          }
+        ],
+        "models": [
+          {
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "priceBasis": "exact",
+            "pricedAs": null
+          }
+        ],
+        "projects": [
+          {
+            "folder": "",
+            "name": "Elsewhere",
+            "projectId": null,
+            "byProvider": {
+              "claude": {
+                "costUsd": 0.017025,
+                "tokens": 2400
+              },
+              "codex": {
+                "costUsd": 0.00122,
+                "tokens": 2400
+              }
+            },
+            "totals": {
+              "calls": 3,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 400,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.018244999999999997
+          }
+        ],
+        "sessions": 2
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-03-29",
+        "to": "2026-10-25",
+        "timeZone": "Invalid/Zone",
+        "resolution": "day"
+      },
+      "expected": {
+        "buckets": [
+          {
+            "slot": "2026-03-29",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 2,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 200,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.03405,
+            "cacheSavingsUsd": 0.0072,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-03-29",
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "cacheSavingsUsd": 0,
+            "sessions": 0
+          },
+          {
+            "slot": "2026-09-18",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-09-18",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 2,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 200,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.03405,
+            "cacheSavingsUsd": 0.0072,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-10-25",
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": null,
+            "cacheSavingsUsd": 0,
+            "sessions": 0
+          }
+        ],
+        "models": [
+          {
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 5,
+              "input": 5000,
+              "cacheRead": 4000,
+              "cacheWrite": 1000,
+              "cacheWrite1h": 500,
+              "output": 2000,
+              "reasoning": 1500
+            },
+            "costUsd": 0.08512499999999999,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 6,
+              "input": 3000,
+              "cacheRead": 2400,
+              "cacheWrite": 600,
+              "cacheWrite1h": 900,
+              "output": 1200,
+              "reasoning": 900
+            },
+            "costUsd": 0.00366,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "unknown",
+            "totals": {
+              "calls": 4,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 600,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": null,
+            "priceBasis": "unknown",
+            "pricedAs": null
+          }
+        ],
+        "projects": [
+          {
+            "folder": "",
+            "name": "Elsewhere",
+            "projectId": null,
+            "byProvider": {
+              "claude": {
+                "costUsd": 0.08512499999999999,
+                "tokens": 12000
+              },
+              "codex": {
+                "costUsd": 0.00366,
+                "tokens": 12000
+              }
+            },
+            "totals": {
+              "calls": 15,
+              "input": 10000,
+              "cacheRead": 8000,
+              "cacheWrite": 2000,
+              "cacheWrite1h": 2000,
+              "output": 4000,
+              "reasoning": 3000
+            },
+            "costUsd": 0.08878499999999999
+          }
+        ],
+        "sessions": 2
+      }
+    },
+    {
+      "payload": {
+        "from": "2026-09-18",
+        "to": "2026-09-18",
+        "timeZone": "Invalid/Zone",
+        "resolution": "day"
+      },
+      "expected": {
+        "buckets": [
+          {
+            "slot": "2026-09-18",
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "cacheSavingsUsd": 0.0036,
+            "sessions": 1
+          },
+          {
+            "slot": "2026-09-18",
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "cacheSavingsUsd": 0.00017999999999999998,
+            "sessions": 1
+          }
+        ],
+        "models": [
+          {
+            "provider": "claude",
+            "model": "claude-opus-4-5",
+            "totals": {
+              "calls": 1,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 100,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.017025,
+            "priceBasis": "exact",
+            "pricedAs": null
+          },
+          {
+            "provider": "codex",
+            "model": "gpt-5-mini",
+            "totals": {
+              "calls": 2,
+              "input": 1000,
+              "cacheRead": 800,
+              "cacheWrite": 200,
+              "cacheWrite1h": 300,
+              "output": 400,
+              "reasoning": 300
+            },
+            "costUsd": 0.00122,
+            "priceBasis": "exact",
+            "pricedAs": null
+          }
+        ],
+        "projects": [
+          {
+            "folder": "",
+            "name": "Elsewhere",
+            "projectId": null,
+            "byProvider": {
+              "claude": {
+                "costUsd": 0.017025,
+                "tokens": 2400
+              },
+              "codex": {
+                "costUsd": 0.00122,
+                "tokens": 2400
+              }
+            },
+            "totals": {
+              "calls": 3,
+              "input": 2000,
+              "cacheRead": 1600,
+              "cacheWrite": 400,
+              "cacheWrite1h": 400,
+              "output": 800,
+              "reasoning": 600
+            },
+            "costUsd": 0.018244999999999997
+          }
+        ],
+        "sessions": 2
+      }
+    }
+  ],
+  "limits": {
+    "claude": [
+      {
+        "input": null,
+        "expected": {
+          "unavailable": {
+            "reason": "failed",
+            "message": "Claude Code returned no readable usage"
+          }
+        }
+      },
+      {
+        "input": [],
+        "expected": {
+          "unavailable": {
+            "reason": "failed",
+            "message": "Claude Code returned no readable usage"
+          }
+        }
+      },
+      {
+        "input": {},
+        "expected": {
+          "unavailable": {
+            "reason": "no-subscription",
+            "message": null
+          }
+        }
+      },
+      {
+        "input": {
+          "rate_limits_available": false
+        },
+        "expected": {
+          "unavailable": {
+            "reason": "no-subscription",
+            "message": null
+          }
+        }
+      },
+      {
+        "input": {
+          "rate_limits": {}
+        },
+        "expected": {
+          "plan": null,
+          "windows": [],
+          "cost": null
+        }
+      },
+      {
+        "input": {
+          "subscription_type": "max",
+          "session": {
+            "total_cost_usd": 1.25
+          },
+          "rate_limits": {
+            "five_hour": {
+              "utilization": 50,
+              "resets_at": "2026-09-19T10:00:00+02:00"
+            },
+            "seven_day": {
+              "utilization": 150,
+              "resets_at": "bad"
+            },
+            "seven_day_opus": {
+              "utilization": -5
+            },
+            "seven_day_sonnet": {
+              "utilization": "20"
+            },
+            "model_scoped": [
+              {
+                "display_name": "Sonnet 5 / Extended",
+                "utilization": 75,
+                "resets_at": "2026-09-20T00:00:00Z"
+              },
+              null
+            ]
+          }
+        },
+        "expected": {
+          "plan": "max",
+          "windows": [
+            {
+              "id": "five_hour",
+              "label": "Session",
+              "kind": "session",
+              "used": 0.5,
+              "resetsAt": 1789804800000,
+              "durationMs": 18000000
+            },
+            {
+              "id": "seven_day",
+              "label": "Weekly",
+              "kind": "weekly",
+              "used": 1,
+              "resetsAt": null,
+              "durationMs": 604800000
+            },
+            {
+              "id": "seven_day_opus",
+              "label": "Weekly · Opus",
+              "kind": "weekly",
+              "used": 0,
+              "resetsAt": null,
+              "durationMs": 604800000
+            },
+            {
+              "id": "seven_day_sonnet_5_extended",
+              "label": "Weekly · Sonnet 5 / Extended",
+              "kind": "weekly",
+              "used": 0.75,
+              "resetsAt": 1789862400000,
+              "durationMs": 604800000
+            }
+          ],
+          "cost": {
+            "sessionUsd": 1.25
+          }
+        }
+      },
+      {
+        "input": {
+          "subscription_type": 7,
+          "session": {
+            "total_cost_usd": "1"
+          },
+          "rate_limits": {
+            "five_hour": {
+              "utilization": 0
+            }
+          }
+        },
+        "expected": {
+          "plan": null,
+          "windows": [
+            {
+              "id": "five_hour",
+              "label": "Session",
+              "kind": "session",
+              "used": 0,
+              "resetsAt": null,
+              "durationMs": 18000000
+            }
+          ],
+          "cost": null
+        }
+      }
+    ],
+    "events": [
+      {
+        "input": null,
+        "expected": null
+      },
+      {
+        "input": {},
+        "expected": null
+      },
+      {
+        "input": {
+          "rateLimitType": "five_hour",
+          "utilization": 0.4,
+          "resetsAt": 1234.0005
+        },
+        "expected": {
+          "kind": "claude",
+          "windows": [
+            {
+              "id": "five_hour",
+              "label": "Session",
+              "kind": "session",
+              "durationMs": 18000000,
+              "used": 0.4,
+              "resetsAt": 1234001
+            }
+          ]
+        }
+      },
+      {
+        "input": {
+          "rateLimitType": "new_type",
+          "utilization": 2
+        },
+        "expected": {
+          "kind": "claude",
+          "windows": [
+            {
+              "id": "new_type",
+              "used": 1
+            }
+          ]
+        }
+      },
+      {
+        "input": {
+          "rateLimitType": "seven_day_opus",
+          "utilization": -1,
+          "resetsAt": -1.2345
+        },
+        "expected": {
+          "kind": "claude",
+          "windows": [
+            {
+              "id": "seven_day_opus",
+              "label": "Weekly · Opus",
+              "kind": "weekly",
+              "durationMs": 604800000,
+              "used": 0,
+              "resetsAt": -1234
+            }
+          ]
+        }
+      },
+      {
+        "input": {
+          "rateLimitType": 7,
+          "utilization": 0.2
+        },
+        "expected": null
+      }
+    ],
+    "codex": [
+      {
+        "input": null,
+        "expected": null
+      },
+      {
+        "input": [],
+        "expected": null
+      },
+      {
+        "input": {},
+        "expected": {
+          "plan": null,
+          "windows": [],
+          "cost": null
+        }
+      },
+      {
+        "input": {
+          "limitId": "model-extra",
+          "primary": {
+            "usedPercent": 50
+          }
+        },
+        "expected": null
+      },
+      {
+        "input": {
+          "planType": "pro",
+          "limitId": "codex",
+          "primary": {
+            "usedPercent": 20,
+            "windowDurationMins": 300,
+            "resetsAt": 1234.0015
+          },
+          "secondary": {
+            "usedPercent": 150,
+            "windowDurationMins": 10080,
+            "resetsAt": 1234
+          }
+        },
+        "expected": {
+          "plan": "pro",
+          "windows": [
+            {
+              "id": "primary",
+              "kind": "session",
+              "label": "Session",
+              "used": 0.2,
+              "resetsAt": 1234002,
+              "durationMs": 18000000
+            },
+            {
+              "id": "secondary",
+              "kind": "weekly",
+              "label": "Weekly",
+              "used": 1,
+              "resetsAt": 1234000,
+              "durationMs": 604800000
+            }
+          ],
+          "cost": null
+        }
+      },
+      {
+        "input": {
+          "primary": {
+            "usedPercent": -20,
+            "windowDurationMins": 43200
+          },
+          "secondary": {
+            "usedPercent": 1
+          }
+        },
+        "expected": {
+          "plan": null,
+          "windows": [
+            {
+              "id": "primary",
+              "kind": "monthly",
+              "label": "Monthly",
+              "used": 0,
+              "resetsAt": null,
+              "durationMs": 2592000000
+            },
+            {
+              "id": "secondary",
+              "kind": "other",
+              "label": "Usage",
+              "used": 0.01,
+              "resetsAt": null,
+              "durationMs": null
+            }
+          ],
+          "cost": null
+        }
+      },
+      {
+        "input": {
+          "primary": {
+            "usedPercent": "2"
+          },
+          "secondary": {
+            "usedPercent": 2,
+            "windowDurationMins": -1,
+            "resetsAt": -0.0015
+          }
+        },
+        "expected": {
+          "plan": null,
+          "windows": [
+            {
+              "id": "secondary",
+              "kind": "session",
+              "label": "Session",
+              "used": 0.02,
+              "resetsAt": -1,
+              "durationMs": -60000
+            }
+          ],
+          "cost": null
+        }
+      }
+    ],
+    "durations": [
+      {
+        "input": null,
+        "expected": "other"
+      },
+      {
+        "input": 0,
+        "expected": "session"
+      },
+      {
+        "input": -1,
+        "expected": "session"
+      },
+      {
+        "input": 604799999,
+        "expected": "session"
+      },
+      {
+        "input": 604800000,
+        "expected": "weekly"
+      },
+      {
+        "input": 2591999999,
+        "expected": "weekly"
+      },
+      {
+        "input": 2592000000,
+        "expected": "monthly"
+      }
+    ],
+    "merges": [
+      {
+        "known": [
+          {
+            "id": "five_hour",
+            "label": "Session",
+            "kind": "session",
+            "used": 0.5,
+            "resetsAt": 123,
+            "durationMs": 18000000
+          }
+        ],
+        "updates": [
+          {
+            "id": "five_hour",
+            "used": 0.7
+          }
+        ],
+        "expected": [
+          {
+            "id": "five_hour",
+            "label": "Session",
+            "kind": "session",
+            "used": 0.7,
+            "resetsAt": 123,
+            "durationMs": 18000000
+          }
+        ]
+      },
+      {
+        "known": [
+          {
+            "id": "five_hour",
+            "label": "Session",
+            "kind": "session",
+            "used": 0.5,
+            "resetsAt": 123,
+            "durationMs": 18000000
+          }
+        ],
+        "updates": [
+          {
+            "id": "five_hour",
+            "used": 0.8,
+            "resetsAt": null
+          }
+        ],
+        "expected": [
+          {
+            "id": "five_hour",
+            "label": "Session",
+            "kind": "session",
+            "used": 0.8,
+            "resetsAt": null,
+            "durationMs": 18000000
+          }
+        ]
+      },
+      {
+        "known": [
+          {
+            "id": "five_hour",
+            "label": "Session",
+            "kind": "session",
+            "used": 0.5,
+            "resetsAt": 123,
+            "durationMs": 18000000
+          }
+        ],
+        "updates": [
+          {
+            "id": "new",
+            "used": 1
+          }
+        ],
+        "expected": [
+          {
+            "id": "five_hour",
+            "label": "Session",
+            "kind": "session",
+            "used": 0.5,
+            "resetsAt": 123,
+            "durationMs": 18000000
+          },
+          {
+            "id": "new",
+            "kind": "other",
+            "label": "Usage",
+            "used": 1,
+            "resetsAt": null,
+            "durationMs": null
+          }
+        ]
+      },
+      {
+        "known": [
+          {
+            "id": "five_hour",
+            "label": "Session",
+            "kind": "session",
+            "used": 0.5,
+            "resetsAt": 123,
+            "durationMs": 18000000
+          }
+        ],
+        "updates": [
+          {
+            "id": "five_hour"
+          },
+          {
+            "used": 0.1
+          }
+        ],
+        "expected": [
+          {
+            "id": "five_hour",
+            "label": "Session",
+            "kind": "session",
+            "used": 0.5,
+            "resetsAt": 123,
+            "durationMs": 18000000
+          }
+        ]
+      },
+      {
+        "known": [
+          {
+            "id": "five_hour",
+            "label": "Session",
+            "kind": "session",
+            "used": 0.5,
+            "resetsAt": 123,
+            "durationMs": 18000000
+          }
+        ],
+        "updates": [
+          {
+            "id": "new",
+            "used": 0.1
+          },
+          {
+            "id": "new",
+            "used": 0.9,
+            "label": "Named"
+          }
+        ],
+        "expected": [
+          {
+            "id": "five_hour",
+            "label": "Session",
+            "kind": "session",
+            "used": 0.5,
+            "resetsAt": 123,
+            "durationMs": 18000000
+          },
+          {
+            "id": "new",
+            "kind": "other",
+            "label": "Named",
+            "used": 0.9,
+            "resetsAt": null,
+            "durationMs": null
+          }
+        ]
+      }
+    ]
+  }
+}

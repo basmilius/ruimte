@@ -28,6 +28,7 @@ class FakeTransport implements Transport {
     items: ChatItem[] = [];
     // What `chat.attach` answers when a test wants more than the thread, such as a seq or the events after `since`.
     attachResult: ((payload: RequestMap['chat.attach']['payload']) => Partial<RequestMap['chat.attach']['result']>) | null = null;
+    historyResult: RequestMap['chat.history']['result'] = { items: [], history: { start: 0, cursor: null } };
     private readonly statusHandlers = new Set<(status: TransportStatus) => void>();
     private readonly eventHandlers = new Map<string, Set<(payload: unknown) => void>>();
 
@@ -46,6 +47,8 @@ class FakeTransport implements Transport {
                     items: this.items,
                     ...this.attachResult?.(payload as RequestMap['chat.attach']['payload'])
                 } as RequestMap[T]['result']);
+            case 'chat.history':
+                return Promise.resolve(this.historyResult as RequestMap[T]['result']);
             case 'chat.configure':
                 return Promise.resolve({ ...info(chatId), runtimeMode: 'auto' } as RequestMap[T]['result']);
             case 'chat.send':
@@ -97,13 +100,20 @@ class FakeTransport implements Transport {
 }
 
 class FakeSink implements ChatSink {
-    readonly resets: Array<{ chatId: string; items: ChatItem[] }> = [];
+    readonly resets: Array<{ chatId: string; items: ChatItem[]; cursor?: string | null }> = [];
+    readonly prepends: Array<{ chatId: string; items: ChatItem[]; cursor: string | null }> = [];
     readonly events: Array<{ chatId: string; event: ChatEvent }> = [];
     readonly forgotten: string[] = [];
 
-    reset(chatId: string, _info: ChatInfo, items: ChatItem[]): void {
-        this.resets.push({ chatId, items });
+    reset(chatId: string, _info: ChatInfo, items: ChatItem[], cursor?: string | null): void {
+        this.resets.push({ chatId, items, ...(cursor === undefined ? {} : { cursor }) });
     }
+
+    prepend(chatId: string, items: ChatItem[], cursor: string | null): void {
+        this.prepends.push({ chatId, items, cursor });
+    }
+
+    setHistoryLoading(): void {}
 
     apply(chatId: string, event: ChatEvent): void {
         this.events.push({ chatId, event });
@@ -137,8 +147,35 @@ describe('ChatClient', () => {
             selection: undefined,
             runtimeMode: 'auto'
         });
-        expect(transport.of('chat.attach')[0]?.payload).toEqual({ chatId: 'c' });
-        expect(sink.resets).toEqual([{ chatId: 'c', items: transport.items }]);
+        expect(transport.of('chat.attach')[0]?.payload).toEqual({ chatId: 'c', historyLimit: 60 });
+        expect(sink.resets).toEqual([{ chatId: 'c', items: transport.items, cursor: null }]);
+    });
+
+    test('opens on a bounded newest page, retains pending prompts and loads older pages explicitly', async () => {
+        const { transport, sink, client } = setup();
+        const newest: ChatItem = { id: 'new', kind: 'user', createdAt: 3, turnId: null, text: 'new' };
+        const pending: ChatItem = {
+            id: 'pending',
+            kind: 'question',
+            createdAt: 2,
+            turnId: null,
+            requestId: 'request',
+            questions: [],
+            answers: null,
+            state: 'pending'
+        };
+        const older: ChatItem = { id: 'old', kind: 'user', createdAt: 1, turnId: null, text: 'old' };
+        transport.items = [newest];
+        transport.attachResult = () => ({ history: { start: 1, cursor: '0:1' }, pending: [pending] });
+        transport.historyResult = { items: [older], history: { start: 0, cursor: null } };
+
+        await client.open('large', {});
+        expect(transport.of('chat.attach')[0]?.payload).toEqual({ chatId: 'large', historyLimit: 60 });
+        expect(sink.resets[0]).toEqual({ chatId: 'large', items: [newest, pending], cursor: '0:1' });
+
+        await client.loadEarlier('large');
+        expect(transport.of('chat.history')[0]?.payload).toEqual({ chatId: 'large', cursor: '0:1', limit: 60 });
+        expect(sink.prepends).toEqual([{ chatId: 'large', items: [older], cursor: null }]);
     });
 
     test('tells the daemon the composer preference once it has one, and says it again on a fresh socket', () => {
@@ -172,7 +209,7 @@ describe('ChatClient', () => {
         transport.calls.length = 0;
         transport.setStatus('open');
         await flush();
-        expect(transport.of('chat.attach').map((c) => c.payload)).toEqual([{ chatId: 'a' }]);
+        expect(transport.of('chat.attach').map((c) => c.payload)).toEqual([{ chatId: 'a', historyLimit: 60 }]);
         expect(sink.resets.map((r) => r.chatId)).toEqual(['a', 'b', 'a']);
     });
 
@@ -181,13 +218,13 @@ describe('ChatClient', () => {
         const later: ChatEvent = { type: 'delta', itemId: 'a1', text: 'more' };
         transport.attachResult = (payload) => (payload.since === undefined ? { seq: 4 } : { items: [], seq: 6, events: [later] });
         await client.open('a', {});
-        expect(transport.of('chat.attach')[0]?.payload).toEqual({ chatId: 'a' });
+        expect(transport.of('chat.attach')[0]?.payload).toEqual({ chatId: 'a', historyLimit: 60 });
         transport.emit('chat.event', { chatId: 'a', event: { type: 'delta', itemId: 'a1', text: 'x' }, seq: 5 });
 
         transport.setStatus('closed');
         transport.setStatus('open');
         await flush();
-        expect(transport.of('chat.attach').at(-1)?.payload).toEqual({ chatId: 'a', since: 5 });
+        expect(transport.of('chat.attach').at(-1)?.payload).toEqual({ chatId: 'a', historyLimit: 60, since: 5 });
         expect(sink.resets).toHaveLength(1);
         expect(sink.events.at(-1)).toEqual({ chatId: 'a', event: later });
 
@@ -196,7 +233,7 @@ describe('ChatClient', () => {
         transport.setStatus('closed');
         transport.setStatus('open');
         await flush();
-        expect(transport.of('chat.attach').at(-1)?.payload).toEqual({ chatId: 'a', since: 6 });
+        expect(transport.of('chat.attach').at(-1)?.payload).toEqual({ chatId: 'a', historyLimit: 60, since: 6 });
         expect(sink.resets).toHaveLength(2);
     });
 

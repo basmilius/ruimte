@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /*
- * The shapes key material travels in, the same ones `apps/server/src/auth/keys.ts` and the client's
+ * The shapes key material travels in, the same ones `crates/ruimte_identity/src/auth.rs` and the client's
  * WebCrypto produce: raw ed25519 bytes in base64url without padding. Checking the length here keeps
  * a string that could never verify from reaching a verifier, a Map or a database row.
  */

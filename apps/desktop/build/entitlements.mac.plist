@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- Electron and the Bun runtime inside the daemon both JIT; without these the hardened runtime kills them. -->
+    <!-- Electron and the packaged Bun simulator adapter both JIT; without these the hardened runtime kills them. -->
     <key>com.apple.security.cs.allow-jit</key>
     <true/>
     <key>com.apple.security.cs.allow-unsigned-executable-memory</key>

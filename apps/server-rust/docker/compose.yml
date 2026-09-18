@@ -1,0 +1,84 @@
+name: ruimte-remote
+
+# Both services run the native daemon; the persistent service is a release build and the isolated
+# test service is a debug build for its test-only statement key.
+x-daemon: &daemon
+  build:
+    # Cargo resolves the root workspace and lockfile from the repository context.
+    context: ../../..
+    dockerfile: apps/server-rust/docker/Dockerfile
+  image: ruimte-remote
+  init: true
+  stop_grace_period: 5s
+  # A broker on this machine is reachable from the container under this name, on Linux as well.
+  extra_hosts:
+    - 'host.docker.internal:host-gateway'
+  # `docker:up` waits on this, so the tests can talk to the daemon the moment it returns.
+  healthcheck:
+    # Concatenated rather than interpolated: compose reads a `${...}` in here as its own.
+    test: ['CMD-SHELL', 'curl --fail --silent --show-error "http://127.0.0.1:$${RUIMTE_PORT}/health" > /dev/null']
+    interval: 2s
+    timeout: 5s
+    retries: 15
+    start_period: 2s
+
+services:
+  # The second machine to work against. Everything put on it stays on it across `docker:down`.
+  daemon:
+    <<: *daemon
+    container_name: ruimte-remote
+    # A different port than the local daemon, and only this machine reaches it: the point is a
+    # daemon on another machine, not a daemon on the network.
+    ports:
+      - '127.0.0.1:4310:4310'
+      # A direct connection is UDP; the container announces 127.0.0.1 on these ports, which Docker forwards in.
+      - '127.0.0.1:43100-43109:43100-43109/udp'
+    command: ['--no-stun', '--direct-ports', '43100-43109', '--direct-host-address', '127.0.0.1']
+    environment:
+      RUIMTE_LABEL: docker-linux
+      # Off unless set when compose runs (apps/pulsar-broker/README.md): the broker this container
+      # dials, and the address a client on this machine is told to dial for the same broker. `off`
+      # rather than empty, since an empty value leaves the daemon on the public default broker.
+      RUIMTE_BROKER_URL: ${RUIMTE_BROKER_URL:-off}
+      RUIMTE_BROKER_ADVERTISE_URL: ${RUIMTE_BROKER_ADVERTISE_URL:-}
+    # A named volume, not a bind mount: the file system has to be the container's own, which is
+    # what makes paths, permissions and checkouts here not this machine's.
+    volumes:
+      - home:/root/.ruimte
+      - work:/work
+
+  # The suite counts the projects a daemon lists and the repositories under /work, so it needs one
+  # that has seen nothing. That is a container of its own rather than a wipe of the one above,
+  # which would cost the state that container is kept around for.
+  daemon-test:
+    <<: *daemon
+    build:
+      context: ../../..
+      dockerfile: apps/server-rust/docker/Dockerfile
+      args:
+        RUIMTE_DOCKER_PROFILE: debug
+    image: ruimte-remote-test
+    container_name: ruimte-remote-test
+    # Only `docker:test` starts this one; a plain `docker compose up` leaves it alone.
+    profiles: ['test']
+    ports:
+      - '127.0.0.1:4320:4320'
+      - '127.0.0.1:43200-43209:43200-43209/udp'
+    command: ['--no-stun', '--direct-ports', '43200-43209', '--direct-host-address', '127.0.0.1']
+    environment:
+      RUIMTE_LABEL: docker-linux
+      RUIMTE_PORT: '4320'
+      # The suite starts a broker of its own on this port on the host, after the container is up;
+      # the daemon keeps retrying until it is there.
+      RUIMTE_BROKER_URL: ws://host.docker.internal:4420
+      RUIMTE_BROKER_ADVERTISE_URL: ws://127.0.0.1:4420
+      # The bench's own statement key (`test.sh` makes one per run), believed in place of the address
+      # book's; only this debug test image accepts it.
+      RUIMTE_PULSAR_TEST_STATEMENT_KEY: ${RUIMTE_PULSAR_TEST_STATEMENT_KEY:-}
+      # No volumes at all, and a wipe on every start, so the restart halfway through the suite
+      # lands on a fresh machine as well.
+      RUIMTE_FRESH_STATE: '1'
+
+volumes:
+  home:
+  work:

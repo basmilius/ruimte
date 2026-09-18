@@ -2,10 +2,10 @@ import { cpSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs
 import { dirname, join, resolve } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
-const BUNDLE_ID = 'app.ruimte.desktop.dev';
-const BUNDLE_NAME = 'Ruimte Dev';
+const BUNDLE_ID = 'app.ruimte.desktop.rust-dev';
+const BUNDLE_NAME = 'Ruimte Rust Dev';
 const MICROPHONE_REASON = 'Ruimte uses the microphone only while you test it or run a GPT-Live conversation.';
-const DEV_BUNDLE_REVISION = '2';
+const DEV_BUNDLE_REVISION = '3';
 
 const replacePlistString = (plist: string, key: string, value: string): void => {
     execFileSync('/usr/bin/plutil', ['-replace', key, '-string', value, plist]);

@@ -1,6 +1,6 @@
 name: npm
 
-# Publishes `ruimte` and its three `@ruimte/<os>-<cpu>` binary packages (Apple silicon only on macOS) with the version of a release.
+# Publishes `ruimte` and its three `@ruimte/<os>-<cpu>` native packages (Apple silicon only on macOS) with the version of a release.
 # npm trusts this workflow through OIDC (Trusted Publishing, configured per package on npmjs.com for
 # `npm.yml` and the `npm` environment), so there is no token anywhere. A version that is already on
 # the registry is skipped, so a run that failed halfway can simply run again.
@@ -34,8 +34,8 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-  # A macOS binary has to be re-signed with codesign after Bun writes it, or the kernel kills it on
-  # launch, so the darwin targets build on macOS. Bun cross-compiles the Linux ones from anywhere.
+  # Every native binary builds on the OS and CPU where it will run. The Linux arm package uses
+  # GitHub's arm64 runner rather than cross-compiling on x64.
   binaries:
     needs: version
     strategy:
@@ -44,14 +44,16 @@ jobs:
           - target: darwin-arm64
             runner: macos-latest
           - target: linux-x64
-            runner: ubuntu-latest
+            runner: ubuntu-22.04
           - target: linux-arm64
-            runner: ubuntu-latest
+            runner: ubuntu-22.04-arm
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v5
         with:
           ref: v${{ needs.version.outputs.version }}
+      - run: rustup show active-toolchain
+      - uses: Swatinem/rust-cache@v2
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -59,7 +61,7 @@ jobs:
       - name: Compile the daemon
         env:
           RUIMTE_VERSION: ${{ needs.version.outputs.version }}
-        run: bun apps/server/scripts/compile.ts --target ${{ matrix.target }} --outdir binaries/${{ matrix.target }}
+        run: bun apps/server-rust/scripts/compile.ts --target ${{ matrix.target }} --outdir binaries/${{ matrix.target }}
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}

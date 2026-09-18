@@ -7,9 +7,11 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit && bun run check:swift",
+    "typecheck": "tsc --noEmit && bun run check:swift && bun run check:rust",
     "generate:swift": "bun scripts/generate-swift.ts && bun ../../apps/ios/Scripts/generate-renderer.ts",
-    "check:swift": "bun scripts/generate-swift.ts --check && bun ../../apps/ios/Scripts/generate-renderer.ts --check"
+    "check:swift": "bun scripts/generate-swift.ts --check && bun ../../apps/ios/Scripts/generate-renderer.ts --check",
+    "generate:rust": "bun scripts/generate-rust-schema.ts",
+    "check:rust": "bun scripts/generate-rust-schema.ts --check && bun ../../apps/server-rust/tests/generate-schema-oracle.ts --check"
   },
   "dependencies": {
     "@ruimte/pulsar": "workspace:*",

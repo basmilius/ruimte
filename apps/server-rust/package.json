@@ -1,0 +1,32 @@
+{
+  "name": "@ruimte/server-rust",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun ../../scripts/dev-rust.ts",
+    "start": "cargo run --locked --manifest-path ../../Cargo.toml -p ruimte_server --bin ruimte-server --",
+    "compile": "bun scripts/compile.ts",
+    "snapshot-prices": "bun scripts/snapshot-prices.ts",
+    "docker:up": "docker compose -f docker/compose.yml up -d --build --wait",
+    "docker:down": "docker compose -f docker/compose.yml down",
+    "docker:reset": "docker compose -f docker/compose.yml --profile test down -v",
+    "docker:pair": "docker/pair.sh",
+    "docker:test": "docker/test.sh",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ruimte/contracts": "workspace:*",
+    "serve-sim": "0.1.46",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@ruimte/pulsar": "workspace:*",
+    "@ruimte/render": "workspace:*",
+    "@types/bun": "^1.4.0",
+    "@xterm/addon-serialize": "^0.14.0",
+    "@xterm/headless": "^6.0.0",
+    "werift": "0.24.4",
+    "typescript": "~6.0.2"
+  }
+}

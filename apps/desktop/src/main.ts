@@ -9,18 +9,9 @@ import { fileSessionKey, fileSessionStore } from './pulsar-store';
 import { createReleaseNotes } from './release-notes';
 import { createServiceController, type BackgroundServiceState } from './service/controller';
 import { healthFrom, workFrom, type BuildIdentity, type MachineWork } from './service/decide';
-import {
-    LAUNCH_AGENT_LABEL,
-    diskFiles,
-    launchAgentPlist,
-    launchdManager,
-    runCommand,
-    systemdManager,
-    systemdUnit,
-    type ServiceManager,
-    type ServiceSpec
-} from '@ruimte/service';
+import { diskFiles, launchAgentPlist, launchdManager, runCommand, systemdManager, systemdUnit, type ServiceManager, type ServiceSpec } from '@ruimte/service';
 import { keepRunningSetting, serviceSupport } from './service/settings';
+import { desktopRuntime } from './service/runtime';
 import { fileSecretStore, type SecretStore } from './secret-store';
 import { createOpenAiLiveSession, parseOpenAiLivePreferences } from './openai-live';
 
@@ -35,10 +26,15 @@ const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, powerSaveBl
 
 // A checkout keeps its own port, name and profile, so it runs beside an installed Ruimte instead of
 // quitting on that app's single instance lock or talking to its daemon.
-const DEFAULT_PORT = app.isPackaged ? 4210 : 4211;
+const runtime = desktopRuntime({
+    packaged: app.isPackaged,
+    productName: app.getName(),
+    homeDirectory: homedir()
+});
 if (!app.isPackaged) {
-    app.setName('Ruimte Dev');
-    app.setPath('userData', join(app.getPath('appData'), 'Ruimte Dev'));
+    const developmentProfile = process.env.RUIMTE_DEV_PROFILE ?? 'Ruimte Rust Dev';
+    app.setName(developmentProfile);
+    app.setPath('userData', join(app.getPath('appData'), developmentProfile));
 }
 // The bundler inlines __dirname as the source path; the app path is where the built files are.
 const here = join(app.getAppPath(), 'dist');
@@ -49,9 +45,9 @@ const devUrl = process.env.RUIMTE_DEV_URL ?? null;
 const smoke = process.env.RUIMTE_SMOKE === '1';
 // Where the smoke run writes the top-left of the window, which is how the title bar is measured instead of guessed.
 const capturePath = process.env.RUIMTE_CAPTURE ?? null;
-const port = Number(process.env.RUIMTE_PORT ?? DEFAULT_PORT);
-// The home the daemon runs with, where its local secret lives; a checkout uses the dev home, as the server's `bun dev` does.
-const ruimteHome = app.isPackaged ? (process.env.RUIMTE_HOME ?? join(homedir(), '.ruimte')) : (process.env.RUIMTE_DEV_HOME ?? join(homedir(), '.ruimte-dev'));
+const port = Number(process.env.RUIMTE_PORT ?? runtime.defaultPort);
+// The home the daemon runs with, where its local secret lives; a checkout uses the native supervisor's dev home.
+const ruimteHome = app.isPackaged ? (process.env.RUIMTE_HOME ?? runtime.daemonHome) : (process.env.RUIMTE_DEV_HOME ?? runtime.daemonHome);
 
 let daemon: ChildProcess | null = null;
 let mainWindow: Electron.BrowserWindow | null = null;
@@ -92,14 +88,20 @@ const daemonCommand = (): { command: string; args: string[] } | null => {
         const bin = join(process.resourcesPath, 'bin');
         return {
             command: join(bin, process.platform === 'win32' ? 'ruimte.exe' : 'ruimte'),
-            args: ['--port', String(port), '--serve', join(process.resourcesPath, 'client')]
+            args: [...runtime.daemonArgs, '--port', String(port), '--serve', join(process.resourcesPath, 'client')]
         };
     }
-    const entry = join(repoRoot, 'apps', 'server', 'src', 'main.ts');
-    if (!existsSync(entry)) {
+    const profile = process.env.RUIMTE_RUST_PROFILE ?? 'dev';
+    const profileDirectory = profile === 'dev' || profile === 'test' ? 'debug' : profile;
+    const target = resolve(repoRoot, process.env.CARGO_TARGET_DIR ?? 'apps/server-rust/target');
+    const executable = join(target, ...(process.env.CARGO_BUILD_TARGET ? [process.env.CARGO_BUILD_TARGET] : []), profileDirectory, 'ruimte-server');
+    if (!existsSync(executable)) {
         return null;
     }
-    return { command: 'bun', args: [entry, '--port', String(port), '--serve', join(repoRoot, 'apps', 'client', 'dist')] };
+    return {
+        command: executable,
+        args: [...runtime.daemonArgs, '--port', String(port), '--serve', join(repoRoot, 'apps', 'client', 'dist')]
+    };
 };
 
 const MISSING_DAEMON = 'The background service is missing. Run the desktop app from the repository or install a release.';
@@ -143,7 +145,9 @@ const spawnDaemon = (): void => {
 /* One ask of the port, bounded, so a daemon that hangs is no answer rather than a start that never ends. */
 const probeDaemon = async (): Promise<BuildIdentity | null> => {
     try {
-        const response = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(1000) });
+        const response = await fetch(`http://127.0.0.1:${port}/health`, {
+            signal: AbortSignal.timeout(1000)
+        });
         return response.ok ? healthFrom(await response.json()) : null;
     } catch {
         return null;
@@ -177,7 +181,7 @@ const waitForDaemon = async (accept: (health: BuildIdentity) => boolean): Promis
     throw new Error('The background service did not come up');
 };
 
-/* The id `apps/server/scripts/compile.ts` wrote beside the binary this bundle carries. */
+/* The native compile script wrote this id beside the binary the bundle carries. */
 const bundledBuild = (): string | null => {
     if (!app.isPackaged) {
         return null;
@@ -189,7 +193,11 @@ const bundledBuild = (): string | null => {
     }
 };
 
-const support = serviceSupport({ packaged: app.isPackaged, platform: process.platform, appImage: process.env.APPIMAGE });
+const support = serviceSupport({
+    packaged: app.isPackaged,
+    platform: process.platform,
+    appImage: process.env.APPIMAGE
+});
 
 /* Only a packaged app on macOS or Linux gets one; the dev app has none to touch, whatever it is asked. */
 const createServiceManager = (): ServiceManager | null => {
@@ -202,14 +210,16 @@ const createServiceManager = (): ServiceManager | null => {
             home: homedir(),
             run: runCommand,
             files: diskFiles,
-            sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+            sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+            label: runtime.launchAgentLabel
         });
     }
     return systemdManager({
         configHome: process.env.XDG_CONFIG_HOME || join(homedir(), '.config'),
         user: userInfo().username,
         run: runCommand,
-        files: diskFiles
+        files: diskFiles,
+        unitName: runtime.systemdUnitName
     });
 };
 
@@ -219,11 +229,15 @@ const serviceDefinition = (): string => {
         throw new Error(MISSING_DAEMON);
     }
     const spec: ServiceSpec = {
-        label: LAUNCH_AGENT_LABEL,
+        label: runtime.launchAgentLabel,
         program: target.command,
         args: target.args,
         // `RUIMTE_SERVICE` tells the daemon that something starts it again when it exits, so it may update itself.
-        environment: { RUIMTE_HOME: ruimteHome, PATH: loginShellPath() ?? process.env.PATH ?? '/usr/bin:/bin', RUIMTE_SERVICE: '1' },
+        environment: {
+            RUIMTE_HOME: ruimteHome,
+            PATH: loginShellPath() ?? process.env.PATH ?? '/usr/bin:/bin',
+            RUIMTE_SERVICE: '1'
+        },
         workingDirectory: homedir(),
         logFile: join(app.getPath('logs'), 'daemon.log')
     };
@@ -295,14 +309,26 @@ ipcMain.on('service:stop-machine', (event) => {
 
 // The band the client reserves across the sidebar's strip and the toolbar, which the overlay controls share on Windows and Linux.
 const TITLEBAR_HEIGHT = 48;
-const OVERLAY_COLORS = { dark: { color: '#1b1b1f', symbolColor: '#ececf1' }, light: { color: '#ffffff', symbolColor: '#18181b' } };
+const OVERLAY_COLORS = {
+    dark: { color: '#1b1b1f', symbolColor: '#ececf1' },
+    light: { color: '#ffffff', symbolColor: '#18181b' }
+};
 
 /* The client draws its own chrome. macOS keeps the traffic lights, inset into the sidebar; elsewhere the window controls overlay the toolbar's right end.
    `trafficLightPosition` is the top left of the buttons' frame, lined up with the sidebar toggle beside it. */
 const titleBarOptions = (dark: boolean): Electron.BrowserWindowConstructorOptions =>
     process.platform === 'darwin'
-        ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 17, y: 17 } }
-        : { titleBarStyle: 'hidden', titleBarOverlay: { height: TITLEBAR_HEIGHT, ...OVERLAY_COLORS[dark ? 'dark' : 'light'] } };
+        ? {
+              titleBarStyle: 'hiddenInset',
+              trafficLightPosition: { x: 17, y: 17 }
+          }
+        : {
+              titleBarStyle: 'hidden',
+              titleBarOverlay: {
+                  height: TITLEBAR_HEIGHT,
+                  ...OVERLAY_COLORS[dark ? 'dark' : 'light']
+              }
+          };
 
 // The partition every browser node's page lives in; `apps/client/src/browser/registry.ts`.
 const BROWSER_PARTITION = 'persist:ruimte';
@@ -327,7 +353,11 @@ interface AppTheme {
  * session so the client names no path; a main frame runs it and a subframe does not.
  */
 const registerGuestPreload = (): void => {
-    session.fromPartition(BROWSER_PARTITION).registerPreloadScript({ type: 'frame', id: 'ruimte-guest', filePath: join(here, 'guest.cjs') });
+    session.fromPartition(BROWSER_PARTITION).registerPreloadScript({
+        type: 'frame',
+        id: 'ruimte-guest',
+        filePath: join(here, 'guest.cjs')
+    });
 };
 
 const isBrowserGuest = (contents: Electron.WebContents): boolean =>
@@ -339,7 +369,10 @@ const applyTheme = (theme: AppTheme): void => {
     nativeTheme.themeSource = theme.followsSystem ? 'system' : theme.resolved;
     // The overlay controls are native; they follow the client's theme by hand.
     if (process.platform !== 'darwin' && mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.setTitleBarOverlay({ height: TITLEBAR_HEIGHT, ...OVERLAY_COLORS[theme.resolved] });
+        mainWindow.setTitleBarOverlay({
+            height: TITLEBAR_HEIGHT,
+            ...OVERLAY_COLORS[theme.resolved]
+        });
     }
     // The window's own ground, so a reload and a resize never flash the other theme's color.
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -353,7 +386,11 @@ const LOCAL_SCHEMES = ['file:', 'data:', 'blob:', 'about:'];
 /* A previewed file may load adjacent assets, but cannot use its scripts to reach a server. */
 const sealPreviewSession = (): void => {
     const preview = session.fromPartition(PREVIEW_PARTITION);
-    preview.webRequest.onBeforeRequest((details, callback) => callback({ cancel: !LOCAL_SCHEMES.some((scheme) => details.url.startsWith(scheme)) }));
+    preview.webRequest.onBeforeRequest((details, callback) =>
+        callback({
+            cancel: !LOCAL_SCHEMES.some((scheme) => details.url.startsWith(scheme))
+        })
+    );
     preview.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
 };
 
@@ -499,7 +536,13 @@ const guestDevTools = (id: number, at?: { x: number; y: number }): void => {
         return;
     }
     // A window of our own, kept above everything, so the inspector floats over a fullscreen app.
-    const window = new BrowserWindow({ width: 960, height: 640, title: 'Inspector', show: false, backgroundColor: '#1b1b1f' });
+    const window = new BrowserWindow({
+        width: 960,
+        height: 640,
+        title: 'Inspector',
+        show: false,
+        backgroundColor: '#1b1b1f'
+    });
     window.setAlwaysOnTop(true, 'floating');
     window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     guest.setDevToolsWebContents(window.webContents);
@@ -551,7 +594,10 @@ const menuLabel = (text: string): string => {
 const editableGuestMenu = (contents: Electron.WebContents, params: Electron.ContextMenuParams): void => {
     const template: Electron.MenuItemConstructorOptions[] = [];
     for (const word of params.dictionarySuggestions.slice(0, SPELLING_SUGGESTIONS)) {
-        template.push({ label: word, click: () => contents.replaceMisspelling(word) });
+        template.push({
+            label: word,
+            click: () => contents.replaceMisspelling(word)
+        });
     }
     if (template.length > 0) {
         template.push({ type: 'separator' });
@@ -566,18 +612,33 @@ const editableGuestMenu = (contents: Electron.WebContents, params: Electron.Cont
     );
     // Only a rich field has a style to drop, which is the whole point of the row.
     if (params.editFlags.canEditRichly) {
-        template.push({ role: 'pasteAndMatchStyle', enabled: params.editFlags.canPaste });
+        template.push({
+            role: 'pasteAndMatchStyle',
+            enabled: params.editFlags.canPaste
+        });
     }
     template.push({ role: 'delete', enabled: params.editFlags.canDelete }, { role: 'selectAll', enabled: params.editFlags.canSelectAll });
     if (process.platform === 'darwin' && params.selectionText !== '') {
         // Electron has no dictionary or search roles; macOS adds Share and Services through the frame.
         template.push(
             { type: 'separator' },
-            { label: `Look Up "${menuLabel(params.selectionText)}"`, click: () => contents.showDefinitionForSelection() },
-            { label: 'Search with Google', click: () => void shell.openExternal(`${SEARCH_URL}${encodeURIComponent(params.selectionText)}`) }
+            {
+                label: `Look Up "${menuLabel(params.selectionText)}"`,
+                click: () => contents.showDefinitionForSelection()
+            },
+            {
+                label: 'Search with Google',
+                click: () => void shell.openExternal(`${SEARCH_URL}${encodeURIComponent(params.selectionText)}`)
+            }
         );
     }
-    template.push({ type: 'separator' }, { label: 'Inspect element', click: () => guestDevTools(contents.id, { x: params.x, y: params.y }) });
+    template.push(
+        { type: 'separator' },
+        {
+            label: 'Inspect element',
+            click: () => guestDevTools(contents.id, { x: params.x, y: params.y })
+        }
+    );
     /*
      * The frame is the one thing that makes AutoFill appear: without it Electron pops a plain menu
      * and macOS appends none of its own rows (AutoFill, Writing Tools, Services). It is null once
@@ -585,7 +646,10 @@ const editableGuestMenu = (contents: Electron.WebContents, params: Electron.Cont
      * AutoFill here routes to Apple's Passwords app only; Chrome's password manager is not in
      * Electron. No position: the menu belongs at the cursor, which is where Electron puts it.
      */
-    Menu.buildFromTemplate(template).popup({ window: mainWindow ?? undefined, ...(params.frame ? { frame: params.frame } : {}) });
+    Menu.buildFromTemplate(template).popup({
+        window: mainWindow ?? undefined,
+        ...(params.frame ? { frame: params.frame } : {})
+    });
 };
 
 /*
@@ -646,7 +710,10 @@ ipcMain.on('browser:context-action', (_event, request: BrowserContextAction) => 
             }
             return;
         case 'inspect':
-            guestDevTools(contents.id, { x: payload.x ?? 0, y: payload.y ?? 0 });
+            guestDevTools(contents.id, {
+                x: payload.x ?? 0,
+                y: payload.y ?? 0
+            });
             return;
         case 'open-external':
             if (payload.url && /^https?:\/\//.test(payload.url)) {
@@ -720,7 +787,10 @@ let pendingLogin: LoopbackLogin | null = null;
 
 const pulsarSessions = (): SessionVault => {
     pulsarVault ??= new SessionVault({
-        client: new AddressBookClient({ baseUrl: addressBookUrl, fetch: (input, init) => net.fetch(input, init) }),
+        client: new AddressBookClient({
+            baseUrl: addressBookUrl,
+            fetch: (input, init) => net.fetch(input, init)
+        }),
         store: fileSessionStore(join(app.getPath('userData'), 'pulsar-session.bin'), safeStorage),
         signer: fileSessionKey(join(app.getPath('userData'), 'pulsar-key.bin'), safeStorage)
     });
@@ -892,10 +962,13 @@ const describeUpdateError = (message: string): string => {
 /*
  * The updater is a state machine the client watches, not a dialog that interrupts. Every change is
  * pushed to the window, which draws the green button in the toolbar and About in the settings. A
- * checkout has no feed (electron-updater reads `app-update.yml` from the bundle), so there the
- * state stays `unsupported` and nothing in the client offers to update.
+ * build without a feed (electron-updater reads `app-update.yml` from the bundle) stays
+ * `unsupported`, so nothing in the client offers to update.
  */
-let updateState: UpdateState = { status: 'unsupported', currentVersion: app.getVersion() };
+let updateState: UpdateState = {
+    status: 'unsupported',
+    currentVersion: app.getVersion()
+};
 let updater: import('electron-updater').AppUpdater | null = null;
 let updateTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -908,7 +981,7 @@ const setUpdateState = (patch: Partial<UpdateState>): void => {
 };
 
 const setupUpdates = (): void => {
-    if (!app.isPackaged) {
+    if (!app.isPackaged || !existsSync(join(process.resourcesPath, 'app-update.yml'))) {
         return;
     }
     try {
@@ -918,11 +991,39 @@ const setupUpdates = (): void => {
         // behind the back of someone who turned it off.
         autoUpdater.autoDownload = false;
         autoUpdater.on('checking-for-update', () => setUpdateState({ status: 'checking', error: null }));
-        autoUpdater.on('update-available', (info) => setUpdateState({ status: 'available', version: info.version, error: null }));
-        autoUpdater.on('update-not-available', () => setUpdateState({ status: 'current', version: undefined, error: null }));
-        autoUpdater.on('download-progress', (progress) => setUpdateState({ status: 'downloading', percent: progress.percent }));
-        autoUpdater.on('update-downloaded', (info) => setUpdateState({ status: 'ready', version: info.version, percent: 100 }));
-        autoUpdater.on('error', (e) => setUpdateState({ status: 'error', error: describeUpdateError(e.message) }));
+        autoUpdater.on('update-available', (info) =>
+            setUpdateState({
+                status: 'available',
+                version: info.version,
+                error: null
+            })
+        );
+        autoUpdater.on('update-not-available', () =>
+            setUpdateState({
+                status: 'current',
+                version: undefined,
+                error: null
+            })
+        );
+        autoUpdater.on('download-progress', (progress) =>
+            setUpdateState({
+                status: 'downloading',
+                percent: progress.percent
+            })
+        );
+        autoUpdater.on('update-downloaded', (info) =>
+            setUpdateState({
+                status: 'ready',
+                version: info.version,
+                percent: 100
+            })
+        );
+        autoUpdater.on('error', (e) =>
+            setUpdateState({
+                status: 'error',
+                error: describeUpdateError(e.message)
+            })
+        );
         setUpdateState({ status: 'idle' });
     } catch (e) {
         // electron-updater missing from the bundle is the only way here; the app stays as it is.
@@ -986,9 +1087,21 @@ ipcMain.handle('releases:list', (_event, refresh?: boolean) => releaseNotes.list
 function appMenu(): Electron.MenuItemConstructorOptions {
     // Only where a service can run: anywhere else quitting already stops the machine.
     const stopItems: Electron.MenuItemConstructorOptions[] =
-        support === 'supported' ? [{ label: 'Stop the Machine and Quit', click: () => stopMachine() }] : [];
+        support === 'supported'
+            ? [
+                  {
+                      label: 'Stop the Machine and Quit',
+                      click: () => stopMachine()
+                  }
+              ]
+            : [];
     if (process.platform !== 'darwin') {
-        return stopItems.length > 0 ? { label: 'File', submenu: [...stopItems, { type: 'separator' }, { role: 'quit' }] } : { role: 'fileMenu' };
+        return stopItems.length > 0
+            ? {
+                  label: 'File',
+                  submenu: [...stopItems, { type: 'separator' }, { role: 'quit' }]
+              }
+            : { role: 'fileMenu' };
     }
     const openSettings = (section: string | null): void => {
         mainWindow?.show();
@@ -999,7 +1112,11 @@ function appMenu(): Electron.MenuItemConstructorOptions {
         submenu: [
             { label: `About ${app.name}…`, click: () => openSettings('about') },
             { type: 'separator' },
-            { label: 'Settings…', accelerator: 'CommandOrControl+,', click: () => openSettings(null) },
+            {
+                label: 'Settings…',
+                accelerator: 'CommandOrControl+,',
+                click: () => openSettings(null)
+            },
             { type: 'separator' },
             { role: 'services' },
             { type: 'separator' },
@@ -1031,7 +1148,12 @@ function viewMenu(): Electron.MenuItemConstructorOptions {
  * capture; only what the client draws next to them does.
  */
 const captureTitleBar = async (window: Electron.BrowserWindow, target: string): Promise<void> => {
-    const image = await window.webContents.capturePage({ x: 0, y: 0, width: 200, height: TITLEBAR_HEIGHT });
+    const image = await window.webContents.capturePage({
+        x: 0,
+        y: 0,
+        width: 200,
+        height: TITLEBAR_HEIGHT
+    });
     const { scaleFactor } = screen.getDisplayMatching(window.getBounds());
     writeFileSync(target, image.toPNG({ scaleFactor }));
     console.log(`smoke: wrote ${target} at ${scaleFactor}x`);
@@ -1068,7 +1190,12 @@ const runSmoke = async (window: Electron.BrowserWindow): Promise<void> => {
         await wait(250);
         const state = (await window.webContents.executeJavaScript(
             `(() => { const ids = window.ruimte?.nodeIds() ?? []; const id = ids[ids.length - 1]; return id ? window.ruimte.browserState(id) : null; })()`
-        )) as { url: string; loading: boolean; title: string; error: string | null } | null;
+        )) as {
+            url: string;
+            loading: boolean;
+            title: string;
+            error: string | null;
+        } | null;
         if (state && !state.loading && state.url.startsWith(target)) {
             console.log(`smoke: browser node loaded ${state.url} (${state.error ?? state.title})`);
             return;

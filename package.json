@@ -8,9 +8,9 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "bun run --filter './apps/*' dev",
+    "dev": "bun scripts/dev.ts",
     "dev:client": "bun run --cwd apps/client dev",
-    "dev:server": "bun run --cwd apps/server dev",
+    "dev:server": "RUIMTE_HOME=${RUIMTE_DEV_HOME:-$HOME/.ruimte-rust-dev} bun scripts/dev-rust.ts --port ${RUIMTE_PORT:-4221}",
     "build": "bun run --cwd apps/client build && bun run --cwd apps/desktop build",
     "check": "bun run --filter '*' typecheck && oxlint",
     "lint": "oxlint",
@@ -19,10 +19,11 @@
     "format": "oxfmt --write \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\"",
     "format:check": "oxfmt --check \"apps/*/src/**/*.{ts,tsx}\" \"packages/*/src/**/*.ts\"",
     "dev:desktop": "bun run --cwd apps/desktop dev",
-    "serve": "bun run --cwd apps/client build && bun run --cwd apps/server start -- --host 0.0.0.0 --serve ../client/dist",
-    "dist": "bun run --cwd apps/client build && bun run --cwd apps/server compile && bun run --cwd apps/desktop pack"
+    "serve": "bun run --cwd apps/client build && bun run --cwd apps/server-rust start -- --host 0.0.0.0 --serve ../client/dist",
+    "dist": "bun run --cwd apps/client build && bun run --cwd apps/server-rust compile && bun run --cwd apps/desktop pack"
   },
   "devDependencies": {
+    "@ruimte/render": "workspace:*",
     "oxfmt": "^0.68.0",
     "oxlint": "^1.79.0",
     "typescript": "~6.0.2"

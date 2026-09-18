@@ -1,0 +1,1586 @@
+{
+  "inventory": [
+    {
+      "name": "help",
+      "served": "canvas",
+      "usage": "[noun] [action]",
+      "summary": "Lists every verb and noun; with a noun the signature of each of its actions, with a noun and an action or with a verb everything that one takes",
+      "flagNames": [],
+      "dryRun": false
+    },
+    {
+      "name": "list",
+      "served": "context",
+      "usage": "",
+      "summary": "Lists the context linked to this session: id, kind, title (also what ruimte-context prints without a verb)"
+    },
+    {
+      "name": "read",
+      "served": "context",
+      "usage": "<id> [--tail N] [--subagent T]",
+      "summary": "Prints one linked source, whole or its last N lines"
+    },
+    {
+      "name": "done",
+      "served": "canvas",
+      "usage": "--result T | --result-file F",
+      "summary": "Reports the result of the task you were opened with, which wakes the chat that gave it",
+      "flagNames": [
+        "result",
+        "result-file"
+      ],
+      "dryRun": false
+    },
+    {
+      "name": "notify",
+      "served": "canvas",
+      "usage": "<id> --text \"...\"",
+      "summary": "Leaves a short message for the agent in another node, along a line that runs from you into it",
+      "flagNames": [
+        "text"
+      ],
+      "dryRun": false
+    },
+    {
+      "name": "agent",
+      "served": "canvas",
+      "usage": "<claude|codex|gemini|copilot> [--terminal] [--prompt T | --prompt-file F] [--cwd P] [--view V] [--beside N] [--group G] [--title T] [--task T] [--mode M] [--worktree [--branch B]] [--dry-run]",
+      "summary": "Opens an agent node that starts working, with an edge from you into it when you are a node on that canvas, so it can read what you have",
+      "flagNames": [
+        "prompt",
+        "prompt-file",
+        "cwd",
+        "view",
+        "beside",
+        "group",
+        "title",
+        "task",
+        "mode",
+        "branch",
+        "terminal",
+        "worktree",
+        "dry-run"
+      ],
+      "dryRun": true
+    },
+    {
+      "name": "team",
+      "served": "canvas",
+      "usage": "--label L --roles '[{\"title\": \"Lexer\", \"prompt\": \"Fix the tokenizer\", \"provider\": \"claude\"}]' [--view V] [--cwd P] [--task] [--mode M] [--worktree] [--dry-run]",
+      "summary": "Opens up to 16 agents at once in a group, each with an edge from you into it when you are a node on that canvas",
+      "flagNames": [
+        "label",
+        "roles",
+        "cwd",
+        "view",
+        "mode",
+        "task",
+        "worktree",
+        "dry-run"
+      ],
+      "dryRun": true
+    },
+    {
+      "name": "node",
+      "served": "noun",
+      "usage": "<list|new|rename|delete|group|arrange> ...",
+      "summary": "Lists, adds, renames, removes, frames and lays out the nodes of a canvas",
+      "actions": [
+        {
+          "name": "node list",
+          "word": "list",
+          "usage": "[--view V]",
+          "flagNames": [
+            "view"
+          ],
+          "dryRun": false
+        },
+        {
+          "name": "node new",
+          "word": "new",
+          "usage": "<note|browser|drawing|diagram|file|terminal|chat> [--title T] [--text B] [--url U] [--path P] [--source V] [--cwd P] [--view V] [--beside N] [--dry-run]",
+          "flagNames": [
+            "title",
+            "text",
+            "url",
+            "path",
+            "source",
+            "cwd",
+            "view",
+            "beside",
+            "dry-run"
+          ],
+          "dryRun": true
+        },
+        {
+          "name": "node rename",
+          "word": "rename",
+          "usage": "<nodeId> --title T [--view V]",
+          "flagNames": [
+            "title",
+            "view"
+          ],
+          "dryRun": false
+        },
+        {
+          "name": "node delete",
+          "word": "delete",
+          "usage": "<nodeId>",
+          "flagNames": [],
+          "dryRun": false
+        },
+        {
+          "name": "node group",
+          "word": "group",
+          "usage": "--nodes A,B [--label L] [--color C] [--view V]",
+          "flagNames": [
+            "nodes",
+            "label",
+            "color",
+            "view"
+          ],
+          "dryRun": false
+        },
+        {
+          "name": "node arrange",
+          "word": "arrange",
+          "usage": "--nodes A,B [--layout grid|row|column] [--cols N] [--view V]",
+          "flagNames": [
+            "nodes",
+            "layout",
+            "cols",
+            "view"
+          ],
+          "dryRun": false
+        }
+      ]
+    },
+    {
+      "name": "link",
+      "served": "noun",
+      "usage": "<list|new|delete> ...",
+      "summary": "Lists, draws and removes the lines of a canvas, which is what lets an agent read the node a line runs from",
+      "actions": [
+        {
+          "name": "link list",
+          "word": "list",
+          "usage": "[--view V]",
+          "flagNames": [
+            "view"
+          ],
+          "dryRun": false
+        },
+        {
+          "name": "link new",
+          "word": "new",
+          "usage": "--to A,B [--from N] [--label L] [--view V]",
+          "flagNames": [
+            "to",
+            "from",
+            "label",
+            "view"
+          ],
+          "dryRun": false
+        },
+        {
+          "name": "link delete",
+          "word": "delete",
+          "usage": "<edgeId> [--view V]",
+          "flagNames": [
+            "view"
+          ],
+          "dryRun": false
+        }
+      ]
+    },
+    {
+      "name": "view",
+      "served": "noun",
+      "usage": "<list|new|rename|icon|move|delete|open|diagram> ...",
+      "summary": "Lists, makes, renames, marks, moves, removes and shows the views of the project, and writes a diagram",
+      "actions": [
+        {
+          "name": "view list",
+          "word": "list",
+          "usage": "",
+          "flagNames": [],
+          "dryRun": false
+        },
+        {
+          "name": "view new",
+          "word": "new",
+          "usage": "<name> [--kind canvas|chat|terminal|browser|drawing|diagram|file|separator] [--path P] [--url U] [--after V]",
+          "flagNames": [
+            "kind",
+            "path",
+            "url",
+            "after"
+          ],
+          "dryRun": false
+        },
+        {
+          "name": "view rename",
+          "word": "rename",
+          "usage": "<viewId> <name>",
+          "flagNames": [],
+          "dryRun": false
+        },
+        {
+          "name": "view icon",
+          "word": "icon",
+          "usage": "<viewId> <lucide-name|emoji>",
+          "flagNames": [],
+          "dryRun": false
+        },
+        {
+          "name": "view move",
+          "word": "move",
+          "usage": "<viewId> --after V | --first",
+          "flagNames": [
+            "after",
+            "first"
+          ],
+          "dryRun": false
+        },
+        {
+          "name": "view delete",
+          "word": "delete",
+          "usage": "<viewId>",
+          "flagNames": [],
+          "dryRun": false
+        },
+        {
+          "name": "view open",
+          "word": "open",
+          "usage": "<viewId>",
+          "flagNames": [],
+          "dryRun": false
+        },
+        {
+          "name": "view diagram",
+          "word": "diagram",
+          "usage": "<viewId> < document.json",
+          "flagNames": [
+            "document"
+          ],
+          "dryRun": false
+        }
+      ]
+    },
+    {
+      "name": "task",
+      "served": "noun",
+      "usage": "<list> ...",
+      "summary": "Lists the tasks you gave and the task you were given; done reports the result of yours",
+      "actions": [
+        {
+          "name": "task list",
+          "word": "list",
+          "usage": "[--all]",
+          "flagNames": [
+            "all"
+          ],
+          "dryRun": false
+        }
+      ]
+    },
+    {
+      "name": "plan",
+      "served": "noun",
+      "usage": "<new|read|set|note|add|edit|move|remove|status|delete> ...",
+      "summary": "Keeps a plan beside this chat: steps you check off as you go, or a test plan a person runs; only a chat has plans",
+      "actions": [
+        {
+          "name": "plan new",
+          "word": "new",
+          "usage": "[--title T] [--kind steps|test] [--checks anyone|agent|person] [--dry-run] (< plan.json | --markdown -)",
+          "flagNames": [
+            "document",
+            "markdown",
+            "title",
+            "kind",
+            "checks",
+            "dry-run"
+          ],
+          "dryRun": true
+        },
+        {
+          "name": "plan read",
+          "word": "read",
+          "usage": "[--plan P] [--all]",
+          "flagNames": [
+            "plan",
+            "all"
+          ],
+          "dryRun": false
+        },
+        {
+          "name": "plan set",
+          "word": "set",
+          "usage": "<stepId>... --state open|active|done|failed|skipped|blocked|warning|info [--note T] [--next ID] [--plan P]",
+          "flagNames": [
+            "state",
+            "note",
+            "next",
+            "plan"
+          ],
+          "dryRun": false
+        },
+        {
+          "name": "plan note",
+          "word": "note",
+          "usage": "<stepId> --text T [--plan P]",
+          "flagNames": [
+            "text",
+            "plan"
+          ],
+          "dryRun": false
+        },
+        {
+          "name": "plan add",
+          "word": "add",
+          "usage": "--type step|text|section --title T [--description D] [--under ID] [--after ID] [--checks anyone|agent|person] [--id ID] [--plan P]",
+          "flagNames": [
+            "type",
+            "title",
+            "description",
+            "under",
+            "after",
+            "checks",
+            "id",
+            "plan"
+          ],
+          "dryRun": false
+        },
+        {
+          "name": "plan edit",
+          "word": "edit",
+          "usage": "<itemId> [--title T] [--description D] [--checks anyone|agent|person] [--plan P]",
+          "flagNames": [
+            "title",
+            "description",
+            "checks",
+            "plan"
+          ],
+          "dryRun": false
+        },
+        {
+          "name": "plan move",
+          "word": "move",
+          "usage": "<itemId> [--under ID] [--after ID] [--plan P]",
+          "flagNames": [
+            "under",
+            "after",
+            "plan"
+          ],
+          "dryRun": false
+        },
+        {
+          "name": "plan remove",
+          "word": "remove",
+          "usage": "<itemId> [--plan P]",
+          "flagNames": [
+            "plan"
+          ],
+          "dryRun": false
+        },
+        {
+          "name": "plan status",
+          "word": "status",
+          "usage": "--text T [--plan P]",
+          "flagNames": [
+            "text",
+            "plan"
+          ],
+          "dryRun": false
+        },
+        {
+          "name": "plan delete",
+          "word": "delete",
+          "usage": "--plan P",
+          "flagNames": [
+            "plan"
+          ],
+          "dryRun": false
+        }
+      ]
+    },
+    {
+      "name": "worktree",
+      "served": "noun",
+      "usage": "<list|diff|merge> ...",
+      "summary": "Reads the worktrees of the repository and what each changed, and merges the ones of agents you opened",
+      "actions": [
+        {
+          "name": "worktree list",
+          "word": "list",
+          "usage": "",
+          "flagNames": [],
+          "dryRun": false
+        },
+        {
+          "name": "worktree diff",
+          "word": "diff",
+          "usage": "<branch> [--stat] [--tail N]",
+          "flagNames": [
+            "tail",
+            "stat"
+          ],
+          "dryRun": false
+        },
+        {
+          "name": "worktree merge",
+          "word": "merge",
+          "usage": "<branch> [--squash | --rebase] [--message M]",
+          "flagNames": [
+            "message",
+            "squash",
+            "rebase"
+          ],
+          "dryRun": false
+        }
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "argv": [],
+      "ok": true,
+      "lines": [
+        "verb\thelp\t[noun] [action]\tLists every verb and noun; with a noun the signature of each of its actions, with a noun and an action or with a verb everything that one takes",
+        "verb\tlist\t\tLists the context linked to this session: id, kind, title (also what ruimte-context prints without a verb)",
+        "verb\tread\t<id> [--tail N] [--subagent T]\tPrints one linked source, whole or its last N lines",
+        "verb\tdone\t--result T | --result-file F\tReports the result of the task you were opened with, which wakes the chat that gave it",
+        "verb\tnotify\t<id> --text \"...\"\tLeaves a short message for the agent in another node, along a line that runs from you into it",
+        "verb\tagent\t<claude|codex|gemini|copilot> [--terminal] [--prompt T | --prompt-file F] [--cwd P] [--view V] [--beside N] [--group G] [--title T] [--task T] [--mode M] [--worktree [--branch B]] [--dry-run]\tOpens an agent node that starts working, with an edge from you into it when you are a node on that canvas, so it can read what you have",
+        "verb\tteam\t--label L --roles '[{\"title\": \"Lexer\", \"prompt\": \"Fix the tokenizer\", \"provider\": \"claude\"}]' [--view V] [--cwd P] [--task] [--mode M] [--worktree] [--dry-run]\tOpens up to 16 agents at once in a group, each with an edge from you into it when you are a node on that canvas",
+        "noun\tnode\tlist|new|rename|delete|group|arrange\tLists, adds, renames, removes, frames and lays out the nodes of a canvas",
+        "noun\tlink\tlist|new|delete\tLists, draws and removes the lines of a canvas, which is what lets an agent read the node a line runs from",
+        "noun\tview\tlist|new|rename|icon|move|delete|open|diagram\tLists, makes, renames, marks, moves, removes and shows the views of the project, and writes a diagram",
+        "noun\ttask\tlist\tLists the tasks you gave and the task you were given; done reports the result of yours",
+        "noun\tplan\tnew|read|set|note|add|edit|move|remove|status|delete\tKeeps a plan beside this chat: steps you check off as you go, or a test plan a person runs; only a chat has plans",
+        "noun\tworktree\tlist|diff|merge\tReads the worktrees of the repository and what each changed, and merges the ones of agents you opened",
+        "scope\tlist and read are what a person linked into this session; node, link, view, task, agent, team, done, notify and worktree are the project itself, and plan is the chat of the caller\ta node you add is readable through read only once a line runs from it into you",
+        "ids\tIds in this output are for your commands. When you talk to the person, name things by their title, never by id",
+        "dry run\t--dry-run\tnode new, agent, plan new, team\tsame checks, nothing made; a refused call makes nothing either, so it is only a preview and never needed for safety; every other verb refuses the flag",
+        "detail\truimte-context help <noun>\tthe signature of every action of a noun",
+        "detail\truimte-context help <noun> <action>\tone action in full",
+        "detail\truimte-context help <verb>\tone verb in full",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "help"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\thelp\t[noun] [action]",
+        "about\tLists every verb and noun; with a noun the signature of each of its actions, with a noun and an action or with a verb everything that one takes",
+        "argument\t<noun>\toptional\tThe noun or verb to detail; without one every verb and noun is listed",
+        "argument\t<action>\toptional\tOne action of that noun, in full",
+        "prints\tverb\tname\targuments\tsummary\tone row per verb",
+        "prints\tnoun\tname\tactions\tsummary\tone row per noun, its actions separated by |; a row that starts with neither is not one",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "list"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tlist\t",
+        "about\tLists the context linked to this session: id, kind, title (also what ruimte-context prints without a verb)",
+        "prints\tid\tkind\ttitle\tone line per linked source, nothing when the person linked none",
+        "kinds\ttext\tterminal\tchat\tdrawing\tdiagram\tfile\ta note and a browser address both arrive as text",
+        "note\tThe id is what ruimte-context read takes; this list is the whole of what you may read",
+        "scope\tlist and read are what a person linked into this session; node, link, view, task, agent, team, done, notify and worktree are the project itself, and plan is the chat of the caller\ta node you add is readable through read only once a line runs from it into you",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "read"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tread\t<id> [--tail N] [--subagent T]",
+        "about\tPrints one linked source, whole or its last N lines",
+        "argument\t<id>\trequired\tThe id of a source, from ruimte-context list; a drawing or diagram also takes the id of the linked node that shows it",
+        "flag\t--tail N\toptional\tOnly the last N lines, N a positive whole number; without it the whole source",
+        "flag\t--subagent T\toptional\tThe whole conversation of one subagent of a linked chat instead of the chat, T the id in its > Subagent line; read from claude-transcript or codex-thread; --tail counts lines of that conversation",
+        "prints\tThe source itself, as text, not as tab-separated lines",
+        "kind\ttext\tThe text the person wrote: a note, a text on the canvas or a browser address\t--tail counts its lines",
+        "kind\tterminal\tThe screen of that session, its last 2000 lines, read the moment you ask\t--tail counts screen lines and cannot reach past those 2000",
+        "kind\tchat\tThe plans of that chat as text, then the whole thread as markdown: who said what, what every tool ran, and one line per subagent with the id --subagent takes\t--tail counts lines of the thread and leaves the plans out",
+        "kind\tdrawing\tThe text of the drawing in reading order, and the picture itself as SVG under it\t--tail counts lines of the reading order and leaves the SVG out",
+        "kind\tdiagram\tIts title, every node layer by layer (sub in brackets), every edge with its label, what each group wraps, and the SVG under it\t--tail counts lines of that list and leaves the SVG out",
+        "kind\tfile\tIts path and a line telling you to read it yourself, since your own tools see a fresher copy\t--tail does nothing here",
+        "cheap\tThe last fifteen lines of a neighbour is usually the whole answer; read the source whole only when it is not",
+        "scope\tlist and read are what a person linked into this session; node, link, view, task, agent, team, done, notify and worktree are the project itself, and plan is the chat of the caller\ta node you add is readable through read only once a line runs from it into you",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "done"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tdone\t--result T | --result-file F",
+        "about\tReports the result of the task you were opened with, which wakes the chat that gave it",
+        "flag\t--result T\toptional\tThe result, at most 32000 characters; \\n, \\t and \\\\ are read as escapes, so a line break is \\n inside plain single quotes and no $'...', heredoc or pipe is needed; --result - takes it from stdin",
+        "flag\t--result-file F\toptional\tThe same result out of a file inside the project folder; not together with --result",
+        "prints\tdone\ttask id\tparent id\tthe task that settled and the chat that is woken with it",
+        "who\tOnly a node opened with --task, while its task is open; the first of done, the end of a chat child's first turn and an exit settles it",
+        "chat\tA chat child that calls done during its first turn reports this result instead of its last answer",
+        "terminal\tA terminal child has no other way to report back: exiting without done fails the task",
+        "refusals\tno-open-task\tresult-twice\tempty-result\tresult-too-long\tthe codes this verb refuses with",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "notify"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tnotify\t<id> --text \"...\"",
+        "about\tLeaves a short message for the agent in another node, along a line that runs from you into it",
+        "argument\t<id>\trequired\tThe node to notify, by id; ruimte-context link list lists the lines you have",
+        "flag\t--text M\trequired\tThe message, at most 500 characters; \\n, \\t and \\\\ are read as escapes, and --text - takes it from stdin",
+        "prints\tnotified\tid\twhen\twhat happened\twhen is now for a message that landed as you called, waiting for one that is held",
+        "who\tOnly a node a line runs from you into, which is the same direction that makes you readable to it; ruimte-context link new draws that line",
+        "who\tA link --to that names a terminal or a chat draws both ways at once, two edges and two rows, so one call is enough to be able to notify it and be notified back",
+        "terminal\tA shell with no agent in it gets the line on its screen at once, dimmed, the way the linked context is announced",
+        "terminal\tAn agent that answers a context hook (Claude Code or Codex) hears it at the start of its next turn; another CLI gets the line on its screen instead",
+        "terminal\tA screen is as wide as the node is, so a long message is wrapped across lines there; it reaches an agent whole either way",
+        "chat\tA chat hears it in front of its next prompt, beside what it is told about links that changed",
+        "waiting\tA node that runs nothing yet keeps the message until it starts",
+        "waiting\tAt most 10 messages wait per node, the oldest dropped first, and one nobody picks up in 6 hours is dropped; each is delivered once",
+        "not\tThis is a message, not a command: nothing is typed into that shell and no turn is started by it",
+        "not\tYou never hear that it was read: the answer says where it went and nothing after that, and waiting means it sits there until that agent takes its next turn",
+        "reply\tThere is no reply channel; the other node answers with a notify of its own, which needs a line running the other way, or you read what it did with ruimte-context read",
+        "refusals\tnot-linked\tself-notify\tnot-an-agent\tunknown-node\tnot-on-a-canvas\tthe whole set this verb refuses with",
+        "ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "agent"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tagent\t<claude|codex|gemini|copilot> [--terminal] [--prompt T | --prompt-file F] [--cwd P] [--view V] [--beside N] [--group G] [--title T] [--task T] [--mode M] [--worktree [--branch B]] [--dry-run]",
+        "about\tOpens an agent node that starts working, with an edge from you into it when you are a node on that canvas, so it can read what you have",
+        "argument\t<cli>\trequired\tclaude, codex, gemini, copilot",
+        "prints\tid\tkind\tview\tcli\tedge\ttask\tthe new node, its kind (chat or terminal), the canvas it landed on, the CLI it runs, the id of the edge drawn into it (- when none was drawn) and, with --task, the id of the task",
+        "prints\tnext\tthe last line under --task, saying what to do while the task runs",
+        "flag\t--terminal\tno value\tMakes a terminal node instead of a chat node; a CLI without a chat backend is a terminal anyway (only claude, codex have one)",
+        "flag\t--prompt T\toptional\tWhat the agent starts working on; \\n, \\t and \\\\ are read as escapes, at most 2000 characters",
+        "flag\t--prompt-file F\toptional\tThe same prompt out of a file, for one with exact bytes; not together with --prompt",
+        "flag\t--cwd P\toptional\tThe directory the agent starts in",
+        "flag\t--view V\toptional\tThe canvas to add to, by view id; ruimte-context view list lists them",
+        "flag\t--beside N\toptional\tPuts the node directly right of node N, top edges level",
+        "flag\t--group G\toptional\tPuts the node inside group node G of that canvas; not together with --beside",
+        "flag\t--title T\toptional\tThe title, at most 120 characters; without one the node is called after the CLI, and the session may rename it",
+        "flag\t--task T\toptional\tGives the new agent a task titled T, which the prompt describes and whose result wakes you; needs a prompt of at most 1760 characters, and the title of the node is T unless --title says otherwise",
+        "flag\t--mode M\toptional\tThe permission mode the agent runs in: supervised, auto-accept-edits, auto or full-access, never wider than your own",
+        "flag\t--worktree\tno value\tStarts the agent in a git worktree of its own on a new branch; not together with --cwd",
+        "flag\t--branch B\toptional\tWith --worktree: the branch to use instead of one named after the task or the title; an existing branch is checked out as it is",
+        "flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field is dry-run and the last names the edge it would draw, as <from> -> <new node>; a refused call makes nothing either, so it is only a preview and never needed for safety",
+        "kinds\tchat\tThe default for claude, codex: the CLI as a thread in the node, fixed to that CLI, with no model picker on the composer; its last answer settles a task",
+        "kinds\tterminal\tThat CLI running in a shell, which is what the person sees and can type in; the only kind for a CLI without a chat backend, and a terminal child has to call done to settle a task",
+        "edge\tThe edge runs from you into the new node, which is the direction that makes you readable to it: it can run ruimte-context read on your id",
+        "edge\tOnly a node on that canvas gets one: a chat that is a view of its own, or a node of another canvas, gets no edge and the edge column shows -",
+        "edge\tOne way only: you do not read the new agent through it. ruimte-context link new --to <its id> draws the line back when you want that too",
+        "edge\truimte-context link list lists what is drawn on the canvas now",
+        "without a prompt\tLeave --prompt out and the node opens with the CLI waiting, so the person types the first thing themselves",
+        "groups\truimte-context node list lists the nodes of a canvas; a row of kind group is what --group takes",
+        "where\tWithout --view the canvas you are a node on; a chat that is a view of its own is a node on no canvas, so it names one with --view and no edge is drawn",
+        "where\tWithout --beside and --group the first free spot right of the caller, or right of everything when the caller is not on that canvas",
+        "group\tThe node lands in a row under the title bar of the group, which grows when it has no room; a collapsed group also takes the id into its members",
+        "paths\t--cwd and --prompt-file are resolved against the project folder, never against your own directory; both may also be absolute",
+        "paths\tBoth have to stay inside the project folder or a worktree of its repository",
+        "prompt\tA terminal agent gets it on the line its CLI is started with, a chat agent as the first message of the thread; it is delivered once and never written into project.json",
+        "quoting\tThe prompt is one shell word: an apostrophe in it ends a single-quoted argument early, so write it as '\\'' or put the prompt in --prompt-file",
+        "limit\tA canvas holds at most 500 nodes",
+        "titles\tA name is at most 120 characters and is never unique: two nodes may carry the same one, and an id is what names a node",
+        "task\tWith --task the prompt is the assignment and T its title; only a chat may give one, since only a chat can be woken with the result",
+        "task\tA chat child finishes its task with the last answer of its first turn, or earlier with ruimte-context done; one that gave tasks of its own finishes with the turn after they all woke it; a terminal child has to call done, and one that exits without it fails the task",
+        "task\tOnce a task settles you are woken once, as soon as you have no turn running, with the results of every task that settled by then; you never have to poll",
+        "task\tThe tasks of one team --task call wake you together: only once every one of them settled (done, failed or cancelled), so one slow role holds back the results of the others",
+        "task\tA task from agent --task wakes you on its own, also while a team of yours is still out; that wake leaves the team's results out, and they all come in a later wake of their own",
+        "task\truimte-context task list lists the ones still open or yet to wake you, with their status; --all adds the history",
+        "depth\tA node a person opened is depth 0 and one an agent opens is one deeper; agent opens up to depth 2, team up to depth 1",
+        "depth\tAt depth 1 you may open a single agent with agent and no team of your own; at depth 2 neither verb opens anything",
+        "depth\tThe daemon writes the depth down beside the node, outside the project, so a restart does not start the count over",
+        "limit\tOne caller may have 16 agent nodes open at a time; removing one frees the count",
+        "mode\tsupervised < auto-accept-edits < auto < full-access\tfrom the narrowest to the widest",
+        "mode\tAn agent you open never runs in a wider mode than you: without --mode a chat opened by a chat takes your mode, and anything else takes the person's default narrowed to yours",
+        "mode\tA terminal agent counts as the mode its CLI last reported, or else the mode it was started in; one the machine cannot tell counts as supervised",
+        "worktree\tEach agent gets a git worktree of its own under the machine's worktrees folder, on a new branch from HEAD, and starts in it; two agents editing the same file never overwrite each other",
+        "worktree\tThe branch is named after the task or the title, with -2, -3 when that name is taken; the turn diff of each agent shows only its own worktree",
+        "worktree\tNothing removes a worktree on its own; ruimte-context worktree merge brings the work of an agent you opened back and removes its worktree once merged",
+        "note\tThe machine starts the node right away, whether or not anyone has its canvas open; a client that shows it later joins what runs",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "team"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tteam\t--label L --roles '[{\"title\": \"Lexer\", \"prompt\": \"Fix the tokenizer\", \"provider\": \"claude\"}]' [--view V] [--cwd P] [--task] [--mode M] [--worktree] [--dry-run]",
+        "about\tOpens up to 16 agents at once in a group, each with an edge from you into it when you are a node on that canvas",
+        "flag\t--label L\trequired\tThe name of the group the agents land in, at most 120 characters",
+        "flag\t--roles J\trequired\tThe roles as JSON, [{\"title\": \"Lexer\", \"prompt\": \"Fix the tokenizer\", \"provider\": \"claude\"}]",
+        "roles\tshape\t[{\"title\": \"Lexer\", \"prompt\": \"Fix the tokenizer\", \"provider\": \"claude\"}]",
+        "roles\ttitle\trequired\tThe title of the node, at most 120 characters; the session never renames over it",
+        "roles\tprompt\trequired\tWhat that agent starts working on, at most 2000 characters",
+        "roles\tprovider\trequired\tclaude, codex, gemini, copilot",
+        "roles\tterminal\toptional\ttrue opens a terminal node instead of a chat node; a CLI without a chat backend is a terminal anyway (only claude, codex have one)",
+        "roles\tcount\tbetween 1 and 16",
+        "json\tA prompt is a JSON string, so a line break in it is \\n of JSON itself and nothing is escaped twice",
+        "quoting\tThe JSON goes in single quotes, so an apostrophe in a prompt ends the quote early: write it as '\\'' or as \\u0027 inside the JSON string",
+        "example\truimte-context team --label \"Parser work\" --roles '[{\"title\":\"Lexer\",\"prompt\":\"Fix the tokenizer in src/lex.ts\",\"provider\":\"claude\"},{\"title\":\"Reviewer\",\"prompt\":\"Read the Lexer node and review its work\",\"provider\":\"codex\"},{\"title\":\"Shell\",\"prompt\":\"Run the lexer tests\",\"provider\":\"claude\",\"terminal\":true}]'",
+        "prints\tid\tkind\ttitle\tview\tcli\tedge\ttask\tthe group first, its label in the title column and a dash for the CLI and the edge, then one line per role in the order of --roles, with the id of its task last under --task; the title is what tells two rows of one CLI apart",
+        "prints\tnext\tthe last line under --task, saying what to do while the tasks run",
+        "flag\t--cwd P\toptional\tThe directory every agent starts in; a directory per role is --worktree",
+        "flag\t--view V\toptional\tThe canvas to add to, by view id; ruimte-context view list lists them. Without it the canvas you are a node on",
+        "flag\t--mode M\toptional\tThe permission mode every role runs in: supervised, auto-accept-edits, auto or full-access, never wider than your own",
+        "flag\t--worktree\tno value\tStarts every role in a git worktree of its own, on a new branch named after the role; not together with --cwd",
+        "flag\t--task\tno value\tGives every role a task titled after the role, which its prompt describes; you are woken once, with the results of all roles, when the last of them settles; each prompt at most 1760 characters",
+        "flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field of every line is dry-run and the last names the edge it would draw, as <from> -> <the role's title>; every role is checked before any is made, and a refused call makes nothing either, so it is only a preview and never needed for safety",
+        "edges\tOne edge per role, from you into that agent, so each of them can read you with ruimte-context read; only when you are a node on that canvas",
+        "edges\tOne way only: you do not read them through it, and the roles do not read each other",
+        "edges\tWithout --task, ruimte-context link new --to <the role's id> draws the line back, which is how you read what a role has done; its id is the first field of that role's row",
+        "edges\tWith --task no line back is needed, since the results of the roles arrive as your next message once they all settled",
+        "edges\truimte-context link list lists what is drawn on the canvas now",
+        "where\tThe group lands on the first free spot right of you, or right of everything when you are not on that canvas",
+        "where\tA chat that is a view of its own is a node on no canvas: it names one with --view, no edge is drawn, and the edge column of every row shows -",
+        "group\tThe agents stand in rows of at most 4 inside the frame, and the frame is sized to hold them",
+        "refusal\tA role that is wrong is named by its place in the array, counting from 0",
+        "paths\t--cwd is resolved against the project folder and has to stay inside it or a worktree of its repository",
+        "prompt\tA terminal role gets its prompt on the line its CLI is started with, a chat role as the first message of its thread; it is delivered once and never written into project.json",
+        "limit\tA canvas holds at most 500 nodes, the group among them",
+        "titles\tA name is at most 120 characters and is never unique: two nodes may carry the same one, and an id is what names a node",
+        "task\tWith --task the prompt is the assignment and T its title; only a chat may give one, since only a chat can be woken with the result",
+        "task\tA chat child finishes its task with the last answer of its first turn, or earlier with ruimte-context done; one that gave tasks of its own finishes with the turn after they all woke it; a terminal child has to call done, and one that exits without it fails the task",
+        "task\tOnce a task settles you are woken once, as soon as you have no turn running, with the results of every task that settled by then; you never have to poll",
+        "task\tThe tasks of one team --task call wake you together: only once every one of them settled (done, failed or cancelled), so one slow role holds back the results of the others",
+        "task\tA task from agent --task wakes you on its own, also while a team of yours is still out; that wake leaves the team's results out, and they all come in a later wake of their own",
+        "task\truimte-context task list lists the ones still open or yet to wake you, with their status; --all adds the history",
+        "depth\tA node a person opened is depth 0 and one an agent opens is one deeper; agent opens up to depth 2, team up to depth 1",
+        "depth\tAt depth 1 you may open a single agent with agent and no team of your own; at depth 2 neither verb opens anything",
+        "depth\tThe daemon writes the depth down beside the node, outside the project, so a restart does not start the count over",
+        "limit\tOne caller may have 16 agent nodes open at a time; removing one frees the count",
+        "mode\tsupervised < auto-accept-edits < auto < full-access\tfrom the narrowest to the widest",
+        "mode\tAn agent you open never runs in a wider mode than you: without --mode a chat opened by a chat takes your mode, and anything else takes the person's default narrowed to yours",
+        "mode\tA terminal agent counts as the mode its CLI last reported, or else the mode it was started in; one the machine cannot tell counts as supervised",
+        "worktree\tEach agent gets a git worktree of its own under the machine's worktrees folder, on a new branch from HEAD, and starts in it; two agents editing the same file never overwrite each other",
+        "worktree\tThe branch is named after the task or the title, with -2, -3 when that name is taken; the turn diff of each agent shows only its own worktree",
+        "worktree\tNothing removes a worktree on its own; ruimte-context worktree merge brings the work of an agent you opened back and removes its worktree once merged",
+        "depth\tA role lands at depth 1: it may open a single agent of its own with agent, and a team of its own is refused",
+        "note\tThe machine starts every agent right away, whether or not anyone has its canvas open; a client that shows one later joins what runs",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "node"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tnode\t<list|new|rename|delete|group|arrange> ...",
+        "about\tLists, adds, renames, removes, frames and lays out the nodes of a canvas",
+        "note\tA node is a note, a browser, a drawing, a diagram, a file, a terminal, a chat or a group on a canvas; agent and team add agent nodes that start working",
+        "scope\tlist and read are what a person linked into this session; node, link, view, task, agent, team, done, notify and worktree are the project itself, and plan is the chat of the caller\ta node you add is readable through read only once a line runs from it into you",
+        "action\tnode list\t[--view V]\tLists the nodes of a canvas: id, kind, title, x, y, w, h, group",
+        "action\tnode new\t<note|browser|drawing|diagram|file|terminal|chat> [--title T] [--text B] [--url U] [--path P] [--source V] [--cwd P] [--view V] [--beside N] [--dry-run]\tAdds one node to a canvas and prints id, kind, view; a browser needs --url, a drawing needs --source, a diagram needs --source, a file needs --path",
+        "action\tnode rename\t<nodeId> --title T [--view V]\tRenames one node and prints id, kind, title; nothing the node hosts renames over it again",
+        "action\tnode delete\t<nodeId>\tRemoves a node you made, with the session it holds and the lines that ran into it",
+        "action\tnode group\t--nodes A,B [--label L] [--color C] [--view V]\tDraws a frame around nodes that already stand together and prints id, group, label, view, members",
+        "action\tnode arrange\t--nodes A,B [--layout grid|row|column] [--cols N] [--view V]\tLays nodes out in a grid, a row or a column without overlap and prints id, x, y",
+        "detail\truimte-context help node <action>\tone action in full",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "link"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tlink\t<list|new|delete> ...",
+        "about\tLists, draws and removes the lines of a canvas, which is what lets an agent read the node a line runs from",
+        "scope\tlist and read are what a person linked into this session; node, link, view, task, agent, team, done, notify and worktree are the project itself, and plan is the chat of the caller\ta node you add is readable through read only once a line runs from it into you",
+        "action\tlink list\t[--view V]\tLists the lines of a canvas: id, from, to, label",
+        "action\tlink new\t--to A,B [--from N] [--label L] [--view V]\tDraws a context line between nodes of one canvas; between two agents it draws both ways, which is two rows",
+        "action\tlink delete\t<edgeId> [--view V]\tRemoves one line whose ends are both yours and prints the line that went",
+        "detail\truimte-context help link <action>\tone action in full",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "view"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tview\t<list|new|rename|icon|move|delete|open|diagram> ...",
+        "about\tLists, makes, renames, marks, moves, removes and shows the views of the project, and writes a diagram",
+        "see\truimte-context view list\tthe views of the project, which is where every id here comes from",
+        "note\tA view is a row in the sidebar: a canvas, a drawing, a diagram, a file, a page, a session of its own, or a line between them",
+        "note\tThe views of a project are shared, so what you make here is what every person with this project open sees",
+        "action\tview list\t\tLists the views of the project in sidebar order: id, kind, name, whether you may delete it and why",
+        "action\tview new\t<name> [--kind canvas|chat|terminal|browser|drawing|diagram|file|separator] [--path P] [--url U] [--after V]\tAdds a view to the sidebar and prints id, kind, name; the default kind is canvas",
+        "action\tview rename\t<viewId> <name>\tRenames a view and prints id, kind, name; nothing the view hosts renames over it again",
+        "action\tview icon\t<viewId> <lucide-name|emoji>\tGives a view a mark of its own and prints id, kind, icon kind, icon",
+        "action\tview move\t<viewId> --after V | --first\tMoves a view to another place in the sidebar and prints id, kind, the place it now has",
+        "action\tview delete\t<viewId>\tRemoves a view you made, with the sessions it holds, and prints what went",
+        "action\tview open\t<viewId>\tShows a view to whoever has this project on screen; the project file is not touched",
+        "action\tview diagram\t<viewId> < document.json\tReplaces the whole diagram of a diagram view with the JSON document on stdin; prints view, rev, nodes, groups, edges",
+        "detail\truimte-context help view <action>\tone action in full",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "task"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\ttask\t<list> ...",
+        "about\tLists the tasks you gave and the task you were given; done reports the result of yours",
+        "see\truimte-context done\treporting the result of the task you were opened with",
+        "action\ttask list\t[--all]\tLists the tasks you gave and the task you were given that are still open or have yet to wake you: id, direction, status, the other node, title, wake, result, batch",
+        "detail\truimte-context help task <action>\tone action in full",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "plan"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tplan\t<new|read|set|note|add|edit|move|remove|status|delete> ...",
+        "about\tKeeps a plan beside this chat: steps you check off as you go, or a test plan a person runs; only a chat has plans",
+        "about\tA plan belongs to the chat that runs the verb, never to a project; a person sees it in a panel beside the chat, checks steps off, writes notes and unlocks",
+        "newest\tWithout --plan every verb works on the newest plan of this chat",
+        "legend\t[ ] open, [~] active, [x] done, [!] failed, [-] skipped, [?] blocked, [w] warning, [i] info",
+        "active\tMark the step you work on with plan set <id> --state active, and move on with plan set <id> --state done --next <id>",
+        "checks\tanyone: you and a person; agent: only you, until a person unlocks it; person: only a person, refused as person-only",
+        "person\tA state a person set is never yours to change (set-by-person), and a step a person unlocked stays unlocked (unlocked-by-person)",
+        "status\tThe status line is one short sentence about what happens now or next, never counts, since the panel shows progress itself",
+        "ids\tIds are for your commands. When you talk to the person, name the plan and its steps by their title, never by id",
+        "compaction\tAfter a compaction you may no longer know the ids: ruimte-context plan read without arguments prints them",
+        "others\truimte-context read <chat> on a linked chat shows its plans above the conversation; you never set steps of another chat",
+        "refusals\tplan-needs-chat\tplan-not-found\tplan-missing-item\tperson-only\tset-by-person\tunlocked-by-person\ttoo-many-plans\tplan-invalid\tthe codes these verbs refuse with most",
+        "action\tplan new\t[--title T] [--kind steps|test] [--checks anyone|agent|person] [--dry-run] (< plan.json | --markdown -)\tMakes a plan for this chat from a JSON document on stdin or a Markdown task list; prints the plan, every item id and how to check one off",
+        "action\tplan read\t[--plan P] [--all]\tPrints the newest plan of this chat as text, with every id in brackets; after a compaction this is how you find the ids again",
+        "action\tplan set\t<stepId>... --state open|active|done|failed|skipped|blocked|warning|info [--note T] [--next ID] [--plan P]\tSets the state of one or more steps in one rev; with --next the step you move on to becomes active in the same rev",
+        "action\tplan note\t<stepId> --text T [--plan P]\tWrites the note of a step, also one a person set; an empty text clears it",
+        "action\tplan add\t--type step|text|section --title T [--description D] [--under ID] [--after ID] [--checks anyone|agent|person] [--id ID] [--plan P]\tAdds a step, text block or section; prints the plan and the id of the new item",
+        "action\tplan edit\t<itemId> [--title T] [--description D] [--checks anyone|agent|person] [--plan P]\tChanges the title, description or checks of an item",
+        "action\tplan move\t<itemId> [--under ID] [--after ID] [--plan P]\tMoves an item, with everything under it, to another place in the plan",
+        "action\tplan remove\t<itemId> [--plan P]\tRemoves an item and everything under it; refused when a person set a state in it",
+        "action\tplan status\t--text T [--plan P]\tSets the line under the title about what happens now or next; an empty text clears it",
+        "action\tplan delete\t--plan P\tRemoves a whole plan of this chat",
+        "detail\truimte-context help plan <action>\tone action in full",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "worktree"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tworktree\t<list|diff|merge> ...",
+        "about\tReads the worktrees of the repository and what each changed, and merges the ones of agents you opened",
+        "worktrees\tagent --worktree and team --worktree give each agent a worktree of its own; these are the words to see and bring back their work",
+        "never\tNothing removes a worktree on its own, also not after a merge; a person removes it from the git panel or when deleting its node",
+        "action\tworktree list\t\tLists the worktrees of the repository: branch, path, nodes, from, changed, new, commits",
+        "action\tworktree diff\t<branch> [--stat] [--tail N]\tPrints what a worktree changed since the branch it was made from, uncommitted and new files included",
+        "action\tworktree merge\t<branch> [--squash | --rebase] [--message M]\tMerges the worktree of an agent you opened into the branch it was made from; the worktree and its branch stay",
+        "detail\truimte-context help worktree <action>\tone action in full",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "node",
+        "list"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tnode list\t[--view V]",
+        "about\tLists the nodes of a canvas: id, kind, title, x, y, w, h, group",
+        "flag\t--view V\toptional\tThe canvas to list, by view id; ruimte-context view list lists them",
+        "prints\tid\tkind\ttitle\tx\ty\tw\th\tgroup\tone line per node, rounded to whole pixels",
+        "units\tx and y are the top left corner of the node in canvas pixels, w and h its size; the canvas has no edges and x or y may be negative",
+        "where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one",
+        "self\tThe last row is not a node: it is self and your own id, or self and a dash when you are not a node on this canvas",
+        "self\tA terminal session also carries its own id in $RUIMTE_SESSION_ID; a chat backend is given none, which is what the self row is for",
+        "groups\tA group is a row of kind group; its id is what --group takes on agent, and the group column names the frame a node stands in, empty on the canvas itself",
+        "see\truimte-context link list\tthe lines of the same canvas, which this list does not show",
+        "note\tA tab or a newline in a title is printed as a space, so a node is always one row",
+        "scope\tlist and read are what a person linked into this session; node, link, view, task, agent, team, done, notify and worktree are the project itself, and plan is the chat of the caller\ta node you add is readable through read only once a line runs from it into you",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "node",
+        "new"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tnode new\t<note|browser|drawing|diagram|file|terminal|chat> [--title T] [--text B] [--url U] [--path P] [--source V] [--cwd P] [--view V] [--beside N] [--dry-run]",
+        "about\tAdds one node to a canvas and prints id, kind, view; a browser needs --url, a drawing needs --source, a diagram needs --source, a file needs --path",
+        "argument\t<kind>\trequired\tnote, browser, drawing, diagram, file, terminal, chat",
+        "prints\tid\tkind\tview\tthe id of the new node, its kind, and the canvas it landed on",
+        "kind\tnote\t--text\tcalled \"Note\" without --title",
+        "kind\tbrowser\t--url (required)\tcalled \"Browser\" without --title",
+        "kind\tdrawing\t--source (required)\tcalled the name of the drawing view without --title",
+        "kind\tdiagram\t--source (required)\tcalled the name of the diagram view without --title",
+        "kind\tfile\t--path (required)\tcalled the file's own name without --title",
+        "kind\tterminal\t--cwd\tcalled \"Terminal\" without --title",
+        "kind\tchat\t--cwd\tcalled \"New chat\" without --title",
+        "kind\tevery kind\t--title T, --view V, --beside N",
+        "flag\t--title T\tevery kind\tThe title, at most 120 characters; one set here is the node's for good, the session never renames over it",
+        "flag\t--view V\tevery kind\tThe canvas to add to, by view id; ruimte-context view list lists them",
+        "flag\t--beside N\tevery kind\tPuts the node directly right of node N, top edges level, whatever is there already",
+        "flag\t--dry-run\tno value\tChecks everything and makes nothing; the first field is dry-run instead of the id the node would have got; a refused call makes nothing either, so it is only a preview and never needed for safety",
+        "flag\t--text B\tnote\tThe body; \\n, \\t and \\\\ are read as escapes, and --text - takes the body from stdin, byte for byte",
+        "flag\t--url U\tbrowser (required)\tAn http or https address",
+        "flag\t--source V\tdrawing (required), diagram (required)\tThe id of a view of this project of the same kind as the node, a drawing for a drawing and a diagram for a diagram; ruimte-context view list lists them",
+        "flag\t--path P\tfile (required)\tThe file to show; it has to exist",
+        "flag\t--cwd P\tterminal, chat\tThe directory the shell starts in",
+        "where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one",
+        "where\tWithout --beside the first free spot right of the caller, or right of everything when the caller is not on that canvas",
+        "paths\t--path and --cwd are resolved against the project folder, never against your own directory; both may also be absolute",
+        "paths\t--cwd has to stay inside the project folder or a worktree of its repository; --path may point outside and is then stored absolute",
+        "limit\tA canvas holds at most 500 nodes; a terminal or chat starts no process until a client shows it",
+        "titles\tA name is at most 120 characters and is never unique: two nodes may carry the same one, and an id is what names a node",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "node",
+        "rename"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tnode rename\t<nodeId> --title T [--view V]",
+        "about\tRenames one node and prints id, kind, title; nothing the node hosts renames over it again",
+        "argument\t<nodeId>\trequired\tThe node to rename, by id; one node per call",
+        "flag\t--title T\trequired\tThe new title, at most 120 characters, one argument, spaces and all",
+        "flag\t--view V\toptional\tThe canvas the node is on, by view id; ruimte-context view list lists them",
+        "prints\tid\tkind\ttitle\tthe node as it now stands",
+        "note\tA title set here is the node's for good: the session it holds never renames over it again, which is what a person typing a title does too",
+        "note\tA rename to the title it already carries writes nothing and is not a refusal",
+        "ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs",
+        "see\truimte-context view rename\trenaming a row in the sidebar instead of a node on a canvas",
+        "titles\tA name is at most 120 characters and is never unique: two nodes may carry the same one, and an id is what names a node",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "node",
+        "delete"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tnode delete\t<nodeId>",
+        "about\tRemoves a node you made, with the session it holds and the lines that ran into it",
+        "argument\t<nodeId>\trequired\tThe node to remove, by id; ruimte-context node list lists them",
+        "prints\tdeleted\tid\tkind\ttitle\tthe node that went",
+        "prints\tended\tid\tkind\tthe session it took with it, for a terminal or a chat",
+        "prints\tedges\tcount\thow many lines ran into or out of it and went with it",
+        "prints\tmembers\tcount\tfor a group: how many nodes stood in the frame and stayed where they are",
+        "rule\tOnly a node whose maker is you, which is every node you made with node new, node group, agent or team",
+        "rule\tA machine can free every node and view of every project on it; a refusal says whether this one does",
+        "rule\tNever your own node, since that would end the session asking",
+        "group\tRemoving a group takes the frame and nothing else: the nodes inside it stay where they stand, because they are not yours to remove with it",
+        "note\tThe node is found on any canvas of this project, so this takes no --view",
+        "see\truimte-context node list\tthe nodes of a canvas, with the ids this takes",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "node",
+        "group"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tnode group\t--nodes A,B [--label L] [--color C] [--view V]",
+        "about\tDraws a frame around nodes that already stand together and prints id, group, label, view, members",
+        "flag\t--nodes A,B\trequired\tThe nodes the frame goes around, by id, separated by commas",
+        "flag\t--label L\toptional\tThe name of the group, at most 120 characters; without one it is called \"Group\"",
+        "flag\t--color C\toptional\tThe color of the frame, one of 17; without one the frame is drawn in the faint gray a person's own grouping gives it",
+        "colors\tred\torange\tamber\tyellow\tlime\tgreen\temerald\tteal\tcyan\tsky\tblue\tindigo\tviolet\tpurple\tfuchsia\tpink\trose",
+        "flag\t--view V\toptional\tThe canvas the nodes are on, by view id; ruimte-context view list lists them",
+        "prints\tid\tgroup\tlabel\tview\tmembers\tthe new group, its label, the canvas it landed on, and how many nodes stand inside the frame",
+        "prints\talso\tid\tkind\ttitle\tone line per node you did not name that the frame ended up around",
+        "where\tThe frame is the box your nodes already occupy, with room on every side and a title band above it, snapped to the canvas grid, which is where a person grouping a selection would have put it",
+        "members\tA group holds whatever has its center inside it, so a node standing between the ones you named goes in with them; that is what the also rows are for",
+        "rule\tEvery node has to stand in the same place already: all of them on the canvas itself, or all of them inside one and the same group",
+        "rule\tA group is never one of --nodes; a frame is drawn around nodes, and the client leaves a group out of a selection for the same reason",
+        "collapsed\tInside a group that is folded shut the new frame joins its members in the file, so it is folded away with the rest",
+        "limit\tA canvas holds at most 500 nodes, this frame among them",
+        "ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs",
+        "see\truimte-context node arrange\ttidying those nodes before you draw a frame around them",
+        "titles\tA name is at most 120 characters and is never unique: two nodes may carry the same one, and an id is what names a node",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "node",
+        "arrange"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tnode arrange\t--nodes A,B [--layout grid|row|column] [--cols N] [--view V]",
+        "about\tLays nodes out in a grid, a row or a column without overlap and prints id, x, y",
+        "flag\t--nodes A,B\trequired\tThe nodes to tidy, by id, separated by commas; they are laid out in the order you name them",
+        "flag\t--layout L\toptional\tgrid, row, column; without it a grid",
+        "flag\t--cols N\tgrid only\tHow many columns the grid gets; without it as square as the count allows, so 5 nodes are 3 and 2",
+        "flag\t--view V\toptional\tThe canvas the nodes are on, by view id; ruimte-context view list lists them",
+        "prints\tid\tx\ty\tone line per node in the order you named them, at the top left corner it now has",
+        "where\tThe block starts at the top left corner of the box those nodes already occupy, so a canvas is straightened where it stands and nothing jumps out of sight; one node therefore never moves",
+        "spacing\t40 px between them, the same room a new node keeps; a column is as wide as the widest node in it and a row as tall as the tallest, so nodes of different sizes never touch",
+        "sizes\tNothing is resized; this moves nodes and nothing else",
+        "layout\trow\tOne row, left to right, top edges level",
+        "layout\tcolumn\tOne column, top to bottom, left edges level",
+        "layout\tgrid\tRows of --cols, filled left to right; --cols 1 is a column and --cols as many as you named is a row",
+        "rule\tA group is never one of --nodes: a frame carries whatever stands in it, and this verb moves the nodes it is given and nothing else",
+        "note\tOnly the nodes you name are kept apart; one you leave out may end up under one you named",
+        "note\tA node moved out of a frame it stood in leaves that group, the same as a person dragging it out",
+        "note\tNodes that are already where this would put them are reported and nothing is written",
+        "ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs and their sizes",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "link",
+        "list"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tlink list\t[--view V]",
+        "about\tLists the lines of a canvas: id, from, to, label",
+        "flag\t--view V\toptional\tThe canvas to list, by view id; ruimte-context view list lists them",
+        "prints\tid\tfrom\tto\tlabel\tone line per line on the canvas, the label empty where it has none",
+        "direction\tA line runs from the first id into the second; into an agent node that is what makes the first readable to it, and never the other way round",
+        "both ways\tTwo agents that read each other are two lines, one each way; ruimte-context link new draws the second",
+        "where\tWithout --view the canvas the caller is a node on; a caller that is a view of its own must name one",
+        "note\tA canvas with no lines on it prints nothing at all",
+        "scope\tlist and read are what a person linked into this session; node, link, view, task, agent, team, done, notify and worktree are the project itself, and plan is the chat of the caller\ta node you add is readable through read only once a line runs from it into you",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "link",
+        "new"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tlink new\t--to A,B [--from N] [--label L] [--view V]",
+        "about\tDraws a context line between nodes of one canvas; between two agents it draws both ways, which is two rows",
+        "flag\t--to A,B\trequired\tThe nodes the line runs into, by id, separated by commas",
+        "flag\t--from N\toptional\tWhere the line starts; without it, you",
+        "flag\t--label L\toptional\tWhat the line is called on the canvas, at most 120 characters; a line into an agent is called \"context\" without one",
+        "flag\t--view V\toptional\tThe canvas both ends are on, by view id; without it the one you are on",
+        "prints\tid\tfrom\tto\tstate\tway\tone line per edge, where state is new for one that was drawn and existing for one that was there already",
+        "way\tout for the line you asked for, back for the one this verb drew the other way by itself, so two rows for one --to is not a mistake",
+        "context\tAn edge into a terminal or a chat node is what lets that agent read the other end with ruimte-context read; a line between two other nodes is only a line",
+        "both ways\tA --to that names a terminal or a chat, from a terminal or a chat, is two edges and two rows: each of them then reads the other, and either may notify the other",
+        "both ways\tInto anything else it is one edge and one row, since only an agent node reads what a line brings it",
+        "again\tAn edge that is already there is left alone and reported as existing, so running the same link new twice changes nothing",
+        "limit\tAt most 20 ids in --to",
+        "ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs",
+        "see\truimte-context link list\twhat is drawn on that canvas now, so you can tell a line that is missing from one that is only the other way round",
+        "see\truimte-context link delete\tremoving a line again, one direction at a time",
+        "see\truimte-context notify\tleaving a message for the agent at the other end, which takes a line running that way",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "link",
+        "delete"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tlink delete\t<edgeId> [--view V]",
+        "about\tRemoves one line whose ends are both yours and prints the line that went",
+        "argument\t<edgeId>\trequired\tThe line to remove, by id; ruimte-context link list lists them",
+        "flag\t--view V\toptional\tThe canvas the line is on, by view id; without it the one you are on",
+        "prints\tdeleted\tid\tfrom\tto\tlabel\tthe line that went, the label empty where it had none",
+        "rule\tOnly a line whose ends are both yours: you, or a node you made with node new, node group, agent or team",
+        "rule\tA line that touches a node a person made stays, and so does a line a person drew into you, since that is the context they gave you",
+        "rule\tA machine can free every node and view of every project on it, and every line with them; a refusal says whether this one does",
+        "both ways\tTwo agents that read each other are two lines, one each way; this removes the one you name and leaves the other",
+        "ends\tBoth nodes stay where they are; node delete removes a node together with its lines",
+        "see\truimte-context link list\tthe lines of a canvas, with the ids this takes",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "view",
+        "list"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tview list\t",
+        "about\tLists the views of the project in sidebar order: id, kind, name, whether you may delete it and why",
+        "prints\tid\tkind\tname\tdelete\twhy\tone line per view, in the order the sidebar has them",
+        "kinds\tcanvas\tchat\tterminal\tbrowser\tdrawing\tdiagram\tfile\tseparator",
+        "delete\tyes or no: whether ruimte-context view delete would remove that view for you, with the reason beside it",
+        "why\tyours, this machine frees every view, a person made it, <id> made it, or you are in it",
+        "self\tThe last row is self and the view you are in: the canvas you stand on, or your own id when you are a view of your own",
+        "note\tA separator is a line in the sidebar and has an empty name",
+        "see\truimte-context help view\tmaking a view, renaming it, marking it, moving it, removing it",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "view",
+        "new"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tview new\t<name> [--kind canvas|chat|terminal|browser|drawing|diagram|file|separator] [--path P] [--url U] [--after V]",
+        "about\tAdds a view to the sidebar and prints id, kind, name; the default kind is canvas",
+        "argument\t<name>\trequired\tWhat the row is called; a name with spaces in it is one argument",
+        "prints\tid\tkind\tname\tthe id of the new view, its kind and its name",
+        "flag\t--kind K\toptional\tcanvas, chat, terminal, browser, drawing, diagram, file, separator; without it a canvas",
+        "flag\t--path P\tfile (required)\tThe file the view reads; it has to exist",
+        "flag\t--url U\tbrowser (required)\tAn http or https address",
+        "flag\t--after V\toptional\tPuts the row right under view V; without it the row goes last",
+        "kind\tseparator\tA line in the sidebar with a label, which never opens and holds nothing",
+        "kind\tchat, terminal\tOpened empty, with no CLI and no directory; the id is the session id",
+        "paths\t--path is resolved against the project folder, never against your own directory; it may also be absolute and then points outside",
+        "limit\tA project holds at most 100 views",
+        "note\tThe view is written down as yours, which is what lets you remove it again with view delete",
+        "titles\tA name is at most 120 characters and is never unique: two nodes may carry the same one, and an id is what names a node",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "view",
+        "rename"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tview rename\t<viewId> <name>",
+        "about\tRenames a view and prints id, kind, name; nothing the view hosts renames over it again",
+        "argument\t<viewId>\trequired\tThe view to rename, by id; ruimte-context view list lists them",
+        "argument\t<name>\trequired\tThe new name, one argument, spaces and all",
+        "prints\tid\tkind\tname\tthe view as it now stands",
+        "note\tA name set here is the view name for good: a page or a session never renames over it",
+        "titles\tA name is at most 120 characters and is never unique: two nodes may carry the same one, and an id is what names a node",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "view",
+        "icon"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tview icon\t<viewId> <lucide-name|emoji>",
+        "about\tGives a view a mark of its own and prints id, kind, icon kind, icon",
+        "argument\t<viewId>\trequired\tThe view to mark, by id; ruimte-context view list lists them",
+        "argument\t<mark>\trequired\tA Lucide name from the set the picker has, or an emoji",
+        "prints\tid\tkind\tlucide|emoji\tthe mark the view now wears",
+        "names\t60 Lucide names; a refusal prints all of them",
+        "emoji\tAt most 16 code points",
+        "note\tA separator is a line in the sidebar and has no room for a mark",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "view",
+        "move"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tview move\t<viewId> --after V | --first",
+        "about\tMoves a view to another place in the sidebar and prints id, kind, the place it now has",
+        "argument\t<viewId>\trequired\tThe view to move, by id; ruimte-context view list lists them",
+        "flag\t--after V\tone of two\tPuts the row right under view V",
+        "flag\t--first\tno value\tPuts the row at the top of the list",
+        "prints\tid\tkind\tindex\tthe place it now has, counted from 0 over every row, separators included",
+        "note\tExactly one of --after and --first; the order of the list is the order of the file",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "view",
+        "delete"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tview delete\t<viewId>",
+        "about\tRemoves a view you made, with the sessions it holds, and prints what went",
+        "argument\t<viewId>\trequired\tThe view to remove, by id; ruimte-context view list lists them",
+        "prints\tdeleted\tid\tkind\tname\tthe view that went",
+        "prints\tended\tid\tkind\tone line per session it took with it, a terminal or a chat",
+        "prints\tnode\tid\tkind\ttitle\tone line per node that stood on it, up to 20, with a nodes row counting them all",
+        "rule\tOnly a view whose maker is you, which is every view you made with view new",
+        "rule\tA machine can free every view of every project on it; a refusal says whether this one does",
+        "rule\tNever the view you are standing in, since that would end the session asking, which is also why this can never empty the sidebar",
+        "note\tA canvas takes its nodes with it, so the shells and agents on it stop where they are",
+        "see\truimte-context view list\tthe last column says which views this rule lets you remove",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "view",
+        "open"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tview open\t<viewId>",
+        "about\tShows a view to whoever has this project on screen; the project file is not touched",
+        "argument\t<viewId>\trequired\tThe view to show, by id; ruimte-context view list lists them",
+        "prints\tshowing\tid\tkind\tname\tthe view you asked for",
+        "prints\tsent\tyes|no\tsentence\twhether anyone had this project on screen to show it to, and the same in words",
+        "shows\tThe view takes the place of the one the person was working in; a view already on screen is brought to the front instead",
+        "note\tThis writes nothing, so it is the one verb a person can turn off: a client may be set to only mention the view and stay where it is",
+        "note\tNobody watching is not a failure; nothing waits, and the same call later shows it to whoever is there then",
+        "note\tA separator is a line in the sidebar and holds nothing to show",
+        "see\truimte-context view list\tthe views of the project, which is where the id comes from",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "view",
+        "diagram"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tview diagram\t<viewId> < document.json",
+        "about\tReplaces the whole diagram of a diagram view with the JSON document on stdin; prints view, rev, nodes, groups, edges",
+        "argument\t<viewId>\trequired\tA diagram view of this project; ruimte-context view list lists them, ruimte-context view new <name> --kind diagram makes one",
+        "stdin\tThe document as JSON, piped in or as a heredoc: ruimte-context view diagram <viewId> <<'EOF' ... EOF",
+        "flag\t--document JSON\toptional\tThe document as one argument instead of on stdin; the CLI puts stdin here when you leave it out",
+        "prints\tview\trev\tnodes\tgroups\tedges\tthe view written, its new rev, and how many nodes, groups and edges it now holds",
+        "document\t{ meta, nodes, groups, edges }\tone JSON object; version and rev belong to the daemon and are ignored when present",
+        "field\tmeta.title\trequired\tstring\tWhat the diagram is called, drawn above it; may be empty",
+        "field\tmeta.direction\trequired\tright|down\tWhich way the edges run: right puts the layers side by side, down stacks them",
+        "field\tnodes[].id\trequired\tstring\tUnique among nodes and groups together; edges and groups name a node by it",
+        "field\tnodes[].label\trequired\tstring\tThe text in the box",
+        "field\tnodes[].sub\toptional\tstring\tA smaller second line under the label",
+        "field\tnodes[].shape\toptional\trect|round|pill|diamond|cylinder\tThe outline; rect when absent",
+        "field\tnodes[].tone\toptional\tink|muted|accent|red|orange|yellow|green|blue|purple|pink\tA palette name, never a hex color, so the diagram follows the theme; ink when absent",
+        "field\tnodes[].pos\toptional\t[number, number]\tOnly a person sets this, by dragging the node; leave it out and the layout places the node",
+        "field\tgroups[].id\trequired\tstring\tUnique among nodes and groups together",
+        "field\tgroups[].label\trequired\tstring\tThe text over the box",
+        "field\tgroups[].wraps\trequired\tstring[]\tThe ids of the nodes inside it; a node is in at most one group, and a group never wraps a group",
+        "field\tgroups[].tone\toptional\tink|muted|accent|red|orange|yellow|green|blue|purple|pink\tA palette name; muted when absent",
+        "field\tedges[].from\trequired\tstring\tThe id of the node the edge starts at; never a group",
+        "field\tedges[].to\trequired\tstring\tThe id of the node the arrow points at; never a group",
+        "field\tedges[].label\toptional\tstring\tText on the line",
+        "field\tedges[].style\toptional\tsolid|dashed|dotted\tHow the line is drawn; solid when absent",
+        "field\tedges[].tone\toptional\tink|muted|accent|red|orange|yellow|green|blue|purple|pink\tA palette name; muted when absent",
+        "layout\tThere are no coordinates to write: the layers come from the edges, and the order of nodes in the file is their order inside a layer",
+        "replace\tA write replaces the whole diagram. A node written without pos loses a position a person dragged it to; copy pos from the file to keep one",
+        "strict\tA field that is not listed here is refused by its path, never dropped",
+        "rules\tIds never repeat across nodes and groups; an edge or a group naming an id that is not a node is refused with that id, and nothing is written",
+        "edit\tA small change can also be an edit of .ruimte/diagrams/<viewId>.json with your own tools; the person sees it, but nothing checks it",
+        "example\t{\"meta\":{\"title\":\"Checkout\",\"direction\":\"right\"},\"nodes\":[{\"id\":\"web\",\"label\":\"Web shop\",\"sub\":\"React\"},{\"id\":\"api\",\"label\":\"API\",\"shape\":\"round\"},{\"id\":\"db\",\"label\":\"Orders\",\"shape\":\"cylinder\",\"tone\":\"blue\"}],\"groups\":[{\"id\":\"backend\",\"label\":\"Backend\",\"wraps\":[\"api\",\"db\"]}],\"edges\":[{\"from\":\"web\",\"to\":\"api\",\"label\":\"HTTPS\"},{\"from\":\"api\",\"to\":\"db\",\"style\":\"dashed\"}]}",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "task",
+        "list"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\ttask list\t[--all]",
+        "about\tLists the tasks you gave and the task you were given that are still open or have yet to wake you: id, direction, status, the other node, title, wake, result, batch",
+        "flag\t--all\tno value\tAlso lists the history: tasks that settled and already woke their chat, and a task you were given that settled",
+        "prints\ttask\tid\tgave|given\tstatus\tnode\ttitle\twake\tresult\tbatch\tone line per task, oldest first; node is the child for a task you gave and the parent for one you were given",
+        "current\tWithout --all only what is current: a task still open, or one you gave that settled and has yet to wake you; a note under the list counts what it left out",
+        "status\topen\tdone\tfailed\tcancelled\tcancelled is a child a person removed",
+        "wake\tpending\tsent\tnone\twhether the chat that gave it has been woken with the result yet; a settled task of a team stays pending until the whole team settled",
+        "batch\tThe id shared by the tasks of one team --task call, or - for a task from agent --task",
+        "result\tThe first line of the result, at most 200 characters; the whole of it reaches the parent when it is woken",
+        "task\tWith --task the prompt is the assignment and T its title; only a chat may give one, since only a chat can be woken with the result",
+        "task\tA chat child finishes its task with the last answer of its first turn, or earlier with ruimte-context done; one that gave tasks of its own finishes with the turn after they all woke it; a terminal child has to call done, and one that exits without it fails the task",
+        "task\tOnce a task settles you are woken once, as soon as you have no turn running, with the results of every task that settled by then; you never have to poll",
+        "task\tThe tasks of one team --task call wake you together: only once every one of them settled (done, failed or cancelled), so one slow role holds back the results of the others",
+        "task\tA task from agent --task wakes you on its own, also while a team of yours is still out; that wake leaves the team's results out, and they all come in a later wake of their own",
+        "task\truimte-context task list lists the ones still open or yet to wake you, with their status; --all adds the history",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "plan",
+        "new"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tplan new\t[--title T] [--kind steps|test] [--checks anyone|agent|person] [--dry-run] (< plan.json | --markdown -)",
+        "about\tMakes a plan for this chat from a JSON document on stdin or a Markdown task list; prints the plan, every item id and how to check one off",
+        "stdin\tThe plan as JSON, piped in or as a heredoc: ruimte-context plan new <<'EOF' ... EOF",
+        "flag\t--markdown -\toptional\tA GFM task list on stdin instead of JSON: # title, ## section, - [ ] step, indented for a sub-step, > **Title** description for a text block, [x] [!] [-] [?] [~] [w] [i] for a state",
+        "flag\t--document JSON\toptional\tThe JSON as one argument instead of on stdin; the CLI puts stdin here when you give neither",
+        "flag\t--title T\toptional\tThe title, over the one in the document",
+        "flag\t--kind K\toptional\tsteps or test, over the one in the document",
+        "flag\t--checks C\toptional\tWho sets the steps that name no checks: anyone, agent, person; over the one in the document",
+        "flag\t--dry-run\toptional\tThe same checks, nothing written; minted ids differ from the ones a real run mints",
+        "prints\tplan\tid\trev 0\tkind\ttitle\tthe plan made; dry run instead of plan with --dry-run",
+        "prints\titem\tid\ttype\tunder\ttitle\tone line per item in document order; under is the section or step it stands in, - at the top",
+        "prints\texample\ta command that checks off the first step",
+        "prints\tids\ta reminder that ids are for commands, never for the person",
+        "document\t{ meta, items }\tone JSON object; by and at are the daemon's and cannot be written",
+        "field\tmeta.title\toptional\tstring\tWhat the plan is called; --title wins over it, and one of the two is required",
+        "field\tmeta.kind\toptional\tsteps|test\tsteps for progress you keep, test for a test plan a person runs; steps when absent, and --kind wins",
+        "field\tmeta.summary\toptional\tstring\tA short Markdown paragraph under the title about what the plan is for, never its progress",
+        "field\tmeta.status\toptional\tstring\tOne short sentence about what happens now or next, such as Fixing the focus bug in the grid; never counts or progress, since the panel shows those, and absent rather than a repeat of the title or summary; plan status changes it later",
+        "field\tmeta.checks\toptional\tanyone|agent|person\tWho sets a step that names no checks of its own: anyone, agent (a person unlocks it) or person; anyone when absent, and --checks wins",
+        "field\titems[] step.type\trequired\t\"step\"\tSays the item is a step",
+        "field\titems[] step.id\toptional\tstring\tLowercase letters, digits and dashes, at most 64, unique in the plan; minted when absent, and a slug you pick reads easier later",
+        "field\titems[] step.title\trequired\tstring\tOne line, at most 200 characters",
+        "field\titems[] step.description\toptional\tstring\tShort Markdown without headings, at most 1000 characters",
+        "field\titems[] step.checks\toptional\tanyone|agent|person\tWho sets this step: anyone, agent or person; the plan checks when absent",
+        "field\titems[] step.state\toptional\topen|active|done|failed|skipped|blocked|warning|info\tOnly on a step without sub-steps, and never on a step only a person checks; open when absent",
+        "field\titems[] step.note\toptional\tstring\tWhy it failed, which commit, what was seen; at most 500 characters",
+        "field\titems[] step.steps\toptional\tobject[]\tSub-steps, up to 5 levels deep; a step with sub-steps takes its state from them",
+        "field\titems[] text.type\trequired\t\"text\"\tSays the item is a text block",
+        "field\titems[] text.id\toptional\tstring\tAs for a step",
+        "field\titems[] text.title\trequired\tstring\tThe bold line of the block",
+        "field\titems[] text.description\toptional\tstring\tWhat a person reads before the steps under it",
+        "field\titems[] section.type\trequired\t\"section\"\tSays the item is a section",
+        "field\titems[] section.id\toptional\tstring\tAs for a step",
+        "field\titems[] section.title\trequired\tstring\tThe heading of the section",
+        "field\titems[] section.description\toptional\tstring\tA paragraph under the heading",
+        "field\titems[] section.items\trequired\tvalue[]\tText blocks and steps; a section never holds a section",
+        "strict\tA field that is not listed here is refused by its path, never dropped",
+        "limits\tAt most 300 items, steps 5 levels deep, 20 plans per chat",
+        "example\t{\"meta\":{\"title\":\"Test the split placement\",\"kind\":\"test\",\"checks\":\"person\"},\"items\":[{\"type\":\"section\",\"id\":\"split\",\"title\":\"Splitting a cell\",\"items\":[{\"type\":\"text\",\"title\":\"Before you start\",\"description\":\"Close every split so the project shows one cell.\"},{\"type\":\"step\",\"id\":\"new-column\",\"title\":\"Dragging a view right makes a new column\"},{\"type\":\"step\",\"id\":\"full-grid\",\"title\":\"A full grid refuses a fourth column\",\"steps\":[{\"type\":\"step\",\"id\":\"no-zone\",\"title\":\"No drop zone on the edge\"}]}]}]}",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "plan",
+        "read"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tplan read\t[--plan P] [--all]",
+        "about\tPrints the newest plan of this chat as text, with every id in brackets; after a compaction this is how you find the ids again",
+        "flag\t--plan P\toptional\tThe plan by id; without it the newest plan of this chat",
+        "flag\t--all\toptional\tEvery plan of this chat, oldest first",
+        "prints\tA plan as text: a line with title, id, kind, rev and progress, a line with status, the active steps and the other plans, then one line per item",
+        "legend\t[ ] open, [~] active, [x] done, [!] failed, [-] skipped, [?] blocked, [w] warning, [i] info",
+        "marks\tperson-only and agent-only say who sets a step; set by a person means you leave its state alone",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "plan",
+        "set"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tplan set\t<stepId>... --state open|active|done|failed|skipped|blocked|warning|info [--note T] [--next ID] [--plan P]",
+        "about\tSets the state of one or more steps in one rev; with --next the step you move on to becomes active in the same rev",
+        "argument\t<stepId>...\trequired\tOne or more steps without sub-steps, by id",
+        "flag\t--state S\trequired\topen, active, done, failed, skipped, blocked, warning, info; active is the step you work on now, and more than one may be; warning ran with a concern and info ran with something worth reading, both with a --note that says what",
+        "flag\t--note T\toptional\tA note on each of the steps; an empty one clears it; \\n reads as a newline",
+        "flag\t--next ID\toptional\tThe step that becomes active in the same rev: plan set build --state done --next tests",
+        "flag\t--plan P\toptional\tThe plan by id; without it the newest plan of this chat",
+        "prints\tplan\tid\trev N\tkind\ttitle\tprogress, then now\tthe active steps, and a dropped line for a state a change took away",
+        "who\tA person-only step is never yours to set, and a state a person set stays; a note is always yours to add",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "plan",
+        "note"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tplan note\t<stepId> --text T [--plan P]",
+        "about\tWrites the note of a step, also one a person set; an empty text clears it",
+        "argument\t<stepId>\trequired\tThe step, by id",
+        "flag\t--text T\trequired\tAt most 500 characters; \\n reads as a newline, and --text - takes it from stdin",
+        "flag\t--plan P\toptional\tThe plan by id; without it the newest plan of this chat",
+        "prints\tplan\tid\trev N\tkind\ttitle\tprogress",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "plan",
+        "add"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tplan add\t--type step|text|section --title T [--description D] [--under ID] [--after ID] [--checks anyone|agent|person] [--id ID] [--plan P]",
+        "about\tAdds a step, text block or section; prints the plan and the id of the new item",
+        "flag\t--type T\trequired\tstep, text or section",
+        "flag\t--title T\trequired\tOne line, at most 200 characters",
+        "flag\t--description D\toptional\tShort Markdown; \\n reads as a newline",
+        "flag\t--under ID\toptional\tThe section or step it goes in, last; a step under a leaf makes that leaf a parent and drops its own state",
+        "flag\t--after ID\toptional\tThe item it goes right after, beside it; with --under it has to stand directly under that item",
+        "flag\t--checks C\toptional\tWho sets a new step: anyone, agent or person",
+        "flag\t--id ID\toptional\tThe id you want, lowercase letters, digits and dashes; minted when absent",
+        "flag\t--plan P\toptional\tThe plan by id; without it the newest plan of this chat",
+        "place\tWithout --under and --after the item goes last at the top of the plan; a section only stands at the top",
+        "prints\tplan\tid\trev N\tkind\ttitle\tprogress, then added\tid\ttype",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "plan",
+        "edit"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tplan edit\t<itemId> [--title T] [--description D] [--checks anyone|agent|person] [--plan P]",
+        "about\tChanges the title, description or checks of an item",
+        "argument\t<itemId>\trequired\tThe item, by id",
+        "flag\t--title T\toptional\tThe new title",
+        "flag\t--description D\toptional\tThe new description; an empty one removes it",
+        "flag\t--checks C\toptional\tWho sets the step; a step a person unlocked stays anyone, and a person-only step stays person-only",
+        "flag\t--plan P\toptional\tThe plan by id; without it the newest plan of this chat",
+        "prints\tplan\tid\trev N\tkind\ttitle\tprogress",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "plan",
+        "move"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tplan move\t<itemId> [--under ID] [--after ID] [--plan P]",
+        "about\tMoves an item, with everything under it, to another place in the plan",
+        "argument\t<itemId>\trequired\tThe item, by id",
+        "flag\t--under ID\toptional\tThe section or step it goes in, last",
+        "flag\t--after ID\toptional\tThe item it goes right after",
+        "flag\t--plan P\toptional\tThe plan by id; without it the newest plan of this chat",
+        "place\tWithout either it goes last at the top of the plan",
+        "prints\tplan\tid\trev N\tkind\ttitle\tprogress",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "plan",
+        "remove"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tplan remove\t<itemId> [--plan P]",
+        "about\tRemoves an item and everything under it; refused when a person set a state in it",
+        "argument\t<itemId>\trequired\tThe item, by id",
+        "flag\t--plan P\toptional\tThe plan by id; without it the newest plan of this chat",
+        "prints\tplan\tid\trev N\tkind\ttitle\tprogress",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "plan",
+        "status"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tplan status\t--text T [--plan P]",
+        "about\tSets the line under the title about what happens now or next; an empty text clears it",
+        "flag\t--text T\trequired\tOne short sentence, at most 200 characters, such as Fixing the focus bug in the grid",
+        "never\tNo counts or progress numbers, since the panel shows progress itself; clear the line rather than repeat the title or summary",
+        "flag\t--plan P\toptional\tThe plan by id; without it the newest plan of this chat",
+        "prints\tplan\tid\trev N\tkind\ttitle\tprogress",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "plan",
+        "delete"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tplan delete\t--plan P",
+        "about\tRemoves a whole plan of this chat",
+        "flag\t--plan P\trequired\tThe plan by id; never the newest by default, since this cannot be undone",
+        "prints\tdeleted\tid\ttitle",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "worktree",
+        "list"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tworktree list\t",
+        "about\tLists the worktrees of the repository: branch, path, nodes, from, changed, new, commits",
+        "prints\tbranch\tpath\tnodes\tfrom\tchanged\tnew\tcommits\tone line per worktree",
+        "nodes\tThe node the worktree was made for and every terminal or chat working in it, comma separated; a dash when none is left",
+        "from\tThe branch it was made from, which its commits are counted against; a dash for a worktree made outside Ruimte",
+        "counts\tchanged: uncommitted tracked files; new: untracked files; commits: commits the from branch does not have",
+        "missing\tA worktree whose folder is gone prints missing in the path column",
+        "see\truimte-context worktree diff\twhat one of them changed",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "worktree",
+        "diff"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tworktree diff\t<branch> [--stat] [--tail N]",
+        "about\tPrints what a worktree changed since the branch it was made from, uncommitted and new files included",
+        "argument\t<branch>\trequired\tThe branch of the worktree, from ruimte-context worktree list",
+        "flag\t--stat\tno value\tOnly one line per file: file, path, lines added, lines removed",
+        "flag\t--tail N\toptional\tOnly the last N lines of the diff, N a positive whole number",
+        "prints\tThe unified diff of every file, as text; a file too large or binary is one line saying so",
+        "measure\tAgainst where the worktree left its from branch, so commits that branch gained since are not in it",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "worktree",
+        "merge"
+      ],
+      "ok": true,
+      "lines": [
+        "usage\tworktree merge\t<branch> [--squash | --rebase] [--message M]",
+        "about\tMerges the worktree of an agent you opened into the branch it was made from; the worktree and its branch stay",
+        "argument\t<branch>\trequired\tThe branch of the worktree, from ruimte-context worktree list",
+        "flag\t--squash\tno value\tOne commit on the target with the message; without a strategy flag the merge writes a merge commit",
+        "flag\t--rebase\tno value\tThe commits put on top of the target and the target fast-forwarded",
+        "flag\t--message M\toptional\tThe message of the commit made of uncommitted files, and of a squash; without it the title of the node",
+        "prints\tmerged\tbranch\tinto\tstrategy\tthen summary, then kept with who removes the worktree",
+        "rule\tOnly a worktree made for an agent you opened, or one opened by an agent you opened",
+        "rule\tOnly into a checkout without uncommitted changes to tracked files: the merge lands in a folder a person works in",
+        "rule\tA conflict is taken back at once and refused with the files; resolving it is for a person, or for the agent again in its worktree",
+        "rule\tAn agent still in a turn in the worktree is refused; no agent is ever stopped by a merge",
+        "rule\tUncommitted and new files in the worktree are committed first, so the merge never takes half of the work",
+        "never\tRemoving the worktree or its branch, merged or not: both stay until a person removes them",
+        "refusal\trefused<TAB><code><TAB><message> on stderr, then what you can pick instead\texit 0 done, 1 the daemon failed, 2 not in a live Ruimte session, 3 refused"
+      ]
+    },
+    {
+      "argv": [
+        "unknown"
+      ],
+      "ok": false,
+      "code": "unknown-verb",
+      "message": "unknown is not a verb or a noun",
+      "lines": [
+        "detail\truimte-context help\tevery verb and noun, with what each takes",
+        "verb\thelp\t[noun] [action]\tLists every verb and noun; with a noun the signature of each of its actions, with a noun and an action or with a verb everything that one takes",
+        "verb\tlist\t\tLists the context linked to this session: id, kind, title (also what ruimte-context prints without a verb)",
+        "verb\tread\t<id> [--tail N] [--subagent T]\tPrints one linked source, whole or its last N lines",
+        "verb\tdone\t--result T | --result-file F\tReports the result of the task you were opened with, which wakes the chat that gave it",
+        "verb\tnotify\t<id> --text \"...\"\tLeaves a short message for the agent in another node, along a line that runs from you into it",
+        "verb\tagent\t<claude|codex|gemini|copilot> [--terminal] [--prompt T | --prompt-file F] [--cwd P] [--view V] [--beside N] [--group G] [--title T] [--task T] [--mode M] [--worktree [--branch B]] [--dry-run]\tOpens an agent node that starts working, with an edge from you into it when you are a node on that canvas, so it can read what you have",
+        "verb\tteam\t--label L --roles '[{\"title\": \"Lexer\", \"prompt\": \"Fix the tokenizer\", \"provider\": \"claude\"}]' [--view V] [--cwd P] [--task] [--mode M] [--worktree] [--dry-run]\tOpens up to 16 agents at once in a group, each with an edge from you into it when you are a node on that canvas",
+        "noun\tnode\tlist|new|rename|delete|group|arrange\tLists, adds, renames, removes, frames and lays out the nodes of a canvas",
+        "noun\tlink\tlist|new|delete\tLists, draws and removes the lines of a canvas, which is what lets an agent read the node a line runs from",
+        "noun\tview\tlist|new|rename|icon|move|delete|open|diagram\tLists, makes, renames, marks, moves, removes and shows the views of the project, and writes a diagram",
+        "noun\ttask\tlist\tLists the tasks you gave and the task you were given; done reports the result of yours",
+        "noun\tplan\tnew|read|set|note|add|edit|move|remove|status|delete\tKeeps a plan beside this chat: steps you check off as you go, or a test plan a person runs; only a chat has plans",
+        "noun\tworktree\tlist|diff|merge\tReads the worktrees of the repository and what each changed, and merges the ones of agents you opened"
+      ]
+    },
+    {
+      "argv": [
+        "node",
+        "unknown"
+      ],
+      "ok": false,
+      "code": "unknown-action",
+      "message": "unknown is not an action of node",
+      "lines": [
+        "action\tnode list\t[--view V]\tLists the nodes of a canvas: id, kind, title, x, y, w, h, group",
+        "action\tnode new\t<note|browser|drawing|diagram|file|terminal|chat> [--title T] [--text B] [--url U] [--path P] [--source V] [--cwd P] [--view V] [--beside N] [--dry-run]\tAdds one node to a canvas and prints id, kind, view; a browser needs --url, a drawing needs --source, a diagram needs --source, a file needs --path",
+        "action\tnode rename\t<nodeId> --title T [--view V]\tRenames one node and prints id, kind, title; nothing the node hosts renames over it again",
+        "action\tnode delete\t<nodeId>\tRemoves a node you made, with the session it holds and the lines that ran into it",
+        "action\tnode group\t--nodes A,B [--label L] [--color C] [--view V]\tDraws a frame around nodes that already stand together and prints id, group, label, view, members",
+        "action\tnode arrange\t--nodes A,B [--layout grid|row|column] [--cols N] [--view V]\tLays nodes out in a grid, a row or a column without overlap and prints id, x, y"
+      ]
+    },
+    {
+      "argv": [
+        "agent",
+        "unknown"
+      ],
+      "ok": false,
+      "code": "bad-arguments",
+      "message": "agent is a verb and has no actions; ruimte-context help agent details it",
+      "lines": [
+        "detail\truimte-context help agent\tone verb in full"
+      ]
+    },
+    {
+      "argv": [
+        "--dry-run"
+      ],
+      "ok": false,
+      "code": "no-dry-run",
+      "message": "help takes no --dry-run; only the verbs that make something do",
+      "lines": [
+        "verb\tnode new\ttakes --dry-run",
+        "verb\tagent\ttakes --dry-run",
+        "verb\tplan new\ttakes --dry-run",
+        "verb\tteam\ttakes --dry-run"
+      ]
+    },
+    {
+      "argv": [
+        "node",
+        "new",
+        "extra"
+      ],
+      "ok": false,
+      "code": "bad-arguments",
+      "message": "help takes a verb, or a noun and one of its actions, and nothing else",
+      "lines": [
+        "usage\thelp\t[noun] [action]",
+        "detail\truimte-context help help"
+      ]
+    }
+  ]
+}

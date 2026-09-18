@@ -24,7 +24,14 @@ const user = (id: string, text: string): ChatItem => ({ id, kind: 'user', create
 describe('applyEvent', () => {
     test('a delta grows the text of a thinking item as it does an assistant one', () => {
         const thinking: ChatItem = { id: 't', kind: 'thinking', createdAt: 0, turnId: null, text: 'Let me', streaming: true, endedAt: null };
-        const state: ChatState = { info: info(), items: { t: thinking }, structure: { t: thinking }, order: ['t'] };
+        const state: ChatState = {
+            info: info(),
+            items: { t: thinking },
+            structure: { t: thinking },
+            order: ['t'],
+            historyCursor: null,
+            loadingHistory: false
+        };
 
         const next = applyEvent(state, { type: 'delta', itemId: 't', text: ' think' });
 
@@ -33,7 +40,14 @@ describe('applyEvent', () => {
 
     test('a delta on a reply with text leaves the structure the rows are derived from as it was', () => {
         const reply: ChatItem = { id: 'r', kind: 'assistant', createdAt: 0, turnId: null, text: 'Hello', streaming: true };
-        const state: ChatState = { info: info(), items: { r: reply }, structure: { r: reply }, order: ['r'] };
+        const state: ChatState = {
+            info: info(),
+            items: { r: reply },
+            structure: { r: reply },
+            order: ['r'],
+            historyCursor: null,
+            loadingHistory: false
+        };
 
         const next = applyEvent(state, { type: 'delta', itemId: 'r', text: ' there' });
 
@@ -56,7 +70,14 @@ describe('applyEvent', () => {
             output: null,
             parentToolUseId: null
         };
-        const state: ChatState = { info: info(), items: { r: empty, x: tool }, structure: { r: empty, x: tool }, order: ['r', 'x'] };
+        const state: ChatState = {
+            info: info(),
+            items: { r: empty, x: tool },
+            structure: { r: empty, x: tool },
+            order: ['r', 'x'],
+            historyCursor: null,
+            loadingHistory: false
+        };
 
         const first = applyEvent(state, { type: 'delta', itemId: 'r', text: 'Hi' });
         expect(first.structure).not.toBe(state.structure);
@@ -68,7 +89,14 @@ describe('applyEvent', () => {
 
     test('a reset replaces the items and their order along with the info', () => {
         const items = { a: user('a', 'old'), b: user('b', 'older') };
-        const state: ChatState = { info: info(), items, structure: items, order: ['a', 'b'] };
+        const state: ChatState = {
+            info: info(),
+            items,
+            structure: items,
+            order: ['a', 'b'],
+            historyCursor: null,
+            loadingHistory: false
+        };
         const cleared = info({
             agentSessionId: null,
             running: false,
@@ -76,12 +104,21 @@ describe('applyEvent', () => {
             usage: { contextTokens: 0, contextWindow: 200000, costUsd: 0.5, turns: 3 }
         });
 
-        expect(applyEvent(state, { type: 'reset', info: cleared, items: [] })).toEqual({ info: cleared, items: {}, structure: {}, order: [] });
+        expect(applyEvent(state, { type: 'reset', info: cleared, items: [] })).toEqual({
+            info: cleared,
+            items: {},
+            structure: {},
+            order: [],
+            historyCursor: null,
+            loadingHistory: false
+        });
         expect(applyEvent(state, { type: 'reset', info: cleared, items: [user('c', 'new')] })).toEqual({
             info: cleared,
             items: { c: user('c', 'new') },
             structure: { c: user('c', 'new') },
-            order: ['c']
+            order: ['c'],
+            historyCursor: null,
+            loadingHistory: false
         });
     });
 });

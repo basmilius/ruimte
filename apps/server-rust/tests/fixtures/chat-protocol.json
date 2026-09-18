@@ -1,0 +1,2855 @@
+{
+  "scenarios": [
+    {
+      "provider": "claude",
+      "generation": null,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "system",
+              "subtype": "init",
+              "session_id": "sid",
+              "model": "m",
+              "slash_commands": [
+                "compact"
+              ],
+              "skills": [
+                "unslop"
+              ]
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "session",
+              "agentSessionId": "sid",
+              "model": "m",
+              "slashCommands": [
+                "compact"
+              ],
+              "skills": [
+                "unslop"
+              ]
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "stream_event",
+              "event": {
+                "type": "message_start",
+                "message": {
+                  "id": "msg_1"
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "stream_event",
+              "event": {
+                "type": "content_block_start",
+                "index": 0,
+                "content_block": {
+                  "type": "thinking"
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "thinking.delta",
+              "ref": "msg_1:k0",
+              "text": ""
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "stream_event",
+              "event": {
+                "type": "content_block_start",
+                "index": 1,
+                "content_block": {
+                  "type": "text",
+                  "text": ""
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "text.delta",
+              "ref": "msg_1:t0",
+              "text": ""
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "stream_event",
+              "event": {
+                "type": "content_block_delta",
+                "index": 1,
+                "delta": {
+                  "type": "text_delta",
+                  "text": "po"
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "text.delta",
+              "ref": "msg_1:t0",
+              "text": "po"
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "stream_event",
+              "parent_tool_use_id": "toolu_task",
+              "event": {
+                "type": "content_block_delta",
+                "index": 1,
+                "delta": {
+                  "type": "text_delta",
+                  "text": "x"
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "assistant",
+              "message": {
+                "id": "msg_1",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "pong"
+                  }
+                ],
+                "usage": {
+                  "input_tokens": 8,
+                  "cache_creation_input_tokens": 2671,
+                  "cache_read_input_tokens": 24869,
+                  "output_tokens": 1
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "text.done",
+              "ref": "msg_1:t0",
+              "text": "pong"
+            },
+            {
+              "type": "usage",
+              "contextTokens": 27548
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "generation": null,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "assistant",
+              "message": {
+                "id": "msg_2",
+                "content": [
+                  {
+                    "type": "tool_use",
+                    "id": "toolu_1",
+                    "name": "Bash",
+                    "input": {
+                      "command": "date"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "tool.started",
+              "ref": "toolu_1",
+              "name": "Bash",
+              "input": {
+                "command": "date"
+              },
+              "parentRef": null
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "user",
+              "message": {
+                "role": "user",
+                "content": [
+                  {
+                    "tool_use_id": "toolu_1",
+                    "type": "tool_result",
+                    "content": "Wed Sep 9",
+                    "is_error": false
+                  }
+                ]
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "tool.done",
+              "ref": "toolu_1",
+              "output": "Wed Sep 9",
+              "state": "done"
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "user",
+              "message": {
+                "role": "user",
+                "content": [
+                  {
+                    "tool_use_id": "toolu_1",
+                    "type": "tool_result",
+                    "content": [
+                      {
+                        "type": "text",
+                        "text": "nope"
+                      }
+                    ],
+                    "is_error": true
+                  }
+                ]
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "tool.done",
+              "ref": "toolu_1",
+              "output": "nope",
+              "state": "error"
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "generation": null,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "assistant",
+              "parent_tool_use_id": "toolu_task",
+              "message": {
+                "id": "msg_3",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "inner"
+                  },
+                  {
+                    "type": "tool_use",
+                    "id": "toolu_5",
+                    "name": "Read",
+                    "input": {}
+                  }
+                ],
+                "usage": {
+                  "input_tokens": 8,
+                  "cache_creation_input_tokens": 2671,
+                  "cache_read_input_tokens": 24869,
+                  "output_tokens": 1
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "text.done",
+              "ref": "msg_3:t0",
+              "text": "inner",
+              "parentRef": "toolu_task"
+            },
+            {
+              "type": "tool.started",
+              "ref": "toolu_5",
+              "name": "Read",
+              "input": {},
+              "parentRef": "toolu_task"
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "generation": null,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "assistant",
+              "message": {
+                "id": "msg_4",
+                "content": [
+                  {
+                    "type": "tool_use",
+                    "id": "toolu_agent",
+                    "name": "Agent",
+                    "input": {
+                      "description": "Run sleep",
+                      "subagent_type": "general-purpose",
+                      "prompt": "sleep 20",
+                      "run_in_background": true
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "tool.started",
+              "ref": "toolu_agent",
+              "name": "Agent",
+              "input": {
+                "description": "Run sleep",
+                "subagent_type": "general-purpose",
+                "prompt": "sleep 20",
+                "run_in_background": true
+              },
+              "parentRef": null
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "system",
+              "subtype": "task_started",
+              "task_id": "a3838cf8b1de992a3",
+              "tool_use_id": "toolu_agent",
+              "description": "Run sleep",
+              "subagent_type": "general-purpose",
+              "is_backgrounded": true,
+              "spawn_depth": 1,
+              "task_type": "local_agent",
+              "prompt": "sleep 20"
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "task.started",
+              "ref": "toolu_agent",
+              "description": "Run sleep",
+              "subagentType": "general-purpose",
+              "prompt": "sleep 20",
+              "background": true
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "system",
+              "subtype": "task_progress",
+              "tool_use_id": "toolu_agent",
+              "description": "Running Sleep for 20 seconds",
+              "subagent_type": "general-purpose",
+              "usage": {
+                "total_tokens": 15074,
+                "tool_uses": 1,
+                "duration_ms": 2575
+              },
+              "last_tool_name": "Bash"
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "task.progress",
+              "ref": "toolu_agent",
+              "summary": "Running Sleep for 20 seconds",
+              "lastTool": "Bash",
+              "usage": {
+                "totalTokens": 15074,
+                "toolUses": 1,
+                "durationMs": 2575
+              }
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "generation": null,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "system",
+              "subtype": "task_started",
+              "tool_use_id": "toolu_2",
+              "description": "Wait a while"
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "tool.progress",
+              "ref": "toolu_2",
+              "startedAt": null,
+              "description": "Wait a while"
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "tool_progress",
+              "tool_use_id": "toolu_2",
+              "tool_name": "Bash",
+              "elapsed_time_seconds": 30
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "tool.progress",
+              "ref": "toolu_2",
+              "startedAt": 1799999970000,
+              "description": null
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "tool_progress",
+              "tool_use_id": "toolu_2",
+              "elapsed_time_seconds": "soon"
+            }
+          ],
+          "now": 1800000000000,
+          "result": [],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "system",
+              "subtype": "task_progress",
+              "tool_use_id": "toolu_3",
+              "description": "Running Sleep for 20 seconds"
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "tool.progress",
+              "ref": "toolu_3",
+              "startedAt": null,
+              "description": "Running Sleep for 20 seconds"
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "generation": null,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "system",
+              "subtype": "task_notification",
+              "task_id": "a3838cf8b1de992a3",
+              "tool_use_id": "toolu_agent",
+              "status": "completed",
+              "output_file": "/tmp/tasks/a3838cf8b1de992a3.output",
+              "summary": "slept",
+              "usage": {
+                "total_tokens": 16464,
+                "tool_uses": 1,
+                "duration_ms": 24235
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "task.done",
+              "ref": "toolu_agent",
+              "summary": "slept",
+              "ok": true,
+              "usage": {
+                "totalTokens": 16464,
+                "toolUses": 1,
+                "durationMs": 24235
+              },
+              "outputFile": "/tmp/tasks/a3838cf8b1de992a3.output"
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "system",
+              "subtype": "task_notification",
+              "task_id": "t",
+              "status": "failed",
+              "summary": "no luck"
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "task.done",
+              "ref": null,
+              "summary": "no luck",
+              "ok": false,
+              "usage": null,
+              "outputFile": null
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "system",
+              "subtype": "task_notification",
+              "task_id": "a91114f36f4c6b0ef",
+              "tool_use_id": "toolu_01GNbHkKfS9B2cD6q6SRC9cQ",
+              "status": "stopped",
+              "output_file": "",
+              "summary": "Merge-readiness review",
+              "skip_transcript": false
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "task.done",
+              "ref": "toolu_01GNbHkKfS9B2cD6q6SRC9cQ",
+              "summary": "Merge-readiness review",
+              "ok": false,
+              "usage": null,
+              "outputFile": null
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "generation": null,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "control_request",
+              "request_id": "r1",
+              "request": {
+                "subtype": "can_use_tool",
+                "tool_name": "Bash",
+                "input": {
+                  "command": "date"
+                },
+                "tool_use_id": "toolu_9",
+                "description": "Run a command",
+                "permission_suggestions": [
+                  {
+                    "type": "addRules",
+                    "rules": [
+                      {
+                        "toolName": "Bash",
+                        "ruleContent": "date:*"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "approval.requested",
+              "requestId": "r1",
+              "ref": "toolu_9",
+              "toolName": "Bash",
+              "input": {
+                "command": "date"
+              },
+              "description": "Run a command",
+              "canAllowAlways": true,
+              "allowAlways": {
+                "label": "Allow with these rules",
+                "description": "[\n  {\n    \"type\": \"addRules\",\n    \"rules\": [\n      {\n        \"toolName\": \"Bash\",\n        \"ruleContent\": \"date:*\"\n      }\n    ]\n  }\n]"
+              }
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "approvalResponse",
+          "args": [
+            "nope",
+            "allow"
+          ],
+          "now": 1800000000000,
+          "result": null,
+          "turnId": null
+        },
+        {
+          "method": "approvalResponse",
+          "args": [
+            "r1",
+            "allow-always"
+          ],
+          "now": 1800000000000,
+          "result": {
+            "type": "control_response",
+            "response": {
+              "subtype": "success",
+              "request_id": "r1",
+              "response": {
+                "behavior": "allow",
+                "updatedInput": {
+                  "command": "date"
+                },
+                "toolUseID": "toolu_9",
+                "updatedPermissions": [
+                  {
+                    "type": "addRules",
+                    "rules": [
+                      {
+                        "toolName": "Bash",
+                        "ruleContent": "date:*"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "turnId": null
+        },
+        {
+          "method": "approvalResponse",
+          "args": [
+            "r1",
+            "allow"
+          ],
+          "now": 1800000000000,
+          "result": null,
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "generation": null,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "control_request",
+              "request_id": "r2",
+              "request": {
+                "subtype": "can_use_tool",
+                "tool_name": "Bash",
+                "input": {},
+                "tool_use_id": "toolu_1"
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "approval.requested",
+              "requestId": "r2",
+              "ref": "toolu_1",
+              "toolName": "Bash",
+              "input": {},
+              "description": null,
+              "canAllowAlways": false
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "approvalResponse",
+          "args": [
+            "r2",
+            "deny",
+            "not that"
+          ],
+          "now": 1800000000000,
+          "result": {
+            "type": "control_response",
+            "response": {
+              "subtype": "success",
+              "request_id": "r2",
+              "response": {
+                "behavior": "deny",
+                "message": "not that",
+                "toolUseID": "toolu_1"
+              }
+            }
+          },
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "generation": null,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "control_request",
+              "request_id": "q1",
+              "request": {
+                "subtype": "can_use_tool",
+                "tool_name": "AskUserQuestion",
+                "input": {
+                  "questions": [
+                    {
+                      "question": "Which one?",
+                      "header": "Pick",
+                      "options": [
+                        {
+                          "label": "A",
+                          "description": "first"
+                        }
+                      ],
+                      "multiSelect": true
+                    }
+                  ]
+                },
+                "tool_use_id": "toolu_q"
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "question.requested",
+              "requestId": "q1",
+              "questions": [
+                {
+                  "id": "0",
+                  "header": "Pick",
+                  "question": "Which one?",
+                  "choices": [
+                    {
+                      "label": "A",
+                      "description": "first"
+                    }
+                  ],
+                  "multiSelect": true
+                }
+              ]
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "questionResponse",
+          "args": [
+            "q1",
+            {
+              "0": "A"
+            }
+          ],
+          "now": 1800000000000,
+          "result": {
+            "type": "control_response",
+            "response": {
+              "subtype": "success",
+              "request_id": "q1",
+              "response": {
+                "behavior": "allow",
+                "updatedInput": {
+                  "questions": [
+                    {
+                      "question": "Which one?",
+                      "header": "Pick",
+                      "options": [
+                        {
+                          "label": "A",
+                          "description": "first"
+                        }
+                      ],
+                      "multiSelect": true
+                    }
+                  ],
+                  "answers": {
+                    "Which one?": "A"
+                  }
+                },
+                "toolUseID": "toolu_q"
+              }
+            }
+          },
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "generation": null,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "control_request",
+              "request_id": "r3",
+              "request": {
+                "subtype": "can_use_tool",
+                "tool_name": "Edit",
+                "input": {}
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "approval.requested",
+              "requestId": "r3",
+              "ref": null,
+              "toolName": "Edit",
+              "input": {},
+              "description": null,
+              "canAllowAlways": false
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "control_cancel_request",
+              "request_id": "r3"
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "request.withdrawn",
+              "requestId": "r3"
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "approvalResponse",
+          "args": [
+            "r3",
+            "allow"
+          ],
+          "now": 1800000000000,
+          "result": null,
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "generation": null,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "system",
+              "subtype": "init",
+              "session_id": "sid",
+              "model": "m"
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "session",
+              "agentSessionId": "sid",
+              "model": "m",
+              "slashCommands": [],
+              "skills": []
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "result",
+              "subtype": "success",
+              "is_error": false,
+              "total_cost_usd": 0.02,
+              "modelUsage": {
+                "m": {
+                  "contextWindow": 200000
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "usage",
+              "contextWindow": 200000
+            },
+            {
+              "type": "turn.done",
+              "state": "done",
+              "costUsd": 0.02
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "result",
+              "subtype": "error_during_execution",
+              "is_error": true,
+              "errors": [
+                "out of tokens"
+              ]
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "turn.done",
+              "state": "error",
+              "costUsd": 0,
+              "error": "out of tokens"
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "generation": null,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "assistant",
+              "uuid": "u-1",
+              "message": {
+                "id": "m1",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "first"
+                  }
+                ]
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "text.done",
+              "ref": "m1:t0",
+              "text": "first"
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "assistant",
+              "uuid": "u-2",
+              "message": {
+                "id": "m2",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "last"
+                  }
+                ]
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "text.done",
+              "ref": "m2:t0",
+              "text": "last"
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "assistant",
+              "uuid": "u-sub",
+              "parent_tool_use_id": "toolu_9",
+              "message": {
+                "id": "m3",
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "sub"
+                  }
+                ]
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "text.done",
+              "ref": "m3:t0",
+              "text": "sub",
+              "parentRef": "toolu_9"
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "result",
+              "subtype": "success",
+              "is_error": false,
+              "total_cost_usd": 0
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "turn.done",
+              "state": "done",
+              "costUsd": 0,
+              "native": {
+                "lastUuid": "u-2"
+              }
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "result",
+              "subtype": "success",
+              "is_error": false,
+              "total_cost_usd": 0
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "turn.done",
+              "state": "done",
+              "costUsd": 0
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "generation": null,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "system",
+              "subtype": "compact_boundary",
+              "compact_metadata": {
+                "trigger": "auto",
+                "pre_tokens": 150000
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "compaction",
+              "preTokens": 150000
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "generation": null,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "rate_limit_event"
+            }
+          ],
+          "now": 1800000000000,
+          "result": [],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            "junk"
+          ],
+          "now": 1800000000000,
+          "result": [],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "generation": null,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "type": "rate_limit_event",
+              "rate_limit_info": {
+                "rateLimitType": "five_hour",
+                "utilization": 0.31,
+                "resetsAt": 1789000000
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "limits",
+              "update": {
+                "kind": "claude",
+                "windows": [
+                  {
+                    "id": "five_hour",
+                    "label": "Session",
+                    "kind": "session",
+                    "durationMs": 18000000,
+                    "used": 0.31,
+                    "resetsAt": 1789000000000
+                  }
+                ]
+              }
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "generation": 1,
+      "steps": [
+        {
+          "method": "threadReady",
+          "args": [
+            {
+              "thread": {
+                "id": "thread-abc",
+                "model": "gpt-6-astra"
+              },
+              "model": "gpt-6-astra never danger-full-access"
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "session",
+              "agentSessionId": "thread-abc",
+              "model": "gpt-6-astra never danger-full-access",
+              "title": null
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "turn/started",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "turn": {
+                  "id": "ct1",
+                  "status": "inProgress"
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [],
+          "turnId": "ct1"
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "generation": 1,
+      "steps": [
+        {
+          "method": "threadReady",
+          "args": [
+            {
+              "thread": {
+                "id": "thread-abc",
+                "name": " Fix the\nbuild "
+              },
+              "model": "m"
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "session",
+              "agentSessionId": "thread-abc",
+              "model": "m",
+              "title": "Fix the build"
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "thread/name/updated",
+              "params": {
+                "threadId": "thread-abc",
+                "threadName": "Renamed"
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "title",
+              "title": "Renamed"
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "thread/name/updated",
+              "params": {
+                "threadId": "thread-abc"
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "generation": 1,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/started",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "item": {
+                  "type": "agentMessage",
+                  "id": "msg_1",
+                  "text": "",
+                  "phase": "final_answer",
+                  "memoryCitation": null,
+                  "delivery": null,
+                  "questions": null
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "text.delta",
+              "ref": "msg_1",
+              "text": ""
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/agentMessage/delta",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "itemId": "msg_1",
+                "delta": "po"
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "text.delta",
+              "ref": "msg_1",
+              "text": "po"
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/completed",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "item": {
+                  "type": "agentMessage",
+                  "id": "msg_1",
+                  "text": "pong",
+                  "phase": "final_answer",
+                  "memoryCitation": null,
+                  "delivery": null,
+                  "questions": null
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "text.done",
+              "ref": "msg_1",
+              "text": "pong"
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "generation": 1,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "thread/tokenUsage/updated",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "tokenUsage": {
+                  "total": {
+                    "totalTokens": 50000
+                  },
+                  "last": {
+                    "totalTokens": 25090
+                  },
+                  "modelContextWindow": 258400
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "usage",
+              "contextTokens": 25090,
+              "contextWindow": 258400
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "thread/tokenUsage/updated",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "tokenUsage": {
+                  "last": {
+                    "totalTokens": 30
+                  },
+                  "modelContextWindow": null
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "usage",
+              "contextTokens": 30
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "generation": 1,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "turn/completed",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "turn": {
+                  "id": "ct1",
+                  "status": "interrupted",
+                  "error": null
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "turn.done",
+              "state": "aborted",
+              "costUsd": 0,
+              "native": {
+                "turnId": "ct1"
+              }
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "turn/completed",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "turn": {
+                  "id": "ct1",
+                  "status": "failed",
+                  "error": {
+                    "message": "overloaded"
+                  }
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "turn.done",
+              "state": "error",
+              "costUsd": 0,
+              "error": "overloaded",
+              "native": {
+                "turnId": "ct1"
+              }
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "generation": 3,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/started",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "item": {
+                  "type": "commandExecution",
+                  "id": "exec-1",
+                  "command": "/bin/zsh -lc \"git status\"",
+                  "cwd": "/w",
+                  "status": "inProgress"
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "tool.started",
+              "ref": "exec-1",
+              "name": "Bash",
+              "input": {
+                "command": "git status",
+                "cwd": "/w"
+              },
+              "parentRef": null
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/commandExecution/outputDelta",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "itemId": "exec-1",
+                "delta": "on main\n"
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "tool.output",
+              "ref": "exec-1",
+              "text": "on main\n"
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/commandExecution/outputDelta",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "itemId": "exec-1",
+                "chunk": [
+                  111,
+                  107
+                ]
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "tool.output",
+              "ref": "exec-1",
+              "text": "ok"
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/commandExecution/requestApproval",
+              "id": 0,
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "itemId": "exec-1",
+                "command": "/bin/zsh -lc \"git status\"",
+                "cwd": "/w",
+                "reason": "Needs the repo",
+                "proposedExecpolicyAmendment": [
+                  "git"
+                ]
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "approval.requested",
+              "requestId": "3-0",
+              "ref": "exec-1",
+              "toolName": "Bash",
+              "input": {
+                "command": "git status",
+                "cwd": "/w"
+              },
+              "description": "Needs the repo",
+              "canAllowAlways": true,
+              "allowAlways": {
+                "label": "Allow this command prefix",
+                "description": "Allow future commands matching this prefix: [\"git\"]"
+              }
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "approvalDecision",
+          "args": [
+            "3-0",
+            "allow-always"
+          ],
+          "now": 1800000000000,
+          "result": {
+            "rpcId": 0,
+            "result": {
+              "decision": {
+                "acceptWithExecpolicyAmendment": {
+                  "execpolicy_amendment": [
+                    "git"
+                  ]
+                }
+              }
+            }
+          },
+          "turnId": null
+        },
+        {
+          "method": "approvalDecision",
+          "args": [
+            "3-0",
+            "allow"
+          ],
+          "now": 1800000000000,
+          "result": null,
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/completed",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "item": {
+                  "type": "commandExecution",
+                  "id": "exec-1",
+                  "command": "/bin/zsh -lc \"git status\"",
+                  "cwd": "/w",
+                  "status": "completed",
+                  "aggregatedOutput": "clean\n"
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "tool.started",
+              "ref": "exec-1",
+              "name": "Bash",
+              "input": {
+                "command": "git status",
+                "cwd": "/w"
+              },
+              "parentRef": null
+            },
+            {
+              "type": "tool.done",
+              "ref": "exec-1",
+              "output": "clean\n",
+              "state": "done"
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "generation": 1,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/started",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "item": {
+                  "type": "fileChange",
+                  "id": "patch-1",
+                  "changes": [
+                    {
+                      "path": "a.ts",
+                      "kind": {
+                        "type": "update",
+                        "move_path": null
+                      },
+                      "diff": "-x\n+y\n"
+                    }
+                  ],
+                  "status": "inProgress"
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "tool.started",
+              "ref": "patch-1",
+              "name": "ApplyPatch",
+              "input": {
+                "summary": "a.ts"
+              },
+              "parentRef": null,
+              "changes": [
+                {
+                  "path": "a.ts",
+                  "kind": "update",
+                  "diff": "-x\n+y\n"
+                }
+              ]
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/fileChange/requestApproval",
+              "id": 4,
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "itemId": "patch-1",
+                "reason": null
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "approval.requested",
+              "requestId": "1-4",
+              "ref": "patch-1",
+              "toolName": "ApplyPatch",
+              "input": {
+                "summary": "a.ts",
+                "changes": [
+                  {
+                    "path": "a.ts",
+                    "kind": "update",
+                    "diff": "-x\n+y\n"
+                  }
+                ]
+              },
+              "description": null,
+              "canAllowAlways": false
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "approvalDecision",
+          "args": [
+            "1-4",
+            "allow-always"
+          ],
+          "now": 1800000000000,
+          "result": {
+            "rpcId": 4,
+            "result": {
+              "decision": "acceptForSession"
+            }
+          },
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/completed",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "item": {
+                  "type": "fileChange",
+                  "id": "patch-1",
+                  "changes": [
+                    {
+                      "path": "a.ts",
+                      "kind": {
+                        "type": "update",
+                        "move_path": null
+                      },
+                      "diff": "-x\n+y\n"
+                    }
+                  ],
+                  "status": "failed"
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "tool.started",
+              "ref": "patch-1",
+              "name": "ApplyPatch",
+              "input": {
+                "summary": "a.ts"
+              },
+              "parentRef": null,
+              "changes": [
+                {
+                  "path": "a.ts",
+                  "kind": "update",
+                  "diff": "-x\n+y\n"
+                }
+              ]
+            },
+            {
+              "type": "tool.done",
+              "ref": "patch-1",
+              "output": "-x\n+y\n",
+              "state": "error",
+              "changes": [
+                {
+                  "path": "a.ts",
+                  "kind": "update",
+                  "diff": "-x\n+y\n"
+                }
+              ]
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "generation": 1,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/started",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "item": {
+                  "type": "collabAgentToolCall",
+                  "id": "collab_1",
+                  "tool": "spawnAgent",
+                  "prompt": "Read the docs",
+                  "model": "gpt-6-astra",
+                  "senderThreadId": "t1",
+                  "receiverThreadIds": [
+                    "child-1"
+                  ],
+                  "agentsStates": {},
+                  "status": "inProgress"
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "tool.started",
+              "ref": "collab_1",
+              "name": "Agent",
+              "input": {
+                "tool": "spawnAgent",
+                "prompt": "Read the docs",
+                "model": "gpt-6-astra",
+                "threads": [
+                  "child-1"
+                ]
+              },
+              "parentRef": null
+            },
+            {
+              "type": "task.started",
+              "ref": "collab_1",
+              "description": "Read the docs",
+              "subagentType": null,
+              "prompt": "Read the docs",
+              "background": true,
+              "threadId": "child-1"
+            },
+            {
+              "type": "task.progress",
+              "ref": "collab_1",
+              "summary": null,
+              "lastTool": null,
+              "usage": null
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/completed",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "item": {
+                  "type": "collabAgentToolCall",
+                  "id": "collab_1",
+                  "tool": "spawnAgent",
+                  "prompt": "Read the docs",
+                  "model": "gpt-6-astra",
+                  "senderThreadId": "t1",
+                  "receiverThreadIds": [
+                    "child-1"
+                  ],
+                  "agentsStates": {
+                    "child-1": {
+                      "status": "completed",
+                      "message": "the docs are read"
+                    }
+                  },
+                  "status": "completed"
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "tool.started",
+              "ref": "collab_1",
+              "name": "Agent",
+              "input": {
+                "tool": "spawnAgent",
+                "prompt": "Read the docs",
+                "model": "gpt-6-astra",
+                "threads": [
+                  "child-1"
+                ]
+              },
+              "parentRef": null
+            },
+            {
+              "type": "task.started",
+              "ref": "collab_1",
+              "description": "Read the docs",
+              "subagentType": null,
+              "prompt": "Read the docs",
+              "background": true,
+              "threadId": "child-1"
+            },
+            {
+              "type": "task.done",
+              "ref": "collab_1",
+              "summary": "child-1: completed, the docs are read",
+              "ok": true
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/completed",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "item": {
+                  "type": "collabAgentToolCall",
+                  "id": "collab_2",
+                  "tool": "sendInput",
+                  "prompt": "Read the docs",
+                  "model": "gpt-6-astra",
+                  "senderThreadId": "t1",
+                  "receiverThreadIds": [
+                    "child-1"
+                  ],
+                  "agentsStates": {},
+                  "status": "completed"
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "tool.started",
+              "ref": "collab_2",
+              "name": "sendInput",
+              "input": {
+                "tool": "sendInput",
+                "prompt": "Read the docs",
+                "model": "gpt-6-astra",
+                "threads": [
+                  "child-1"
+                ]
+              },
+              "parentRef": null
+            },
+            {
+              "type": "tool.done",
+              "ref": "collab_2",
+              "output": "",
+              "state": "done"
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "generation": 1,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/fileChange/requestApproval",
+              "id": 3,
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "itemId": "patch-1",
+                "reason": null
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "approval.requested",
+              "requestId": "1-3",
+              "ref": "patch-1",
+              "toolName": "ApplyPatch",
+              "input": {
+                "itemId": "patch-1",
+                "changes": []
+              },
+              "description": null,
+              "canAllowAlways": false
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "serverRequest/resolved",
+              "params": {
+                "threadId": "t1",
+                "requestId": 3
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "request.withdrawn",
+              "requestId": "1-3"
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "approvalDecision",
+          "args": [
+            "1-3",
+            "allow"
+          ],
+          "now": 1800000000000,
+          "result": null,
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "generation": 1,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/tool/requestUserInput",
+              "id": 7,
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "itemId": "q",
+                "isBlocking": true,
+                "questions": [
+                  {
+                    "id": "color",
+                    "header": "Choice",
+                    "question": "Which?",
+                    "options": [
+                      {
+                        "label": "Red",
+                        "description": "Warm"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "question.requested",
+              "requestId": "1-7",
+              "questions": [
+                {
+                  "id": "color",
+                  "header": "Choice",
+                  "question": "Which?",
+                  "choices": [
+                    {
+                      "label": "Red",
+                      "description": "Warm"
+                    }
+                  ],
+                  "multiSelect": false
+                }
+              ]
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "questionAnswer",
+          "args": [
+            "1-7",
+            {
+              "color": "Red"
+            }
+          ],
+          "now": 1800000000000,
+          "result": {
+            "kind": "respond",
+            "rpcId": 7,
+            "result": {
+              "answers": {
+                "color": {
+                  "answers": [
+                    "Red"
+                  ]
+                }
+              }
+            }
+          },
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "generation": 1,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/started",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "item": {
+                  "type": "agentMessage",
+                  "id": "call_1",
+                  "text": "Which?\n- Red\n- Blue",
+                  "phase": "final_answer",
+                  "memoryCitation": null,
+                  "delivery": "async",
+                  "questions": [
+                    {
+                      "title": "Which?",
+                      "options": [
+                        "Red",
+                        "Blue"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/completed",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "item": {
+                  "type": "agentMessage",
+                  "id": "call_1",
+                  "text": "Which?\n- Red\n- Blue",
+                  "phase": "final_answer",
+                  "memoryCitation": null,
+                  "delivery": "async",
+                  "questions": [
+                    {
+                      "title": "Which?",
+                      "options": [
+                        "Red",
+                        "Blue"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "question.requested",
+              "requestId": "call_1",
+              "questions": [
+                {
+                  "id": "0",
+                  "header": "",
+                  "question": "Which?",
+                  "choices": [
+                    {
+                      "label": "Red",
+                      "description": ""
+                    },
+                    {
+                      "label": "Blue",
+                      "description": ""
+                    }
+                  ],
+                  "multiSelect": false
+                }
+              ],
+              "async": true
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "questionAnswer",
+          "args": [
+            "call_1",
+            {
+              "0": "Red"
+            }
+          ],
+          "now": 1800000000000,
+          "result": {
+            "kind": "steer",
+            "text": "Red"
+          },
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "generation": 1,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/started",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "item": {
+                  "type": "agentMessage",
+                  "id": "call_2",
+                  "text": "Which?",
+                  "phase": "final_answer",
+                  "memoryCitation": null,
+                  "delivery": "async",
+                  "questions": [
+                    {
+                      "title": "Which?",
+                      "options": [
+                        "Red"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/completed",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "item": {
+                  "type": "agentMessage",
+                  "id": "call_2",
+                  "text": "Which?",
+                  "phase": "final_answer",
+                  "memoryCitation": null,
+                  "delivery": "async",
+                  "questions": [
+                    {
+                      "title": "Which?",
+                      "options": [
+                        "Red"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "question.requested",
+              "requestId": "call_2",
+              "questions": [
+                {
+                  "id": "0",
+                  "header": "",
+                  "question": "Which?",
+                  "choices": [
+                    {
+                      "label": "Red",
+                      "description": ""
+                    }
+                  ],
+                  "multiSelect": false
+                }
+              ],
+              "async": true
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "thread/requestUserInput",
+              "id": 7,
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "questions": [
+                  {
+                    "id": "color",
+                    "header": "Choice",
+                    "question": "Which color?",
+                    "options": [
+                      {
+                        "label": "Red",
+                        "description": ""
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [],
+          "turnId": null
+        },
+        {
+          "method": "dismissQuestion",
+          "args": [
+            "1-7"
+          ],
+          "now": 1800000000000,
+          "result": false,
+          "turnId": null
+        },
+        {
+          "method": "dismissQuestion",
+          "args": [
+            "call_2"
+          ],
+          "now": 1800000000000,
+          "result": true,
+          "turnId": null
+        },
+        {
+          "method": "dismissQuestion",
+          "args": [
+            "call_2"
+          ],
+          "now": 1800000000000,
+          "result": false,
+          "turnId": null
+        },
+        {
+          "method": "questionAnswer",
+          "args": [
+            "call_2",
+            {
+              "0": "Red"
+            }
+          ],
+          "now": 1800000000000,
+          "result": null,
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "generation": 1,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/permissions/requestApproval",
+              "id": 9,
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1"
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "generation": 1,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/completed",
+              "params": {
+                "threadId": "t1",
+                "turnId": "ct1",
+                "item": {
+                  "type": "contextCompaction",
+                  "id": "cc-1"
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "compaction",
+              "preTokens": null
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "error",
+              "params": {
+                "error": {
+                  "message": "stream stalled"
+                },
+                "willRetry": true
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "note",
+              "level": "warning",
+              "text": "stream stalled"
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "model/rerouted",
+              "params": {
+                "toModel": "gpt-5.6-sol"
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "model",
+              "model": "gpt-5.6-sol"
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "generation": 1,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/reasoning/summaryTextDelta",
+              "params": {
+                "itemId": "r1",
+                "delta": "weighing"
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "thinking.delta",
+              "ref": "r1",
+              "text": "weighing"
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/reasoning/summaryPartAdded",
+              "params": {
+                "itemId": "r1",
+                "summaryIndex": 1
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "thinking.delta",
+              "ref": "r1",
+              "text": "\n\n"
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/reasoning/summaryPartAdded",
+              "params": {
+                "itemId": "r1",
+                "summaryIndex": 0
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/reasoning/textDelta",
+              "params": {
+                "itemId": "r1",
+                "delta": "the details"
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "thinking.delta",
+              "ref": "r1",
+              "text": "the details"
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "generation": 1,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/completed",
+              "params": {
+                "item": {
+                  "type": "reasoning",
+                  "id": "r1",
+                  "summary": [
+                    "first",
+                    ""
+                  ],
+                  "content": [
+                    "second"
+                  ]
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "thinking.done",
+              "ref": "r1",
+              "text": "first\n\nsecond"
+            }
+          ],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/started",
+              "params": {
+                "item": {
+                  "type": "reasoning",
+                  "id": "r2",
+                  "summary": [],
+                  "content": []
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [],
+          "turnId": null
+        },
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "item/completed",
+              "params": {
+                "item": {
+                  "type": "reasoning",
+                  "id": "r2",
+                  "summary": [],
+                  "content": []
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "generation": 0,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "account/rateLimits/updated",
+              "params": {
+                "rateLimits": {
+                  "limitId": "codex",
+                  "planType": "pro",
+                  "primary": {
+                    "usedPercent": 96,
+                    "windowDurationMins": 10080,
+                    "resetsAt": 1789453149
+                  }
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [
+            {
+              "type": "limits",
+              "update": {
+                "kind": "codex",
+                "plan": "pro",
+                "windows": [
+                  {
+                    "id": "primary",
+                    "kind": "weekly",
+                    "label": "Weekly",
+                    "used": 0.96,
+                    "resetsAt": 1789453149000,
+                    "durationMs": 604800000
+                  }
+                ]
+              }
+            }
+          ],
+          "turnId": null
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "generation": 0,
+      "steps": [
+        {
+          "method": "handle",
+          "args": [
+            {
+              "method": "account/rateLimits/updated",
+              "params": {
+                "rateLimits": {
+                  "limitId": "codex_spark",
+                  "primary": {
+                    "usedPercent": 3
+                  }
+                }
+              }
+            }
+          ],
+          "now": 1800000000000,
+          "result": [],
+          "turnId": null
+        }
+      ]
+    }
+  ]
+}

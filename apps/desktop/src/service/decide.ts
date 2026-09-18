@@ -1,7 +1,7 @@
 /* What `/health` says about the daemon behind the port, and what the app expects to find there. */
 export interface BuildIdentity {
     version: string;
-    /* The id `apps/server/scripts/compile.ts` stamps into the binary; null in a checkout or an older daemon. */
+    /* The native compile script stamps this id into the binary; null in a checkout or an older daemon. */
     build: string | null;
 }
 
@@ -42,7 +42,7 @@ export const sameBuild = (running: BuildIdentity, expected: BuildIdentity): bool
     return running.version === expected.version;
 };
 
-/* What a restart would end, from the daemon's `/machine/work`. Mirrors `apps/server/src/service/work.ts`. */
+/* What a restart would end, from the daemon's `/machine/work`. */
 export interface MachineWork {
     terminals: number;
     agents: number;

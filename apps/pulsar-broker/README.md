@@ -78,12 +78,12 @@ second announcement of a key replaces the first socket, which hears `error repla
 missed heartbeat, 4009 replaced, 4029 announcing too often, and 1006 or 1009 for a frame over the size cap.
 
 `BrokerPeer` in `@ruimte/pulsar` is the peer's side of this without a socket; the daemon
-(`apps/server/src/pulsar/broker-relay.ts`), the client (`apps/client/src/transport/broker-signaling.ts`)
+(`apps/server-rust/src/broker.rs`), the client (`apps/client/src/transport/broker-signaling.ts`)
 and the tests wrap their own socket around it.
 
 ## Try it against the Docker container
 
-The container on `127.0.0.1:4310` (`apps/server/docker`) reaches this machine as `host.docker.internal`,
+The container on `127.0.0.1:4310` (`apps/server-rust/docker`) reaches this machine as `host.docker.internal`,
 so it dials the broker under that name while a client here dials `127.0.0.1`. `--broker-advertise` is the
 URL the daemon hands clients in its pairing answer and in `endpoint.info`.
 
@@ -198,8 +198,7 @@ broker can read, and start the broker with `--turn cloudflare --cloudflare-turn-
 --cloudflare-turn-token-file <file>`. One set of credentials serves every peer until two thirds of its
 lifetime, so the API is asked a handful of times a day.
 
-`apps/server/scripts/webrtc-probe.ts` takes `--turn <url> --turn-user <u> --turn-pass <p>` and
-`--relay-only`, to try the relay between two machines with werift on both ends.
+The native direct and broker integration tests live in `apps/server-rust/tests`. They use local signaling and WebRTC fixtures; a deployed TURN relay still needs a check between real machines.
 
 ## Behind Cloudflare's proxy
 

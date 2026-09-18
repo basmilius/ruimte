@@ -1,8 +1,0 @@
-#!/bin/sh
-# Ruimte puts this directory in front of the PATH of every terminal and chat it starts.
-# Next to a compiled `ruimte` it runs that; in a checkout it runs the source through bun.
-here=$(dirname "$0")
-if [ -x "$here/ruimte" ]; then
-    exec "$here/ruimte" context "$@"
-fi
-exec bun "$here/../src/main.ts" context "$@"

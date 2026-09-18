@@ -12,7 +12,7 @@ Publishing a release also publishes `ruimte` on npm, Ruimte for a machine withou
 same version. `.github/workflows/npm.yml` runs on `release: published` and by hand
 (`gh workflow run npm.yml -f version=0.2.0`, for a tag that exists). It compiles the daemon for
 `darwin-arm64` on macOS (Apple silicon only, no Intel build) and for `linux-x64` and `linux-arm64`
-on Ubuntu, lays out the packages with `packages/npm/scripts/build.ts` and publishes them with
+on matching native Ubuntu runners, lays out the packages with `packages/npm/scripts/build.ts` and publishes them with
 `packages/npm/scripts/publish.ts`: the three `@ruimte/<os>-<cpu>` packages first and `ruimte` last,
 a version already on the registry skipped, and a prerelease under the `next` tag. A run that failed
 halfway can run again.
@@ -23,13 +23,12 @@ repository `ruimte`, workflow `npm.yml`, environment `npm`. npm only offers that
 package that exists, which is what the `0.0.0` folders in `packages/npm/placeholders` were published
 for, by hand and once. A new platform package needs the same two steps before its first release.
 
-A macOS binary is compiled on macOS: Bun writes the bundle after it signs, and a darwin binary that
-`codesign` did not sign again is killed at launch with an invalid signature.
+Each native daemon is built on its target platform and architecture with the pinned Rust toolchain. Cross-compilation is not part of the packaging command. The macOS bundle also includes the simulator adapter and its native addon. See [the native build flow](rust-daemon/RELEASE.md) for complete bundle commands and verification.
 
 To try the packages without publishing:
 
 ```sh
-RUIMTE_VERSION=0.0.0-local bun apps/server/scripts/compile.ts --target darwin-arm64 --outdir /tmp/npm/binaries/darwin-arm64
+RUIMTE_VERSION=0.0.0-local bun apps/server-rust/scripts/compile.ts --target darwin-arm64 --outdir /tmp/npm/binaries/darwin-arm64
 bun packages/npm/scripts/build.ts --version 0.0.0-local --binaries /tmp/npm/binaries --out /tmp/npm/out --only darwin-arm64
 bun packages/npm/scripts/publish.ts --out /tmp/npm/out --dry-run    # wants all three platforms
 ```
@@ -58,10 +57,9 @@ fall back for.
 
 A Developer ID Application certificate in the login keychain is enough; electron-builder finds it
 by itself. The app is signed with the hardened runtime and the entitlements in
-`build/entitlements.mac.plist`, which open up JIT for Electron and for the Bun runtime inside the
-daemon.
+`build/entitlements.mac.plist`, which open up JIT for Electron and for the bundled Bun simulator adapter.
 
-The daemon is not a helper Electron knows about, so `mac.binaries` names it. Without that line it
+The daemon, native context CLI, simulator adapter and addon are listed in `mac.binaries`. Without that line it
 ships unsigned inside a signed app and Apple refuses the notarization.
 
 After a build, three commands say whether it is sound:

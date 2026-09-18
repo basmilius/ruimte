@@ -1,0 +1,933 @@
+{
+  "cases": [
+    {
+      "name": "missing",
+      "snapshot": null,
+      "log": null,
+      "result": null,
+      "list": []
+    },
+    {
+      "name": "snapshot",
+      "snapshot": "{\"info\":{\"chatId\":\"chat\",\"provider\":\"claude\",\"cwd\":\"/\",\"agentSessionId\":null,\"model\":null,\"selection\":{\"model\":\"claude-sonnet-5\",\"options\":{}},\"runtimeMode\":\"full-access\",\"status\":\"idle\",\"running\":false,\"activeTurnId\":null,\"slashCommands\":[],\"usage\":{\"contextTokens\":0,\"contextWindow\":null,\"costUsd\":0,\"turns\":0},\"createdAt\":0},\"items\":[{\"id\":\"a\",\"kind\":\"assistant\",\"createdAt\":1,\"turnId\":null,\"text\":\"he\",\"streaming\":true}],\"seq\":2,\"resetSeq\":0}",
+      "log": null,
+      "result": {
+        "info": {
+          "chatId": "chat",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": false,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "a",
+            "createdAt": 1,
+            "turnId": null,
+            "kind": "assistant",
+            "text": "he",
+            "streaming": true
+          }
+        ],
+        "seq": 2,
+        "resetSeq": 0,
+        "preambles": [],
+        "lines": []
+      },
+      "list": [
+        "chat"
+      ]
+    },
+    {
+      "name": "legacy snapshot",
+      "snapshot": "{\"info\":{\"chatId\":\"chat\",\"provider\":\"claude\",\"cwd\":\"/\",\"agentSessionId\":null,\"model\":null,\"selection\":{\"model\":\"claude-sonnet-5\",\"options\":{}},\"runtimeMode\":\"full-access\",\"status\":\"idle\",\"running\":false,\"activeTurnId\":null,\"slashCommands\":[],\"usage\":{\"contextTokens\":0,\"contextWindow\":null,\"costUsd\":0,\"turns\":0},\"createdAt\":0},\"items\":[{\"id\":\"a\",\"kind\":\"assistant\",\"createdAt\":1,\"turnId\":null,\"text\":\"he\",\"streaming\":true}]}",
+      "log": null,
+      "result": {
+        "info": {
+          "chatId": "chat",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": false,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "a",
+            "createdAt": 1,
+            "turnId": null,
+            "kind": "assistant",
+            "text": "he",
+            "streaming": true
+          }
+        ],
+        "seq": 0,
+        "resetSeq": 0,
+        "preambles": [],
+        "lines": []
+      },
+      "list": [
+        "chat"
+      ]
+    },
+    {
+      "name": "preambles and unknown fields",
+      "snapshot": "{\"info\":{\"chatId\":\"chat\",\"provider\":\"claude\",\"cwd\":\"/\",\"agentSessionId\":null,\"model\":null,\"selection\":{\"model\":\"claude-sonnet-5\",\"options\":{}},\"runtimeMode\":\"full-access\",\"status\":\"idle\",\"running\":false,\"activeTurnId\":null,\"slashCommands\":[],\"usage\":{\"contextTokens\":0,\"contextWindow\":null,\"costUsd\":0,\"turns\":0},\"createdAt\":0,\"extra\":\"strip\"},\"items\":[{\"id\":\"a\",\"kind\":\"assistant\",\"createdAt\":1,\"turnId\":null,\"text\":\"he\",\"streaming\":true}],\"seq\":2,\"resetSeq\":0,\"preambles\":[\"first\",\"second\"],\"extra\":\"strip\"}",
+      "log": null,
+      "result": {
+        "info": {
+          "chatId": "chat",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": false,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "a",
+            "createdAt": 1,
+            "turnId": null,
+            "kind": "assistant",
+            "text": "he",
+            "streaming": true
+          }
+        ],
+        "seq": 2,
+        "resetSeq": 0,
+        "preambles": [
+          "first",
+          "second"
+        ],
+        "lines": []
+      },
+      "list": [
+        "chat"
+      ]
+    },
+    {
+      "name": "late log delta",
+      "snapshot": "{\"info\":{\"chatId\":\"chat\",\"provider\":\"claude\",\"cwd\":\"/\",\"agentSessionId\":null,\"model\":null,\"selection\":{\"model\":\"claude-sonnet-5\",\"options\":{}},\"runtimeMode\":\"full-access\",\"status\":\"idle\",\"running\":false,\"activeTurnId\":null,\"slashCommands\":[],\"usage\":{\"contextTokens\":0,\"contextWindow\":null,\"costUsd\":0,\"turns\":0},\"createdAt\":0},\"items\":[{\"id\":\"a\",\"kind\":\"assistant\",\"createdAt\":1,\"turnId\":null,\"text\":\"he\",\"streaming\":true}],\"seq\":2,\"resetSeq\":0}",
+      "log": "{\"seq\":1,\"at\":1,\"event\":{\"type\":\"item\",\"item\":{\"id\":\"a\",\"kind\":\"assistant\",\"createdAt\":1,\"turnId\":null,\"text\":\"wrong\",\"streaming\":true}}}\n{\"seq\":3,\"at\":1,\"event\":{\"type\":\"delta\",\"itemId\":\"a\",\"text\":\"llo\"}}\n{\"seq\":4,\"at\":1,\"event\":{\"type\":\"info\",\"info\":{\"chatId\":\"chat\",\"provider\":\"claude\",\"cwd\":\"/\",\"agentSessionId\":null,\"model\":null,\"selection\":{\"model\":\"claude-sonnet-5\",\"options\":{}},\"runtimeMode\":\"full-access\",\"status\":\"running\",\"running\":false,\"activeTurnId\":null,\"slashCommands\":[],\"usage\":{\"contextTokens\":0,\"contextWindow\":null,\"costUsd\":0,\"turns\":0},\"createdAt\":0}}}\n",
+      "result": {
+        "info": {
+          "chatId": "chat",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "running",
+          "running": false,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "a",
+            "createdAt": 1,
+            "turnId": null,
+            "kind": "assistant",
+            "text": "hello",
+            "streaming": true
+          }
+        ],
+        "seq": 2,
+        "resetSeq": 0,
+        "preambles": [],
+        "lines": [
+          {
+            "seq": 1,
+            "at": 1,
+            "event": {
+              "type": "item",
+              "item": {
+                "id": "a",
+                "createdAt": 1,
+                "turnId": null,
+                "kind": "assistant",
+                "text": "wrong",
+                "streaming": true
+              }
+            }
+          },
+          {
+            "seq": 3,
+            "at": 1,
+            "event": {
+              "type": "delta",
+              "itemId": "a",
+              "text": "llo"
+            }
+          },
+          {
+            "seq": 4,
+            "at": 1,
+            "event": {
+              "type": "info",
+              "info": {
+                "chatId": "chat",
+                "provider": "claude",
+                "cwd": "/",
+                "agentSessionId": null,
+                "model": null,
+                "selection": {
+                  "model": "claude-sonnet-5",
+                  "options": {}
+                },
+                "runtimeMode": "full-access",
+                "status": "running",
+                "running": false,
+                "activeTurnId": null,
+                "slashCommands": [],
+                "usage": {
+                  "contextTokens": 0,
+                  "contextWindow": null,
+                  "costUsd": 0,
+                  "turns": 0
+                },
+                "createdAt": 0
+              }
+            }
+          }
+        ]
+      },
+      "list": [
+        "chat"
+      ]
+    },
+    {
+      "name": "torn tail",
+      "snapshot": "{\"info\":{\"chatId\":\"chat\",\"provider\":\"claude\",\"cwd\":\"/\",\"agentSessionId\":null,\"model\":null,\"selection\":{\"model\":\"claude-sonnet-5\",\"options\":{}},\"runtimeMode\":\"full-access\",\"status\":\"idle\",\"running\":false,\"activeTurnId\":null,\"slashCommands\":[],\"usage\":{\"contextTokens\":0,\"contextWindow\":null,\"costUsd\":0,\"turns\":0},\"createdAt\":0},\"items\":[{\"id\":\"a\",\"kind\":\"assistant\",\"createdAt\":1,\"turnId\":null,\"text\":\"he\",\"streaming\":true}],\"seq\":2,\"resetSeq\":0}",
+      "log": "{\"seq\":3,\"at\":1,\"event\":{\"type\":\"delta\",\"itemId\":\"a\",\"text\":\"llo\"}}\n{\"seq\":4,\"at\":1,\"event\":",
+      "result": {
+        "info": {
+          "chatId": "chat",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": false,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "a",
+            "createdAt": 1,
+            "turnId": null,
+            "kind": "assistant",
+            "text": "hello",
+            "streaming": true
+          }
+        ],
+        "seq": 2,
+        "resetSeq": 0,
+        "preambles": [],
+        "lines": [
+          {
+            "seq": 3,
+            "at": 1,
+            "event": {
+              "type": "delta",
+              "itemId": "a",
+              "text": "llo"
+            }
+          }
+        ]
+      },
+      "list": [
+        "chat"
+      ]
+    },
+    {
+      "name": "valid unterminated tail",
+      "snapshot": "{\"info\":{\"chatId\":\"chat\",\"provider\":\"claude\",\"cwd\":\"/\",\"agentSessionId\":null,\"model\":null,\"selection\":{\"model\":\"claude-sonnet-5\",\"options\":{}},\"runtimeMode\":\"full-access\",\"status\":\"idle\",\"running\":false,\"activeTurnId\":null,\"slashCommands\":[],\"usage\":{\"contextTokens\":0,\"contextWindow\":null,\"costUsd\":0,\"turns\":0},\"createdAt\":0},\"items\":[{\"id\":\"a\",\"kind\":\"assistant\",\"createdAt\":1,\"turnId\":null,\"text\":\"he\",\"streaming\":true}],\"seq\":2,\"resetSeq\":0}",
+      "log": "{\"seq\":3,\"at\":1,\"event\":{\"type\":\"delta\",\"itemId\":\"a\",\"text\":\"llo\"}}",
+      "result": {
+        "info": {
+          "chatId": "chat",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": false,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "a",
+            "createdAt": 1,
+            "turnId": null,
+            "kind": "assistant",
+            "text": "hello",
+            "streaming": true
+          }
+        ],
+        "seq": 2,
+        "resetSeq": 0,
+        "preambles": [],
+        "lines": [
+          {
+            "seq": 3,
+            "at": 1,
+            "event": {
+              "type": "delta",
+              "itemId": "a",
+              "text": "llo"
+            }
+          }
+        ]
+      },
+      "list": [
+        "chat"
+      ]
+    },
+    {
+      "name": "reset",
+      "snapshot": "{\"info\":{\"chatId\":\"chat\",\"provider\":\"claude\",\"cwd\":\"/\",\"agentSessionId\":null,\"model\":null,\"selection\":{\"model\":\"claude-sonnet-5\",\"options\":{}},\"runtimeMode\":\"full-access\",\"status\":\"idle\",\"running\":false,\"activeTurnId\":null,\"slashCommands\":[],\"usage\":{\"contextTokens\":0,\"contextWindow\":null,\"costUsd\":0,\"turns\":0},\"createdAt\":0},\"items\":[{\"id\":\"a\",\"kind\":\"assistant\",\"createdAt\":1,\"turnId\":null,\"text\":\"he\",\"streaming\":true}],\"seq\":2,\"resetSeq\":0}",
+      "log": "{\"seq\":3,\"at\":1,\"event\":{\"type\":\"reset\",\"info\":{\"chatId\":\"chat\",\"provider\":\"claude\",\"cwd\":\"/\",\"agentSessionId\":null,\"model\":null,\"selection\":{\"model\":\"claude-sonnet-5\",\"options\":{}},\"runtimeMode\":\"full-access\",\"status\":\"idle\",\"running\":false,\"activeTurnId\":null,\"slashCommands\":[],\"usage\":{\"contextTokens\":0,\"contextWindow\":null,\"costUsd\":0,\"turns\":0},\"createdAt\":0},\"items\":[]}}\n{\"seq\":4,\"at\":1,\"event\":{\"type\":\"item\",\"item\":{\"id\":\"b\",\"kind\":\"assistant\",\"createdAt\":1,\"turnId\":null,\"text\":\"new\",\"streaming\":true}}}\n",
+      "result": {
+        "info": {
+          "chatId": "chat",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": false,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "b",
+            "createdAt": 1,
+            "turnId": null,
+            "kind": "assistant",
+            "text": "new",
+            "streaming": true
+          }
+        ],
+        "seq": 2,
+        "resetSeq": 3,
+        "preambles": [],
+        "lines": [
+          {
+            "seq": 3,
+            "at": 1,
+            "event": {
+              "type": "reset",
+              "info": {
+                "chatId": "chat",
+                "provider": "claude",
+                "cwd": "/",
+                "agentSessionId": null,
+                "model": null,
+                "selection": {
+                  "model": "claude-sonnet-5",
+                  "options": {}
+                },
+                "runtimeMode": "full-access",
+                "status": "idle",
+                "running": false,
+                "activeTurnId": null,
+                "slashCommands": [],
+                "usage": {
+                  "contextTokens": 0,
+                  "contextWindow": null,
+                  "costUsd": 0,
+                  "turns": 0
+                },
+                "createdAt": 0
+              },
+              "items": []
+            }
+          },
+          {
+            "seq": 4,
+            "at": 1,
+            "event": {
+              "type": "item",
+              "item": {
+                "id": "b",
+                "createdAt": 1,
+                "turnId": null,
+                "kind": "assistant",
+                "text": "new",
+                "streaming": true
+              }
+            }
+          }
+        ]
+      },
+      "list": [
+        "chat"
+      ]
+    },
+    {
+      "name": "log alone",
+      "snapshot": null,
+      "log": "{\"seq\":1,\"at\":1,\"event\":{\"type\":\"item\",\"item\":{\"id\":\"a\",\"kind\":\"assistant\",\"createdAt\":1,\"turnId\":null,\"text\":\"from log\",\"streaming\":true}}}\n{\"seq\":2,\"at\":1,\"event\":{\"type\":\"info\",\"info\":{\"chatId\":\"chat\",\"provider\":\"claude\",\"cwd\":\"/\",\"agentSessionId\":null,\"model\":null,\"selection\":{\"model\":\"claude-sonnet-5\",\"options\":{}},\"runtimeMode\":\"full-access\",\"status\":\"idle\",\"running\":false,\"activeTurnId\":null,\"slashCommands\":[],\"usage\":{\"contextTokens\":0,\"contextWindow\":null,\"costUsd\":0,\"turns\":0},\"createdAt\":0}}}\n",
+      "result": {
+        "info": {
+          "chatId": "chat",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": false,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "a",
+            "createdAt": 1,
+            "turnId": null,
+            "kind": "assistant",
+            "text": "from log",
+            "streaming": true
+          }
+        ],
+        "seq": 0,
+        "resetSeq": 0,
+        "preambles": [],
+        "lines": [
+          {
+            "seq": 1,
+            "at": 1,
+            "event": {
+              "type": "item",
+              "item": {
+                "id": "a",
+                "createdAt": 1,
+                "turnId": null,
+                "kind": "assistant",
+                "text": "from log",
+                "streaming": true
+              }
+            }
+          },
+          {
+            "seq": 2,
+            "at": 1,
+            "event": {
+              "type": "info",
+              "info": {
+                "chatId": "chat",
+                "provider": "claude",
+                "cwd": "/",
+                "agentSessionId": null,
+                "model": null,
+                "selection": {
+                  "model": "claude-sonnet-5",
+                  "options": {}
+                },
+                "runtimeMode": "full-access",
+                "status": "idle",
+                "running": false,
+                "activeTurnId": null,
+                "slashCommands": [],
+                "usage": {
+                  "contextTokens": 0,
+                  "contextWindow": null,
+                  "costUsd": 0,
+                  "turns": 0
+                },
+                "createdAt": 0
+              }
+            }
+          }
+        ]
+      },
+      "list": [
+        "chat"
+      ]
+    },
+    {
+      "name": "corrupt snapshot recover",
+      "snapshot": "{broken",
+      "log": "{\"seq\":1,\"at\":1,\"event\":{\"type\":\"info\",\"info\":{\"chatId\":\"chat\",\"provider\":\"claude\",\"cwd\":\"/\",\"agentSessionId\":null,\"model\":null,\"selection\":{\"model\":\"claude-sonnet-5\",\"options\":{}},\"runtimeMode\":\"full-access\",\"status\":\"idle\",\"running\":false,\"activeTurnId\":null,\"slashCommands\":[],\"usage\":{\"contextTokens\":0,\"contextWindow\":null,\"costUsd\":0,\"turns\":0},\"createdAt\":0}}}\n{\"seq\":2,\"at\":1,\"event\":{\"type\":\"item\",\"item\":{\"id\":\"a\",\"kind\":\"assistant\",\"createdAt\":1,\"turnId\":null,\"text\":\"recover\",\"streaming\":true}}}\n",
+      "result": {
+        "info": {
+          "chatId": "chat",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": false,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "a",
+            "createdAt": 1,
+            "turnId": null,
+            "kind": "assistant",
+            "text": "recover",
+            "streaming": true
+          }
+        ],
+        "seq": 0,
+        "resetSeq": 0,
+        "preambles": [],
+        "lines": [
+          {
+            "seq": 1,
+            "at": 1,
+            "event": {
+              "type": "info",
+              "info": {
+                "chatId": "chat",
+                "provider": "claude",
+                "cwd": "/",
+                "agentSessionId": null,
+                "model": null,
+                "selection": {
+                  "model": "claude-sonnet-5",
+                  "options": {}
+                },
+                "runtimeMode": "full-access",
+                "status": "idle",
+                "running": false,
+                "activeTurnId": null,
+                "slashCommands": [],
+                "usage": {
+                  "contextTokens": 0,
+                  "contextWindow": null,
+                  "costUsd": 0,
+                  "turns": 0
+                },
+                "createdAt": 0
+              }
+            }
+          },
+          {
+            "seq": 2,
+            "at": 1,
+            "event": {
+              "type": "item",
+              "item": {
+                "id": "a",
+                "createdAt": 1,
+                "turnId": null,
+                "kind": "assistant",
+                "text": "recover",
+                "streaming": true
+              }
+            }
+          }
+        ]
+      },
+      "list": [
+        "chat"
+      ]
+    },
+    {
+      "name": "invalid schema recover",
+      "snapshot": "{\"info\":{\"bad\":true},\"items\":[{\"id\":\"a\",\"kind\":\"assistant\",\"createdAt\":1,\"turnId\":null,\"text\":\"he\",\"streaming\":true}],\"seq\":2,\"resetSeq\":0}",
+      "log": "{\"seq\":1,\"at\":1,\"event\":{\"type\":\"info\",\"info\":{\"chatId\":\"chat\",\"provider\":\"claude\",\"cwd\":\"/\",\"agentSessionId\":null,\"model\":null,\"selection\":{\"model\":\"claude-sonnet-5\",\"options\":{}},\"runtimeMode\":\"full-access\",\"status\":\"idle\",\"running\":false,\"activeTurnId\":null,\"slashCommands\":[],\"usage\":{\"contextTokens\":0,\"contextWindow\":null,\"costUsd\":0,\"turns\":0},\"createdAt\":0}}}\n",
+      "result": {
+        "info": {
+          "chatId": "chat",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": false,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [],
+        "seq": 0,
+        "resetSeq": 0,
+        "preambles": [],
+        "lines": [
+          {
+            "seq": 1,
+            "at": 1,
+            "event": {
+              "type": "info",
+              "info": {
+                "chatId": "chat",
+                "provider": "claude",
+                "cwd": "/",
+                "agentSessionId": null,
+                "model": null,
+                "selection": {
+                  "model": "claude-sonnet-5",
+                  "options": {}
+                },
+                "runtimeMode": "full-access",
+                "status": "idle",
+                "running": false,
+                "activeTurnId": null,
+                "slashCommands": [],
+                "usage": {
+                  "contextTokens": 0,
+                  "contextWindow": null,
+                  "costUsd": 0,
+                  "turns": 0
+                },
+                "createdAt": 0
+              }
+            }
+          }
+        ]
+      },
+      "list": [
+        "chat"
+      ]
+    },
+    {
+      "name": "log alone missing info",
+      "snapshot": null,
+      "log": "{\"seq\":1,\"at\":1,\"event\":{\"type\":\"item\",\"item\":{\"id\":\"a\",\"kind\":\"assistant\",\"createdAt\":1,\"turnId\":null,\"text\":\"lost\",\"streaming\":true}}}\n",
+      "result": null,
+      "list": [
+        "chat"
+      ]
+    },
+    {
+      "name": "log alone starts late",
+      "snapshot": null,
+      "log": "{\"seq\":2,\"at\":1,\"event\":{\"type\":\"info\",\"info\":{\"chatId\":\"chat\",\"provider\":\"claude\",\"cwd\":\"/\",\"agentSessionId\":null,\"model\":null,\"selection\":{\"model\":\"claude-sonnet-5\",\"options\":{}},\"runtimeMode\":\"full-access\",\"status\":\"idle\",\"running\":false,\"activeTurnId\":null,\"slashCommands\":[],\"usage\":{\"contextTokens\":0,\"contextWindow\":null,\"costUsd\":0,\"turns\":0},\"createdAt\":0}}}\n",
+      "result": null,
+      "list": [
+        "chat"
+      ]
+    },
+    {
+      "name": "duplicate out of order and gap",
+      "snapshot": "{\"info\":{\"chatId\":\"chat\",\"provider\":\"claude\",\"cwd\":\"/\",\"agentSessionId\":null,\"model\":null,\"selection\":{\"model\":\"claude-sonnet-5\",\"options\":{}},\"runtimeMode\":\"full-access\",\"status\":\"idle\",\"running\":false,\"activeTurnId\":null,\"slashCommands\":[],\"usage\":{\"contextTokens\":0,\"contextWindow\":null,\"costUsd\":0,\"turns\":0},\"createdAt\":0},\"items\":[{\"id\":\"a\",\"kind\":\"assistant\",\"createdAt\":1,\"turnId\":null,\"text\":\"he\",\"streaming\":true}],\"seq\":2,\"resetSeq\":0}",
+      "log": "{\"seq\":3,\"at\":1,\"event\":{\"type\":\"delta\",\"itemId\":\"a\",\"text\":\"A\"}}\n{\"seq\":3,\"at\":1,\"event\":{\"type\":\"delta\",\"itemId\":\"a\",\"text\":\"B\"}}\n{\"seq\":5,\"at\":1,\"event\":{\"type\":\"delta\",\"itemId\":\"a\",\"text\":\"C\"}}\n{\"seq\":4,\"at\":1,\"event\":{\"type\":\"delta\",\"itemId\":\"a\",\"text\":\"D\"}}\n",
+      "result": {
+        "info": {
+          "chatId": "chat",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": false,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "a",
+            "createdAt": 1,
+            "turnId": null,
+            "kind": "assistant",
+            "text": "heAC",
+            "streaming": true
+          }
+        ],
+        "seq": 2,
+        "resetSeq": 0,
+        "preambles": [],
+        "lines": [
+          {
+            "seq": 3,
+            "at": 1,
+            "event": {
+              "type": "delta",
+              "itemId": "a",
+              "text": "A"
+            }
+          },
+          {
+            "seq": 5,
+            "at": 1,
+            "event": {
+              "type": "delta",
+              "itemId": "a",
+              "text": "C"
+            }
+          }
+        ]
+      },
+      "list": [
+        "chat"
+      ]
+    },
+    {
+      "name": "bad event and junk",
+      "snapshot": "{\"info\":{\"chatId\":\"chat\",\"provider\":\"claude\",\"cwd\":\"/\",\"agentSessionId\":null,\"model\":null,\"selection\":{\"model\":\"claude-sonnet-5\",\"options\":{}},\"runtimeMode\":\"full-access\",\"status\":\"idle\",\"running\":false,\"activeTurnId\":null,\"slashCommands\":[],\"usage\":{\"contextTokens\":0,\"contextWindow\":null,\"costUsd\":0,\"turns\":0},\"createdAt\":0},\"items\":[{\"id\":\"a\",\"kind\":\"assistant\",\"createdAt\":1,\"turnId\":null,\"text\":\"he\",\"streaming\":true}],\"seq\":2,\"resetSeq\":0}",
+      "log": "garbage\n{\"seq\":3,\"at\":1,\"event\":{\"type\":\"unrecognized\"}}\n{\"seq\":4,\"at\":1,\"event\":{\"type\":\"delta\",\"itemId\":\"a\",\"text\":\"ok\"}}\n",
+      "result": {
+        "info": {
+          "chatId": "chat",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": false,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "a",
+            "createdAt": 1,
+            "turnId": null,
+            "kind": "assistant",
+            "text": "heok",
+            "streaming": true
+          }
+        ],
+        "seq": 2,
+        "resetSeq": 0,
+        "preambles": [],
+        "lines": [
+          {
+            "seq": 4,
+            "at": 1,
+            "event": {
+              "type": "delta",
+              "itemId": "a",
+              "text": "ok"
+            }
+          }
+        ]
+      },
+      "list": [
+        "chat"
+      ]
+    },
+    {
+      "name": "upsert remove delta",
+      "snapshot": "{\"info\":{\"chatId\":\"chat\",\"provider\":\"claude\",\"cwd\":\"/\",\"agentSessionId\":null,\"model\":null,\"selection\":{\"model\":\"claude-sonnet-5\",\"options\":{}},\"runtimeMode\":\"full-access\",\"status\":\"idle\",\"running\":false,\"activeTurnId\":null,\"slashCommands\":[],\"usage\":{\"contextTokens\":0,\"contextWindow\":null,\"costUsd\":0,\"turns\":0},\"createdAt\":0},\"items\":[{\"id\":\"a\",\"kind\":\"assistant\",\"createdAt\":1,\"turnId\":null,\"text\":\"he\",\"streaming\":true}],\"seq\":2,\"resetSeq\":0}",
+      "log": "{\"seq\":3,\"at\":1,\"event\":{\"type\":\"item\",\"item\":{\"id\":\"a\",\"kind\":\"assistant\",\"createdAt\":1,\"turnId\":null,\"text\":\"replace\",\"streaming\":true}}}\n{\"seq\":4,\"at\":1,\"event\":{\"type\":\"delta\",\"itemId\":\"missing\",\"text\":\"skip\"}}\n{\"seq\":5,\"at\":1,\"event\":{\"type\":\"remove\",\"itemId\":\"a\"}}\n",
+      "result": {
+        "info": {
+          "chatId": "chat",
+          "provider": "claude",
+          "cwd": "/",
+          "agentSessionId": null,
+          "model": null,
+          "selection": {
+            "model": "claude-sonnet-5",
+            "options": {}
+          },
+          "runtimeMode": "full-access",
+          "status": "idle",
+          "running": false,
+          "activeTurnId": null,
+          "slashCommands": [],
+          "usage": {
+            "contextTokens": 0,
+            "contextWindow": null,
+            "costUsd": 0,
+            "turns": 0
+          },
+          "createdAt": 0
+        },
+        "items": [
+          {
+            "id": "a",
+            "createdAt": 1,
+            "turnId": null,
+            "kind": "assistant",
+            "text": "replace",
+            "streaming": true
+          }
+        ],
+        "seq": 2,
+        "resetSeq": 0,
+        "preambles": [],
+        "lines": [
+          {
+            "seq": 3,
+            "at": 1,
+            "event": {
+              "type": "item",
+              "item": {
+                "id": "a",
+                "createdAt": 1,
+                "turnId": null,
+                "kind": "assistant",
+                "text": "replace",
+                "streaming": true
+              }
+            }
+          },
+          {
+            "seq": 4,
+            "at": 1,
+            "event": {
+              "type": "delta",
+              "itemId": "missing",
+              "text": "skip"
+            }
+          }
+        ]
+      },
+      "list": [
+        "chat"
+      ]
+    }
+  ]
+}

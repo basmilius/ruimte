@@ -1,0 +1,702 @@
+{
+  "settings": [
+    {
+      "input": {},
+      "output": {}
+    },
+    {
+      "input": {
+        "appearance": "dark",
+        "size": "large",
+        "contrast": "enabled"
+      },
+      "output": {
+        "appearance": "dark",
+        "textSize": "default",
+        "increaseContrast": true
+      }
+    },
+    {
+      "input": {
+        "appearance": "LIGHT\n",
+        "size": "ACCESSIBILITY-LARGE",
+        "contrast": "DISABLED"
+      },
+      "output": {
+        "appearance": "light",
+        "textSize": "extra-large",
+        "increaseContrast": false
+      }
+    },
+    {
+      "input": {
+        "size": "small"
+      },
+      "output": {
+        "textSize": "small"
+      }
+    },
+    {
+      "input": {
+        "size": "large"
+      },
+      "output": {
+        "textSize": "default"
+      }
+    },
+    {
+      "input": {
+        "size": "extra-extra-large"
+      },
+      "output": {
+        "textSize": "large"
+      }
+    },
+    {
+      "input": {
+        "size": "accessibility-large"
+      },
+      "output": {
+        "textSize": "extra-large"
+      }
+    },
+    {
+      "input": {
+        "size": "extra-small"
+      },
+      "output": {
+        "textSize": "large"
+      }
+    },
+    {
+      "input": {
+        "size": "medium"
+      },
+      "output": {
+        "textSize": "small"
+      }
+    },
+    {
+      "input": {
+        "size": "extra-large"
+      },
+      "output": {
+        "textSize": "large"
+      }
+    },
+    {
+      "input": {
+        "size": "unknown"
+      },
+      "output": {
+        "textSize": "default"
+      }
+    },
+    {
+      "input": {
+        "size": ""
+      },
+      "output": {}
+    },
+    {
+      "input": {
+        "appearance": "invalid",
+        "contrast": ""
+      },
+      "output": {}
+    },
+    {
+      "input": {
+        "ax": {
+          "liquid-glass": "clear"
+        }
+      },
+      "output": {
+        "liquidGlass": "clear"
+      }
+    },
+    {
+      "input": {
+        "ax": {
+          "liquid-glass": "tinted"
+        }
+      },
+      "output": {
+        "liquidGlass": "tinted"
+      }
+    },
+    {
+      "input": {
+        "ax": {
+          "liquid-glass": "invalid"
+        }
+      },
+      "output": {}
+    },
+    {
+      "input": {
+        "ax": {
+          "liquid-glass": ""
+        }
+      },
+      "output": {}
+    },
+    {
+      "input": {
+        "ax": {
+          "color-filter": "none"
+        }
+      },
+      "output": {
+        "colorFilter": "none"
+      }
+    },
+    {
+      "input": {
+        "ax": {
+          "color-filter": "grayscale"
+        }
+      },
+      "output": {
+        "colorFilter": "grayscale"
+      }
+    },
+    {
+      "input": {
+        "ax": {
+          "color-filter": "red-green"
+        }
+      },
+      "output": {
+        "colorFilter": "red-green"
+      }
+    },
+    {
+      "input": {
+        "ax": {
+          "color-filter": "green-red"
+        }
+      },
+      "output": {
+        "colorFilter": "green-red"
+      }
+    },
+    {
+      "input": {
+        "ax": {
+          "color-filter": "blue-yellow"
+        }
+      },
+      "output": {
+        "colorFilter": "blue-yellow"
+      }
+    },
+    {
+      "input": {
+        "ax": {
+          "color-filter": "invalid"
+        }
+      },
+      "output": {}
+    },
+    {
+      "input": {
+        "ax": {
+          "color-filter": ""
+        }
+      },
+      "output": {}
+    },
+    {
+      "input": {
+        "ax": {
+          "reduce-motion": "on",
+          "reduce-transparency": "off",
+          "voiceover": "on",
+          "show-borders": "off"
+        }
+      },
+      "output": {
+        "reduceMotion": true,
+        "reduceTransparency": false,
+        "showBorders": false,
+        "voiceOver": true
+      }
+    },
+    {
+      "input": {
+        "ax": {
+          "reduce-motion": "on",
+          "bad": 2
+        }
+      },
+      "output": {}
+    },
+    {
+      "input": {
+        "ax": []
+      },
+      "output": {}
+    },
+    {
+      "input": {
+        "ax": null
+      },
+      "output": {}
+    },
+    {
+      "input": {
+        "ax": {
+          "color-filter": "grayscale",
+          "liquid-glass": "clear",
+          "unknown": "hello"
+        }
+      },
+      "output": {
+        "liquidGlass": "clear",
+        "colorFilter": "grayscale"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setAppearance",
+        "value": "dark"
+      },
+      "output": {
+        "args": [
+          "ui",
+          "fixture",
+          "appearance",
+          "dark"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setTextSize",
+        "value": "small"
+      },
+      "output": {
+        "args": [
+          "ui",
+          "fixture",
+          "content_size",
+          "small"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setTextSize",
+        "value": "default"
+      },
+      "output": {
+        "args": [
+          "ui",
+          "fixture",
+          "content_size",
+          "large"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setTextSize",
+        "value": "large"
+      },
+      "output": {
+        "args": [
+          "ui",
+          "fixture",
+          "content_size",
+          "extra-extra-large"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setTextSize",
+        "value": "extra-large"
+      },
+      "output": {
+        "args": [
+          "ui",
+          "fixture",
+          "content_size",
+          "accessibility-large"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setToggle",
+        "setting": "reduceMotion",
+        "value": false
+      },
+      "output": {
+        "args": [
+          "spawn",
+          "fixture",
+          "<AX>",
+          "set",
+          "reduce-motion",
+          "off"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setToggle",
+        "setting": "reduceMotion",
+        "value": true
+      },
+      "output": {
+        "args": [
+          "spawn",
+          "fixture",
+          "<AX>",
+          "set",
+          "reduce-motion",
+          "on"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setToggle",
+        "setting": "increaseContrast",
+        "value": false
+      },
+      "output": {
+        "args": [
+          "ui",
+          "fixture",
+          "increase_contrast",
+          "disabled"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setToggle",
+        "setting": "increaseContrast",
+        "value": true
+      },
+      "output": {
+        "args": [
+          "ui",
+          "fixture",
+          "increase_contrast",
+          "enabled"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setToggle",
+        "setting": "reduceTransparency",
+        "value": false
+      },
+      "output": {
+        "args": [
+          "spawn",
+          "fixture",
+          "<AX>",
+          "set",
+          "reduce-transparency",
+          "off"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setToggle",
+        "setting": "reduceTransparency",
+        "value": true
+      },
+      "output": {
+        "args": [
+          "spawn",
+          "fixture",
+          "<AX>",
+          "set",
+          "reduce-transparency",
+          "on"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setToggle",
+        "setting": "showBorders",
+        "value": false
+      },
+      "output": {
+        "args": [
+          "spawn",
+          "fixture",
+          "<AX>",
+          "set",
+          "show-borders",
+          "off"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setToggle",
+        "setting": "showBorders",
+        "value": true
+      },
+      "output": {
+        "args": [
+          "spawn",
+          "fixture",
+          "<AX>",
+          "set",
+          "show-borders",
+          "on"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setToggle",
+        "setting": "voiceOver",
+        "value": false
+      },
+      "output": {
+        "args": [
+          "spawn",
+          "fixture",
+          "<AX>",
+          "set",
+          "voiceover",
+          "off"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setToggle",
+        "setting": "voiceOver",
+        "value": true
+      },
+      "output": {
+        "args": [
+          "spawn",
+          "fixture",
+          "<AX>",
+          "set",
+          "voiceover",
+          "on"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setLiquidGlass",
+        "value": "tinted"
+      },
+      "output": {
+        "args": [
+          "spawn",
+          "fixture",
+          "<AX>",
+          "set",
+          "liquid-glass",
+          "tinted"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setColorFilter",
+        "value": "blue-yellow"
+      },
+      "output": {
+        "args": [
+          "spawn",
+          "fixture",
+          "<AX>",
+          "set",
+          "color-filter",
+          "blue-yellow"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setLocation",
+        "latitude": -0.25,
+        "longitude": 4.123
+      },
+      "output": {
+        "args": [
+          "location",
+          "fixture",
+          "set",
+          "-0.25,4.123"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "clearLocation"
+      },
+      "output": {
+        "args": [
+          "location",
+          "fixture",
+          "clear"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "setPermission",
+        "appId": "com.example.app",
+        "permission": "faceid",
+        "decision": "grant"
+      },
+      "output": {
+        "args": [
+          "privacy",
+          "fixture",
+          "grant",
+          "faceid",
+          "com.example.app"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "openUrl",
+        "url": "https://example.test/"
+      },
+      "output": {
+        "args": [
+          "openurl",
+          "fixture",
+          "https://example.test/"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "launchApp",
+        "appId": "com.example.app"
+      },
+      "output": {
+        "args": [
+          "launch",
+          "fixture",
+          "com.example.app"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "terminateApp",
+        "appId": "com.example.app"
+      },
+      "output": {
+        "args": [
+          "terminate",
+          "fixture",
+          "com.example.app"
+        ]
+      }
+    },
+    {
+      "input": {
+        "deviceId": "fixture",
+        "backendId": "simctl",
+        "platform": "ios",
+        "action": "sendPush",
+        "appId": "com.example.app",
+        "payload": "{\"title\":\"literal\"}"
+      },
+      "output": {
+        "args": [
+          "push",
+          "fixture",
+          "com.example.app",
+          "-"
+        ],
+        "stdin": "{\"aps\":{\"alert\":\"{\\\"title\\\":\\\"literal\\\"}\"}}"
+      }
+    }
+  ]
+}

@@ -1,5 +1,4 @@
-import { chmod, copyFile, mkdir, rm, writeFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { chmod, copyFile, lstat, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { launcherManifest, platformManifest } from '../src/manifest';
@@ -11,8 +10,8 @@ import { LAUNCHER_NAME, targetId, TARGETS } from '../src/targets';
  *   bun scripts/build.ts --version 0.2.0 --binaries <dir> --out <dir>
  *
  * `--binaries` holds one folder per target (`darwin-arm64/`, ...), each what `compile.ts --target`
- * wrote: `ruimte`, `ruimte-context` and `ruimte.build`. `--only darwin-arm64` builds the packages
- * for the binaries that exist, which is what a local try on one machine has.
+ * wrote. `--only darwin-arm64` builds the packages for the binaries that exist, which is what a
+ * local try on one machine has.
  */
 const { values } = parseArgs({
     args: process.argv.slice(2),
@@ -39,22 +38,92 @@ const targets = values.only.length > 0 ? TARGETS.filter((target) => values.only.
 
 const writeJson = (path: string, value: unknown): Promise<void> => writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
 
+interface BundleManifest {
+    format: number;
+    version: string;
+    buildId: string;
+    target: { os: string; arch: string };
+}
+
+const copyBundleEntry = async (source: string, destination: string): Promise<void> => {
+    const entry = await lstat(source);
+    if (entry.isSymbolicLink()) {
+        throw new Error(`Refusing symlink in native bundle: ${source}`);
+    }
+    if (entry.isDirectory()) {
+        await mkdir(destination, { recursive: true });
+        for (const name of await readdir(source)) {
+            await copyBundleEntry(join(source, name), join(destination, name));
+        }
+        return;
+    }
+    if (!entry.isFile()) {
+        throw new Error(`Refusing unsupported entry in native bundle: ${source}`);
+    }
+    await copyFile(source, destination);
+};
+
+const readBundle = async (source: string, target: (typeof TARGETS)[number]): Promise<string[]> => {
+    const manifestPath = join(source, 'ruimte.bundle.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as BundleManifest;
+    const os = target.os === 'darwin' ? 'mac' : target.os;
+    if (
+        manifest.format !== 1 ||
+        manifest.version !== version ||
+        typeof manifest.buildId !== 'string' ||
+        manifest.buildId.length === 0 ||
+        manifest.target?.os !== os ||
+        manifest.target.arch !== target.cpu
+    ) {
+        throw new Error(`Native bundle metadata does not match ${targetId(target)} ${version}`);
+    }
+    if ((await readFile(join(source, 'ruimte.build'), 'utf8')).trim() !== manifest.buildId) {
+        throw new Error(`Native bundle build marker does not match ${manifest.buildId}`);
+    }
+
+    const allowed = new Set(['ruimte', 'ruimte-context', 'ruimte.build', 'ruimte.bundle.json', 'web']);
+    const required = ['ruimte', 'ruimte-context', 'ruimte.build', 'ruimte.bundle.json'];
+    if (target.os === 'darwin') {
+        allowed.add('ruimte-simulator-helper');
+        allowed.add('native');
+        required.push('ruimte-simulator-helper', 'native');
+    }
+    const names = await readdir(source);
+    const unexpected = names.find((name) => !allowed.has(name));
+    if (unexpected) {
+        throw new Error(`Unexpected native bundle entry: ${join(source, unexpected)}`);
+    }
+    for (const name of required) {
+        await lstat(join(source, name)).catch(() => {
+            throw new Error(`Missing ${join(source, name)}`);
+        });
+    }
+    if (target.os === 'darwin') {
+        for (const name of ['serve-sim-ax-settings', 'serve-sim-native.node']) {
+            await lstat(join(source, 'native', name)).catch(() => {
+                throw new Error(`Missing ${join(source, 'native', name)}`);
+            });
+        }
+    }
+    return names;
+};
+
 await rm(out, { recursive: true, force: true });
 
 for (const target of targets) {
     const source = join(binaries, targetId(target));
     const dir = join(out, targetId(target));
     await mkdir(join(dir, 'bin'), { recursive: true });
-    for (const name of ['ruimte', 'ruimte-context', 'ruimte.build']) {
-        if (!existsSync(join(source, name))) {
-            console.error(`Missing ${join(source, name)}`);
-            process.exit(1);
-        }
-        await copyFile(join(source, name), join(dir, 'bin', name));
+    for (const name of await readBundle(source, target)) {
+        await copyBundleEntry(join(source, name), join(dir, 'bin', name));
     }
-    // An artifact download drops the mode, and npm packs the mode it finds.
+    // GitHub's artifact download does not retain modes, while npm packs the modes on disk.
     await chmod(join(dir, 'bin', 'ruimte'), 0o755);
     await chmod(join(dir, 'bin', 'ruimte-context'), 0o755);
+    if (target.os === 'darwin') {
+        await chmod(join(dir, 'bin', 'ruimte-simulator-helper'), 0o755);
+        await chmod(join(dir, 'bin', 'native', 'serve-sim-ax-settings'), 0o755);
+    }
     await writeJson(join(dir, 'package.json'), platformManifest(target, version));
     await copyFile(join(repoRoot, 'LICENSE'), join(dir, 'LICENSE'));
     console.log(`Laid out ${dir}`);

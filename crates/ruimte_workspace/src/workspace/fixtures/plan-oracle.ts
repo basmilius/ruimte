@@ -1,0 +1,20 @@
+import { applyPlanOps, planProgress, planToMarkdown } from '../../../../../packages/plan/src/index.ts';
+const now='2026-09-16T14:30:00Z';
+const step=(id:string,extra={})=>({type:'step',id,title:`Step ${id}`,...extra});
+const plan=(items:any[],meta={})=>({id:'plan-1',rev:3,createdAt:'2026-09-16T13:40:00Z',meta:{title:'Plan',kind:'steps',checks:'anyone',...meta},items});
+const cases:any[]=[];
+function add(name:string,input:any,ops:any[],actor:'person'|'agent') {let n=0;const result=applyPlanOps(input,ops,{actor,now,mintId:()=>`m${++n}`});cases.push({name,input,ops,actor,now,result,...(result.ok?{progress:planProgress(result.plan.items),markdown:planToMarkdown(result.plan)}:{})});}
+for(const checks of ['anyone','agent','person'])for(const actor of ['person','agent'] as const)for(const state of ['open','active','done','blocked','skipped']) add(`${checks} ${actor} ${state}`,plan([step('a',{checks})]),[{op:'set',ids:['a'],state}],actor);
+for(const state of ['open','active','done','blocked','skipped'])add(`person mark to ${state}`,plan([step('a',{state:'done',by:'person',at:now})]),[{op:'set',ids:['a'],state}],'agent');
+add('all or nothing',plan([step('a'),step('b',{checks:'person'})]),[{op:'set',ids:['a'],state:'done'},{op:'set',ids:['b'],state:'done'}],'agent');
+add('note preserved',plan([step('a',{state:'done',by:'person',at:now})]),[{op:'note',id:'a',text:'observed result'}],'agent');
+add('unlock',plan([step('a',{checks:'agent'})]),[{op:'unlock',ids:'all'},{op:'set',ids:['a'],state:'done'}],'person');
+add('agent cannot unlock',plan([step('a',{checks:'agent'})]),[{op:'unlock',ids:'all'}],'agent');
+add('cannot remove person mark',plan([step('a',{state:'done',by:'person',at:now})]),[{op:'remove',id:'a'}],'agent');
+add('person cannot remove',plan([step('a')]),[{op:'remove',id:'a'}],'person');
+add('parent state',plan([step('a',{steps:[step('b')]})]),[{op:'set',ids:['a'],state:'done'}],'agent');
+add('mark child',plan([step('a',{steps:[step('b'),step('c')]})]),[{op:'set',ids:['b'],state:'done',next:'c'}],'agent');
+add('missing id',plan([step('a')]),[{op:'set',ids:['missing'],state:'done'}],'agent');
+add('meta cannot remove person checks',plan([step('a')],{checks:'person'}),[{op:'meta',checks:'agent'}],'agent');
+await Bun.write('/tmp/ruimte-rust-plan-oracle.json',JSON.stringify(cases,null,2)+'\n');
+console.log(JSON.stringify({cases:cases.length,allowed:cases.filter(c=>c.result.ok).length,refused:cases.filter(c=>!c.result.ok).length}));

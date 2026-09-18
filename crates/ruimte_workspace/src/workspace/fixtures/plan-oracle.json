@@ -1,0 +1,2524 @@
+[
+  {
+    "name": "anyone person open",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "anyone"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "open"
+      }
+    ],
+    "actor": "person",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "anyone",
+            "state": "open"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 1,
+      "active": 0,
+      "done": 0,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 0
+    },
+    "markdown": "# Plan\n\n- [ ] Step a\n"
+  },
+  {
+    "name": "anyone person active",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "anyone"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "active"
+      }
+    ],
+    "actor": "person",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "anyone",
+            "state": "active",
+            "by": "person",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 1,
+      "done": 0,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 0
+    },
+    "markdown": "# Plan\n\n- [~] Step a\n"
+  },
+  {
+    "name": "anyone person done",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "anyone"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "done"
+      }
+    ],
+    "actor": "person",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "anyone",
+            "state": "done",
+            "by": "person",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 0,
+      "done": 1,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 1
+    },
+    "markdown": "# Plan\n\n- [x] Step a\n"
+  },
+  {
+    "name": "anyone person blocked",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "anyone"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "blocked"
+      }
+    ],
+    "actor": "person",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "anyone",
+            "state": "blocked",
+            "by": "person",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 0,
+      "done": 0,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 1,
+      "warning": 0,
+      "info": 0,
+      "finished": 0
+    },
+    "markdown": "# Plan\n\n- [?] Step a\n"
+  },
+  {
+    "name": "anyone person skipped",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "anyone"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "skipped"
+      }
+    ],
+    "actor": "person",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "anyone",
+            "state": "skipped",
+            "by": "person",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 0,
+      "done": 0,
+      "failed": 0,
+      "skipped": 1,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 1
+    },
+    "markdown": "# Plan\n\n- [-] Step a\n"
+  },
+  {
+    "name": "anyone agent open",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "anyone"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "open"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "anyone",
+            "state": "open",
+            "by": "agent",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 1,
+      "active": 0,
+      "done": 0,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 0
+    },
+    "markdown": "# Plan\n\n- [ ] Step a\n"
+  },
+  {
+    "name": "anyone agent active",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "anyone"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "active"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "anyone",
+            "state": "active",
+            "by": "agent",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 1,
+      "done": 0,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 0
+    },
+    "markdown": "# Plan\n\n- [~] Step a\n"
+  },
+  {
+    "name": "anyone agent done",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "anyone"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "done"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "anyone",
+            "state": "done",
+            "by": "agent",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 0,
+      "done": 1,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 1
+    },
+    "markdown": "# Plan\n\n- [x] Step a\n"
+  },
+  {
+    "name": "anyone agent blocked",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "anyone"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "blocked"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "anyone",
+            "state": "blocked",
+            "by": "agent",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 0,
+      "done": 0,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 1,
+      "warning": 0,
+      "info": 0,
+      "finished": 0
+    },
+    "markdown": "# Plan\n\n- [?] Step a\n"
+  },
+  {
+    "name": "anyone agent skipped",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "anyone"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "skipped"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "anyone",
+            "state": "skipped",
+            "by": "agent",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 0,
+      "done": 0,
+      "failed": 0,
+      "skipped": 1,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 1
+    },
+    "markdown": "# Plan\n\n- [-] Step a\n"
+  },
+  {
+    "name": "agent person open",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "agent"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "open"
+      }
+    ],
+    "actor": "person",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "step-locked",
+      "message": "Only the agent checks \"a\" until a person unlocks it"
+    }
+  },
+  {
+    "name": "agent person active",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "agent"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "active"
+      }
+    ],
+    "actor": "person",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "step-locked",
+      "message": "Only the agent checks \"a\" until a person unlocks it"
+    }
+  },
+  {
+    "name": "agent person done",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "agent"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "done"
+      }
+    ],
+    "actor": "person",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "step-locked",
+      "message": "Only the agent checks \"a\" until a person unlocks it"
+    }
+  },
+  {
+    "name": "agent person blocked",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "agent"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "blocked"
+      }
+    ],
+    "actor": "person",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "step-locked",
+      "message": "Only the agent checks \"a\" until a person unlocks it"
+    }
+  },
+  {
+    "name": "agent person skipped",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "agent"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "skipped"
+      }
+    ],
+    "actor": "person",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "step-locked",
+      "message": "Only the agent checks \"a\" until a person unlocks it"
+    }
+  },
+  {
+    "name": "agent agent open",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "agent"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "open"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "agent",
+            "state": "open",
+            "by": "agent",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 1,
+      "active": 0,
+      "done": 0,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 0
+    },
+    "markdown": "# Plan\n\n- [ ] Step a\n"
+  },
+  {
+    "name": "agent agent active",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "agent"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "active"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "agent",
+            "state": "active",
+            "by": "agent",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 1,
+      "done": 0,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 0
+    },
+    "markdown": "# Plan\n\n- [~] Step a\n"
+  },
+  {
+    "name": "agent agent done",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "agent"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "done"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "agent",
+            "state": "done",
+            "by": "agent",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 0,
+      "done": 1,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 1
+    },
+    "markdown": "# Plan\n\n- [x] Step a\n"
+  },
+  {
+    "name": "agent agent blocked",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "agent"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "blocked"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "agent",
+            "state": "blocked",
+            "by": "agent",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 0,
+      "done": 0,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 1,
+      "warning": 0,
+      "info": 0,
+      "finished": 0
+    },
+    "markdown": "# Plan\n\n- [?] Step a\n"
+  },
+  {
+    "name": "agent agent skipped",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "agent"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "skipped"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "agent",
+            "state": "skipped",
+            "by": "agent",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 0,
+      "done": 0,
+      "failed": 0,
+      "skipped": 1,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 1
+    },
+    "markdown": "# Plan\n\n- [-] Step a\n"
+  },
+  {
+    "name": "person person open",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "person"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "open"
+      }
+    ],
+    "actor": "person",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "person",
+            "state": "open"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 1,
+      "active": 0,
+      "done": 0,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 0
+    },
+    "markdown": "# Plan\n\n- [ ] Step a\n"
+  },
+  {
+    "name": "person person active",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "person"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "active"
+      }
+    ],
+    "actor": "person",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "person",
+            "state": "active",
+            "by": "person",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 1,
+      "done": 0,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 0
+    },
+    "markdown": "# Plan\n\n- [~] Step a\n"
+  },
+  {
+    "name": "person person done",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "person"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "done"
+      }
+    ],
+    "actor": "person",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "person",
+            "state": "done",
+            "by": "person",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 0,
+      "done": 1,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 1
+    },
+    "markdown": "# Plan\n\n- [x] Step a\n"
+  },
+  {
+    "name": "person person blocked",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "person"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "blocked"
+      }
+    ],
+    "actor": "person",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "person",
+            "state": "blocked",
+            "by": "person",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 0,
+      "done": 0,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 1,
+      "warning": 0,
+      "info": 0,
+      "finished": 0
+    },
+    "markdown": "# Plan\n\n- [?] Step a\n"
+  },
+  {
+    "name": "person person skipped",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "person"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "skipped"
+      }
+    ],
+    "actor": "person",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "person",
+            "state": "skipped",
+            "by": "person",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 0,
+      "done": 0,
+      "failed": 0,
+      "skipped": 1,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 1
+    },
+    "markdown": "# Plan\n\n- [-] Step a\n"
+  },
+  {
+    "name": "person agent open",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "person"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "open"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "person-only",
+      "message": "Only a person checks \"a\""
+    }
+  },
+  {
+    "name": "person agent active",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "person"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "active"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "person-only",
+      "message": "Only a person checks \"a\""
+    }
+  },
+  {
+    "name": "person agent done",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "person"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "done"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "person-only",
+      "message": "Only a person checks \"a\""
+    }
+  },
+  {
+    "name": "person agent blocked",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "person"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "blocked"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "person-only",
+      "message": "Only a person checks \"a\""
+    }
+  },
+  {
+    "name": "person agent skipped",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "person"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "skipped"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "person-only",
+      "message": "Only a person checks \"a\""
+    }
+  },
+  {
+    "name": "person mark to open",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "state": "done",
+          "by": "person",
+          "at": "2026-09-16T14:30:00Z"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "open"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "set-by-person",
+      "message": "A person set \"a\" to done; add a note or ask in the chat instead"
+    }
+  },
+  {
+    "name": "person mark to active",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "state": "done",
+          "by": "person",
+          "at": "2026-09-16T14:30:00Z"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "active"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "set-by-person",
+      "message": "A person set \"a\" to done; add a note or ask in the chat instead"
+    }
+  },
+  {
+    "name": "person mark to done",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "state": "done",
+          "by": "person",
+          "at": "2026-09-16T14:30:00Z"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "done"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "state": "done",
+            "by": "person",
+            "at": "2026-09-16T14:30:00Z"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 0,
+      "done": 1,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 1
+    },
+    "markdown": "# Plan\n\n- [x] Step a\n"
+  },
+  {
+    "name": "person mark to blocked",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "state": "done",
+          "by": "person",
+          "at": "2026-09-16T14:30:00Z"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "blocked"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "set-by-person",
+      "message": "A person set \"a\" to done; add a note or ask in the chat instead"
+    }
+  },
+  {
+    "name": "person mark to skipped",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "state": "done",
+          "by": "person",
+          "at": "2026-09-16T14:30:00Z"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "skipped"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "set-by-person",
+      "message": "A person set \"a\" to done; add a note or ask in the chat instead"
+    }
+  },
+  {
+    "name": "all or nothing",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a"
+        },
+        {
+          "type": "step",
+          "id": "b",
+          "title": "Step b",
+          "checks": "person"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "done"
+      },
+      {
+        "op": "set",
+        "ids": [
+          "b"
+        ],
+        "state": "done"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "person-only",
+      "message": "Only a person checks \"b\""
+    }
+  },
+  {
+    "name": "note preserved",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "state": "done",
+          "by": "person",
+          "at": "2026-09-16T14:30:00Z"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "note",
+        "id": "a",
+        "text": "observed result"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "state": "done",
+            "by": "person",
+            "at": "2026-09-16T14:30:00Z",
+            "note": "observed result"
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 0,
+      "done": 1,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 1
+    },
+    "markdown": "# Plan\n\n- [x] Step a\n    > observed result\n"
+  },
+  {
+    "name": "unlock",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "agent"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "unlock",
+        "ids": "all"
+      },
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "done"
+      }
+    ],
+    "actor": "person",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "checks": "agent",
+            "state": "done",
+            "by": "person",
+            "at": "2026-09-16T14:30:00Z",
+            "unlocked": true
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 1,
+      "open": 0,
+      "active": 0,
+      "done": 1,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 1
+    },
+    "markdown": "# Plan\n\n- [x] Step a\n"
+  },
+  {
+    "name": "agent cannot unlock",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "checks": "agent"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "unlock",
+        "ids": "all"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "op-not-allowed",
+      "message": "An agent cannot unlock a plan"
+    }
+  },
+  {
+    "name": "cannot remove person mark",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "state": "done",
+          "by": "person",
+          "at": "2026-09-16T14:30:00Z"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "remove",
+        "id": "a"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "set-by-person",
+      "message": "A person checked \"a\" or a step under it, so it stays"
+    }
+  },
+  {
+    "name": "person cannot remove",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "remove",
+        "id": "a"
+      }
+    ],
+    "actor": "person",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "op-not-allowed",
+      "message": "A person cannot remove in a plan"
+    }
+  },
+  {
+    "name": "parent state",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "steps": [
+            {
+              "type": "step",
+              "id": "b",
+              "title": "Step b"
+            }
+          ]
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "a"
+        ],
+        "state": "done"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "plan-parent-state",
+      "message": "The step \"a\" has sub-steps, so its state follows from them"
+    }
+  },
+  {
+    "name": "mark child",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a",
+          "steps": [
+            {
+              "type": "step",
+              "id": "b",
+              "title": "Step b"
+            },
+            {
+              "type": "step",
+              "id": "c",
+              "title": "Step c"
+            }
+          ]
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "b"
+        ],
+        "state": "done",
+        "next": "c"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": true,
+      "plan": {
+        "id": "plan-1",
+        "rev": 4,
+        "createdAt": "2026-09-16T13:40:00Z",
+        "meta": {
+          "title": "Plan",
+          "kind": "steps",
+          "checks": "anyone"
+        },
+        "items": [
+          {
+            "type": "step",
+            "id": "a",
+            "title": "Step a",
+            "steps": [
+              {
+                "type": "step",
+                "id": "b",
+                "title": "Step b",
+                "state": "done",
+                "by": "agent",
+                "at": "2026-09-16T14:30:00Z"
+              },
+              {
+                "type": "step",
+                "id": "c",
+                "title": "Step c",
+                "state": "active",
+                "by": "agent",
+                "at": "2026-09-16T14:30:00Z"
+              }
+            ]
+          }
+        ]
+      },
+      "minted": [],
+      "dropped": []
+    },
+    "progress": {
+      "total": 2,
+      "open": 0,
+      "active": 1,
+      "done": 1,
+      "failed": 0,
+      "skipped": 0,
+      "blocked": 0,
+      "warning": 0,
+      "info": 0,
+      "finished": 1
+    },
+    "markdown": "# Plan\n\n- [~] Step a\n    - [x] Step b\n    - [~] Step c\n"
+  },
+  {
+    "name": "missing id",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "anyone"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "set",
+        "ids": [
+          "missing"
+        ],
+        "state": "done"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "plan-missing-item",
+      "message": "The plan has no item \"missing\""
+    }
+  },
+  {
+    "name": "meta cannot remove person checks",
+    "input": {
+      "id": "plan-1",
+      "rev": 3,
+      "createdAt": "2026-09-16T13:40:00Z",
+      "meta": {
+        "title": "Plan",
+        "kind": "steps",
+        "checks": "person"
+      },
+      "items": [
+        {
+          "type": "step",
+          "id": "a",
+          "title": "Step a"
+        }
+      ]
+    },
+    "ops": [
+      {
+        "op": "meta",
+        "checks": "agent"
+      }
+    ],
+    "actor": "agent",
+    "now": "2026-09-16T14:30:00Z",
+    "result": {
+      "ok": false,
+      "code": "person-only",
+      "message": "Only a person checks the steps of this plan, and that stays so"
+    }
+  }
+]

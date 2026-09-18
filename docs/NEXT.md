@@ -12,7 +12,7 @@ larger ones becomes a GitHub issue when it starts.
    window, not for the platform). Linux runs, see `docs/LINUX.md`; the signed and notarized
    macOS build, the icon and the update path are done, see `docs/RELEASE.md`.
 3. **The daemon as a background service** is built (`apps/desktop/src/service`, `packages/service`)
-   and waits for a packaged release to be tried, updates included (`apps/server/src/service`).
+   and waits for a packaged release to be tried, updates included (`crates/ruimte_cli/src/cli/service.rs`).
    Accepting a window of previous protocol versions (the last three, say) instead of only the
    same one is for later, once a bump is in sight. The ruimte.app landing page comes later and gets
    an issue when it starts. A known gap in the checkpoints: the turn diff is of the chat's own folder

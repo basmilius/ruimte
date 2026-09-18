@@ -23,7 +23,7 @@ Pair another machine on your network once and its projects open like local proje
 
 ## Stack
 
-React 19, TypeScript, Vite, Tailwind v4, Base UI, zustand, Lucide, xterm 6, shiki, react-markdown and `@pierre/diffs`. Bun for tooling.
+React 19, TypeScript, Vite, Tailwind v4, Base UI, zustand, Lucide, xterm 6, shiki, react-markdown and `@pierre/diffs`. Rust for the daemon and native CLI. Bun for client tooling and the simulator adapter.
 
 ## Develop
 
@@ -32,11 +32,13 @@ bun install
 bun dev
 ```
 
-`bun dev` starts the daemon on `localhost:4211`, the Vite client and the Electron shell. The daemon keeps its state in `~/.ruimte-dev`; set `RUIMTE_DEV_HOME` to choose another folder. The Vite client proxies `/ws` to it. An installed Ruimte keeps `4210` and `~/.ruimte`, so both versions can run on one machine.
+Install the Rust toolchain pinned in `rust-toolchain.toml` before the first build. `bun dev` starts the daemon on `localhost:4221`, the Vite client and the Electron shell. The daemon keeps its state in `~/.ruimte-rust-dev`; set `RUIMTE_DEV_HOME` to choose another folder. The Vite client proxies `/ws` to it. An installed Ruimte keeps `4210` and `~/.ruimte`, so both versions can run on one machine.
 
-`bun run dev:client` and `bun run dev:server` start one side. `bun run dev:desktop` opens the Electron shell against the running development server as "Ruimte Dev", with a profile of its own. Browser nodes only work there. `bun run check` typechecks and lints every package. `bun run build` builds the client, and `bun test` runs all package tests.
+`bun run dev:client` and `bun run dev:server` start one side. `bun run dev:desktop` opens the Electron shell against the running development server as "Ruimte Rust Dev", with a profile of its own. Browser nodes only work there. `bun run check` typechecks and lints every package. `bun run build` builds the client and desktop shell. `bun test` runs the TypeScript tests; `cargo test --locked --workspace --lib` runs the native unit tests.
 
-The repo is a Bun workspace: `apps/client` (React UI), `apps/server` (the daemon), `apps/desktop` (the Electron shell), `packages/contracts` (zod 4 schemas for the wire, the only place a message shape is defined) and `packages/drawing` (the geometry, the SVG painter and the reading order of a drawing, without a DOM).
+The repo combines a Cargo workspace with Bun workspaces: `apps/client` (React UI), `apps/server-rust` and `crates/` (the Rust daemon), `apps/desktop` (the Electron shell), `packages/contracts` (zod 4 schemas for the wire, the only place a message shape is defined) and `packages/drawing` (the geometry, the SVG painter and the reading order of a drawing, without a DOM).
+
+The crate layout, selective builds and development cache behavior are documented in [BUILD.md](docs/rust-daemon/BUILD.md).
 
 ## Release
 

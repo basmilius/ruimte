@@ -1,11 +1,8 @@
 # Linux
 
-What is left before Ruimte runs and ships on Linux. Almost all of it is packaging, CI and the
-Electron shell. The daemon needs nothing: it has no native module, already runs on Debian in
-`apps/server/docker`, spawns its PTYs through `Bun.spawn({ terminal })`, reads DMI and the device
-tree for the machine model, reveals through `xdg-open` and falls back to per-directory watching.
-The client needs one cosmetic thing, the font stacks. Everything else below is `apps/desktop`,
-`electron-builder.yml` and the workflows.
+The current daemon is Rust. Native library, PTY and wire tests run on Linux arm64; production bundles are built on matching native hosts. The remote development container lives in `apps/server-rust/docker`. See [the current build flow](rust-daemon/RELEASE.md) and [verification](rust-daemon/VERIFICATION.md).
+
+The remaining notes below record the desktop packaging investigation from September 11, before the Rust migration. Old Bun daemon commands and binary sizes describe that checkpoint.
 
 An rpm and an AppImage were built and run on Fedora 44 (x64, Wayland) on 2026-09-11 with the
 changes in `electron-builder.yml` and `apps/desktop/package.json` that this file describes. What

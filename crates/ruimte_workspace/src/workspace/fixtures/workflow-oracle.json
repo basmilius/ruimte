@@ -1,0 +1,2079 @@
+{
+  "modeCases": [
+    {
+      "mine": "supervised",
+      "requested": null,
+      "expected": {
+        "ok": true,
+        "value": "supervised"
+      },
+      "narrowed": null
+    },
+    {
+      "mine": "supervised",
+      "requested": "supervised",
+      "expected": {
+        "ok": true,
+        "value": "supervised"
+      },
+      "narrowed": "supervised"
+    },
+    {
+      "mine": "supervised",
+      "requested": "auto-accept-edits",
+      "expected": {
+        "ok": false,
+        "code": "mode-above-parent",
+        "message": "You run in supervised and --mode auto-accept-edits is wider; an agent you open runs in your mode or a narrower one",
+        "lines": [
+          "mode\tyou\tsupervised",
+          "mode\tsupervised\tallowed"
+        ]
+      },
+      "narrowed": "supervised"
+    },
+    {
+      "mine": "supervised",
+      "requested": "auto",
+      "expected": {
+        "ok": false,
+        "code": "mode-above-parent",
+        "message": "You run in supervised and --mode auto is wider; an agent you open runs in your mode or a narrower one",
+        "lines": [
+          "mode\tyou\tsupervised",
+          "mode\tsupervised\tallowed"
+        ]
+      },
+      "narrowed": "supervised"
+    },
+    {
+      "mine": "supervised",
+      "requested": "full-access",
+      "expected": {
+        "ok": false,
+        "code": "mode-above-parent",
+        "message": "You run in supervised and --mode full-access is wider; an agent you open runs in your mode or a narrower one",
+        "lines": [
+          "mode\tyou\tsupervised",
+          "mode\tsupervised\tallowed"
+        ]
+      },
+      "narrowed": "supervised"
+    },
+    {
+      "mine": "auto-accept-edits",
+      "requested": null,
+      "expected": {
+        "ok": true,
+        "value": "auto-accept-edits"
+      },
+      "narrowed": null
+    },
+    {
+      "mine": "auto-accept-edits",
+      "requested": "supervised",
+      "expected": {
+        "ok": true,
+        "value": "auto-accept-edits"
+      },
+      "narrowed": "supervised"
+    },
+    {
+      "mine": "auto-accept-edits",
+      "requested": "auto-accept-edits",
+      "expected": {
+        "ok": true,
+        "value": "auto-accept-edits"
+      },
+      "narrowed": "auto-accept-edits"
+    },
+    {
+      "mine": "auto-accept-edits",
+      "requested": "auto",
+      "expected": {
+        "ok": false,
+        "code": "mode-above-parent",
+        "message": "You run in auto-accept-edits and --mode auto is wider; an agent you open runs in your mode or a narrower one",
+        "lines": [
+          "mode\tyou\tauto-accept-edits",
+          "mode\tsupervised\tallowed",
+          "mode\tauto-accept-edits\tallowed"
+        ]
+      },
+      "narrowed": "auto-accept-edits"
+    },
+    {
+      "mine": "auto-accept-edits",
+      "requested": "full-access",
+      "expected": {
+        "ok": false,
+        "code": "mode-above-parent",
+        "message": "You run in auto-accept-edits and --mode full-access is wider; an agent you open runs in your mode or a narrower one",
+        "lines": [
+          "mode\tyou\tauto-accept-edits",
+          "mode\tsupervised\tallowed",
+          "mode\tauto-accept-edits\tallowed"
+        ]
+      },
+      "narrowed": "auto-accept-edits"
+    },
+    {
+      "mine": "auto",
+      "requested": null,
+      "expected": {
+        "ok": true,
+        "value": "auto"
+      },
+      "narrowed": null
+    },
+    {
+      "mine": "auto",
+      "requested": "supervised",
+      "expected": {
+        "ok": true,
+        "value": "auto"
+      },
+      "narrowed": "supervised"
+    },
+    {
+      "mine": "auto",
+      "requested": "auto-accept-edits",
+      "expected": {
+        "ok": true,
+        "value": "auto"
+      },
+      "narrowed": "auto-accept-edits"
+    },
+    {
+      "mine": "auto",
+      "requested": "auto",
+      "expected": {
+        "ok": true,
+        "value": "auto"
+      },
+      "narrowed": "auto"
+    },
+    {
+      "mine": "auto",
+      "requested": "full-access",
+      "expected": {
+        "ok": false,
+        "code": "mode-above-parent",
+        "message": "You run in auto and --mode full-access is wider; an agent you open runs in your mode or a narrower one",
+        "lines": [
+          "mode\tyou\tauto",
+          "mode\tsupervised\tallowed",
+          "mode\tauto-accept-edits\tallowed",
+          "mode\tauto\tallowed"
+        ]
+      },
+      "narrowed": "auto"
+    },
+    {
+      "mine": "full-access",
+      "requested": null,
+      "expected": {
+        "ok": true,
+        "value": "full-access"
+      },
+      "narrowed": null
+    },
+    {
+      "mine": "full-access",
+      "requested": "supervised",
+      "expected": {
+        "ok": true,
+        "value": "full-access"
+      },
+      "narrowed": "supervised"
+    },
+    {
+      "mine": "full-access",
+      "requested": "auto-accept-edits",
+      "expected": {
+        "ok": true,
+        "value": "full-access"
+      },
+      "narrowed": "auto-accept-edits"
+    },
+    {
+      "mine": "full-access",
+      "requested": "auto",
+      "expected": {
+        "ok": true,
+        "value": "full-access"
+      },
+      "narrowed": "auto"
+    },
+    {
+      "mine": "full-access",
+      "requested": "full-access",
+      "expected": {
+        "ok": true,
+        "value": "full-access"
+      },
+      "narrowed": "full-access"
+    }
+  ],
+  "depths": [
+    {
+      "mine": 0,
+      "verb": "agent",
+      "already": 0,
+      "making": 1,
+      "expected": {
+        "ok": true,
+        "value": 1
+      }
+    },
+    {
+      "mine": 0,
+      "verb": "agent",
+      "already": 0,
+      "making": 2,
+      "expected": {
+        "ok": true,
+        "value": 1
+      }
+    },
+    {
+      "mine": 0,
+      "verb": "agent",
+      "already": 0,
+      "making": 8,
+      "expected": {
+        "ok": true,
+        "value": 1
+      }
+    },
+    {
+      "mine": 0,
+      "verb": "agent",
+      "already": 15,
+      "making": 1,
+      "expected": {
+        "ok": true,
+        "value": 1
+      }
+    },
+    {
+      "mine": 0,
+      "verb": "agent",
+      "already": 15,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-many-agents",
+        "message": "You have 15 agent nodes open and this would open 2 more; one caller may have 16 open at a time, and the count frees when a person removes them",
+        "lines": []
+      }
+    },
+    {
+      "mine": 0,
+      "verb": "agent",
+      "already": 15,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-many-agents",
+        "message": "You have 15 agent nodes open and this would open 8 more; one caller may have 16 open at a time, and the count frees when a person removes them",
+        "lines": []
+      }
+    },
+    {
+      "mine": 0,
+      "verb": "agent",
+      "already": 16,
+      "making": 1,
+      "expected": {
+        "ok": false,
+        "code": "too-many-agents",
+        "message": "You have 16 agent nodes open and this would open 1 more; one caller may have 16 open at a time, and the count frees when a person removes them",
+        "lines": []
+      }
+    },
+    {
+      "mine": 0,
+      "verb": "agent",
+      "already": 16,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-many-agents",
+        "message": "You have 16 agent nodes open and this would open 2 more; one caller may have 16 open at a time, and the count frees when a person removes them",
+        "lines": []
+      }
+    },
+    {
+      "mine": 0,
+      "verb": "agent",
+      "already": 16,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-many-agents",
+        "message": "You have 16 agent nodes open and this would open 8 more; one caller may have 16 open at a time, and the count frees when a person removes them",
+        "lines": []
+      }
+    },
+    {
+      "mine": 0,
+      "verb": "team",
+      "already": 0,
+      "making": 1,
+      "expected": {
+        "ok": true,
+        "value": 1
+      }
+    },
+    {
+      "mine": 0,
+      "verb": "team",
+      "already": 0,
+      "making": 2,
+      "expected": {
+        "ok": true,
+        "value": 1
+      }
+    },
+    {
+      "mine": 0,
+      "verb": "team",
+      "already": 0,
+      "making": 8,
+      "expected": {
+        "ok": true,
+        "value": 1
+      }
+    },
+    {
+      "mine": 0,
+      "verb": "team",
+      "already": 15,
+      "making": 1,
+      "expected": {
+        "ok": true,
+        "value": 1
+      }
+    },
+    {
+      "mine": 0,
+      "verb": "team",
+      "already": 15,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-many-agents",
+        "message": "You have 15 agent nodes open and this would open 2 more; one caller may have 16 open at a time, and the count frees when a person removes them",
+        "lines": []
+      }
+    },
+    {
+      "mine": 0,
+      "verb": "team",
+      "already": 15,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-many-agents",
+        "message": "You have 15 agent nodes open and this would open 8 more; one caller may have 16 open at a time, and the count frees when a person removes them",
+        "lines": []
+      }
+    },
+    {
+      "mine": 0,
+      "verb": "team",
+      "already": 16,
+      "making": 1,
+      "expected": {
+        "ok": false,
+        "code": "too-many-agents",
+        "message": "You have 16 agent nodes open and this would open 1 more; one caller may have 16 open at a time, and the count frees when a person removes them",
+        "lines": []
+      }
+    },
+    {
+      "mine": 0,
+      "verb": "team",
+      "already": 16,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-many-agents",
+        "message": "You have 16 agent nodes open and this would open 2 more; one caller may have 16 open at a time, and the count frees when a person removes them",
+        "lines": []
+      }
+    },
+    {
+      "mine": 0,
+      "verb": "team",
+      "already": 16,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-many-agents",
+        "message": "You have 16 agent nodes open and this would open 8 more; one caller may have 16 open at a time, and the count frees when a person removes them",
+        "lines": []
+      }
+    },
+    {
+      "mine": 1,
+      "verb": "agent",
+      "already": 0,
+      "making": 1,
+      "expected": {
+        "ok": true,
+        "value": 2
+      }
+    },
+    {
+      "mine": 1,
+      "verb": "agent",
+      "already": 0,
+      "making": 2,
+      "expected": {
+        "ok": true,
+        "value": 2
+      }
+    },
+    {
+      "mine": 1,
+      "verb": "agent",
+      "already": 0,
+      "making": 8,
+      "expected": {
+        "ok": true,
+        "value": 2
+      }
+    },
+    {
+      "mine": 1,
+      "verb": "agent",
+      "already": 15,
+      "making": 1,
+      "expected": {
+        "ok": true,
+        "value": 2
+      }
+    },
+    {
+      "mine": 1,
+      "verb": "agent",
+      "already": 15,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-many-agents",
+        "message": "You have 15 agent nodes open and this would open 2 more; one caller may have 16 open at a time, and the count frees when a person removes them",
+        "lines": []
+      }
+    },
+    {
+      "mine": 1,
+      "verb": "agent",
+      "already": 15,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-many-agents",
+        "message": "You have 15 agent nodes open and this would open 8 more; one caller may have 16 open at a time, and the count frees when a person removes them",
+        "lines": []
+      }
+    },
+    {
+      "mine": 1,
+      "verb": "agent",
+      "already": 16,
+      "making": 1,
+      "expected": {
+        "ok": false,
+        "code": "too-many-agents",
+        "message": "You have 16 agent nodes open and this would open 1 more; one caller may have 16 open at a time, and the count frees when a person removes them",
+        "lines": []
+      }
+    },
+    {
+      "mine": 1,
+      "verb": "agent",
+      "already": 16,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-many-agents",
+        "message": "You have 16 agent nodes open and this would open 2 more; one caller may have 16 open at a time, and the count frees when a person removes them",
+        "lines": []
+      }
+    },
+    {
+      "mine": 1,
+      "verb": "agent",
+      "already": 16,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-many-agents",
+        "message": "You have 16 agent nodes open and this would open 8 more; one caller may have 16 open at a time, and the count frees when a person removes them",
+        "lines": []
+      }
+    },
+    {
+      "mine": 1,
+      "verb": "team",
+      "already": 0,
+      "making": 1,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 1 and team would open agents at depth 2; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t1",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 1,
+      "verb": "team",
+      "already": 0,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 1 and team would open agents at depth 2; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t1",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 1,
+      "verb": "team",
+      "already": 0,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 1 and team would open agents at depth 2; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t1",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 1,
+      "verb": "team",
+      "already": 15,
+      "making": 1,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 1 and team would open agents at depth 2; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t1",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 1,
+      "verb": "team",
+      "already": 15,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 1 and team would open agents at depth 2; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t1",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 1,
+      "verb": "team",
+      "already": 15,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 1 and team would open agents at depth 2; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t1",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 1,
+      "verb": "team",
+      "already": 16,
+      "making": 1,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 1 and team would open agents at depth 2; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t1",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 1,
+      "verb": "team",
+      "already": 16,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 1 and team would open agents at depth 2; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t1",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 1,
+      "verb": "team",
+      "already": 16,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 1 and team would open agents at depth 2; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t1",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 2,
+      "verb": "agent",
+      "already": 0,
+      "making": 1,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 2 and agent would open agents at depth 3; agent opens up to depth 2",
+        "lines": [
+          "depth\tyou\t2",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 2,
+      "verb": "agent",
+      "already": 0,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 2 and agent would open agents at depth 3; agent opens up to depth 2",
+        "lines": [
+          "depth\tyou\t2",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 2,
+      "verb": "agent",
+      "already": 0,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 2 and agent would open agents at depth 3; agent opens up to depth 2",
+        "lines": [
+          "depth\tyou\t2",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 2,
+      "verb": "agent",
+      "already": 15,
+      "making": 1,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 2 and agent would open agents at depth 3; agent opens up to depth 2",
+        "lines": [
+          "depth\tyou\t2",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 2,
+      "verb": "agent",
+      "already": 15,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 2 and agent would open agents at depth 3; agent opens up to depth 2",
+        "lines": [
+          "depth\tyou\t2",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 2,
+      "verb": "agent",
+      "already": 15,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 2 and agent would open agents at depth 3; agent opens up to depth 2",
+        "lines": [
+          "depth\tyou\t2",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 2,
+      "verb": "agent",
+      "already": 16,
+      "making": 1,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 2 and agent would open agents at depth 3; agent opens up to depth 2",
+        "lines": [
+          "depth\tyou\t2",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 2,
+      "verb": "agent",
+      "already": 16,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 2 and agent would open agents at depth 3; agent opens up to depth 2",
+        "lines": [
+          "depth\tyou\t2",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 2,
+      "verb": "agent",
+      "already": 16,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 2 and agent would open agents at depth 3; agent opens up to depth 2",
+        "lines": [
+          "depth\tyou\t2",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 2,
+      "verb": "team",
+      "already": 0,
+      "making": 1,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 2 and team would open agents at depth 3; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t2",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 2,
+      "verb": "team",
+      "already": 0,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 2 and team would open agents at depth 3; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t2",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 2,
+      "verb": "team",
+      "already": 0,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 2 and team would open agents at depth 3; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t2",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 2,
+      "verb": "team",
+      "already": 15,
+      "making": 1,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 2 and team would open agents at depth 3; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t2",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 2,
+      "verb": "team",
+      "already": 15,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 2 and team would open agents at depth 3; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t2",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 2,
+      "verb": "team",
+      "already": 15,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 2 and team would open agents at depth 3; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t2",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 2,
+      "verb": "team",
+      "already": 16,
+      "making": 1,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 2 and team would open agents at depth 3; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t2",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 2,
+      "verb": "team",
+      "already": 16,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 2 and team would open agents at depth 3; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t2",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 2,
+      "verb": "team",
+      "already": 16,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 2 and team would open agents at depth 3; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t2",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 3,
+      "verb": "agent",
+      "already": 0,
+      "making": 1,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 3 and agent would open agents at depth 4; agent opens up to depth 2",
+        "lines": [
+          "depth\tyou\t3",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 3,
+      "verb": "agent",
+      "already": 0,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 3 and agent would open agents at depth 4; agent opens up to depth 2",
+        "lines": [
+          "depth\tyou\t3",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 3,
+      "verb": "agent",
+      "already": 0,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 3 and agent would open agents at depth 4; agent opens up to depth 2",
+        "lines": [
+          "depth\tyou\t3",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 3,
+      "verb": "agent",
+      "already": 15,
+      "making": 1,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 3 and agent would open agents at depth 4; agent opens up to depth 2",
+        "lines": [
+          "depth\tyou\t3",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 3,
+      "verb": "agent",
+      "already": 15,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 3 and agent would open agents at depth 4; agent opens up to depth 2",
+        "lines": [
+          "depth\tyou\t3",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 3,
+      "verb": "agent",
+      "already": 15,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 3 and agent would open agents at depth 4; agent opens up to depth 2",
+        "lines": [
+          "depth\tyou\t3",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 3,
+      "verb": "agent",
+      "already": 16,
+      "making": 1,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 3 and agent would open agents at depth 4; agent opens up to depth 2",
+        "lines": [
+          "depth\tyou\t3",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 3,
+      "verb": "agent",
+      "already": 16,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 3 and agent would open agents at depth 4; agent opens up to depth 2",
+        "lines": [
+          "depth\tyou\t3",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 3,
+      "verb": "agent",
+      "already": 16,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 3 and agent would open agents at depth 4; agent opens up to depth 2",
+        "lines": [
+          "depth\tyou\t3",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 3,
+      "verb": "team",
+      "already": 0,
+      "making": 1,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 3 and team would open agents at depth 4; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t3",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 3,
+      "verb": "team",
+      "already": 0,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 3 and team would open agents at depth 4; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t3",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 3,
+      "verb": "team",
+      "already": 0,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 3 and team would open agents at depth 4; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t3",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 3,
+      "verb": "team",
+      "already": 15,
+      "making": 1,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 3 and team would open agents at depth 4; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t3",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 3,
+      "verb": "team",
+      "already": 15,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 3 and team would open agents at depth 4; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t3",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 3,
+      "verb": "team",
+      "already": 15,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 3 and team would open agents at depth 4; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t3",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 3,
+      "verb": "team",
+      "already": 16,
+      "making": 1,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 3 and team would open agents at depth 4; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t3",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 3,
+      "verb": "team",
+      "already": 16,
+      "making": 2,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 3 and team would open agents at depth 4; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t3",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    },
+    {
+      "mine": 3,
+      "verb": "team",
+      "already": 16,
+      "making": 8,
+      "expected": {
+        "ok": false,
+        "code": "too-deep",
+        "message": "You sit at depth 3 and team would open agents at depth 4; team opens up to depth 1",
+        "lines": [
+          "depth\tyou\t3",
+          "depth\t0\ta node a person opened",
+          "depth\tagent\topens up to depth 2",
+          "depth\tteam\topens up to depth 1"
+        ]
+      }
+    }
+  ],
+  "taskResults": [
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "done"
+      },
+      "items": [],
+      "at": 1000,
+      "expected": {
+        "status": "done",
+        "result": {
+          "text": "It ended its turn without an answer.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "done"
+      },
+      "items": [
+        {
+          "id": "a",
+          "kind": "assistant",
+          "createdAt": 2,
+          "turnId": "turn",
+          "text": "  answer  ",
+          "streaming": false
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "done",
+        "result": {
+          "text": "answer",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "done"
+      },
+      "items": [
+        {
+          "id": "a",
+          "kind": "assistant",
+          "createdAt": 2,
+          "turnId": "turn",
+          "text": "first",
+          "streaming": false
+        },
+        {
+          "id": "b",
+          "kind": "assistant",
+          "createdAt": 2,
+          "turnId": "turn",
+          "text": "child",
+          "streaming": false,
+          "parentToolUseId": "agent"
+        },
+        {
+          "id": "c",
+          "kind": "assistant",
+          "createdAt": 2,
+          "turnId": "turn",
+          "text": "last",
+          "streaming": false
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "done",
+        "result": {
+          "text": "last",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "done"
+      },
+      "items": [
+        {
+          "id": "a",
+          "kind": "assistant",
+          "createdAt": 2,
+          "turnId": "turn",
+          "text": "   ",
+          "streaming": false
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "done",
+        "result": {
+          "text": "It ended its turn without an answer.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "done"
+      },
+      "items": [
+        {
+          "id": "note",
+          "kind": "note",
+          "createdAt": 3,
+          "turnId": "turn",
+          "level": "error",
+          "text": "Useful failure"
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "done",
+        "result": {
+          "text": "It ended its turn without an answer.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "done"
+      },
+      "items": [
+        {
+          "id": "note",
+          "kind": "note",
+          "createdAt": 3,
+          "turnId": "turn",
+          "level": "warning",
+          "text": "This turn could not be resumed after the machine restarted: provider unavailable"
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "done",
+        "result": {
+          "text": "It ended its turn without an answer.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "done"
+      },
+      "items": [
+        {
+          "id": "note",
+          "kind": "note",
+          "createdAt": 3,
+          "turnId": "turn",
+          "level": "warning",
+          "text": "ordinary warning"
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "done",
+        "result": {
+          "text": "It ended its turn without an answer.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "done"
+      },
+      "items": [
+        {
+          "id": "note",
+          "kind": "note",
+          "createdAt": 3,
+          "turnId": "other",
+          "level": "error",
+          "text": "wrong turn"
+        },
+        {
+          "id": "a",
+          "kind": "assistant",
+          "createdAt": 2,
+          "turnId": "other",
+          "text": "wrong answer",
+          "streaming": false
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "done",
+        "result": {
+          "text": "It ended its turn without an answer.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "error"
+      },
+      "items": [],
+      "at": 1000,
+      "expected": {
+        "status": "failed",
+        "result": {
+          "text": "Its turn ended in an error.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "error"
+      },
+      "items": [
+        {
+          "id": "a",
+          "kind": "assistant",
+          "createdAt": 2,
+          "turnId": "turn",
+          "text": "  answer  ",
+          "streaming": false
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "failed",
+        "result": {
+          "text": "Its turn ended in an error.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "error"
+      },
+      "items": [
+        {
+          "id": "a",
+          "kind": "assistant",
+          "createdAt": 2,
+          "turnId": "turn",
+          "text": "first",
+          "streaming": false
+        },
+        {
+          "id": "b",
+          "kind": "assistant",
+          "createdAt": 2,
+          "turnId": "turn",
+          "text": "child",
+          "streaming": false,
+          "parentToolUseId": "agent"
+        },
+        {
+          "id": "c",
+          "kind": "assistant",
+          "createdAt": 2,
+          "turnId": "turn",
+          "text": "last",
+          "streaming": false
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "failed",
+        "result": {
+          "text": "Its turn ended in an error.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "error"
+      },
+      "items": [
+        {
+          "id": "a",
+          "kind": "assistant",
+          "createdAt": 2,
+          "turnId": "turn",
+          "text": "   ",
+          "streaming": false
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "failed",
+        "result": {
+          "text": "Its turn ended in an error.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "error"
+      },
+      "items": [
+        {
+          "id": "note",
+          "kind": "note",
+          "createdAt": 3,
+          "turnId": "turn",
+          "level": "error",
+          "text": "Useful failure"
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "failed",
+        "result": {
+          "text": "Useful failure",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "error"
+      },
+      "items": [
+        {
+          "id": "note",
+          "kind": "note",
+          "createdAt": 3,
+          "turnId": "turn",
+          "level": "warning",
+          "text": "This turn could not be resumed after the machine restarted: provider unavailable"
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "failed",
+        "result": {
+          "text": "Its turn ended in an error.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "error"
+      },
+      "items": [
+        {
+          "id": "note",
+          "kind": "note",
+          "createdAt": 3,
+          "turnId": "turn",
+          "level": "warning",
+          "text": "ordinary warning"
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "failed",
+        "result": {
+          "text": "Its turn ended in an error.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "error"
+      },
+      "items": [
+        {
+          "id": "note",
+          "kind": "note",
+          "createdAt": 3,
+          "turnId": "other",
+          "level": "error",
+          "text": "wrong turn"
+        },
+        {
+          "id": "a",
+          "kind": "assistant",
+          "createdAt": 2,
+          "turnId": "other",
+          "text": "wrong answer",
+          "streaming": false
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "failed",
+        "result": {
+          "text": "Its turn ended in an error.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "aborted"
+      },
+      "items": [],
+      "at": 1000,
+      "expected": {
+        "status": "failed",
+        "result": {
+          "text": "It was stopped before it finished.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "aborted"
+      },
+      "items": [
+        {
+          "id": "a",
+          "kind": "assistant",
+          "createdAt": 2,
+          "turnId": "turn",
+          "text": "  answer  ",
+          "streaming": false
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "failed",
+        "result": {
+          "text": "It was stopped before it finished.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "aborted"
+      },
+      "items": [
+        {
+          "id": "a",
+          "kind": "assistant",
+          "createdAt": 2,
+          "turnId": "turn",
+          "text": "first",
+          "streaming": false
+        },
+        {
+          "id": "b",
+          "kind": "assistant",
+          "createdAt": 2,
+          "turnId": "turn",
+          "text": "child",
+          "streaming": false,
+          "parentToolUseId": "agent"
+        },
+        {
+          "id": "c",
+          "kind": "assistant",
+          "createdAt": 2,
+          "turnId": "turn",
+          "text": "last",
+          "streaming": false
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "failed",
+        "result": {
+          "text": "It was stopped before it finished.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "aborted"
+      },
+      "items": [
+        {
+          "id": "a",
+          "kind": "assistant",
+          "createdAt": 2,
+          "turnId": "turn",
+          "text": "   ",
+          "streaming": false
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "failed",
+        "result": {
+          "text": "It was stopped before it finished.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "aborted"
+      },
+      "items": [
+        {
+          "id": "note",
+          "kind": "note",
+          "createdAt": 3,
+          "turnId": "turn",
+          "level": "error",
+          "text": "Useful failure"
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "failed",
+        "result": {
+          "text": "It was stopped before it finished.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "aborted"
+      },
+      "items": [
+        {
+          "id": "note",
+          "kind": "note",
+          "createdAt": 3,
+          "turnId": "turn",
+          "level": "warning",
+          "text": "This turn could not be resumed after the machine restarted: provider unavailable"
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "failed",
+        "result": {
+          "text": "This turn could not be resumed after the machine restarted: provider unavailable",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "aborted"
+      },
+      "items": [
+        {
+          "id": "note",
+          "kind": "note",
+          "createdAt": 3,
+          "turnId": "turn",
+          "level": "warning",
+          "text": "ordinary warning"
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "failed",
+        "result": {
+          "text": "It was stopped before it finished.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    },
+    {
+      "turn": {
+        "id": "turn",
+        "kind": "turn",
+        "createdAt": 1,
+        "turnId": "turn",
+        "origin": "user",
+        "endedAt": 20,
+        "costUsd": 0,
+        "state": "aborted"
+      },
+      "items": [
+        {
+          "id": "note",
+          "kind": "note",
+          "createdAt": 3,
+          "turnId": "other",
+          "level": "error",
+          "text": "wrong turn"
+        },
+        {
+          "id": "a",
+          "kind": "assistant",
+          "createdAt": 2,
+          "turnId": "other",
+          "text": "wrong answer",
+          "streaming": false
+        }
+      ],
+      "at": 1000,
+      "expected": {
+        "status": "failed",
+        "result": {
+          "text": "It was stopped before it finished.",
+          "source": "turn",
+          "at": 1000
+        }
+      }
+    }
+  ]
+}

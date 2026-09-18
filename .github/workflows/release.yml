@@ -30,10 +30,15 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
+      - run: rustup show active-toolchain
+      - uses: Swatinem/rust-cache@v2
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - run: cargo test --locked --workspace --lib
       - run: bun run check
       - run: bun run test
 
@@ -42,6 +47,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v5
+      - run: rustup show active-toolchain
+      - uses: Swatinem/rust-cache@v2
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -50,7 +57,7 @@ jobs:
         run: echo "RUIMTE_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
       - run: bun run --cwd apps/client build
       - name: Compile the daemon
-        run: bun run --cwd apps/server compile -- --os mac --arch arm64
+        run: bun run --cwd apps/server-rust compile -- --os mac --arch arm64
       # notarytool reads the key from a file, so the secret becomes one for the length of the job.
       - name: The App Store Connect key on disk
         env:
@@ -119,6 +126,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v5
+      - run: rustup show active-toolchain
+      - uses: Swatinem/rust-cache@v2
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -133,7 +142,7 @@ jobs:
         run: echo "RUIMTE_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
       - run: bun run --cwd apps/client build
       - name: Compile the daemon
-        run: bun run --cwd apps/server compile -- --os linux --arch ${{ matrix.arch }}
+        run: bun run --cwd apps/server-rust compile -- --os linux --arch ${{ matrix.arch }}
       # Every target goes up, AppImage included: the feed an install updates from has to name the
       # format it was installed from.
       - name: Build and upload

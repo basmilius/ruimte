@@ -25,7 +25,7 @@ export const platformManifest = (target: Target, version: string): Manifest => (
     ...COMMON,
     os: [target.os],
     cpu: [target.cpu],
-    // Bun's Linux binaries link against glibc; npm leaves the package out on musl rather than install one that does not start.
+    // The Linux build links against glibc; npm leaves it out on musl rather than install one that does not start.
     ...(target.os === 'linux' ? { libc: ['glibc'] } : {}),
     files: ['bin']
 });

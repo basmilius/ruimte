@@ -1,0 +1,5135 @@
+{
+  "hooks": [
+    {
+      "input": null,
+      "expected": null
+    },
+    {
+      "input": [],
+      "expected": null
+    },
+    {
+      "input": {},
+      "expected": null
+    },
+    {
+      "input": "bad",
+      "expected": null
+    },
+    {
+      "input": {
+        "session_id": "",
+        "hook_event_name": "Stop"
+      },
+      "expected": null
+    },
+    {
+      "input": {
+        "session_id": 1,
+        "hook_event_name": "Stop"
+      },
+      "expected": null
+    },
+    {
+      "input": {
+        "session_id": "s",
+        "hook_event_name": ""
+      },
+      "expected": null
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "SessionStart",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": {
+        "agentSessionId": "session-界",
+        "transcriptPath": "/tmp/fixture.jsonl",
+        "status": "idle",
+        "permissionMode": "default"
+      }
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "UserPromptSubmit",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": {
+        "agentSessionId": "session-界",
+        "transcriptPath": "/tmp/fixture.jsonl",
+        "status": "running",
+        "permissionMode": "default"
+      }
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "PreToolUse",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": {
+        "agentSessionId": "session-界",
+        "transcriptPath": "/tmp/fixture.jsonl",
+        "status": "running",
+        "permissionMode": "default"
+      }
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "PostToolUse",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": {
+        "agentSessionId": "session-界",
+        "transcriptPath": "/tmp/fixture.jsonl",
+        "status": "running",
+        "permissionMode": "default"
+      }
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "PostToolUseFailure",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": {
+        "agentSessionId": "session-界",
+        "transcriptPath": "/tmp/fixture.jsonl",
+        "status": "running",
+        "permissionMode": "default"
+      }
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "PermissionRequest",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": {
+        "agentSessionId": "session-界",
+        "transcriptPath": "/tmp/fixture.jsonl",
+        "status": "needs-you",
+        "permissionMode": "default"
+      }
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "Notification",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": null
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "Elicitation",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": {
+        "agentSessionId": "session-界",
+        "transcriptPath": "/tmp/fixture.jsonl",
+        "status": "needs-you",
+        "permissionMode": "default"
+      }
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "ElicitationResult",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": {
+        "agentSessionId": "session-界",
+        "transcriptPath": "/tmp/fixture.jsonl",
+        "status": "running",
+        "permissionMode": "default"
+      }
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "SubagentStop",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": {
+        "agentSessionId": "session-界",
+        "transcriptPath": "/tmp/fixture.jsonl",
+        "status": "running",
+        "permissionMode": "default"
+      }
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "Stop",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": {
+        "agentSessionId": "session-界",
+        "transcriptPath": "/tmp/fixture.jsonl",
+        "status": "idle",
+        "permissionMode": "default"
+      }
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "StopFailure",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": {
+        "agentSessionId": "session-界",
+        "transcriptPath": "/tmp/fixture.jsonl",
+        "status": "error",
+        "permissionMode": "default"
+      }
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "SessionEnd",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": {
+        "agentSessionId": "session-界",
+        "transcriptPath": "/tmp/fixture.jsonl",
+        "status": null,
+        "permissionMode": "default"
+      }
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "Interrupt",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": {
+        "agentSessionId": "session-界",
+        "transcriptPath": "/tmp/fixture.jsonl",
+        "status": "idle",
+        "permissionMode": "default"
+      }
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "PermissionDenied",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": {
+        "agentSessionId": "session-界",
+        "transcriptPath": "/tmp/fixture.jsonl",
+        "status": "running",
+        "permissionMode": "default"
+      }
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "PostToolBatch",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": {
+        "agentSessionId": "session-界",
+        "transcriptPath": "/tmp/fixture.jsonl",
+        "status": "running",
+        "permissionMode": "default"
+      }
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "SubagentStart",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": {
+        "agentSessionId": "session-界",
+        "transcriptPath": "/tmp/fixture.jsonl",
+        "status": "running",
+        "permissionMode": "default"
+      }
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "PreCompact",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": {
+        "agentSessionId": "session-界",
+        "transcriptPath": "/tmp/fixture.jsonl",
+        "status": "running",
+        "permissionMode": "default"
+      }
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "PostCompact",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": {
+        "agentSessionId": "session-界",
+        "transcriptPath": "/tmp/fixture.jsonl",
+        "status": "running",
+        "permissionMode": "default"
+      }
+    },
+    {
+      "input": {
+        "session_id": "session-界",
+        "hook_event_name": "Unknown",
+        "transcript_path": "/tmp/fixture.jsonl",
+        "permission_mode": "default"
+      },
+      "expected": null
+    },
+    {
+      "input": {
+        "session_id": "s",
+        "hook_event_name": "Notification",
+        "notification_type": "permission_prompt"
+      },
+      "expected": {
+        "agentSessionId": "s",
+        "transcriptPath": null,
+        "status": "needs-you",
+        "permissionMode": null
+      }
+    },
+    {
+      "input": {
+        "session_id": "s",
+        "hook_event_name": "Notification",
+        "notification_type": "elicitation_dialog"
+      },
+      "expected": {
+        "agentSessionId": "s",
+        "transcriptPath": null,
+        "status": "needs-you",
+        "permissionMode": null
+      }
+    },
+    {
+      "input": {
+        "session_id": "s",
+        "hook_event_name": "Notification",
+        "notification_type": "idle_prompt"
+      },
+      "expected": {
+        "agentSessionId": "s",
+        "transcriptPath": null,
+        "status": "idle",
+        "permissionMode": null
+      }
+    },
+    {
+      "input": {
+        "session_id": "s",
+        "hook_event_name": "Notification",
+        "notification_type": "unknown"
+      },
+      "expected": null
+    },
+    {
+      "input": {
+        "session_id": "s",
+        "hook_event_name": "Notification",
+        "notification_type": null
+      },
+      "expected": null
+    },
+    {
+      "input": {
+        "session_id": "s",
+        "hook_event_name": "PreToolUse",
+        "tool_name": "AskUserQuestion"
+      },
+      "expected": {
+        "agentSessionId": "s",
+        "transcriptPath": null,
+        "status": "needs-you",
+        "permissionMode": null
+      }
+    },
+    {
+      "input": {
+        "session_id": "s",
+        "hook_event_name": "PreToolUse",
+        "tool_name": "Bash"
+      },
+      "expected": {
+        "agentSessionId": "s",
+        "transcriptPath": null,
+        "status": "running",
+        "permissionMode": null
+      }
+    },
+    {
+      "input": {
+        "session_id": "s",
+        "hook_event_name": "PreToolUse",
+        "tool_name": "unknown"
+      },
+      "expected": {
+        "agentSessionId": "s",
+        "transcriptPath": null,
+        "status": "running",
+        "permissionMode": null
+      }
+    }
+  ],
+  "modes": [
+    {
+      "kind": "claude",
+      "permission": null,
+      "launched": "supervised",
+      "expected": null
+    },
+    {
+      "kind": "claude",
+      "permission": null,
+      "launched": "auto-accept-edits",
+      "expected": null
+    },
+    {
+      "kind": "claude",
+      "permission": null,
+      "launched": "auto",
+      "expected": null
+    },
+    {
+      "kind": "claude",
+      "permission": null,
+      "launched": "full-access",
+      "expected": null
+    },
+    {
+      "kind": "claude",
+      "permission": "default",
+      "launched": "supervised",
+      "expected": "supervised"
+    },
+    {
+      "kind": "claude",
+      "permission": "default",
+      "launched": "auto-accept-edits",
+      "expected": "supervised"
+    },
+    {
+      "kind": "claude",
+      "permission": "default",
+      "launched": "auto",
+      "expected": "supervised"
+    },
+    {
+      "kind": "claude",
+      "permission": "default",
+      "launched": "full-access",
+      "expected": "supervised"
+    },
+    {
+      "kind": "claude",
+      "permission": "plan",
+      "launched": "supervised",
+      "expected": "supervised"
+    },
+    {
+      "kind": "claude",
+      "permission": "plan",
+      "launched": "auto-accept-edits",
+      "expected": "supervised"
+    },
+    {
+      "kind": "claude",
+      "permission": "plan",
+      "launched": "auto",
+      "expected": "supervised"
+    },
+    {
+      "kind": "claude",
+      "permission": "plan",
+      "launched": "full-access",
+      "expected": "supervised"
+    },
+    {
+      "kind": "claude",
+      "permission": "dontAsk",
+      "launched": "supervised",
+      "expected": "supervised"
+    },
+    {
+      "kind": "claude",
+      "permission": "dontAsk",
+      "launched": "auto-accept-edits",
+      "expected": "supervised"
+    },
+    {
+      "kind": "claude",
+      "permission": "dontAsk",
+      "launched": "auto",
+      "expected": "supervised"
+    },
+    {
+      "kind": "claude",
+      "permission": "dontAsk",
+      "launched": "full-access",
+      "expected": "supervised"
+    },
+    {
+      "kind": "claude",
+      "permission": "acceptEdits",
+      "launched": "supervised",
+      "expected": "auto-accept-edits"
+    },
+    {
+      "kind": "claude",
+      "permission": "acceptEdits",
+      "launched": "auto-accept-edits",
+      "expected": "auto-accept-edits"
+    },
+    {
+      "kind": "claude",
+      "permission": "acceptEdits",
+      "launched": "auto",
+      "expected": "auto-accept-edits"
+    },
+    {
+      "kind": "claude",
+      "permission": "acceptEdits",
+      "launched": "full-access",
+      "expected": "auto-accept-edits"
+    },
+    {
+      "kind": "claude",
+      "permission": "auto",
+      "launched": "supervised",
+      "expected": "auto"
+    },
+    {
+      "kind": "claude",
+      "permission": "auto",
+      "launched": "auto-accept-edits",
+      "expected": "auto"
+    },
+    {
+      "kind": "claude",
+      "permission": "auto",
+      "launched": "auto",
+      "expected": "auto"
+    },
+    {
+      "kind": "claude",
+      "permission": "auto",
+      "launched": "full-access",
+      "expected": "auto"
+    },
+    {
+      "kind": "claude",
+      "permission": "bypassPermissions",
+      "launched": "supervised",
+      "expected": "full-access"
+    },
+    {
+      "kind": "claude",
+      "permission": "bypassPermissions",
+      "launched": "auto-accept-edits",
+      "expected": "full-access"
+    },
+    {
+      "kind": "claude",
+      "permission": "bypassPermissions",
+      "launched": "auto",
+      "expected": "full-access"
+    },
+    {
+      "kind": "claude",
+      "permission": "bypassPermissions",
+      "launched": "full-access",
+      "expected": "full-access"
+    },
+    {
+      "kind": "claude",
+      "permission": "unknown",
+      "launched": "supervised",
+      "expected": "supervised"
+    },
+    {
+      "kind": "claude",
+      "permission": "unknown",
+      "launched": "auto-accept-edits",
+      "expected": "supervised"
+    },
+    {
+      "kind": "claude",
+      "permission": "unknown",
+      "launched": "auto",
+      "expected": "supervised"
+    },
+    {
+      "kind": "claude",
+      "permission": "unknown",
+      "launched": "full-access",
+      "expected": "supervised"
+    },
+    {
+      "kind": "codex",
+      "permission": null,
+      "launched": "supervised",
+      "expected": null
+    },
+    {
+      "kind": "codex",
+      "permission": null,
+      "launched": "auto-accept-edits",
+      "expected": null
+    },
+    {
+      "kind": "codex",
+      "permission": null,
+      "launched": "auto",
+      "expected": null
+    },
+    {
+      "kind": "codex",
+      "permission": null,
+      "launched": "full-access",
+      "expected": null
+    },
+    {
+      "kind": "codex",
+      "permission": "default",
+      "launched": "supervised",
+      "expected": "supervised"
+    },
+    {
+      "kind": "codex",
+      "permission": "default",
+      "launched": "auto-accept-edits",
+      "expected": "auto-accept-edits"
+    },
+    {
+      "kind": "codex",
+      "permission": "default",
+      "launched": "auto",
+      "expected": "auto"
+    },
+    {
+      "kind": "codex",
+      "permission": "default",
+      "launched": "full-access",
+      "expected": "supervised"
+    },
+    {
+      "kind": "codex",
+      "permission": "plan",
+      "launched": "supervised",
+      "expected": "supervised"
+    },
+    {
+      "kind": "codex",
+      "permission": "plan",
+      "launched": "auto-accept-edits",
+      "expected": "supervised"
+    },
+    {
+      "kind": "codex",
+      "permission": "plan",
+      "launched": "auto",
+      "expected": "supervised"
+    },
+    {
+      "kind": "codex",
+      "permission": "plan",
+      "launched": "full-access",
+      "expected": "supervised"
+    },
+    {
+      "kind": "codex",
+      "permission": "dontAsk",
+      "launched": "supervised",
+      "expected": "supervised"
+    },
+    {
+      "kind": "codex",
+      "permission": "dontAsk",
+      "launched": "auto-accept-edits",
+      "expected": "supervised"
+    },
+    {
+      "kind": "codex",
+      "permission": "dontAsk",
+      "launched": "auto",
+      "expected": "supervised"
+    },
+    {
+      "kind": "codex",
+      "permission": "dontAsk",
+      "launched": "full-access",
+      "expected": "supervised"
+    },
+    {
+      "kind": "codex",
+      "permission": "acceptEdits",
+      "launched": "supervised",
+      "expected": "auto-accept-edits"
+    },
+    {
+      "kind": "codex",
+      "permission": "acceptEdits",
+      "launched": "auto-accept-edits",
+      "expected": "auto-accept-edits"
+    },
+    {
+      "kind": "codex",
+      "permission": "acceptEdits",
+      "launched": "auto",
+      "expected": "auto-accept-edits"
+    },
+    {
+      "kind": "codex",
+      "permission": "acceptEdits",
+      "launched": "full-access",
+      "expected": "auto-accept-edits"
+    },
+    {
+      "kind": "codex",
+      "permission": "auto",
+      "launched": "supervised",
+      "expected": "auto"
+    },
+    {
+      "kind": "codex",
+      "permission": "auto",
+      "launched": "auto-accept-edits",
+      "expected": "auto"
+    },
+    {
+      "kind": "codex",
+      "permission": "auto",
+      "launched": "auto",
+      "expected": "auto"
+    },
+    {
+      "kind": "codex",
+      "permission": "auto",
+      "launched": "full-access",
+      "expected": "auto"
+    },
+    {
+      "kind": "codex",
+      "permission": "bypassPermissions",
+      "launched": "supervised",
+      "expected": "full-access"
+    },
+    {
+      "kind": "codex",
+      "permission": "bypassPermissions",
+      "launched": "auto-accept-edits",
+      "expected": "full-access"
+    },
+    {
+      "kind": "codex",
+      "permission": "bypassPermissions",
+      "launched": "auto",
+      "expected": "full-access"
+    },
+    {
+      "kind": "codex",
+      "permission": "bypassPermissions",
+      "launched": "full-access",
+      "expected": "full-access"
+    },
+    {
+      "kind": "codex",
+      "permission": "unknown",
+      "launched": "supervised",
+      "expected": "supervised"
+    },
+    {
+      "kind": "codex",
+      "permission": "unknown",
+      "launched": "auto-accept-edits",
+      "expected": "supervised"
+    },
+    {
+      "kind": "codex",
+      "permission": "unknown",
+      "launched": "auto",
+      "expected": "supervised"
+    },
+    {
+      "kind": "codex",
+      "permission": "unknown",
+      "launched": "full-access",
+      "expected": "supervised"
+    },
+    {
+      "kind": "gemini",
+      "permission": null,
+      "launched": "supervised",
+      "expected": null
+    },
+    {
+      "kind": "gemini",
+      "permission": null,
+      "launched": "auto-accept-edits",
+      "expected": null
+    },
+    {
+      "kind": "gemini",
+      "permission": null,
+      "launched": "auto",
+      "expected": null
+    },
+    {
+      "kind": "gemini",
+      "permission": null,
+      "launched": "full-access",
+      "expected": null
+    },
+    {
+      "kind": "gemini",
+      "permission": "default",
+      "launched": "supervised",
+      "expected": "supervised"
+    },
+    {
+      "kind": "gemini",
+      "permission": "default",
+      "launched": "auto-accept-edits",
+      "expected": "supervised"
+    },
+    {
+      "kind": "gemini",
+      "permission": "default",
+      "launched": "auto",
+      "expected": "supervised"
+    },
+    {
+      "kind": "gemini",
+      "permission": "default",
+      "launched": "full-access",
+      "expected": "supervised"
+    },
+    {
+      "kind": "gemini",
+      "permission": "plan",
+      "launched": "supervised",
+      "expected": "supervised"
+    },
+    {
+      "kind": "gemini",
+      "permission": "plan",
+      "launched": "auto-accept-edits",
+      "expected": "supervised"
+    },
+    {
+      "kind": "gemini",
+      "permission": "plan",
+      "launched": "auto",
+      "expected": "supervised"
+    },
+    {
+      "kind": "gemini",
+      "permission": "plan",
+      "launched": "full-access",
+      "expected": "supervised"
+    },
+    {
+      "kind": "gemini",
+      "permission": "dontAsk",
+      "launched": "supervised",
+      "expected": "supervised"
+    },
+    {
+      "kind": "gemini",
+      "permission": "dontAsk",
+      "launched": "auto-accept-edits",
+      "expected": "supervised"
+    },
+    {
+      "kind": "gemini",
+      "permission": "dontAsk",
+      "launched": "auto",
+      "expected": "supervised"
+    },
+    {
+      "kind": "gemini",
+      "permission": "dontAsk",
+      "launched": "full-access",
+      "expected": "supervised"
+    },
+    {
+      "kind": "gemini",
+      "permission": "acceptEdits",
+      "launched": "supervised",
+      "expected": "auto-accept-edits"
+    },
+    {
+      "kind": "gemini",
+      "permission": "acceptEdits",
+      "launched": "auto-accept-edits",
+      "expected": "auto-accept-edits"
+    },
+    {
+      "kind": "gemini",
+      "permission": "acceptEdits",
+      "launched": "auto",
+      "expected": "auto-accept-edits"
+    },
+    {
+      "kind": "gemini",
+      "permission": "acceptEdits",
+      "launched": "full-access",
+      "expected": "auto-accept-edits"
+    },
+    {
+      "kind": "gemini",
+      "permission": "auto",
+      "launched": "supervised",
+      "expected": "auto"
+    },
+    {
+      "kind": "gemini",
+      "permission": "auto",
+      "launched": "auto-accept-edits",
+      "expected": "auto"
+    },
+    {
+      "kind": "gemini",
+      "permission": "auto",
+      "launched": "auto",
+      "expected": "auto"
+    },
+    {
+      "kind": "gemini",
+      "permission": "auto",
+      "launched": "full-access",
+      "expected": "auto"
+    },
+    {
+      "kind": "gemini",
+      "permission": "bypassPermissions",
+      "launched": "supervised",
+      "expected": "full-access"
+    },
+    {
+      "kind": "gemini",
+      "permission": "bypassPermissions",
+      "launched": "auto-accept-edits",
+      "expected": "full-access"
+    },
+    {
+      "kind": "gemini",
+      "permission": "bypassPermissions",
+      "launched": "auto",
+      "expected": "full-access"
+    },
+    {
+      "kind": "gemini",
+      "permission": "bypassPermissions",
+      "launched": "full-access",
+      "expected": "full-access"
+    },
+    {
+      "kind": "gemini",
+      "permission": "unknown",
+      "launched": "supervised",
+      "expected": "supervised"
+    },
+    {
+      "kind": "gemini",
+      "permission": "unknown",
+      "launched": "auto-accept-edits",
+      "expected": "supervised"
+    },
+    {
+      "kind": "gemini",
+      "permission": "unknown",
+      "launched": "auto",
+      "expected": "supervised"
+    },
+    {
+      "kind": "gemini",
+      "permission": "unknown",
+      "launched": "full-access",
+      "expected": "supervised"
+    },
+    {
+      "kind": "copilot",
+      "permission": null,
+      "launched": "supervised",
+      "expected": null
+    },
+    {
+      "kind": "copilot",
+      "permission": null,
+      "launched": "auto-accept-edits",
+      "expected": null
+    },
+    {
+      "kind": "copilot",
+      "permission": null,
+      "launched": "auto",
+      "expected": null
+    },
+    {
+      "kind": "copilot",
+      "permission": null,
+      "launched": "full-access",
+      "expected": null
+    },
+    {
+      "kind": "copilot",
+      "permission": "default",
+      "launched": "supervised",
+      "expected": "supervised"
+    },
+    {
+      "kind": "copilot",
+      "permission": "default",
+      "launched": "auto-accept-edits",
+      "expected": "supervised"
+    },
+    {
+      "kind": "copilot",
+      "permission": "default",
+      "launched": "auto",
+      "expected": "supervised"
+    },
+    {
+      "kind": "copilot",
+      "permission": "default",
+      "launched": "full-access",
+      "expected": "supervised"
+    },
+    {
+      "kind": "copilot",
+      "permission": "plan",
+      "launched": "supervised",
+      "expected": "supervised"
+    },
+    {
+      "kind": "copilot",
+      "permission": "plan",
+      "launched": "auto-accept-edits",
+      "expected": "supervised"
+    },
+    {
+      "kind": "copilot",
+      "permission": "plan",
+      "launched": "auto",
+      "expected": "supervised"
+    },
+    {
+      "kind": "copilot",
+      "permission": "plan",
+      "launched": "full-access",
+      "expected": "supervised"
+    },
+    {
+      "kind": "copilot",
+      "permission": "dontAsk",
+      "launched": "supervised",
+      "expected": "supervised"
+    },
+    {
+      "kind": "copilot",
+      "permission": "dontAsk",
+      "launched": "auto-accept-edits",
+      "expected": "supervised"
+    },
+    {
+      "kind": "copilot",
+      "permission": "dontAsk",
+      "launched": "auto",
+      "expected": "supervised"
+    },
+    {
+      "kind": "copilot",
+      "permission": "dontAsk",
+      "launched": "full-access",
+      "expected": "supervised"
+    },
+    {
+      "kind": "copilot",
+      "permission": "acceptEdits",
+      "launched": "supervised",
+      "expected": "auto-accept-edits"
+    },
+    {
+      "kind": "copilot",
+      "permission": "acceptEdits",
+      "launched": "auto-accept-edits",
+      "expected": "auto-accept-edits"
+    },
+    {
+      "kind": "copilot",
+      "permission": "acceptEdits",
+      "launched": "auto",
+      "expected": "auto-accept-edits"
+    },
+    {
+      "kind": "copilot",
+      "permission": "acceptEdits",
+      "launched": "full-access",
+      "expected": "auto-accept-edits"
+    },
+    {
+      "kind": "copilot",
+      "permission": "auto",
+      "launched": "supervised",
+      "expected": "auto"
+    },
+    {
+      "kind": "copilot",
+      "permission": "auto",
+      "launched": "auto-accept-edits",
+      "expected": "auto"
+    },
+    {
+      "kind": "copilot",
+      "permission": "auto",
+      "launched": "auto",
+      "expected": "auto"
+    },
+    {
+      "kind": "copilot",
+      "permission": "auto",
+      "launched": "full-access",
+      "expected": "auto"
+    },
+    {
+      "kind": "copilot",
+      "permission": "bypassPermissions",
+      "launched": "supervised",
+      "expected": "full-access"
+    },
+    {
+      "kind": "copilot",
+      "permission": "bypassPermissions",
+      "launched": "auto-accept-edits",
+      "expected": "full-access"
+    },
+    {
+      "kind": "copilot",
+      "permission": "bypassPermissions",
+      "launched": "auto",
+      "expected": "full-access"
+    },
+    {
+      "kind": "copilot",
+      "permission": "bypassPermissions",
+      "launched": "full-access",
+      "expected": "full-access"
+    },
+    {
+      "kind": "copilot",
+      "permission": "unknown",
+      "launched": "supervised",
+      "expected": "supervised"
+    },
+    {
+      "kind": "copilot",
+      "permission": "unknown",
+      "launched": "auto-accept-edits",
+      "expected": "supervised"
+    },
+    {
+      "kind": "copilot",
+      "permission": "unknown",
+      "launched": "auto",
+      "expected": "supervised"
+    },
+    {
+      "kind": "copilot",
+      "permission": "unknown",
+      "launched": "full-access",
+      "expected": "supervised"
+    }
+  ],
+  "capabilities": [
+    {
+      "kind": "claude",
+      "hasHooks": true,
+      "takesContext": true
+    },
+    {
+      "kind": "codex",
+      "hasHooks": true,
+      "takesContext": true
+    },
+    {
+      "kind": "gemini",
+      "hasHooks": false,
+      "takesContext": false
+    },
+    {
+      "kind": "copilot",
+      "hasHooks": false,
+      "takesContext": false
+    }
+  ],
+  "merges": [
+    {
+      "kind": "claude",
+      "input": null,
+      "expected": {
+        "config": {
+          "hooks": {
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUseFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "Notification": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Elicitation": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "ElicitationResult": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "StopFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": true
+      },
+      "again": {
+        "config": {
+          "hooks": {
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUseFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "Notification": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Elicitation": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "ElicitationResult": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "StopFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": false
+      }
+    },
+    {
+      "kind": "claude",
+      "input": {},
+      "expected": {
+        "config": {
+          "hooks": {
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUseFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "Notification": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Elicitation": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "ElicitationResult": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "StopFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": true
+      },
+      "again": {
+        "config": {
+          "hooks": {
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUseFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "Notification": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Elicitation": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "ElicitationResult": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "StopFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": false
+      }
+    },
+    {
+      "kind": "claude",
+      "input": {
+        "theme": "keep",
+        "hooks": {}
+      },
+      "expected": {
+        "config": {
+          "theme": "keep",
+          "hooks": {
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUseFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "Notification": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Elicitation": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "ElicitationResult": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "StopFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": true
+      },
+      "again": {
+        "config": {
+          "theme": "keep",
+          "hooks": {
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUseFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "Notification": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Elicitation": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "ElicitationResult": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "StopFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": false
+      }
+    },
+    {
+      "kind": "claude",
+      "input": {
+        "hooks": {
+          "Stop": [
+            {
+              "matcher": "keep",
+              "extra": 7,
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "other",
+                  "timeout": 5
+                },
+                {
+                  "type": "command",
+                  "command": "legacy RUIMTE_HOOK_URL command",
+                  "timeout": 9
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": {
+        "config": {
+          "hooks": {
+            "Stop": [
+              {
+                "matcher": "keep",
+                "extra": 7,
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "other",
+                    "timeout": 5
+                  },
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUseFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "Notification": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Elicitation": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "ElicitationResult": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "StopFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": true
+      },
+      "again": {
+        "config": {
+          "hooks": {
+            "Stop": [
+              {
+                "matcher": "keep",
+                "extra": 7,
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "other",
+                    "timeout": 5
+                  },
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUseFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "Notification": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Elicitation": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "ElicitationResult": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "StopFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": false
+      }
+    },
+    {
+      "kind": "claude",
+      "input": {
+        "hooks": {
+          "Stop": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "legacy RUIMTE_HOOK_URL command",
+                  "timeout": 9
+                },
+                {
+                  "type": "command",
+                  "command": "legacy RUIMTE_HOOK_URL command",
+                  "timeout": 9
+                }
+              ]
+            },
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "legacy RUIMTE_HOOK_URL command",
+                  "timeout": 9
+                }
+              ]
+            }
+          ],
+          "Unknown": [
+            {
+              "extra": 1,
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "legacy RUIMTE_HOOK_URL command",
+                  "timeout": 9
+                },
+                {
+                  "type": "command",
+                  "command": "keep"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": {
+        "config": {
+          "hooks": {
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Unknown": [
+              {
+                "extra": 1,
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "keep"
+                  }
+                ]
+              }
+            ],
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUseFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "Notification": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Elicitation": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "ElicitationResult": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "StopFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": true
+      },
+      "again": {
+        "config": {
+          "hooks": {
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Unknown": [
+              {
+                "extra": 1,
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "keep"
+                  }
+                ]
+              }
+            ],
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUseFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "Notification": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Elicitation": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "ElicitationResult": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "StopFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": false
+      }
+    },
+    {
+      "kind": "claude",
+      "input": {
+        "hooks": {
+          "Stop": [
+            null,
+            "bad",
+            {
+              "hooks": []
+            },
+            {
+              "hooks": "bad"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "config": {
+          "hooks": {
+            "Stop": [
+              null,
+              "bad",
+              {
+                "hooks": []
+              },
+              {
+                "hooks": "bad"
+              },
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUseFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "Notification": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Elicitation": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "ElicitationResult": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "StopFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": true
+      },
+      "again": {
+        "config": {
+          "hooks": {
+            "Stop": [
+              null,
+              "bad",
+              {
+                "hooks": []
+              },
+              {
+                "hooks": "bad"
+              },
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUseFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "Notification": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Elicitation": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "ElicitationResult": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "StopFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": false
+      }
+    },
+    {
+      "kind": "claude",
+      "input": {
+        "hooks": "bad"
+      },
+      "expected": {
+        "config": {
+          "hooks": {
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUseFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "Notification": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Elicitation": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "ElicitationResult": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "StopFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": true
+      },
+      "again": {
+        "config": {
+          "hooks": {
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUseFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "Notification": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Elicitation": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "ElicitationResult": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "StopFailure": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": false
+      }
+    },
+    {
+      "kind": "codex",
+      "input": null,
+      "expected": {
+        "config": {
+          "hooks": {
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Interrupt": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": true
+      },
+      "again": {
+        "config": {
+          "hooks": {
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Interrupt": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": false
+      }
+    },
+    {
+      "kind": "codex",
+      "input": {},
+      "expected": {
+        "config": {
+          "hooks": {
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Interrupt": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": true
+      },
+      "again": {
+        "config": {
+          "hooks": {
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Interrupt": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": false
+      }
+    },
+    {
+      "kind": "codex",
+      "input": {
+        "theme": "keep",
+        "hooks": {}
+      },
+      "expected": {
+        "config": {
+          "theme": "keep",
+          "hooks": {
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Interrupt": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": true
+      },
+      "again": {
+        "config": {
+          "theme": "keep",
+          "hooks": {
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Interrupt": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": false
+      }
+    },
+    {
+      "kind": "codex",
+      "input": {
+        "hooks": {
+          "Stop": [
+            {
+              "matcher": "keep",
+              "extra": 7,
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "other",
+                  "timeout": 5
+                },
+                {
+                  "type": "command",
+                  "command": "legacy RUIMTE_HOOK_URL command",
+                  "timeout": 9
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": {
+        "config": {
+          "hooks": {
+            "Stop": [
+              {
+                "matcher": "keep",
+                "extra": 7,
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "other",
+                    "timeout": 5
+                  },
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Interrupt": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": true
+      },
+      "again": {
+        "config": {
+          "hooks": {
+            "Stop": [
+              {
+                "matcher": "keep",
+                "extra": 7,
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "other",
+                    "timeout": 5
+                  },
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Interrupt": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": false
+      }
+    },
+    {
+      "kind": "codex",
+      "input": {
+        "hooks": {
+          "Stop": [
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "legacy RUIMTE_HOOK_URL command",
+                  "timeout": 9
+                },
+                {
+                  "type": "command",
+                  "command": "legacy RUIMTE_HOOK_URL command",
+                  "timeout": 9
+                }
+              ]
+            },
+            {
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "legacy RUIMTE_HOOK_URL command",
+                  "timeout": 9
+                }
+              ]
+            }
+          ],
+          "Unknown": [
+            {
+              "extra": 1,
+              "hooks": [
+                {
+                  "type": "command",
+                  "command": "legacy RUIMTE_HOOK_URL command",
+                  "timeout": 9
+                },
+                {
+                  "type": "command",
+                  "command": "keep"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "expected": {
+        "config": {
+          "hooks": {
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Unknown": [
+              {
+                "extra": 1,
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "keep"
+                  }
+                ]
+              }
+            ],
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Interrupt": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": true
+      },
+      "again": {
+        "config": {
+          "hooks": {
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Unknown": [
+              {
+                "extra": 1,
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "keep"
+                  }
+                ]
+              }
+            ],
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Interrupt": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": false
+      }
+    },
+    {
+      "kind": "codex",
+      "input": {
+        "hooks": {
+          "Stop": [
+            null,
+            "bad",
+            {
+              "hooks": []
+            },
+            {
+              "hooks": "bad"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "config": {
+          "hooks": {
+            "Stop": [
+              null,
+              "bad",
+              {
+                "hooks": []
+              },
+              {
+                "hooks": "bad"
+              },
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Interrupt": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": true
+      },
+      "again": {
+        "config": {
+          "hooks": {
+            "Stop": [
+              null,
+              "bad",
+              {
+                "hooks": []
+              },
+              {
+                "hooks": "bad"
+              },
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Interrupt": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": false
+      }
+    },
+    {
+      "kind": "codex",
+      "input": {
+        "hooks": "bad"
+      },
+      "expected": {
+        "config": {
+          "hooks": {
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Interrupt": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": true
+      },
+      "again": {
+        "config": {
+          "hooks": {
+            "SessionStart": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "UserPromptSubmit": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PreToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PostToolUse": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "PermissionRequest": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 125
+                  }
+                ]
+              }
+            ],
+            "SubagentStop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Stop": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "Interrupt": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ],
+            "SessionEnd": [
+              {
+                "hooks": [
+                  {
+                    "type": "command",
+                    "command": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0",
+                    "timeout": 3
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "changed": false
+      }
+    }
+  ],
+  "commands": [
+    {
+      "kind": "claude",
+      "event": "Stop",
+      "expected": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0"
+    },
+    {
+      "kind": "claude",
+      "event": "PermissionRequest",
+      "expected": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/claude\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0"
+    },
+    {
+      "kind": "codex",
+      "event": "Stop",
+      "expected": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 2 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0"
+    },
+    {
+      "kind": "codex",
+      "event": "PermissionRequest",
+      "expected": "if [ -n \"$RUIMTE_HOOK_URL\" ]; then curl -sf -m 120 -X POST \"$RUIMTE_HOOK_URL/codex\" -H \"Authorization: Bearer $RUIMTE_HOOK_TOKEN\" -H \"Content-Type: application/json\" --data-binary @-; else cat >/dev/null 2>&1; fi; exit 0"
+    }
+  ]
+}

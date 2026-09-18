@@ -1,0 +1,9 @@
+[package]
+name = "ruimte_schema"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+jsonschema.workspace = true
+ruimte_core = { path = "../ruimte_core" }
+serde_json.workspace = true

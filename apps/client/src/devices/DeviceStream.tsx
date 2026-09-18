@@ -9,6 +9,7 @@ import {
     type LiveStreamFrame
 } from '@ruimte/contracts';
 import { credentialFor } from '@/endpoint/credentials';
+import { streamResponseError } from '@/devices/device-stream-error';
 import {
     approachGestureTotal,
     boundedGestureDelta,
@@ -132,7 +133,7 @@ class FramePainter {
                 bitmap.close();
             }
         } catch (error) {
-            this.failed(error instanceof Error ? error.message : 'A simulator frame could not be drawn');
+            this.failed(error instanceof Error ? error.message : 'A device frame could not be drawn');
         } finally {
             this.drawing = false;
             if (this.pending) {
@@ -197,7 +198,7 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
         });
         void client.open(target, direct ? 'events' : 'http').then(
             (id) => mounted && setStreamId(id),
-            (error) => mounted && setStreamError(error instanceof Error ? error.message : 'The simulator could not start streaming')
+            (error) => mounted && setStreamError(error instanceof Error ? error.message : 'The device could not start streaming')
         );
         return () => {
             mounted = false;
@@ -224,8 +225,11 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
                     const credential = credentialFor(endpoint);
                     const headers = credential ? { Authorization: `Bearer ${credential}` } : undefined;
                     const response = await fetch(`${endpoint.httpBaseUrl}/live-stream/${encodeURIComponent(streamId)}`, { headers, signal: controller.signal });
-                    if (!response.ok || !response.body) {
-                        throw new Error(response.status === 404 ? 'The device stream is not ready yet' : `The device stream returned ${response.status}`);
+                    if (!response.ok) {
+                        throw await streamResponseError(response);
+                    }
+                    if (!response.body) {
+                        throw new Error('The device stream ended before it started');
                     }
                     const contentType = response.headers.get('content-type') ?? '';
                     const hevc = contentType.startsWith(HEVC_STREAM_CONTENT_TYPE.split(';')[0]!);
@@ -245,7 +249,7 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
                     }
                 } catch (error) {
                     if (!controller.signal.aborted) {
-                        setStreamError(error instanceof Error ? error.message : 'The simulator stream stopped');
+                        setStreamError(error instanceof Error ? error.message : 'The device stream stopped');
                     }
                 }
                 await wait(RETRY_MS, controller.signal);

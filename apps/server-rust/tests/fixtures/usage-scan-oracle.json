@@ -1,0 +1,1952 @@
+{
+  "roots": [
+    {
+      "provider": "claude",
+      "path": "<root>/claude"
+    },
+    {
+      "provider": "codex",
+      "path": "<root>/codex"
+    }
+  ],
+  "steps": [
+    {
+      "name": "empty",
+      "actions": [],
+      "expected": {
+        "files": 0,
+        "changedFiles": 0,
+        "roots": [
+          {
+            "provider": "claude",
+            "path": "<root>/claude",
+            "status": "ok",
+            "message": null
+          },
+          {
+            "provider": "codex",
+            "path": "<root>/codex",
+            "status": "ok",
+            "message": null
+          }
+        ],
+        "records": [],
+        "index": null
+      }
+    },
+    {
+      "name": "unterminated valid Claude line",
+      "actions": [
+        {
+          "kind": "write",
+          "path": "claude/a.jsonl",
+          "text": "{\"type\":\"assistant\",\"timestamp\":\"2026-09-10T09:00:01.000Z\",\"sessionId\":\"s-界\",\"cwd\":\"/work/α\",\"message\":{\"id\":\"message\",\"model\":\"claude-opus-5\",\"usage\":{\"input_tokens\":12,\"cache_read_input_tokens\":9000,\"cache_creation_input_tokens\":800,\"cache_creation\":{\"ephemeral_1h_input_tokens\":300,\"ephemeral_5m_input_tokens\":500},\"output_tokens\":640,\"output_tokens_details\":{\"thinking_tokens\":120}}}}"
+        }
+      ],
+      "expected": {
+        "files": 1,
+        "changedFiles": 1,
+        "roots": [
+          {
+            "provider": "claude",
+            "path": "<root>/claude",
+            "status": "ok",
+            "message": null
+          },
+          {
+            "provider": "codex",
+            "path": "<root>/codex",
+            "status": "ok",
+            "message": null
+          }
+        ],
+        "records": [
+          {
+            "provider": "claude",
+            "timestampMs": 1789030801000,
+            "model": "claude-opus-5",
+            "sessionId": "s-界",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 12,
+              "cacheRead": 9000,
+              "cacheWrite": 800,
+              "cacheWrite1h": 300,
+              "output": 640,
+              "reasoning": 120
+            },
+            "dedupeKey": "message"
+          }
+        ],
+        "index": {
+          "version": 1,
+          "models": [
+            "claude-opus-5"
+          ],
+          "sessions": [
+            "s-界"
+          ],
+          "folders": [
+            "/work/α"
+          ],
+          "files": {
+            "<root>/claude/a.jsonl": {
+              "p": "claude",
+              "s": 391,
+              "m": 1789725600000,
+              "o": 0,
+              "c": null,
+              "r": [],
+              "t": [
+                [
+                  1789030801000,
+                  0,
+                  0,
+                  0,
+                  1,
+                  12,
+                  9000,
+                  800,
+                  300,
+                  640,
+                  120,
+                  "message"
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "unchanged",
+      "actions": [],
+      "expected": {
+        "files": 1,
+        "changedFiles": 0,
+        "roots": [
+          {
+            "provider": "claude",
+            "path": "<root>/claude",
+            "status": "ok",
+            "message": null
+          },
+          {
+            "provider": "codex",
+            "path": "<root>/codex",
+            "status": "ok",
+            "message": null
+          }
+        ],
+        "records": [
+          {
+            "provider": "claude",
+            "timestampMs": 1789030801000,
+            "model": "claude-opus-5",
+            "sessionId": "s-界",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 12,
+              "cacheRead": 9000,
+              "cacheWrite": 800,
+              "cacheWrite1h": 300,
+              "output": 640,
+              "reasoning": 120
+            },
+            "dedupeKey": "message"
+          }
+        ],
+        "index": {
+          "version": 1,
+          "models": [
+            "claude-opus-5"
+          ],
+          "sessions": [
+            "s-界"
+          ],
+          "folders": [
+            "/work/α"
+          ],
+          "files": {
+            "<root>/claude/a.jsonl": {
+              "p": "claude",
+              "s": 391,
+              "m": 1789725600000,
+              "o": 0,
+              "c": null,
+              "r": [],
+              "t": [
+                [
+                  1789030801000,
+                  0,
+                  0,
+                  0,
+                  1,
+                  12,
+                  9000,
+                  800,
+                  300,
+                  640,
+                  120,
+                  "message"
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "finish tail and growing duplicate",
+      "actions": [
+        {
+          "kind": "append",
+          "path": "claude/a.jsonl",
+          "text": "\r\n{\"type\":\"assistant\",\"timestamp\":\"2026-09-10T09:00:01.000Z\",\"sessionId\":\"s-界\",\"cwd\":\"/work/α\",\"message\":{\"id\":\"message\",\"model\":\"claude-opus-5\",\"usage\":{\"input_tokens\":12,\"cache_read_input_tokens\":9000,\"cache_creation_input_tokens\":800,\"cache_creation\":{\"ephemeral_1h_input_tokens\":300,\"ephemeral_5m_input_tokens\":500},\"output_tokens\":40,\"output_tokens_details\":{\"thinking_tokens\":120}}}}\n"
+        }
+      ],
+      "expected": {
+        "files": 1,
+        "changedFiles": 1,
+        "roots": [
+          {
+            "provider": "claude",
+            "path": "<root>/claude",
+            "status": "ok",
+            "message": null
+          },
+          {
+            "provider": "codex",
+            "path": "<root>/codex",
+            "status": "ok",
+            "message": null
+          }
+        ],
+        "records": [
+          {
+            "provider": "claude",
+            "timestampMs": 1789030801000,
+            "model": "claude-opus-5",
+            "sessionId": "s-界",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 12,
+              "cacheRead": 9000,
+              "cacheWrite": 800,
+              "cacheWrite1h": 300,
+              "output": 640,
+              "reasoning": 120
+            },
+            "dedupeKey": "message"
+          }
+        ],
+        "index": {
+          "version": 1,
+          "models": [
+            "claude-opus-5"
+          ],
+          "sessions": [
+            "s-界"
+          ],
+          "folders": [
+            "/work/α"
+          ],
+          "files": {
+            "<root>/claude/a.jsonl": {
+              "p": "claude",
+              "s": 784,
+              "m": 1789725601000,
+              "o": 784,
+              "c": null,
+              "r": [
+                [
+                  1789030801000,
+                  0,
+                  0,
+                  0,
+                  1,
+                  12,
+                  9000,
+                  800,
+                  300,
+                  640,
+                  120,
+                  "message"
+                ]
+              ],
+              "t": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "duplicate resumed transcript",
+      "actions": [
+        {
+          "kind": "write",
+          "path": "claude/resume.jsonl",
+          "text": "{\"type\":\"assistant\",\"timestamp\":\"2026-09-10T09:00:01.000Z\",\"sessionId\":\"s-界\",\"cwd\":\"/work/α\",\"message\":{\"id\":\"message\",\"model\":\"claude-opus-5\",\"usage\":{\"input_tokens\":12,\"cache_read_input_tokens\":9000,\"cache_creation_input_tokens\":800,\"cache_creation\":{\"ephemeral_1h_input_tokens\":300,\"ephemeral_5m_input_tokens\":500},\"output_tokens\":640,\"output_tokens_details\":{\"thinking_tokens\":120}}}}\n"
+        }
+      ],
+      "expected": {
+        "files": 2,
+        "changedFiles": 1,
+        "roots": [
+          {
+            "provider": "claude",
+            "path": "<root>/claude",
+            "status": "ok",
+            "message": null
+          },
+          {
+            "provider": "codex",
+            "path": "<root>/codex",
+            "status": "ok",
+            "message": null
+          }
+        ],
+        "records": [
+          {
+            "provider": "claude",
+            "timestampMs": 1789030801000,
+            "model": "claude-opus-5",
+            "sessionId": "s-界",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 12,
+              "cacheRead": 9000,
+              "cacheWrite": 800,
+              "cacheWrite1h": 300,
+              "output": 640,
+              "reasoning": 120
+            },
+            "dedupeKey": "message"
+          }
+        ],
+        "index": {
+          "version": 1,
+          "models": [
+            "claude-opus-5"
+          ],
+          "sessions": [
+            "s-界"
+          ],
+          "folders": [
+            "/work/α"
+          ],
+          "files": {
+            "<root>/claude/a.jsonl": {
+              "p": "claude",
+              "s": 784,
+              "m": 1789725601000,
+              "o": 784,
+              "c": null,
+              "r": [
+                [
+                  1789030801000,
+                  0,
+                  0,
+                  0,
+                  1,
+                  12,
+                  9000,
+                  800,
+                  300,
+                  640,
+                  120,
+                  "message"
+                ]
+              ],
+              "t": []
+            },
+            "<root>/claude/resume.jsonl": {
+              "p": "claude",
+              "s": 392,
+              "m": 1789725602000,
+              "o": 392,
+              "c": null,
+              "r": [
+                [
+                  1789030801000,
+                  0,
+                  0,
+                  0,
+                  1,
+                  12,
+                  9000,
+                  800,
+                  300,
+                  640,
+                  120,
+                  "message"
+                ]
+              ],
+              "t": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Codex metadata then partial JSON",
+      "actions": [
+        {
+          "kind": "write",
+          "path": "codex/a.jsonl",
+          "text": "{\"type\":\"session_meta\",\"timestamp\":\"2026-09-10T09:00:00.000Z\",\"payload\":{\"id\":\"thread\",\"cwd\":\"/work/α\"}}\n{\"type\":\"turn_context\",\"timestamp\":\"2026-09-10T09:00:01.000Z\",\"payload\":{\"model\":\"gpt-5.6-sol\",\"cwd\":\"/work/α\"}}\n{\"type\":\"event_msg\",\"timestamp\":\"2026-09"
+        }
+      ],
+      "expected": {
+        "files": 3,
+        "changedFiles": 1,
+        "roots": [
+          {
+            "provider": "claude",
+            "path": "<root>/claude",
+            "status": "ok",
+            "message": null
+          },
+          {
+            "provider": "codex",
+            "path": "<root>/codex",
+            "status": "ok",
+            "message": null
+          }
+        ],
+        "records": [
+          {
+            "provider": "claude",
+            "timestampMs": 1789030801000,
+            "model": "claude-opus-5",
+            "sessionId": "s-界",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 12,
+              "cacheRead": 9000,
+              "cacheWrite": 800,
+              "cacheWrite1h": 300,
+              "output": 640,
+              "reasoning": 120
+            },
+            "dedupeKey": "message"
+          }
+        ],
+        "index": {
+          "version": 1,
+          "models": [
+            "claude-opus-5"
+          ],
+          "sessions": [
+            "s-界"
+          ],
+          "folders": [
+            "/work/α"
+          ],
+          "files": {
+            "<root>/claude/a.jsonl": {
+              "p": "claude",
+              "s": 784,
+              "m": 1789725601000,
+              "o": 784,
+              "c": null,
+              "r": [
+                [
+                  1789030801000,
+                  0,
+                  0,
+                  0,
+                  1,
+                  12,
+                  9000,
+                  800,
+                  300,
+                  640,
+                  120,
+                  "message"
+                ]
+              ],
+              "t": []
+            },
+            "<root>/claude/resume.jsonl": {
+              "p": "claude",
+              "s": 392,
+              "m": 1789725602000,
+              "o": 392,
+              "c": null,
+              "r": [
+                [
+                  1789030801000,
+                  0,
+                  0,
+                  0,
+                  1,
+                  12,
+                  9000,
+                  800,
+                  300,
+                  640,
+                  120,
+                  "message"
+                ]
+              ],
+              "t": []
+            },
+            "<root>/codex/a.jsonl": {
+              "p": "codex",
+              "s": 260,
+              "m": 1789725603000,
+              "o": 220,
+              "c": {
+                "model": "gpt-5.6-sol",
+                "sessionId": "thread",
+                "cwd": "/work/α",
+                "total": null,
+                "sawSessionMeta": true,
+                "suppressing": false,
+                "anchorMs": 0,
+                "lastSignature": null
+              },
+              "r": [],
+              "t": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "finish Codex usage tail",
+      "actions": [
+        {
+          "kind": "append",
+          "path": "codex/a.jsonl",
+          "text": "-10T09:00:02.000Z\",\"payload\":{\"type\":\"token_count\",\"info\":{\"total_token_usage\":{\"input_tokens\":1000,\"cached_input_tokens\":800,\"cache_write_input_tokens\":0,\"output_tokens\":50,\"reasoning_output_tokens\":0,\"total_tokens\":1050},\"last_token_usage\":{\"input_tokens\":1000,\"cached_input_tokens\":800,\"cache_write_input_tokens\":0,\"output_tokens\":50,\"reasoning_output_tokens\":0,\"total_tokens\":1050}}}}"
+        }
+      ],
+      "expected": {
+        "files": 3,
+        "changedFiles": 1,
+        "roots": [
+          {
+            "provider": "claude",
+            "path": "<root>/claude",
+            "status": "ok",
+            "message": null
+          },
+          {
+            "provider": "codex",
+            "path": "<root>/codex",
+            "status": "ok",
+            "message": null
+          }
+        ],
+        "records": [
+          {
+            "provider": "claude",
+            "timestampMs": 1789030801000,
+            "model": "claude-opus-5",
+            "sessionId": "s-界",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 12,
+              "cacheRead": 9000,
+              "cacheWrite": 800,
+              "cacheWrite1h": 300,
+              "output": 640,
+              "reasoning": 120
+            },
+            "dedupeKey": "message"
+          },
+          {
+            "provider": "codex",
+            "timestampMs": 1789030802000,
+            "model": "gpt-5.6-sol",
+            "sessionId": "thread",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 200,
+              "cacheRead": 800,
+              "cacheWrite": 0,
+              "cacheWrite1h": 0,
+              "output": 50,
+              "reasoning": 0
+            },
+            "dedupeKey": null
+          }
+        ],
+        "index": {
+          "version": 1,
+          "models": [
+            "claude-opus-5",
+            "gpt-5.6-sol"
+          ],
+          "sessions": [
+            "s-界",
+            "thread"
+          ],
+          "folders": [
+            "/work/α"
+          ],
+          "files": {
+            "<root>/claude/a.jsonl": {
+              "p": "claude",
+              "s": 784,
+              "m": 1789725601000,
+              "o": 784,
+              "c": null,
+              "r": [
+                [
+                  1789030801000,
+                  0,
+                  0,
+                  0,
+                  1,
+                  12,
+                  9000,
+                  800,
+                  300,
+                  640,
+                  120,
+                  "message"
+                ]
+              ],
+              "t": []
+            },
+            "<root>/claude/resume.jsonl": {
+              "p": "claude",
+              "s": 392,
+              "m": 1789725602000,
+              "o": 392,
+              "c": null,
+              "r": [
+                [
+                  1789030801000,
+                  0,
+                  0,
+                  0,
+                  1,
+                  12,
+                  9000,
+                  800,
+                  300,
+                  640,
+                  120,
+                  "message"
+                ]
+              ],
+              "t": []
+            },
+            "<root>/codex/a.jsonl": {
+              "p": "codex",
+              "s": 648,
+              "m": 1789725604000,
+              "o": 220,
+              "c": {
+                "model": "gpt-5.6-sol",
+                "sessionId": "thread",
+                "cwd": "/work/α",
+                "total": null,
+                "sawSessionMeta": true,
+                "suppressing": false,
+                "anchorMs": 0,
+                "lastSignature": null
+              },
+              "r": [],
+              "t": [
+                [
+                  1789030802000,
+                  1,
+                  1,
+                  0,
+                  1,
+                  200,
+                  800,
+                  0,
+                  0,
+                  50,
+                  0,
+                  0
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "restart with uncommitted tail",
+      "actions": [
+        {
+          "kind": "restart"
+        }
+      ],
+      "expected": {
+        "files": 3,
+        "changedFiles": 0,
+        "roots": [
+          {
+            "provider": "claude",
+            "path": "<root>/claude",
+            "status": "ok",
+            "message": null
+          },
+          {
+            "provider": "codex",
+            "path": "<root>/codex",
+            "status": "ok",
+            "message": null
+          }
+        ],
+        "records": [
+          {
+            "provider": "claude",
+            "timestampMs": 1789030801000,
+            "model": "claude-opus-5",
+            "sessionId": "s-界",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 12,
+              "cacheRead": 9000,
+              "cacheWrite": 800,
+              "cacheWrite1h": 300,
+              "output": 640,
+              "reasoning": 120
+            },
+            "dedupeKey": "message"
+          },
+          {
+            "provider": "codex",
+            "timestampMs": 1789030802000,
+            "model": "gpt-5.6-sol",
+            "sessionId": "thread",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 200,
+              "cacheRead": 800,
+              "cacheWrite": 0,
+              "cacheWrite1h": 0,
+              "output": 50,
+              "reasoning": 0
+            },
+            "dedupeKey": null
+          }
+        ],
+        "index": {
+          "version": 1,
+          "models": [
+            "claude-opus-5",
+            "gpt-5.6-sol"
+          ],
+          "sessions": [
+            "s-界",
+            "thread"
+          ],
+          "folders": [
+            "/work/α"
+          ],
+          "files": {
+            "<root>/claude/a.jsonl": {
+              "p": "claude",
+              "s": 784,
+              "m": 1789725601000,
+              "o": 784,
+              "c": null,
+              "r": [
+                [
+                  1789030801000,
+                  0,
+                  0,
+                  0,
+                  1,
+                  12,
+                  9000,
+                  800,
+                  300,
+                  640,
+                  120,
+                  "message"
+                ]
+              ],
+              "t": []
+            },
+            "<root>/claude/resume.jsonl": {
+              "p": "claude",
+              "s": 392,
+              "m": 1789725602000,
+              "o": 392,
+              "c": null,
+              "r": [
+                [
+                  1789030801000,
+                  0,
+                  0,
+                  0,
+                  1,
+                  12,
+                  9000,
+                  800,
+                  300,
+                  640,
+                  120,
+                  "message"
+                ]
+              ],
+              "t": []
+            },
+            "<root>/codex/a.jsonl": {
+              "p": "codex",
+              "s": 648,
+              "m": 1789725604000,
+              "o": 220,
+              "c": {
+                "model": "gpt-5.6-sol",
+                "sessionId": "thread",
+                "cwd": "/work/α",
+                "total": null,
+                "sawSessionMeta": true,
+                "suppressing": false,
+                "anchorMs": 0,
+                "lastSignature": null
+              },
+              "r": [],
+              "t": [
+                [
+                  1789030802000,
+                  1,
+                  1,
+                  0,
+                  1,
+                  200,
+                  800,
+                  0,
+                  0,
+                  50,
+                  0,
+                  0
+                ]
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "commit Codex tail and second usage",
+      "actions": [
+        {
+          "kind": "append",
+          "path": "codex/a.jsonl",
+          "text": "\n{\"type\":\"event_msg\",\"timestamp\":\"2026-09-10T09:00:03.000Z\",\"payload\":{\"type\":\"token_count\",\"info\":{\"total_token_usage\":{\"input_tokens\":3000,\"cached_input_tokens\":2400,\"cache_write_input_tokens\":0,\"output_tokens\":130,\"reasoning_output_tokens\":0,\"total_tokens\":3130},\"last_token_usage\":{\"input_tokens\":2000,\"cached_input_tokens\":1600,\"cache_write_input_tokens\":0,\"output_tokens\":80,\"reasoning_output_tokens\":0,\"total_tokens\":2080}}}}\n"
+        }
+      ],
+      "expected": {
+        "files": 3,
+        "changedFiles": 1,
+        "roots": [
+          {
+            "provider": "claude",
+            "path": "<root>/claude",
+            "status": "ok",
+            "message": null
+          },
+          {
+            "provider": "codex",
+            "path": "<root>/codex",
+            "status": "ok",
+            "message": null
+          }
+        ],
+        "records": [
+          {
+            "provider": "claude",
+            "timestampMs": 1789030801000,
+            "model": "claude-opus-5",
+            "sessionId": "s-界",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 12,
+              "cacheRead": 9000,
+              "cacheWrite": 800,
+              "cacheWrite1h": 300,
+              "output": 640,
+              "reasoning": 120
+            },
+            "dedupeKey": "message"
+          },
+          {
+            "provider": "codex",
+            "timestampMs": 1789030802000,
+            "model": "gpt-5.6-sol",
+            "sessionId": "thread",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 200,
+              "cacheRead": 800,
+              "cacheWrite": 0,
+              "cacheWrite1h": 0,
+              "output": 50,
+              "reasoning": 0
+            },
+            "dedupeKey": null
+          },
+          {
+            "provider": "codex",
+            "timestampMs": 1789030803000,
+            "model": "gpt-5.6-sol",
+            "sessionId": "thread",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 400,
+              "cacheRead": 1600,
+              "cacheWrite": 0,
+              "cacheWrite1h": 0,
+              "output": 80,
+              "reasoning": 0
+            },
+            "dedupeKey": null
+          }
+        ],
+        "index": {
+          "version": 1,
+          "models": [
+            "claude-opus-5",
+            "gpt-5.6-sol"
+          ],
+          "sessions": [
+            "s-界",
+            "thread"
+          ],
+          "folders": [
+            "/work/α"
+          ],
+          "files": {
+            "<root>/claude/a.jsonl": {
+              "p": "claude",
+              "s": 784,
+              "m": 1789725601000,
+              "o": 784,
+              "c": null,
+              "r": [
+                [
+                  1789030801000,
+                  0,
+                  0,
+                  0,
+                  1,
+                  12,
+                  9000,
+                  800,
+                  300,
+                  640,
+                  120,
+                  "message"
+                ]
+              ],
+              "t": []
+            },
+            "<root>/claude/resume.jsonl": {
+              "p": "claude",
+              "s": 392,
+              "m": 1789725602000,
+              "o": 392,
+              "c": null,
+              "r": [
+                [
+                  1789030801000,
+                  0,
+                  0,
+                  0,
+                  1,
+                  12,
+                  9000,
+                  800,
+                  300,
+                  640,
+                  120,
+                  "message"
+                ]
+              ],
+              "t": []
+            },
+            "<root>/codex/a.jsonl": {
+              "p": "codex",
+              "s": 1081,
+              "m": 1789725606000,
+              "o": 1081,
+              "c": {
+                "model": "gpt-5.6-sol",
+                "sessionId": "thread",
+                "cwd": "/work/α",
+                "total": {
+                  "input": 3000,
+                  "cached": 2400,
+                  "cacheWrite": 0,
+                  "output": 130,
+                  "reasoning": 0
+                },
+                "sawSessionMeta": true,
+                "suppressing": false,
+                "anchorMs": 0,
+                "lastSignature": "{\"input_tokens\":3000,\"cached_input_tokens\":2400,\"cache_write_input_tokens\":0,\"output_tokens\":130,\"reasoning_output_tokens\":0,\"total_tokens\":3130}"
+              },
+              "r": [
+                [
+                  1789030802000,
+                  1,
+                  1,
+                  0,
+                  1,
+                  200,
+                  800,
+                  0,
+                  0,
+                  50,
+                  0,
+                  0
+                ],
+                [
+                  1789030803000,
+                  1,
+                  1,
+                  0,
+                  1,
+                  400,
+                  1600,
+                  0,
+                  0,
+                  80,
+                  0,
+                  0
+                ]
+              ],
+              "t": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "truncated Claude file",
+      "actions": [
+        {
+          "kind": "write",
+          "path": "claude/a.jsonl",
+          "text": "{}\n"
+        }
+      ],
+      "expected": {
+        "files": 3,
+        "changedFiles": 1,
+        "roots": [
+          {
+            "provider": "claude",
+            "path": "<root>/claude",
+            "status": "ok",
+            "message": null
+          },
+          {
+            "provider": "codex",
+            "path": "<root>/codex",
+            "status": "ok",
+            "message": null
+          }
+        ],
+        "records": [
+          {
+            "provider": "claude",
+            "timestampMs": 1789030801000,
+            "model": "claude-opus-5",
+            "sessionId": "s-界",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 12,
+              "cacheRead": 9000,
+              "cacheWrite": 800,
+              "cacheWrite1h": 300,
+              "output": 640,
+              "reasoning": 120
+            },
+            "dedupeKey": "message"
+          },
+          {
+            "provider": "codex",
+            "timestampMs": 1789030802000,
+            "model": "gpt-5.6-sol",
+            "sessionId": "thread",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 200,
+              "cacheRead": 800,
+              "cacheWrite": 0,
+              "cacheWrite1h": 0,
+              "output": 50,
+              "reasoning": 0
+            },
+            "dedupeKey": null
+          },
+          {
+            "provider": "codex",
+            "timestampMs": 1789030803000,
+            "model": "gpt-5.6-sol",
+            "sessionId": "thread",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 400,
+              "cacheRead": 1600,
+              "cacheWrite": 0,
+              "cacheWrite1h": 0,
+              "output": 80,
+              "reasoning": 0
+            },
+            "dedupeKey": null
+          }
+        ],
+        "index": {
+          "version": 1,
+          "models": [
+            "claude-opus-5",
+            "gpt-5.6-sol"
+          ],
+          "sessions": [
+            "s-界",
+            "thread"
+          ],
+          "folders": [
+            "/work/α"
+          ],
+          "files": {
+            "<root>/claude/a.jsonl": {
+              "p": "claude",
+              "s": 3,
+              "m": 1789725607000,
+              "o": 3,
+              "c": null,
+              "r": [],
+              "t": []
+            },
+            "<root>/claude/resume.jsonl": {
+              "p": "claude",
+              "s": 392,
+              "m": 1789725602000,
+              "o": 392,
+              "c": null,
+              "r": [
+                [
+                  1789030801000,
+                  0,
+                  0,
+                  0,
+                  1,
+                  12,
+                  9000,
+                  800,
+                  300,
+                  640,
+                  120,
+                  "message"
+                ]
+              ],
+              "t": []
+            },
+            "<root>/codex/a.jsonl": {
+              "p": "codex",
+              "s": 1081,
+              "m": 1789725606000,
+              "o": 1081,
+              "c": {
+                "model": "gpt-5.6-sol",
+                "sessionId": "thread",
+                "cwd": "/work/α",
+                "total": {
+                  "input": 3000,
+                  "cached": 2400,
+                  "cacheWrite": 0,
+                  "output": 130,
+                  "reasoning": 0
+                },
+                "sawSessionMeta": true,
+                "suppressing": false,
+                "anchorMs": 0,
+                "lastSignature": "{\"input_tokens\":3000,\"cached_input_tokens\":2400,\"cache_write_input_tokens\":0,\"output_tokens\":130,\"reasoning_output_tokens\":0,\"total_tokens\":3130}"
+              },
+              "r": [
+                [
+                  1789030802000,
+                  1,
+                  1,
+                  0,
+                  1,
+                  200,
+                  800,
+                  0,
+                  0,
+                  50,
+                  0,
+                  0
+                ],
+                [
+                  1789030803000,
+                  1,
+                  1,
+                  0,
+                  1,
+                  400,
+                  1600,
+                  0,
+                  0,
+                  80,
+                  0,
+                  0
+                ]
+              ],
+              "t": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "delete duplicate preserves usage",
+      "actions": [
+        {
+          "kind": "delete",
+          "path": "claude/resume.jsonl"
+        }
+      ],
+      "expected": {
+        "files": 2,
+        "changedFiles": 0,
+        "roots": [
+          {
+            "provider": "claude",
+            "path": "<root>/claude",
+            "status": "ok",
+            "message": null
+          },
+          {
+            "provider": "codex",
+            "path": "<root>/codex",
+            "status": "ok",
+            "message": null
+          }
+        ],
+        "records": [
+          {
+            "provider": "claude",
+            "timestampMs": 1789030801000,
+            "model": "claude-opus-5",
+            "sessionId": "s-界",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 12,
+              "cacheRead": 9000,
+              "cacheWrite": 800,
+              "cacheWrite1h": 300,
+              "output": 640,
+              "reasoning": 120
+            },
+            "dedupeKey": "message"
+          },
+          {
+            "provider": "codex",
+            "timestampMs": 1789030802000,
+            "model": "gpt-5.6-sol",
+            "sessionId": "thread",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 200,
+              "cacheRead": 800,
+              "cacheWrite": 0,
+              "cacheWrite1h": 0,
+              "output": 50,
+              "reasoning": 0
+            },
+            "dedupeKey": null
+          },
+          {
+            "provider": "codex",
+            "timestampMs": 1789030803000,
+            "model": "gpt-5.6-sol",
+            "sessionId": "thread",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 400,
+              "cacheRead": 1600,
+              "cacheWrite": 0,
+              "cacheWrite1h": 0,
+              "output": 80,
+              "reasoning": 0
+            },
+            "dedupeKey": null
+          }
+        ],
+        "index": {
+          "version": 1,
+          "models": [
+            "claude-opus-5",
+            "gpt-5.6-sol"
+          ],
+          "sessions": [
+            "s-界",
+            "thread"
+          ],
+          "folders": [
+            "/work/α"
+          ],
+          "files": {
+            "<root>/claude/a.jsonl": {
+              "p": "claude",
+              "s": 3,
+              "m": 1789725607000,
+              "o": 3,
+              "c": null,
+              "r": [],
+              "t": []
+            },
+            "<root>/claude/resume.jsonl": {
+              "p": "claude",
+              "s": 392,
+              "m": 1789725602000,
+              "o": 392,
+              "c": null,
+              "r": [
+                [
+                  1789030801000,
+                  0,
+                  0,
+                  0,
+                  1,
+                  12,
+                  9000,
+                  800,
+                  300,
+                  640,
+                  120,
+                  "message"
+                ]
+              ],
+              "t": []
+            },
+            "<root>/codex/a.jsonl": {
+              "p": "codex",
+              "s": 1081,
+              "m": 1789725606000,
+              "o": 1081,
+              "c": {
+                "model": "gpt-5.6-sol",
+                "sessionId": "thread",
+                "cwd": "/work/α",
+                "total": {
+                  "input": 3000,
+                  "cached": 2400,
+                  "cacheWrite": 0,
+                  "output": 130,
+                  "reasoning": 0
+                },
+                "sawSessionMeta": true,
+                "suppressing": false,
+                "anchorMs": 0,
+                "lastSignature": "{\"input_tokens\":3000,\"cached_input_tokens\":2400,\"cache_write_input_tokens\":0,\"output_tokens\":130,\"reasoning_output_tokens\":0,\"total_tokens\":3130}"
+              },
+              "r": [
+                [
+                  1789030802000,
+                  1,
+                  1,
+                  0,
+                  1,
+                  200,
+                  800,
+                  0,
+                  0,
+                  50,
+                  0,
+                  0
+                ],
+                [
+                  1789030803000,
+                  1,
+                  1,
+                  0,
+                  1,
+                  400,
+                  1600,
+                  0,
+                  0,
+                  80,
+                  0,
+                  0
+                ]
+              ],
+              "t": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "same size rewrite",
+      "actions": [
+        {
+          "kind": "write",
+          "path": "claude/a.jsonl",
+          "text": "[]\n"
+        }
+      ],
+      "expected": {
+        "files": 2,
+        "changedFiles": 1,
+        "roots": [
+          {
+            "provider": "claude",
+            "path": "<root>/claude",
+            "status": "ok",
+            "message": null
+          },
+          {
+            "provider": "codex",
+            "path": "<root>/codex",
+            "status": "ok",
+            "message": null
+          }
+        ],
+        "records": [
+          {
+            "provider": "claude",
+            "timestampMs": 1789030801000,
+            "model": "claude-opus-5",
+            "sessionId": "s-界",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 12,
+              "cacheRead": 9000,
+              "cacheWrite": 800,
+              "cacheWrite1h": 300,
+              "output": 640,
+              "reasoning": 120
+            },
+            "dedupeKey": "message"
+          },
+          {
+            "provider": "codex",
+            "timestampMs": 1789030802000,
+            "model": "gpt-5.6-sol",
+            "sessionId": "thread",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 200,
+              "cacheRead": 800,
+              "cacheWrite": 0,
+              "cacheWrite1h": 0,
+              "output": 50,
+              "reasoning": 0
+            },
+            "dedupeKey": null
+          },
+          {
+            "provider": "codex",
+            "timestampMs": 1789030803000,
+            "model": "gpt-5.6-sol",
+            "sessionId": "thread",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 400,
+              "cacheRead": 1600,
+              "cacheWrite": 0,
+              "cacheWrite1h": 0,
+              "output": 80,
+              "reasoning": 0
+            },
+            "dedupeKey": null
+          }
+        ],
+        "index": {
+          "version": 1,
+          "models": [
+            "claude-opus-5",
+            "gpt-5.6-sol"
+          ],
+          "sessions": [
+            "s-界",
+            "thread"
+          ],
+          "folders": [
+            "/work/α"
+          ],
+          "files": {
+            "<root>/claude/a.jsonl": {
+              "p": "claude",
+              "s": 3,
+              "m": 1789725609000,
+              "o": 3,
+              "c": null,
+              "r": [],
+              "t": []
+            },
+            "<root>/claude/resume.jsonl": {
+              "p": "claude",
+              "s": 392,
+              "m": 1789725602000,
+              "o": 392,
+              "c": null,
+              "r": [
+                [
+                  1789030801000,
+                  0,
+                  0,
+                  0,
+                  1,
+                  12,
+                  9000,
+                  800,
+                  300,
+                  640,
+                  120,
+                  "message"
+                ]
+              ],
+              "t": []
+            },
+            "<root>/codex/a.jsonl": {
+              "p": "codex",
+              "s": 1081,
+              "m": 1789725606000,
+              "o": 1081,
+              "c": {
+                "model": "gpt-5.6-sol",
+                "sessionId": "thread",
+                "cwd": "/work/α",
+                "total": {
+                  "input": 3000,
+                  "cached": 2400,
+                  "cacheWrite": 0,
+                  "output": 130,
+                  "reasoning": 0
+                },
+                "sawSessionMeta": true,
+                "suppressing": false,
+                "anchorMs": 0,
+                "lastSignature": "{\"input_tokens\":3000,\"cached_input_tokens\":2400,\"cache_write_input_tokens\":0,\"output_tokens\":130,\"reasoning_output_tokens\":0,\"total_tokens\":3130}"
+              },
+              "r": [
+                [
+                  1789030802000,
+                  1,
+                  1,
+                  0,
+                  1,
+                  200,
+                  800,
+                  0,
+                  0,
+                  50,
+                  0,
+                  0
+                ],
+                [
+                  1789030803000,
+                  1,
+                  1,
+                  0,
+                  1,
+                  400,
+                  1600,
+                  0,
+                  0,
+                  80,
+                  0,
+                  0
+                ]
+              ],
+              "t": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "missing provider root",
+      "actions": [
+        {
+          "kind": "delete",
+          "path": "claude"
+        }
+      ],
+      "expected": {
+        "files": 1,
+        "changedFiles": 0,
+        "roots": [
+          {
+            "provider": "claude",
+            "path": "<root>/claude",
+            "status": "missing",
+            "message": null
+          },
+          {
+            "provider": "codex",
+            "path": "<root>/codex",
+            "status": "ok",
+            "message": null
+          }
+        ],
+        "records": [
+          {
+            "provider": "claude",
+            "timestampMs": 1789030801000,
+            "model": "claude-opus-5",
+            "sessionId": "s-界",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 12,
+              "cacheRead": 9000,
+              "cacheWrite": 800,
+              "cacheWrite1h": 300,
+              "output": 640,
+              "reasoning": 120
+            },
+            "dedupeKey": "message"
+          },
+          {
+            "provider": "codex",
+            "timestampMs": 1789030802000,
+            "model": "gpt-5.6-sol",
+            "sessionId": "thread",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 200,
+              "cacheRead": 800,
+              "cacheWrite": 0,
+              "cacheWrite1h": 0,
+              "output": 50,
+              "reasoning": 0
+            },
+            "dedupeKey": null
+          },
+          {
+            "provider": "codex",
+            "timestampMs": 1789030803000,
+            "model": "gpt-5.6-sol",
+            "sessionId": "thread",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 400,
+              "cacheRead": 1600,
+              "cacheWrite": 0,
+              "cacheWrite1h": 0,
+              "output": 80,
+              "reasoning": 0
+            },
+            "dedupeKey": null
+          }
+        ],
+        "index": {
+          "version": 1,
+          "models": [
+            "claude-opus-5",
+            "gpt-5.6-sol"
+          ],
+          "sessions": [
+            "s-界",
+            "thread"
+          ],
+          "folders": [
+            "/work/α"
+          ],
+          "files": {
+            "<root>/claude/a.jsonl": {
+              "p": "claude",
+              "s": 3,
+              "m": 1789725609000,
+              "o": 3,
+              "c": null,
+              "r": [],
+              "t": []
+            },
+            "<root>/claude/resume.jsonl": {
+              "p": "claude",
+              "s": 392,
+              "m": 1789725602000,
+              "o": 392,
+              "c": null,
+              "r": [
+                [
+                  1789030801000,
+                  0,
+                  0,
+                  0,
+                  1,
+                  12,
+                  9000,
+                  800,
+                  300,
+                  640,
+                  120,
+                  "message"
+                ]
+              ],
+              "t": []
+            },
+            "<root>/codex/a.jsonl": {
+              "p": "codex",
+              "s": 1081,
+              "m": 1789725606000,
+              "o": 1081,
+              "c": {
+                "model": "gpt-5.6-sol",
+                "sessionId": "thread",
+                "cwd": "/work/α",
+                "total": {
+                  "input": 3000,
+                  "cached": 2400,
+                  "cacheWrite": 0,
+                  "output": 130,
+                  "reasoning": 0
+                },
+                "sawSessionMeta": true,
+                "suppressing": false,
+                "anchorMs": 0,
+                "lastSignature": "{\"input_tokens\":3000,\"cached_input_tokens\":2400,\"cache_write_input_tokens\":0,\"output_tokens\":130,\"reasoning_output_tokens\":0,\"total_tokens\":3130}"
+              },
+              "r": [
+                [
+                  1789030802000,
+                  1,
+                  1,
+                  0,
+                  1,
+                  200,
+                  800,
+                  0,
+                  0,
+                  50,
+                  0,
+                  0
+                ],
+                [
+                  1789030803000,
+                  1,
+                  1,
+                  0,
+                  1,
+                  400,
+                  1600,
+                  0,
+                  0,
+                  80,
+                  0,
+                  0
+                ]
+              ],
+              "t": []
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "restart missing provider retains index",
+      "actions": [
+        {
+          "kind": "restart"
+        }
+      ],
+      "expected": {
+        "files": 1,
+        "changedFiles": 0,
+        "roots": [
+          {
+            "provider": "claude",
+            "path": "<root>/claude",
+            "status": "missing",
+            "message": null
+          },
+          {
+            "provider": "codex",
+            "path": "<root>/codex",
+            "status": "ok",
+            "message": null
+          }
+        ],
+        "records": [
+          {
+            "provider": "claude",
+            "timestampMs": 1789030801000,
+            "model": "claude-opus-5",
+            "sessionId": "s-界",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 12,
+              "cacheRead": 9000,
+              "cacheWrite": 800,
+              "cacheWrite1h": 300,
+              "output": 640,
+              "reasoning": 120
+            },
+            "dedupeKey": "message"
+          },
+          {
+            "provider": "codex",
+            "timestampMs": 1789030802000,
+            "model": "gpt-5.6-sol",
+            "sessionId": "thread",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 200,
+              "cacheRead": 800,
+              "cacheWrite": 0,
+              "cacheWrite1h": 0,
+              "output": 50,
+              "reasoning": 0
+            },
+            "dedupeKey": null
+          },
+          {
+            "provider": "codex",
+            "timestampMs": 1789030803000,
+            "model": "gpt-5.6-sol",
+            "sessionId": "thread",
+            "cwd": "/work/α",
+            "totals": {
+              "calls": 1,
+              "input": 400,
+              "cacheRead": 1600,
+              "cacheWrite": 0,
+              "cacheWrite1h": 0,
+              "output": 80,
+              "reasoning": 0
+            },
+            "dedupeKey": null
+          }
+        ],
+        "index": {
+          "version": 1,
+          "models": [
+            "claude-opus-5",
+            "gpt-5.6-sol"
+          ],
+          "sessions": [
+            "s-界",
+            "thread"
+          ],
+          "folders": [
+            "/work/α"
+          ],
+          "files": {
+            "<root>/claude/a.jsonl": {
+              "p": "claude",
+              "s": 3,
+              "m": 1789725609000,
+              "o": 3,
+              "c": null,
+              "r": [],
+              "t": []
+            },
+            "<root>/claude/resume.jsonl": {
+              "p": "claude",
+              "s": 392,
+              "m": 1789725602000,
+              "o": 392,
+              "c": null,
+              "r": [
+                [
+                  1789030801000,
+                  0,
+                  0,
+                  0,
+                  1,
+                  12,
+                  9000,
+                  800,
+                  300,
+                  640,
+                  120,
+                  "message"
+                ]
+              ],
+              "t": []
+            },
+            "<root>/codex/a.jsonl": {
+              "p": "codex",
+              "s": 1081,
+              "m": 1789725606000,
+              "o": 1081,
+              "c": {
+                "model": "gpt-5.6-sol",
+                "sessionId": "thread",
+                "cwd": "/work/α",
+                "total": {
+                  "input": 3000,
+                  "cached": 2400,
+                  "cacheWrite": 0,
+                  "output": 130,
+                  "reasoning": 0
+                },
+                "sawSessionMeta": true,
+                "suppressing": false,
+                "anchorMs": 0,
+                "lastSignature": "{\"input_tokens\":3000,\"cached_input_tokens\":2400,\"cache_write_input_tokens\":0,\"output_tokens\":130,\"reasoning_output_tokens\":0,\"total_tokens\":3130}"
+              },
+              "r": [
+                [
+                  1789030802000,
+                  1,
+                  1,
+                  0,
+                  1,
+                  200,
+                  800,
+                  0,
+                  0,
+                  50,
+                  0,
+                  0
+                ],
+                [
+                  1789030803000,
+                  1,
+                  1,
+                  0,
+                  1,
+                  400,
+                  1600,
+                  0,
+                  0,
+                  80,
+                  0,
+                  0
+                ]
+              ],
+              "t": []
+            }
+          }
+        }
+      }
+    }
+  ]
+}

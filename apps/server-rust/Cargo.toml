@@ -1,0 +1,53 @@
+[package]
+name = "ruimte_server"
+version.workspace = true
+edition.workspace = true
+default-run = "ruimte-server"
+
+[lib]
+name = "ruimte_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "ruimte-server"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+axum.workspace = true
+base64.workspace = true
+bytes.workspace = true
+futures-util.workspace = true
+hmac.workspace = true
+mime_guess.workspace = true
+percent-encoding.workspace = true
+rand.workspace = true
+reqwest.workspace = true
+rtc.workspace = true
+ruimte_browser = { path = "../../crates/ruimte_browser" }
+ruimte_cli = { path = "../../crates/ruimte_cli" }
+ruimte_core = { path = "../../crates/ruimte_core" }
+ruimte_devices = { path = "../../crates/ruimte_devices" }
+ruimte_identity = { path = "../../crates/ruimte_identity" }
+ruimte_runtime = { path = "../../crates/ruimte_runtime" }
+ruimte_schema = { path = "../../crates/ruimte_schema" }
+ruimte_usage = { path = "../../crates/ruimte_usage" }
+ruimte_workspace = { path = "../../crates/ruimte_workspace" }
+serde_json.workspace = true
+sha2.workspace = true
+subtle.workspace = true
+tokio.workspace = true
+tokio-tungstenite.workspace = true
+tokio-util.workspace = true
+tower-http.workspace = true
+url.workspace = true
+uuid.workspace = true
+webrtc.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+tower.workspace = true
+
+[target.'cfg(target_os = "macos")'.dependencies]
+ruimte_ios_bridge = { path = "../../crates/ruimte_ios_bridge" }

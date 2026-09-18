@@ -8,9 +8,13 @@ module.exports = async (context) => {
         context.electronPlatformName === 'darwin'
             ? join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`, 'Contents', 'Resources')
             : join(context.appOutDir, 'resources');
-    const daemon = join(resources, 'bin', context.electronPlatformName === 'win32' ? 'ruimte.exe' : 'ruimte');
-    if (!existsSync(daemon)) {
-        throw new Error(`No daemon at ${daemon}; run \`bun run --cwd apps/server compile\` for this os and arch first`);
+    const names = ['ruimte', 'ruimte-context', 'ruimte.build', 'ruimte.bundle.json'];
+    if (context.electronPlatformName === 'darwin') {
+        names.push('ruimte-simulator-helper', 'native/serve-sim-ax-settings', 'native/serve-sim-native.node');
+    }
+    const missing = names.map((name) => join(resources, 'bin', name)).find((path) => !existsSync(path));
+    if (missing) {
+        throw new Error(`Native bundle is missing ${missing}; run \`bun run --cwd apps/server-rust compile\` for this os and arch first`);
     }
     if (!existsSync(join(resources, 'client', 'index.html'))) {
         throw new Error('No built client; run `bun run --cwd apps/client build` first');

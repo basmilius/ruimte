@@ -5,6 +5,7 @@
     "": {
       "name": "ruimte",
       "devDependencies": {
+        "@ruimte/render": "workspace:*",
         "oxfmt": "^0.68.0",
         "oxlint": "^1.79.0",
         "typescript": "~6.0.2",
@@ -106,27 +107,22 @@
         "wrangler": "^4.131.2",
       },
     },
-    "apps/server": {
-      "name": "@ruimte/server",
+    "apps/server-rust": {
+      "name": "@ruimte/server-rust",
       "version": "0.0.0",
       "dependencies": {
-        "@ruimte/actions": "workspace:*",
         "@ruimte/contracts": "workspace:*",
-        "@ruimte/diagram": "workspace:*",
-        "@ruimte/drawing": "workspace:*",
-        "@ruimte/plan": "workspace:*",
-        "@ruimte/pulsar": "workspace:*",
-        "@ruimte/service": "workspace:*",
-        "@xterm/addon-serialize": "^0.14.0",
-        "@xterm/headless": "^6.0.0",
-        "reflect-metadata": "0.2.2",
         "serve-sim": "0.1.46",
-        "werift": "0.24.4",
         "zod": "^4.5.4",
       },
       "devDependencies": {
+        "@ruimte/pulsar": "workspace:*",
+        "@ruimte/render": "workspace:*",
         "@types/bun": "^1.4.0",
+        "@xterm/addon-serialize": "^0.14.0",
+        "@xterm/headless": "^6.0.0",
         "typescript": "~6.0.2",
+        "werift": "0.24.4",
       },
     },
     "apps/station": {
@@ -212,6 +208,19 @@
       "version": "0.0.0",
       "dependencies": {
         "zod": "^4.5.4",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.4.0",
+        "typescript": "~6.0.2",
+      },
+    },
+    "packages/render": {
+      "name": "@ruimte/render",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/contracts": "workspace:*",
+        "@ruimte/diagram": "workspace:*",
+        "@ruimte/drawing": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "^1.4.0",
@@ -611,7 +620,9 @@
 
     "@ruimte/pulsar-worker": ["@ruimte/pulsar-worker@workspace:apps/pulsar-worker"],
 
-    "@ruimte/server": ["@ruimte/server@workspace:apps/server"],
+    "@ruimte/render": ["@ruimte/render@workspace:packages/render"],
+
+    "@ruimte/server-rust": ["@ruimte/server-rust@workspace:apps/server-rust"],
 
     "@ruimte/service": ["@ruimte/service@workspace:packages/service"],
 
