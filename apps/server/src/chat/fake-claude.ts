@@ -124,8 +124,8 @@ export const fakeClaude: FakeCli = (io) => {
             io.exit(1);
             return;
         }
-        // The first line alone, so a prompt a task brief was added under still waits.
-        if (text.split('\n')[0] === 'slow') {
+        // A line of its own, so a prompt with a task brief under it or a message above it still waits.
+        if (text.split('\n').some((line) => line === 'slow')) {
             slow = true;
             out({ type: 'stream_event', event: { type: 'message_start', message: { id: `msg_${nonce}_${++messageCounter}`, model } }, session_id: sessionId });
             return;

@@ -145,7 +145,7 @@ beforeEach(async () => {
     ended = [];
     watching = [];
     notified = [];
-    delivery = { at: 'waiting', detail: 'nothing runs in that node yet; it reads the message when it starts (1 waiting)' };
+    delivery = { at: 'waiting', wake: false, detail: 'nothing runs in that node yet; it reads the message when it starts (1 waiting)' };
     lineage = new AgentLineageStore(join(root, 'home'));
     tasks = new TaskStore(join(root, 'home'));
     await lineage.load();
@@ -2618,7 +2618,7 @@ describe('notify', () => {
     test('says where the message landed, in the words the daemon gave it', async () => {
         const target = (await post('node', ['new', 'terminal'])).lines[0]!.split('\t')[0]!;
         await post('link', ['new', '--to', target]);
-        delivery = { at: 'now', detail: 'printed on the screen of that terminal' };
+        delivery = { at: 'now', wake: false, detail: 'printed on the screen of that terminal' };
         expect((await post('notify', [target, '--text', 'look at the log'])).lines).toEqual([
             `notified\t${target}\tnow\tprinted on the screen of that terminal`
         ]);

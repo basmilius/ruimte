@@ -214,6 +214,12 @@ describe('labels', () => {
         expect(agentTurnLabel({ ...turn, origin: 'agent' })).toBe('Continued on its own');
         expect(agentTurnLabel({ ...turn, origin: 'agent', label: 'Lexer', taskIds: ['task-1'] })).toBe('Woken by a task: Lexer');
         expect(agentTurnLabel({ ...turn, origin: 'agent', label: 'Lexer, Docs', taskIds: ['task-1', 'task-2'] })).toBe('Woken by 2 tasks: Lexer, Docs');
+        expect(agentTurnLabel({ ...turn, origin: 'agent', label: 'Message from Lexer', messageFrom: ['chat-2'] })).toBe(
+            'Woken by a message: Message from Lexer'
+        );
+        expect(agentTurnLabel({ ...turn, origin: 'agent', label: 'Messages from Lexer, Docs', messageFrom: ['chat-2', 'chat-3'] })).toBe(
+            'Woken by 2 messages: Messages from Lexer, Docs'
+        );
     });
 });
 

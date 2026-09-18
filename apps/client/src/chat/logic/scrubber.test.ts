@@ -37,6 +37,26 @@ describe('ticksOf', () => {
         expect(ticks[1]!.text).toBe('Woken by 2 tasks');
     });
 
+    test('a wake by a message is a place to return to as much as a wake by a task', () => {
+        const woken: ChatItem[] = [
+            {
+                id: 't5',
+                kind: 'turn',
+                createdAt: 9000,
+                turnId: 't5',
+                state: 'done',
+                endedAt: 10000,
+                costUsd: 0,
+                origin: 'agent',
+                label: 'Message from Lexer',
+                messageFrom: ['chat-2']
+            },
+            { id: 'a5', kind: 'assistant', createdAt: 9500, turnId: 't5', text: 'Noted.', streaming: false }
+        ];
+        const ticks = ticksOf(deriveTimelineRows(woken, options));
+        expect(ticks.map((tick) => [tick.id, tick.kind, tick.text])).toEqual([['start-t5', 'wake', 'Woken by a message: Message from Lexer']]);
+    });
+
     test('a message of only attachments reads as their names', () => {
         const ticks = ticksOf(deriveTimelineRows(thread, options));
         expect(ticks[2]!.text).toBe('shot.png');

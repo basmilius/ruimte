@@ -57,7 +57,7 @@ One WebSocket (or the same frames over a WebRTC DataChannel), JSON frames valida
 
 Decisions the code cannot show. Do not reverse one without asking Bas.
 
-- No kanban view, ever. A canvas is not a scheduler either: no cron, loop or trigger nodes, no task queue with retries or dependencies between nodes. The one reaction is a finished task waking the chat that delegated it, once.
+- No kanban view, ever. A canvas is not a scheduler either: no cron, loop or trigger nodes, no task queue with retries or dependencies between nodes. Two things wake a chat, each once: a finished task wakes the chat that delegated it, and a message wakes the chat it was sent to. A message goes one step deep, so the turn it opened wakes nobody, and a terminal is never woken at all.
 - Not planned: telemetry; SSH/WSL environments (another machine runs a daemon of its own); managed accounts (a CLI logs in itself); agent-to-agent messages through a PTY and MCP browser automation (see the agent rules below); a folder or files node (not a file manager); a video node (a browser node plays a file).
 - Every shortcut needs a modifier. The only bare keys are a drawing view's tools, and only while no text is typed and no dialog is up, and the widget keys inside a prompt card (arrows, Home, End, Space, Enter), only while the focus is in that card.
 - Never highlight the canvas grid in the accent color. Type: only the four sizes in `@theme`, no bracket sizes, nothing below 12px; Geist only for the wordmark, Kalam only for drawing text.

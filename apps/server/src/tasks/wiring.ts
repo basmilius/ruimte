@@ -1,12 +1,13 @@
 import type { Task } from '@ruimte/contracts';
 import type { TaskHost } from '../canvas/verb.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
+import { chatOpener } from '../chat/wake-chat.ts';
 import type { OutboxEntry, OutboxWork, StartAgentEntry } from '../outbox/outbox.ts';
 import type { OutboxHandlers } from '../outbox/outbox-worker.ts';
 import { giveTaskHandler } from './give-task.ts';
 import { TaskCoordinator } from './task-coordinator.ts';
 import type { TaskStore } from './task-store.ts';
-import { oweWake, parkedNote, wakeParentHandler, type WakeChat } from './wake-parent.ts';
+import { oweWake, parkedNote, wakeParentHandler } from './wake-parent.ts';
 
 export interface TaskWiringDeps {
     tasks: TaskStore;
@@ -74,22 +75,7 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
         alert: (chatId, text) => deps.alert('chat', chatId, 'Could not wake the chat', text)
     });
 
-    /* The chat a turn is to be opened in, loaded from disk when nobody has it; null for a node with no thread. */
-    const chatFor = async (chatId: string): Promise<WakeChat | null> => {
-        if (!deps.chats.get(chatId)) {
-            if (!deps.placed(chatId) || !(await deps.chats.hasStored(chatId))) {
-                return null;
-            }
-            await deps.chats.create({ chatId });
-        }
-        const session = deps.chats.get(chatId);
-        return session
-            ? {
-                  items: () => session.thread.list(),
-                  wake: (wake) => session.wake(wake) !== null
-              }
-            : null;
-    };
+    const chatFor = chatOpener({ chats: deps.chats, placed: deps.placed });
 
     return {
         coordinator,

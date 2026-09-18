@@ -909,7 +909,16 @@ describe('a message another node left', () => {
 
     const notify = async (targetId: string, text: string): Promise<void> => {
         const notice: Omit<Notice, 'createdAt'> = { projectId: 'project-1', targetId, from: 'term-1', fromTitle: 'dev server', text };
-        await deliverNotice(notices, { terminal: () => null, hasChat: (id) => manager.get(id) !== undefined }, notice);
+        await deliverNotice(
+            notices,
+            {
+                terminal: () => null,
+                // No outbox in these tests, so the message waits for the turn the test sends itself.
+                chat: async (id) => (manager.get(id) === undefined ? 'none' : 'running'),
+                fromMessage: () => false
+            },
+            notice
+        );
         await showNotices(notices, { has: (id) => manager.hasStored(id), note: (id, line) => manager.addNote(id, 'info', line) }, targetId);
     };
 

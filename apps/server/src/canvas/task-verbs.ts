@@ -218,7 +218,7 @@ const TASK_NEW_DETAIL: readonly string[] = [
     'depth\tNo node is opened here, so neither the depth an agent may open at nor the number of agents you may have open comes in',
     'refusals\tnot-a-chat-parent\tself-task\tunknown-node\tnot-on-a-canvas\tnot-an-agent\tnot-yours\tnot-a-chat\tno-agent\ttask-running\tthe whole set this action refuses with',
     'see\truimte-context agent --task\topens an agent that is not there yet, with a task of its own',
-    'see\truimte-context notify\tleaves a message an agent hears at the start of its next turn, without starting one',
+    'see\truimte-context notify\tsends a message along a line, which a chat takes a turn on but never reports back from: a task comes back to you with its result and settles, a message does not',
     ...TASK_LINES,
     'ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs'
 ];
@@ -265,7 +265,7 @@ export const taskNewAction = defineAction('task', {
         if (call.host.madeBy(id) !== call.caller) {
             throw new VerbRefusal('not-yours', `${id} is not a node you opened; a task only goes to an agent you opened yourself`, [
                 ...lines(),
-                `see\truimte-context notify ${id}\tleaves it a message along a line, which starts no turn`
+                `see\truimte-context notify ${id}\tsends it a message along a line, which it acts on itself and never reports back from`
             ]);
         }
         if (target.kind !== 'chat') {
@@ -274,7 +274,7 @@ export const taskNewAction = defineAction('task', {
                 `${id} is a terminal node: a task has to start a turn, and nothing is typed into a shell a person can type in`,
                 [
                     ...lines(),
-                    `see\truimte-context notify ${id}\tleaves it a message it hears at the start of its next turn`,
+                    `see\truimte-context notify ${id}\tsends it a message its agent hears at the start of its next turn; a terminal is never given a turn either`,
                     'see\truimte-context agent --terminal --task\topens a terminal of its own with the task on the line its CLI starts with'
                 ]
             );

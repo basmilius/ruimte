@@ -37,6 +37,12 @@ const GiveTaskSchema = z.object({
     payload: z.object({ taskId: z.string().min(1) })
 });
 
+const DeliverMessageSchema = z.object({
+    kind: z.literal('deliver-message'),
+    // The target is the chat the message was left for; the message itself waits in the notice store, with any that came in beside it.
+    payload: z.object({ from: z.string().min(1) })
+});
+
 const EndChildrenSchema = z.object({
     kind: z.literal('end-children'),
     // The target is the node that was stopped or deleted; these are the agents it had opened when that was owed.
@@ -54,6 +60,7 @@ const OutboxWorkSchema = z.discriminatedUnion('kind', [
     ResumeRunSchema,
     WakeParentSchema,
     GiveTaskSchema,
+    DeliverMessageSchema,
     EndChildrenSchema,
     DeliverSummarySchema
 ]);
@@ -77,6 +84,7 @@ export type StartAgentEntry = Extract<OutboxEntry, { kind: 'start-agent' }>;
 export type ResumeRunEntry = Extract<OutboxEntry, { kind: 'resume-run' }>;
 export type WakeParentEntry = Extract<OutboxEntry, { kind: 'wake-parent' }>;
 export type GiveTaskEntry = Extract<OutboxEntry, { kind: 'give-task' }>;
+export type DeliverMessageEntry = Extract<OutboxEntry, { kind: 'deliver-message' }>;
 export type EndChildrenEntry = Extract<OutboxEntry, { kind: 'end-children' }>;
 export type DeliverSummaryEntry = Extract<OutboxEntry, { kind: 'deliver-summary' }>;
 

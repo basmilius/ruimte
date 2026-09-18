@@ -8584,6 +8584,12 @@
                     "type": "string"
                   }
                 },
+                "messageFrom": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
                 "native": {
                   "type": "object",
                   "properties": {
@@ -9761,6 +9767,12 @@
                     "type": "string"
                   }
                 },
+                "messageFrom": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
                 "native": {
                   "type": "object",
                   "properties": {
@@ -10653,6 +10665,12 @@
                     "type": "string"
                   }
                 },
+                "messageFrom": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
                 "native": {
                   "type": "object",
                   "properties": {
@@ -11534,6 +11552,12 @@
                           "maximum": 9007199254740991
                         },
                         "taskIds": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "messageFrom": {
                           "type": "array",
                           "items": {
                             "type": "string"
@@ -12960,6 +12984,12 @@
                             "maximum": 9007199254740991
                           },
                           "taskIds": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "messageFrom": {
                             "type": "array",
                             "items": {
                               "type": "string"
@@ -15143,6 +15173,12 @@
                   "maximum": 9007199254740991
                 },
                 "taskIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "messageFrom": {
                   "type": "array",
                   "items": {
                     "type": "string"
@@ -30756,6 +30792,12 @@
                           "type": "string"
                         }
                       },
+                      "messageFrom": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
                       "native": {
                         "type": "object",
                         "properties": {
@@ -32177,6 +32219,12 @@
                           "maximum": 9007199254740991
                         },
                         "taskIds": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "messageFrom": {
                           "type": "array",
                           "items": {
                             "type": "string"

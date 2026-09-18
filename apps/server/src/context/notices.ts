@@ -191,24 +191,32 @@ export class NoticeStore {
     }
 }
 
-/* Where a message went: onto a screen now, or into the queue of an agent that is busy or not there yet. */
+/* Where a message went: onto a screen now, into a turn the chat is owed, or into a queue it waits in. */
 export interface NoticeDelivery {
     at: 'now' | 'waiting';
     detail: string;
+    /* Whether the receiving chat is owed a turn on this message; the daemon's outbox is what opens it. */
+    wake: boolean;
 }
 
 export interface NoticeTargets {
     /* The terminal running under this node id, when the daemon has one that has not exited. */
     terminal(id: string): { agent: AgentInfo | null; notice(text: string): void } | null;
-    /* Whether a chat runs under this id; a chat hears a message in front of its next prompt. */
-    hasChat(id: string): boolean;
+    /* What the daemon holds under this id: a chat between turns, one that is in a turn, or no chat at all. */
+    chat(id: string): Promise<'idle' | 'running' | 'none'>;
+    /* Whether the turn this node is running was opened by a message of its own, which is where waking stops. */
+    fromMessage(id: string): boolean;
 }
 
 /*
- * One message on its way to a node. An agent that answers a context hook is the only kind that can
- * be handed something between two turns, so its message waits for that turn. Everything else gets
- * the line on the screen, which is what the motd already does: never typed into the PTY, since the
- * shell must not read a byte nobody typed.
+ * One message on its way to a node, and whether the receiver owes a turn on it. A chat between turns
+ * gets one, the way a settled task gives one: a person watching two agents cannot tell a message from
+ * an assignment, and a message nobody starts a turn for sits there until someone happens to prompt
+ * that chat. One step deep, so the turn a message opened wakes nobody with a message of its own.
+ *
+ * A terminal keeps what it always did. Starting a turn there means typing into the shell a person
+ * types in, so an agent that answers a context hook hears the message at the start of the next turn
+ * it takes itself, and every other terminal gets the line on its screen, which is what the motd does.
  */
 export const deliverNotice = async (store: NoticeStore, targets: NoticeTargets, notice: Omit<Notice, 'createdAt'>): Promise<NoticeDelivery> => {
     const terminal = targets.terminal(notice.targetId);
@@ -217,6 +225,7 @@ export const deliverNotice = async (store: NoticeStore, targets: NoticeTargets, 
         terminal.notice(renderNotice({ ...notice, createdAt: Date.now() }));
         return {
             at: 'now',
+            wake: false,
             detail:
                 agent?.live === true
                     ? `printed on its screen; ${agent.kind} takes nothing between its turns, so its agent may not read it`
@@ -225,18 +234,24 @@ export const deliverNotice = async (store: NoticeStore, targets: NoticeTargets, 
     }
     const waiting = await store.put(notice);
     const count = waiting === 1 ? '1 waiting' : `${waiting} waiting`;
-    /* What a message is not: a turn. Every line says so, because the answer to a notify is the last
-       thing an agent reads before it decides whether to wait for a reply that is never coming. */
     if (terminal) {
-        return { at: 'waiting', detail: `its agent reads it at the start of its next turn, which nothing here starts (${count})` };
+        return { at: 'waiting', wake: false, detail: `its agent reads it at the start of its next turn, which nothing here starts (${count})` };
     }
-    if (targets.hasChat(notice.targetId)) {
+    const chat = await targets.chat(notice.targetId);
+    if (chat === 'none') {
+        return { at: 'waiting', wake: false, detail: `nothing runs in that node yet; it reads the message when it starts (${count})` };
+    }
+    if (chat === 'running') {
+        return { at: 'waiting', wake: false, detail: `that chat is in a turn; it reads the message in front of its next one (${count})` };
+    }
+    if (targets.fromMessage(notice.from)) {
         return {
             at: 'waiting',
-            detail: `the chat reads it in front of its next prompt, which this does not start; ruimte-context task new does (${count})`
+            wake: false,
+            detail: `a message started the turn you are in, and a message starts one turn and no further; that chat reads this one in front of its next turn (${count})`
         };
     }
-    return { at: 'waiting', detail: `nothing runs in that node yet; it reads the message when it starts (${count})` };
+    return { at: 'now', wake: true, detail: 'that chat takes a turn on it, and reads it there' };
 };
 
 /* The chat a message was left for, as the two things showing it needs: whether it is there, and a line in its thread. */

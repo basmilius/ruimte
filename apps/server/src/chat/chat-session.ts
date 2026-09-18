@@ -430,12 +430,14 @@ export class ChatSession {
     }
 
     /*
-     * Opens a turn about tasks that settled, with no message of a person in front of it: a note says
-     * what woke the chat and the turn carries the task ids. Checked and opened in one step, so false
-     * means a turn is in the way (or the daemon is going down) and nothing happened. Never through
-     * `send`: that steps on a turn with `origin: 'agent'`, so a second wake would close the first.
+     * Opens a turn nobody typed a prompt for (tasks that settled, a message another node left), with
+     * a note saying what woke the chat and the turn carrying what it was: the task ids, or the nodes
+     * the messages came from, which is what keeps a turn a message opened from waking anyone itself.
+     * Checked and opened in one step, so null means a turn is in the way (or the daemon is going
+     * down) and nothing happened. Never through `send`: that steps on a turn with `origin: 'agent'`,
+     * so a second wake would close the first.
      */
-    wake(wake: { text: string; label: string; note: string; taskIds: string[]; summaryFor?: string }): string | null {
+    wake(wake: { text: string; label: string; note: string; taskIds: string[]; summaryFor?: string; messageFrom?: string[] }): string | null {
         if (this.frozen || this.thread.info.activeTurnId !== null) {
             return null;
         }
@@ -452,6 +454,7 @@ export class ChatSession {
                 origin: 'agent',
                 label: wake.label,
                 ...(wake.taskIds.length === 0 ? {} : { taskIds: wake.taskIds }),
+                ...(wake.messageFrom === undefined || wake.messageFrom.length === 0 ? {} : { messageFrom: wake.messageFrom }),
                 ...(wake.summaryFor === undefined ? {} : { summaryFor: wake.summaryFor }),
                 endedAt: null,
                 costUsd: 0

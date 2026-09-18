@@ -1,4 +1,5 @@
-import type { ChatItem, Task } from '@ruimte/contracts';
+import type { Task } from '@ruimte/contracts';
+import type { WakeChat } from '../chat/wake-chat.ts';
 import { errorText } from '../error-text.ts';
 import type { OutboxEntry, OutboxWork, WakeParentEntry } from '../outbox/outbox.ts';
 import type { OutboxOutcome } from '../outbox/outbox-worker.ts';
@@ -53,10 +54,7 @@ export const wakeLabel = (tasks: readonly Task[]): string => tasks.map((task) =>
 
 export const wakeNote = (tasks: readonly Task[]): string => `Woken by ${tasks.length} finished ${tasks.length === 1 ? 'task' : 'tasks'}`;
 
-export interface WakeChat {
-    items(): ChatItem[];
-    wake(wake: { text: string; label: string; note: string; taskIds: string[] }): boolean;
-}
+export type { WakeChat };
 
 export interface WakeParentDeps {
     tasks: Pick<TaskStore, 'pendingWake' | 'readyWake' | 'openBatches' | 'markWoken' | 'dropWake'>;
@@ -129,6 +127,8 @@ const parkedText = (entry: OutboxEntry, title: string, reason: string): string =
             return `The machine could not start the agent in ${title} (${entry.target}): ${reason}`;
         case 'give-task':
             return `The machine could not give a task to ${title} (${entry.target}): ${reason}`;
+        case 'deliver-message':
+            return `The machine could not give ${title} (${entry.target}) a turn on the message it was sent: ${reason}`;
         default:
             return `The machine could not resume the turn of ${title} (${entry.target}) after a restart: ${reason}`;
     }
@@ -145,7 +145,8 @@ export const parkedNote =
         if (entry.kind === 'deliver-summary') {
             return;
         }
-        const chatId = entry.kind === 'wake-parent' ? entry.target : deps.madeBy(entry.target);
+        /* A message is nobody's to answer for but the chat it was left for, which has no opener in this. */
+        const chatId = entry.kind === 'wake-parent' || entry.kind === 'deliver-message' ? entry.target : deps.madeBy(entry.target);
         if (chatId === null) {
             return;
         }

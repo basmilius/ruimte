@@ -59,6 +59,8 @@ import { ChatManager } from './chat/chat-manager.ts';
 import { hookContext } from './context/context-note.ts';
 import { CONTEXT_PATH, ContextStore } from './context/context-store.ts';
 import { deliverNotice, noticeNote, NoticeStore, renderNotice, showNotices, type Notice } from './context/notices.ts';
+import { deliverMessageHandler, turnFromMessage } from './context/deliver-message.ts';
+import { chatOpener } from './chat/wake-chat.ts';
 import { ChatStore } from './chat/chat-store.ts';
 import type { ServerConfig } from './config.ts';
 import { Dispatcher, type ClientAccess } from './dispatcher.ts';
@@ -300,6 +302,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             'resume-run': resumeRunHandler(chats),
             'wake-parent': taskWiring.wakeParent,
             'give-task': taskWiring.giveTask,
+            'deliver-message': deliverMessageHandler({
+                notices,
+                chat: chatOpener({ chats, placed: (nodeId) => projects.index.locate(nodeId) !== null }),
+                placed: (nodeId) => projects.index.locate(nodeId) !== null
+            }),
             'end-children': endChildren.handler,
             'deliver-summary': summaries.handler
         },
@@ -425,7 +432,18 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
                         const session = manager.get(id);
                         return session && !session.exited ? { agent: session.agent, notice: (text: string) => session.notice(text) } : null;
                     },
-                    hasChat: (id) => chats.get(id) !== undefined
+                    chat: async (id) => {
+                        const session = chats.get(id);
+                        if (session) {
+                            return session.info.activeTurnId === null ? 'idle' : 'running';
+                        }
+                        // A chat nobody has loaded is idle: the turn opens on the thread the daemon reads back from disk.
+                        return (await chats.hasStored(id)) ? 'idle' : 'none';
+                    },
+                    fromMessage: (id) => {
+                        const session = chats.get(id);
+                        return session !== undefined && turnFromMessage(session.thread.list(), session.info.activeTurnId);
+                    }
                 },
                 notice
             );
@@ -434,6 +452,10 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             await showNotices(notices, noticeChat, notice.targetId).catch((e) =>
                 console.error(`Showing a message in chat ${notice.targetId} failed:`, errorText(e))
             );
+            /* After the line in the thread, so a person sees the message itself above the turn it opens. */
+            if (delivery.wake) {
+                await outboxWorker.enqueue(notice.projectId, notice.targetId, { kind: 'deliver-message', payload: { from: notice.from } });
+            }
             return delivery;
         }
     };

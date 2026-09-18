@@ -156,7 +156,8 @@ describe('showNotices', () => {
 describe('deliverNotice', () => {
     const targets = (overrides: Partial<NoticeTargets> = {}): NoticeTargets => ({
         terminal: () => null,
-        hasChat: () => false,
+        chat: async () => 'none',
+        fromMessage: () => false,
         ...overrides
     });
 
@@ -173,7 +174,11 @@ describe('deliverNotice', () => {
         const printed: string[] = [];
         const deps = targets({ terminal: () => ({ agent: agent('claude'), notice: (text) => printed.push(text) }) });
         const delivery = await deliverNotice(store, deps, left('the build is green'));
-        expect(delivery).toEqual({ at: 'waiting', detail: 'its agent reads it at the start of its next turn, which nothing here starts (1 waiting)' });
+        expect(delivery).toEqual({
+            at: 'waiting',
+            wake: false,
+            detail: 'its agent reads it at the start of its next turn, which nothing here starts (1 waiting)'
+        });
         expect(printed).toEqual([]);
         expect(store.waiting('term-2')).toHaveLength(1);
     });
@@ -187,13 +192,32 @@ describe('deliverNotice', () => {
         expect(printed).toHaveLength(1);
     });
 
-    test('a chat waits for its next prompt, and a node that runs nothing waits to start', async () => {
-        const chat = await deliverNotice(store, targets({ hasChat: () => true }), left('the build is green'));
-        expect(chat).toEqual({
-            at: 'waiting',
-            detail: 'the chat reads it in front of its next prompt, which this does not start; ruimte-context task new does (1 waiting)'
-        });
+    test('a chat between turns is owed one, and hears the message in it', async () => {
+        const delivery = await deliverNotice(store, targets({ chat: async () => 'idle' }), left('the build is green', 'chat-2'));
+        expect(delivery).toEqual({ at: 'now', wake: true, detail: 'that chat takes a turn on it, and reads it there' });
+        // The message stays in the queue; the turn's preamble is what takes it.
+        expect(store.waiting('chat-2')).toHaveLength(1);
+    });
+
+    test('a chat in a turn keeps it, and a node that runs nothing waits to start', async () => {
+        const busy = await deliverNotice(store, targets({ chat: async () => 'running' }), left('the build is green', 'chat-2'));
+        expect(busy).toEqual({ at: 'waiting', wake: false, detail: 'that chat is in a turn; it reads the message in front of its next one (1 waiting)' });
         const cold = await deliverNotice(store, targets(), left('and another', 'term-3'));
         expect(cold.detail).toStartWith('nothing runs in that node yet');
+        expect(cold.wake).toBe(false);
+    });
+
+    test('a sender in a turn a message started wakes nobody, and hears why', async () => {
+        const delivery = await deliverNotice(
+            store,
+            targets({ chat: async () => 'idle', fromMessage: (id) => id === 'term-1' }),
+            left('and what about the tests', 'chat-2')
+        );
+        expect(delivery).toEqual({
+            at: 'waiting',
+            wake: false,
+            detail: 'a message started the turn you are in, and a message starts one turn and no further; that chat reads this one in front of its next turn (1 waiting)'
+        });
+        expect(store.waiting('chat-2')).toHaveLength(1);
     });
 });

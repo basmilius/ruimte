@@ -11,6 +11,9 @@ import { wireSummaries } from '../chat/summary.ts';
 import { fakeClaude } from '../chat/fake-claude.ts';
 import { fakeCodex } from '../chat/fake-codex.ts';
 import { inProcess, type InProcessCli } from '../chat/fake-cli.ts';
+import { deliverMessageHandler, turnFromMessage } from '../context/deliver-message.ts';
+import { deliverNotice, NoticeStore, renderNotice, showNotices } from '../context/notices.ts';
+import { chatOpener } from '../chat/wake-chat.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { Checkpoints, type CheckpointService } from '../git/checkpoints.ts';
 import { worktreeAgents } from '../git/worktree-agents.ts';
@@ -40,6 +43,7 @@ const providers = new ProviderRegistry({ detect: async () => ({ installed: true,
 /* One run of the daemon over a home, wired the way `daemon.ts` wires it, with fakes where a process would be. */
 export interface TestDaemon {
     tasks: TaskStore;
+    notices: NoticeStore;
     lineage: AgentLineageStore;
     outbox: OutboxStore;
     worker: OutboxWorker;
@@ -82,6 +86,8 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
     await outbox.load();
     const tasks = new TaskStore(home);
     await tasks.load();
+    const notices = new NoticeStore(home, () => clock.now());
+    await notices.load();
     const adapter = new FakePtyAdapter();
     const claude = inProcess(fakeClaude);
     const codex = inProcess(fakeCodex);
@@ -102,6 +108,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
             entries: () => outbox.list(),
             enqueue: (id, target, work) => box.worker!.enqueue(id, target, work)
         }),
+        messages: (chatId) => notices.take(chatId).map(renderNotice),
         taskRows: (chatId) => tasks.ofParent(chatId),
         endedAt: (chatId) => lineage.endedAt(chatId),
         plans
@@ -177,6 +184,11 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
             'resume-run': resumeRunHandler(chats),
             'wake-parent': wiring.wakeParent,
             'give-task': wiring.giveTask,
+            'deliver-message': deliverMessageHandler({
+                notices,
+                chat: chatOpener({ chats, placed: (nodeId) => store.index.locate(nodeId) !== null }),
+                placed: (nodeId) => store.index.locate(nodeId) !== null
+            }),
             'end-children': endChildren.handler,
             'deliver-summary': summaries.handler
         },
@@ -201,6 +213,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
             drops.push(chats.dropUnspokenFork(forkId));
         }
         void lineage.prune(id, ids);
+        void notices.prune(id, ids);
         void outbox.prune(id, ids);
         void wiring.prune(id, ids);
     };
@@ -255,7 +268,35 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
             await endChildren.owe(nodeId);
             await (kind === 'terminal' ? sessions.kill(nodeId) : chats.kill(nodeId)).catch(() => undefined);
         },
-        notify: () => Promise.reject(new Error('not used here')),
+        notify: async (notice) => {
+            const delivery = await deliverNotice(
+                notices,
+                {
+                    terminal: (id) => {
+                        const session = sessions.get(id);
+                        return session && !session.exited ? { agent: session.agent, notice: (text: string) => session.notice(text) } : null;
+                    },
+                    chat: async (id) => {
+                        const session = chats.get(id);
+                        if (session) {
+                            return session.info.activeTurnId === null ? 'idle' : 'running';
+                        }
+                        return (await chats.hasStored(id)) ? 'idle' : 'none';
+                    },
+                    fromMessage: (id) => {
+                        const session = chats.get(id);
+                        return session !== undefined && turnFromMessage(session.thread.list(), session.info.activeTurnId);
+                    }
+                },
+                notice
+            );
+            await showNotices(notices, { has: (id) => chats.hasStored(id), note: (id, text) => chats.addNote(id, 'info', text) }, notice.targetId);
+            if (delivery.wake) {
+                await worker.enqueue(notice.projectId, notice.targetId, { kind: 'deliver-message', payload: { from: notice.from } });
+                recheck();
+            }
+            return delivery;
+        },
         writeDiagram: () => Promise.reject(new Error('not used here')),
         tasks: wiring.host,
         plans
@@ -281,6 +322,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
 
     return {
         tasks,
+        notices,
         lineage,
         outbox,
         worker,

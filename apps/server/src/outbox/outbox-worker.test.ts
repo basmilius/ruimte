@@ -35,6 +35,7 @@ test('an entry is on disk until its work is done, and then it is gone', async ()
         store,
         clock,
         handlers: {
+            'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
             'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
             'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
             'resume-run': unused,
@@ -70,6 +71,7 @@ test('what an earlier run owed is started once after a restart, and not again af
             store: reloaded,
             clock,
             handlers: {
+                'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
                 'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
                 'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
                 'resume-run': unused,
@@ -102,6 +104,7 @@ test('entries for one target run one after the other, oldest first, while other 
         store,
         clock,
         handlers: {
+            'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
             'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
             'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
             'resume-run': unused,
@@ -143,6 +146,7 @@ test('a failure waits 1, 5 and 30 seconds on the clock and is then given up on',
         store,
         clock,
         handlers: {
+            'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
             'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
             'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
             'resume-run': unused,
@@ -178,6 +182,7 @@ test('a retry that was waiting survives a restart with its attempts', async () =
         store,
         clock,
         handlers: {
+            'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
             'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
             'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
             'resume-run': unused,
@@ -219,6 +224,7 @@ test('an entry that waits keeps its file, costs no attempt, holds no lane and ru
         store,
         clock,
         handlers: {
+            'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
             'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
             'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
             'end-children': unused,
@@ -261,6 +267,7 @@ test('a wake that lands while the entry is still deciding to wait runs it again 
         store,
         clock,
         handlers: {
+            'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
             'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
             'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
             'start-agent': unused,
@@ -315,6 +322,7 @@ test('ending children waits for a start of one of them that runs, and holds back
         store,
         clock,
         handlers: {
+            'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
             'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
             'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
             'resume-run': unused,

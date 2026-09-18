@@ -100,6 +100,11 @@ export const agentTurnLabel = (turn: ChatTurnItem): string => {
         const count = turn.taskIds.length;
         return `Woken by ${count === 1 ? 'a task' : `${count} tasks`}${turn.label ? `: ${turn.label}` : ''}`;
     }
+    // A turn the machine opened over a message another node sent; the label names who sent it.
+    if (turn.messageFrom !== undefined && turn.messageFrom.length > 0) {
+        const count = turn.messageFrom.length;
+        return `Woken by ${count === 1 ? 'a message' : `${count} messages`}${turn.label ? `: ${turn.label}` : ''}`;
+    }
     return turn.label ? `Sub-agent finished: ${turn.label}` : 'Continued on its own';
 };
 

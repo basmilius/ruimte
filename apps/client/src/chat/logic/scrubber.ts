@@ -50,7 +50,7 @@ export const ticksOf = (rows: readonly TimelineRow[]): ScrubberTick[] =>
             return [{ id: row.id, rowIndex, kind: 'person', text, createdAt: row.item.createdAt, turnId: row.item.turnId }];
         }
         // The other turns nobody asked for (a sub-agent that finished, the CLI going on) are no place to return to.
-        if (row.kind === 'turn-start' && (row.turn.taskIds?.length ?? 0) > 0) {
+        if (row.kind === 'turn-start' && ((row.turn.taskIds?.length ?? 0) > 0 || (row.turn.messageFrom?.length ?? 0) > 0)) {
             return [{ id: row.id, rowIndex, kind: 'wake', text: row.label, createdAt: row.turn.createdAt, turnId: row.turn.id }];
         }
         return [];

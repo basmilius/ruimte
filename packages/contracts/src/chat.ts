@@ -340,6 +340,8 @@ export const ChatTurnItemSchema = z.object({
     attempt: z.number().int().positive().optional(),
     // The tasks whose results woke the chat for this turn; only a turn the daemon opened carries them.
     taskIds: z.array(z.string()).optional(),
+    // The nodes whose messages woke the chat for this turn, which is where waking on a message stops: a turn with one wakes nobody.
+    messageFrom: z.array(z.string()).optional(),
     // The CLI's own name for where this turn ended, which is what a fork after this turn is cut at.
     native: z.object({ turnId: z.string().optional(), lastUuid: z.string().optional() }).optional(),
     // The git tree of the chat's folder when the turn settled: what a fork after this turn starts its files from.
