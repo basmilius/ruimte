@@ -23,6 +23,10 @@ describe('deriveContextSources', () => {
         flow: node('flow', 'diagram', { title: 'Flow', viewId: 'diagram-1' }),
         readme: node('readme', 'file', { title: 'README.md', path: 'docs/README.md' }),
         outside: node('outside', 'file', { title: 'hosts', path: '/etc/hosts' }),
+        phone: node('phone', 'device', {
+            title: 'iPhone 17 Pro',
+            device: { platform: 'ios', kind: 'simulator', name: 'iPhone 17 Pro', runtime: 'iOS 26.2' }
+        }),
         frame: node('frame', 'group')
     };
     const texts = { t1: { id: 't1', x: 0, y: 0, text: 'First line\nsecond', size: 18 } };
@@ -80,12 +84,94 @@ describe('deriveContextSources', () => {
         expect(sources.get('shell')).toEqual([{ id: 't1', kind: 'text', title: 'First line', text: 'First line\nsecond' }]);
     });
 
-    test('a group into an agent is a line only, a browser hands over its address', () => {
-        const sources = deriveContextSources(nodes, texts, [
-            { id: 'e1', from: 'frame', to: 'chat' },
-            { id: 'e2', from: 'page', to: 'chat' }
+    test('a browser is its own kind and carries the address a read opens with', () => {
+        const sources = deriveContextSources(nodes, texts, [{ id: 'e1', from: 'page', to: 'chat' }]);
+        expect(sources.get('chat')).toEqual([{ id: 'page', kind: 'browser', title: 'page', text: 'https://ruimte.app' }]);
+    });
+
+    test('a device hands over the reference the daemon looks the real device up by', () => {
+        const sources = deriveContextSources(nodes, texts, [{ id: 'e1', from: 'phone', to: 'chat' }]);
+        expect(sources.get('chat')).toEqual([
+            {
+                id: 'phone',
+                kind: 'device',
+                title: 'iPhone 17 Pro',
+                device: { platform: 'ios', kind: 'simulator', name: 'iPhone 17 Pro', runtime: 'iOS 26.2' }
+            }
         ]);
-        expect(sources.get('chat')).toEqual([{ id: 'page', kind: 'text', title: 'page', text: 'https://ruimte.app' }]);
+    });
+
+    test('a device node that points at nothing is only a line', () => {
+        const loose = { ...nodes, empty: node('empty', 'device') };
+        expect(deriveContextSources(loose, texts, [{ id: 'e1', from: 'empty', to: 'chat' }]).size).toBe(0);
+    });
+});
+
+describe('deriveContextSources of a group', () => {
+    const chat = node('chat', 'chat', { x: 5000, y: 5000 });
+    const frame = node('frame', 'group', { title: 'Release', x: 0, y: 0, w: 1000, h: 1000 });
+    const inner = node('inner', 'group', { title: 'Inner', x: 400, y: 400, w: 500, h: 500 });
+    const plan = node('plan', 'note', { title: 'Plan', body: 'ship', x: 100, y: 100, w: 100, h: 100 });
+    const shell = node('shell', 'terminal', { title: 'dev server', x: 500, y: 500, w: 100, h: 100 });
+    const outside = node('outside', 'note', { title: 'Later', body: 'not now', x: 4000, y: 0, w: 100, h: 100 });
+    const nodes = { chat, frame, plan, shell, outside, inner };
+    const texts = { t1: { id: 't1', x: 200, y: 300, text: 'Scope\nwhat we ship', size: 18 } };
+    const intoChat = [{ id: 'e1', from: 'frame', to: 'chat' }];
+
+    test('everything inside the frame becomes a source of its own, a text included', () => {
+        expect(deriveContextSources(nodes, texts, intoChat).get('chat')).toEqual([
+            { id: 'plan', kind: 'text', title: 'Plan', text: 'ship' },
+            { id: 'shell', kind: 'terminal', title: 'dev server' },
+            { id: 't1', kind: 'text', title: 'Scope', text: 'Scope\nwhat we ship' }
+        ]);
+    });
+
+    test('a frame inside the frame hands over its own, and never itself', () => {
+        const ids = deriveContextSources(nodes, texts, intoChat)
+            .get('chat')
+            ?.map((source) => source.id);
+        expect(ids).not.toContain('inner');
+        expect(ids).toContain('shell');
+    });
+
+    test('a collapsed frame is what the file says it holds', () => {
+        const folded = {
+            ...nodes,
+            frame: { ...frame, collapsed: true, expandedHeight: 1000, h: 40, memberIds: ['outside'] }
+        };
+        expect(deriveContextSources(folded, texts, intoChat).get('chat')).toEqual([{ id: 'outside', kind: 'text', title: 'Later', text: 'not now' }]);
+    });
+
+    test('the agent standing in the frame is not context for itself', () => {
+        const inside = { ...nodes, chat: { ...chat, x: 700, y: 100 } };
+        const ids = deriveContextSources(inside, texts, intoChat)
+            .get('chat')
+            ?.map((source) => source.id);
+        expect(ids).not.toContain('chat');
+    });
+
+    test('a node reached by a line of its own and by the frame around it is one source', () => {
+        const edges = [...intoChat, { id: 'e2', from: 'plan', to: 'chat' }];
+        expect(
+            deriveContextSources(nodes, texts, edges)
+                .get('chat')
+                ?.filter((source) => source.id === 'plan')
+        ).toHaveLength(1);
+    });
+
+    test('two frames that hold each other hand their members over once', () => {
+        const overlapping = {
+            chat,
+            left: node('left', 'group', { x: 0, y: 0, w: 600, h: 600 }),
+            right: node('right', 'group', { x: 200, y: 200, w: 600, h: 600 }),
+            plan
+        };
+        const sources = deriveContextSources(overlapping, {}, [{ id: 'e1', from: 'left', to: 'chat' }]).get('chat');
+        expect(sources).toEqual([{ id: 'plan', kind: 'text', title: 'Plan', text: 'ship' }]);
+    });
+
+    test('an empty frame is a line and nothing more', () => {
+        expect(deriveContextSources({ chat, frame }, {}, intoChat).size).toBe(0);
     });
 });
 

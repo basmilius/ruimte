@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatItem, ContextSource, DiagramDocument, DrawingElement, Plan } from '@ruimte/contracts';
+import type { ChatItem, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan } from '@ruimte/contracts';
 import { ContextStore, MAX_SCREEN_LINES, renderTranscript } from './context-store.ts';
 
 const items: ChatItem[] = [
@@ -45,10 +45,23 @@ const diagram: DiagramDocument = {
 // Stands in for the project index: what each target's document links into it.
 const linked = new Map<string, ContextSource[]>();
 
+const phone: DeviceInfo = {
+    deviceId: 'C0FFEE-1234',
+    backendId: 'ios-simulator',
+    platform: 'ios',
+    kind: 'simulator',
+    name: 'iPhone 17 Pro',
+    runtime: 'iOS 26.2',
+    state: 'booted',
+    capabilities: { boot: true, shutdown: true, stream: true, input: true, screenshot: true }
+};
+
 const store = new ContextStore({
     sources: (targetId) => linked.get(targetId) ?? [],
     terminalText: async (id) => (id === 'term' ? `${Array.from({ length: 2500 }, (_, i) => `line ${i}`).join('\n')}` : null),
     chatItems: (id) => (id === 'chat' ? items : null),
+    browserText: async (id) => (id === 'page' ? 'Release notes\n\nEverything is new.' : null),
+    devices: async () => [phone],
     drawingElements: async (id) => (id === 'view-1' ? drawing : null),
     // Only the agent of the project that holds it reads the diagram, which is what the daemon's reader does too.
     diagramDocument: async (targetId, id) => (targetId === 'agent' && id === 'flow-1' ? diagram : null),
@@ -67,6 +80,41 @@ describe('ContextStore', () => {
         const read = await store.read('agent', 'node-1');
         expect(read).toContain('/home/bas/app/README.md');
         expect(read).toContain('Read it with your own tools');
+    });
+
+    test('a browser answers its address and the text of the page this machine has open', async () => {
+        linked.set('agent', [{ id: 'page', kind: 'browser', title: 'Release notes', text: 'https://ruimte.app/notes' }]);
+        expect(store.list('agent')).toEqual([{ id: 'page', kind: 'browser', title: 'Release notes' }]);
+        const read = (await store.read('agent', 'page')) ?? '';
+        expect(read.split('\n')[0]).toBe('# Page: https://ruimte.app/notes');
+        expect(read).toContain('Everything is new.');
+        expect(await store.read('agent', 'page', 1)).toBe('# Page: https://ruimte.app/notes\n\nEverything is new.');
+    });
+
+    test('a browser no page is open for says so, and keeps its address', async () => {
+        linked.set('agent', [{ id: 'closed', kind: 'browser', title: 'Docs', text: 'https://ruimte.app' }]);
+        const read = (await store.read('agent', 'closed')) ?? '';
+        expect(read).toContain('https://ruimte.app');
+        expect(read).toContain('No page of this node is open on this machine');
+    });
+
+    test('a device is looked up among the devices this machine has, ids and all', async () => {
+        const device = { platform: 'ios', kind: 'simulator', name: 'iPhone 17 Pro', runtime: 'iOS 26.2' } as const;
+        linked.set('agent', [{ id: 'phone', kind: 'device', title: 'iPhone 17 Pro', device }]);
+        expect(store.list('agent')).toEqual([{ id: 'phone', kind: 'device', title: 'iPhone 17 Pro' }]);
+        const read = (await store.read('agent', 'phone')) ?? '';
+        expect(read).toContain('state: booted');
+        expect(read).toContain('deviceId: C0FFEE-1234');
+        expect(read).toContain('backendId: ios-simulator');
+    });
+
+    test('a device this machine does not have says so instead of naming ids it has not got', async () => {
+        const device = { platform: 'ios', kind: 'physical', name: 'Bas iPhone', runtime: 'iOS 27.0' } as const;
+        linked.set('agent', [{ id: 'gone', kind: 'device', title: 'Bas iPhone', device }]);
+        const read = (await store.read('agent', 'gone')) ?? '';
+        expect(read).toContain('# Device: Bas iPhone');
+        expect(read).toContain('has no such device right now');
+        expect(read).not.toContain('deviceId:');
     });
 
     test('lists what the document links, without the text bodies, and reads each kind', async () => {

@@ -201,6 +201,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }),
         terminalText: (sessionId) => manager.get(sessionId)?.plainText() ?? Promise.resolve(null),
         chatItems: (chatId) => chats.get(chatId)?.thread.list() ?? null,
+        browserText: (browserId) => browsers.text(browserId),
+        devices: () => devices.list(),
         chatPlans: (chatId) => plans.read(chatId),
         subagentItems: (chatId, toolUseId) => chats.subagentItems(chatId, toolUseId),
         drawingElements: (viewId) => drawings.elementsOf(viewId),

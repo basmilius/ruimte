@@ -81,6 +81,12 @@ const normalizeUrl = (input: string): string => {
     return value;
 };
 
+/* A page the length of a book would push everything else out of an agent's window; an article fits well inside this. */
+export const BROWSER_TEXT_MAX_CHARS = 40_000;
+
+/* What the page says, as a reader sees it: `innerText` leaves out what is hidden and keeps the line breaks the layout makes. */
+const PAGE_TEXT_EXPRESSION = `(document.body ? document.body.innerText : '').slice(0, ${BROWSER_TEXT_MAX_CHARS})`;
+
 const FAVICON_DATA_URL = /^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/]+=*$/i;
 const LOCATION_EXPRESSION = 'location.href';
 const USER_AGENT_EXPRESSION = 'navigator.userAgent';
@@ -212,6 +218,12 @@ class BrowserSession implements LiveFrameSource {
 
     info(): BrowserInfo {
         return { ...this.state };
+    }
+
+    /* The text of the page as it stands. It only reads: nothing here navigates, reloads or clicks. */
+    async text(): Promise<string> {
+        const value = await this.enqueuePage(() => this.page.evaluate<unknown>(PAGE_TEXT_EXPRESSION)).catch(() => null);
+        return typeof value === 'string' ? value.trim() : '';
     }
 
     async navigate(input: string): Promise<void> {
@@ -541,6 +553,17 @@ export class BrowserManager {
             this.stopFrameEvents(browserId, clientId);
         }
         return session.info();
+    }
+
+    /*
+     * The text of a page this machine has open under that node, for an agent a line into it lets
+     * read. Null when no client opened one here, which on a desktop is the usual answer: that shell
+     * draws the page itself. Whichever client opened it, the page is the same page, so the first
+     * session under the id answers.
+     */
+    async text(browserId: string): Promise<string | null> {
+        const session = [...this.sessions.values()].find((candidate) => candidate.id === browserId);
+        return session ? session.text() : null;
     }
 
     detach(browserId: string, clientId: string): void {

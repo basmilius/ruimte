@@ -1,6 +1,8 @@
-import type { ChatItem, ContextSource, DiagramDocument, DrawingElement, Plan } from '@ruimte/contracts';
+import type { ChatItem, ContextSource, DeviceInfo, DiagramDocument, DrawingElement, Plan } from '@ruimte/contracts';
 import { renderPlanText } from '@ruimte/plan';
 import { contextChangeNote } from './context-note.ts';
+import { renderPage } from './context-browser.ts';
+import { renderDevice } from './context-device.ts';
 import { renderDiagram } from './context-diagram.ts';
 import { renderDrawing } from './context-drawing.ts';
 
@@ -29,6 +31,10 @@ interface ContextReaders {
     terminalText(sessionId: string): Promise<string | null>;
     /* A chat's thread, or null when there is none. */
     chatItems(chatId: string): ChatItem[] | null;
+    /* The text of the page this machine has open under a browser node, null when it has none. */
+    browserText?(browserId: string): Promise<string | null>;
+    /* The devices this machine has right now, for looking up what a device node points at. */
+    devices?(): Promise<DeviceInfo[]>;
     /* The plans a chat keeps, oldest first. */
     chatPlans?(chatId: string): Promise<Plan[]>;
     /* The whole conversation of one subagent of a chat; throws when the CLI kept none for it. */
@@ -124,7 +130,7 @@ export class ContextStore {
     }
 
     list(targetId: string): ContextSource[] {
-        return this.readers.sources(targetId).map(({ text: _text, nodeId: _nodeId, ...source }) => source);
+        return this.readers.sources(targetId).map(({ text: _text, nodeId: _nodeId, device: _device, ...source }) => source);
     }
 
     /*
@@ -162,6 +168,20 @@ export class ContextStore {
                 // Above the thread, where a tail never cuts it off: how far a child got is what its parent reads for first.
                 const plans = (await this.readers.chatPlans?.(source.id).catch(() => [])) ?? [];
                 return plans.length === 0 ? thread : `${plans.map((plan) => renderPlanText(plan)).join('\n\n')}\n\n${thread}`;
+            }
+            /* The page as it stands, under the address the project file knows. Reading it is the whole
+               of what a line into a browser may do: nothing here navigates, reloads or clicks. */
+            case 'browser': {
+                const text = (await this.readers.browserText?.(source.id).catch(() => null)) ?? null;
+                return renderPage(source.text ?? '', text, tail);
+            }
+            /* Which device, looked up now rather than when the line was drawn: what a machine has
+               changes while nobody touches the canvas. A tail has three lines to leave out, so it does nothing. */
+            case 'device': {
+                if (!source.device) {
+                    return null;
+                }
+                return renderDevice(source.device, (await this.readers.devices?.().catch(() => [])) ?? []);
             }
             case 'drawing': {
                 const elements = await this.readers.drawingElements(source.id);

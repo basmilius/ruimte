@@ -14,6 +14,7 @@ class FakePage implements BrowserPage {
     onNavigationFailed: ((error: Error) => void) | null = null;
     readonly calls: Array<[string, Record<string, unknown> | undefined]> = [];
     favicon: string | null = null;
+    pageText = '';
     activeOperations = 0;
     maxActiveOperations = 0;
     private frameListener: ((event: MessageEvent<{ data: string; sessionId: number }>) => void) | null = null;
@@ -50,7 +51,14 @@ class FakePage implements BrowserPage {
     }
     async evaluate<T>(expression: string): Promise<T> {
         return this.operation(
-            () => (expression === 'location.href' ? this.locationUrl : expression === 'navigator.userAgent' ? this.userAgent : this.favicon) as T
+            () =>
+                (expression === 'location.href'
+                    ? this.locationUrl
+                    : expression === 'navigator.userAgent'
+                      ? this.userAgent
+                      : expression.startsWith('(document.body')
+                        ? this.pageText
+                        : this.favicon) as T
         );
     }
 
@@ -140,6 +148,17 @@ describe('BrowserManager', () => {
         expect(frames.at(-1)).toMatchObject({ width: 1600, height: 1200 });
 
         unsubscribe();
+        manager.closeAll();
+    });
+
+    test('hands over the text of a page it has open, and nothing for a node it has no page of', async () => {
+        const page = new FakePage();
+        const manager = new BrowserManager(new LiveStreamHub(), () => page);
+        page.pageText = '  Release notes\n\nEverything is new.  ';
+        await manager.open('node-1', 'client-1', 'https://example.com', 800, 600);
+
+        expect(await manager.text('node-1')).toBe('Release notes\n\nEverything is new.');
+        expect(await manager.text('node-2')).toBeNull();
         manager.closeAll();
     });
 

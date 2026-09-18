@@ -36,6 +36,14 @@ export const DeviceInfoSchema = z.object({
 
 export const DeviceListResultSchema = z.object({ devices: z.array(DeviceInfoSchema) });
 
+/*
+ * Whether a device is the one a reference points at. A reference names a device the way a person
+ * does, since the id is the machine's and a project file that travels to another machine would
+ * carry an id that means nothing there.
+ */
+export const deviceMatches = (device: DeviceInfo, reference: DeviceReference): boolean =>
+    device.platform === reference.platform && device.kind === reference.kind && device.name === reference.name && device.runtime === reference.runtime;
+
 export const DeviceTargetPayloadSchema = z.object({
     deviceId: DeviceIdSchema,
     backendId: z.string().min(1).max(64),

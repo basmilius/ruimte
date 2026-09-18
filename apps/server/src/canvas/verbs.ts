@@ -128,8 +128,9 @@ const listVerb: ContextVerb = {
     summary: 'Lists the context linked to this session: id, kind, title (also what ruimte-context prints without a verb)',
     detail: [
         'prints\tid\tkind\ttitle\tone line per linked source, nothing when the person linked none',
-        `kinds\t${ContextSourceSchema.shape.kind.options.join('\t')}\ta note and a browser address both arrive as text`,
+        `kinds\t${ContextSourceSchema.shape.kind.options.join('\t')}\ta note and a text on the canvas both arrive as text`,
         'note\tThe id is what ruimte-context read takes; this list is the whole of what you may read',
+        'note\tA line from a group lists what lies inside that frame, each on a line of its own, a frame inside it included; the group itself is never a line here',
         SCOPE_LINE
     ]
 };
@@ -144,12 +145,14 @@ const readVerb: ContextVerb = {
         'flag\t--tail N\toptional\tOnly the last N lines, N a positive whole number; without it the whole source',
         `flag\t--subagent T\toptional\tThe whole conversation of one subagent of a linked chat instead of the chat, T the id in its > Subagent line; read from ${ChatSubagentSourceSchema.options.join(' or ')}; --tail counts lines of that conversation`,
         'prints\tThe source itself, as text, not as tab-separated lines',
-        'kind\ttext\tThe text the person wrote: a note, a text on the canvas or a browser address\t--tail counts its lines',
+        'kind\ttext\tThe text the person wrote: a note or a text on the canvas\t--tail counts its lines',
         `kind\tterminal\tThe screen of that session, its last ${MAX_SCREEN_LINES} lines, read the moment you ask\t--tail counts screen lines and cannot reach past those ${MAX_SCREEN_LINES}`,
         'kind\tchat\tThe plans of that chat as text, then the whole thread as markdown: who said what, what every tool ran, and one line per subagent with the id --subagent takes\t--tail counts lines of the thread and leaves the plans out',
         'kind\tdrawing\tThe text of the drawing in reading order, and the picture itself as SVG under it\t--tail counts lines of the reading order and leaves the SVG out',
         'kind\tdiagram\tIts title, every node layer by layer (sub in brackets), every edge with its label, what each group wraps, and the SVG under it\t--tail counts lines of that list and leaves the SVG out',
         'kind\tfile\tIts path and a line telling you to read it yourself, since your own tools see a fresher copy\t--tail does nothing here',
+        'kind\tbrowser\tThe address of the page and, under it, the text of that page as this machine has it open, read the moment you ask; the address alone when no page of it is open here\t--tail counts lines of the page text and keeps the address',
+        'kind\tdevice\tWhich device the node points at: its name, platform, kind and runtime, and the state, deviceId and backendId this machine knows it by, or a line saying the device is not here right now\t--tail does nothing here',
         'cheap\tThe last fifteen lines of a neighbour is usually the whole answer; read the source whole only when it is not',
         SCOPE_LINE
     ]

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { DeviceInfo, DeviceReference } from '@ruimte/contracts';
+import { deviceMatches, type DeviceInfo, type DeviceReference } from '@ruimte/contracts';
 
 export interface DeviceListState {
     devices: DeviceInfo[];
@@ -48,8 +48,8 @@ export const useDevices = create<DevicesState>((set, get) => ({
 export const sameDevice = (left: Pick<DeviceInfo, 'backendId' | 'deviceId'>, right: Pick<DeviceInfo, 'backendId' | 'deviceId'>): boolean =>
     left.backendId === right.backendId && left.deviceId === right.deviceId;
 
-export const deviceMatches = (device: DeviceInfo, reference: DeviceReference): boolean =>
-    device.platform === reference.platform && device.kind === reference.kind && device.name === reference.name && device.runtime === reference.runtime;
+// Re-exported, since what a reference points at is one rule and the daemon answers it too.
+export { deviceMatches };
 
 export const useDeviceList = (endpointId: string): DeviceListState => useDevices((state) => state.byEndpoint[endpointId] ?? EMPTY_DEVICE_LIST);
 

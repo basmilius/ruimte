@@ -1,4 +1,5 @@
 import type { ContextSource } from './context.ts';
+import { groupMemberIds } from './node-defaults.ts';
 import { isCanvasView, type CanvasNodeKind, type ProjectEdge, type ProjectNode, type ProjectText, type ProjectView } from './project.ts';
 import { resolveStoredPath } from './stored-path.ts';
 
@@ -8,10 +9,78 @@ export const isAgentKind = (kind: CanvasNodeKind): boolean => kind === 'terminal
 // A text's first line is its name in the list an agent sees.
 const titleOf = (text: string): string => text.split('\n')[0]?.trim().slice(0, 60) || 'Text';
 
+/* One thing a line can start at, or null when it is a node with nothing to read in it. */
+const sourceOf = (
+    nodes: Readonly<Record<string, ProjectNode>>,
+    texts: Readonly<Record<string, ProjectText>>,
+    fromId: string,
+    folder: string | null
+): ContextSource | null => {
+    const node = nodes[fromId];
+    const text = texts[fromId];
+    if (text) {
+        return { id: text.id, kind: 'text', title: titleOf(text.text), text: text.text };
+    }
+    if (!node) {
+        return null;
+    }
+    if (node.kind === 'terminal' || node.kind === 'chat') {
+        return { id: node.id, kind: node.kind, title: node.title };
+    }
+    if (node.kind === 'note') {
+        return { id: node.id, kind: 'text', title: node.title, text: node.body ?? '' };
+    }
+    if ((node.kind === 'drawing' || node.kind === 'diagram') && node.viewId) {
+        // The view id, not the node id: the daemon reads the file, and two nodes can mirror one.
+        return { id: node.viewId, kind: node.kind, title: node.title, nodeId: node.id };
+    }
+    if (node.kind === 'file' && node.path) {
+        // The path the daemon's machine knows it by, since that is where the agent runs.
+        return { id: node.id, kind: 'file', title: node.title, text: resolveStoredPath(folder, node.path) ?? node.path };
+    }
+    if (node.kind === 'browser' && node.url) {
+        // The address travels along, so a read opens with it even when the page itself cannot be reached.
+        return { id: node.id, kind: 'browser', title: node.title, text: node.url };
+    }
+    if (node.kind === 'device' && node.device) {
+        // What the node points at, never what it is: the daemon looks the device up at the moment of reading.
+        return { id: node.id, kind: 'device', title: node.title, device: node.device };
+    }
+    return null;
+};
+
+/*
+ * What a line that starts here makes readable. A group is the corner of the canvas it frames, so it
+ * hands over the things inside it, each under its own title, and a frame inside that frame hands
+ * over its own in turn: a person who draws a line from the outer one means everything it holds.
+ * `framed` keeps that walk finite, since two frames can each hold the other's center.
+ */
+const sourcesFrom = (
+    nodes: Readonly<Record<string, ProjectNode>>,
+    texts: Readonly<Record<string, ProjectText>>,
+    fromId: string,
+    targetId: string,
+    folder: string | null,
+    framed: Set<string>
+): ContextSource[] => {
+    const node = nodes[fromId];
+    if (node && node.kind === 'group') {
+        if (framed.has(node.id)) {
+            return [];
+        }
+        framed.add(node.id);
+        const members = groupMemberIds(node, [...Object.values(nodes), ...Object.values(texts)]);
+        // The agent standing in the frame is not context for itself.
+        return members.filter((memberId) => memberId !== targetId).flatMap((memberId) => sourcesFrom(nodes, texts, memberId, targetId, folder, framed));
+    }
+    const source = sourceOf(nodes, texts, fromId, folder);
+    return source ? [source] : [];
+};
+
 /*
  * What every agent node may read, derived from the edges into it. A line into anything else is
- * only a line. Terminals and chats are read live by the daemon; the rest travels as text. The
- * folder is what turns a file node's stored path into the path the agent's own tools take.
+ * only a line. Terminals, chats and browser pages are read live by the daemon; the rest travels as
+ * text. The folder is what turns a file node's stored path into the path the agent's own tools take.
  */
 export const deriveContextSources = (
     nodes: Readonly<Record<string, ProjectNode>>,
@@ -25,26 +94,19 @@ export const deriveContextSources = (
         if (!target || !isAgentKind(target.kind)) {
             continue;
         }
-        const node = nodes[edge.from];
-        const text = texts[edge.from];
-        let source: ContextSource | null = null;
-        if (text) {
-            source = { id: text.id, kind: 'text', title: titleOf(text.text), text: text.text };
-        } else if (node && (node.kind === 'terminal' || node.kind === 'chat')) {
-            source = { id: node.id, kind: node.kind, title: node.title };
-        } else if (node && node.kind === 'note') {
-            source = { id: node.id, kind: 'text', title: node.title, text: node.body ?? '' };
-        } else if (node && (node.kind === 'drawing' || node.kind === 'diagram') && node.viewId) {
-            // The view id, not the node id: the daemon reads the file, and two nodes can mirror one.
-            source = { id: node.viewId, kind: node.kind, title: node.title, nodeId: node.id };
-        } else if (node && node.kind === 'file' && node.path) {
-            // The path the daemon's machine knows it by, since that is where the agent runs.
-            source = { id: node.id, kind: 'file', title: node.title, text: resolveStoredPath(folder, node.path) ?? node.path };
-        } else if (node && node.kind === 'browser' && node.url) {
-            source = { id: node.id, kind: 'text', title: node.title, text: node.url };
+        const current = byTarget.get(edge.to) ?? [];
+        /* A node reached twice, by a line of its own and by the frame around it, or by two frames,
+           is one source: `read` takes an id, and the same id twice in a list is a riddle. */
+        const known = new Set(current.map((source) => source.id));
+        const added: ContextSource[] = [];
+        for (const source of sourcesFrom(nodes, texts, edge.from, edge.to, folder, new Set())) {
+            if (!known.has(source.id)) {
+                known.add(source.id);
+                added.push(source);
+            }
         }
-        if (source) {
-            byTarget.set(edge.to, [...(byTarget.get(edge.to) ?? []), source]);
+        if (added.length > 0) {
+            byTarget.set(edge.to, [...current, ...added]);
         }
     }
     return byTarget;
