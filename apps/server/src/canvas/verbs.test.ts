@@ -343,14 +343,14 @@ describe('the tree', () => {
         }
         // A kind where the action goes, or a flag, is not an action either: node <kind> and a bare link are gone.
         expect((await post('node', ['note', '--text', 'x'])).lines[0]).toBe(
-            'refused\tunknown-action\tnode needs one of list, new, rename, delete, group, arrange, and note is not one'
+            'refused\tunknown-action\tnode needs one of list, new, edit, rename, delete, group, arrange, and note is not one'
         );
         expect((await post('link', ['--to', 'note-1'])).lines[0]).toBe('refused\tunknown-action\tlink needs one of list, new, delete, and --to is not one');
     });
 
     test('the nouns hold the actions the grammar names, in that order', () => {
         const words = (noun: string): string[] => nounNamed(noun).actions.map((action) => action.word);
-        expect(words('node')).toEqual(['list', 'new', 'rename', 'delete', 'group', 'arrange']);
+        expect(words('node')).toEqual(['list', 'new', 'edit', 'rename', 'delete', 'group', 'arrange']);
         expect(words('link')).toEqual(['list', 'new', 'delete']);
         expect(words('view')).toEqual(['list', 'new', 'rename', 'icon', 'move', 'delete', 'open', 'diagram']);
         expect(words('task')).toEqual(['list']);
@@ -395,7 +395,9 @@ describe('help', () => {
             'refusal'
         ]);
         expect(lines[2]).toBe('verb\tread\t<id> [--tail N] [--subagent T]\tPrints one linked source, whole or its last N lines');
-        expect(lines).toContain('noun\tnode\tlist|new|rename|delete|group|arrange\tLists, adds, renames, removes, frames and lays out the nodes of a canvas');
+        expect(lines).toContain(
+            'noun\tnode\tlist|new|edit|rename|delete|group|arrange\tLists, adds, writes in, renames, removes, frames and lays out the nodes of a canvas'
+        );
         expect(lines.at(-7)).toStartWith('scope\tlist and read are what a person linked into this session;');
         expect(lines.at(-6)).toBe('ids\tIds in this output are for your commands. When you talk to the person, name things by their title, never by id');
         expect(lines.at(-5)).toBe(
@@ -2196,6 +2198,77 @@ describe('node arrange', () => {
         expect((await post('node', ['arrange', '--nodes', 'ghost'])).lines[0]).toBe('refused\tunknown-node\tghost is not a node on main');
         expect((await post('node', ['arrange', '--nodes', 'note-1', '--dry-run'])).lines[0]).toStartWith('refused\tno-dry-run\t');
         expect((await post('node', ['arrange'])).lines[0]).toBe('refused\tbad-arguments\t--nodes needs one or more node ids, separated by commas');
+    });
+});
+
+describe('node edit', () => {
+    test('writes the body of a note the caller made, escapes and all', async () => {
+        const id = (await post('node', ['new', 'note', '--text', 'first'])).lines[0]!.split('\t')[0]!;
+        const { status, lines } = await post('node', ['edit', id, '--text', 'one\\ntwo']);
+        expect(status).toBe(200);
+        expect(lines).toEqual([`edited\t${id}\t2\t7`]);
+        expect((await nodeOnDisk(id))?.body).toBe('one\ntwo');
+    });
+
+    test('--append writes a line under what is there and leaves the rest standing', async () => {
+        await post('link', ['new', '--to', 'note-1']);
+        expect((await post('node', ['edit', 'note-1', '--text', 'mine', '--append'])).lines).toEqual(['edited\tnote-1\t2\t6']);
+        expect((await nodeOnDisk('note-1'))?.body).toBe('x\nmine');
+        const empty = (await post('node', ['new', 'note'])).lines[0]!.split('\t')[0]!;
+        expect((await post('node', ['edit', empty, '--text', 'first', '--append'])).lines).toEqual([`edited\t${empty}\t1\t5`]);
+        expect((await nodeOnDisk(empty))?.body).toBe('first');
+    });
+
+    test('two appends at the same moment both land, neither over the other', async () => {
+        await post('link', ['new', '--to', 'note-1']);
+        const answers = await Promise.all(
+            ['from the chat', 'from the shell', 'from a third'].map((text) => post('node', ['edit', 'note-1', '--text', text, '--append']))
+        );
+        // Each call counted a note one line longer than the one before it, so none of them wrote against a body that was already stale.
+        expect(answers.map(({ lines }) => Number(lines[0]!.split('\t')[2])).sort()).toEqual([2, 3, 4]);
+        expect((await nodeOnDisk('note-1'))?.body?.split('\n').sort()).toEqual(['from a third', 'from the chat', 'from the shell', 'x']);
+    });
+
+    test('a note the caller did not make takes a line, whichever way it runs', async () => {
+        const refused = await post('node', ['edit', 'note-1', '--text', 'mine']);
+        expect(refused.status).toBe(422);
+        expect(refused.lines[0]).toBe(
+            'refused\tnot-linked\tnote-1 is a note you did not make and no line joins you to it: draw that line and you can write in it'
+        );
+        expect(refused.lines).toContain('note\tmain has no note you may write in; ruimte-context node new note --text B adds one of your own');
+        expect(refused.lines).toContain('see\truimte-context link new --to note-1\tdraws the line this needs');
+        // The line a person drew from the note into this session says the same thing as one the other way.
+        await post('link', ['new', '--from', 'note-1', '--to', 'term-1']);
+        expect((await post('node', ['edit', 'note-1', '--text', 'mine'])).status).toBe(200);
+        expect((await nodeOnDisk('note-1'))?.body).toBe('mine');
+    });
+
+    test('only a note, and only one that is on the canvas', async () => {
+        const wrong = await post('node', ['edit', 'term-1', '--text', 'x']);
+        expect(wrong.status).toBe(422);
+        expect(wrong.lines[0]).toBe(
+            'refused\tnot-a-note\tterm-1 is a terminal node and only a note holds a body to write; what a file, a browser, a terminal or a chat shows is not yours to set'
+        );
+        expect((await post('node', ['edit', 'ghost', '--text', 'x'])).lines[0]).toBe('refused\tunknown-node\tghost is not a node on main');
+        expect((await onDisk()).rev).toBe(1);
+    });
+
+    test('one note per call, and the body it already carries writes nothing', async () => {
+        await post('link', ['new', '--to', 'note-1']);
+        const rev = (await onDisk()).rev;
+        expect((await post('node', ['edit', 'note-1', '--text', 'x'])).lines).toEqual(['edited\tnote-1\t1\t1']);
+        expect((await onDisk()).rev).toBe(rev);
+        expect((await post('node', ['edit', 'note-1'])).lines[0]).toBe('refused\tbad-arguments\t--text needs the body to write, in quotes');
+        expect((await post('node', ['edit', 'note-1', 'note-2', '--text', 'x'])).lines[0]).toBe(
+            'refused\tbad-arguments\tnode edit takes one node id and nothing else; the body goes in --text'
+        );
+        expect((await post('node', ['edit', '--text', 'x'])).lines[0]).toBe('refused\tbad-arguments\tnode edit needs the id of a note');
+        expect((await post('node', ['edit', 'note-1', '--text=', '--append'])).lines[0]).toBe(
+            'refused\tbad-arguments\t--append has nothing to add: --text is empty; leave --append off to empty the note'
+        );
+        // Without --append an empty --text is what empties a note again.
+        expect((await post('node', ['edit', 'note-1', '--text='])).lines).toEqual(['edited\tnote-1\t0\t0']);
+        expect((await nodeOnDisk('note-1'))?.body).toBe('');
     });
 });
 

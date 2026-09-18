@@ -4,6 +4,7 @@ import { MAX_SCREEN_LINES } from '../context/context-store.ts';
 import { agentVerb } from './agent-verb.ts';
 import { arrangeAction } from './arrange-verb.ts';
 import { diagramAction } from './diagram-verb.ts';
+import { nodeEditAction } from './edit-verb.ts';
 import { groupAction } from './group-verb.ts';
 import { linkDeleteAction, linkListAction, linkNewAction } from './link-verb.ts';
 import { nodeDeleteAction, nodeListAction, nodeNewAction } from './node-verb.ts';
@@ -156,12 +157,12 @@ const readVerb: ContextVerb = {
 
 const nodeNoun = defineNoun({
     name: 'node',
-    summary: 'Lists, adds, renames, removes, frames and lays out the nodes of a canvas',
+    summary: 'Lists, adds, writes in, renames, removes, frames and lays out the nodes of a canvas',
     detail: [
         'note\tA node is a note, a browser, a drawing, a diagram, a file, a terminal, a chat or a group on a canvas; agent and team add agent nodes that start working',
         SCOPE_LINE
     ],
-    actions: [nodeListAction, nodeNewAction, renameAction, nodeDeleteAction, groupAction, arrangeAction]
+    actions: [nodeListAction, nodeNewAction, nodeEditAction, renameAction, nodeDeleteAction, groupAction, arrangeAction]
 });
 
 const linkNoun = defineNoun({
