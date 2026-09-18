@@ -114,7 +114,6 @@ export function CommitLog({ cwd, revision, reading, onOpen }: CommitLogProps) {
                                 data-selected={commit.hash === reading || undefined}
                                 onClick={() => onOpen(commit)}
                             >
-                                <span className="shrink-0 font-mono text-text-faint">{commit.shortHash}</span>
                                 <span className="truncate text-text">{commit.subject}</span>
                                 {commit.refs.map((ref) => (
                                     <Pill key={ref} mono className="shrink-0 py-0">
