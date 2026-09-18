@@ -31,6 +31,12 @@ const WakeParentSchema = z.object({
     payload: z.object({ taskId: z.string().min(1) })
 });
 
+const GiveTaskSchema = z.object({
+    kind: z.literal('give-task'),
+    // The target is the agent the task went to; the record itself holds what it asks and who asked.
+    payload: z.object({ taskId: z.string().min(1) })
+});
+
 const EndChildrenSchema = z.object({
     kind: z.literal('end-children'),
     // The target is the node that was stopped or deleted; these are the agents it had opened when that was owed.
@@ -43,7 +49,14 @@ const DeliverSummarySchema = z.object({
     payload: z.object({ forkId: z.string().min(1), turnId: z.string().min(1), text: z.string() })
 });
 
-const OutboxWorkSchema = z.discriminatedUnion('kind', [StartAgentSchema, ResumeRunSchema, WakeParentSchema, EndChildrenSchema, DeliverSummarySchema]);
+const OutboxWorkSchema = z.discriminatedUnion('kind', [
+    StartAgentSchema,
+    ResumeRunSchema,
+    WakeParentSchema,
+    GiveTaskSchema,
+    EndChildrenSchema,
+    DeliverSummarySchema
+]);
 
 const OutboxEntrySchema = z.intersection(
     OutboxWorkSchema,
@@ -63,6 +76,7 @@ export type OutboxEntry = z.infer<typeof OutboxEntrySchema>;
 export type StartAgentEntry = Extract<OutboxEntry, { kind: 'start-agent' }>;
 export type ResumeRunEntry = Extract<OutboxEntry, { kind: 'resume-run' }>;
 export type WakeParentEntry = Extract<OutboxEntry, { kind: 'wake-parent' }>;
+export type GiveTaskEntry = Extract<OutboxEntry, { kind: 'give-task' }>;
 export type EndChildrenEntry = Extract<OutboxEntry, { kind: 'end-children' }>;
 export type DeliverSummaryEntry = Extract<OutboxEntry, { kind: 'deliver-summary' }>;
 

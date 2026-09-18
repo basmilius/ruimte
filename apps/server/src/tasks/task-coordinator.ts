@@ -11,6 +11,8 @@ export interface TaskCoordinatorDeps {
     chatItems(chatId: string): readonly ChatItem[] | null;
     /* Whether a project still places the node; a child that went is cancelled by the prune, never failed. */
     placed(nodeId: string): boolean;
+    /* Whether the daemon still owes the turn that carries a task, which is a task nobody is working on yet. */
+    owedTurn(taskId: string): boolean;
     /* Owes the parent a wake; only ever writes the outbox. */
     oweWake(task: Task): Promise<void>;
     /* Raises attention on a node whose task failed, for the person who has to look at why. */
@@ -112,11 +114,12 @@ export class TaskCoordinator {
 
     /* The agent of a child could not be started at all. */
     startFailed(childId: string, error: unknown): void {
-        const task = this.deps.tasks.openFor(childId);
-        if (!task || this.stopped) {
-            return;
-        }
-        this.settle(task, 'failed', { text: `The agent could not be started: ${errorText(error)}`, source: 'exit', at: this.deps.now() });
+        this.failed(childId, `The agent could not be started: ${errorText(error)}`);
+    }
+
+    /* The turn a task given to a running agent was to open never opened, so nobody is working on it. */
+    giveFailed(childId: string, error: unknown): void {
+        this.failed(childId, `The task could not be given: ${errorText(error)}`);
     }
 
     /* `ruimte-context done` from the child itself, which wins over whatever else was about to settle it. */
@@ -135,10 +138,35 @@ export class TaskCoordinator {
         }
     }
 
+    /* An open task of this child that nothing can carry any more. */
+    private failed(childId: string, text: string): void {
+        const task = this.deps.tasks.openFor(childId);
+        if (!task || this.stopped) {
+            return;
+        }
+        this.settle(task, 'failed', { text, source: 'exit', at: this.deps.now() });
+    }
+
+    /*
+     * Whether this turn is the one the task's result comes from. A task given to an agent that was
+     * already working gets a turn of its own, which names it: the turn that was in its way answers
+     * the person who sent it, not the task, and while that turn is still owed nothing does. A child
+     * opened with its task has no turn of the kind, so its first turn settles it, as it always did.
+     */
+    private answers(items: readonly ChatItem[], turn: ChatTurnItem, task: Task): boolean {
+        if ((turn.taskIds ?? []).includes(task.id)) {
+            return true;
+        }
+        if (this.deps.owedTurn(task.id)) {
+            return false;
+        }
+        return !items.some((item) => item.kind === 'turn' && (item.taskIds ?? []).includes(task.id));
+    }
+
     private turnEnded(chatId: string, turn: ChatTurnItem): void {
         const task = this.deps.tasks.openFor(chatId);
         const items = this.deps.chatItems(chatId);
-        if (!task || items === null || this.delegating(chatId)) {
+        if (!task || items === null || !this.answers(items, turn, task) || this.delegating(chatId)) {
             return;
         }
         const { status, result } = resultOfTurn(turn, items, this.deps.now());

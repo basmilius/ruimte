@@ -217,6 +217,9 @@ const host = (): CanvasHost => ({
     writeDiagram: (projectId, viewId, content) => diagrams.write(projectId, viewId, content),
     tasks: {
         open: (record) => tasks.open(record, 1),
+        give: (record) => tasks.open(record, 1),
+        // Every chat of these tests is one the daemon could open a turn in; the real states are in the task tests.
+        chatState: async () => 'idle',
         done: async (childId, text) => {
             const open = tasks.openFor(childId);
             return open ? tasks.settle(open.id, 'done', { text, source: 'done', at: 2 }, 2) : null;
@@ -358,7 +361,7 @@ describe('the tree', () => {
         expect(words('node')).toEqual(['list', 'new', 'edit', 'rename', 'delete', 'group', 'arrange']);
         expect(words('link')).toEqual(['list', 'new', 'delete']);
         expect(words('view')).toEqual(['list', 'new', 'rename', 'icon', 'move', 'delete', 'open', 'diagram']);
-        expect(words('task')).toEqual(['list']);
+        expect(words('task')).toEqual(['list', 'new']);
         expect(words('worktree')).toEqual(['list', 'diff', 'merge']);
         expect(VERBS.filter((entry) => entry.served !== 'noun').map((entry) => entry.name)).toEqual([
             'help',

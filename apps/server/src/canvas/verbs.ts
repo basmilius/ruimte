@@ -12,7 +12,7 @@ import { notifyVerb } from './notify-verb.ts';
 import { openAction } from './open-verb.ts';
 import { planVerb } from './plan-verb.ts';
 import { renameAction } from './rename-verb.ts';
-import { doneVerb, taskListAction } from './task-verbs.ts';
+import { doneVerb, taskListAction, taskNewAction } from './task-verbs.ts';
 import { teamVerb } from './team-verb.ts';
 import { VIEW_ACTIONS, VIEW_DETAIL, VIEW_SUMMARY } from './view-verb.ts';
 import { worktreeVerb } from './worktree-verb.ts';
@@ -186,9 +186,12 @@ const viewNoun = defineNoun({
 
 const taskNoun = defineNoun({
     name: 'task',
-    summary: 'Lists the tasks you gave and the task you were given; done reports the result of yours',
-    detail: ['see\truimte-context done\treporting the result of the task you were opened with'],
-    actions: [taskListAction]
+    summary: 'Lists the tasks you gave and the task you were given, and gives one to an agent you opened; done reports the result of yours',
+    detail: [
+        'see\truimte-context agent --task\tgiving a task to an agent that is not open yet, which opens it',
+        'see\truimte-context done\treporting the result of the task you were opened with'
+    ],
+    actions: [taskListAction, taskNewAction]
 });
 
 /* In the order `help` lists them, the verbs of their own before the nouns: everything `ruimte-context` does, whichever route serves it. */

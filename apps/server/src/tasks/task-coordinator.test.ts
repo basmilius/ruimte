@@ -25,6 +25,8 @@ beforeEach(async () => {
         now: () => 10,
         chatItems: (chatId) => threads.get(chatId) ?? null,
         placed: () => true,
+        // Every task here was given when its child was opened, so no turn of one is still owed.
+        owedTurn: () => false,
         oweWake: async (task) => {
             owed.push(task.id);
             onOwed?.();

@@ -3,14 +3,17 @@ import type { TaskHost } from '../canvas/verb.ts';
 import type { ChatManager } from '../chat/chat-manager.ts';
 import type { OutboxEntry, OutboxWork, StartAgentEntry } from '../outbox/outbox.ts';
 import type { OutboxHandlers } from '../outbox/outbox-worker.ts';
+import { giveTaskHandler } from './give-task.ts';
 import { TaskCoordinator } from './task-coordinator.ts';
 import type { TaskStore } from './task-store.ts';
-import { oweWake, parkedNote, wakeParentHandler } from './wake-parent.ts';
+import { oweWake, parkedNote, wakeParentHandler, type WakeChat } from './wake-parent.ts';
 
 export interface TaskWiringDeps {
     tasks: TaskStore;
     chats: ChatManager;
     placed(nodeId: string): boolean;
+    /* Whether the daemon still owes the turn that carries a task; until it ran, no turn of the child is its answer. */
+    owedTurn(taskId: string): boolean;
     titleFor(nodeId: string): string | null;
     madeBy(nodeId: string): string | null;
     enqueue(projectId: string, target: string, work: OutboxWork): Promise<void>;
@@ -25,6 +28,7 @@ export interface TaskWiring {
     coordinator: TaskCoordinator;
     host: TaskHost;
     wakeParent: OutboxHandlers['wake-parent'];
+    giveTask: OutboxHandlers['give-task'];
     onParked(entry: OutboxEntry, error: unknown): void;
     onStartGaveUp(entry: StartAgentEntry, error: unknown): void;
     /* What the daemon does with the child's own prune of the project: cancel, then look at the parents again. */
@@ -42,6 +46,7 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
         now,
         chatItems: (chatId) => deps.chats.get(chatId)?.thread.list() ?? null,
         placed: deps.placed,
+        owedTurn: deps.owedTurn,
         oweWake: (task) => oweWake({ enqueue: deps.enqueue }, task),
         alert: (nodeId, title, body) => deps.alert(deps.chats.get(nodeId) ? 'chat' : 'terminal', nodeId, title, body)
     });
@@ -69,32 +74,53 @@ export const wireTasks = (deps: TaskWiringDeps): TaskWiring => {
         alert: (chatId, text) => deps.alert('chat', chatId, 'Could not wake the chat', text)
     });
 
+    /* The chat a turn is to be opened in, loaded from disk when nobody has it; null for a node with no thread. */
+    const chatFor = async (chatId: string): Promise<WakeChat | null> => {
+        if (!deps.chats.get(chatId)) {
+            if (!deps.placed(chatId) || !(await deps.chats.hasStored(chatId))) {
+                return null;
+            }
+            await deps.chats.create({ chatId });
+        }
+        const session = deps.chats.get(chatId);
+        return session
+            ? {
+                  items: () => session.thread.list(),
+                  wake: (wake) => session.wake(wake) !== null
+              }
+            : null;
+    };
+
     return {
         coordinator,
         host: {
             open: (record) => deps.tasks.open(record, now()),
+            give: async (record) => {
+                // The record first: the handler reads what the task asks from it, and a restart in between still owes the turn.
+                const task = await deps.tasks.open(record, now());
+                await deps.enqueue(task.projectId, task.childId, { kind: 'give-task', payload: { taskId: task.id } });
+                return task;
+            },
+            chatState: async (nodeId) => {
+                const session = deps.chats.get(nodeId);
+                if (session) {
+                    return session.info.activeTurnId === null ? 'idle' : 'running';
+                }
+                // A chat nobody has loaded is idle: the turn opens on the thread the daemon reads back from disk.
+                return (await deps.chats.hasStored(nodeId)) ? 'idle' : 'none';
+            },
             done: (childId, text) => coordinator.done(childId, text),
             involving: (nodeId) => deps.tasks.involving(nodeId)
         },
-        wakeParent: wakeParentHandler({
-            tasks: deps.tasks,
-            chat: async (chatId) => {
-                if (!deps.chats.get(chatId)) {
-                    if (!deps.placed(chatId) || !(await deps.chats.hasStored(chatId))) {
-                        return null;
-                    }
-                    await deps.chats.create({ chatId });
-                }
-                const session = deps.chats.get(chatId);
-                return session
-                    ? {
-                          items: () => session.thread.list(),
-                          wake: (wake) => session.wake(wake) !== null
-                      }
-                    : null;
+        wakeParent: wakeParentHandler({ tasks: deps.tasks, chat: chatFor }),
+        giveTask: giveTaskHandler({ tasks: deps.tasks, chat: chatFor, titleFor: deps.titleFor, placed: deps.placed }),
+        onParked: (entry, error) => {
+            // A task whose turn never opened is one nobody is working on: it fails, so its chat is not left waiting.
+            if (entry.kind === 'give-task') {
+                coordinator.giveFailed(entry.target, error);
             }
-        }),
-        onParked,
+            onParked(entry, error);
+        },
         onStartGaveUp: (entry, error) => {
             coordinator.startFailed(entry.target, error);
             onParked(entry, error);

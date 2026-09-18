@@ -118,6 +118,7 @@ const boot = async (): Promise<Daemon> => {
         clock: stillClock,
         handlers: {
             'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
+            'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
             'resume-run': () => Promise.reject(new Error('no resume in these tests')),
             'wake-parent': () => Promise.reject(new Error('no wake in these tests')),
             'end-children': () => Promise.reject(new Error('no ending in these tests')),
@@ -184,7 +185,7 @@ const boot = async (): Promise<Daemon> => {
         endSession: unused,
         notify: unused,
         writeDiagram: unused,
-        tasks: { open: unused, done: unused, involving: () => [] },
+        tasks: { open: unused, give: unused, chatState: unused, done: unused, involving: () => [] },
         plans: { read: unused, create: unused, apply: unused, delete: unused }
     };
 

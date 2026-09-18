@@ -250,6 +250,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         tasks,
         chats,
         placed: (nodeId) => projects.index.locate(nodeId) !== null,
+        owedTurn: (taskId) => outbox.list().some((entry) => entry.kind === 'give-task' && entry.payload.taskId === taskId),
         titleFor: (nodeId) => projects.index.titleFor(nodeId),
         madeBy: (nodeId) => lineage.madeBy(nodeId),
         enqueue: (...args) => outboxWorker.enqueue(...args),
@@ -299,6 +300,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }),
             'resume-run': resumeRunHandler(chats),
             'wake-parent': taskWiring.wakeParent,
+            'give-task': taskWiring.giveTask,
             'end-children': endChildren.handler,
             'deliver-summary': summaries.handler
         },

@@ -120,6 +120,20 @@ export interface ParkedNoteDeps {
     alert(nodeId: string, body: string): void;
 }
 
+/* What the chat is told about work that was given up on, in the words of the kind it was. */
+const parkedText = (entry: OutboxEntry, title: string, reason: string): string => {
+    switch (entry.kind) {
+        case 'wake-parent':
+            return `The machine could not wake this chat with the results of its tasks: ${reason}`;
+        case 'start-agent':
+            return `The machine could not start the agent in ${title} (${entry.target}): ${reason}`;
+        case 'give-task':
+            return `The machine could not give a task to ${title} (${entry.target}): ${reason}`;
+        default:
+            return `The machine could not resume the turn of ${title} (${entry.target}) after a restart: ${reason}`;
+    }
+};
+
 /*
  * A piece of owed work the daemon gave up on is said in the thread of the chat it was for: the chat
  * that opened the node, or the chat a wake was for. Only in a chat, since a terminal has no thread.
@@ -137,12 +151,7 @@ export const parkedNote =
         }
         const title = deps.titleFor(entry.target) ?? entry.target;
         const reason = errorText(error);
-        const text =
-            entry.kind === 'wake-parent'
-                ? `The machine could not wake this chat with the results of its tasks: ${reason}`
-                : entry.kind === 'start-agent'
-                  ? `The machine could not start the agent in ${title} (${entry.target}): ${reason}`
-                  : `The machine could not resume the turn of ${title} (${entry.target}) after a restart: ${reason}`;
+        const text = parkedText(entry, title, reason);
         void deps.note(chatId, text).catch((e: unknown) => console.error(`Leaving a note in ${chatId} failed:`, errorText(e)));
         if (entry.kind === 'wake-parent') {
             deps.alert(chatId, text);

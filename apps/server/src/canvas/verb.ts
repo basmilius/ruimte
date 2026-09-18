@@ -97,6 +97,10 @@ export interface WorktreeHost {
 export interface TaskHost {
     /* `batchId` ties the tasks of one `team --task` call together, which wake the parent as one. */
     open(record: { projectId: string; parentId: string; childId: string; title: string; prompt: string; batchId?: string }): Promise<Task>;
+    /* Opens a task for an agent that is already running, and owes the turn that carries it. */
+    give(record: { projectId: string; parentId: string; childId: string; title: string; prompt: string }): Promise<Task>;
+    /* Whether the daemon has a chat for this node at all, and whether a turn of it is in the way. */
+    chatState(nodeId: string): Promise<'none' | 'idle' | 'running'>;
     /* Ends the open task of this child with the result it reported; null when it has none open. */
     done(childId: string, text: string): Promise<Task | null>;
     /* Every task the node gave or was given, oldest first. */

@@ -123,6 +123,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         tasks,
         chats,
         placed: (nodeId) => store.index.locate(nodeId) !== null,
+        owedTurn: (taskId) => outbox.list().some((entry) => entry.kind === 'give-task' && entry.payload.taskId === taskId),
         titleFor: (nodeId) => store.index.titleFor(nodeId),
         madeBy: (nodeId) => lineage.madeBy(nodeId),
         // Owed after the task is written, so a wait on the outbox looks again once the entry is there.
@@ -175,6 +176,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
             }),
             'resume-run': resumeRunHandler(chats),
             'wake-parent': wiring.wakeParent,
+            'give-task': wiring.giveTask,
             'end-children': endChildren.handler,
             'deliver-summary': summaries.handler
         },

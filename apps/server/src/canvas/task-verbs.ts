@@ -1,9 +1,9 @@
-import { isCanvasView, type ProjectContent, type Task } from '@ruimte/contracts';
+import { isAgentKind, isCanvasView, type ProjectContent, type ProjectNode, type Task } from '@ruimte/contracts';
 import { z } from 'zod';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
-import { readResultFile } from './project-paths.ts';
+import { readPromptFile, readResultFile } from './project-paths.ts';
 import { unescapeText } from './text-escapes.ts';
-import { VerbRefusal, defineAction, defineVerb, field, placeOf } from './verb.ts';
+import { MAX_TITLE_LENGTH, VerbRefusal, defineAction, defineVerb, field, orNote, placeOf, titleField, type VerbCall } from './verb.ts';
 
 /* A result past this is a document, not an answer; the wake shows at most the first 8 KiB of it anyway. */
 export const MAX_RESULT_LENGTH = 32_000;
@@ -148,6 +148,153 @@ export const doneVerb = defineVerb({
             throw new VerbRefusal('no-open-task', 'Your task settled a moment ago, before this result arrived');
         }
         return [`done\t${settled.id}\t${settled.parentId}`];
+    }
+});
+
+const NEEDS_PROMPT = '--prompt needs what the task asks, in quotes';
+
+/* What the task asks, from whichever flag carried it, against the room a task's prompt has. */
+const taskPromptOf = async (flags: { prompt?: string; 'prompt-file'?: string }, call: VerbCall, folder: string | null): Promise<string> => {
+    if (flags.prompt !== undefined && flags['prompt-file'] !== undefined) {
+        throw new VerbRefusal('prompt-twice', '--prompt and --prompt-file both say what the task asks; give one of them');
+    }
+    let prompt: string;
+    if (flags['prompt-file'] !== undefined) {
+        prompt = await readPromptFile(folder, flags['prompt-file'], (path) => call.host.worktreePaths(path));
+    } else if (flags.prompt !== undefined) {
+        prompt = unescapeText(flags.prompt);
+    } else {
+        throw new VerbRefusal('empty-prompt', NEEDS_PROMPT);
+    }
+    prompt = prompt.trim();
+    if (prompt === '') {
+        throw new VerbRefusal('empty-prompt', 'The prompt is empty; a task is what it asks, so say what that agent is to do');
+    }
+    if (prompt.length > MAX_TASK_PROMPT_LENGTH) {
+        throw new VerbRefusal(
+            'prompt-too-long',
+            `The prompt is ${prompt.length} characters and a task takes at most ${MAX_TASK_PROMPT_LENGTH}, since the agent is also told how to report back; put the rest in a file and tell it to read that`
+        );
+    }
+    return prompt;
+};
+
+/* The title of a task nobody named: its first line, cut to what a name on the canvas fits. */
+const titleFromPrompt = (prompt: string): string =>
+    field(prompt.split('\n').find((line) => line.trim() !== '') ?? prompt)
+        .trim()
+        .slice(0, MAX_TITLE_LENGTH);
+
+/* A node of this project, on whatever canvas it sits: a task travels by lineage, not over a canvas. */
+const nodeOf = (content: ProjectContent, id: string): ProjectNode | undefined => {
+    for (const view of content.views) {
+        if (isCanvasView(view)) {
+            const node = view.nodes.find((candidate) => candidate.id === id);
+            if (node) {
+                return node;
+            }
+        }
+    }
+    return undefined;
+};
+
+/* The agent nodes this caller opened itself, which is the whole of what it may set to work. */
+const openedAgents = (content: ProjectContent, caller: string, madeBy: (nodeId: string) => string | null): ProjectNode[] =>
+    content.views.flatMap((view) => (isCanvasView(view) ? view.nodes.filter((node) => isAgentKind(node.kind) && madeBy(node.id) === caller) : []));
+
+const TASK_NEW_DETAIL: readonly string[] = [
+    'argument\t<id>\trequired\tThe agent to give the task to, by id; only a chat you opened yourself',
+    `flag\t--prompt T\trequired\tWhat the task asks, at most ${MAX_TASK_PROMPT_LENGTH} characters; \\n, \\t and \\\\ are read as escapes`,
+    'flag\t--prompt-file F\toptional\tThe same assignment out of a file, for one with exact bytes; not together with --prompt',
+    `flag\t--title T\toptional\tThe title of the task, at most ${MAX_TITLE_LENGTH} characters; without one the first line of the prompt`,
+    'prints\ttask\tid\tnode\twhen\tthe task that was opened, the agent it went to, and now for one that starts as you call or waiting for one that is still in a turn',
+    'prints\tnext\tthe last line, saying what to do while the task runs',
+    'who\tOnly an agent you opened yourself, which the machine wrote down outside the project: a line into a node is not enough, since two agents that read each other would then be able to set each other to work in turn, without a person ever asking for it',
+    'who\tOnly a chat: a terminal is a shell a person types in, and nothing is typed into that, so a terminal takes its task on the line its CLI starts with instead',
+    'one\tAn agent holds one task at a time; while one is open a second is refused, naming the one in its way',
+    "waiting\tAn agent in a turn keeps that turn: the task opens the turn after it, the way a person's message waits for the turn it was sent into",
+    'mode\tThe agent keeps the permission mode it was opened in, which was already no wider than yours; a task never widens it',
+    'depth\tNo node is opened here, so neither the depth an agent may open at nor the number of agents you may have open comes in',
+    'refusals\tnot-a-chat-parent\tself-task\tunknown-node\tnot-an-agent\tnot-yours\tnot-a-chat\tno-agent\ttask-running\tthe whole set this action refuses with',
+    'see\truimte-context agent --task\topens an agent that is not there yet, with a task of its own',
+    'see\truimte-context notify\tleaves a message an agent hears at the start of its next turn, without starting one',
+    ...TASK_LINES,
+    'ids\tOnly ids, never titles; ruimte-context node list lists the nodes of a canvas with theirs'
+];
+
+const NEEDS_TARGET = 'task new takes the id of the agent to give the task to';
+
+export const taskNewAction = defineAction('task', {
+    name: 'new',
+    usage: '<id> --prompt T | --prompt-file F [--title T]',
+    summary: 'Gives a task to an agent you opened that is already running, whose result wakes you the way the task of a new one does',
+    detail: TASK_NEW_DETAIL,
+    positionals: z.tuple([z.string({ error: NEEDS_TARGET }).min(1, NEEDS_TARGET)], {
+        error: (issue) => (issue.code === 'too_big' ? 'task new takes one id and nothing else; what the task asks goes in --prompt' : NEEDS_TARGET)
+    }),
+    flags: z.object({
+        prompt: z.string().optional(),
+        'prompt-file': z.string().min(1, '--prompt-file needs the path of a file').optional(),
+        title: titleField('--title', '--title needs the title of the task').optional()
+    }),
+    async run({ positionals: [id], flags }, call) {
+        const place = placeOf(call);
+        if (id === call.caller) {
+            throw new VerbRefusal('self-task', `${id} is you; a task is what you give another agent`);
+        }
+        const content = await call.host.read(place.projectId);
+        requireChatParent(content, call.caller);
+        /* Only the nodes this same call would accept, so a refusal answers with what can be asked instead. */
+        const lines = (): string[] =>
+            orNote(
+                openedAgents(content, call.caller, (nodeId) => call.host.madeBy(nodeId)).map((node) => `node\t${node.id}\t${node.kind}\t${field(node.title)}`),
+                'You have opened no agent that is still in this project; ruimte-context agent --task opens one with a task of its own'
+            );
+        const target = nodeOf(content, id);
+        if (!target) {
+            throw new VerbRefusal('unknown-node', `${id} is not a node of this project`, lines());
+        }
+        if (!isAgentKind(target.kind)) {
+            throw new VerbRefusal('not-an-agent', `${id} is a ${target.kind} node; only a terminal or a chat has an agent that could take a task`, lines());
+        }
+        if (call.host.madeBy(id) !== call.caller) {
+            throw new VerbRefusal('not-yours', `${id} is not a node you opened; a task only goes to an agent you opened yourself`, [
+                ...lines(),
+                `see\truimte-context notify ${id}\tleaves it a message along a line, which starts no turn`
+            ]);
+        }
+        if (target.kind !== 'chat') {
+            throw new VerbRefusal(
+                'not-a-chat',
+                `${id} is a terminal node: a task has to start a turn, and nothing is typed into a shell a person can type in`,
+                [
+                    ...lines(),
+                    `see\truimte-context notify ${id}\tleaves it a message it hears at the start of its next turn`,
+                    'see\truimte-context agent --terminal --task\topens a terminal of its own with the task on the line its CLI starts with'
+                ]
+            );
+        }
+        const running = call.host.tasks.involving(id).find((task) => task.childId === id && task.status === 'open');
+        if (running) {
+            throw new VerbRefusal(
+                'task-running',
+                `${id} is working on the task "${field(running.title)}" and takes one at a time; wait for its result, which wakes you`,
+                [taskLine(running, call.caller), 'see\truimte-context agent --task\topens another agent for work that cannot wait']
+            );
+        }
+        const state = await call.host.tasks.chatState(id);
+        if (state === 'none') {
+            throw new VerbRefusal('no-agent', `${id} runs no agent yet: nothing was started in it, so there is no turn a task could open`, lines());
+        }
+        const prompt = await taskPromptOf(flags, call, place.folder);
+        const task = await call.host.tasks.give({
+            projectId: place.projectId,
+            parentId: call.caller,
+            childId: id,
+            title: flags.title ?? titleFromPrompt(prompt),
+            prompt
+        });
+        return [`task\t${task.id}\t${id}\t${state === 'running' ? 'waiting' : 'now'}`, nextLine(false)];
     }
 });
 
