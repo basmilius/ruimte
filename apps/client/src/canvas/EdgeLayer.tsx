@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { isAgentKind, useCanvas, useCanvasStore } from '@/state/canvas';
-import { edgeLines, fixedSides, selectedLine, textRect, type EdgeLine } from '@/canvas/edge-lines';
+import { edgeLines, fixedSides, selectedLine, textRect } from '@/canvas/edge-lines';
+import { edgeLook, lineRole } from '@/canvas/edge-look';
 import { routeDraft, routeEdge, selfRoute, SIDE_NORMAL, type Obstacle, type Side } from '@/canvas/edge-route';
 import { markerPath, type MarkerShape } from '@/canvas/marker-path';
 import type { Point, Rect } from '@/canvas/math';
@@ -123,13 +124,12 @@ export function EdgeLayer() {
         [hidden, nodes]
     );
 
-    /* Into an agent the line carries context and shows it in the accent; anywhere else it is a plain
-       line. A pair between two agents is one either way round. */
-    const carriesContext = (line: EdgeLine): boolean =>
-        [line.edge.to, ...(line.back === null ? [] : [line.back.to])].some((id) => {
-            const target = nodes[id];
-            return target !== undefined && isAgentKind(target.kind);
-        });
+    /* What a line running into this node means when nothing wrote a role on it: into an agent it is
+       the context that agent reads, anywhere else it is only a line. */
+    const readsContext = (nodeId: string): boolean => {
+        const target = nodes[nodeId];
+        return target !== undefined && isAgentKind(target.kind);
+    };
 
     return (
         <svg className="pointer-events-none absolute left-0 top-0 overflow-visible" width="1" height="1">
@@ -151,17 +151,11 @@ export function EdgeLayer() {
                           );
                 const mid = route.mid;
                 const active = hovered === key || line.ids.some((id) => selection.includes(id));
-                const context = carriesContext(line);
-                const stroke = context ? (active ? 'var(--accent)' : 'var(--edge-context)') : active ? 'var(--text-muted)' : 'var(--edge-line)';
-                // A line a task went along says how the task stands, and stays dashed only while it is open.
+                // A line a task went along says how the task stands, and only looks open while it is.
                 const task = edgeTask(tasks, line.edge.from, line.edge.to) ?? (line.back === null ? null : edgeTask(tasks, line.back.from, line.back.to));
                 const label = task === null ? line.label : TASK_EDGE_LABEL[task.status];
-                const dashed = task !== null && task.status === 'open';
-                /* A line that means something reads one way, so its head says so and its tail closes
-                   off. A pair reads both ways, which is a head at either end. */
-                const reads = context || task !== null;
-                const head: MarkerShape = reads ? 'chevron' : 'dot';
-                const tail: MarkerShape = reads && line.back !== null ? 'chevron' : 'dot';
+                const look = edgeLook(lineRole(line, readsContext), { pair: line.back !== null, openTask: task !== null && task.status === 'open' });
+                const stroke = look.accent ? (active ? 'var(--accent)' : 'var(--edge-context)') : active ? 'var(--text-muted)' : 'var(--edge-line)';
                 return (
                     <g key={key} onPointerEnter={() => setHovered(key)} onPointerLeave={() => setHovered((h) => (h === key ? null : h))}>
                         {/* A wide invisible stroke gives the thin line something to hover and click; a double-click names it. */}
@@ -185,13 +179,13 @@ export function EdgeLayer() {
                             d={route.d}
                             fill="none"
                             stroke={stroke}
-                            strokeWidth={active ? 3 : 2}
-                            strokeDasharray={dashed ? '6 6' : undefined}
+                            strokeWidth={active ? look.width + 1 : look.width}
+                            strokeDasharray={look.dashed ? '6 6' : undefined}
                             strokeLinecap="round"
                             strokeLinejoin="round"
                         />
-                        <EdgeMarker shape={tail} at={route.from} side={route.fromSide} stroke={stroke} />
-                        <EdgeMarker shape={head} at={route.to} side={route.toSide} stroke={stroke} />
+                        <EdgeMarker shape={look.tail} at={route.from} side={route.fromSide} stroke={stroke} />
+                        <EdgeMarker shape={look.head} at={route.to} side={route.toSide} stroke={stroke} />
                         <EdgeLabel ids={line.ids} label={label} at={mid} editing={editing === key} onEdit={(on) => setEditing(on ? key : null)} />
                         {active && editing !== key && (
                             <g
