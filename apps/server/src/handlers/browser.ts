@@ -11,10 +11,15 @@ const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
             throw error;
         });
 
-export const registerBrowserHandlers = (dispatcher: Dispatcher, browsers: BrowserManager): void => {
-    dispatcher.register('browser.open', (payload, client) =>
-        translate(() => browsers.open(payload.browserId, client.id, payload.url, payload.width, payload.height, payload.stream, payload.deviceScaleFactor))
-    );
+export const registerBrowserHandlers = (dispatcher: Dispatcher, browsers: BrowserManager, streamingAllowed: () => boolean): void => {
+    dispatcher.register('browser.open', (payload, client) => {
+        if (!streamingAllowed()) {
+            throw new RequestError('streaming-disabled', 'Browser and device streaming is disabled on this machine');
+        }
+        return translate(() =>
+            browsers.open(payload.browserId, client.id, payload.url, payload.width, payload.height, payload.stream, payload.deviceScaleFactor)
+        );
+    });
     dispatcher.register('browser.detach', (payload, client) => {
         browsers.detach(payload.browserId, client.id);
         return {};

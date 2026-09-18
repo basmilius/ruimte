@@ -16,6 +16,7 @@ let identity: EndpointIdentity;
 let dispatcher: Dispatcher;
 let minted: number;
 let disconnected: string[];
+let streamingChanges: boolean[];
 
 const client = (access?: ClientAccess): { connection: ClientConnection; frames: ServerFrame[] } => {
     const frames: ServerFrame[] = [];
@@ -44,11 +45,13 @@ beforeEach(async () => {
     dispatcher = new Dispatcher();
     minted = 0;
     disconnected = [];
+    streamingChanges = [];
     registerAuthHandlers(dispatcher, store, {
         identity,
         version: '0.0.0',
         broker: () => ({ brokerUrl: identity.broker.mode === 'custom' ? identity.broker.url : null, brokerFixed: false }),
         pairingUrl: () => `http://box:4210/pair#${store.issuePairingToken()}${minted++}`,
+        streamingChanged: (allowed) => streamingChanges.push(allowed),
         disconnect: (sessionId) => disconnected.push(sessionId)
     });
 });
@@ -117,6 +120,7 @@ describe('auth handlers', () => {
                     icon: { kind: 'lucide', value: 'server' },
                     agentsDeleteAnyView: false,
                     refuseStatements: false,
+                    streamingAllowed: true,
                     broker: { mode: 'default' }
                 }
             }
@@ -172,6 +176,24 @@ describe('auth handlers', () => {
         expect(identity.refuseStatements).toBe(true);
         const renamed = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: 'Studio 2', icon: null });
         expect(renamed).toMatchObject({ ok: true, result: { refuseStatements: true } });
+    });
+
+    test('streaming starts allowed, can be disabled, and is left alone by a rename', async () => {
+        expect(await ask({ reachability: 'loopback', sessionId: null }, 'endpoint.info')).toMatchObject({
+            ok: true,
+            result: { streamingAllowed: true }
+        });
+        const disabled = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', {
+            name: null,
+            icon: null,
+            streamingAllowed: false
+        });
+        expect(disabled).toMatchObject({ ok: true, result: { streamingAllowed: false } });
+        expect(identity.streamingAllowed).toBe(false);
+        expect(streamingChanges).toEqual([false]);
+
+        const renamed = await ask({ reachability: 'lan', sessionId: 's1' }, 'endpoint.setIdentity', { name: 'Studio', icon: null });
+        expect(renamed).toMatchObject({ ok: true, result: { streamingAllowed: false } });
     });
 
     test('the broker setting is set from any client, checked, and endpoint.info carries the broker it leads to', async () => {

@@ -432,7 +432,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerPushHandlers(dispatcher, auth, () => push.synchronizeActivities(), push);
     registerServerHandlers(dispatcher, { version: VERSION, home: config.home, model: await readMachineModel() });
     registerSessionHandlers(dispatcher, manager, endChildren.owe);
-    registerBrowserHandlers(dispatcher, browsers);
+    registerBrowserHandlers(dispatcher, browsers, () => identity.streamingAllowed);
     const forkDeps = chatForkDeps({ chats, host: canvasHost, titleFor: (id) => projects.index.titleFor(id), lineage, worktrees, checkpoints });
     registerChatHandlers(dispatcher, chats, providers, endChildren.owe, endChildren.stopNode, {
         fork: (payload) => forkChat(forkDeps, payload),
@@ -449,6 +449,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         version: VERSION,
         broker: () => brokerSwitch.describe(),
         pairingUrl: () => pairingUrl(config.host, server.port ?? config.port, auth.issuePairingToken()),
+        streamingChanged: (allowed) => {
+            if (!allowed) {
+                browsers.closeAll();
+            }
+        },
         disconnect: (sessionId) => {
             handshake.revoke(sessionId);
             for (const { channel, connection } of [...connections.values(), ...directConnections]) {
@@ -578,6 +583,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         icon: identity.icon,
         agentsDeleteAnyView: identity.agentsDeleteAnyView,
         refuseStatements: identity.refuseStatements,
+        streamingAllowed: identity.streamingAllowed,
         platform: process.platform,
         version: VERSION,
         protocol: PROTOCOL_VERSION,
@@ -724,7 +730,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             }
 
             if (url.pathname.startsWith(`${LIVE_STREAM_PATH}/`)) {
-                return handleLiveStreamRequest(request, url, remote, auth, access, browsers.streams);
+                return handleLiveStreamRequest(request, url, remote, auth, access, browsers.streams, () => identity.streamingAllowed);
             }
 
             if (url.pathname.startsWith(`${HOOKS_PATH}/`)) {

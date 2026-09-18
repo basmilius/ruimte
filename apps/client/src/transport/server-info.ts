@@ -26,6 +26,7 @@ const load = (endpointId: string): void => {
                 icon: info.icon ?? null,
                 agentsDeleteAnyView: info.agentsDeleteAnyView === true,
                 refuseStatements: info.refuseStatements === true,
+                streamingAllowed: info.streamingAllowed ?? null,
                 broker: info.broker ?? null,
                 brokerFixed: info.brokerFixed === true,
                 reachability: info.reachability,

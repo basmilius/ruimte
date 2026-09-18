@@ -9,7 +9,7 @@ import { addMachineToAccount, openAccountMachine, refreshAccountMachines, usePul
 import { BackgroundServiceSection } from '@/shell/settings/BackgroundServiceSection';
 import { ConfirmDialog } from '@/shell/settings/ConfirmDialog';
 import { MachineIdentityForm } from '@/shell/settings/MachineIdentityForm';
-import { BrokerRow, DirectRow, MachineAccess, RefuseStatementsRow, WithReason } from '@/shell/settings/MachineSettings';
+import { BrokerRow, DirectRow, MachineAccess, RefuseStatementsRow, StreamingRow, WithReason } from '@/shell/settings/MachineSettings';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { useMachineIcon } from '@/shell/settings/machine-icon';
@@ -119,6 +119,9 @@ function MachineDialogBody({ entry }: { entry: MachineEntry }) {
                         <SettingsSection title="Connection">
                             <DirectRow endpoint={entry.endpoint} available={model.direct} />
                             <BrokerRow endpoint={entry.endpoint} reason={reason} />
+                        </SettingsSection>
+                        <SettingsSection title="Streaming">
+                            <StreamingRow endpoint={entry.endpoint} reason={reason} />
                         </SettingsSection>
                         <SettingsSection title="Account">
                             {registrationFailure && (

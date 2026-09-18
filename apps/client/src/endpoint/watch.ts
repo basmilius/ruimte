@@ -29,6 +29,7 @@ export const startEndpointWatch = (): (() => void) => {
                         icon: payload.icon,
                         agentsDeleteAnyView: payload.agentsDeleteAnyView === true,
                         refuseStatements: payload.refuseStatements === true,
+                        ...(payload.streamingAllowed === undefined ? {} : { streamingAllowed: payload.streamingAllowed }),
                         ...(payload.broker === undefined ? {} : { broker: payload.broker, brokerFixed: payload.brokerFixed === true })
                     });
                     // A daemon from before the broker setting sends no URL, which says nothing about its broker.

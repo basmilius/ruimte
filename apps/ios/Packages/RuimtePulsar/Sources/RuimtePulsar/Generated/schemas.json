@@ -4519,6 +4519,9 @@
           "refuseStatements": {
             "type": "boolean"
           },
+          "streamingAllowed": {
+            "type": "boolean"
+          },
           "platform": {
             "type": "string"
           },
@@ -25681,6 +25684,9 @@
       "refuseStatements": {
         "type": "boolean"
       },
+      "streamingAllowed": {
+        "type": "boolean"
+      },
       "platform": {
         "type": "string"
       },
@@ -25899,6 +25905,9 @@
       "refuseStatements": {
         "type": "boolean"
       },
+      "streamingAllowed": {
+        "type": "boolean"
+      },
       "broker": {
         "oneOf": [
           {
@@ -26078,6 +26087,9 @@
         "type": "boolean"
       },
       "refuseStatements": {
+        "type": "boolean"
+      },
+      "streamingAllowed": {
         "type": "boolean"
       },
       "platform": {
@@ -30499,6 +30511,9 @@
         "type": "boolean"
       },
       "refuseStatements": {
+        "type": "boolean"
+      },
+      "streamingAllowed": {
         "type": "boolean"
       },
       "broker": {

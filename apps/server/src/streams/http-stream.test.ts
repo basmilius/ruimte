@@ -60,4 +60,15 @@ describe('the live stream route', () => {
         expect(response.status).toBe(204);
         expect(response.headers.get('access-control-allow-headers')).toBe('authorization');
     });
+
+    test('refuses an authenticated stream when the machine disabled streaming', async () => {
+        const hub = new LiveStreamHub();
+        hub.register('browser:node-1', { async start() {}, async stop() {} });
+        const url = new URL(`http://127.0.0.1:4210${LIVE_STREAM_PATH}/browser%3Anode-1`);
+        const request = new Request(url, { headers: { authorization: `Bearer ${LOCAL_SECRET}` } });
+        const response = await handleLiveStreamRequest(request, url, '127.0.0.1', auth, OPTIONS, hub, () => false);
+
+        expect(response.status).toBe(403);
+        expect(await response.text()).toContain('streaming is disabled');
+    });
 });

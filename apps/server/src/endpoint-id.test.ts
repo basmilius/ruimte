@@ -120,6 +120,7 @@ describe('readOrCreateEndpointIdentity', () => {
                     icon: null,
                     agentsDeleteAnyView: false,
                     refuseStatements: false,
+                    streamingAllowed: true,
                     broker: { mode: 'default' }
                 }
             }
@@ -147,6 +148,20 @@ describe('readOrCreateEndpointIdentity', () => {
         await identity.setIdentity('Studio again', null, { agentsDeleteAnyView: false });
         const written = JSON.parse(await readFile(join(home, 'endpoint.json'), 'utf8')) as Record<string, unknown>;
         expect(written.agentsDeleteAnyView).toBeUndefined();
+    });
+
+    test('streaming is on by default and only an explicit opt-out is stored', async () => {
+        const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
+        expect(identity.streamingAllowed).toBe(true);
+
+        await identity.setIdentity(null, null, { streamingAllowed: false });
+        expect((await readOrCreateEndpointIdentity(home, 'the-hostname')).streamingAllowed).toBe(false);
+        let written = JSON.parse(await readFile(join(home, 'endpoint.json'), 'utf8')) as Record<string, unknown>;
+        expect(written.streamingAllowed).toBe(false);
+
+        await identity.setIdentity(null, null, { streamingAllowed: true });
+        written = JSON.parse(await readFile(join(home, 'endpoint.json'), 'utf8')) as Record<string, unknown>;
+        expect(written.streamingAllowed).toBeUndefined();
     });
 
     test('the broker setting survives a restart, is applied before clients hear it, and a default one is not written', async () => {

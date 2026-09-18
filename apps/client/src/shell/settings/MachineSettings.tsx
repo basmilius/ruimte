@@ -36,7 +36,10 @@ export function WithReason({ reason, children }: { reason: string | null; childr
  * switch sends back the name and icon the machine has; a machine nobody named answers to its own
  * default, and sending that name back would make it chosen.
  */
-const saveMachineSetting = async (endpoint: Endpoint, patch: { broker?: BrokerSetting; refuseStatements?: boolean }): Promise<void> => {
+const saveMachineSetting = async (
+    endpoint: Endpoint,
+    patch: { broker?: BrokerSetting; refuseStatements?: boolean; streamingAllowed?: boolean }
+): Promise<void> => {
     const link = transportFor(endpoint.id);
     if (!link) {
         return;
@@ -54,6 +57,7 @@ const saveMachineSetting = async (endpoint: Endpoint, patch: { broker?: BrokerSe
             icon: answer.icon ?? null,
             agentsDeleteAnyView: answer.agentsDeleteAnyView === true,
             refuseStatements: answer.refuseStatements === true,
+            streamingAllowed: answer.streamingAllowed ?? null,
             broker: answer.broker ?? null,
             brokerFixed: answer.brokerFixed === true
         });
@@ -239,6 +243,42 @@ export function RefuseStatementsRow({ endpoint, reason }: { endpoint: Endpoint; 
                         onChange={(checked) => void set(checked)}
                         label={`Refuse sign-in through an account on ${endpoint.label}`}
                         disabled={busy || reason !== null}
+                    />
+                </WithReason>
+            }
+        />
+    );
+}
+
+/* One daemon policy covers today's browser stream and the device streams that will follow it. */
+export function StreamingRow({ endpoint, reason }: { endpoint: Endpoint; reason: string | null }) {
+    const allowed = useServers((s) => s.byEndpoint[endpoint.id]?.streamingAllowed ?? null);
+    const [busy, setBusy] = useState(false);
+    const unavailable = reason ?? (allowed === null ? 'This machine runs a version without this setting' : null);
+
+    const set = async (checked: boolean): Promise<void> => {
+        setBusy(true);
+        await saveMachineSetting(endpoint, { streamingAllowed: checked });
+        setBusy(false);
+    };
+
+    return (
+        <SettingsRow
+            label="Browser and device streaming"
+            description={
+                reason !== null
+                    ? 'Not answering. Change this once the machine is back.'
+                    : allowed === null
+                      ? 'This machine runs a version without this setting.'
+                      : 'Allow this machine to stream browser pages and device screens to clients without a native view of their own.'
+            }
+            control={
+                <WithReason reason={unavailable}>
+                    <Toggle
+                        checked={allowed !== false}
+                        onChange={(checked) => void set(checked)}
+                        label={`Allow browser and device streaming from ${endpoint.label}`}
+                        disabled={busy || unavailable !== null}
                     />
                 </WithReason>
             }

@@ -13,7 +13,8 @@ export const handleLiveStreamRequest = async (
     remoteAddress: string,
     auth: AuthStore,
     options: AccessOptions,
-    hub: LiveStreamHub
+    hub: LiveStreamHub,
+    streamingAllowed: () => boolean = () => true
 ): Promise<Response> => {
     const origin = request.headers.get('origin');
     const headers = corsHeaders(origin);
@@ -32,6 +33,9 @@ export const handleLiveStreamRequest = async (
     const decision = await decideAccess(request, remoteAddress, auth, options);
     if (!decision.ok) {
         return new Response(decision.reason, { status: decision.status, headers });
+    }
+    if (!streamingAllowed()) {
+        return new Response('Browser and device streaming is disabled on this machine', { status: 403, headers });
     }
     const encodedId = url.pathname.slice(LIVE_STREAM_PATH.length + 1);
     if (encodedId === '' || encodedId.includes('/')) {

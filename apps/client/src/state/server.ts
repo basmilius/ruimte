@@ -22,6 +22,8 @@ export interface ServerInfo {
     /* Whether this machine turns away a statement from the address book, so only a pairing link lets a
        client in. Enforced by the daemon; false for a daemon that predates statements. */
     refuseStatements: boolean;
+    /* Whether the daemon permits browser and device streaming; null for a daemon without the setting. */
+    streamingAllowed: boolean | null;
     /* The broker a person picked for this machine; null for a daemon that predates the setting. */
     broker: BrokerSetting | null;
     /* Whether a flag or the environment on the machine decides the broker, which leaves the setting without effect. */
@@ -42,6 +44,7 @@ const UNKNOWN: ServerInfo = {
     icon: null,
     agentsDeleteAnyView: false,
     refuseStatements: false,
+    streamingAllowed: null,
     broker: null,
     brokerFixed: false,
     reachability: null,
@@ -55,14 +58,23 @@ interface ServersStore {
         endpointId: string,
         info: Pick<
             ServerInfo,
-            'label' | 'nameSource' | 'icon' | 'agentsDeleteAnyView' | 'refuseStatements' | 'broker' | 'brokerFixed' | 'reachability' | 'publicKey'
+            | 'label'
+            | 'nameSource'
+            | 'icon'
+            | 'agentsDeleteAnyView'
+            | 'refuseStatements'
+            | 'streamingAllowed'
+            | 'broker'
+            | 'brokerFixed'
+            | 'reachability'
+            | 'publicKey'
         >
     ): void;
     /* What someone set on this machine, from `endpoint.changed` or from setting it here. A switch left out stays where it stands. */
     setIdentity(
         endpointId: string,
         info: Pick<ServerInfo, 'label' | 'nameSource' | 'icon' | 'agentsDeleteAnyView'> &
-            Partial<Pick<ServerInfo, 'refuseStatements' | 'broker' | 'brokerFixed'>>
+            Partial<Pick<ServerInfo, 'refuseStatements' | 'streamingAllowed' | 'broker' | 'brokerFixed'>>
     ): void;
     /* A machine that is forgotten takes what it said about itself with it. */
     forget(endpointId: string): void;

@@ -34,6 +34,9 @@ const FileSchema = z.object({
        way in. Here for the same reason as the switch above: the daemon is what takes a statement or
        does not. Absent is off, which is what "logging in grants access" means. */
     refuseStatements: z.boolean().optional().catch(undefined),
+    /* Whether clients may stream browser pages and, later, device screens from this daemon. Absent
+       is on so existing machines keep the behavior they had before this switch existed. */
+    streamingAllowed: z.boolean().optional().catch(undefined),
     /* Which broker this machine announces itself to, set from a client. Absent is the build's default;
        one that will not read falls back to it too, since a machine on the default broker is findable. */
     broker: BrokerSettingSchema.optional().catch(undefined)
@@ -50,6 +53,7 @@ interface IdentityOptions {
     icon: ProjectIconChoice | null;
     agentsDeleteAnyView: boolean;
     refuseStatements: boolean;
+    streamingAllowed: boolean;
     broker: BrokerSetting;
 }
 
@@ -63,6 +67,7 @@ export interface IdentityBroker {
 export interface IdentityFlags {
     agentsDeleteAnyView?: boolean;
     refuseStatements?: boolean;
+    streamingAllowed?: boolean;
     broker?: BrokerSetting;
 }
 
@@ -84,6 +89,7 @@ export class EndpointIdentity {
     private chosenIcon: ProjectIconChoice | null;
     private deleteAnyView: boolean;
     private noStatements: boolean;
+    private allowStreaming: boolean;
     private brokerSetting: BrokerSetting;
     private brokerSwitch: IdentityBroker | null = null;
 
@@ -97,6 +103,7 @@ export class EndpointIdentity {
         this.chosenIcon = options.icon;
         this.deleteAnyView = options.agentsDeleteAnyView;
         this.noStatements = options.refuseStatements;
+        this.allowStreaming = options.streamingAllowed;
         this.brokerSetting = options.broker;
     }
 
@@ -122,6 +129,11 @@ export class EndpointIdentity {
     /* What an offer carrying a statement is asked about. Off on a fresh machine. */
     get refuseStatements(): boolean {
         return this.noStatements;
+    }
+
+    /* The daemon checks this at the streaming boundary; native views on a client do not need it. */
+    get streamingAllowed(): boolean {
+        return this.allowStreaming;
     }
 
     /* The broker a person picked for this machine, which a flag or the environment may still override. */
@@ -151,13 +163,14 @@ export class EndpointIdentity {
     /*
      * A null name hands the machine back to the one it starts with; a null icon leaves it without
      * one. A switch is left as it stands when it is not passed, since the dialog that names a machine
-     * is not the control that sets either.
+     * is not the control that sets it.
      */
     async setIdentity(name: string | null, icon: ProjectIconChoice | null, flags: IdentityFlags = {}): Promise<void> {
         this.chosenName = name;
         this.chosenIcon = icon;
         this.deleteAnyView = flags.agentsDeleteAnyView ?? this.deleteAnyView;
         this.noStatements = flags.refuseStatements ?? this.noStatements;
+        this.allowStreaming = flags.streamingAllowed ?? this.allowStreaming;
         this.brokerSetting = flags.broker ?? this.brokerSetting;
         await this.persist();
         if (flags.broker !== undefined) {
@@ -172,6 +185,7 @@ export class EndpointIdentity {
                 icon: this.chosenIcon,
                 agentsDeleteAnyView: this.deleteAnyView,
                 refuseStatements: this.noStatements,
+                streamingAllowed: this.allowStreaming,
                 broker: this.brokerSetting,
                 ...this.brokerSwitch?.describe()
             }
@@ -192,6 +206,7 @@ export class EndpointIdentity {
             ...(this.chosenIcon === null ? {} : { icon: this.chosenIcon }),
             ...(this.deleteAnyView ? { agentsDeleteAnyView: true } : {}),
             ...(this.noStatements ? { refuseStatements: true } : {}),
+            ...(!this.allowStreaming ? { streamingAllowed: false } : {}),
             ...(this.brokerSetting.mode === 'default' ? {} : { broker: this.brokerSetting })
         };
         await mkdir(dirname(this.path), { recursive: true, mode: 0o700 });
@@ -224,6 +239,7 @@ export const readOrCreateEndpointIdentity = async (home: string, defaultName: st
         icon: file?.icon ?? null,
         agentsDeleteAnyView: file?.agentsDeleteAnyView ?? false,
         refuseStatements: file?.refuseStatements ?? false,
+        streamingAllowed: file?.streamingAllowed ?? true,
         broker: file?.broker ?? { mode: 'default' }
     });
     if (!keys) {

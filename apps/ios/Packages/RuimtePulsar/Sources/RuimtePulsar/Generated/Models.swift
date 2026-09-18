@@ -2919,6 +2919,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `icon`: Presence<PairResultEndpointIcon>
     public let `agentsDeleteAnyView`: Bool?
     public let `refuseStatements`: Bool?
+    public let `streamingAllowed`: Bool?
     public let `platform`: String
     public let `version`: String
     public let `protocol`: Int64?
@@ -2929,13 +2930,14 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     public let `broker`: PairResultEndpointBroker?
     public let `brokerFixed`: Bool?
 
-    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<PairResultEndpointIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `refuseStatements`: Bool? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil) {
+    public init(`id`: String, `label`: String, `nameSource`: PairResultEndpointNameSource? = nil, `icon`: Presence<PairResultEndpointIcon> = .missing, `agentsDeleteAnyView`: Bool? = nil, `refuseStatements`: Bool? = nil, `streamingAllowed`: Bool? = nil, `platform`: String, `version`: String, `protocol`: Int64? = nil, `reachability`: PairResultEndpointReachability, `authenticated`: Bool, `publicKey`: String? = nil, `brokerUrl`: Presence<String> = .missing, `broker`: PairResultEndpointBroker? = nil, `brokerFixed`: Bool? = nil) {
         self.`id` = `id`
         self.`label` = `label`
         self.`nameSource` = `nameSource`
         self.`icon` = `icon`
         self.`agentsDeleteAnyView` = `agentsDeleteAnyView`
         self.`refuseStatements` = `refuseStatements`
+        self.`streamingAllowed` = `streamingAllowed`
         self.`platform` = `platform`
         self.`version` = `version`
         self.`protocol` = `protocol`
@@ -2955,6 +2957,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         `icon` = try container.contains(.`icon`) ? (container.decodeNil(forKey: .`icon`) ? .null : .value(container.decode(PairResultEndpointIcon.self, forKey: .`icon`))) : .missing
         `agentsDeleteAnyView` = try container.decodeIfPresent(Bool.self, forKey: .`agentsDeleteAnyView`)
         `refuseStatements` = try container.decodeIfPresent(Bool.self, forKey: .`refuseStatements`)
+        `streamingAllowed` = try container.decodeIfPresent(Bool.self, forKey: .`streamingAllowed`)
         `platform` = try container.decode(String.self, forKey: .`platform`)
         `version` = try container.decode(String.self, forKey: .`version`)
         `protocol` = try container.decodeIfPresent(Int64.self, forKey: .`protocol`)
@@ -2978,6 +2981,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         }
         try container.encodeIfPresent(`agentsDeleteAnyView`, forKey: .`agentsDeleteAnyView`)
         try container.encodeIfPresent(`refuseStatements`, forKey: .`refuseStatements`)
+        try container.encodeIfPresent(`streamingAllowed`, forKey: .`streamingAllowed`)
         try container.encode(`platform`, forKey: .`platform`)
         try container.encode(`version`, forKey: .`version`)
         try container.encodeIfPresent(`protocol`, forKey: .`protocol`)
@@ -3000,6 +3004,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
         case `icon` = "icon"
         case `agentsDeleteAnyView` = "agentsDeleteAnyView"
         case `refuseStatements` = "refuseStatements"
+        case `streamingAllowed` = "streamingAllowed"
         case `platform` = "platform"
         case `version` = "version"
         case `protocol` = "protocol"

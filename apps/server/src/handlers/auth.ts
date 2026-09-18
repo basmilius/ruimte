@@ -16,6 +16,8 @@ interface EndpointHost {
     pairingUrl(): string;
     // Revoking must take effect now, not at the next connection, so the daemon drops that session's sockets here.
     disconnect(sessionId: string): void;
+    // A disabled policy stops streams already in flight as well as refusing the next one.
+    streamingChanged(allowed: boolean): void;
 }
 
 export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, host: EndpointHost): void => {
@@ -29,6 +31,7 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
         icon: identity.icon,
         agentsDeleteAnyView: identity.agentsDeleteAnyView,
         refuseStatements: identity.refuseStatements,
+        streamingAllowed: identity.streamingAllowed,
         platform: process.platform,
         version: host.version,
         protocol: PROTOCOL_VERSION,
@@ -49,8 +52,12 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
         await identity.setIdentity(payload.name, payload.icon, {
             agentsDeleteAnyView: payload.agentsDeleteAnyView,
             refuseStatements: payload.refuseStatements,
+            streamingAllowed: payload.streamingAllowed,
             broker: payload.broker
         });
+        if (payload.streamingAllowed !== undefined) {
+            host.streamingChanged(identity.streamingAllowed);
+        }
         return info(client.access);
     });
 
