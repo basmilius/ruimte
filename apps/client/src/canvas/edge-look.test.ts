@@ -12,25 +12,51 @@ const lineOf = (edge: ProjectEdge, back: ProjectEdge | null = null): EdgeLine =>
     label: undefined
 });
 
-// The only nodes in these tests that a line can read: everything else is a page, a note or a frame.
+// The only nodes in these tests that a line can read: everything else is a page, a note or a device.
 const reads = (nodeId: string): boolean => nodeId === 'agent' || nodeId === 'other-agent';
+
+// The nodes an agent works on rather than reads.
+const driven = (nodeId: string): boolean => nodeId === 'page' || nodeId === 'phone';
 
 const solo = { pair: false, openTask: false };
 
 describe('lineRole', () => {
     test('a line without a role into an agent still reads, which is every project drawn so far', () => {
-        expect(lineRole(lineOf(edgeOf('note', 'agent')), reads)).toBe('context');
-        expect(lineRole(lineOf(edgeOf('note', 'page')), reads)).toBe('plain');
+        expect(lineRole(lineOf(edgeOf('note', 'agent')), reads, driven)).toBe('context');
+        expect(lineRole(lineOf(edgeOf('note', 'page')), reads, driven)).toBe('plain');
+    });
+
+    test('a line out of an agent into something that never reads is the same context line', () => {
+        expect(lineRole(lineOf(edgeOf('agent', 'note')), reads, driven)).toBe('context');
+    });
+
+    test('a line out of an agent into a device or a page says the agent works there', () => {
+        expect(lineRole(lineOf(edgeOf('agent', 'phone')), reads, driven)).toBe('target');
+        expect(lineRole(lineOf(edgeOf('agent', 'page')), reads, driven)).toBe('target');
+    });
+
+    test('the same line drawn the other way is what the agent reads, so it stays a context line', () => {
+        expect(lineRole(lineOf(edgeOf('phone', 'agent')), reads, driven)).toBe('context');
+        expect(lineRole(lineOf(edgeOf('page', 'agent')), reads, driven)).toBe('context');
+    });
+
+    test('a pair between an agent and a device says the reading out loud, so it is drawn as one', () => {
+        expect(lineRole(lineOf(edgeOf('agent', 'phone'), edgeOf('phone', 'agent')), reads, driven)).toBe('context');
+    });
+
+    test('between two agents a line keeps reading into its head, whatever lies at the tail', () => {
+        expect(lineRole(lineOf(edgeOf('agent', 'other-agent')), reads, driven)).toBe('context');
     });
 
     test('the role written on the line decides, whichever direction of a pair carries it', () => {
-        expect(lineRole(lineOf(edgeOf('agent', 'page', 'target')), reads)).toBe('target');
-        expect(lineRole(lineOf(edgeOf('agent', 'other-agent'), edgeOf('other-agent', 'agent', 'origin')), reads)).toBe('origin');
+        expect(lineRole(lineOf(edgeOf('agent', 'page', 'target')), reads, driven)).toBe('target');
+        expect(lineRole(lineOf(edgeOf('phone', 'agent', 'target')), reads, driven)).toBe('target');
+        expect(lineRole(lineOf(edgeOf('agent', 'other-agent'), edgeOf('other-agent', 'agent', 'origin')), reads, driven)).toBe('origin');
     });
 
     test('a role a newer Ruimte wrote is no role here, so the line is drawn the way it was', () => {
-        expect(lineRole(lineOf(edgeOf('note', 'agent', 'beams')), reads)).toBe('context');
-        expect(lineRole(lineOf(edgeOf('note', 'page', 'beams')), reads)).toBe('plain');
+        expect(lineRole(lineOf(edgeOf('note', 'agent', 'beams')), reads, driven)).toBe('context');
+        expect(lineRole(lineOf(edgeOf('note', 'page', 'beams')), reads, driven)).toBe('plain');
     });
 });
 

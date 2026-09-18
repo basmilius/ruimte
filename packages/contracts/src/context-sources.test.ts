@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { deriveContextSources, deriveProjectContextSources } from './context-sources.ts';
+import type { ContextSource } from './context.ts';
 import type { ProjectNode, ProjectView } from './project.ts';
 
 const node = (id: string, kind: ProjectNode['kind'], extra: Partial<ProjectNode> = {}): ProjectNode => ({
@@ -72,16 +73,57 @@ describe('deriveContextSources', () => {
         expect(deriveContextSources(loose, texts, [{ id: 'e1', from: 'empty', to: 'chat' }]).size).toBe(0);
     });
 
-    test('only edges into an agent node become context', () => {
+    test('a line between two nodes that neither read is only a line', () => {
         const edges = [
-            { id: 'e1', from: 'shell', to: 'note' },
-            { id: 'e2', from: 'note', to: 'frame' },
-            { id: 'e3', from: 'page', to: 't1' },
-            { id: 'e4', from: 't1', to: 'shell' }
+            { id: 'e1', from: 'note', to: 'frame' },
+            { id: 'e2', from: 'page', to: 't1' },
+            { id: 'e3', from: 't1', to: 'shell' }
         ];
         const sources = deriveContextSources(nodes, texts, edges);
         expect([...sources.keys()]).toEqual(['shell']);
         expect(sources.get('shell')).toEqual([{ id: 't1', kind: 'text', title: 'First line', text: 'First line\nsecond' }]);
+    });
+
+    test('a note reads the same whichever way the line was drawn', () => {
+        const source: ContextSource = { id: 'note', kind: 'text', title: 'Plan', text: '# Plan\n\nShip it.' };
+        expect(deriveContextSources(nodes, texts, [{ id: 'e1', from: 'note', to: 'chat' }]).get('chat')).toEqual([source]);
+        expect(deriveContextSources(nodes, texts, [{ id: 'e1', from: 'chat', to: 'note' }]).get('chat')).toEqual([source]);
+    });
+
+    test('a device linked from the agent is the device the agent works on, and reads either way', () => {
+        const source: ContextSource = {
+            id: 'phone',
+            kind: 'device',
+            title: 'iPhone 17 Pro',
+            device: { platform: 'ios', kind: 'simulator', name: 'iPhone 17 Pro', runtime: 'iOS 26.2' }
+        };
+        expect(deriveContextSources(nodes, texts, [{ id: 'e1', from: 'phone', to: 'chat' }]).get('chat')).toEqual([source]);
+        expect(deriveContextSources(nodes, texts, [{ id: 'e1', from: 'chat', to: 'phone' }]).get('chat')).toEqual([source]);
+    });
+
+    test('a browser reads the same whichever way the line was drawn', () => {
+        const source: ContextSource = { id: 'page', kind: 'browser', title: 'page', text: 'https://ruimte.app' };
+        expect(deriveContextSources(nodes, texts, [{ id: 'e1', from: 'page', to: 'chat' }]).get('chat')).toEqual([source]);
+        expect(deriveContextSources(nodes, texts, [{ id: 'e1', from: 'chat', to: 'page' }]).get('chat')).toEqual([source]);
+    });
+
+    test('an origin line carries context too: a role says what a line means, never who may read it', () => {
+        const sources = deriveContextSources(nodes, texts, [{ id: 'e1', from: 'chat', to: 'note', role: 'origin' }]);
+        expect(sources.get('chat')).toEqual([{ id: 'note', kind: 'text', title: 'Plan', text: '# Plan\n\nShip it.' }]);
+    });
+
+    test('between two agents the direction stands: the head reads the tail and not the other way', () => {
+        const sources = deriveContextSources(nodes, texts, [{ id: 'e1', from: 'chat', to: 'shell' }]);
+        expect([...sources.keys()]).toEqual(['shell']);
+        expect(sources.get('shell')).toEqual([{ id: 'chat', kind: 'chat', title: 'chat' }]);
+    });
+
+    test('a node linked both ways is one source, since a person drew one thing twice', () => {
+        const edges = [
+            { id: 'e1', from: 'note', to: 'chat' },
+            { id: 'e2', from: 'chat', to: 'note' }
+        ];
+        expect(deriveContextSources(nodes, texts, edges).get('chat')).toHaveLength(1);
     });
 
     test('a browser is its own kind and carries the address a read opens with', () => {
@@ -168,6 +210,11 @@ describe('deriveContextSources of a group', () => {
         };
         const sources = deriveContextSources(overlapping, {}, [{ id: 'e1', from: 'left', to: 'chat' }]).get('chat');
         expect(sources).toEqual([{ id: 'plan', kind: 'text', title: 'Plan', text: 'ship' }]);
+    });
+
+    test('a frame linked from the agent hands over the same members', () => {
+        const fromChat = [{ id: 'e1', from: 'chat', to: 'frame' }];
+        expect(deriveContextSources(nodes, texts, fromChat).get('chat')).toEqual(deriveContextSources(nodes, texts, intoChat).get('chat'));
     });
 
     test('an empty frame is a line and nothing more', () => {

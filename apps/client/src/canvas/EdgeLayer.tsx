@@ -124,11 +124,19 @@ export function EdgeLayer() {
         [hidden, nodes]
     );
 
-    /* What a line running into this node means when nothing wrote a role on it: into an agent it is
-       the context that agent reads, anywhere else it is only a line. */
+    /* Whether this node reads what a line brings it, which only an agent does; every other node is
+       an end a line runs to and nothing more. */
     const readsContext = (nodeId: string): boolean => {
         const target = nodes[nodeId];
         return target !== undefined && isAgentKind(target.kind);
+    };
+
+    /* Whether an agent works on this node rather than reads it, which is what a line out of an agent
+       into a device or a page means with no role written on it. It says what the line is, and grants
+       nothing: what an agent may do hangs on lineage, never on a line. */
+    const drivenByAgent = (nodeId: string): boolean => {
+        const node = nodes[nodeId];
+        return node !== undefined && (node.kind === 'device' || node.kind === 'browser');
     };
 
     return (
@@ -154,7 +162,10 @@ export function EdgeLayer() {
                 // A line a task went along says how the task stands, and only looks open while it is.
                 const task = edgeTask(tasks, line.edge.from, line.edge.to) ?? (line.back === null ? null : edgeTask(tasks, line.back.from, line.back.to));
                 const label = task === null ? line.label : TASK_EDGE_LABEL[task.status];
-                const look = edgeLook(lineRole(line, readsContext), { pair: line.back !== null, openTask: task !== null && task.status === 'open' });
+                const look = edgeLook(lineRole(line, readsContext, drivenByAgent), {
+                    pair: line.back !== null,
+                    openTask: task !== null && task.status === 'open'
+                });
                 const stroke = look.accent ? (active ? 'var(--accent)' : 'var(--edge-context)') : active ? 'var(--text-muted)' : 'var(--edge-line)';
                 return (
                     <g key={key} onPointerEnter={() => setHovered(key)} onPointerLeave={() => setHovered((h) => (h === key ? null : h))}>

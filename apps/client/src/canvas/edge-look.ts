@@ -27,14 +27,23 @@ const ORIGIN_WIDTH = 1;
 /*
  * What a line means. The role written on it decides, from either direction of a pair, since a person
  * sees one line. A line without a role, or with a word a newer Ruimte wrote, is read the way every
- * line was read before the field existed: running into an agent it is the context that agent reads.
+ * line was read before the field existed: running into an agent it is the context that agent reads,
+ * the way back of a pair included, since a line drawn both ways says the reading out loud. A line
+ * out of an agent into something that never reads carries that same context back, and into a device
+ * or a page it says the agent works there, which is what a target line is for.
  */
-export const lineRole = (line: EdgeLine, reads: (nodeId: string) => boolean): LineRole => {
+export const lineRole = (line: EdgeLine, reads: (nodeId: string) => boolean, driven: (nodeId: string) => boolean): LineRole => {
     const written = edgeRole(line.edge) ?? (line.back === null ? null : edgeRole(line.back));
     if (written !== null) {
         return written;
     }
-    return reads(line.edge.to) || (line.back !== null && reads(line.back.to)) ? 'context' : 'plain';
+    if (reads(line.edge.to) || (line.back !== null && reads(line.back.to))) {
+        return 'context';
+    }
+    if (!reads(line.edge.from)) {
+        return 'plain';
+    }
+    return driven(line.edge.to) ? 'target' : 'context';
 };
 
 /*

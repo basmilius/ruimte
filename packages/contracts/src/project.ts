@@ -192,9 +192,9 @@ export const ProjectEdgeSchema = z.looseObject({
 export type ProjectEdge = z.infer<typeof ProjectEdgeSchema>;
 
 /*
- * What a line is for. `context` is the one every version has drawn: the head reads the tail with
- * `ruimte-context read` and may notify along it. `target` runs from an agent into something it can
- * drive. `origin` is drawn by the daemon when one node opened another and carries no permission of
+ * What a line is for. `context` is the one every version has drawn: the agent it touches reads the
+ * other end with `ruimte-context read` and may notify along it, and between two agents the head is
+ * the one that reads. `target` runs from an agent into something it can drive. `origin` is drawn by the daemon when one node opened another and carries no permission of
  * its own, only where the node came from.
  */
 export const EDGE_ROLES = ['context', 'target', 'origin'] as const;
