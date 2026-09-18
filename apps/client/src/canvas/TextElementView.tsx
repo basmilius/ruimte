@@ -15,6 +15,8 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
     const canvasStore = useCanvasStore();
     const text = useCanvas((s) => s.texts[id]);
     const selected = useCanvas((s) => s.selection.includes(id));
+    // The line being drawn would land here, which is the same thing to show as a selection.
+    const linkTarget = useCanvas((s) => s.linkDraft?.over === id);
     const editing = useCanvas((s) => s.editingTextId === id);
     const hidden = useCanvas((s) => s.hidden.has(id));
     const ref = useRef<HTMLDivElement>(null);
@@ -61,7 +63,7 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
                 'text-element absolute whitespace-pre rounded-sm px-1 py-0.5 leading-tight text-text',
                 text.bold ? 'font-bold' : 'font-medium',
                 text.italic && 'italic',
-                selected && !editing && 'outline-2 outline-accent',
+                (selected || linkTarget) && !editing && 'outline-2 outline-accent',
                 !editing && 'cursor-default'
             )}
             style={{ left: text.x, top: text.y, fontSize: text.size, fontFamily: FONT_STACK[text.font ?? 'sans'] }}

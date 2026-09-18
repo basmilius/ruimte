@@ -128,13 +128,13 @@ function Title({ id, title, editing, muted, onDone }: { id: string; title: strin
     const canvasStore = useCanvasStore();
     if (!editing) {
         // A crumb on the way back from a sub-agent gives the emphasis to the step on screen.
-        return <span className={clsx('truncate text-sm font-medium', muted ? 'text-text-muted hover:text-text' : 'text-text')}>{title}</span>;
+        return <span className={clsx('truncate text-xs font-medium', muted ? 'text-text-muted hover:text-text' : 'text-text')}>{title}</span>;
     }
     return (
         <input
             autoFocus
             defaultValue={title}
-            className="min-w-0 grow rounded-md bg-surface-sunken px-1.5 py-0.5 text-sm font-medium text-text outline-none ring-1 ring-accent"
+            className="min-w-0 grow rounded-md bg-surface-sunken px-1.5 py-0.5 text-xs font-medium text-text outline-none ring-1 ring-accent"
             onPointerDown={(e) => e.stopPropagation()}
             onFocus={(e) => e.currentTarget.select()}
             onBlur={(e) => {
@@ -179,6 +179,9 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
     const transport = useOptionalConnection()?.transport ?? null;
     const node = useCanvas((s) => s.nodes[id]);
     const selected = useCanvas((s) => s.selection.includes(id));
+    /* The line being drawn would land here: the node that is about to be connected says so, never the
+       one the line is being pulled from. */
+    const linkTarget = useCanvas((s) => s.linkDraft?.over === id);
     /* The keyboard is in this node's content. It is not what the ring shows: a node is selected to be
        moved, resized or removed, and it has the focus to be typed in. */
     const active = useCanvas((s) => isNodeActive(s.bodyFocusId, id));
@@ -232,7 +235,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                     // isolate: xterm's layers carry z-indexes; without a stacking context they would paint over a node added later.
                     'absolute isolate flex flex-col overflow-hidden rounded-xl border focus-visible:outline-none',
                     isGroup ? GROUP_FRAME : isNote ? clsx('shadow-node', noteColorClass(node.color)) : 'bg-surface shadow-node',
-                    selected && 'node-selected',
+                    (selected || linkTarget) && 'node-selected',
                     /* The border stays under the selection ring, which is drawn outside it: a
                        transparent border would show a line of bare canvas now that a surface is
                        clipped to its padding box. A group's is its color, which is what tells one
@@ -395,14 +398,6 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                 {resizable &&
                     !collapsed &&
                     RESIZE_EDGES.map((edge) => <div key={edge} data-resize={edge} className={clsx('absolute z-10', EDGE_STYLE[edge])} />)}
-                {selected && (
-                    <Tooltip label="Drag to connect to another node" side="right">
-                        <div
-                            data-port={id}
-                            className="absolute -right-2 top-1/2 z-20 h-4 w-4 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-accent bg-surface shadow-[0_0_0_2px_var(--surface)] hover:bg-accent"
-                        />
-                    </Tooltip>
-                )}
                 {resizing && (
                     <div className="pointer-events-none absolute bottom-2 right-2 rounded-md bg-accent px-2 py-0.5 font-mono text-xs tabular-nums text-accent-text shadow-float">
                         {node.w} × {node.h}

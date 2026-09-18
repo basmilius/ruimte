@@ -1,4 +1,5 @@
 import { createStore, type StoreApi } from 'zustand';
+import { canLink } from '@/canvas/edge-lines';
 import { createEditorRegistry } from '@/state/editors';
 import { editorHook, focusedEditor, useEditorStoreOf } from '@/state/workspace-stores';
 import {
@@ -24,6 +25,7 @@ import type {
     AgentStatus,
     DeviceReference,
     NodeKind,
+    NodeSide,
     NodeTitleSource,
     ProjectCanvasView,
     ProjectLayout,
@@ -70,6 +72,9 @@ export interface Edge {
     from: string;
     to: string;
     label?: string;
+    /* The port a person drew the line from; an end without one lands wherever the route reads best. */
+    fromSide?: NodeSide;
+    toSide?: NodeSide;
 }
 
 /*
@@ -80,6 +85,10 @@ interface LinkDraft {
     from: string;
     to: Point;
     aiming?: boolean;
+    /* The port the drag started on, which the line it becomes keeps. */
+    fromSide?: NodeSide;
+    /* What the line would land on if it were let go here, so that node can say so. */
+    over?: string;
 }
 
 // The height of a node frame's header; a collapsed group is its header only.
@@ -204,7 +213,7 @@ export interface CanvasState {
     toggleGroupCollapse(id: string): void;
     setGroupWorktree(id: string, worktree: { path: string; branch: string } | null): void;
     /* Edges: any node or text to any other. Into an agent node (terminal or chat) the edge also makes the source readable. */
-    addEdge(from: string, to: string): string | null;
+    addEdge(from: string, to: string, sides?: { fromSide?: NodeSide; toSide?: NodeSide }): string | null;
     removeEdge(id: string): void;
     setEdgeLabel(id: string, label: string): void;
     setLinkDraft(draft: LinkDraft | null): void;
@@ -632,21 +641,17 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         setGroupWorktree(id, worktree) {
             set((s) => (s.nodes[id]?.kind === 'group' ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], worktree: worktree ?? undefined } } } : {}));
         },
-        addEdge(from, to) {
+        addEdge(from, to, sides) {
             const s = get();
             const exists = (id: string): boolean => Boolean(s.nodes[id] || s.texts[id]);
-            if (from === to || !exists(from) || !exists(to)) {
-                return null;
-            }
-            // One line per pair, whichever way it was drawn.
-            if (s.edges.some((edge) => (edge.from === from && edge.to === to) || (edge.from === to && edge.to === from))) {
+            if (!exists(from) || !exists(to) || !canLink(s.edges, from, to)) {
                 return null;
             }
             const id = nextId('edge');
             const target = s.nodes[to];
             // Only a line into an agent carries meaning, so only that one gets a label by default.
             const label = target && isAgentKind(target.kind) ? 'context' : undefined;
-            set({ edges: [...s.edges, { id, from, to, label }], linkDraft: null, ...remember(s) });
+            set({ edges: [...s.edges, { id, from, to, label, ...sides }], linkDraft: null, ...remember(s) });
             return id;
         },
         startLink(from) {

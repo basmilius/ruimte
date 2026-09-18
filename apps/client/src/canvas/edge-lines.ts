@@ -1,4 +1,5 @@
 import type { Edge } from '@/state/canvas';
+import type { FixedSides } from '@/canvas/edge-route';
 import type { Rect } from '@/canvas/math';
 
 /*
@@ -41,37 +42,22 @@ export const edgeLines = (edges: readonly Edge[]): EdgeLine[] => {
     return lines;
 };
 
+/* Whether a line may still be drawn between these two: never onto itself, and one line per pair. */
+export const canLink = (edges: readonly Edge[], from: string, to: string): boolean =>
+    from !== to && !edges.some((edge) => (edge.from === from && edge.to === to) || (edge.from === to && edge.to === from));
+
+/*
+ * The ports a line is held to. Both directions of a pair are one line, and the one drawn back names
+ * the same two ports the other way round.
+ */
+export const fixedSides = (line: EdgeLine): FixedSides => ({
+    fromSide: line.edge.fromSide ?? line.back?.toSide,
+    toSide: line.edge.toSide ?? line.back?.fromSide
+});
+
 /* Whether a selection is exactly one line, which is when Enter may open its name for editing. */
 export const selectedLine = (lines: readonly EdgeLine[], selection: readonly string[]): EdgeLine | null =>
     lines.find((line) => line.ids.length === selection.length && line.ids.every((id) => selection.includes(id))) ?? null;
-
-export interface Anchors {
-    ax: number;
-    ay: number;
-    bx: number;
-    by: number;
-    horizontal: boolean;
-}
-
-/* Anchor on the facing sides, so an edge takes the short way round. */
-export const anchors = (a: Rect, b: Rect): Anchors => {
-    const acx = a.x + a.w / 2;
-    const acy = a.y + a.h / 2;
-    const bcx = b.x + b.w / 2;
-    const bcy = b.y + b.h / 2;
-    const horizontal = Math.abs(bcx - acx) >= Math.abs(bcy - acy);
-    if (horizontal) {
-        const right = bcx >= acx;
-        return { ax: right ? a.x + a.w : a.x, ay: acy, bx: right ? b.x : b.x + b.w, by: bcy, horizontal };
-    }
-    const below = bcy >= acy;
-    return { ax: acx, ay: below ? a.y + a.h : a.y, bx: bcx, by: below ? b.y : b.y + b.h, horizontal };
-};
-
-export const curve = (p: Anchors): string =>
-    p.horizontal
-        ? `M ${p.ax} ${p.ay} C ${(p.ax + p.bx) / 2} ${p.ay}, ${(p.ax + p.bx) / 2} ${p.by}, ${p.bx} ${p.by}`
-        : `M ${p.ax} ${p.ay} C ${p.ax} ${(p.ay + p.by) / 2}, ${p.bx} ${(p.ay + p.by) / 2}, ${p.bx} ${p.by}`;
 
 // A text has no box of its own; this is close enough to aim an edge at.
 export const textRect = (text: { x: number; y: number; size: number; text: string }): Rect => ({

@@ -1,16 +1,20 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useShallow } from 'zustand/react/shallow';
 import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
 import { GRID, intersects, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math';
 import { isSpaceDown } from '@/canvas/canvas-shortcuts';
-import { isNodeActive, NODE_SIZE, useCanvas, useCanvasStore } from '@/state/canvas';
+import type { NodeSide } from '@ruimte/contracts';
+import { canLink } from '@/canvas/edge-lines';
+import { framePressHandsKeyboard } from '@/canvas/frame-press';
+import { isNodeActive, NODE_SIZE, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { useEndpointId } from '@/state/keys';
 import { showFileOnCanvas } from '@/project/views';
 import { CanvasMenuPopup } from '@/canvas/CanvasMenu';
 import { EmptyCanvas } from '@/canvas/EmptyCanvas';
 import { EdgeLayer } from '@/canvas/EdgeLayer';
+import { PortHints } from '@/canvas/PortHints';
 import { NodeFrame } from '@/canvas/NodeFrame';
 import { TextElementView } from '@/canvas/TextElementView';
 import { TextToolbar } from '@/canvas/TextToolbar';
@@ -22,7 +26,7 @@ type Gesture =
     | { kind: 'pan'; last: Point }
     | { kind: 'box'; origin: Point; current: Point; additive: boolean }
     | { kind: 'move'; start: Point; applied: Point; moved: boolean }
-    | { kind: 'link'; from: string }
+    | { kind: 'link'; from: string; fromSide?: NodeSide }
     | {
           kind: 'resize';
           nodeId: string;
@@ -36,6 +40,37 @@ const ZOOM_SETTLE_MS = 160;
    stands beside the first instead of over it. */
 const DROP_STEP = NODE_SIZE.file.w + 24;
 const MIN_NODE = { w: 240, h: 160 };
+
+/*
+ * What a line being drawn would land on: whatever the canvas shows under the pointer. The pointer is
+ * captured by the canvas during a drag, so the element under it is looked up rather than read off
+ * the event.
+ */
+const linkTargetUnder = (clientX: number, clientY: number): { id: string; side?: NodeSide } | null => {
+    /* Everything under the pointer, not only the top one: a line drawn across another line must not
+       lose the node it is over to the line's own hit area. */
+    for (const element of document.elementsFromPoint(clientX, clientY)) {
+        const port = element.closest<HTMLElement>('[data-port]');
+        if (port?.dataset.port) {
+            return { id: port.dataset.port, side: port.dataset.portSide as NodeSide | undefined };
+        }
+        const node = element.closest<HTMLElement>('[data-node-id]')?.dataset.nodeId;
+        if (node) {
+            return { id: node };
+        }
+        const text = element.closest<HTMLElement>('[data-text-id]')?.dataset.textId;
+        if (text) {
+            return { id: text };
+        }
+    }
+    return null;
+};
+
+const linkTargetAt = (state: CanvasState, from: string, clientX: number, clientY: number): string | null => {
+    const id = linkTargetUnder(clientX, clientY)?.id ?? null;
+    // A target that would take no line says nothing either.
+    return id !== null && canLink(state.edges, from, id) ? id : null;
+};
 
 /* Hands the keyboard back to the page, so the node that had it stops answering keys. */
 const blurActive = (): void => (document.activeElement as HTMLElement | null)?.blur();
@@ -213,6 +248,22 @@ export function Canvas() {
         rootRef.current!.setPointerCapture(e.pointerId);
     };
 
+    /*
+     * A press on a node's header puts the keyboard in its body (below); the browser would focus the
+     * frame on mousedown right after and take it off again. The default is stopped here and not on the pointer
+     * event, which would cost the header its click and the double-click that renames a node.
+     */
+    const onMouseDown = (e: ReactMouseEvent): void => {
+        const target = e.target as HTMLElement;
+        if (e.button !== 0 || target.closest('button, input') || target.closest('[data-node-body]')) {
+            return;
+        }
+        const nodeId = target.closest<HTMLElement>('[data-node-id]')?.dataset.nodeId ?? null;
+        if (nodeId !== null && nodeId === canvasStore.getState().bodyFocusId) {
+            e.preventDefault();
+        }
+    };
+
     const onPointerDown = (e: ReactPointerEvent): void => {
         const target = e.target as HTMLElement;
         /* A popup portals out of its node but keeps bubbling here, so the checks below would read it
@@ -247,12 +298,15 @@ export function Canvas() {
             return;
         }
 
-        const port = target.closest<HTMLElement>('[data-port]')?.dataset.port;
+        const portElement = target.closest<HTMLElement>('[data-port]');
+        const port = portElement?.dataset.port;
         if (port) {
             e.preventDefault();
             e.stopPropagation();
-            s.setLinkDraft({ from: port, to: toWorld(s.camera, point) });
-            startGesture({ kind: 'link', from: port }, e);
+            // The port it starts on is the side the line keeps, however the two nodes move later.
+            const fromSide = portElement?.dataset.portSide as NodeSide | undefined;
+            s.setLinkDraft({ from: port, to: toWorld(s.camera, point), fromSide });
+            startGesture({ kind: 'link', from: port, fromSide }, e);
             return;
         }
 
@@ -282,11 +336,11 @@ export function Canvas() {
                 }
                 return;
             }
-            /* The header and the frame around the body: this press picks the node up, it does not step
-               into it. A node being dragged keeps the keyboard only if it already had it. */
+            /* The header and the frame around the body: this press picks the node up and hands the
+               keyboard to its content, the way a title bar does. */
             if (s.bodyFocusId !== nodeId) {
-                s.setBodyFocus(null);
                 blurActive();
+                s.setBodyFocus(framePressHandsKeyboard(s.nodes[nodeId]?.kind, e.shiftKey) ? nodeId : null);
             }
             if (!s.selection.includes(nodeId)) {
                 s.select([nodeId], e.shiftKey);
@@ -364,7 +418,11 @@ export function Canvas() {
         const point = screenPoint(e);
         if (!g) {
             if (s.linkDraft?.aiming) {
-                s.setLinkDraft({ ...s.linkDraft, to: toWorld(s.camera, point) });
+                s.setLinkDraft({
+                    ...s.linkDraft,
+                    to: toWorld(s.camera, point),
+                    over: linkTargetAt(s, s.linkDraft.from, e.clientX, e.clientY) ?? undefined
+                });
             }
             return;
         }
@@ -405,7 +463,12 @@ export function Canvas() {
                 s.resizeNode(g.nodeId, resizedRect(g.rect, g.edge, (point.x - g.start.x) / s.camera.zoom, (point.y - g.start.y) / s.camera.zoom));
                 break;
             case 'link':
-                s.setLinkDraft({ from: g.from, to: toWorld(s.camera, point) });
+                s.setLinkDraft({
+                    from: g.from,
+                    to: toWorld(s.camera, point),
+                    fromSide: g.fromSide,
+                    over: linkTargetAt(s, g.from, e.clientX, e.clientY) ?? undefined
+                });
                 break;
         }
     };
@@ -451,10 +514,9 @@ export function Canvas() {
         } else if (g.kind === 'link') {
             s.setLinkDraft(null);
             // The pointer is captured, so the target is whatever the canvas shows under it.
-            const under = document.elementFromPoint(e.clientX, e.clientY);
-            const targetId = under?.closest<HTMLElement>('[data-node-id]')?.dataset.nodeId ?? under?.closest<HTMLElement>('[data-text-id]')?.dataset.textId;
-            if (targetId) {
-                s.addEdge(g.from, targetId);
+            const target = linkTargetUnder(e.clientX, e.clientY);
+            if (target) {
+                s.addEdge(g.from, target.id, { fromSide: g.fromSide, toSide: target.side });
             }
         }
     };
@@ -525,6 +587,7 @@ export function Canvas() {
                     cursor: aiming ? 'crosshair' : activeGesture === 'pan' ? 'grabbing' : locks.pan ? undefined : isSpaceDown() ? 'grab' : undefined
                 }}
                 data-gesture={activeGesture ?? undefined}
+                onMouseDown={onMouseDown}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
@@ -551,6 +614,8 @@ export function Canvas() {
                     {drawIds.map((id) => (
                         <NodeFrame key={id} id={id} z={stacking[id] ?? 1} />
                     ))}
+                    {/* Over the nodes, so a port beside one is never covered by the node standing next to it. */}
+                    <PortHints rootRef={rootRef} />
                 </div>
                 <TextToolbar />
                 {drawIds.length === 0 && textIds.length === 0 && <EmptyCanvas />}

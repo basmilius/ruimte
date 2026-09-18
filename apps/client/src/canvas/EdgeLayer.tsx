@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { isAgentKind, useCanvas, useCanvasStore } from '@/state/canvas';
-import { anchors, curve, edgeLines, selectedLine, textRect, type EdgeLine } from '@/canvas/edge-lines';
+import { edgeLines, fixedSides, selectedLine, textRect, type EdgeLine } from '@/canvas/edge-lines';
+import { routeDraft, routeEdge, selfRoute, type Obstacle } from '@/canvas/edge-route';
 import type { Point, Rect } from '@/canvas/math';
 import { useEndpointId } from '@/state/keys';
 import { TASK_EDGE_LABEL, edgeTask, useTasks } from '@/state/tasks';
@@ -60,6 +61,12 @@ function EdgeLabel({
     );
 }
 
+/* Where a line meets a node: it stops a gap short and leaves this hole in the canvas behind, rimmed
+   in its own color, so nothing is ever drawn against a node's border. */
+function PortDot({ at, stroke }: { at: Point; stroke: string }) {
+    return <circle cx={at.x} cy={at.y} r="5" fill="var(--canvas-bg)" stroke={stroke} strokeWidth="2" />;
+}
+
 export function EdgeLayer() {
     const canvasStore = useCanvasStore();
     const edges = useCanvas((s) => s.edges);
@@ -99,6 +106,16 @@ export function EdgeLayer() {
 
     const rectOf = (id: string): Rect | null => (hidden.has(id) ? null : nodes[id] ? nodes[id] : texts[id] ? textRect(texts[id]) : null);
 
+    /* What a line routes around. A group is a frame under its nodes, so a line between two of them
+       would be pushed out of the group it belongs to. */
+    const obstacles = useMemo(
+        () =>
+            Object.values(nodes)
+                .filter((node) => node.kind !== 'group' && !hidden.has(node.id))
+                .map(({ id, x, y, w, h }): Obstacle => ({ id, x, y, w, h })),
+        [hidden, nodes]
+    );
+
     /* Into an agent the line carries context and shows it in the accent; anywhere else it is a plain
        line. A pair between two agents is one either way round. */
     const carriesContext = (line: EdgeLine): boolean =>
@@ -116,12 +133,19 @@ export function EdgeLayer() {
                     return null;
                 }
                 const key = line.edge.id;
-                const p = anchors(a, b);
-                const d = curve(p);
-                const mid = { x: (p.ax + p.bx) / 2, y: (p.ay + p.by) / 2 };
+                const route =
+                    line.edge.from === line.edge.to
+                        ? selfRoute(a)
+                        : routeEdge(
+                              a,
+                              b,
+                              obstacles.filter((obstacle) => obstacle.id !== line.edge.from && obstacle.id !== line.edge.to),
+                              fixedSides(line)
+                          );
+                const mid = route.mid;
                 const active = hovered === key || line.ids.some((id) => selection.includes(id));
                 const context = carriesContext(line);
-                const stroke = context ? 'var(--accent)' : active ? 'var(--text-muted)' : 'var(--border-strong)';
+                const stroke = context ? (active ? 'var(--accent)' : 'var(--edge-context)') : active ? 'var(--text-muted)' : 'var(--edge-line)';
                 // A line a task went along says how the task stands, and stays dashed only while it is open.
                 const task = edgeTask(tasks, line.edge.from, line.edge.to) ?? (line.back === null ? null : edgeTask(tasks, line.back.from, line.back.to));
                 const label = task === null ? line.label : TASK_EDGE_LABEL[task.status];
@@ -130,7 +154,7 @@ export function EdgeLayer() {
                     <g key={key} onPointerEnter={() => setHovered(key)} onPointerLeave={() => setHovered((h) => (h === key ? null : h))}>
                         {/* A wide invisible stroke gives the thin line something to hover and click; a double-click names it. */}
                         <path
-                            d={d}
+                            d={route.d}
                             fill="none"
                             stroke="transparent"
                             strokeWidth="14"
@@ -146,16 +170,16 @@ export function EdgeLayer() {
                             }}
                         />
                         <path
-                            d={d}
+                            d={route.d}
                             fill="none"
                             stroke={stroke}
                             strokeWidth={active ? 3 : 2}
-                            strokeOpacity={context ? (active ? 0.95 : 0.55) : 1}
                             strokeDasharray={dashed ? '6 6' : undefined}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
                         />
-                        <circle cx={p.bx} cy={p.by} r="4" fill={stroke} />
-                        {/* A head at the tail too: the pair reads at a glance as both nodes reading each other. */}
-                        {line.back !== null && <circle cx={p.ax} cy={p.ay} r="4" fill={stroke} />}
+                        <PortDot at={route.from} stroke={stroke} />
+                        <PortDot at={route.to} stroke={stroke} />
                         <EdgeLabel ids={line.ids} label={label} at={mid} editing={editing === key} onEdit={(on) => setEditing(on ? key : null)} />
                         {active && editing !== key && (
                             <g
@@ -181,8 +205,26 @@ export function EdgeLayer() {
                     if (!from) {
                         return null;
                     }
-                    const p = anchors(from, { x: draft.to.x, y: draft.to.y, w: 0, h: 0 });
-                    return <path d={curve(p)} fill="none" stroke="var(--accent)" strokeWidth="2" strokeOpacity="0.8" strokeDasharray="4 4" />;
+                    const route = routeDraft(
+                        from,
+                        draft.to,
+                        obstacles.filter((obstacle) => obstacle.id !== draft.from),
+                        { fromSide: draft.fromSide }
+                    );
+                    return (
+                        <>
+                            <path
+                                d={route.d}
+                                fill="none"
+                                stroke="var(--accent)"
+                                strokeWidth="2"
+                                strokeDasharray="4 4"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                            <circle cx={route.from.x} cy={route.from.y} r="5" fill="var(--canvas-bg)" stroke="var(--accent)" strokeWidth="2" />
+                        </>
+                    );
                 })()}
         </svg>
     );

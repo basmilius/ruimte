@@ -73,7 +73,7 @@ const NODE_FIELDS: FieldGroups = {
 
 const TEXT_FIELDS: FieldGroups = { position: ['x', 'y'] };
 
-const EDGE_FIELDS: FieldGroups = { ends: ['from', 'to'] };
+const EDGE_FIELDS: FieldGroups = { ends: ['from', 'to', 'fromSide', 'toSide'] };
 
 type FieldsMerge<T> = { ok: true; merged: T; took: boolean } | { ok: false; field: string };
 

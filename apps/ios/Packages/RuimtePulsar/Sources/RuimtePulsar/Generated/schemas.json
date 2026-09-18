@@ -16560,6 +16560,24 @@
                           },
                           "label": {
                             "type": "string"
+                          },
+                          "fromSide": {
+                            "type": "string",
+                            "enum": [
+                              "top",
+                              "right",
+                              "bottom",
+                              "left"
+                            ]
+                          },
+                          "toSide": {
+                            "type": "string",
+                            "enum": [
+                              "top",
+                              "right",
+                              "bottom",
+                              "left"
+                            ]
                           }
                         },
                         "required": [
@@ -18690,6 +18708,24 @@
                           },
                           "label": {
                             "type": "string"
+                          },
+                          "fromSide": {
+                            "type": "string",
+                            "enum": [
+                              "top",
+                              "right",
+                              "bottom",
+                              "left"
+                            ]
+                          },
+                          "toSide": {
+                            "type": "string",
+                            "enum": [
+                              "top",
+                              "right",
+                              "bottom",
+                              "left"
+                            ]
                           }
                         },
                         "required": [
@@ -33197,6 +33233,24 @@
                           },
                           "label": {
                             "type": "string"
+                          },
+                          "fromSide": {
+                            "type": "string",
+                            "enum": [
+                              "top",
+                              "right",
+                              "bottom",
+                              "left"
+                            ]
+                          },
+                          "toSide": {
+                            "type": "string",
+                            "enum": [
+                              "top",
+                              "right",
+                              "bottom",
+                              "left"
+                            ]
                           }
                         },
                         "required": [

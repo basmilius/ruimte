@@ -166,11 +166,19 @@ export const ProjectTextSchema = z.object({
 export type ProjectText = z.infer<typeof ProjectTextSchema>;
 
 // A line between two things on the canvas. Into an agent's node it also means the agent may read the source.
+/* The side of a node a line leaves from or lands on. */
+export const NodeSideSchema = z.enum(['top', 'right', 'bottom', 'left']);
+export type NodeSide = z.infer<typeof NodeSideSchema>;
+
 export const ProjectEdgeSchema = z.object({
     id: z.string().min(1),
     from: z.string().min(1),
     to: z.string().min(1),
-    label: z.string().optional()
+    label: z.string().optional(),
+    /* The port a person drew this line from, which it keeps whatever the two nodes do afterwards.
+       An end without one is free: the canvas puts it on the side that reads best. */
+    fromSide: NodeSideSchema.optional(),
+    toSide: NodeSideSchema.optional()
 });
 export type ProjectEdge = z.infer<typeof ProjectEdgeSchema>;
 

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { Edge } from '@/state/canvas';
-import { anchors, curve, edgeLines, selectedLine, textRect } from './edge-lines';
+import { canLink, edgeLines, selectedLine, textRect } from './edge-lines';
 
 const edge = (id: string, from: string, to: string, label?: string): Edge => ({ id, from, to, ...(label === undefined ? {} : { label }) });
 
@@ -49,27 +49,22 @@ describe('selectedLine', () => {
     });
 });
 
-describe('the path between two boxes', () => {
-    const box = { x: 0, y: 0, w: 100, h: 100 };
-
-    test('leaves the facing sides, so the line takes the short way round', () => {
-        const right = anchors(box, { x: 300, y: 0, w: 100, h: 100 });
-        expect(right.horizontal).toBe(true);
-        expect([right.ax, right.bx]).toEqual([100, 300]);
-        const below = anchors(box, { x: 0, y: 300, w: 100, h: 100 });
-        expect(below.horizontal).toBe(false);
-        expect([below.ay, below.by]).toEqual([100, 300]);
-    });
-
-    test('is a bezier that starts and ends on those anchors', () => {
-        const path = curve(anchors(box, { x: 300, y: 0, w: 100, h: 100 }));
-        expect(path).toStartWith('M 100 50 C');
-        expect(path).toEndWith('300 50');
-    });
-
+describe('what an edge aims at', () => {
     test('a text is aimed at by the box its words take up', () => {
         expect(textRect({ x: 10, y: 20, size: 16, text: 'hello' })).toEqual({ x: 10, y: 20, w: 44, h: 22.4 });
         // Never narrower than something you can aim at.
         expect(textRect({ x: 0, y: 0, size: 16, text: '' }).w).toBe(40);
+    });
+});
+
+describe('whether a line may be drawn', () => {
+    const edges = [edge('e1', 'a', 'b')];
+
+    test('is no for a node onto itself and for a pair that already has one', () => {
+        expect(canLink(edges, 'a', 'c')).toBe(true);
+        expect(canLink(edges, 'a', 'a')).toBe(false);
+        expect(canLink(edges, 'a', 'b')).toBe(false);
+        // Whichever way the first one was drawn.
+        expect(canLink(edges, 'b', 'a')).toBe(false);
     });
 });

@@ -101,9 +101,11 @@ export const useCanvasShortcuts = (): void => {
                     s.setLinkDraft(null);
                 } else if (s.editingTextId) {
                     s.setEditingText(null);
-                } else {
+                } else if (s.bodyFocusId === null) {
                     s.clearSelection();
                 }
+                /* Escape steps out of the content and leaves the node selected, since a press on its
+                   header put the keyboard there: the keys that act on a node work again right away. */
                 s.setBodyFocus(null);
                 (document.activeElement as HTMLElement | null)?.blur();
                 return;
