@@ -73,7 +73,11 @@ export function ViewToolbar({
         );
     }
     if (view.kind === 'device') {
-        return <div className="flex min-w-0 grow items-center justify-end"><DeviceToolbar id={view.id} /></div>;
+        return (
+            <div className="flex min-w-0 grow items-center justify-end">
+                <DeviceToolbar id={view.id} />
+            </div>
+        );
     }
     if (view.kind === 'file' || view.kind === 'diagram') {
         // The active renderer portals its controls here after the body mounts.

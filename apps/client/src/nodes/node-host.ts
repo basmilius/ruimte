@@ -1,5 +1,13 @@
 import { useEffect, useMemo } from 'react';
-import { isSessionView, type AgentKind, type CanvasNodeKind, type DeviceReference, type NodeTitleSource, type ProjectView, type RuntimeMode } from '@ruimte/contracts';
+import {
+    isSessionView,
+    type AgentKind,
+    type CanvasNodeKind,
+    type DeviceReference,
+    type NodeTitleSource,
+    type ProjectView,
+    type RuntimeMode
+} from '@ruimte/contracts';
 import { suggestedTitleFor } from '@/chat/title';
 import { canvasOfNode, DEFAULT_TITLES, useCanvas, type CanvasNode } from '@/state/canvas';
 import { useDocument } from '@/state/document';

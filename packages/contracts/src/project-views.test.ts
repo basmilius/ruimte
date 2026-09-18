@@ -235,7 +235,12 @@ describe('what a view keeps running', () => {
         expect(sessionNodesOfView({ kind: 'chat', id: 'c1', name: 'Planner', node: {} })).toEqual([{ id: 'c1', kind: 'chat' }]);
         expect(sessionNodesOfView({ kind: 'browser', id: 'p1', name: 'Page', url: 'https://bas.dev' })).toEqual([]);
         expect(
-            sessionNodesOfView({ kind: 'device', id: 'phone', name: 'iPhone', device: { platform: 'ios', kind: 'simulator', name: 'iPhone', runtime: 'iOS 27.0' } })
+            sessionNodesOfView({
+                kind: 'device',
+                id: 'phone',
+                name: 'iPhone',
+                device: { platform: 'ios', kind: 'simulator', name: 'iPhone', runtime: 'iOS 27.0' }
+            })
         ).toEqual([]);
         expect(sessionNodesOfView({ kind: 'drawing', id: 'd1', name: 'Sketch' })).toEqual([]);
         expect(sessionNodesOfView({ kind: 'separator', id: 'sep' })).toEqual([]);
