@@ -55,8 +55,8 @@ describe('edgeLook', () => {
         expect(edgeLook('target', solo)).toEqual({ tail: 'none', head: 'chevron', dashed: false, accent: false, width: 2 });
     });
 
-    test('an origin points back at the node that opened the other, thinner than the rest', () => {
-        expect(edgeLook('origin', solo)).toEqual({ tail: 'arrow', head: 'dot', dashed: true, accent: false, width: 1 });
+    test('an origin points at what was opened, thinner than the rest', () => {
+        expect(edgeLook('origin', solo)).toEqual({ tail: 'dot', head: 'arrow', dashed: true, accent: false, width: 1 });
         expect(edgeLook('origin', solo).width).toBeLessThan(edgeLook('plain', solo).width);
     });
 

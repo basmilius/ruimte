@@ -51,7 +51,7 @@ export const edgeLook = (role: LineRole, { pair, openTask }: { pair: boolean; op
         case 'target':
             return { tail: 'none', head: 'chevron', dashed: false, accent: false, width: EDGE_WIDTH };
         case 'origin':
-            return { tail: 'arrow', head: 'dot', dashed: true, accent: false, width: ORIGIN_WIDTH };
+            return { tail: 'dot', head: 'arrow', dashed: true, accent: false, width: ORIGIN_WIDTH };
         case 'plain':
             return { tail: 'dot', head: 'dot', dashed: false, accent: false, width: EDGE_WIDTH };
     }
