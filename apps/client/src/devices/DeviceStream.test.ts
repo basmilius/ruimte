@@ -9,12 +9,38 @@ import {
     positionInContainedFrame,
     trackpadGesturePoint
 } from './device-layout';
+import { HevcDecoderGate } from './hevc-decoder';
 
 describe('hevcKeyFrame', () => {
     test('recognizes IRAP units in three and four byte Annex-B framing', () => {
         expect(hevcKeyFrame(new Uint8Array([0, 0, 0, 1, 19 << 1, 1]))).toBe(true);
         expect(hevcKeyFrame(new Uint8Array([0, 0, 1, 21 << 1, 1, 2]))).toBe(true);
         expect(hevcKeyFrame(new Uint8Array([0, 0, 0, 1, 1 << 1, 1]))).toBe(false);
+    });
+});
+
+describe('HevcDecoderGate', () => {
+    const delta = new Uint8Array([0, 0, 0, 1, 1 << 1, 1]);
+    const key = new Uint8Array([0, 0, 0, 1, 19 << 1, 1]);
+
+    test('waits for a key frame after configure and recovery', () => {
+        const gate = new HevcDecoderGate();
+
+        expect(gate.accept(delta, 0)).toBeNull();
+        expect(gate.accept(key, 0)).toBe('key');
+        expect(gate.accept(delta, 0)).toBe('delta');
+
+        gate.reset();
+        expect(gate.accept(delta, 0)).toBeNull();
+        expect(gate.accept(key, 0)).toBe('key');
+    });
+
+    test('drops queued delta frames without losing the next key frame', () => {
+        const gate = new HevcDecoderGate();
+
+        expect(gate.accept(key, 0)).toBe('key');
+        expect(gate.accept(delta, 9)).toBeNull();
+        expect(gate.accept(key, 9)).toBe('key');
     });
 });
 

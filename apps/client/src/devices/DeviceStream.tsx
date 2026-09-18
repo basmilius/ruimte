@@ -14,11 +14,11 @@ import {
     boundedGestureDelta,
     deviceScrollDelta,
     dominantGestureAxis,
-    hevcKeyFrame,
     pinchPoints,
     positionInContainedFrame,
     trackpadGesturePoint
 } from '@/devices/device-layout';
+import { HevcDecoderGate } from '@/devices/hevc-decoder';
 import { useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
 import { deviceClientFor } from '@/transport/connections';
@@ -61,6 +61,7 @@ class FramePainter {
     private readonly painted: () => void;
     private pending: LiveStreamFrame | null = null;
     private videoDecoder: VideoDecoder | null = null;
+    private readonly videoGate = new HevcDecoderGate();
 
     constructor(canvas: RefObject<HTMLCanvasElement | null>, painted: () => void, failed: (message: string) => void) {
         this.canvas = canvas;
@@ -83,6 +84,7 @@ class FramePainter {
         this.pending = null;
         this.videoDecoder?.close();
         this.videoDecoder = null;
+        this.videoGate.reset();
     }
 
     private decodeVideo(frame: LiveStreamFrame): void {
@@ -90,29 +92,43 @@ class FramePainter {
             this.failed('This browser cannot decode the device video stream');
             return;
         }
-        if (!this.videoDecoder || this.videoDecoder.state === 'closed') {
-            this.videoDecoder = new VideoDecoder({
-                output: (videoFrame) => {
-                    const canvas = this.canvas.current;
-                    if (canvas) {
-                        canvas.width = videoFrame.displayWidth;
-                        canvas.height = videoFrame.displayHeight;
-                        canvas.getContext('2d', { alpha: false })?.drawImage(videoFrame, 0, 0, canvas.width, canvas.height);
-                        this.painted();
-                    }
-                    videoFrame.close();
-                },
-                error: (error) => this.failed(error.message)
-            });
-            this.videoDecoder.configure({ codec: 'hev1.1.6.L93.B0', hardwareAcceleration: 'prefer-hardware', optimizeForLatency: true });
-        }
-        const keyFrame = hevcKeyFrame(frame.data);
-        if (this.videoDecoder.decodeQueueSize > 8 && !keyFrame) {
+        const chunkType = this.videoGate.accept(frame.data, this.videoDecoder?.decodeQueueSize ?? 0);
+        if (!chunkType) {
             return;
         }
-        this.videoDecoder.decode(
-            new EncodedVideoChunk({ type: keyFrame ? 'key' : 'delta', timestamp: frame.sequence * 16_667, data: frame.data.slice().buffer })
-        );
+        try {
+            if (!this.videoDecoder || this.videoDecoder.state === 'closed') {
+                const decoder = new VideoDecoder({
+                    output: (videoFrame) => {
+                        const canvas = this.canvas.current;
+                        if (canvas) {
+                            canvas.width = videoFrame.displayWidth;
+                            canvas.height = videoFrame.displayHeight;
+                            canvas.getContext('2d', { alpha: false })?.drawImage(videoFrame, 0, 0, canvas.width, canvas.height);
+                            this.painted();
+                        }
+                        videoFrame.close();
+                    },
+                    error: (error) => {
+                        if (this.videoDecoder === decoder) {
+                            this.videoDecoder = null;
+                            this.videoGate.reset();
+                        }
+                        this.failed(error.message);
+                    }
+                });
+                this.videoDecoder = decoder;
+                decoder.configure({ codec: 'hev1.1.6.L93.B0', hardwareAcceleration: 'prefer-hardware', optimizeForLatency: true });
+            }
+            this.videoDecoder.decode(new EncodedVideoChunk({ type: chunkType, timestamp: frame.sequence * 16_667, data: frame.data.slice().buffer }));
+        } catch (error) {
+            if (this.videoDecoder?.state !== 'closed') {
+                this.videoDecoder?.close();
+            }
+            this.videoGate.reset();
+            this.videoDecoder = null;
+            this.failed(error instanceof Error ? error.message : 'The device video stream could not be decoded');
+        }
     }
 
     private async draw(): Promise<void> {
