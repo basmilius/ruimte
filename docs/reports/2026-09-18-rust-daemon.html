@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Ruimte · Rust voor de daemon?</title><style>
+:root {
+  color-scheme: light;
+  --brand: #353e53;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--reference); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+
+.lead { max-width: 850px; }
+.result { font-size: 26px; font-weight: 650; color: var(--accent); }
+.chart-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.diagram .loss { fill: var(--danger); }
+.diagram .gain { fill: var(--success); }
+.diagram .reference { fill: var(--muted); }
+.bar.reference span { background: var(--muted); }
+.formula { padding: 14px 18px; background: var(--panel); border-radius: 8px; font-variant-numeric: tabular-nums; }
+.controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.controls output { color: var(--accent); }
+.source-list { font-size: 14px; }
+.table:focus-visible { outline-offset: 2px; }
+@media(max-width:700px) { .controls { grid-template-columns: 1fr; gap: 8px; } }
+@media print { :root { font-size: 10.5pt; line-height: 1.5; } h1 { font-size: 36pt; } h2 { font-size: 20pt; } h3 { font-size: 13pt; } .intro { font-size: 13pt; } th, td { padding: 8px; font-size: 9pt; } th:first-child { min-width: 85px; } thead { display: table-header-group; break-after: avoid; } tbody tr:first-child { break-before: avoid; } p { orphans: 3; widows: 3; } #bronnen { break-inside: avoid; } *:focus-visible { outline: none !important; } .panel { padding: 18px; } .controls { display: none; } .interactive-result { break-inside: avoid; } a { text-decoration: none; } }
+</style></head><body>
+<a class="skip" href="#advies">Ga naar de conclusie</a>
+<header>
+<p class="eyebrow">RUIMTE · TECHNISCH ONDERZOEK · 18 SEPTEMBER 2026</p>
+<h1>Rust voor de daemon?</h1>
+<p class="intro">Een gerichte Rust-kern verdient onderzoek. Voor een volledige herschrijving ontbreekt nu bewijs dat de winst opweegt tegen het opnieuw bouwen van het bestaande gedrag.</p>
+<p class="lead">De meest concrete aanleiding zit in terminalbuffers en snapshots. Processampling is een tweede, kleiner af te bakenen kandidaat. Behoud de TypeScript-laag voor snel veranderende agent-, chat- en projectlogica zolang metingen geen andere keuze rechtvaardigen.</p>
+<p><span class="status">Alleen onderzoek · geen applicatiecode gewijzigd</span></p>
+<p class="caption">Bronbasis: <code>3b46403e130b</code> plus de lokale werkboom op 18 september 2026. Er waren al ongecommitte wijzigingen, onder meer aan devices, daemon en contracts. De inventaris bevat bestandshashes. Dit rapport beschrijft die momentopname, niet uitsluitend de commit.</p>
+<nav aria-label="Inhoud"><a href="#advies">Advies</a><a href="#situatie">Codebasis</a><a href="#metingen">Metingen</a><a href="#kandidaten">Kandidaten</a><a href="#scenario">Winst en verlies</a><a href="#migratie">Migratierisico</a><a href="#vervolg">Vervolgonderzoek</a><a href="#bronnen">Bronnen</a></nav>
+</header><main>
+<section id="advies" class="recommendation">
+<h2>Begin bij de terminalkern, besluit later over de hele daemon</h2>
+<p>Een serverproces past goed bij Rust als CPU-verwerking, geheugen per sessie of voorspelbare responstijden de grens bepalen. In Ruimte zit dat werk echter tussen veel orchestratielogica. Alleen <code>daemon.ts</code> vertalen lost weinig op: dat bestand verbindt vooral services. Een volledige vervanging van <code>apps/server</code> is een omvangrijk productproject.</p>
+<div class="split"><div class="panel"><h3>Nu onderbouwd</h3><p>Elke terminal heeft een headless xterm met maximaal 10.000 scrollbackregels. Volledige snapshots lopen periodiek over alle sessies. De geïsoleerde proef laat zien dat deze paden bij veel gevulde buffers aandacht verdienen.</p></div><div class="panel"><h3>Nog niet onderbouwd</h3><p>Hoeveel sneller of zuiniger een equivalente Rust-implementatie is. Er is geen Rust-prototype, geen representatief productieprofiel en geen Linux-capaciteitsmeting. Een percentage uit het scenariomodel is daarom geen verwachte productwinst.</p></div></div>
+<p>Mijn voorkeursvolgorde: meet de echte daemon, vergelijk gerichte Bun-optimalisaties, toets daarna een kleine Rust-kern op hetzelfde gedrag. Ga pas verder als de winst ook buiten een microbenchmark zichtbaar blijft.</p>
+</section>
+<section id="situatie">
+<h2>De server is een groot deel van het product</h2>
+<div class="stats"><div><strong>36.057</strong><span>fysieke regels serverbron, inclusief witruimte en commentaar</span></div><div><strong>217</strong><span>TypeScript-bestanden buiten de test/helperselectie</span></div><div><strong>121</strong><span>requesttypen in REQUEST_SCHEMAS</span></div><div><strong>145</strong><span>serverbestanden met .test. in de naam, inclusief integratietests</span></div></div>
+<p>Chat en canvas samen beslaan 12.326 van die bronregels, ongeveer 34%. PTY, sessies en processes samen beslaan 3.000 regels. Dat verschil laat zien hoeveel functioneel gedrag je bij een totale rewrite meeneemt. Regelaantallen meten omvang, geen complexiteit of CPU-gebruik. <a href="2026-09-18-rust-daemon-data/source-inventory.json">Inventaris en telmethode</a>.</p>
+<div class="table" role="region" aria-label="Huidige architectuur" tabindex="0"><table class="wide"><thead><tr><th scope="col">Onderdeel</th><th scope="col">Huidige uitvoering</th><th scope="col">Betekenis voor Rust</th></tr></thead><tbody>
+<tr><th scope="row">HTTP, WebSocket, PTY</th><td>Bun.serve en Bun.spawn met terminal; Bun WebSockets gebruiken uWebSockets.</td><td>Deze basis is al native. Winst zit eerder in het werk rond de calls dan in het vervangen van alleen de API.</td></tr>
+<tr><th scope="row">Terminalstatus</th><td>@xterm/headless 6.0.0 en addon-serialize 0.14.0; scherm, scrollback, reflow en resync.</td><td>De duidelijkste reken- en geheugenkandidaat, maar terminalcompatibiliteit is een harde eis.</td></tr>
+<tr><th scope="row">Chat, projecten en agents</th><td>TypeScript-state, CLI-subprocessen, JSON-bestanden, outbox en taakcoördinatie.</td><td>Veel correctheid en integratie, niet vanzelf veel taalafhankelijke rekentijd.</td></tr>
+<tr><th scope="row">Remote transport</th><td>werift voor WebRTC; gedeelde authenticatie en dispatcher voor verbindingen.</td><td>Een aparte mogelijke bottleneck. Een andere stack vraagt interoptests met web, desktop en iOS.</td></tr>
+<tr><th scope="row">Browser en devices</th><td>Bun.WebView met Chrome en binair HTTP-streamtransport; daarnaast base64-events.</td><td>Browserrendering blijft buiten een gewone daemonrewrite. Bun.WebView vervangen is een eigen integratieproject.</td></tr>
+</tbody></table></div>
+<p class="caption">Code: <a href="../../apps/server/src/daemon.ts">daemon.ts</a>, <a href="../../apps/server/src/pty/bun-pty.ts">bun-pty.ts</a>, <a href="../../apps/server/src/connection.ts">connection.ts</a>, <a href="../../apps/server/src/browser/manager.ts">browser/manager.ts:489</a>. Native WebSocket-basis: <a href="https://bun.com/docs/runtime/http/websockets">Bun-documentatie</a>.</p>
+<p>De React-client en Electron-shell blijven bij een daemonrewrite bestaan. Lag door canvasrendering, browserlayout of terminalrendering aan de clientkant vraagt een apart profiel. Gedeelde teken- en diagramlogica naar Rust/Wasm verplaatsen is pas zinvol als die berekeningen zelf dominant blijken; daarvoor is hier geen bewijs gevonden. <a href="../../CLAUDE.md">Projectarchitectuur</a>.</p>
+<p>Een daemon op een Linux-server is iets anders dan de centrale Pulsar-diensten. <code>apps/pulsar-broker</code> bemiddelt bij signaling en zit na het verbinden buiten de DataChannel-datastroom. <code>apps/pulsar-worker</code> draait op Cloudflare met D1 voor accounts en adresboek. Een daemonrewrite vervangt geen van beide en versnelt evenmin automatisch TURN-relayverkeer. <a href="../../apps/pulsar-broker/README.md">Brokerarchitectuur</a> · <a href="../../apps/pulsar-worker/README.md">Workerarchitectuur</a>.</p>
+</section>
+<section id="metingen">
+<h2>Wat de lokale meting werkelijk laat zien</h2>
+<p><span class="badge confirmed">Gemeten</span> Negen geïsoleerde Bun-processen, drie per groepsgrootte. Apple M4 Max, 64 GiB RAM, macOS 27.2, Bun 1.4.0. Elke terminal is 120 × 40 cellen met 10.000 scrollbackregels. De invoer bestaat uit 10.000 regels met 100 ASCII-tekens, groene ANSI-opmaak en CRLF: 1.110.000 bytes per terminal.</p>
+<p>Per proces warmt één terminal de code op. Daarna vult de proef 1, 10 of 50 nieuwe terminals achter elkaar, wacht op verwerking en serialiseert hun buffers. Alle snapshotstrings blijven tot het meetpunt bestaan. Er draait geen shell, daemon, socket of Rust-code. De invoer is bewust eenvoudig; interactieve TUI-uitvoer, Unicode en veel kleine chunks kunnen een ander kostenprofiel geven.</p>
+<figure class="panel"><div class="table" role="region" aria-label="Totale tijd voor één snapshotronde" tabindex="0"><svg class="diagram plot" width="850" viewBox="0 0 850 266" role="img" aria-labelledby="snapshot-t snapshot-d"><title id="snapshot-t">Totale tijd voor één snapshotronde</title><desc id="snapshot-d">Gemeten totale wall-clocktijd voor het achter elkaar serialiseren van alle gevulde buffers, mediaan van drie runs. Exclusief schijf, netwerk, PTY en de write-barrière van Session.serializeScreen. Geen p99-latentie en geen bewijs dat de daemon zolang aaneengesloten blokkeert.</desc><path class="grid" d="M215.0 30 V231"/><text class="label" x="215.0" y="20" text-anchor="middle">0</text><path class="grid" d="M332.5 30 V231"/><text class="label" x="332.5" y="20" text-anchor="middle">350</text><path class="grid" d="M450.0 30 V231"/><text class="label" x="450.0" y="20" text-anchor="middle">700</text><path class="grid" d="M567.5 30 V231"/><text class="label" x="567.5" y="20" text-anchor="middle">1050</text><path class="grid" d="M685.0 30 V231"/><text class="label" x="685.0" y="20" text-anchor="middle">1400</text><text x="0" y="65">1 terminal</text><rect class="series" x="215" y="45" width="9.20" height="29" rx="4"/><text x="234.20" y="65">27,4 ms</text><text x="0" y="127">10 terminals</text><rect class="series" x="215" y="107" width="79.62" height="29" rx="4"/><text x="304.62" y="127">237,2 ms</text><text x="0" y="189">50 terminals</text><rect class="series" x="215" y="169" width="392.21" height="29" rx="4"/><text x="617.21" y="189">1.168,3 ms</text></svg></div><figcaption>Gemeten totale wall-clocktijd voor het achter elkaar serialiseren van alle gevulde buffers, mediaan van drie runs. Exclusief schijf, netwerk, PTY en de write-barrière van Session.serializeScreen. Geen p99-latentie en geen bewijs dat de daemon zolang aaneengesloten blokkeert.</figcaption></figure>
+<figure class="panel"><div class="table" role="region" aria-label="Geheugen in de bibliotheekproef" tabindex="0"><svg class="diagram plot" width="850" viewBox="0 0 850 452" role="img" aria-labelledby="memory-t memory-d"><title id="memory-t">Geheugen in de bibliotheekproef</title><desc id="memory-d">Gemeten RSS van het volledige proefproces, mediaan van drie runs. Bovenste balk per groep is na vullen en GC; onderste is direct na serialisatie, vóór GC. RSS omvat runtime, allocator en nog niet teruggegeven pagina’s. Dit is geen meting van live objecten, piekgeheugen of de volledige daemon.</desc><path class="grid" d="M215.0 30 V417"/><text class="label" x="215.0" y="20" text-anchor="middle">0</text><path class="grid" d="M332.5 30 V417"/><text class="label" x="332.5" y="20" text-anchor="middle">1000</text><path class="grid" d="M450.0 30 V417"/><text class="label" x="450.0" y="20" text-anchor="middle">2000</text><path class="grid" d="M567.5 30 V417"/><text class="label" x="567.5" y="20" text-anchor="middle">3000</text><path class="grid" d="M685.0 30 V417"/><text class="label" x="685.0" y="20" text-anchor="middle">4000</text><text x="0" y="65">1 terminal · gevuld</text><rect class="series" x="215" y="45" width="17.36" height="29" rx="4"/><text x="242.36" y="65">147,7 MiB</text><text x="0" y="127">1 terminal · snapshot</text><rect class="reference" x="215" y="107" width="23.85" height="29" rx="4"/><text x="248.85" y="127">203,0 MiB</text><text x="0" y="189">10 terminals · gevuld</text><rect class="series" x="215" y="169" width="35.74" height="29" rx="4"/><text x="260.74" y="189">304,1 MiB</text><text x="0" y="251">10 terminals · snapshot</text><rect class="reference" x="215" y="231" width="89.00" height="29" rx="4"/><text x="314.00" y="251">757,4 MiB</text><text x="0" y="313">50 terminals · gevuld</text><rect class="series" x="215" y="293" width="134.58" height="29" rx="4"/><text x="359.58" y="313">1.145,3 MiB</text><text x="0" y="375">50 terminals · snapshot</text><rect class="reference" x="215" y="355" width="381.67" height="29" rx="4"/><text x="606.67" y="375">3.248,3 MiB</text></svg></div><figcaption>Gemeten RSS van het volledige proefproces, mediaan van drie runs. Bovenste balk per groep is na vullen en GC; onderste is direct na serialisatie, vóór GC. RSS omvat runtime, allocator en nog niet teruggegeven pagina’s. Dit is geen meting van live objecten, piekgeheugen of de volledige daemon.</figcaption></figure>
+<div class="table" role="region" aria-label="Meetresultaten in cijfers" tabindex="0"><table class="wide"><caption>Medianen; bij snapshottijd ook minimum en maximum. Tijden in ms, RSS in MiB.</caption><thead><tr><th scope="col">Terminals</th><th scope="col">Vullen, ms</th><th scope="col">Snapshot, ms<br>min tot max</th><th scope="col">RSS gevuld</th><th scope="col">RSS snapshot</th><th scope="col">RSS na extra GC</th></tr></thead><tbody><tr><th scope="row">1</th><td>9,4</td><td>27,4<br><span class="caption">27,2 tot 28,6</span></td><td>147,7</td><td>203,0</td><td>203,1</td></tr><tr><th scope="row">10</th><td>79,3</td><td>237,2<br><span class="caption">234,5 tot 237,2</span></td><td>304,1</td><td>757,4</td><td>758,0</td></tr><tr><th scope="row">50</th><td>378,1</td><td>1.168,3<br><span class="caption">1.162,8 tot 1.170,8</span></td><td>1.145,3</td><td>3.248,3</td><td>3.250,8</td></tr></tbody></table></div>
+<p>Bij 50 terminals is de snapshotronde circa 1,17 seconde. De snapshotstrings bevatten samen 51.000.450 UTF-8-bytes, ongeveer 48,6 MiB. Dat is veel minder dan de RSS-toename. RSS omvat ook tijdelijke allocaties, runtime-reserves en pagina’s die de allocator vasthoudt; de extra GC brengt die niet direct terug naar het OS. De proef bewijst dus geen geheugenlek en evenmin hoeveel daarvan Rust zou besparen.</p>
+<p>De RSS vóór de meetfase ligt na warmup rond 145 MiB. Dat is geen idle-daemonmeting. Gebruik ook het kleine verschil bij één terminal niet als een lineair geheugenbedrag per sessie. De toestand van allocator en runtime telt mee.</p>
+<p class="note">De echte daemon wacht vóór elke serialisatie op xterms write-callback. Deze proef klokt alleen de serialisatie zelf en voert die achter elkaar uit. De 1,17 seconde is geen gemeten eventloopstilstand van de daemon. Wel rechtvaardigt dit een profiel van snapshots, vooral op kleinere Linux-machines.</p>
+<p>In de code schrijft <code>Session.receive</code> alle uitvoer naar xterm, ook zonder aangesloten kijker. Elke 30 seconden vraagt de snapshotscheduler alle schermen op; <code>snapshotAll</code> verzamelt ze eerst in een array en daarna schrijft de store ze weg. Dat maakt minder vaak of alleen gewijzigde schermen serialiseren, snapshots spreiden en schermen direct wegschrijven relevante Bun-alternatieven. <a href="../../apps/server/src/sessions/session.ts">session.ts:132, 267</a> · <a href="../../apps/server/src/sessions/manager.ts">manager.ts:457</a> · <a href="../../apps/server/src/sessions/snapshot-store.ts">snapshot-store.ts:6, 69</a>.</p>
+<details open><summary>Reproduceerbare proef en beperkingen</summary><p><a href="2026-09-18-rust-daemon-data/measurements.json">Alle meetwaarden en machinegegevens</a> · <a href="2026-09-18-rust-daemon-data/terminal-benchmark.mjs">Zelfstandig proefscript</a>. Start vanuit een checkout met de bestaande dependencies; herhaal iedere grootte drie keer in een nieuw proces.</p><pre><code>bun docs/reports/2026-09-18-rust-daemon-data/terminal-benchmark.mjs 1
+bun docs/reports/2026-09-18-rust-daemon-data/terminal-benchmark.mjs 10
+bun docs/reports/2026-09-18-rust-daemon-data/terminal-benchmark.mjs 50</code></pre><p>Drie runs geven een indicatie, geen betrouwbaarheidsinterval. Andere processen op de Mac zijn niet stilgelegd. Niet gemeten: product-CPU, idleverbruik, p95/p99, Linux, netwerklatentie, serverdichtheid, binarygrootte en Rust. Er zijn geen nieuwe applicatietests geschreven of producttests gedraaid voor deze documentatietaak.</p></details>
+</section>
+<section id="kandidaten">
+<h2>Welke delen komen in aanmerking?</h2>
+<div class="table" role="region" aria-label="Afweging per module" tabindex="0"><table class="wide"><thead><tr><th scope="col">Kandidaat</th><th scope="col">Potentiële winst</th><th scope="col">Verlies of beperking</th><th scope="col">Oordeel</th></tr></thead><tbody>
+<tr><th scope="row">Terminalemulatie en snapshots</th><td>Controle over bufferindeling, allocaties en CPU-parallelisme per sessie; mogelijk minder JS-heapdruk.</td><td>Nieuwe emulator moet scrollback, Unicode, resize/reflow, alternate screen, cursor en ANSI-export blijven ondersteunen. Afwijkingen beschadigen resync of herstel.</td><td>Eerste grotere kandidaat na profilering. Test de hele terminalstatus, niet alleen PTY-spawn.</td></tr>
+<tr><th scope="row">Processampling</th><td>Synchrone OS-verzameling buiten de JS-eventloop; getypeerde native structs.</td><td>Syscalls blijven nodig. macOS gebruikt al libproc/Mach via FFI. Een Bun-worker kan eveneens isoleren.</td><td>Geschikt voor een kleinere proef, vooral bij grote Linux-procestabellen.</td></tr>
+<tr><th scope="row">Usage-index en transcriptparsing</th><td>Bij grote koude scans mogelijk minder allocaties en meer parallelle verwerking.</td><td>Incrementele offsets, caching en filters bestaan al. Disk-I/O en directoryscans verdwijnen niet.</td><td>Alleen prioriteit als een profiel koude scans of aggregatie aanwijst.</td></tr>
+<tr><th scope="row">Pulsar DataChannel</th><td>Mogelijk lager CPU-gebruik bij langdurige hoge datastromen.</td><td>ICE, DTLS/SCTP, TURN, fragmentatie, backpressure en iOS-interop moeten opnieuw kloppen.</td><td>Los benchmarken; niet tegelijk met de eerste terminalmigratie.</td></tr>
+<tr><th scope="row">HTTP en dispatcher</th><td>Eventueel minder runtimebasis en allocaties bij een volledige Rust-service.</td><td>Bun-netwerkbasis is al native. Zod-validatie en JSON-serialisatie zijn nog niet als dominante kosten aangetoond.</td><td>Geen eerste rewrite-doel.</td></tr>
+<tr><th scope="row">Git en grep</th><td>Alleen de voorbereiding en verwerking van resultaten versnellen.</td><td>Git draait als extern proces; grep gebruikt rg als het beschikbaar is. Veel zwaar werk ligt al buiten TypeScript.</td><td>Behoud subprocessen; controleer beschikbaarheid van rg op servers.</td></tr>
+<tr><th scope="row">Browser-/device-streams</th><td>Minder kopieën en encodingwerk als dát het probleem is.</td><td>Chrome, capture, codec en netwerk bepalen een deel van de kosten. Binair HTTP-transport bestaat al.</td><td>Eerst capture, encoding en transport apart meten.</td></tr>
+<tr><th scope="row">Chat, canvas, auth en stores</th><td>Op termijn één native backend en expliciete eigendom van state.</td><td>Grote port, gedeelde TS-logica verdwijnt, veel gedrags- en migratierisico. Sneller modelantwoord volgt er niet uit.</td><td>Voorlopig TypeScript houden.</td></tr>
+</tbody></table></div>
+<p class="caption">Bewijs voor de kleinere kandidaten: <a href="../../apps/server/src/processes/linux.ts">LinuxSampler:92</a>, <a href="../../apps/server/src/processes/darwin.ts">DarwinSampler en FFI</a>, <a href="../../apps/server/src/processes/monitor.ts">monitor:31, 432</a>, <a href="../../apps/server/src/usage/scanner.ts">incrementele usage-scan</a>, <a href="../../apps/server/src/usage/usage-service.ts">scan-TTL</a>, <a href="../../apps/server/src/fs/grep.ts">rg met JS-fallback</a>, <a href="../../apps/server/src/git/run.ts">Git-subprocessen</a>, <a href="../../apps/server/src/pulsar/data-channel.ts">DataChannel-adapter</a>, <a href="../../apps/server/src/streams/http-stream.ts">binaire streamroute</a>.</p>
+<h3>Wat Rust concreet toevoegt</h3>
+<p>Rust beheert geheugen via ownership in plaats van een garbage collector. Dat kan de allocaties en levensduur van terminalbuffers beter beheersbaar maken. Het garandeert geen kleine buffers, lage latency of afwezigheid van leaks. Bun met een Rust-addon houdt bovendien zijn JavaScript-runtime en GC. <a href="https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html">Rust, ownership</a>.</p>
+<p>Tokio biedt async I/O en een multithread-runtime. CPU-zwaar werk moet nog steeds expliciet uit async taken worden gehouden, bijvoorbeeld met begrensde workers. Eén onbegrensde queue of een grote synchrone serialisatie kan ook in Rust latency veroorzaken. <a href="https://tokio.rs/tokio/topics/bridging">Tokio, sync en async combineren</a>.</p>
+<h3>Wat eerst binnen Bun vergeleken moet worden</h3>
+<ul><li>Snapshots alleen bij wijzigingen, met een geheugenbudget en gespreide verwerking. Behoud shutdownflush en herstelgaranties.</li><li>Processampling in een worker, met dezelfde PID/starttijdcontrole en platformsemantiek.</li><li>Per-sessie batching en gedeelde encoding bij meerdere kijkers. De huidige code concateneert per client en <code>OutputGate</code> doet per frame JSON.stringify.</li><li>De invoerqueue van headless xterm meten en begrenzen waar nodig. Socketbackpressure met resync begrenst een ander deel van de keten; hij pauzeert hier niet automatisch de PTY-invoer.</li></ul>
+<p class="caption"><a href="../../apps/server/src/backpressure.ts">OutputGate: high-water 1 MiB, low-water 256 KiB</a> · <a href="../../apps/server/src/sessions/session.ts">16 ms outputbatching en xterm.write</a> · <a href="https://xtermjs.org/docs/guides/flowcontrol/">xterm, write-buffer en flow control</a>. Dit zijn onderzoeksrichtingen, geen in dit onderzoek bevestigde fouten.</p>
+</section>
+<section id="scenario">
+<h2>Hoe groot kan de winst zijn, en wanneer verlies je?</h2>
+<p><span class="badge warning">Theoretisch model</span> De taalversnelling geldt alleen voor het deel van het werk dat je vervangt. Netwerkwachttijd, modelinference, Git, schijf en Chrome kunnen hetzelfde blijven. Onderstaande cijfers zijn gekozen rekenvoorbeelden, geen Rust-benchmark.</p>
+<p class="formula"><code>Tnieuw / Toud = 1 − p + p / s + h</code><br><code>p</code> = vervangbaar aandeel van de oorspronkelijke tijd; <code>s</code> = lokale versnelling; <code>h</code> = extra overhead als deel van de oorspronkelijke tijd.</p>
+<figure class="panel"><div class="table" role="region" aria-label="Theoretische winst en verlies" tabindex="0"><svg class="diagram plot" width="850" viewBox="0 0 850 330" role="img" aria-labelledby="g-t g-d"><title id="g-t">Winst en verlies door versnelling en overhead</title><desc id="g-d">Vier verzonnen scenario’s geven van 2,5 procent extra tijd tot 62 procent minder tijd. De tabel bevat alle aannames.</desc><path class="grid" d="M230.0 42 V290"/><text class="label" x="230.0" y="27" text-anchor="middle">-10%</text><path class="grid" d="M285.0 42 V290"/><text class="label" x="285.0" y="27" text-anchor="middle">0%</text><path class="grid" d="M395.0 42 V290"/><text class="label" x="395.0" y="27" text-anchor="middle">20%</text><path class="grid" d="M505.0 42 V290"/><text class="label" x="505.0" y="27" text-anchor="middle">40%</text><path class="grid" d="M615.0 42 V290"/><text class="label" x="615.0" y="27" text-anchor="middle">60%</text><path class="grid" d="M725.0 42 V290"/><text class="label" x="725.0" y="27" text-anchor="middle">80%</text><path class="axis" d="M285 40 V290"/><text x="0" y="81">Klein aandeel, dure grens</text><rect class="loss" x="271.25" y="62" width="13.75" height="28" rx="3"/><text x="294.0" y="81">-2,5%</text><text x="0" y="139">Beperkt CPU-aandeel</text><rect class="gain" x="285.0" y="120" width="27.5" height="28" rx="3"/><text x="321.5" y="139">+5,0%</text><text x="0" y="197">Helft versnelt</text><rect class="gain" x="285.0" y="178" width="166.83333333333334" height="28" rx="3"/><text x="460.83333333333337" y="197">+30,3%</text><text x="0" y="255">Dominante rekenkern</text><rect class="gain" x="285.0" y="236" width="341.0" height="28" rx="3"/><text x="635.0" y="255">+62,0%</text></svg></div><figcaption>Rekenvoorbeelden, geen prognose. Rechts = minder totale uitvoeringstijd; links = meer tijd. De lokale versnelling en overhead zijn gekozen aannames, geen resultaten van Rust.</figcaption></figure>
+<div class="table" role="region" aria-label="Aannames van de scenario’s" tabindex="0"><table class="wide"><caption>Dezelfde vaste hoeveelheid werk. Oorspronkelijke uitvoeringstijd = 100 eenheden.</caption><thead><tr><th scope="col">Scenario</th><th scope="col">Aandeel p</th><th scope="col">Versnelling s</th><th scope="col">Overhead h</th><th scope="col">Nieuwe tijd</th><th scope="col">Tijdwinst</th></tr></thead><tbody><tr><th scope="row">Klein aandeel, dure grens</th><td>5%</td><td>2×</td><td>5%</td><td>102,5</td><td>-2,5%</td></tr><tr><th scope="row">Beperkt CPU-aandeel</th><td>20%</td><td>2×</td><td>5%</td><td>95,0</td><td>+5,0%</td></tr><tr><th scope="row">Helft versnelt</th><td>50%</td><td>3×</td><td>3%</td><td>69,7</td><td>+30,3%</td></tr><tr><th scope="row">Dominante rekenkern</th><td>80%</td><td>5×</td><td>2%</td><td>38,0</td><td>+62,0%</td></tr></tbody></table></div>
+<div class="panel interactive-result"><h3>Verken je eigen aannames</h3><p id="model-note">Startvoorbeeld: 40% vervangbaar werk, lokaal 3× sneller en 3% extra overhead. Dat levert 76,3 tijdseenheden op, oftewel 23,7% minder tijd. Dit model is geschikt voor een vaste, optelbare werklast; niet voor een voorspelling van p99 onder wachtrijen.</p>
+<div class="controls"><div><label for="share">Vervangbaar aandeel <output id="share-value">40%</output></label><input id="share" type="range" min="0" max="90" step="1" value="40" aria-describedby="model-note"></div><div><label for="speed">Lokale versnelling <output id="speed-value">3×</output></label><input id="speed" type="range" min="0.5" max="8" step="0.1" value="3" aria-describedby="model-note"></div><div><label for="overhead">Extra overhead <output id="overhead-value">3%</output></label><input id="overhead" type="range" min="0" max="30" step="1" value="3" aria-describedby="model-note"></div></div>
+<div class="bar-label"><span>Huidige uitvoering</span><span>100 tijdseenheden</span></div><div class="bar reference" aria-hidden="true"><span id="old-bar" style="width:100%"></span></div>
+<div class="bar-label"><span>Nieuwe uitvoering</span><output id="new-time" for="share speed overhead">76,3 tijdseenheden</output></div><div class="bar" aria-hidden="true"><span id="new-bar" style="width:76.3333%"></span></div>
+<p class="result" id="model-result" aria-live="polite">23,7% minder tijd · 1,31× snelheid</p><p class="caption" id="model-state">Aannames: p = 40%, s = 3×, h = 3%. Beide balken gebruiken dezelfde schaal.</p><noscript><p class="caption">JavaScript staat uit. Het startvoorbeeld hierboven blijft leesbaar.</p></noscript></div>
+<h3>De grens tussen winst en verlies</h3>
+<p>Een Rust-helper is gunstig wanneer <code>p × (1 − 1/s) &gt; h</code>. Als slechts 5% van een actie versnelt en dat deel 2× sneller wordt, is het budget voor alle extra kopieën, berichten en contextwissels samen maar 2,5% van de oorspronkelijke tijd. Een extra proces is dan snel te duur.</p>
+<h3>Minder daemongeheugen is niet dezelfde winst op de server</h3>
+<p>Rekenvoorbeeld: stel dat Rust het daemongeheugen halveert. Als de daemon 10% van het totale geheugen van daemon plus agents, shells en browsers inneemt, daalt dat totaal slechts 5%. Bij een daemonaandeel van 50% wordt dat 25%. Beide aandelen en de halvering zijn aannames.</p>
+<div class="bar-label"><span>Daemonaandeel 10% · totaal blijft over</span><span>95%</span></div><div class="bar reference" aria-hidden="true"><span style="width:95%"></span></div><div class="bar-label"><span>Daemonaandeel 50% · totaal blijft over</span><span>75%</span></div><div class="bar" aria-hidden="true"><span style="width:75%"></span></div>
+<p class="caption">Schaal 0–100% van oorspronkelijk totaalgeheugen. Formule: totaalreductie = daemonaandeel × reductie binnen daemon. Geen productieaandelen gemeten.</p>
+<p>Een volledige Rust-daemon kan de Bun-runtime uit dat proces verwijderen. Een sidecar voegt juist een proces toe; buffers en kopieën over IPC kunnen de besparing tenietdoen. Een native addon houdt alles in één proces maar heeft geen aparte crashgrens. Kleinere binaries, sneller starten en lagere serverkosten zijn hier nog open meetvragen. Bun levert nu al een zelfstandig executable. <a href="../../apps/server/scripts/compile.ts">Huidige compileerstap</a> · <a href="https://bun.com/docs/bundler/executables">Bun executable-documentatie</a>.</p>
+</section>
+<section id="migratie">
+<h2>Een gerichte migratie heeft een andere prijs dan een rewrite</h2>
+<div class="table" role="region" aria-label="Vergelijking migratiestrategieën" tabindex="0"><table class="wide"><thead><tr><th scope="col">Optie</th><th scope="col">Voordeel</th><th scope="col">Nadeel</th><th scope="col">Wanneer passend?</th></tr></thead><tbody>
+<tr><th scope="row">Bun behouden, hotspots aanpakken</th><td>Hergebruik van contracts, tests en tooling; kleinste functionele verandering.</td><td>JSC/GC blijft; parallelisme en begrensde queues vragen eigen ontwerp.</td><td>Eerste vergelijking, om te bepalen welk probleem de taal werkelijk oplost.</td></tr>
+<tr><th scope="row">Rust-addon via Node-API</th><td>Geen extra proces; goed voor een grof gebatchte buffer- of parserservice.</td><td>Native crash raakt daemon. Threading, ownership over de grens en builds per target. Bun ondersteunt Node-API, maar test de daadwerkelijk gebruikte subset.</td><td>Als kopie- en IPC-kosten een sidecar ongunstig maken.</td></tr>
+<tr><th scope="row">Rust-helper via lokale IPC</th><td>Apart CPU- en foutdomein; één duidelijk afgebakende taak kan zelfstandig worden gemeten.</td><td>Extra RSS, kopieën, protocolversies, toezicht en foutafhandeling. Een parserhelper vereist reconstructie van state na uitval.</td><td>Kleine samplerproef, of terminalkern met een expliciet lifecyclecontract.</td></tr>
+<tr><th scope="row">Volledige daemon in Rust</th><td>Geen JS-runtime nodig in de daemon; consistente native backend en ruimte voor gericht parallelisme.</td><td>Alle stores, hooks, CLI-backends, transporten, platformdetails en herstelpaden porten. Dubbel onderhoud tijdens overgang.</td><td>Pas bij brede gemeten beperkingen of een expliciete langetermijnkeuze met budget voor gedragspariteit.</td></tr>
+</tbody></table></div>
+<p class="caption">Node-API-mogelijkheden: <a href="https://bun.com/docs/runtime/node-api">Bun-documentatie</a>. Deze tabel is een architectuuroordeel, geen tijd- of kostenraming.</p>
+<h3>Waar de grens zou kunnen liggen</h3>
+<p><code>PtyAdapter</code> is al een smalle grens voor spawn, write, resize, kill, data en exit. Alleen die adapter vervangen laat de headless xterm-kosten staan. Voor de terminalkandidaat moet de afbakening ook schermstate, snapshot, contexttekst en resync omvatten. Houd één eigenaar van terminalstate; twee emulators permanent naast elkaar leveren dubbel werk en uiteenlopende schermen op.</p>
+<p>Als alleen de parser naar een helper gaat, kan Bun de PTY blijven bezitten, maar een helperherstart vraagt een herstelprotocol. Als Rust ook de PTY bezit, beïnvloedt een crash de shells en zijn process groups, signalen en restartbeleid onderdeel van de migratie. Een betrouwbare sidecar is daarom meer dan bytes over stdin sturen. <a href="../../apps/server/src/pty/pty.ts">Bestaande PtyAdapter</a> · <a href="../../apps/server/src/sessions/session.ts">Sessielifecycle</a>.</p>
+<h3>Beschikbare Rust-bouwstenen</h3>
+<p><a href="https://docs.rs/portable-pty/latest/portable_pty/">portable-pty</a> biedt een platformoverstijgende PTY-interface. <a href="https://docs.rs/vt100/latest/vt100/">vt100</a> parseert terminalbytes, houdt schermstate bij en kan opgemaakte output teruggeven. <a href="https://docs.rs/alacritty_terminal/latest/alacritty_terminal/">alacritty_terminal</a> is een andere emulatorbasis. Geen daarvan is hier als gelijkwaardige vervanging voor xterm gecertificeerd. Vooral volledige scrollbackexport en reflow moeten eerst worden bewezen.</p>
+<p>Voor een volledige backend zijn <a href="https://docs.rs/axum/latest/axum/">Axum met Tokio</a> en serde_json logische te onderzoeken bouwstenen. Er bestaat ook een <a href="https://docs.rs/webrtc/latest/webrtc/">Rust WebRTC-stack</a>. De beschikbaarheid van een crate bewijst geen prestatiewinst of compatibiliteit met de huidige werift-workarounds. Bun.WebView vraagt daarnaast een vervangende Chrome/CDP-integratie of een behouden helper.</p>
+<h3>Gedrag dat niet verloren mag gaan</h3>
+<ul><li>Contracten en validatie. De client en server delen Zod-schema’s. De bestaande Swift-generator exporteert al JSON Schema en wire-fixtures; gebruik dat als vertrekpunt voor Rust, met expliciete tests voor defaults, ontbrekend versus null, unknown fields en foutcodes. Een afgeleid type alleen vervangt Zod-validatie niet.</li><li>Authenticatie. Behoud de exact getekende bytes, nonce- en ticketgedrag, originchecks, lokale sleutel en ingetrokken toegang. Een Rust-typechecker bewijst geen juiste autorisatie.</li><li>Terminalvolgorde. Attach/snapshot moet aansluiten op de uitvoer zonder gaten of duplicaten. Een trage kijker krijgt resync zonder andere kijkers te blokkeren. UTF-8-chunks, signals, exit/drain en kill-escalatie moeten hetzelfde blijven.</li><li>Persistente state. Endpointidentiteit, keys, permissies, atomair schrijven, projectrevisies, chatlogs, lineage, outbox en taken moeten bruikbaar blijven. Test crashmomenten en voorkom dubbele agentstarts.</li><li>Levering en terugweg. macOS en Linux, ARM64 en x64, servicebeheer, signing en updates horen bij de port. Een daemonrestart beëindigt nu de shells; plan een overstap als onderhoudsmoment of bij idle, niet als bewezen naadloze hot swap.</li></ul>
+<p class="caption"><a href="../../packages/contracts/scripts/generate-swift.ts">Schema-export voor Swift</a> · <a href="../../packages/contracts/src/protocol.ts">Protocolversies</a> · <a href="../../packages/pulsar/src/signing.ts">Te ondertekenen bytes</a> · <a href="../../apps/server/src/auth/access.ts">Toegangsbeslissing</a> · <a href="../../apps/server/src/fs.ts">Atomair schrijven</a> · <a href="../../apps/server/src/outbox/outbox-worker.ts">Outbox</a> · <a href="../../apps/server/src/service/self-update.ts">Updates bij idle</a>.</p>
+<p>Er staat nog geen Cargo-project in deze checkout. De ontwikkelkosten omvatten dus ook Rust-tooling, targetbuilds, schema-generatie en expertise. Een betrouwbare kalender- of euro-raming vraagt eerst een beperkte port en kennis van het team. Dit rapport verzint daarvoor geen percentages.</p>
+</section>
+<section id="vervolg">
+<h2>Een beslisbaar vervolgonderzoek</h2>
+<p>Onderstaande stappen zijn een voorstel. Er is in dit onderzoek geen Rust-module, migratie of configuratiewijziging uitgevoerd.</p>
+<ol class="steps"><li class="step"><div><h3>Leg de doelbelasting vast</h3><p>Maak onderscheid tussen één daemon per ontwikkelmachine, een gedeelde Linux-host met veel sessies en centrale brokerverbindingen. Neem als proefmatrix 1, 10, 50 en 100 sessies; idle en uitvoerbursts; 0, 1 en 5 kijkers; direct WebSocket en WebRTC. Bepaal welke aantallen werkelijk nodig zijn. Het huidige authenticatiemodel voor paired clients wordt door een Rust-port niet vanzelf een geïsoleerd multitenantsysteem.</p></div></li>
+<li class="step"><div><h3>Meet de huidige daemon en een Bun-variant</h3><p>Meet daemon-CPU, RSS/PSS waar beschikbaar, eventloopvertraging, allocaties, snapshotduur en invoer-tot-scherm p50/p95/p99. Meet child processes apart en het totaal samen. Test koude en warme usage-scans en processampling op Linux. Vergelijk dezelfde workload met gespreide of gewijzigde-only snapshots en worker-isolatie voordat een taalconclusie volgt.</p><p>Gebruik ook realistische TUI-recordings, brede tekens en emoji, resize/reflow, trage clients, reconnect en disconnect. Draai meerdere opgewarmde herhalingen op dezelfde machine met identieke data, versie en netwerkcondities.</p></div></li>
+<li class="step"><div><h3>Toets één Rust-kandidaat op pariteit</h3><p>Kies de hotspot die het profiel bevestigt. Replay dezelfde terminalbytes tegen beide emulators en vergelijk scherm, cursor, modes en scrollback na elke relevante stap. ANSI-strings mogen anders zijn als ze aantoonbaar hetzelfde scherm herstellen. Controleer daarnaast snapshots van de huidige daemon en de reverse migratie. Voor een sampler vergelijk je PID-identiteit, CPU/disk-eenheden, permissions en het gedrag bij verdwijnende processen.</p></div></li>
+<li class="step"><div><h3>Gebruik vooraf afgesproken beslisgrenzen</h3><p>Voorstel, nog geen product-SLO: eis volledige pariteit op de afgesproken fixtures en minimaal 30% minder CPU óf 25% minder geheugen voor daemon plus eventuele helper onder de doelbelasting. Laat p99-invoerlatentie niet meer dan 5% verslechteren, beoordeeld tegenover meetruis en meerdere runs. Onderzoek een kleinere winst alleen als die een concrete capaciteits- of latencygrens oplost.</p><p>Neem restart/recovery, buildgrootte, opstartduur, releasecomplexiteit en onderhoud mee. Slaagt één module, dan rechtvaardigt dat die module. Het is nog geen bewijs voor het herschrijven van de resterende server.</p></div></li></ol>
+</section>
+<section id="bronnen">
+<h2>Bronnen en bewijskracht</h2>
+<p><span class="badge confirmed">Vastgesteld</span> Broncode, fysieke regelaantallen en de geïsoleerde xterm-metingen. <span class="badge info">Beoordeling</span> Prioriteit van modules en migratiestrategieën. <span class="badge warning">Aannames</span> Alle Rust-versnellingsfactoren, geheugenreducties, overheadscenario’s en voorgestelde acceptatiegrenzen.</p>
+<p>Bronlinks staan bij de bevindingen. Lokale links verwijzen naar deze checkout en kunnen na latere wijzigingen andere inhoud tonen; de <a href="2026-09-18-rust-daemon-data/source-inventory.json">inventaris</a> bewaart de geanalyseerde serverbestandshashes en werkboomstatus. Externe documentatie is geraadpleegd op 18 september 2026 en dient voor mogelijkheden van de runtimes en libraries. Er zijn geen algemene Rust-versus-JavaScript-benchmarks als voorspelling voor Ruimte gebruikt.</p>
+<p>De kern van het rapport blijft zelfstandig leesbaar zonder netwerk, fonts, buildstap of JavaScript. De losse meetgegevens en het proefscript zijn onderbouwing; het rapport bevat alle grafieken en tabellen zelf.</p>
+</section></main><footer><p>Ruimte · Rust-verkenning · 18 september 2026. Vormgeving op basis van de html-report-skill, met de donkere Iron-merkkleur uit de huidige clientstyles. Alleen rapport en onderzoeksbijlagen toegevoegd.</p></footer>
+<script>
+{
+const share = document.getElementById('share');
+const speed = document.getElementById('speed');
+const overhead = document.getElementById('overhead');
+const f = (value, digits = 1) => value.toLocaleString('nl-NL', {maximumFractionDigits: digits, minimumFractionDigits: digits});
+function update() {
+ const p = Number(share.value), s = Number(speed.value), h = Number(overhead.value);
+ const time = 100 - p + p / s + h;
+ const gain = 100 - time;
+ const scale = Math.max(100, time);
+ document.getElementById('share-value').value = p + '%';
+ document.getElementById('speed-value').value = f(s) + '×';
+ document.getElementById('overhead-value').value = h + '%';
+ document.getElementById('new-time').value = f(time) + ' tijdseenheden';
+ document.getElementById('old-bar').style.width = (100 / scale * 100) + '%';
+ document.getElementById('new-bar').style.width = (time / scale * 100) + '%';
+ document.getElementById('new-bar').style.background = gain < 0 ? 'var(--danger)' : 'var(--accent)';
+ document.getElementById('model-result').textContent = f(Math.abs(gain)) + (gain >= 0 ? '% minder tijd' : '% meer tijd') + ' · ' + f(100 / time, 2) + '× snelheid';
+ document.getElementById('model-state').textContent = 'Aannames: p = ' + p + '%, s = ' + f(s) + '×, h = ' + h + '%. Beide balken gebruiken dezelfde schaal.';
+}
+for (const input of [share, speed, overhead]) input.addEventListener('input', update);
+}
+</script>
+</body></html>
