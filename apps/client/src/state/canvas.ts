@@ -72,6 +72,15 @@ export type TextElement = ProjectText;
    whatever a newer Ruimte wrote on an edge the moment this store handed the canvas back. */
 export type Edge = ProjectEdge;
 
+/* The ports a new line is held to, as far as the drag that drew it named them. */
+export type EdgeSides = Pick<Edge, 'fromSide' | 'toSide'>;
+
+/* The same two ports the other way round, so the line back is held where the line out is drawn. */
+const mirroredSides = (sides: EdgeSides | undefined): EdgeSides => ({
+    ...(sides?.toSide === undefined ? {} : { fromSide: sides.toSide }),
+    ...(sides?.fromSide === undefined ? {} : { toSide: sides.fromSide })
+});
+
 /*
  * An edge being drawn: from a node or text to wherever the pointer is, in world units. Started from
  * a port it lives as long as the drag; started from a menu (`aiming`) it waits for a click on a target.
@@ -207,8 +216,12 @@ export interface CanvasState {
 
     toggleGroupCollapse(id: string): void;
     setGroupWorktree(id: string, worktree: { path: string; branch: string } | null): void;
-    /* Edges: any node or text to any other. Into an agent node (terminal or chat) the edge also makes the source readable. */
-    addEdge(from: string, to: string, sides?: { fromSide?: NodeSide; toSide?: NodeSide }): string | null;
+    /*
+     * Edges: any node or text to any other. Into an agent node (terminal or chat) the edge also makes
+     * the source readable, so between two agents this draws both ways at once and answers with the id
+     * of the one that was asked for.
+     */
+    addEdge(from: string, to: string, sides?: EdgeSides): string | null;
     removeEdge(id: string): void;
     setEdgeLabel(id: string, label: string): void;
     setLinkDraft(draft: LinkDraft | null): void;
@@ -642,12 +655,28 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
             if (!exists(from) || !exists(to) || !canLink(s.edges, from, to)) {
                 return null;
             }
-            const id = nextId('edge');
-            const target = s.nodes[to];
-            // Only a line into an agent carries meaning, so only that one gets a label by default.
-            const label = target && isAgentKind(target.kind) ? 'context' : undefined;
-            set({ edges: [...s.edges, { id, from, to, label, ...sides }], linkDraft: null, ...remember(s) });
-            return id;
+            const isAgent = (id: string): boolean => {
+                const node = s.nodes[id];
+                return node !== undefined && isAgentKind(node.kind);
+            };
+            const drawn: Edge[] = [];
+            const draw = (start: string, end: string, ends: EdgeSides): void => {
+                if (!canLink([...s.edges, ...drawn], start, end)) {
+                    return;
+                }
+                // Only a line into an agent carries meaning, so only that one gets a label by default.
+                const label = isAgent(end) ? 'context' : undefined;
+                drawn.push({ id: nextId('edge'), from: start, to: end, label, ...ends });
+            };
+            draw(from, to, sides ?? {});
+            /* Both ways between two agents, the way the daemon's `link new` draws it: a line is what
+               lets the end it runs into read the other, so two agents that read each other are two. */
+            if (isAgent(from) && isAgent(to)) {
+                draw(to, from, mirroredSides(sides));
+            }
+            // One handling is one step in the history, whether it drew one line or the pair.
+            set({ edges: [...s.edges, ...drawn], linkDraft: null, ...remember(s) });
+            return drawn[0]!.id;
         },
         startLink(from) {
             const s = get();

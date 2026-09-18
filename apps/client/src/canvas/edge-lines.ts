@@ -42,9 +42,13 @@ export const edgeLines = (edges: readonly Edge[]): EdgeLine[] => {
     return lines;
 };
 
-/* Whether a line may still be drawn between these two: never onto itself, and one line per pair. */
+/*
+ * Whether a line may still be drawn between these two: never onto itself, and never a second one the
+ * same way round. The way back is a line of its own, since it is what makes the other end readable,
+ * so a pair fills at two and a third line between the same two would only repeat a direction.
+ */
 export const canLink = (edges: readonly Edge[], from: string, to: string): boolean =>
-    from !== to && !edges.some((edge) => (edge.from === from && edge.to === to) || (edge.from === to && edge.to === from));
+    from !== to && !edges.some((edge) => edge.from === from && edge.to === to);
 
 /*
  * The ports a line is held to. Both directions of a pair are one line, and the one drawn back names

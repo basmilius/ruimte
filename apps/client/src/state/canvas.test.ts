@@ -52,10 +52,11 @@ describe('edges', () => {
                 shell: node('shell', 0, 0),
                 page: node('page', 400, 0, 'browser'),
                 memo: node('memo', 0, 400, 'note'),
-                frame: node('frame', 400, 400, 'group')
+                frame: node('frame', 400, 400, 'group'),
+                talk: node('talk', 800, 400, 'chat')
             },
             texts: { t1: { id: 't1', x: 800, y: 0, text: 'hello', size: 18 } },
-            order: ['shell', 'page', 'memo', 'frame'],
+            order: ['shell', 'page', 'memo', 'frame', 'talk'],
             edges: [],
             selection: [],
             linkDraft: null
@@ -72,14 +73,36 @@ describe('edges', () => {
         expect(canvas().edges.map((edge) => edge.label)).toEqual([undefined, undefined, undefined, 'context']);
     });
 
-    test('a pair gets one line whichever way it is drawn, and nothing connects to itself or to a stranger', () => {
+    test('the way back is a line of its own, and nothing connects to itself, to a stranger or twice the same way', () => {
         seed();
         const s = canvas();
         expect(s.addEdge('page', 'memo')).not.toBeNull();
+        expect(s.addEdge('page', 'memo')).toBeNull();
+        expect(s.addEdge('memo', 'page')).not.toBeNull();
         expect(s.addEdge('memo', 'page')).toBeNull();
         expect(s.addEdge('page', 'page')).toBeNull();
         expect(s.addEdge('page', 'missing')).toBeNull();
+        expect(canvas().edges).toHaveLength(2);
+    });
+
+    test('a line between two agents is drawn both ways at once, as one step of the history', () => {
+        seed();
+        const id = canvas().addEdge('shell', 'talk', { fromSide: 'right', toSide: 'left' });
+        const edges = canvas().edges;
+        expect(edges).toHaveLength(2);
+        expect(edges[0]).toMatchObject({ id: id!, from: 'shell', to: 'talk', label: 'context', fromSide: 'right', toSide: 'left' });
+        // The line back reads the other way, is named the same and holds the same two ports.
+        expect(edges[1]).toMatchObject({ from: 'talk', to: 'shell', label: 'context', fromSide: 'left', toSide: 'right' });
+        // One handling, so one undo takes the whole pair away and neither line is left behind.
+        canvas().undo();
+        expect(canvas().edges).toEqual([]);
+    });
+
+    test('a line into anything but an agent stays one line', () => {
+        seed();
+        expect(canvas().addEdge('talk', 'memo')).not.toBeNull();
         expect(canvas().edges).toHaveLength(1);
+        expect(canvas().edges[0]).toMatchObject({ from: 'talk', to: 'memo', label: undefined });
     });
 
     test('a field a newer Ruimte put on an edge is still on it when the canvas is handed back', () => {

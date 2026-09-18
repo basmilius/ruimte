@@ -60,11 +60,16 @@ describe('what an edge aims at', () => {
 describe('whether a line may be drawn', () => {
     const edges = [edge('e1', 'a', 'b')];
 
-    test('is no for a node onto itself and for a pair that already has one', () => {
+    test('is no for a node onto itself and for a second line the same way round', () => {
         expect(canLink(edges, 'a', 'c')).toBe(true);
         expect(canLink(edges, 'a', 'a')).toBe(false);
         expect(canLink(edges, 'a', 'b')).toBe(false);
-        // Whichever way the first one was drawn.
-        expect(canLink(edges, 'b', 'a')).toBe(false);
+    });
+
+    test('the way back is a line of its own, and a third between the same two is not', () => {
+        expect(canLink(edges, 'b', 'a')).toBe(true);
+        const pair = [...edges, edge('e2', 'b', 'a')];
+        expect(canLink(pair, 'b', 'a')).toBe(false);
+        expect(canLink(pair, 'a', 'b')).toBe(false);
     });
 });
