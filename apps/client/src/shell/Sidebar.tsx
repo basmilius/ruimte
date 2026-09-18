@@ -67,6 +67,7 @@ import { NewViewItems, NewViewTiles } from '@/shell/ViewMenu';
 import { setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { UsageLimitsCard } from '@/shell/usage/UsageLimitsCard';
+import { ConnectionDot } from '@/shell/ConnectionDot';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { Icon } from '@/ui/Icon';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
@@ -747,6 +748,7 @@ export function Sidebar() {
                             </Menu.Positioner>
                         </Menu.Portal>
                     </Menu.Root>
+                    <ConnectionDot />
                     <UsageLimitsCard>
                         <button className="icon-btn" aria-label="Usage" onClick={() => useUi.getState().setUsageOpen(true)}>
                             <Icon icon={ChartNoAxesColumn} size={16} />

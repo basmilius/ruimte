@@ -2,9 +2,7 @@ import clsx from 'clsx';
 import { ArrowDownToLine, Search } from 'lucide-react';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
-import { ConnectionDot } from '@/shell/ConnectionDot';
 import { PanelControls } from '@/shell/PanelControls';
-import { ProjectActionsMenu } from '@/shell/ProjectActionsMenu';
 import { ProjectMenu } from '@/shell/ProjectMenu';
 import { ViewMenu } from '@/shell/ViewMenu';
 import { useHasViewToolbar, useShowsSubagents, useToolbarView, ViewToolbar } from '@/shell/ViewToolbar';
@@ -26,10 +24,9 @@ import { VoiceButton } from '@/voice/VoiceButton';
 import { useVoice } from '@/voice/state';
 
 /* The band above the canvas: which project is open, and the panels that sit next to it. It is as
-   tall as the sidebar's own strip, so the two read as one title bar across the window. The
-   connection dot lives here rather than in the sidebar, so it stays in view while the list is
-   hidden; the left padding follows the sidebar's width, which keeps the breadcrumb from jumping
-   when the list slides away. */
+   tall as the sidebar's own strip, so the two read as one title bar across the window. The left
+   padding follows the sidebar's width, which keeps the breadcrumb from jumping when the list
+   slides away. */
 export function Toolbar() {
     const projectDirty = useProject((s) => s.dirty);
     const drawingDirty = useDrawing((s) => s.dirty);
@@ -83,10 +80,8 @@ export function Toolbar() {
             {hasViewToolbar && !inSubagents && <Separator />}
             {!split && <ViewToolbar view={view} focused={bodyFocused} chatTitle={sidebarOpen ? (view?.name ?? undefined) : undefined} />}
             {hasViewToolbar && <Separator />}
-            <ConnectionDot />
             <div className={BTN_GROUP}>
                 <PanelControls />
-                <ProjectActionsMenu />
             </div>
             <Separator />
             {/* The palette keeps the toolbar's right end, so with no panel beside it the search icon

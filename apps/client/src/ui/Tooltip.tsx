@@ -21,6 +21,7 @@ interface TooltipProps {
     /* A shortcut, or a short phrase about a key that is not one ("Shift skips the cache"). */
     kbd?: Shortcut | string;
     side?: Side;
+    sideOffset?: number;
     /* Makes the label the accessible name of the trigger as well: what an icon-only button needs,
        and the way to keep the name and the tooltip from ever saying two different things. */
     name?: boolean;
@@ -28,12 +29,12 @@ interface TooltipProps {
     children: ReactElement<Record<string, unknown>>;
 }
 
-export function Tooltip({ label, kbd, side = 'top', name = false, children }: TooltipProps) {
+export function Tooltip({ label, kbd, side = 'top', sideOffset = 6, name = false, children }: TooltipProps) {
     return (
         <BaseTooltip.Root>
             <BaseTooltip.Trigger render={children} aria-label={name && typeof label === 'string' ? label : undefined} />
             <BaseTooltip.Portal>
-                <BaseTooltip.Positioner side={side} sideOffset={6} className="tooltip-positioner">
+                <BaseTooltip.Positioner side={side} sideOffset={sideOffset} className="tooltip-positioner">
                     <BaseTooltip.Popup className="tooltip-popup">
                         <BaseTooltip.Viewport className="px-[9px] py-[5px] whitespace-nowrap">
                             <span>{label}</span>

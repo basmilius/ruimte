@@ -15,5 +15,5 @@ export function Favicon({ id, size = 16 }: { id: string; size?: number }) {
     if (!url || url === failed) {
         return <Icon icon={Globe} size={size} />;
     }
-    return <img src={url} alt="" width={size} height={size} className="shrink-0 rounded-sm" onError={() => setFailed(url)} />;
+    return <img src={url} alt="" width={size} height={size} className="shrink-0" onError={() => setFailed(url)} />;
 }

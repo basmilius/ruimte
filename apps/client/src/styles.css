@@ -505,7 +505,7 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        padding: 7px 10px;
+        padding: 6px 10px;
         border-radius: 6px;
         font-size: var(--text-sm);
         /* The type scale, not the 1.5 the reset inherits, so a row is a whole number of pixels tall
@@ -520,11 +520,29 @@
     .menu-item[data-highlighted] { background: var(--surface-active); }
     :root[data-modality='pointer'] .menu-item[data-highlighted] { background: var(--surface-hover); }
     .menu-item[data-disabled] { opacity: .45; }
+    .project-menu-row { gap: 1px; }
+    .project-menu-row > .menu-item:first-child { border-radius: 6px 0 0 6px; }
+    .project-menu-actions {
+        width: calc(var(--text-sm--line-height) + 12px);
+        padding: 0;
+        border-radius: 0 6px 6px 0;
+        justify-content: center;
+        gap: 0;
+    }
     /* A list the arrow keys walk that is not a Base UI menu: the palette, the model picker, the
        composer's own menus. Its cursor carries the same two marks a menu row does. */
     .cursor-row[data-active='true'] { background: var(--surface-active); color: var(--text); }
     :root[data-modality='pointer'] .cursor-row[data-active='true'] { background: var(--surface-hover); }
     .menu-item[data-popup-open] { background: var(--surface-active); }
+    :root[data-modality='pointer'] .project-menu-row:hover > .menu-item {
+        background: color-mix(in srgb, var(--surface-hover) 55%, transparent);
+    }
+    :root[data-modality='pointer'] .project-menu-row > .menu-item[data-highlighted] {
+        background: var(--surface-hover);
+    }
+    .project-menu-row:has(.project-menu-actions[data-popup-open]) > .menu-item {
+        background: var(--surface-hover);
+    }
     /* A shortcut in a row: pushed to the right, in the interface font, wherever a row carries one. */
     .menu-item kbd { margin-left: auto; font-family: var(--font-sans); font-size: var(--text-xs); color: var(--text-faint); }
 

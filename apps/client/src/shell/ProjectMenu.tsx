@@ -1,20 +1,26 @@
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
+import { Dialog } from '@base-ui-components/react/dialog';
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, ChevronDown, ChevronRight, FolderOpen, History, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, FolderOpen, History, MoreHorizontal, Plus, Settings2, X } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { menuProjects, type ProjectMenuRow } from '@/project/list';
-import { createProjectOn, openProject } from '@/project/open';
+import { closeProject, createProjectOn, openProject } from '@/project/open';
+import { closeWarning, sessionNodesOf } from '@/project/project-sessions';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
+import { ProjectSettingsDialog } from '@/shell/ProjectSettingsDialog';
 import { ProjectNameDialog } from '@/shell/ProjectNameDialog';
+import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
 import { useProjectList } from '@/state/project-list';
 import { useProject } from '@/state/project';
-import { useServers } from '@/state/server';
+import { fileManagerName, useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
+import { transportFor } from '@/transport';
 import { useOpenEndpoints } from '@/transport/status';
 import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
+import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -22,11 +28,15 @@ interface ProjectRowProps {
     row: ProjectMenuRow;
     /* One machine needs no naming; the label only earns its place in the row once there are two. */
     showMachine: boolean;
-    current: boolean;
+    actions?: {
+        platform: string | null;
+        onSettings(): void;
+        onClose(): void;
+    };
 }
 
 /* One project in the switcher. The folder is what the tooltip says, so the row stays a single line. */
-function ProjectRow({ row, showMachine, current }: ProjectRowProps) {
+function ProjectRow({ row, showMachine, actions }: ProjectRowProps) {
     const { summary } = row;
     const tooltip = (
         <span className="flex flex-col items-start">
@@ -37,29 +47,73 @@ function ProjectRow({ row, showMachine, current }: ProjectRowProps) {
         </span>
     );
 
+    const project = (
+        <Menu.Item
+            className={clsx('menu-item min-w-0 flex-1', (!summary.available || !row.connected) && 'opacity-50')}
+            disabled={!summary.available}
+            onClick={() => void openProject(row.endpointId, summary.projectId).catch(() => undefined)}
+        >
+            <ProjectGlyph projectId={summary.projectId} endpointId={row.endpointId} icon={summary.icon} color={summary.color} />
+            <span className="min-w-0 truncate">{summary.name}</span>
+            {showMachine && <span className="ml-auto pl-3 truncate text-xs text-text-faint">{row.machineLabel}</span>}
+        </Menu.Item>
+    );
+
+    if (!actions) {
+        return (
+            <Tooltip label={tooltip} side="right">
+                {project}
+            </Tooltip>
+        );
+    }
+
+    const reveal = async (): Promise<void> => {
+        if (!summary.folder) {
+            return;
+        }
+        await transportFor(row.endpointId)
+            ?.request('fs.reveal', { path: summary.folder })
+            .catch(() => undefined);
+    };
+
     return (
-        <Tooltip label={tooltip} side="right">
-            <Menu.Item
-                className={clsx('menu-item', (!summary.available || !row.connected) && 'opacity-50')}
-                disabled={!summary.available}
-                onClick={() => void openProject(row.endpointId, summary.projectId).catch(() => undefined)}
-            >
-                <ProjectGlyph projectId={summary.projectId} endpointId={row.endpointId} icon={summary.icon} color={summary.color} />
-                <span className="min-w-0 truncate">{summary.name}</span>
-                {showMachine && <span className="ml-auto pl-3 truncate text-xs text-text-faint">{row.machineLabel}</span>}
-                {current && (
-                    <span className={clsx('shrink-0', !showMachine && 'ml-auto')}>
-                        <Icon icon={Check} size={14} />
-                    </span>
-                )}
-            </Menu.Item>
-        </Tooltip>
+        <div className="project-menu-row flex min-w-0 items-stretch" role="group">
+            <Tooltip label={tooltip} side="right" sideOffset={41}>
+                {project}
+            </Tooltip>
+            <Menu.SubmenuRoot>
+                <Menu.SubmenuTrigger
+                    className="menu-item project-menu-actions shrink-0"
+                    aria-label={`Actions for ${summary.name}`}
+                    label={`Actions for ${summary.name}`}
+                >
+                    <Icon icon={MoreHorizontal} size={14} />
+                </Menu.SubmenuTrigger>
+                <Menu.Portal>
+                    <Menu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
+                        <Menu.Popup className="menu-popup min-w-52">
+                            {summary.folder && (
+                                <Menu.Item className="menu-item" onClick={() => void reveal()}>
+                                    <Icon icon={ExternalLink} size={14} /> Open in {fileManagerName(actions.platform)}
+                                </Menu.Item>
+                            )}
+                            <Menu.Item className="menu-item" onClick={actions.onSettings}>
+                                <Icon icon={Settings2} size={14} /> Project settings…
+                            </Menu.Item>
+                            <Menu.Separator className={MENU_SEPARATOR} />
+                            <Menu.Item className="menu-item" onClick={actions.onClose}>
+                                <Icon icon={X} size={14} /> Close project
+                            </Menu.Item>
+                        </Menu.Popup>
+                    </Menu.Positioner>
+                </Menu.Portal>
+            </Menu.SubmenuRoot>
+        </div>
     );
 }
 
-/* The project segment of the toolbar's breadcrumb: every project this client can reach, and the two
-   ways to bring in one that is not listed yet. What you can do to the project that is open is not
-   here but in the toolbar's own menu, because those are options of a canvas rather than ways in. */
+/* The project segment of the toolbar's breadcrumb: projects to switch to, their actions, and the
+   two ways to bring in one that is not listed yet. */
 export function ProjectMenu() {
     const rows = useProjectList((s) => s.projects);
     const current = useProject((s) => s.current);
@@ -69,34 +123,53 @@ export function ProjectMenu() {
     const activeId = useEndpoints((s) => s.activeId);
     const connected = useOpenEndpoints();
     const [newOpen, setNewOpen] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [closing, setClosing] = useState<{ name: string; sessions: number } | null>(null);
     const { open, recent } = useMemo(() => menuProjects(rows, endpoints, connected), [rows, endpoints, connected]);
     const showMachine = endpoints.length > 1;
     const machineId = currentEndpointId ?? activeId;
-    /* The pill names a machine only when the work is somewhere else. Being on the machine the app
-       runs on is the ordinary case, and a prefix that is on screen whatever you do says nothing. */
     const machine = machineId === LOCAL_ENDPOINT_ID ? null : (endpoints.find((endpoint) => endpoint.id === machineId) ?? null);
-    const machineIcon = useServers((s) => s.byEndpoint[machineId]?.icon ?? null);
+    const servers = useServers((s) => s.byEndpoint);
+    const machineIcon = servers[machineId]?.icon ?? null;
 
     const isCurrent = (row: ProjectMenuRow): boolean => row.summary.projectId === current?.projectId && row.endpointId === currentEndpointId;
+
+    const activate = async (row: ProjectMenuRow): Promise<boolean> => {
+        if (isCurrent(row)) {
+            return true;
+        }
+        return (await openProject(row.endpointId, row.summary.projectId)) === 'done';
+    };
+
+    const showSettings = async (row: ProjectMenuRow): Promise<void> => {
+        if (await activate(row)) {
+            setSettingsOpen(true);
+        }
+    };
+
+    const askClose = async (row: ProjectMenuRow): Promise<void> => {
+        if (!(await activate(row))) {
+            return;
+        }
+        const active = useProject.getState().current;
+        setClosing({ name: active?.name ?? row.summary.name, sessions: sessionNodesOf(useDocument.getState().exportViews()).length });
+    };
+
+    const close = async (): Promise<void> => {
+        setClosing(null);
+        await closeProject();
+    };
 
     return (
         <>
             <Menu.Root>
                 <Menu.Trigger className="flex h-8 min-w-0 items-center gap-2 rounded-md px-2 text-left hover:bg-surface-hover data-[popup-open]:bg-surface-active">
                     {machine && (
-                        <>
-                            {/* The name gives way long before the project's does: it is the same word for
-                                every project on that machine, and what is left when it has gone is the
-                                icon, which is the mark this machine carries everywhere else. The tooltip
-                                is what says the name once the room for it is gone. */}
-                            <Tooltip label={machine.label}>
-                                <span className="flex min-w-0 shrink-[9999] items-center gap-2">
-                                    <MachineGlyph icon={machineIcon} size={14} className="text-text-muted" />
-                                    <span className="min-w-0 truncate text-sm text-text-muted">{machine.label}</span>
-                                </span>
-                            </Tooltip>
-                            <span className="shrink-0 text-text-faint">/</span>
-                        </>
+                        <Tooltip label={machine.label}>
+                            <span className="flex shrink-0 items-center">
+                                <MachineGlyph icon={machineIcon} size={14} className="text-text-muted" />
+                            </span>
+                        </Tooltip>
                     )}
                     {current && (
                         <ProjectGlyph projectId={current.projectId} endpointId={currentEndpointId ?? undefined} icon={current.icon} color={current.color} />
@@ -109,7 +182,16 @@ export function ProjectMenu() {
                         <Menu.Popup className="menu-popup min-w-60">
                             {open.length > 0 && <div className={MENU_LABEL}>Projects</div>}
                             {open.map((row) => (
-                                <ProjectRow key={`${row.endpointId}:${row.summary.projectId}`} row={row} showMachine={showMachine} current={isCurrent(row)} />
+                                <ProjectRow
+                                    key={`${row.endpointId}:${row.summary.projectId}`}
+                                    row={row}
+                                    showMachine={showMachine}
+                                    actions={{
+                                        platform: servers[row.endpointId]?.platform ?? null,
+                                        onSettings: () => void showSettings(row),
+                                        onClose: () => void askClose(row)
+                                    }}
+                                />
                             ))}
                             {recent.length > 0 && (
                                 <>
@@ -123,12 +205,7 @@ export function ProjectMenu() {
                                             <Menu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
                                                 <Menu.Popup className="menu-popup min-w-60">
                                                     {recent.map((row) => (
-                                                        <ProjectRow
-                                                            key={`${row.endpointId}:${row.summary.projectId}`}
-                                                            row={row}
-                                                            showMachine={showMachine}
-                                                            current={false}
-                                                        />
+                                                        <ProjectRow key={`${row.endpointId}:${row.summary.projectId}`} row={row} showMachine={showMachine} />
                                                     ))}
                                                 </Menu.Popup>
                                             </Menu.Positioner>
@@ -159,6 +236,24 @@ export function ProjectMenu() {
                     await createProjectOn(machineId, name);
                 }}
             />
+
+            {current && <ProjectSettingsDialog project={current} open={settingsOpen} onOpenChange={setSettingsOpen} />}
+
+            <Dialog.Root open={closing !== null} onOpenChange={(next) => !next && setClosing(null)}>
+                <Dialog.Portal>
+                    <Dialog.Backdrop className="dialog-backdrop" />
+                    <Dialog.Popup className="dialog-popup w-[420px] p-5">
+                        <Dialog.Title className="text-base font-semibold text-text">Close {closing?.name}?</Dialog.Title>
+                        <p className="mt-1 text-xs text-text-muted">{closeWarning(closing?.sessions ?? 0)}</p>
+                        <div className="mt-4 flex items-center justify-end gap-2">
+                            <Button onClick={() => setClosing(null)}>Cancel</Button>
+                            <Button variant={closing?.sessions === 0 ? 'primary' : 'danger'} onClick={() => void close()}>
+                                <Icon icon={X} size={12} /> Close
+                            </Button>
+                        </div>
+                    </Dialog.Popup>
+                </Dialog.Portal>
+            </Dialog.Root>
         </>
     );
 }

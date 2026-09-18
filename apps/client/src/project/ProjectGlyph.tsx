@@ -36,14 +36,14 @@ export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, cl
         if (image.url === null) {
             return <span aria-hidden className={clsx('shrink-0', className)} style={box} />;
         }
-        return <img src={image.url} alt="" width={size} height={size} className={clsx('shrink-0 rounded-sm object-contain', className)} style={box} />;
+        return <img src={image.url} alt="" width={size} height={size} className={clsx('shrink-0 object-contain', className)} style={box} />;
     }
     // The letter takes the project's own color on a tint of it, so nothing has to guess what reads
     // on an arbitrary hex. Never under 12 pixels, which a 16 pixel box still holds.
     return (
         <span
             aria-hidden
-            className={clsx('flex shrink-0 items-center justify-center rounded-sm leading-none font-semibold', className)}
+            className={clsx('flex shrink-0 items-center justify-center leading-none font-semibold', className)}
             style={{
                 ...box,
                 background: `color-mix(in oklab, ${color} 20%, transparent)`,
