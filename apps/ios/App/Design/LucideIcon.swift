@@ -95,6 +95,8 @@ struct WorkspaceViewIcon: View {
         case "chat": return "message-square"
         case "terminal": return "terminal"
         case "browser": return "globe"
+        case "device": return "smartphone"
+        case "separator": return "minus"
         case "drawing": return "pen-tool"
         case "diagram": return "workflow"
         case "file": return "file-text"
