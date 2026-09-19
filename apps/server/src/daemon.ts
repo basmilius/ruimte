@@ -19,12 +19,9 @@ import { CodexTitleReader } from './agents/codex-title.ts';
 import { AgentLineageStore } from './agents/lineage.ts';
 import { PendingPromptStore } from './agents/pending-prompts.ts';
 import { OutboxStore } from './outbox/outbox.ts';
-import { OutboxWorker } from './outbox/outbox-worker.ts';
-import { nodeMode, startAgentHandler, startAgentWork } from './outbox/start-agent.ts';
-import { wireEndChildren } from './outbox/end-children.ts';
-import { oweResume, resumeRunHandler, resumeRunParked } from './outbox/resume-run.ts';
+import { nodeMode, startAgentWork } from './outbox/start-agent.ts';
+import { OutboxLink, wireOutbox } from './outbox/wiring.ts';
 import { TaskStore } from './tasks/task-store.ts';
-import { wireTasks } from './tasks/wiring.ts';
 import { registerTaskHandlers } from './handlers/tasks.ts';
 import { registerPlanHandlers } from './handlers/plan.ts';
 import { PlanStore } from './plans/plan-store.ts';
@@ -59,8 +56,7 @@ import { ChatManager } from './chat/chat-manager.ts';
 import { hookContext } from './context/context-note.ts';
 import { CONTEXT_PATH, ContextStore } from './context/context-store.ts';
 import { deliverNotice, noticeNote, NoticeStore, renderNotice, showNotices, type Notice } from './context/notices.ts';
-import { deliverMessageHandler, turnFromMessage } from './context/deliver-message.ts';
-import { chatOpener } from './chat/wake-chat.ts';
+import { turnFromMessage } from './context/deliver-message.ts';
 import { ChatStore } from './chat/chat-store.ts';
 import type { ServerConfig } from './config.ts';
 import { Dispatcher, type ClientAccess } from './dispatcher.ts';
@@ -71,7 +67,6 @@ import { BUILD, COMPILED as compiled, VERSION } from './version.ts';
 import { registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
 import { chatForkDeps, forkChat, readForkInfo } from './chat/fork.ts';
-import { wireSummaries } from './chat/summary.ts';
 import { withForkOrigin } from './context/fork-origin.ts';
 import { FS_FILE_PATH, handleFsFileRequest } from './fs/file-route.ts';
 import { FolderWatcher } from './fs/watch.ts';
@@ -217,6 +212,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         canvasOf: (targetId) => projects.index.canvasOf(targetId),
         targetForToken
     });
+    const outboxLink = new OutboxLink({ outbox, projectOf: (id) => projects.index.locate(id)?.projectId ?? null });
     const attachments = new AttachmentStore(config.home);
     const checkpoints = new Checkpoints(config.home);
     const plans = new PlanStore(config.home);
@@ -237,85 +233,35 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         claudeTitles,
         // One one-shot call per Codex chat, on whichever CLI here answers a single prompt.
         nameChat: (provider, input) => suggestChatTitle(providers, provider, input),
-        onInterruptedRun: oweResume({
-            projectOf: (id) => projects.index.locate(id)?.projectId ?? null,
-            entries: () => outbox.list(),
-            enqueue: (...args) => outboxWorker.enqueue(...args)
-        }),
+        onInterruptedRun: outboxLink.onInterruptedRun,
         taskRows: (chatId) => tasks.ofParent(chatId),
         endedAt: (chatId) => lineage.endedAt(chatId),
         plans
     });
     const projects = new ProjectStore(config.home);
-    const taskWiring = wireTasks({
+    const outboxWiring = wireOutbox({
+        link: outboxLink,
+        outbox,
+        projects,
+        lineage,
+        prompts,
+        notices,
         tasks,
         chats,
-        placed: (nodeId) => projects.index.locate(nodeId) !== null,
-        owedTurn: (taskId) => outbox.list().some((entry) => entry.kind === 'give-task' && entry.payload.taskId === taskId),
-        titleFor: (nodeId) => projects.index.titleFor(nodeId),
-        madeBy: (nodeId) => lineage.madeBy(nodeId),
-        enqueue: (...args) => outboxWorker.enqueue(...args),
-        alert: (target, nodeId, title, body) => push.alert(target, nodeId, title, body),
-        wake: (chatId) => outboxWorker.wake(chatId)
+        sessions: manager,
+        alert: (target, nodeId, title, body) => push.alert(target, nodeId, title, body)
     });
-    // Stopping or deleting a node ends the agents it opened, through the outbox so a restart in between still does.
-    const endChildren = wireEndChildren({ lineage, outbox, tasks, chats, sessions: manager, enqueue: (...args) => outboxWorker.enqueue(...args) });
-    // A node deleted before anyone ran it takes its prompt with it, and a node that is gone frees the count its opener is held to.
-    projects.index.onPlaces = (projectId, ids) => {
-        endChildren.places(projectId, ids);
-        void prompts.prune(projectId, ids).catch((e) => console.error('Pruning pending prompts failed:', errorText(e)));
-        for (const forkId of lineage.forksLeaving(projectId, ids)) {
-            void chats.dropUnspokenFork(forkId).catch((e) => console.error('Removing an unused fork failed:', errorText(e)));
-        }
-        void lineage.prune(projectId, ids).catch((e) => console.error('Pruning agent lineage failed:', errorText(e)));
-        void notices.prune(projectId, ids).catch((e) => console.error('Pruning waiting messages failed:', errorText(e)));
-        void outbox.prune(projectId, ids).catch((e) => console.error('Pruning the outbox failed:', errorText(e)));
-        void taskWiring.prune(projectId, ids).catch((e) => console.error('Pruning tasks failed:', errorText(e)));
-    };
+    const outboxWorker = outboxWiring.worker;
+    const taskWiring = outboxWiring.tasks;
+    const endChildren = outboxWiring.endChildren;
+    const summaries = outboxWiring.summaries;
+    projects.index.onPlaces = outboxWiring.places;
     const drawings = new DrawingStore(projects);
     projects.attachDrawings(drawings);
     const diagrams = new DiagramStore(projects);
     projects.attachDiagrams(diagrams);
     // Before the socket answers, so an agent whose project nobody opened since the restart still reads its links.
     await projects.warmIndex();
-    const summaries = wireSummaries({
-        chats,
-        host: { locate: (id) => projects.index.locate(id), mutate: (projectId, apply) => projects.mutate(projectId, apply) },
-        titleFor: (id) => projects.index.titleFor(id),
-        enqueue: (...args) => outboxWorker.enqueue(...args)
-    });
-    // Started once hooks have an address, and without waiting for any client: that is the whole point.
-    const outboxWorker = new OutboxWorker({
-        store: outbox,
-        handlers: {
-            'start-agent': startAgentHandler({
-                placed: (nodeId) => projects.index.locate(nodeId) !== null,
-                hasChat: (chatId) => chats.get(chatId) !== undefined,
-                createChat: (payload) => chats.create(payload),
-                composerPreference: (provider) => chats.composerPreferences.for(provider),
-                killChat: (chatId) => chats.kill(chatId),
-                hasSession: (sessionId) => manager.get(sessionId) !== undefined,
-                createSession: (options) => manager.create(options),
-                killSession: (sessionId) => manager.kill(sessionId),
-                onGaveUp: taskWiring.onStartGaveUp
-            }),
-            'resume-run': resumeRunHandler(chats),
-            'wake-parent': taskWiring.wakeParent,
-            'give-task': taskWiring.giveTask,
-            'deliver-message': deliverMessageHandler({
-                notices,
-                chat: chatOpener({ chats, placed: (nodeId) => projects.index.locate(nodeId) !== null }),
-                placed: (nodeId) => projects.index.locate(nodeId) !== null
-            }),
-            'end-children': endChildren.handler,
-            'deliver-summary': summaries.handler
-        },
-        onParked: (entry, error) => {
-            resumeRunParked(chats)(entry, error);
-            taskWiring.onParked(entry, error);
-            summaries.onParked(entry, error);
-        }
-    });
     const folders = new FolderWatcher();
     const liveStreams = new LiveStreamHub();
     const browsers = BrowserManager.withBun(config.home, liveStreams);
