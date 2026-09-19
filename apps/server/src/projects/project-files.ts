@@ -31,21 +31,21 @@ export const DIAGRAMS_DIR = 'diagrams';
  * `unreadable` is broken JSON or a shape no version of ours ever wrote; `invalid` is a file that
  * parses but breaks a rule of the project, which is worth a message rather than a fresh canvas.
  */
-export type DocumentParse = { kind: 'ok'; document: ProjectDocument } | { kind: 'unreadable' } | { kind: 'invalid'; message: string };
+export type JsonDocumentParse<T> = { kind: 'ok'; document: T } | { kind: 'unreadable' } | { kind: 'invalid'; message: string };
 
-type ReadOutcome =
-    | { kind: 'ok'; document: ProjectDocument; text: string }
+export type JsonDocumentRead<T> =
+    | { kind: 'ok'; document: T; text: string }
     | { kind: 'missing' }
     | { kind: 'corrupt'; setAside: string }
     | { kind: 'invalid'; message: string };
 
 /*
- * Reads a canvas file, version 1 or 2. A file that is not a document at all is moved next to
- * itself with a timestamp, so a bad merge or a crash never costs the person their canvas and
- * never gets written over by a fresh one. A file that breaks an invariant stays where it is:
- * only a person can decide which of the two things sharing an id was meant.
+ * How the project file, a drawing and a diagram are all read. A file that is not one of ours at all
+ * is moved next to itself with a timestamp, so a bad merge or a crash never costs the person their
+ * work and never gets written over by a fresh file. One that parses but breaks an invariant stays
+ * where it is: only a person can decide which of the two things sharing an id was meant.
  */
-export const readDocument = async (path: string): Promise<ReadOutcome> => {
+export const readJsonDocument = async <T>(path: string, parse: (text: string) => JsonDocumentParse<T>): Promise<JsonDocumentRead<T>> => {
     let text: string;
     try {
         text = await readFile(path, 'utf8');
@@ -55,7 +55,7 @@ export const readDocument = async (path: string): Promise<ReadOutcome> => {
         }
         throw e;
     }
-    const parsed = parseDocument(text);
+    const parsed = parse(text);
     if (parsed.kind === 'ok') {
         return { kind: 'ok', document: parsed.document, text };
     }
@@ -66,6 +66,19 @@ export const readDocument = async (path: string): Promise<ReadOutcome> => {
     await rename(path, setAside);
     return { kind: 'corrupt', setAside };
 };
+
+/* The text that landed is the answer: a caller keeps it to tell its own write from someone else's. */
+export const writeJsonDocument = async <T>(path: string, document: T, serialize: (document: T) => string): Promise<string> => {
+    await mkdir(dirname(path), { recursive: true });
+    const text = serialize(document);
+    await writeAtomic(path, text, 0o644);
+    return text;
+};
+
+export type DocumentParse = JsonDocumentParse<ProjectDocument>;
+
+/* Reads a canvas file, version 1 or 2. */
+export const readDocument = (path: string): Promise<JsonDocumentRead<ProjectDocument>> => readJsonDocument(path, parseDocument);
 
 export const parseDocument = (text: string): DocumentParse => {
     let value: unknown;
@@ -89,12 +102,7 @@ export const parseDocument = (text: string): DocumentParse => {
    kind a newer Ruimte wrote goes back in exactly as it was read. */
 export const serializeDocument = (document: ProjectDocument): string => `${JSON.stringify(storedContentOf(document), null, 2)}\n`;
 
-export const writeDocument = async (path: string, document: ProjectDocument): Promise<string> => {
-    await mkdir(dirname(path), { recursive: true });
-    const text = serializeDocument(document);
-    await writeAtomic(path, text, 0o644);
-    return text;
-};
+export const writeDocument = (path: string, document: ProjectDocument): Promise<string> => writeJsonDocument(path, document, serializeDocument);
 
 const toPosix = (path: string): string => path.split(sep).join('/');
 
@@ -163,16 +171,16 @@ export const viewIdOfFile = (filename: string): string | null => {
 };
 
 /*
- * The top level indented, every element on one line. `JSON.stringify(document, null, 2)` would put
- * every point of every stroke on a line of its own, and a git diff of that says nothing.
+ * The top level indented, every entry of a list on one line. `JSON.stringify(document, null, 2)`
+ * would put every point of every stroke on a line of its own, and a diff of that says nothing.
  */
-export const serializeDrawing = (document: DrawingDocument): string => {
-    const elements = document.elements.map((element) => `    ${JSON.stringify(element)}`).join(',\n');
-    const list = elements === '' ? '[]' : `[\n${elements}\n  ]`;
-    return `{\n  "version": ${document.version},\n  "rev": ${document.rev},\n  "elements": ${list}\n}\n`;
-};
+const oneItemPerLine = (items: readonly unknown[]): string =>
+    items.length === 0 ? '[]' : `[\n${items.map((item) => `    ${JSON.stringify(item)}`).join(',\n')}\n  ]`;
 
-export type DrawingParse = { kind: 'ok'; document: DrawingDocument } | { kind: 'unreadable' } | { kind: 'invalid'; message: string };
+export const serializeDrawing = (document: DrawingDocument): string =>
+    ['{', `  "version": ${document.version},`, `  "rev": ${document.rev},`, `  "elements": ${oneItemPerLine(document.elements)}`, '}', ''].join('\n');
+
+export type DrawingParse = JsonDocumentParse<DrawingDocument>;
 
 export const parseDrawing = (text: string): DrawingParse => {
     let value: unknown;
@@ -193,49 +201,11 @@ export const parseDrawing = (text: string): DrawingParse => {
     return { kind: 'ok', document };
 };
 
-type DrawingReadOutcome =
-    | { kind: 'ok'; document: DrawingDocument; text: string }
-    | { kind: 'missing' }
-    | { kind: 'corrupt'; setAside: string }
-    | { kind: 'invalid'; message: string };
+export const readDrawing = (path: string): Promise<JsonDocumentRead<DrawingDocument>> => readJsonDocument(path, parseDrawing);
 
-/*
- * Reads a drawing file. Broken JSON is moved next to itself with a timestamp, the rule the project
- * file follows, so a crash or a bad merge never costs the drawing and never gets written over.
- */
-export const readDrawing = async (path: string): Promise<DrawingReadOutcome> => {
-    let text: string;
-    try {
-        text = await readFile(path, 'utf8');
-    } catch (e) {
-        if (isNotFound(e)) {
-            return { kind: 'missing' };
-        }
-        throw e;
-    }
-    const parsed = parseDrawing(text);
-    if (parsed.kind === 'ok') {
-        return { kind: 'ok', document: parsed.document, text };
-    }
-    if (parsed.kind === 'invalid') {
-        return parsed;
-    }
-    const setAside = `${path}.corrupt-${new Date().toISOString().replace(/[:.]/g, '-')}`;
-    await rename(path, setAside);
-    return { kind: 'corrupt', setAside };
-};
+export const writeDrawing = (path: string, document: DrawingDocument): Promise<string> => writeJsonDocument(path, document, serializeDrawing);
 
-export const writeDrawing = async (path: string, document: DrawingDocument): Promise<string> => {
-    await mkdir(dirname(path), { recursive: true });
-    const text = serializeDrawing(document);
-    await writeAtomic(path, text, 0o644);
-    return text;
-};
-
-const oneItemPerLine = (items: readonly unknown[]): string =>
-    items.length === 0 ? '[]' : `[\n${items.map((item) => `    ${JSON.stringify(item)}`).join(',\n')}\n  ]`;
-
-/* The top level indented and every node, group and edge on one line, so a diff names what was added. */
+/* The same shape for a diagram, so a diff names the node, group or edge that was added. */
 export const serializeDiagram = (document: DiagramDocument): string =>
     [
         '{',
@@ -249,7 +219,7 @@ export const serializeDiagram = (document: DiagramDocument): string =>
         ''
     ].join('\n');
 
-export type DiagramParse = { kind: 'ok'; document: DiagramDocument } | { kind: 'unreadable' } | { kind: 'invalid'; message: string };
+export type DiagramParse = JsonDocumentParse<DiagramDocument>;
 
 export const parseDiagram = (text: string): DiagramParse => {
     let value: unknown;
@@ -270,41 +240,9 @@ export const parseDiagram = (text: string): DiagramParse => {
     return { kind: 'ok', document };
 };
 
-type DiagramReadOutcome =
-    | { kind: 'ok'; document: DiagramDocument; text: string }
-    | { kind: 'missing' }
-    | { kind: 'corrupt'; setAside: string }
-    | { kind: 'invalid'; message: string };
+export const readDiagram = (path: string): Promise<JsonDocumentRead<DiagramDocument>> => readJsonDocument(path, parseDiagram);
 
-/* Reads a diagram file under the rule a drawing follows: broken JSON is set aside, never written over. */
-export const readDiagram = async (path: string): Promise<DiagramReadOutcome> => {
-    let text: string;
-    try {
-        text = await readFile(path, 'utf8');
-    } catch (e) {
-        if (isNotFound(e)) {
-            return { kind: 'missing' };
-        }
-        throw e;
-    }
-    const parsed = parseDiagram(text);
-    if (parsed.kind === 'ok') {
-        return { kind: 'ok', document: parsed.document, text };
-    }
-    if (parsed.kind === 'invalid') {
-        return parsed;
-    }
-    const setAside = `${path}.corrupt-${new Date().toISOString().replace(/[:.]/g, '-')}`;
-    await rename(path, setAside);
-    return { kind: 'corrupt', setAside };
-};
-
-export const writeDiagram = async (path: string, document: DiagramDocument): Promise<string> => {
-    await mkdir(dirname(path), { recursive: true });
-    const text = serializeDiagram(document);
-    await writeAtomic(path, text, 0o644);
-    return text;
-};
+export const writeDiagram = (path: string, document: DiagramDocument): Promise<string> => writeJsonDocument(path, document, serializeDiagram);
 
 // What an uploaded icon may be, and what it is called on disk. An `.ico` is a favicon, not
 // something a person picks in a file dialog, so it is read but never written.
