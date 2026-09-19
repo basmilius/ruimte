@@ -14,6 +14,7 @@ import type {
 import { abortedByMachine } from '@ruimte/contracts';
 import { formatElapsedShort } from '@/format/duration';
 import { handbackReportOf } from './handback';
+import { toolEntry } from './tool-catalog';
 import { hasFileChanges, isFileChange } from './tools';
 
 /*
@@ -47,25 +48,6 @@ interface TimelineOptions {
     activeTurnId: string | null;
 }
 
-/* The tools a run of calls is summarized in words of its own; every other name reads as calls of that name. */
-const NAMED_TOOLS = new Set([
-    'Read',
-    'Edit',
-    'Write',
-    'MultiEdit',
-    'NotebookEdit',
-    'ApplyPatch',
-    'Bash',
-    'Grep',
-    'Glob',
-    'WebFetch',
-    'WebSearch',
-    'Task',
-    'Agent',
-    'Skill',
-    'TodoWrite'
-]);
-
 /* "Read 4 files", "Ran 2 commands", or "12 tool calls" when the run mixes kinds. */
 /*
  * A turn runs in two rhythms. The tool lines are a list and read as one when they sit tight
@@ -80,7 +62,7 @@ export const summarizeGroup = (tools: ChatToolItem[]): string => {
     const names = new Set(tools.map((tool) => tool.name));
     if (names.size === 1) {
         const name = tools[0]!.name;
-        return NAMED_TOOLS.has(name)
+        return toolEntry(name)?.grouped === true
             ? i18next.t(`chat:group.tools.${name}`, { count: tools.length })
             : i18next.t('chat:group.calls', { name, count: tools.length });
     }
