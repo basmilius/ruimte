@@ -206,7 +206,11 @@ GitHub sign-in is unchanged. See the Worker README for the Apple configuration.
   `4266157cd08f92115de885ab12d87196a8db87e1`. The native adapter exchanges no audio/video
   tracks and declares no microphone, camera or background-audio capability.
 - `packages/contracts/scripts/generate-swift.ts` generates the full daemon request/result/event
-  API, JSON schemas, constants and TypeScript fixtures. `bun run check` refuses stale output.
+  API, JSON schemas, constants and TypeScript fixtures. It also generates the closed vocabularies
+  of the daemon's own schemas as Swift enums (agent, task, plan and chat), with the plan markers,
+  so a switch over one stops compiling when a case is added; their object schemas stay out, since a
+  plan step holds its own sub-steps and the resulting `$ref` is not resolved here.
+  `bun run check` refuses stale output.
   `MachineClient` correlates responses, bounds timeouts, rejects pending requests on disconnect,
   shares subscriptions/attachments and reads versioned resources in chunks.
 - Required nullable fields, optional fields and optional nullable fields remain distinct.
