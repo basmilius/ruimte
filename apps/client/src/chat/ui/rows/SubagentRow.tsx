@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Bot, ChevronDown } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem } from '@ruimte/contracts';
-import { formatDuration } from '@/chat/logic/timeline';
+import { formatElapsedShort } from '@/format/duration';
 import { Markdown } from '@/chat/ui/Markdown';
 import { RunningFor, ToggleLine, WorkLiveRow, WorkRow } from '@/chat/ui/rows/WorkRows';
 import { useSubagentSupport } from '@/chat/subagent-support';
@@ -14,17 +14,36 @@ import { Icon } from '@/ui/Icon';
 // The work of a long-running agent scrolls inside its row instead of pushing the thread away.
 const CHILDREN_MAX_PX = 320;
 
+/*
+ * One step a sub-agent took, inside its parent's row. The thread's own `Row` draws the same kinds,
+ * but off a timeline it has already grouped and folded, and it writes an answer at the size of a
+ * message; here every step is a line and the text is the aside under it.
+ */
+function ChildRow({ item }: { item: ChatItem }) {
+    if (item.kind === 'tool') {
+        return item.state === 'running' ? <WorkLiveRow tool={item} /> : <WorkRow tool={item} />;
+    }
+    if (item.kind === 'assistant') {
+        return (
+            <div className="-mx-1 px-1 pb-2 text-xs text-text-muted select-text">
+                <Markdown text={item.text} />
+            </div>
+        );
+    }
+    return null;
+}
+
 function StatusPill({ item }: { item: ChatSubagentItem }) {
-    const { t } = useTranslation('chat');
+    const { t } = useTranslation(['chat', 'common']);
     if (item.status === 'running') {
         return <RunningFor startedAt={item.startedAt} />;
     }
     const failed = item.status === 'failed';
-    const duration = item.finishedAt === null ? null : formatDuration(item.finishedAt - item.startedAt);
+    const duration = item.finishedAt === null ? null : formatElapsedShort(item.finishedAt - item.startedAt);
     const outcome = failed ? 'failed' : 'done';
     return (
         <span className={clsx('shrink-0 text-xs tabular-nums', failed ? 'text-status-error' : 'text-text-faint')}>
-            {duration === null ? t(`rows.subagent.${outcome}`) : t(`rows.subagent.${outcome}In`, { duration })}
+            {duration === null ? t(`common:status.${outcome}`) : t(`rows.subagent.${outcome}In`, { duration })}
         </span>
     );
 }
@@ -46,19 +65,9 @@ function SubagentWork({ item, work }: { item: ChatSubagentItem; work: ChatItem[]
     return (
         <div ref={scroller} className="ml-6 overflow-y-auto" style={{ maxHeight: CHILDREN_MAX_PX }}>
             {item.itemsTruncated && <div className="pb-1 text-xs text-text-faint">{t('rows.subagent.truncated')}</div>}
-            {work.map((child) =>
-                child.kind === 'tool' ? (
-                    child.state === 'running' ? (
-                        <WorkLiveRow key={child.id} tool={child} />
-                    ) : (
-                        <WorkRow key={child.id} tool={child} />
-                    )
-                ) : child.kind === 'assistant' ? (
-                    <div key={child.id} className="-mx-1 px-1 pb-2 text-xs text-text-muted select-text">
-                        <Markdown text={child.text} />
-                    </div>
-                ) : null
-            )}
+            {work.map((child) => (
+                <ChildRow key={child.id} item={child} />
+            ))}
         </div>
     );
 }

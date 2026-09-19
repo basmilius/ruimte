@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -9,10 +9,12 @@ import { forksAfter } from '@/chat/logic/fork';
 import { useChats, type ChatsById } from '@/state/chats';
 import { splitKey, useEndpointId } from '@/state/keys';
 import { Tooltip } from '@/ui/Tooltip';
-import { fileChanges, formatElapsed, liveOutput, readImagePath, toolStartedAt, toolSummary, unifiedChanges, type FileChange } from '@/chat/logic/tools';
+import { fileChanges, liveOutput, readImagePath, toolStartedAt, toolSummary, unifiedChanges, type FileChange } from '@/chat/logic/tools';
 import { ReadImage } from '@/chat/ui/ImageView';
+import { formatClockDuration, formatElapsedShort } from '@/format/duration';
 import { ROW_GUTTER, toolIcon } from '@/chat/ui/icons';
 import { Icon } from '@/ui/Icon';
+import { useTickingText } from '@/ui/useNow';
 
 // The diff renderers carry shiki; they only load once a thread shows a file change.
 const EditDiff = lazy(() => import('@/chat/ui/EditDiff'));
@@ -123,20 +125,10 @@ export function WorkRow({ tool, nested }: { tool: ChatToolItem; nested?: boolean
     );
 }
 
-/* "running for 12s" next to a live call; like WorkingRow, the timer writes the text itself. */
+/* "running for 12s" next to a live call. */
 export function RunningFor({ startedAt }: { startedAt: number }) {
     const { t } = useTranslation('chat');
-    const ref = useRef<HTMLSpanElement>(null);
-    useEffect(() => {
-        const tick = (): void => {
-            if (ref.current) {
-                ref.current.textContent = t('work.runningFor', { elapsed: formatElapsed(Date.now() - startedAt) });
-            }
-        };
-        tick();
-        const timer = window.setInterval(tick, 1000);
-        return () => window.clearInterval(timer);
-    }, [startedAt, t]);
+    const ref = useTickingText(() => t('work.runningFor', { elapsed: formatElapsedShort(Date.now() - startedAt) }));
     return <span ref={ref} className="shrink-0 text-xs text-text-faint tabular-nums" />;
 }
 
@@ -392,25 +384,10 @@ function ProviderChangedFiles({
     );
 }
 
-const pad = (n: number): string => String(n).padStart(2, '0');
-
-/* "Working for 00:14": the timer writes the text itself, so a tick never re-renders the thread. */
+/* "Working for 00:14". */
 export function WorkingRow({ startedAt }: { startedAt: number }) {
     const { t } = useTranslation('chat');
-    const ref = useRef<HTMLSpanElement>(null);
-    useEffect(() => {
-        const tick = (): void => {
-            const seconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            if (ref.current) {
-                ref.current.textContent = hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds % 60)}` : `${pad(minutes)}:${pad(seconds % 60)}`;
-            }
-        };
-        tick();
-        const timer = window.setInterval(tick, 1000);
-        return () => window.clearInterval(timer);
-    }, [startedAt]);
+    const ref = useTickingText(() => formatClockDuration(Date.now() - startedAt));
     return (
         <div className="-mx-1 mb-0.5 flex h-7 items-center gap-2 px-1 text-xs text-text-muted">
             <span className={`${ROW_GUTTER} text-accent`}>

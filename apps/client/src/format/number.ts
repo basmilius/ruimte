@@ -40,6 +40,18 @@ const moneySpec = (currency: string, maximumFractionDigits: number | undefined):
 export const formatMoney = (value: number, currency: string, maximumFractionDigits?: number): string =>
     numberFormatter(moneySpec(currency, maximumFractionDigits)).format(value);
 
+/* `1.2M`, `412K`, `640`: a token count is read as a size, not counted. */
+export const formatTokens = (value: number): string => {
+    const rounded = Math.round(value);
+    if (rounded >= 1_000_000) {
+        return `${formatDecimal(rounded >= 10_000_000 ? Math.round(rounded / 1_000_000) : rounded / 1_000_000)}M`;
+    }
+    if (rounded >= 1_000) {
+        return `${formatDecimal(rounded >= 10_000 ? Math.round(rounded / 1_000) : rounded / 1_000)}K`;
+    }
+    return formatNumber(rounded);
+};
+
 const UNITS = ['B', 'KB', 'MB', 'GB', 'TB'] as const;
 
 /*

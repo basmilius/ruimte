@@ -1,6 +1,6 @@
 import type { UsageProvider, UsageRate, UsageTotals } from '@ruimte/contracts';
 import { formatDay, formatHour, formatWeekdayDay } from '@/format/datetime';
-import { formatDecimal, formatMoney, formatNumber } from '@/format/number';
+import { formatMoney, formatNumber, formatTokens } from '@/format/number';
 
 /* Dollars are what a price table is in; euros are what the page can be set to. */
 export type UsageCurrency = 'USD' | 'EUR';
@@ -9,17 +9,7 @@ export type UsageCurrency = 'USD' | 'EUR';
    would be: `$5,480.96` in the US, `$ 5.480,96` in the Netherlands. The labels stay English. */
 export const formatCount = (value: number): string => formatNumber(value);
 
-/* `1.2M`, `412K`, `640`: a token count is read as a size, not counted. */
-export const formatTokens = (value: number): string => {
-    const rounded = Math.round(value);
-    if (rounded >= 1_000_000) {
-        return `${formatDecimal(rounded >= 10_000_000 ? Math.round(rounded / 1_000_000) : rounded / 1_000_000)}M`;
-    }
-    if (rounded >= 1_000) {
-        return `${formatDecimal(rounded >= 10_000 ? Math.round(rounded / 1_000) : rounded / 1_000)}K`;
-    }
-    return formatNumber(rounded);
-};
+export { formatTokens };
 
 /*
  * What a call cost, in the currency the page is set to. Prices are in dollars, so anything else is

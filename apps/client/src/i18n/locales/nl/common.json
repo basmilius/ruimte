@@ -32,5 +32,12 @@
     "yes": "Ja",
     "no": "Nee"
   },
-  "unseen": "Klaar terwijl je weg was"
+  "unseen": "Klaar terwijl je weg was",
+  "status": {
+    "running": "bezig",
+    "done": "klaar",
+    "failed": "mislukt",
+    "cancelled": "geannuleerd"
+  },
+  "taskMark": "Taak: {{title}} ({{status}})"
 }

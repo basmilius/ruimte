@@ -1,18 +1,15 @@
 import { describe, expect, test } from 'bun:test';
-import { CircleCheck, CircleSlash, CircleX, LoaderCircle } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem, ChatToolItem, Task } from '@ruimte/contracts';
-import { formatClock, formatDate } from '@/shell/usage/format';
+import { formatClock, formatDayClock } from '@/format/datetime';
 import {
     composerStopLabel,
     composerStopOf,
     entryTimeOf,
-    formatRunningFor,
     latestPreview,
     needsTail,
     previewFor,
     previewOfItem,
     sectionSubagents,
-    statusLookOf,
     statusWordOf,
     stopOf,
     subagentTitle,
@@ -237,13 +234,6 @@ describe('stopping an active entry', () => {
     });
 });
 
-test('each state has the icon and tone it has elsewhere, and only running spins', () => {
-    expect(statusLookOf('running')).toEqual({ icon: LoaderCircle, tone: 'text-status-running', spins: true });
-    expect(statusLookOf('done')).toEqual({ icon: CircleCheck, tone: 'text-status-idle', spins: false });
-    expect(statusLookOf('failed')).toEqual({ icon: CircleX, tone: 'text-status-error', spins: false });
-    expect(statusLookOf('cancelled')).toEqual({ icon: CircleSlash, tone: 'text-text-faint', spins: false });
-});
-
 describe('the time on the right of an entry', () => {
     // Local noon, so a day boundary in the test's own time zone is hours away.
     const noon = new Date(2026, 8, 16, 12, 0, 0).getTime();
@@ -252,7 +242,7 @@ describe('the time on the right of an entry', () => {
         expect(entryTimeOf(subagent('a', { startedAt: noon - 12_000 }), null, noon)).toBe('12s');
         expect(entryTimeOf(subagent('a', { startedAt: noon - 134_000 }), null, noon)).toBe('2m 14s');
         expect(entryTimeOf(subagent('a', { startedAt: noon - 3_780_000 }), null, noon)).toBe('1h 3m');
-        expect(formatRunningFor(7_200_000)).toBe('2h');
+        expect(entryTimeOf(subagent('a', { startedAt: noon - 7_200_000 }), null, noon)).toBe('2h');
         expect(entryTimeOf(subagent('a', { startedAt: 0 }), null, noon)).toBeNull();
     });
 
@@ -260,7 +250,7 @@ describe('the time on the right of an entry', () => {
         const ended = new Date(2026, 8, 16, 11, 2).getTime();
         expect(entryTimeOf(subagent('a', { status: 'done', finishedAt: ended }), null, noon)).toBe(formatClock(ended));
         const yesterday = new Date(2026, 8, 15, 23, 40).getTime();
-        expect(entryTimeOf(subagent('a', { status: 'failed', finishedAt: yesterday }), null, noon)).toBe(`${formatDate(yesterday)} ${formatClock(yesterday)}`);
+        expect(entryTimeOf(subagent('a', { status: 'failed', finishedAt: yesterday }), null, noon)).toBe(formatDayClock(yesterday));
         expect(entryTimeOf(subagent('a', { status: 'done', finishedAt: null }), null, noon)).toBeNull();
     });
 

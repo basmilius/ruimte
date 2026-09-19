@@ -1,12 +1,12 @@
 import type { ChatFileChange, ChatToolItem } from '@ruimte/contracts';
+import { isRecord } from './json';
+import { toolEntry } from './tool-catalog';
 
 export interface FileChange {
     path: string;
     before: string;
     after: string;
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const str = (value: unknown): string | null => (typeof value === 'string' ? value : null);
 
@@ -15,31 +15,19 @@ export const toolSummary = (name: string, input: unknown): string => {
     if (!isRecord(input)) {
         return '';
     }
-    switch (name) {
-        case 'Bash':
-            return str(input.description) ?? str(input.command) ?? '';
-        case 'Read':
-        case 'Edit':
-        case 'Write':
-        case 'MultiEdit':
-        case 'NotebookEdit':
-            return str(input.file_path) ?? str(input.notebook_path) ?? '';
-        case 'Grep':
-        case 'Glob':
-            return str(input.pattern) ?? '';
-        case 'WebFetch':
-        case 'WebSearch':
-            return str(input.url) ?? str(input.query) ?? '';
-        case 'Task':
-        case 'Agent':
-            return str(input.description) ?? '';
-        case 'Skill':
-            return str(input.skill) ?? '';
-        default: {
-            const first = Object.values(input).find((value) => typeof value === 'string');
-            return typeof first === 'string' ? first : '';
+    const known = toolEntry(name);
+    if (known === undefined) {
+        // A tool nobody wrote down, an MCP one above all: the first string it was given is the best guess there is.
+        const first = Object.values(input).find((value) => typeof value === 'string');
+        return typeof first === 'string' ? first : '';
+    }
+    for (const key of known.summary) {
+        const value = str(input[key]);
+        if (value !== null) {
+            return value;
         }
     }
+    return '';
 };
 
 // What `GET /fs/file` will serve; a path with another suffix is not worth asking the daemon about.
@@ -47,7 +35,7 @@ const IMAGE_SUFFIXES = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'];
 
 /* The image file a tool call looked at, so the row can draw it; null for every other call. */
 export const readImagePath = (name: string, input: unknown): string | null => {
-    if (name !== 'Read' && name !== 'NotebookRead') {
+    if (toolEntry(name)?.readsImage !== true) {
         return null;
     }
     const path = isRecord(input) ? str(input.file_path) : null;
@@ -76,7 +64,7 @@ export const fileChanges = (name: string, input: unknown): FileChange[] => {
     return [];
 };
 
-export const isFileChange = (name: string): boolean => name === 'Edit' || name === 'Write' || name === 'MultiEdit' || name === 'ApplyPatch';
+export const isFileChange = (name: string): boolean => toolEntry(name)?.changesFiles === true;
 
 /* The unified diffs a provider put next to a tool call; empty for one that reports before and after. */
 export const unifiedChanges = (tool: ChatToolItem): ChatFileChange[] => (tool.changes ?? []).filter((change) => change.diff !== '');
@@ -109,14 +97,4 @@ export const liveOutput = (tool: ChatToolItem): string | null => {
     }
     const lines = output.replace(/\n$/, '').split('\n');
     return lines.slice(-LIVE_OUTPUT_LINES).join('\n');
-};
-
-/* "12s", "2m 5s": how long a call has been running, for the live row. */
-export const formatElapsed = (ms: number): string => {
-    const seconds = Math.max(0, Math.floor(ms / 1000));
-    if (seconds < 60) {
-        return `${seconds}s`;
-    }
-    const rest = seconds % 60;
-    return rest === 0 ? `${Math.floor(seconds / 60)}m` : `${Math.floor(seconds / 60)}m ${rest}s`;
 };

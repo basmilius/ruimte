@@ -15,7 +15,8 @@ import { FadingWords } from '@/chat/ui/FadingWords';
 import { settledBlocksText } from '@/chat/ui/markdown-blocks';
 import { WHOLE_FADE_CLASS } from '@/chat/ui/rehype-fade';
 import { useRevealedText } from '@/chat/ui/reveal';
-import { formatDuration } from '@/chat/logic/timeline';
+import { formatElapsedShort } from '@/format/duration';
+import { formatTokens } from '@/format/number';
 import { toolSummary } from '@/chat/logic/tools';
 import { ROW_GUTTER } from '@/chat/ui/icons';
 import { useChatPlace } from '@/chat/ui/use-chat-place';
@@ -205,7 +206,7 @@ export function ThinkingRow({ chatId, item: derived }: { chatId: string; item: C
                     <span className="chat-live-text">{t('rows.thinking.live')}</span>
                 ) : (
                     <>
-                        <span>{t('rows.thinking.thoughtFor', { duration: formatDuration((item.endedAt ?? item.createdAt) - item.createdAt) })}</span>
+                        <span>{t('rows.thinking.thoughtFor', { duration: formatElapsedShort((item.endedAt ?? item.createdAt) - item.createdAt) })}</span>
                         <Icon icon={ChevronDown} size={12} className={clsx('transition-transform', open && 'rotate-180')} />
                     </>
                 )}
@@ -283,27 +284,25 @@ function OpenChatButton({ chatId }: { chatId: string }) {
  * "Show result". When the CLI named the sub-agent it woke up about, the header opens that row.
  */
 export function AgentTurnRow({ label, onOpen }: { label: string; onOpen?: () => void }) {
-    if (!onOpen) {
-        return (
-            <div className="mb-0.5 flex h-7 w-full items-center gap-2 text-left text-xs text-text-muted">
-                <span className={ROW_GUTTER}>
-                    <Icon icon={Bot} size={12} />
-                </span>
-                <span className="min-w-0 truncate select-text">{label}</span>
-            </div>
-        );
-    }
-    return (
-        <button className="mb-0.5 flex h-7 w-full items-center gap-2 text-left text-xs text-text-muted hover:text-text" onClick={onOpen}>
+    const line = 'mb-0.5 flex h-7 w-full items-center gap-2 text-left text-xs text-text-muted';
+    // A header with nowhere to go is text to read and copy; one that opens a row is a button.
+    const content = (
+        <>
             <span className={ROW_GUTTER}>
                 <Icon icon={Bot} size={12} />
             </span>
-            <span className="min-w-0 truncate">{label}</span>
+            <span className={clsx('min-w-0 truncate', onOpen === undefined && 'select-text')}>{label}</span>
+        </>
+    );
+    if (onOpen === undefined) {
+        return <div className={line}>{content}</div>;
+    }
+    return (
+        <button className={clsx(line, 'hover:text-text')} onClick={onOpen}>
+            {content}
         </button>
     );
 }
-
-const formatTokens = (count: number): string => (count >= 1000 ? `${Math.round(count / 1000)}k` : String(count));
 
 export function CompactionRow({ preTokens }: { preTokens: number | null }) {
     const { t } = useTranslation('chat');

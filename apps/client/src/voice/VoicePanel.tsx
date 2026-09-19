@@ -19,10 +19,12 @@ import {
 } from 'lucide-react';
 import { FadingWords } from '@/chat/ui/FadingWords';
 import { hasOverlayControls } from '@/desktop/bridge';
+import { formatClockDuration } from '@/format/duration';
 import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
+import { useNow } from '@/ui/useNow';
 import { closeVoicePanel, startVoice, stopVoice, undoVoiceAction, undoVoiceActions } from '@/voice/controller';
 import { idleVoiceBands, type IdleVoiceBands } from '@/voice/idle-waveform';
 import { useVoice, type VoiceAction, type VoiceActionKind, type VoicePhase, type VoiceUtterance } from '@/voice/state';
@@ -41,11 +43,6 @@ const actionIcons: Record<VoiceActionKind, LucideIcon> = {
     node: Plus,
     view: LayoutGrid,
     delete: Trash2
-};
-
-const durationLabel = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    return `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 };
 
 const waveformHeight = (value: number): string => `${Math.max(2, value * 26).toFixed(2)}px`;
@@ -104,14 +101,14 @@ function useDisplayedWaveform(phase: VoicePhase, inputBands: number[], outputBan
     return phase === 'listening' ? { input: inputBands, output: outputBands } : idleVoiceBands(0, count);
 }
 
-function VoiceStatus({ elapsed, phase }: { elapsed: number; phase: VoicePhase }) {
+function VoiceStatus({ elapsedMs, phase }: { elapsedMs: number; phase: VoicePhase }) {
     const { t } = useTranslation('voice');
     return (
         <div className="flex shrink-0 items-center gap-1.5 text-[10px] text-text-muted" role="status">
             <span
                 className={clsx('h-1.5 w-1.5 rounded-full', phase === 'listening' ? 'bg-positive' : phase === 'error' ? 'bg-status-error' : 'bg-text-faint')}
             />
-            <span className="tabular-nums">{phase === 'listening' ? t('phase.live', { elapsed: durationLabel(elapsed) }) : t(`phase.${phase}`)}</span>
+            <span className="tabular-nums">{phase === 'listening' ? t('phase.live', { elapsed: formatClockDuration(elapsedMs) }) : t(`phase.${phase}`)}</span>
         </div>
     );
 }
@@ -160,20 +157,6 @@ function VoiceWaveform({ phase }: { phase: VoicePhase }) {
             </div>
         </section>
     );
-}
-
-function useElapsedSeconds(startedAt: number | null): number {
-    const [now, setNow] = useState(0);
-
-    useEffect(() => {
-        if (startedAt === null) {
-            return;
-        }
-        const timer = window.setInterval(() => setNow(Date.now()), 1_000);
-        return () => window.clearInterval(timer);
-    }, [startedAt]);
-
-    return startedAt === null ? 0 : Math.max(0, Math.floor((now - startedAt) / 1_000));
 }
 
 function ActionEvent({ action }: { action: VoiceAction }) {
@@ -308,7 +291,7 @@ function TranscriptEntry({ streaming, utterance }: { streaming: boolean; utteran
                     utterance.speaker === 'assistant' ? 'text-accent' : 'text-text-muted'
                 )}
             >
-                {utterance.speaker === 'assistant' ? t('speaker.assistant') : t('speaker.person')} · {durationLabel(Math.floor(utterance.startMs / 1_000))}
+                {utterance.speaker === 'assistant' ? t('speaker.assistant') : t('speaker.person')} · {formatClockDuration(utterance.startMs)}
             </div>
             <p className="text-sm leading-6 text-text whitespace-pre-wrap [text-wrap:pretty]">
                 {streaming ? <FadingWords text={utterance.text} /> : utterance.text}
@@ -327,7 +310,8 @@ export function VoicePanel() {
     const actions = useVoice((state) => state.actions);
     const sessionStartedAt = useVoice((state) => state.sessionStartedAt);
     const storedWidth = useVoice((state) => state.width);
-    const elapsed = useElapsedSeconds(sessionStartedAt);
+    const now = useNow(1_000, sessionStartedAt !== null);
+    const elapsedMs = sessionStartedAt === null ? 0 : Math.max(0, now - sessionStartedAt);
     const bottom = useRef<HTMLDivElement>(null);
     const panel = useRef<HTMLElement>(null);
     const width = clampColumnWidth({ min: MIN_WIDTH, max: () => window.innerWidth - MIN_WORKSPACE_WIDTH }, storedWidth ?? DEFAULT_WIDTH);
@@ -362,7 +346,7 @@ export function VoicePanel() {
                             <Icon icon={Mic} size={14} className="text-text-muted" />
                             {t('title')}
                         </span>
-                        <VoiceStatus elapsed={elapsed} phase={phase} />
+                        <VoiceStatus elapsedMs={elapsedMs} phase={phase} />
                         <Tooltip label={t('close')} name>
                             <button className="icon-btn" onClick={closeVoicePanel}>
                                 <Icon icon={X} size={16} />

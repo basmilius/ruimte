@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { ChatAttachmentUpload } from '@ruimte/contracts';
+import { persistedJson } from '@/chat/persisted-json';
 
 const STORAGE_KEY = 'ruimte.chat.drafts';
 
@@ -15,23 +16,11 @@ export const EMPTY_DRAFT: ChatDraft = { text: '', mentions: [], skills: [], atta
 // Older records only had text; the arrays are filled in on read.
 type DraftRecord = { text: string; mentions?: string[]; skills?: string[]; attachments?: ChatAttachmentUpload[] };
 
-const readAll = (): Record<string, DraftRecord> => {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? (JSON.parse(raw) as Record<string, DraftRecord>) : {};
-    } catch {
-        return {};
-    }
-};
+const storage = persistedJson<Record<string, DraftRecord>>(STORAGE_KEY, (raw) => (raw ? (JSON.parse(raw) as Record<string, DraftRecord>) : {}), {});
 
-const store = (drafts: Record<string, DraftRecord>): boolean => {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
-        return true;
-    } catch {
-        return false;
-    }
-};
+const readAll = (): Record<string, DraftRecord> => storage.read();
+
+const store = (drafts: Record<string, DraftRecord>): boolean => storage.write(drafts);
 
 export const isEmptyDraft = (draft: ChatDraft): boolean => draft.text.trim() === '' && draft.attachments.length === 0;
 

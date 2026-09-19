@@ -32,5 +32,12 @@
     "yes": "Yes",
     "no": "No"
   },
-  "unseen": "Finished while you were away"
+  "unseen": "Finished while you were away",
+  "status": {
+    "running": "running",
+    "done": "done",
+    "failed": "failed",
+    "cancelled": "cancelled"
+  },
+  "taskMark": "Task: {{title}} ({{status}})"
 }

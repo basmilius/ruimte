@@ -1,15 +1,9 @@
 import clsx from 'clsx';
-import { CircleDashed, CircleSlash, CircleX, ListChecks } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { Task } from '@ruimte/contracts';
 import { Icon } from '@/ui/Icon';
+import { statusLookOf, taskStatusWord } from '@/ui/status-look';
 import { Tooltip } from '@/ui/Tooltip';
-
-const LOOK: Record<Task['status'], { icon: typeof ListChecks; className: string; word: string }> = {
-    open: { icon: CircleDashed, className: 'text-status-running', word: 'working on it' },
-    done: { icon: ListChecks, className: 'text-status-idle', word: 'done' },
-    failed: { icon: CircleX, className: 'text-status-error', word: 'failed' },
-    cancelled: { icon: CircleSlash, className: 'text-text-faint', word: 'cancelled' }
-};
 
 /*
  * The mark a node wears when another agent opened it with a task: the line into it says so on the
@@ -17,11 +11,13 @@ const LOOK: Record<Task['status'], { icon: typeof ListChecks; className: string;
  * to press; the row in the thread of the chat that gave the task is where its result is read.
  */
 export function TaskMark({ task, className }: { task: Task; className?: string }) {
-    const look = LOOK[task.status];
+    const { t } = useTranslation('common');
+    const word = taskStatusWord(task.status);
+    const look = statusLookOf(word);
     return (
-        <Tooltip label={`Task: ${task.title} (${look.word})`}>
-            <span className={clsx('inline-flex shrink-0 items-center', look.className, className)}>
-                <Icon icon={look.icon} size={12} />
+        <Tooltip label={t('taskMark', { title: task.title, status: t(`status.${word}`) })}>
+            <span className={clsx('inline-flex shrink-0 items-center', look.tone, className)}>
+                <Icon icon={look.icon} size={12} className={clsx(look.spins && 'animate-spin')} />
             </span>
         </Tooltip>
     );

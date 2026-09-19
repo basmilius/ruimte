@@ -1,16 +1,17 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import clsx from 'clsx';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useTranslation } from 'react-i18next';
 import { Bot } from 'lucide-react';
 import type { ChatSubagentItem } from '@ruimte/contracts';
-import { deriveTimelineRows, isBlock } from '@/chat/logic/timeline';
+import { deriveTimelineRows } from '@/chat/logic/timeline';
 import { INITIAL_CONVERSATION, SubagentConversation, type SubagentConversationState } from '@/chat/subagent-conversation';
 import { useSubagentSupport } from '@/chat/subagent-support';
 import { EMPTY_TARGET, readTimelineTarget, type TimelineTarget } from '@/chat/logic/timeline-target';
 import { crumbOf, openBelow, useSubagentTrail } from '@/chat/subagent-view';
 import { Row } from '@/chat/ui/rows/Rows';
 import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
+import { FOLLOW_THRESHOLD_PX, rowRhythm } from '@/chat/ui/rows/row-rhythm';
+import { useToggleSet } from '@/chat/ui/useToggleSet';
 import { FileLinkContext } from '@/shell/panels/file-links';
 import { useChatRow } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
@@ -18,9 +19,6 @@ import { machineTransport } from '@/transport';
 import { Button } from '@/ui/Button';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
-
-// Below this distance from the bottom the thread follows what the agent writes; above it the reader scrolled back.
-const FOLLOW_THRESHOLD_PX = 40;
 
 const NO_TURNS = new Set<string>();
 
@@ -33,13 +31,16 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
     const endpointId = useEndpointId();
     const { trail, show } = useSubagentTrail(chatId);
     const [state, setState] = useState<SubagentConversationState>(INITIAL_CONVERSATION);
-    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
-    const [expandedSubagents, setExpandedSubagents] = useState<Set<string>>(() => new Set());
     const controller = useRef<SubagentConversation | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const threadRef = useRef<HTMLDivElement>(null);
     const [target, setTarget] = useState<TimelineTarget>(EMPTY_TARGET);
     const followRef = useRef(true);
+    const stopFollowing = useCallback(() => {
+        followRef.current = false;
+    }, []);
+    const groups = useToggleSet(stopFollowing);
+    const subagents = useToggleSet(stopFollowing);
     // The height before older rows went in above, so the rows being read stay where they were.
     const heightBefore = useRef<number | null>(null);
     const cwd = useChatRow(chatId, (row) => row?.info.cwd ?? null);
@@ -61,8 +62,8 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
     }, [state.unsupported, endpointId]);
 
     const rows = useMemo(
-        () => deriveTimelineRows(state.items, { expandedGroups, expandedTurns: NO_TURNS, expandedSubagents, activeTurnId: null }),
-        [state.items, expandedGroups, expandedSubagents]
+        () => deriveTimelineRows(state.items, { expandedGroups: groups.ids, expandedTurns: NO_TURNS, expandedSubagents: subagents.ids, activeTurnId: null }),
+        [state.items, groups.ids, subagents.ids]
     );
 
     useLayoutEffect(() => {
@@ -90,20 +91,6 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
             </EmptyState>
         );
     }
-
-    const toggle = (set: (update: (current: Set<string>) => Set<string>) => void, id: string): void => {
-        set((current) => {
-            const next = new Set(current);
-            if (next.has(id)) {
-                next.delete(id);
-            } else {
-                next.add(id);
-            }
-            return next;
-        });
-        // Opening or closing a fold is a deliberate look back, not a reason to jump to the end.
-        followRef.current = false;
-    };
 
     const openChild = (item: ChatSubagentItem): void => {
         show(openBelow(trail, crumbOf(item)));
@@ -142,16 +129,14 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
                         {rows.length === 0 && !state.live && <div className="text-xs text-text-faint">{t('rows.subagent.nothingYet')}</div>}
                         {rows.map((row, index) => {
                             const previous = index > 0 ? rows[index - 1]! : null;
-                            const question = row.kind === 'user';
-                            const seam = !question && previous !== null && previous.kind !== 'user' && isBlock(row) !== isBlock(previous);
                             return (
-                                <div key={row.id} data-item-id={row.id} className={clsx(question && 'pb-(--chat-answer-gap)', seam && 'pt-(--chat-block-gap)')}>
+                                <div key={row.id} data-item-id={row.id} className={rowRhythm(row, previous)}>
                                     <Row
                                         row={row}
                                         chatId={chatId}
-                                        toggleGroup={(id) => toggle(setExpandedGroups, id)}
+                                        toggleGroup={groups.toggle}
                                         toggleTurn={() => undefined}
-                                        toggleSubagent={(id) => toggle(setExpandedSubagents, id)}
+                                        toggleSubagent={subagents.toggle}
                                         openSubagent={() => undefined}
                                         openConversation={openChild}
                                     />

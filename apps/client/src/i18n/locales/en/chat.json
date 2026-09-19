@@ -90,9 +90,7 @@
       "task": "Task",
       "label": "Sub-agent",
       "background": "background",
-      "done": "done",
       "doneIn": "done in {{duration}}",
-      "failed": "failed",
       "failedIn": "failed in {{duration}}",
       "nothingYet": "Nothing to show yet.",
       "truncated": "Only the beginning of this agent's work is kept.",
@@ -140,16 +138,10 @@
     "tools": {
       "Read_one": "Read {{count}} file",
       "Read_other": "Read {{count}} files",
-      "Edit_one": "Edited {{count}} file",
-      "Edit_other": "Edited {{count}} files",
       "Write_one": "Wrote {{count}} file",
       "Write_other": "Wrote {{count}} files",
-      "MultiEdit_one": "Edited {{count}} file",
-      "MultiEdit_other": "Edited {{count}} files",
       "NotebookEdit_one": "Edited {{count}} notebook",
       "NotebookEdit_other": "Edited {{count}} notebooks",
-      "ApplyPatch_one": "Edited {{count}} file",
-      "ApplyPatch_other": "Edited {{count}} files",
       "Bash_one": "Ran {{count}} command",
       "Bash_other": "Ran {{count}} commands",
       "Grep_one": "Searched {{count}} pattern",
@@ -250,13 +242,7 @@
     "unsupported": "This machine cannot open a sub-agent's conversation. Update Ruimte there to read it.",
     "unreadable": "The conversation could not be read.",
     "noAnswer": "The machine did not answer",
-    "stopFailed": "The sub-agent could not be stopped",
-    "status": {
-      "running": "running",
-      "done": "done",
-      "failed": "failed",
-      "cancelled": "cancelled"
-    }
+    "stopFailed": "The sub-agent could not be stopped"
   },
   "modes": {
     "supervised": {

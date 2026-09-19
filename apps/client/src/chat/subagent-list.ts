@@ -1,17 +1,15 @@
 import i18next from 'i18next';
-import { CircleCheck, CircleSlash, CircleX, LoaderCircle, type LucideIcon } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem, Task } from '@ruimte/contracts';
 import { isHandbackNotice, lastHandbackReport } from '@/chat/logic/handback';
-import { formatElapsed } from '@/chat/logic/tools';
 import { stripMarkdown } from '@/chat/logic/timeline-copy';
 import { toolSummary } from '@/chat/logic/tools';
 import { canOpenSubagent } from '@/chat/subagent-view';
-import { formatClock, formatDate } from '@/shell/usage/format';
+import { formatMoment } from '@/format/datetime';
+import { formatElapsedShort } from '@/format/duration';
+import type { StatusWord } from '@/ui/status-look';
 
 /* The latest thing a sub-agent did, as its entry in the list says it: a tool call, or text it wrote. */
 export type SubagentPreview = { kind: 'tool'; name: string; detail: string } | { kind: 'text'; text: string };
-
-export type SubagentStatusWord = 'running' | 'done' | 'failed' | 'cancelled';
 
 export interface SubagentSections {
     active: ChatSubagentItem[];
@@ -66,29 +64,8 @@ export const subagentTitle = (item: ChatSubagentItem): string => item.descriptio
 export const taskIdOf = (item: ChatSubagentItem): string | null => (item.origin === 'ruimte' && item.id.startsWith('task-') ? item.id.slice(5) : null);
 
 /* A cancelled task is a failed row on the wire, and only the task itself still says which it was. */
-export const statusWordOf = (item: ChatSubagentItem, task: Task | null): SubagentStatusWord =>
+export const statusWordOf = (item: ChatSubagentItem, task: Task | null): StatusWord =>
     item.status === 'failed' && task?.status === 'cancelled' ? 'cancelled' : item.status;
-
-/* How an entry's state looks in front of its title. */
-export interface SubagentStatusLook {
-    icon: LucideIcon;
-    tone: string;
-    spins: boolean;
-}
-
-/*
- * The same states look the same elsewhere: a failed or cancelled task on its node (`TaskMark`), what
- * finished in the toolbar (`StatusSummary`) and work in progress in a toast. A spinner stops under
- * reduced motion with every other animation (`styles.css`).
- */
-const STATUS_LOOKS: Record<SubagentStatusWord, SubagentStatusLook> = {
-    running: { icon: LoaderCircle, tone: 'text-status-running', spins: true },
-    done: { icon: CircleCheck, tone: 'text-status-idle', spins: false },
-    failed: { icon: CircleX, tone: 'text-status-error', spins: false },
-    cancelled: { icon: CircleSlash, tone: 'text-text-faint', spins: false }
-};
-
-export const statusLookOf = (word: SubagentStatusWord): SubagentStatusLook => STATUS_LOOKS[word];
 
 export const previewOfItem = (item: ChatItem): SubagentPreview | null => {
     switch (item.kind) {
@@ -195,36 +172,18 @@ export const stopOf = (item: ChatSubagentItem, turnRunning: boolean): SubagentSt
 
 export const stopLabel = (stop: SubagentStop): string => (stop === 'task' ? i18next.t('chat:subagents.stop.task') : i18next.t('chat:subagents.stop.mark'));
 
-const HOUR_MS = 3_600_000;
-
-/* How long an entry has run: the same seconds and minutes a running tool call shows, and hours past one. */
-export const formatRunningFor = (ms: number): string => {
-    if (ms < HOUR_MS) {
-        return formatElapsed(ms);
-    }
-    const hours = Math.floor(ms / HOUR_MS);
-    const minutes = Math.floor((ms % HOUR_MS) / 60_000);
-    return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
-};
-
-const sameDay = (a: number, b: number): boolean => {
-    const left = new Date(a);
-    const right = new Date(b);
-    return left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth() && left.getDate() === right.getDate();
-};
-
 /* The time on the right of an entry: how long it has run so far, or when it ended, with the date once that was not today. */
 export const entryTimeOf = (item: ChatSubagentItem, task: Task | null, now: number): string | null => {
     // A task's own record says when it was given and settled; the row copies those, but may lag behind it.
     const startedAt = task?.createdAt ?? item.startedAt;
     const finishedAt = task === null ? item.finishedAt : (task.settledAt ?? item.finishedAt);
     if (item.status === 'running') {
-        return startedAt > 0 ? formatRunningFor(now - startedAt) : null;
+        return startedAt > 0 ? formatElapsedShort(now - startedAt) : null;
     }
     if (finishedAt === null || finishedAt <= 0) {
         return null;
     }
-    return sameDay(finishedAt, now) ? formatClock(finishedAt) : `${formatDate(finishedAt)} ${formatClock(finishedAt)}`;
+    return formatMoment(finishedAt, now);
 };
 
 /*

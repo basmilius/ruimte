@@ -1,7 +1,7 @@
 import { isCanvasView, isOpenableView, type ProjectNode, type ProjectView, type VoiceToolName } from '@ruimte/contracts';
 import type { ActionName, ActionOutput, ActionResult } from '@ruimte/actions';
 import { clientActions, VOICE_ACTION_CALL } from '@/actions/client-actions';
-import { intersects, visibleRect } from '@/canvas/math';
+import { sightOf, visibleNodes } from '@/state/attention';
 import { focusedCanvas, type CanvasState } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey } from '@/state/keys';
@@ -258,8 +258,8 @@ const nodesInScope = (canvas: CanvasState, scope: string | null): ProjectNode[] 
     }
     const nodes = Object.values(canvas.nodes).filter((node) => !canvas.hidden.has(node.id));
     if (scope === 'visible') {
-        const viewport = visibleRect(canvas.camera, canvas.viewport);
-        return nodes.filter((node) => intersects(node, viewport));
+        const inSight = new Set(visibleNodes(sightOf(canvas), { readable: false }));
+        return nodes.filter((node) => inSight.has(node.id));
     }
     return nodes;
 };

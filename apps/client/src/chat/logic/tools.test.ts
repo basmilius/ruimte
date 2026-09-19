@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatToolItem } from '@ruimte/contracts';
-import { approvalChanges, formatElapsed, hasFileChanges, liveOutput, readImagePath, toolStartedAt, unifiedChanges } from './tools';
+import { approvalChanges, hasFileChanges, liveOutput, readImagePath, toolStartedAt, unifiedChanges } from './tools';
 
 const running = (progress?: ChatToolItem['progress']): ChatToolItem => ({
     id: 'b1',
@@ -39,13 +39,6 @@ describe('live tool helpers', () => {
         expect(liveOutput(running({ startedAt: null, description: null, output: `${lines}\n` }))).toBe(
             Array.from({ length: 12 }, (_, i) => `line ${i + 8}`).join('\n')
         );
-    });
-
-    test('elapsed time reads as seconds, then minutes', () => {
-        expect(formatElapsed(-5)).toBe('0s');
-        expect(formatElapsed(12_400)).toBe('12s');
-        expect(formatElapsed(120_000)).toBe('2m');
-        expect(formatElapsed(125_000)).toBe('2m 5s');
     });
 });
 

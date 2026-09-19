@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { Bot, Eye, FolderSearch, Globe, Hammer, ListTodo, Search, SquarePen, Terminal, Wrench, Zap } from 'lucide-react';
+import { Hammer, Wrench } from 'lucide-react';
+import { toolEntry } from '@/chat/logic/tool-catalog';
 import { Icon } from '@/ui/Icon';
 
 const SIZE = 12;
@@ -15,31 +16,9 @@ export const ROW_GUTTER = 'grid h-5 w-4 shrink-0 place-items-center';
 
 /* The icon that says what a tool call is about; unknown tools get the wrench. */
 export const toolIcon = (name: string, size: number = SIZE): ReactNode => {
-    switch (name) {
-        case 'Read':
-            return <Icon icon={Eye} size={size} />;
-        case 'Edit':
-        case 'Write':
-        case 'MultiEdit':
-        case 'NotebookEdit':
-            return <Icon icon={SquarePen} size={size} />;
-        case 'Bash':
-            return <Icon icon={Terminal} size={size} />;
-        case 'Grep':
-            return <Icon icon={Search} size={size} />;
-        case 'Glob':
-            return <Icon icon={FolderSearch} size={size} />;
-        case 'WebFetch':
-        case 'WebSearch':
-            return <Icon icon={Globe} size={size} />;
-        case 'Task':
-        case 'Agent':
-            return <Icon icon={Bot} size={size} />;
-        case 'Skill':
-            return <Icon icon={Zap} size={size} />;
-        case 'TodoWrite':
-            return <Icon icon={ListTodo} size={size} />;
-        default:
-            return name.startsWith('mcp__') ? <Icon icon={Hammer} size={size} /> : <Icon icon={Wrench} size={size} />;
+    const known = toolEntry(name);
+    if (known !== undefined) {
+        return <Icon icon={known.icon} size={size} />;
     }
+    return name.startsWith('mcp__') ? <Icon icon={Hammer} size={size} /> : <Icon icon={Wrench} size={size} />;
 };

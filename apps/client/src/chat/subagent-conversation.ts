@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import type { ChatItem, ChatSubagentResult } from '@ruimte/contracts';
-import { TransportError, type Transport } from '../transport/transport';
+import { isConnectionError, TransportError, type Transport } from '../transport/transport';
 
 // What the panel opens on: the newest end of the conversation, which is where an agent that works is.
 export const SUBAGENT_PAGE = 60;
@@ -163,8 +163,7 @@ export class SubagentConversation {
             const merged = mergeNewest(this.state.items, this.state.cursor, page.items, page.history.cursor);
             this.set({ status: 'ready', items: merged.items, cursor: merged.cursor, live: page.live, error: null });
         } catch (error) {
-            const dropped = error instanceof TransportError && (error.code === 'not-connected' || error.code === 'disconnected');
-            if (this.state.status === 'ready' && dropped) {
+            if (this.state.status === 'ready' && isConnectionError(error)) {
                 // What is on screen stays; the socket that comes back asks again.
                 return;
             }

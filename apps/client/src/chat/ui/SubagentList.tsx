@@ -9,7 +9,6 @@ import {
     needsTail,
     previewFor,
     sectionSubagents,
-    statusLookOf,
     statusWordOf,
     subagentTitle,
     taskIdOf,
@@ -27,6 +26,8 @@ import { machineTransport } from '@/transport';
 import { SECTION_LABEL } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
+import { useNow } from '@/ui/useNow';
+import { statusLookOf } from '@/ui/status-look';
 import { Tooltip } from '@/ui/Tooltip';
 
 // The newest end is all an entry shows, so a few items are enough to find the last call or reply in.
@@ -68,19 +69,6 @@ const useTail = (chatId: string, toolUseId: string, enabled: boolean): readonly 
     return enabled ? tail : null;
 };
 
-/* One clock for the whole list, ticking each second only while an entry is running. */
-const useListClock = (ticking: boolean): number => {
-    const [now, setNow] = useState(Date.now);
-    useEffect(() => {
-        if (!ticking) {
-            return;
-        }
-        const timer = window.setInterval(() => setNow(Date.now()), 1000);
-        return () => window.clearInterval(timer);
-    }, [ticking]);
-    return now;
-};
-
 function Preview({ preview }: { preview: SubagentPreview }) {
     if (preview.kind === 'text') {
         return <span className="line-clamp-2 break-words text-text-muted">{preview.text}</span>;
@@ -94,7 +82,7 @@ function Preview({ preview }: { preview: SubagentPreview }) {
 }
 
 function Entry({ chatId, item, work, now }: { chatId: string; item: ChatSubagentItem; work: readonly ChatItem[]; now: number }) {
-    const { t } = useTranslation('chat');
+    const { t } = useTranslation(['chat', 'common']);
     const endpointId = useEndpointId();
     const refused = useSubagentSupport((s) => s.unsupported[endpointId] === true);
     const taskId = taskIdOf(item);
@@ -114,7 +102,7 @@ function Entry({ chatId, item, work, now }: { chatId: string; item: ChatSubagent
                 onClick={() => show(openFromList(crumbOf(item)))}
             >
                 <span className="flex min-w-0 items-center gap-2">
-                    <Tooltip label={t(`subagents.status.${word}`)}>
+                    <Tooltip label={t(`common:status.${word}`)}>
                         <span className={clsx(ROW_GUTTER, look.tone)}>
                             <Icon icon={look.icon} size={14} className={clsx(look.spins && 'animate-spin')} />
                         </span>
@@ -122,7 +110,7 @@ function Entry({ chatId, item, work, now }: { chatId: string; item: ChatSubagent
                     {/* The title reads at the size of the chat's own messages; the line under it stays small. */}
                     <span className="min-w-0 truncate text-sm font-medium text-text">{subagentTitle(item)}</span>
                     {/* The icon says the state to the eye; a screen reader hears it with the title. */}
-                    <span className="sr-only">, {t(`subagents.status.${word}`)}</span>
+                    <span className="sr-only">, {t(`common:status.${word}`)}</span>
                     {time !== null && <span className="ml-auto shrink-0 pl-3 text-text-muted tabular-nums">{time}</span>}
                 </span>
                 {preview !== null && (
@@ -176,7 +164,8 @@ export function SubagentList({ chatId }: { chatId: string }) {
     const structure = useChatRow(chatId, (row) => row?.structure) ?? NO_STRUCTURE;
     const work = useMemo(() => threadWorkBy(order, structure), [order, structure]);
     const sections = useMemo(() => sectionSubagents(subagents, work), [subagents, work]);
-    const now = useListClock(sections.active.length > 0);
+    // One clock for the whole list, ticking only while an entry is running.
+    const now = useNow(1000, sections.active.length > 0);
     if (subagents.length === 0) {
         return <EmptyState icon={<Icon icon={Bot} size={16} />}>{t('subagents.empty')}</EmptyState>;
     }

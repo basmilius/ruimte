@@ -1,9 +1,10 @@
 import { ActionRefusal, ActionRegistry, type ActionCall, type ActionOutput } from '@ruimte/actions';
 import { isCanvasView, isOpenableView, isUnknownNode, isUnknownView, type NodeTitleSource, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
-import { intersects, toWorld, visibleRect } from '@/canvas/math';
+import { toWorld } from '@/canvas/math';
 import { nearestFreeNodeRect } from '@/canvas/place-node';
 import { recentChatMessages } from '@/chat/recent-messages';
+import { sightOf, visibleNodes } from '@/state/attention';
 import { focusedCanvas, NODE_SIZE, type CanvasState, type NodeKind } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { activeViewOf, useDocument, type DocumentState } from '@/state/document';
@@ -79,7 +80,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>): A
             const state = document.getState();
             const active = activeViewOf(state);
             const current = active && isCanvasView(active) ? focusedCanvas().getState() : null;
-            const viewport = current ? visibleRect(current.camera, current.viewport) : null;
+            const inSight = current === null ? new Set<string>() : new Set(visibleNodes(sightOf(current), { readable: false }));
             return {
                 output: {
                     project: useProject.getState().current?.name ?? 'Untitled project',
@@ -105,7 +106,7 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>): A
                                           id: node.id,
                                           title: node.title,
                                           kind: kindOfNode(node),
-                                          visible: viewport !== null && !current.hidden.has(node.id) && intersects(node, viewport)
+                                          visible: inSight.has(node.id)
                                       })),
                                   selected: current.selection
                                       .map((id) => current.nodes[id])

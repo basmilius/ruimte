@@ -2,7 +2,7 @@ import i18next from 'i18next';
 import type { ProjectContent, ProjectDocument, ProjectIconChoice, ProjectLocal, ProjectSummary, ProjectView } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
-import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
+import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../transport/transport';
 import { overlayLocal, readClientLocal, withoutClientBrowserState, writeClientLocal } from './client-local';
 import { browserStorage, rememberProject, type LastProjectStorage } from './last-project';
 import { mergeProject, type CanvasPatch } from './merge';
@@ -106,8 +106,6 @@ const contentOf = (document: ProjectDocument): ProjectContent => {
     const { version: _version, rev: _rev, ...content } = document;
     return content;
 };
-
-const isConnectionError = (e: unknown): boolean => e instanceof TransportError && (e.code === 'not-connected' || e.code === 'disconnected');
 
 /*
  * Synchronizes one workspace with its project file. Shared edits debounce to the daemon, local view

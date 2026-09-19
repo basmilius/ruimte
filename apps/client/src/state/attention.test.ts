@@ -1,6 +1,16 @@
 import { describe, expect, test } from 'bun:test';
 import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
-import { attentionTotal, groupAttention, isUnseen, nextUnseen, readableNodes, seenNodes, settledSince, type AttentionPass } from '@/state/attention';
+import {
+    attentionTotal,
+    groupAttention,
+    isUnseen,
+    nextUnseen,
+    readableNodes,
+    seenNodes,
+    settledSince,
+    visibleNodes,
+    type AttentionPass
+} from '@/state/attention';
 import type { ChatState } from '@/state/chats';
 import type { SessionState, StatusOf } from '@/state/sessions';
 
@@ -69,6 +79,15 @@ describe('what a person can read on a canvas', () => {
 
     test('a node past the edge of the viewport is not read, however close', () => {
         expect(readableNodes({ ...canvas, camera: { x: -1400, y: 0, zoom: 1 } })).toEqual([]);
+    });
+
+    /* An agent reads a node's title and content, not its pixels, so the zoom a person needs to read
+       one says nothing about what an agent can see. Everything else about sight still holds. */
+    test('a caller that does not need to read keeps what a zoomed-out camera has in front of it', () => {
+        const far = { ...canvas, camera: { x: 0, y: 0, zoom: 0.2 } };
+        expect(visibleNodes(far, { readable: false })).toEqual(['a', 'b']);
+        expect(visibleNodes({ ...far, hidden: new Set(['a']) }, { readable: false })).toEqual(['b']);
+        expect(visibleNodes({ ...far, viewport: { w: 0, h: 0 } }, { readable: false })).toEqual([]);
     });
 });
 

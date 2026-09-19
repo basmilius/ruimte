@@ -201,6 +201,14 @@ describe('labels', () => {
         expect(summarizeGroup([tool('1', 'Read', {}), tool('2', 'Bash', {})])).toBe('2 tool calls');
     });
 
+    /* Edit, MultiEdit and ApplyPatch used to carry their own copy of this sentence, and counted the
+       calls where the sentence says files. */
+    test('a run that only edits counts the files it touched, whichever tool touched them', () => {
+        expect(summarizeGroup([tool('1', 'Edit', { file_path: 'a' }), tool('2', 'Edit', { file_path: 'a' })])).toBe('Edited 1 file');
+        expect(summarizeGroup([tool('1', 'MultiEdit', { file_path: 'a' }), tool('2', 'ApplyPatch', { file_path: 'b' })])).toBe('Edited 2 files');
+        expect(summarizeGroup([tool('1', 'Write', { file_path: 'a' }), tool('2', 'Write', { file_path: 'b' })])).toBe('Wrote 2 files');
+    });
+
     test('turnLabel', () => {
         expect(turnLabel({ id: 't', kind: 'turn', createdAt: 0, turnId: 't', state: 'aborted', endedAt: 8000, costUsd: 0 })).toBe('You stopped after 8s');
         expect(turnLabel({ id: 't', kind: 'turn', createdAt: 0, turnId: 't', state: 'done', endedAt: 72_000, costUsd: 0 })).toBe('Worked for 1m 12s');

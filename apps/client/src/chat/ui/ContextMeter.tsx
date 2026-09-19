@@ -2,13 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { Popover } from '@base-ui-components/react/popover';
 import { Minimize2 } from 'lucide-react';
 import type { ChatUsage } from '@ruimte/contracts';
-import { formatMoney } from '@/format/number';
+import { formatMoney, formatTokens } from '@/format/number';
 import { Icon } from '@/ui/Icon';
 
 const RADIUS = 9;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-
-const formatTokens = (count: number): string => (count >= 1000 ? `${Math.round(count / 1000)}k` : String(count));
 
 /* A small ring for how full the context is; the popover has the numbers and the compact button. */
 export function ContextMeter({ usage, disabled, onCompact }: { usage: ChatUsage; disabled: boolean; onCompact(): void }) {

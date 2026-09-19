@@ -1,7 +1,7 @@
 import { isOpenableView, type ProjectShowViewEvent } from '@ruimte/contracts';
 import { callerName, showViewNotice } from '@/project/show-view';
 import { useSettings } from '@/state/settings';
-import { pool } from '@/transport';
+import { watchPool } from '@/transport/pool-watch';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { windowWorkspace } from '@/state/window';
@@ -44,35 +44,7 @@ const onShowView = (endpointId: string, payload: ProjectShowViewEvent): void => 
  * to the clients that have that project open, and this side still checks it is about the project
  * on screen: the socket may outlive a switch to another project.
  */
-export const startShowViewWatch = (): (() => void) => {
-    const watching = new Map<string, () => void>();
-
-    const sync = (): void => {
-        const ids = new Set(pool.ids());
-        for (const [endpointId, stop] of watching) {
-            if (!ids.has(endpointId)) {
-                stop();
-                watching.delete(endpointId);
-            }
-        }
-        for (const endpointId of ids) {
-            const link = watching.has(endpointId) ? null : pool.peek(endpointId);
-            if (link) {
-                watching.set(
-                    endpointId,
-                    link.on('project.showView', (payload) => onShowView(endpointId, payload))
-                );
-            }
-        }
-    };
-
-    sync();
-    const off = pool.subscribe(sync);
-    return () => {
-        off();
-        for (const stop of watching.values()) {
-            stop();
-        }
-        watching.clear();
-    };
-};
+export const startShowViewWatch = (): (() => void) =>
+    watchPool((link, endpointId) => ({
+        subscriptions: [link.on('project.showView', (payload) => onShowView(endpointId, payload))]
+    }));

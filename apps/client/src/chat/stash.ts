@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { uploadBytes } from '@/chat/attachments';
 import type { ChatDraft } from '@/chat/drafts';
+import { isRecord } from '@/chat/logic/json';
+import { persistedJson } from '@/chat/persisted-json';
 import { shortcut } from '@/ui/shortcut';
 
 /* Puts the draft away, or takes the last one back on an empty box. */
@@ -26,8 +28,6 @@ export interface StashedPrompt {
     attachments: StashedAttachment[];
     createdAt: number;
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const strings = (value: unknown): string[] => (Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : []);
 
@@ -87,27 +87,17 @@ export const stashedFrom = (draft: ChatDraft, id: string, now: number): StashedP
     };
 };
 
-const read = (): StashedPrompt[] => {
-    try {
-        return parseStash(localStorage.getItem(STORAGE_KEY));
-    } catch {
-        return [];
-    }
-};
+const storage = persistedJson<StashedPrompt[]>(STORAGE_KEY, parseStash, []);
 
 /*
  * Prompts put aside for later, one list for the whole app rather than one per chat: on a canvas a
  * stashed prompt usually moves to another node, which is the reason to stash it at all.
  */
-export const useStash = create<{ prompts: StashedPrompt[] }>(() => ({ prompts: read() }));
+export const useStash = create<{ prompts: StashedPrompt[] }>(() => ({ prompts: storage.read() }));
 
 const write = (prompts: StashedPrompt[]): void => {
     useStash.setState({ prompts });
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(prompts));
-    } catch {
-        // Storage that refuses keeps the list for this session; it is not worth an error.
-    }
+    storage.write(prompts);
 };
 
 /* Puts a draft on the shelf; false when the composer held nothing to put there. */

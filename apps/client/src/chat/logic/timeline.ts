@@ -12,7 +12,9 @@ import type {
     ChatUserItem
 } from '@ruimte/contracts';
 import { abortedByMachine } from '@ruimte/contracts';
+import { formatElapsedShort } from '@/format/duration';
 import { handbackReportOf } from './handback';
+import { toolEntry } from './tool-catalog';
 import { hasFileChanges, isFileChange } from './tools';
 
 /*
@@ -46,25 +48,6 @@ interface TimelineOptions {
     activeTurnId: string | null;
 }
 
-/* The tools a run of calls is summarized in words of its own; every other name reads as calls of that name. */
-const NAMED_TOOLS = new Set([
-    'Read',
-    'Edit',
-    'Write',
-    'MultiEdit',
-    'NotebookEdit',
-    'ApplyPatch',
-    'Bash',
-    'Grep',
-    'Glob',
-    'WebFetch',
-    'WebSearch',
-    'Task',
-    'Agent',
-    'Skill',
-    'TodoWrite'
-]);
-
 /* "Read 4 files", "Ran 2 commands", or "12 tool calls" when the run mixes kinds. */
 /*
  * A turn runs in two rhythms. The tool lines are a list and read as one when they sit tight
@@ -77,28 +60,20 @@ export const isBlock = (row: TimelineRow): boolean => BLOCK_KINDS.has(row.kind);
 
 export const summarizeGroup = (tools: ChatToolItem[]): string => {
     const names = new Set(tools.map((tool) => tool.name));
-    if (names.size === 1) {
-        const name = tools[0]!.name;
-        return NAMED_TOOLS.has(name)
-            ? i18next.t(`chat:group.tools.${name}`, { count: tools.length })
-            : i18next.t('chat:group.calls', { name, count: tools.length });
+    const only = names.size === 1 ? tools[0]!.name : null;
+    if (only !== null && toolEntry(only)?.grouped === true) {
+        return i18next.t(`chat:group.tools.${only}`, { count: tools.length });
     }
-    const edits = tools.filter((tool) => isFileChange(tool.name)).length;
-    if (edits === tools.length) {
+    /* A run that only touches files says so once, whether it took one tool or three, and counts the
+       files rather than the calls: three edits to one file are one file edited. */
+    if (tools.every((tool) => isFileChange(tool.name))) {
         const paths = new Set(tools.map((tool) => (tool.input as { file_path?: string })?.file_path ?? tool.id));
         return i18next.t('chat:group.edited', { count: paths.size });
     }
-    return i18next.t('chat:group.toolCalls', { count: tools.length });
-};
-
-export const formatDuration = (ms: number): string => {
-    const seconds = Math.max(1, Math.round(ms / 1000));
-    if (seconds < 60) {
-        return `${seconds}s`;
+    if (only !== null) {
+        return i18next.t('chat:group.calls', { name: only, count: tools.length });
     }
-    const minutes = Math.floor(seconds / 60);
-    const rest = seconds % 60;
-    return rest === 0 ? `${minutes}m` : `${minutes}m ${rest}s`;
+    return i18next.t('chat:group.toolCalls', { count: tools.length });
 };
 
 /*
@@ -120,7 +95,7 @@ export const agentTurnLabel = (turn: ChatTurnItem): string => {
 
 /* The items of the turn tell a turn a person stopped from one the machine ended after a restart. */
 export const turnLabel = (turn: ChatTurnItem, items: readonly ChatItem[] = []): string => {
-    const duration = formatDuration((turn.endedAt ?? turn.createdAt) - turn.createdAt);
+    const duration = formatElapsedShort((turn.endedAt ?? turn.createdAt) - turn.createdAt);
     switch (turn.state) {
         case 'aborted':
             return abortedByMachine(turn, items) ? i18next.t('chat:turn.stopped', { duration }) : i18next.t('chat:turn.youStopped', { duration });
