@@ -3,9 +3,10 @@ import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useShallow } from 'zustand/react/shallow';
 import { carriesFiles, carriesPaths, dropEffectFor, dropPoints, droppedPaths } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
-import { GRID, intersects, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math';
+import { GRID, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math';
 import { isSpaceDown } from '@/canvas/canvas-shortcuts';
 import type { NodeSide } from '@ruimte/contracts';
+import { rectFromPoints } from '@ruimte/drawing';
 import { canLink } from '@/canvas/edge-lines';
 import { framePressHandsKeyboard } from '@/canvas/frame-press';
 import { isNodeActive, NODE_SIZE, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
@@ -485,27 +486,7 @@ export function Canvas() {
         if (g.kind === 'box') {
             setBox(null);
             if (Math.abs(g.current.x - g.origin.x) > 3 || Math.abs(g.current.y - g.origin.y) > 3) {
-                const a = toWorld(s.camera, g.origin);
-                const b = toWorld(s.camera, g.current);
-                const rect = {
-                    x: Math.min(a.x, b.x),
-                    y: Math.min(a.y, b.y),
-                    w: Math.abs(b.x - a.x),
-                    h: Math.abs(b.y - a.y)
-                };
-                if (g.additive) {
-                    const hits = [
-                        ...Object.values(s.nodes)
-                            .filter((n) => intersects(n, rect))
-                            .map((n) => n.id),
-                        ...Object.values(s.texts)
-                            .filter((t) => intersects({ x: t.x, y: t.y, w: t.size * 8, h: t.size * 1.4 }, rect))
-                            .map((t) => t.id)
-                    ];
-                    s.select(hits, true);
-                } else {
-                    s.selectInRect(rect);
-                }
+                s.selectInRect(rectFromPoints(toWorld(s.camera, g.origin), toWorld(s.camera, g.current)), g.additive);
             }
         } else if (g.kind === 'move' && g.moved) {
             s.settleMove();

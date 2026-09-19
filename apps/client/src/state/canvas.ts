@@ -182,7 +182,7 @@ export interface CanvasState {
 
     select(ids: string[], additive?: boolean): void;
     clearSelection(): void;
-    selectInRect(rect: Rect): void;
+    selectInRect(rect: Rect, additive?: boolean): void;
     /* Puts a node on top, selects it and hands its content the keyboard: what a click in a body does. */
     activateNode(id: string): void;
     setBodyFocus(id: string | null): void;
@@ -432,17 +432,18 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         clearSelection() {
             set({ selection: [] });
         },
-        selectInRect(rect) {
-            const { nodes, texts } = get();
+        selectInRect(rect, additive = false) {
+            const { nodes, texts, hidden } = get();
+            // A node inside a collapsed group is not drawn, so a box drawn over it cannot take it along.
             const hits = [
                 ...Object.values(nodes)
-                    .filter((n) => intersects(n, rect))
-                    .map((n) => n.id),
+                    .filter((node) => !hidden.has(node.id) && intersects(node, rect))
+                    .map((node) => node.id),
                 ...Object.values(texts)
-                    .filter((t) => intersects({ x: t.x, y: t.y, w: t.size * 8, h: t.size * 1.4 }, rect))
-                    .map((t) => t.id)
+                    .filter((text) => !hidden.has(text.id) && intersects({ x: text.x, y: text.y, w: text.size * 8, h: text.size * 1.4 }, rect))
+                    .map((text) => text.id)
             ];
-            set({ selection: hits });
+            set((state) => ({ selection: additive ? [...new Set([...state.selection, ...hits])] : hits }));
         },
         activateNode(id) {
             get().bringToFront(id);

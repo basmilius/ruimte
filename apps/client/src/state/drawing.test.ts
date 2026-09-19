@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { DrawingDocument, DrawingElement } from '@ruimte/contracts';
-import { createDrawingStore, focusedDrawing } from './drawing';
+import { boundsOf, createDrawingStore, focusedDrawing } from './drawing';
 
 /* Every test here is about one editor, and with no workspace open that is the module's own. */
 const drawing = () => focusedDrawing().getState();
@@ -28,6 +28,34 @@ const ids = (): string[] => drawing().elements.map((element) => element.id);
 beforeEach(() => {
     drawing().setViewport({ w: 800, h: 600 });
     drawing().load('view-1', document([rect('a'), rect('b', 200)]), { camera: { center: { x: 390, y: 280 }, zoom: 1 }, focusedNodeId: null });
+});
+
+describe('bounds', () => {
+    /* A line drawn to the left or upwards keeps its start in (x, y) and carries a negative size. */
+    const line = (id: string, w: number, h: number): DrawingElement => ({
+        kind: 'line',
+        id,
+        x: 300,
+        y: 200,
+        w,
+        h,
+        stroke: 'ink',
+        strokeWidth: 2,
+        seed: 3,
+        points: [
+            [0, 0],
+            [w, h]
+        ]
+    });
+
+    test('an arrow drawn to the left is bounded where it is drawn, the way the export reads it', () => {
+        expect(boundsOf([line('l', -200, -100)])).toEqual({ x: 100, y: 100, w: 200, h: 100 });
+        expect(boundsOf([rect('a'), line('l', -200, -100)])).toEqual({ x: 0, y: 0, w: 300, h: 200 });
+    });
+
+    test('nothing has no bounds', () => {
+        expect(boundsOf([])).toBeNull();
+    });
 });
 
 describe('loading', () => {

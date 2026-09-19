@@ -1,4 +1,5 @@
 import type { DiagramDocument, DiagramEdge, DiagramNode, DiagramShape } from '@ruimte/contracts';
+import { unionOf } from '@ruimte/drawing';
 import { placeAcross } from './across.ts';
 import { DUMMY_MARGIN, NODE_MARGIN, bandCode, type Band, type Hop, type Unit } from './graph.ts';
 import { orderLayers } from './order.ts';
@@ -213,17 +214,6 @@ const center = (box: Rect): Point => ({ x: Math.round(box.x + box.w / 2), y: Mat
 
 const overlapsRect = (left: Rect, right: Rect): boolean =>
     left.x < right.x + right.w && right.x < left.x + left.w && left.y < right.y + right.h && right.y < left.y + left.h;
-
-const unionOf = (rects: readonly Rect[]): Rect => {
-    if (rects.length === 0) {
-        return { x: 0, y: 0, w: 0, h: 0 };
-    }
-    const left = Math.min(...rects.map((rect) => rect.x));
-    const top = Math.min(...rects.map((rect) => rect.y));
-    const right = Math.max(...rects.map((rect) => rect.x + rect.w));
-    const bottom = Math.max(...rects.map((rect) => rect.y + rect.h));
-    return { x: left, y: top, w: right - left, h: bottom - top };
-};
 
 /* Drops repeated corners and corners in the middle of a straight run. */
 const simplify = (points: readonly Point[]): Point[] => {
@@ -754,7 +744,7 @@ export const layoutOf = (document: Pick<DiagramDocument, 'meta' | 'nodes' | 'gro
         if (rects.length === 0) {
             return [];
         }
-        const rect = unionOf(rects);
+        const rect = unionOf(rects)!;
         const labelBox = { x: rect.x + GROUP_LABEL_INSET, y: rect.y + 4, w: estimateTextWidth(group.label, SUB_SIZE, true), h: SUB_LINE };
         return [{ id: group.id, ...rect, labelBox }];
     });
@@ -777,5 +767,5 @@ export const layoutOf = (document: Pick<DiagramDocument, 'meta' | 'nodes' | 'gro
     const corners = edges.flatMap((edge) => edge.points.map((point) => ({ ...point, w: 0, h: 0 })));
     const labels = edges.flatMap((edge) => (edge.label ? [edge.label] : []));
     const groupLabels = groups.map((group) => group.labelBox);
-    return { nodes, groups, edges, bounds: unionOf([...nodes, ...groups, ...groupLabels, ...corners, ...labels]) };
+    return { nodes, groups, edges, bounds: unionOf([...nodes, ...groups, ...groupLabels, ...corners, ...labels]) ?? { x: 0, y: 0, w: 0, h: 0 } };
 };

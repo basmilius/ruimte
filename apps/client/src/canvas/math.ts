@@ -1,4 +1,5 @@
 import { CANVAS_GRID, type ViewCamera } from '@ruimte/contracts';
+import { unionOf } from '@ruimte/drawing';
 
 export interface Camera {
     x: number;
@@ -45,22 +46,8 @@ export const zoomAround = (camera: Camera, nextZoom: number, anchor: Point): Cam
     };
 };
 
-export const unionRect = (rects: Rect[]): Rect | null => {
-    if (rects.length === 0) {
-        return null;
-    }
-    let minX = Infinity,
-        minY = Infinity,
-        maxX = -Infinity,
-        maxY = -Infinity;
-    for (const r of rects) {
-        minX = Math.min(minX, r.x);
-        minY = Math.min(minY, r.y);
-        maxX = Math.max(maxX, r.x + r.w);
-        maxY = Math.max(maxY, r.y + r.h);
-    }
-    return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
-};
+/* One union for the whole client: the package's reckons with a rect drawn to the left or upwards, which has a negative size. */
+export const unionRect = (rects: readonly Rect[]): Rect | null => unionOf(rects);
 
 export const intersects = (a: Rect, b: Rect): boolean => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 

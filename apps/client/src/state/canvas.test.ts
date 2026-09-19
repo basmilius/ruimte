@@ -43,6 +43,27 @@ describe('groups', () => {
         expect(after.b).toMatchObject({ x: 416, y: 108 });
         expect(after[groupId!]).toMatchObject({ x: group.x + 16, y: group.y + 8 });
     });
+
+    test('a box drawn over a collapsed group takes the group, never the nodes folded into it', () => {
+        focusedCanvas().setState({
+            nodes: { a: node('a', 100, 100), b: node('b', 400, 100), far: node('far', 2000, 2000) },
+            texts: { t1: { id: 't1', x: 150, y: 150, text: 'in', size: 18 } },
+            order: ['a', 'b', 'far'],
+            selection: ['a', 'b', 't1'],
+            edges: [],
+            hidden: new Set()
+        });
+        const groupId = canvas().groupSelection()!;
+        canvas().toggleGroupCollapse(groupId);
+        canvas().clearSelection();
+
+        canvas().selectInRect({ x: 0, y: 0, w: 1000, h: 1000 });
+        expect(canvas().selection).toEqual([groupId]);
+
+        // The same box with the modifier down adds to what is already selected.
+        canvas().selectInRect({ x: 1900, y: 1900, w: 400, h: 400 }, true);
+        expect([...canvas().selection].sort()).toEqual([groupId, 'far'].sort());
+    });
 });
 
 describe('edges', () => {

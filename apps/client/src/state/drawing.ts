@@ -22,13 +22,13 @@ import {
     intersects,
     isMeasured,
     snapZoom,
-    unionRect,
     viewCameraOf,
     zoomAround,
     type Camera,
     type Point,
     type Rect
 } from '@/canvas/math';
+import { boundsOfElements } from '@ruimte/drawing';
 import { fitTextBox } from '@/drawing/paint';
 import { nextId, type CameraRequest } from '@/state/canvas';
 
@@ -175,7 +175,7 @@ export interface DrawingState {
     applyDocument(document: DrawingDocument): void;
 }
 
-export const boundsOf = (elements: readonly DrawingElement[]): Rect | null => unionRect([...elements]);
+export const boundsOf = (elements: readonly DrawingElement[]): Rect | null => boundsOfElements(elements);
 
 const remember = (state: DrawingState): Pick<DrawingState, 'past' | 'future'> => ({
     past: [...state.past.slice(-(HISTORY_LIMIT - 1)), state.elements],
@@ -359,9 +359,13 @@ export const createDrawingStore = (): StoreApi<DrawingState> =>
         zoomToSelection() {
             const { elements, selection, viewport } = get();
             const bounds = boundsOf(elements.filter((element) => selection.includes(element.id)));
-            const camera = bounds === null ? null : cameraToFit(bounds, viewport, 96, 1.5);
+            if (bounds === null) {
+                return;
+            }
+            const camera = cameraToFit(bounds, viewport, 96, 1.5);
+            // A shortcut on a drawing nobody can see yet is worth nothing later, so this one does not wait.
             if (camera !== null) {
-                set({ camera });
+                set({ camera, pendingCamera: null });
             }
         },
         viewCamera() {
