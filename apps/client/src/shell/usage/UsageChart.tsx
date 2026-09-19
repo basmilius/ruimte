@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { UsageProvider } from '@ruimte/contracts';
 import { FLOAT } from '@/ui/classes';
+import { useMeasuredWidth } from '@/ui/useMeasuredWidth';
 import { PROVIDER_COLORS, PROVIDER_LABELS, slotAxisLabel, slotLabel } from '@/shell/usage/format';
 import { niceScale, type ChartSlot } from '@/shell/usage/summary';
 
@@ -19,30 +20,13 @@ const TOOLTIP_WIDTH = 168;
 /* A bar that is dimmed still has to read as its own color, so the rest keeps well over half of it. */
 const DIMMED = 0.55;
 
-/* The plot draws in real pixels rather than a stretched view box, so a bar lands on whole ones. */
-const useWidth = (): [(node: HTMLDivElement | null) => void, number] => {
-    const [width, setWidth] = useState(0);
-    const observer = useRef<ResizeObserver | null>(null);
-    useEffect(() => () => observer.current?.disconnect(), []);
-    const measure = (node: HTMLDivElement | null): void => {
-        observer.current?.disconnect();
-        if (node === null) {
-            return;
-        }
-        setWidth(node.clientWidth);
-        observer.current = new ResizeObserver(([entry]) => setWidth(Math.round(entry!.contentRect.width)));
-        observer.current.observe(node);
-    };
-    return [measure, width];
-};
-
 /*
  * One stacked bar per slot, a segment per provider. Stacked rather than layered areas: the total of
  * a day is the height of its bar, and the smaller provider never disappears under the larger one.
  */
 export function UsageChart({ slots, providers, format, labelEvery }: UsageChartProps) {
     const { t } = useTranslation('usage');
-    const [measure, width] = useWidth();
+    const [measure, width] = useMeasuredWidth();
     const [hovered, setHovered] = useState<number | null>(null);
     const scale = niceScale(Math.max(...slots.map((slot) => slot.total), 0));
     const band = slots.length === 0 ? 0 : width / slots.length;
