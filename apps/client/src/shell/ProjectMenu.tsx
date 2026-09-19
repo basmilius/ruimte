@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Menu } from '@base-ui-components/react/menu';
 import { ChevronDown, ChevronRight, ExternalLink, FolderOpen, History, MoreHorizontal, Plus, Settings2, X } from 'lucide-react';
@@ -39,13 +40,14 @@ interface ProjectRowProps {
 
 /* One project in the switcher. The folder is what the tooltip says, so the row stays a single line. */
 function ProjectRow({ row, showMachine, actions }: ProjectRowProps) {
+    const { t } = useTranslation('shell');
     const { summary } = row;
     const tooltip = (
         <span className="flex flex-col items-start">
-            <span>{summary.folder ?? 'Not in a folder'}</span>
+            <span>{summary.folder ?? t('projectMenu.noFolder')}</span>
             {/* Not connected is about the machine, unavailable about the folder; a row can be either. */}
-            {!row.connected && <span className="text-text-muted">Not connected</span>}
-            {!summary.available && <span className="text-text-muted">That folder is gone</span>}
+            {!row.connected && <span className="text-text-muted">{t('connection.noLink')}</span>}
+            {!summary.available && <span className="text-text-muted">{t('projectMenu.folderGone')}</span>}
         </span>
     );
 
@@ -86,8 +88,8 @@ function ProjectRow({ row, showMachine, actions }: ProjectRowProps) {
             <Menu.SubmenuRoot>
                 <Menu.SubmenuTrigger
                     className="menu-item project-menu-actions shrink-0"
-                    aria-label={`Actions for ${summary.name}`}
-                    label={`Actions for ${summary.name}`}
+                    aria-label={t('projectMenu.actionsFor', { name: summary.name })}
+                    label={t('projectMenu.actionsFor', { name: summary.name })}
                 >
                     <Icon icon={MoreHorizontal} size={14} />
                 </Menu.SubmenuTrigger>
@@ -96,15 +98,15 @@ function ProjectRow({ row, showMachine, actions }: ProjectRowProps) {
                         <Menu.Popup className="menu-popup min-w-52">
                             {summary.folder && (
                                 <Menu.Item className="menu-item" onClick={() => void reveal()}>
-                                    <Icon icon={ExternalLink} size={14} /> Open in {fileManagerName(actions.platform)}
+                                    <Icon icon={ExternalLink} size={14} /> {t('projectMenu.openIn', { app: fileManagerName(actions.platform) })}
                                 </Menu.Item>
                             )}
                             <Menu.Item className="menu-item" onClick={actions.onSettings}>
-                                <Icon icon={Settings2} size={14} /> Project settings…
+                                <Icon icon={Settings2} size={14} /> {t('projectMenu.projectSettings')}
                             </Menu.Item>
                             <Menu.Separator className={MENU_SEPARATOR} />
                             <Menu.Item className="menu-item" onClick={actions.onClose}>
-                                <Icon icon={X} size={14} /> Close project
+                                <Icon icon={X} size={14} /> {t('projectMenu.closeProject')}
                             </Menu.Item>
                         </Menu.Popup>
                     </Menu.Positioner>
@@ -117,6 +119,7 @@ function ProjectRow({ row, showMachine, actions }: ProjectRowProps) {
 /* The project segment of the toolbar's breadcrumb: projects to switch to, their actions, and the
    two ways to bring in one that is not listed yet. */
 export function ProjectMenu() {
+    const { t } = useTranslation(['shell', 'common']);
     const rows = useProjectList((s) => s.projects);
     const current = useProject((s) => s.current);
     const currentEndpointId = useProject((s) => s.currentEndpointId);
@@ -241,7 +244,7 @@ export function ProjectMenu() {
                 <Menu.Portal>
                     <Menu.Positioner className="z-(--z-popup)" side="bottom" sideOffset={6} align="start">
                         <Menu.Popup className="menu-popup min-w-60">
-                            {open.length > 0 && <div className={MENU_LABEL}>Projects</div>}
+                            {open.length > 0 && <div className={MENU_LABEL}>{t('projectMenu.projects')}</div>}
                             {open.map((row) => (
                                 <ProjectRow
                                     key={`${row.endpointId}:${row.summary.projectId}`}
@@ -259,7 +262,7 @@ export function ProjectMenu() {
                                     {open.length > 0 && <Menu.Separator className={MENU_SEPARATOR} />}
                                     <Menu.SubmenuRoot>
                                         <Menu.SubmenuTrigger className="menu-item">
-                                            <Icon icon={History} size={14} /> Recent projects
+                                            <Icon icon={History} size={14} /> {t('projectMenu.recent')}
                                             <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
                                         </Menu.SubmenuTrigger>
                                         <Menu.Portal>
@@ -276,10 +279,10 @@ export function ProjectMenu() {
                             )}
                             {(open.length > 0 || recent.length > 0) && <Menu.Separator className={MENU_SEPARATOR} />}
                             <Menu.Item className="menu-item" onClick={() => setNewOpen(true)}>
-                                <Icon icon={Plus} size={14} /> New project
+                                <Icon icon={Plus} size={14} /> {t('projectMenu.newProject')}
                             </Menu.Item>
                             <Menu.Item className="menu-item" onClick={() => useUi.getState().openFolderBrowser()}>
-                                <Icon icon={FolderOpen} size={14} /> Open folder
+                                <Icon icon={FolderOpen} size={14} /> {t('projectMenu.openFolder')}
                             </Menu.Item>
                         </Menu.Popup>
                     </Menu.Positioner>
@@ -289,10 +292,10 @@ export function ProjectMenu() {
             <ProjectNameDialog
                 open={newOpen}
                 onOpenChange={setNewOpen}
-                title="New project"
-                description="Stored in the app, not in a folder. To share a project through git, open a folder instead."
-                action="Create"
-                fallback="Untitled project"
+                title={t('projectMenu.newProject')}
+                description={t('projectMenu.newProjectDescription')}
+                action={t('projectMenu.create')}
+                fallback={t('projectMenu.untitled')}
                 onSubmit={async (name) => {
                     await createProjectOn(machineId, name);
                 }}
@@ -309,12 +312,12 @@ export function ProjectMenu() {
                 <Dialog.Portal>
                     <Dialog.Backdrop className="dialog-backdrop" />
                     <Dialog.Popup className="dialog-popup w-[420px] p-5">
-                        <Dialog.Title className="text-base font-semibold text-text">Close {closing?.name}?</Dialog.Title>
+                        <Dialog.Title className="text-base font-semibold text-text">{t('projectMenu.closeTitle', { name: closing?.name ?? '' })}</Dialog.Title>
                         <p className="mt-1 text-xs text-text-muted">{closeWarning(closing?.sessions ?? 0)}</p>
                         <div className="mt-4 flex items-center justify-end gap-2">
-                            <Button onClick={() => setClosing(null)}>Cancel</Button>
+                            <Button onClick={() => setClosing(null)}>{t('common:action.cancel')}</Button>
                             <Button variant={closing?.sessions === 0 ? 'primary' : 'danger'} onClick={() => void close()}>
-                                <Icon icon={X} size={12} /> Close
+                                <Icon icon={X} size={12} /> {t('common:action.close')}
                             </Button>
                         </div>
                     </Dialog.Popup>

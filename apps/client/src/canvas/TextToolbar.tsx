@@ -1,6 +1,7 @@
 import { useShallow } from 'zustand/react/shallow';
 import { Menu } from '@base-ui-components/react/menu';
 import { Bold, Check, Italic, Type } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { DrawingFont } from '@ruimte/contracts';
 import { FONT_STACK } from '@/canvas/TextElementView';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
@@ -8,11 +9,7 @@ import { BTN_GROUP, FLOAT } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
-const FONTS: Array<{ value: DrawingFont; label: string }> = [
-    { value: 'sans', label: 'Sans' },
-    { value: 'hand', label: 'Hand' },
-    { value: 'mono', label: 'Mono' }
-];
+const FONTS: readonly DrawingFont[] = ['sans', 'hand', 'mono'];
 
 /* The same steps a drawing offers, so a label and a written word can be set to match. */
 const SIZES = [16, 20, 28, 36];
@@ -27,6 +24,7 @@ const BAR_HEIGHT = 40;
  * size at every zoom, and it keeps the caret where it is: the press never reaches the canvas.
  */
 export function TextToolbar() {
+    const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
     const { camera, text } = useCanvas(
         useShallow((s) => ({
@@ -57,11 +55,11 @@ export function TextToolbar() {
             onMouseDown={(e) => e.preventDefault()}
         >
             <Menu.Root>
-                <Tooltip label="Font" name>
+                <Tooltip label={t('text.font')} name>
                     <Menu.Trigger className="icon-btn h-8 gap-1.5 px-2">
                         <Icon icon={Type} size={16} />
                         <span className="text-xs" style={{ fontFamily: FONT_STACK[font] }}>
-                            {FONTS.find((row) => row.value === font)?.label}
+                            {t(`text.fonts.${font}`)}
                         </span>
                     </Menu.Trigger>
                 </Tooltip>
@@ -69,14 +67,14 @@ export function TextToolbar() {
                     <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={8} align="start">
                         <Menu.Popup className="menu-popup">
                             <Menu.RadioGroup value={font} onValueChange={(value: DrawingFont) => style({ font: value })}>
-                                {FONTS.map((row) => (
-                                    <Menu.RadioItem key={row.value} value={row.value} className="menu-item">
+                                {FONTS.map((value) => (
+                                    <Menu.RadioItem key={value} value={value} className="menu-item">
                                         <span className="grid h-4 w-4 place-items-center">
                                             <Menu.RadioItemIndicator>
                                                 <Icon icon={Check} size={14} />
                                             </Menu.RadioItemIndicator>
                                         </span>
-                                        <span style={{ fontFamily: FONT_STACK[row.value] }}>{row.label}</span>
+                                        <span style={{ fontFamily: FONT_STACK[value] }}>{t(`text.fonts.${value}`)}</span>
                                     </Menu.RadioItem>
                                 ))}
                             </Menu.RadioGroup>
@@ -86,7 +84,7 @@ export function TextToolbar() {
             </Menu.Root>
 
             <Menu.Root>
-                <Tooltip label="Size" name>
+                <Tooltip label={t('text.size')} name>
                     <Menu.Trigger className="icon-btn h-8 px-2 text-xs tabular-nums">{text.size}</Menu.Trigger>
                 </Tooltip>
                 <Menu.Portal>
@@ -110,12 +108,12 @@ export function TextToolbar() {
             </Menu.Root>
 
             <div className={BTN_GROUP}>
-                <Tooltip label="Bold" name>
+                <Tooltip label={t('text.bold')} name>
                     <button className="icon-btn h-8 w-8" aria-pressed={text.bold === true} onClick={() => style({ bold: !text.bold })}>
                         <Icon icon={Bold} size={16} />
                     </button>
                 </Tooltip>
-                <Tooltip label="Italic" name>
+                <Tooltip label={t('text.italic')} name>
                     <button className="icon-btn h-8 w-8" aria-pressed={text.italic === true} onClick={() => style({ italic: !text.italic })}>
                         <Icon icon={Italic} size={16} />
                     </button>

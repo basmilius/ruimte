@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+import i18next from 'i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import clsx from 'clsx';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { Terminal } from '@xterm/xterm';
 import { ClipboardPaste, Copy, Play, RotateCw, Scan } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useEndpointId } from '@/state/keys';
 import { useSessionRow } from '@/state/sessions';
 import { useProject } from '@/state/project';
@@ -78,6 +80,7 @@ export function TerminalPlate({ id }: { id: string }) {
 
 /* The body of a terminal, the same on a canvas inside a frame and filling a view of its own. */
 export function TerminalBody({ id, focused }: { id: string; focused: boolean }) {
+    const { t } = useTranslation('canvas');
     const hostRef = useRef<HTMLDivElement>(null);
     const termRef = useRef<Terminal | null>(null);
     const fitRef = useRef<FitAddon | null>(null);
@@ -188,7 +191,8 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
             })
             .catch((e: unknown) => {
                 if (!cancelled) {
-                    setFailure(e instanceof Error ? e.message : 'The session could not be started');
+                    // Not the hook's `t`: the effect would then depend on it and rebuild the terminal on a language change.
+                    setFailure(e instanceof Error ? e.message : i18next.t('canvas:terminal.startFailed'));
                 }
             });
 
@@ -307,7 +311,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         <ContextMenu.Root onOpenChange={(open) => setSelected(open && (termRef.current?.hasSelection() ?? false))}>
             <ContextMenu.Trigger className="absolute inset-0 bg-term-bg">
                 <div ref={hostRef} className="term-host" />
-                {status !== 'open' && <NodeNotice>{status === 'closed' ? 'Reconnecting to the machine' : 'Connecting to the machine'}</NodeNotice>}
+                {status !== 'open' && <NodeNotice>{status === 'closed' ? t('notice.reconnecting') : t('notice.connecting')}</NodeNotice>}
                 {failure && (
                     <NodeNotice tone="error" onRetry={rebuild}>
                         {failure}
@@ -317,20 +321,20 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                     <div className="absolute inset-x-0 bottom-0 z-10 flex items-center gap-2 border-t border-border bg-surface-raised/90 px-3 py-1.5 font-mono text-xs text-term-dim">
                         {/* A shell that ended on its own reads as a footnote; a non-zero code is news. */}
                         {resumable ? (
-                            <span className="grow">[session ended]</span>
+                            <span className="grow">{t('terminal.sessionEnded')}</span>
                         ) : (
-                            <span className={clsx('grow', exited !== 0 && 'text-status-error')}>[process exited with code {exited}]</span>
+                            <span className={clsx('grow', exited !== 0 && 'text-status-error')}>{t('terminal.exited', { code: exited })}</span>
                         )}
                         {resumable && (
                             <Button size="sm" onClick={() => void resume()}>
-                                <Icon icon={Play} size={12} /> Resume
+                                <Icon icon={Play} size={12} /> {t('terminal.resume')}
                             </Button>
                         )}
                         <Button size="sm" variant="secondary" onClick={() => void restart()}>
-                            <Icon icon={RotateCw} size={12} /> Restart
+                            <Icon icon={RotateCw} size={12} /> {t('terminal.restart')}
                         </Button>
                         <Button size="sm" onClick={close}>
-                            Close
+                            {t('common:action.close')}
                         </Button>
                     </div>
                 )}
@@ -339,14 +343,14 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
                 <ContextMenu.Positioner className="z-(--z-popup)">
                     <ContextMenu.Popup className="menu-popup">
                         <ContextMenu.Item className="menu-item" disabled={!selected} onClick={() => copyText(termRef.current?.getSelection() ?? '')}>
-                            <Icon icon={Copy} size={14} /> Copy
+                            <Icon icon={Copy} size={14} /> {t('common:action.copy')}
                         </ContextMenu.Item>
                         <ContextMenu.Item className="menu-item" onClick={() => void paste()}>
-                            <Icon icon={ClipboardPaste} size={14} /> Paste
+                            <Icon icon={ClipboardPaste} size={14} /> {t('edit.paste')}
                         </ContextMenu.Item>
                         <ContextMenu.Separator className={MENU_SEPARATOR} />
                         <ContextMenu.Item className="menu-item" onClick={() => termRef.current?.selectAll()}>
-                            <Icon icon={Scan} size={14} /> Select all
+                            <Icon icon={Scan} size={14} /> {t('common:action.selectAll')}
                         </ContextMenu.Item>
                     </ContextMenu.Popup>
                 </ContextMenu.Positioner>

@@ -1,0 +1,263 @@
+{
+  "device": {
+    "controls": {
+      "home": "Home",
+      "gestures": "Apparaatgebaren",
+      "swipeHome": "Veeg naar home",
+      "appSwitcher": "App-switcher",
+      "lock": "Vergrendelen",
+      "siri": "Siri",
+      "rotate": "Apparaat draaien",
+      "rotateLeft": "Links",
+      "rotateRight": "Rechts"
+    },
+    "state": {
+      "booted": "{{name}} draait.",
+      "shutdown": "{{name}} is gestopt.",
+      "transitioning": "{{name}} verandert van staat."
+    },
+    "boot": "Simulator starten",
+    "noStream": "Schermstreaming zit niet in deze build.",
+    "noReference": "Deze simulator verwijst naar geen enkel apparaat.",
+    "finding": "{{name}} zoeken...",
+    "notInstalled": "{{name}} met {{runtime}} staat niet op deze machine.",
+    "plate": "Simulator",
+    "listFailed": "De apparaten konden niet worden gelezen",
+    "stream": {
+      "screen": "Scherm van {{name}}",
+      "starting": "Apparaat starten...",
+      "noDecoder": "Deze browser kan de videostream van het apparaat niet decoderen",
+      "undecodable": "De videostream van het apparaat kon niet worden gedecodeerd",
+      "frameFailed": "Een frame van de simulator kon niet worden getekend",
+      "startFailed": "De simulator kon niet gaan streamen",
+      "notReady": "De stream van het apparaat is nog niet klaar",
+      "httpStatus": "De stream van het apparaat antwoordde met {{status}}",
+      "unknownFormat": "De machine antwoordde met een onbekend streamformaat",
+      "stopped": "De stream van de simulator stopte"
+    },
+    "tools": {
+      "title": "Simulatortools",
+      "close": "Tools sluiten",
+      "loading": "Instellingen van de simulator lezen…",
+      "readFailed": "De instellingen van de simulator konden niet worden gelezen",
+      "changeFailed": "De instelling van de simulator kon niet worden gewijzigd",
+      "bundleId": "Bundle-ID",
+      "app": {
+        "title": "App",
+        "urlPlaceholder": "https://… of myapp://",
+        "open": "Openen",
+        "launch": "Starten",
+        "terminate": "Stoppen"
+      },
+      "display": {
+        "title": "Scherm",
+        "appearance": "Weergave",
+        "light": "Licht",
+        "dark": "Donker",
+        "textSize": "Tekstgrootte",
+        "liquidGlass": "Liquid Glass",
+        "clear": "Helder",
+        "tinted": "Getint",
+        "colorFilter": "Kleurfilter",
+        "reduceMotion": "Verminder beweging",
+        "increaseContrast": "Verhoog contrast",
+        "reduceTransparency": "Verminder transparantie",
+        "showBorders": "Toon randen",
+        "voiceOver": "VoiceOver"
+      },
+      "textSizes": {
+        "small": "Klein",
+        "default": "Standaard",
+        "large": "Groot",
+        "extra-large": "Extra groot"
+      },
+      "colorFilters": {
+        "none": "Geen",
+        "grayscale": "Grijstinten",
+        "red-green": "Rood / groen",
+        "green-red": "Groen / rood",
+        "blue-yellow": "Blauw / geel"
+      },
+      "location": {
+        "title": "Locatie",
+        "latitude": "Breedtegraad",
+        "longitude": "Lengtegraad",
+        "preset": "Locatiepreset",
+        "presetPlaceholder": "Preset…",
+        "set": "Instellen",
+        "clear": "Wissen"
+      },
+      "permissions": {
+        "title": "Toestemmingen",
+        "label": "Toestemming",
+        "grant": "Geven",
+        "revoke": "Intrekken",
+        "reset": "Reset",
+        "kinds": {
+          "camera": "Camera",
+          "microphone": "Microfoon",
+          "photos": "Foto's",
+          "contacts": "Contacten",
+          "calendar": "Agenda",
+          "reminders": "Herinneringen",
+          "location": "Locatie",
+          "motion": "Beweging",
+          "media-library": "Mediabibliotheek",
+          "faceid": "Face ID"
+        }
+      },
+      "push": {
+        "title": "Pushmelding",
+        "alertText": "Meldingstekst",
+        "send": "Versturen"
+      }
+    }
+  },
+  "pairing": {
+    "notALink": "Dat is geen koppellink. Een koppellink ziet eruit als http://machine:4210/pair#token",
+    "refused": "Die machine weigerde het koppelen",
+    "noKeyOrToken": "Die machine antwoordde zonder key of token",
+    "ownDaemon": "Die link is voor de machine die deze pagina serveerde. Die staat al in de lijst als {{label}}.",
+    "merged": {
+      "title": "{{label}} staat al in de lijst",
+      "description": "Die link wijst naar dezelfde machine. Het adres is nu {{address}}."
+    }
+  },
+  "handshake": {
+    "wrongKey": "{{address}} heeft niet de key waarmee deze client gekoppeld is",
+    "noEndpoint": "Geen endpoint {{id}} om mee te verbinden",
+    "unknownKey": {
+      "title": "{{label}} kent deze client niet",
+      "description": "De toegang is ingetrokken, of de machine is de koppeling kwijt. Koppel opnieuw om te verbinden."
+    },
+    "imposter": {
+      "title": "{{label}} kan zijn identiteit niet bewijzen",
+      "description": "{{address}} antwoordt met een andere key dan die waarmee deze client gekoppeld is. Koppel opnieuw om te verbinden."
+    }
+  },
+  "identity": {
+    "mismatch": {
+      "title": "{{label}} antwoordt als een andere machine",
+      "description": "{{address}} is niet de machine waarmee deze client gekoppeld is. Koppel opnieuw om te verbinden."
+    },
+    "merged": {
+      "title": "{{label}} staat al in de lijst",
+      "description": "{{address}} is een ander adres van {{machine}}."
+    }
+  },
+  "link": {
+    "cancelled": "Niet langer op die machine gewacht",
+    "silent": "Die machine antwoordt niet",
+    "notInList": "Die machine staat niet meer in de lijst",
+    "notOnAccount": "Die machine staat niet meer in de lijst of op je account"
+  },
+  "storage": {
+    "indexedDbClosed": "IndexedDB ging niet open",
+    "indexedDbRefused": "IndexedDB weigerde de request"
+  },
+  "account": {
+    "yours": {
+      "github": "je GitHub-account",
+      "apple": "je Apple ID"
+    },
+    "this": {
+      "github": "dit GitHub-account",
+      "apple": "deze Apple ID"
+    },
+    "noun": {
+      "github": "GitHub-account",
+      "apple": "Apple ID"
+    },
+    "signedInWithProvider": "Ingelogd met {{provider}}",
+    "signedInAsLogin": "Ingelogd als {{login}}",
+    "takeover": {
+      "or": "of",
+      "warning": "Wie {{names}} overneemt, kan bij je machines, dus zet daar tweestapsverificatie aan."
+    },
+    "confirmation": {
+      "signedIn": "Ingelogd met {{provider}}",
+      "signedInAs": "Ingelogd met {{provider}} als {{login}}",
+      "linked": "{{provider}} is aan je account toegevoegd"
+    },
+    "sessionEndedOnDevice": "Je sessie op dit apparaat is afgelopen. Log opnieuw in om je machines te openen.",
+    "sessionEnded": "Je sessie is afgelopen. Log opnieuw in.",
+    "signInUnavailable": "Inloggen werkt in de desktop-app en op station.ruimte.app",
+    "signInFirst": "Log eerst in op je account",
+    "statementMismatch": "Je account antwoordde met een statement voor iets anders",
+    "signInAndConnect": "Log eerst in en verbind met de machine",
+    "noBroker": "{{name}} is nog niet met een broker verbonden en is dus alleen op zijn eigen netwerk te bereiken"
+  },
+  "signIn": {
+    "wrongCallback": "Het antwoord van de browser hoort niet bij deze inlogpoging. Probeer het opnieuw.",
+    "cancelled": "Inloggen is geannuleerd.",
+    "failed": "Inloggen lukte niet ({{error}}).",
+    "noCode": "De browser kwam terug zonder inlogcode. Probeer het opnieuw.",
+    "notStarted": "Deze pagina heeft geen inlogpoging begonnen. Log opnieuw in.",
+    "tooLong": "Het inloggen duurde te lang. Log opnieuw in."
+  },
+  "protocol": {
+    "daemon-older": "Deze machine draait een oudere Ruimte. Werk Ruimte daar bij, of herstart hem om de update op te pikken.",
+    "daemon-newer": "Deze machine draait een nieuwere Ruimte dan deze app. Werk deze app bij."
+  },
+  "broker": {
+    "badUrl": "De broker-URL {{url}} gaat niet open",
+    "limited": "De broker op {{host}} beperkt deze client; nieuwe poging over {{seconds}} seconden",
+    "refusedClient": "De broker op {{host}} weigerde deze client: {{reason}}",
+    "unreachable": "De broker op {{host}} was niet te bereiken",
+    "machineAbsent": "De machine is niet verbonden met de broker op {{host}}. Hij moet draaien met de broker aan.",
+    "refusedSignal": "De broker op {{host}} weigerde het signaal: {{reason}}",
+    "signInFailed": "Inloggen op de broker lukte niet: {{reason}}",
+    "noVouch": "Je account kon niet instaan voor deze client: {{reason}}"
+  },
+  "direct": {
+    "closed": {
+      "declined": "De machine opent te veel directe verbindingen tegelijk",
+      "failed": "De machine kon de directe verbinding niet beantwoorden",
+      "timeout": "De machine gaf het wachten op de directe verbinding op",
+      "done": "De machine heeft de directe verbinding beëindigd",
+      "not-paired": "De machine kent deze client niet. De toegang is ingetrokken, of de koppeling is kwijt; koppel opnieuw om te verbinden.",
+      "statements-refused": "De machine weigert inloggen via een account. Koppel met een link om te verbinden.",
+      "other": "De machine heeft de directe verbinding gesloten"
+    },
+    "channelEarly": "Het channel ging open vóór het answer dat het beschrijft",
+    "badHandshake": "De machine beantwoordde de directe verbinding met iets anders dan haar handshake",
+    "dead": "De machine antwoordt niet meer over de directe verbinding",
+    "badFrame": "De machine stuurde een frame dat deze client niet kan lezen",
+    "channelClosed": "De directe verbinding is gesloten",
+    "channelClosedEarly": "Het channel sloot voordat de machine deze client binnenliet",
+    "noPathWithRelay": "Geen netwerkpad naar de machine: ICE mislukte, ook via de relay.",
+    "noPath": "Geen netwerkpad naar de machine: ICE mislukte. Een directe verbinding heeft UDP aan beide kanten nodig, en deze route biedt geen relay.",
+    "noOffer": "De browser maakte geen offer",
+    "refused": "De machine nam de directe verbinding niet aan: {{reason}}",
+    "noReason": "geen reden gegeven",
+    "unreachable": "De machine was niet te bereiken om een directe verbinding op te zetten",
+    "unreachableWith": "De machine was niet te bereiken om een directe verbinding op te zetten: {{reason}}",
+    "unsignedSignal": "Een signaal op de broker noemt de machine, maar is niet door haar ondertekend",
+    "noKeyOverBroker": "Een directe verbinding via de broker logt in met een key, en deze browser kan er geen maken",
+    "notProven": "{{label}} bewees zijn identiteit niet over de directe verbinding",
+    "noKey": "Een directe verbinding logt in met een key, en deze browser kan er geen maken",
+    "needsPairedKey": "Een directe verbinding heeft een gekoppelde key nodig. Koppel deze machine opnieuw.",
+    "timedOut": "De directe verbinding kwam niet binnen {{seconds}} seconden op",
+    "frameRefused": "De directe verbinding weigerde een frame: {{reason}}",
+    "answerNotApplied": "Het answer van de machine liet zich niet toepassen: {{reason}}",
+    "refusedVerdict": "De machine weigerde de directe verbinding: {{reason}}",
+    "setupFailed": "Een directe verbinding opzetten lukte niet: {{reason}}"
+  },
+  "connection": {
+    "notConnected": "De machine is niet verbonden",
+    "closedBeforeAnswer": "De verbinding sloot voordat de machine antwoordde",
+    "noMachine": "Er is geen machine gekozen. Log in en open een van je machines.",
+    "unknownMachine": "Deze machine is hier niet bekend",
+    "openFailed": "Een verbinding openen lukte niet: {{reason}}",
+    "badReply": "Het antwoord op {{type}} past niet bij het contract",
+    "noAddress": "Geen adres binnen {{seconds}} seconden"
+  },
+  "file": {
+    "tooLarge": "Dit bestand is {{size}} MB; over een directe verbinding laadt hoogstens {{max}} MB",
+    "emptyPiece": "De machine stuurde een leeg stuk vóór het einde van het bestand",
+    "changed": "Het bestand veranderde tijdens het laden"
+  },
+  "station": {
+    "mixedContent": "Deze pagina wordt over https geserveerd, en een browser laat hem geen machine op gewoon http bereiken. Voeg de machine vanuit de desktop-app toe aan je account en open hem hier, of zet hem achter https."
+  }
+}

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import clsx from 'clsx';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { isTypingTarget } from '@/canvas/canvas-shortcuts';
 import { leavePromptStack, PROMPT_STACK_ATTRIBUTE, usePromptFront } from '@/canvas/prompt-stack';
@@ -42,12 +43,13 @@ function SourceRow({
     onStep(delta: number): void;
     onGoTo(): void;
 }) {
+    const { t } = useTranslation('canvas');
     const node = useCanvas((s) => s.nodes[prompt.subject.nodeId]);
     const status = useNodeStatus(node ?? { id: prompt.subject.nodeId, kind: prompt.surface });
     return (
         <div className="flex min-w-0 items-center gap-2 border-b border-dashed border-border px-3 py-1.5 text-xs text-text-muted">
             {status && <StatusDot status={status} />}
-            <Tooltip label="Go to node">
+            <Tooltip label={t('promptStack.goToNode')}>
                 <button type="button" className="min-w-0 truncate font-medium text-text hover:underline" onClick={onGoTo}>
                     {prompt.title}
                 </button>
@@ -60,15 +62,13 @@ function SourceRow({
             <span className="grow" />
             {count > 1 && (
                 <span className={`${BTN_GROUP} shrink-0`}>
-                    <Tooltip label="Previous prompt" name>
+                    <Tooltip label={t('promptStack.previous')} name>
                         <button type="button" className="icon-btn h-6 w-6" disabled={index === 0} onClick={() => onStep(-1)}>
                             <Icon icon={ChevronLeft} size={14} />
                         </button>
                     </Tooltip>
-                    <span className="px-1 tabular-nums">
-                        {index + 1} of {count}
-                    </span>
-                    <Tooltip label="Next prompt" name>
+                    <span className="px-1 tabular-nums">{t('promptStack.position', { index: index + 1, count })}</span>
+                    <Tooltip label={t('promptStack.next')} name>
                         <button type="button" className="icon-btn h-6 w-6" disabled={index === count - 1} onClick={() => onStep(1)}>
                             <Icon icon={ChevronRight} size={14} />
                         </button>
@@ -85,6 +85,7 @@ function SourceRow({
  * the keyboard by itself, so typing in a terminal goes on while a card arrives.
  */
 export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: boolean }) {
+    const { t } = useTranslation('canvas');
     const prompts = useCanvasPrompts();
     const canvasStore = useCanvasStore();
     const endpointId = useEndpointId();
@@ -165,7 +166,7 @@ export function PromptStack({ viewId, dockShown }: { viewId: string; dockShown: 
                 {edges >= 2 && <div aria-hidden className={`${PROMPT_SURFACE} absolute inset-x-6 -top-3 h-4`} />}
                 {edges >= 1 && <div aria-hidden className={`${PROMPT_SURFACE} absolute inset-x-3 -top-1.5 h-4`} />}
                 <div className={`${PROMPT_SURFACE} relative focus-within:border-accent`}>
-                    <ErrorBoundary label="This prompt failed to render" resetKeys={[active.id]} className="relative p-3">
+                    <ErrorBoundary label={t('promptStack.failed')} resetKeys={[active.id]} className="relative p-3">
                         <PromptView
                             key={active.id}
                             subject={active.subject}

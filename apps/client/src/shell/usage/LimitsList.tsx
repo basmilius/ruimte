@@ -1,42 +1,22 @@
 import clsx from 'clsx';
+import i18next from 'i18next';
+import { useTranslation } from 'react-i18next';
 import type { UsageLimitsProvider, UsageLimitsSnapshot, UsageWindow } from '@ruimte/contracts';
 import { Tooltip } from '@/ui/Tooltip';
 import { ProviderLogo } from '@/ui/ProviderLogo';
+import { formatClock, formatWeekdayClock, isSameDay } from '@/format/datetime';
+import { formatCountdown } from '@/format/duration';
 import { PROVIDER_COLORS, PROVIDER_LABELS } from '@/shell/usage/format';
 
 /* Red where a window is nearly spent, amber where it is worth knowing. A window with room to spare
    is not news, so it takes the text color rather than a hue that competes with the two that are. */
 const toneOf = (used: number): string => (used >= 0.9 ? 'bg-status-error' : used >= 0.7 ? 'bg-status-needs-you' : 'bg-text');
 
-const CLOCK = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
-const WEEKDAY_CLOCK = new Intl.DateTimeFormat(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
-
-const MINUTE = 60_000;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
-
 /* A time of day when the reset is today, a weekday and a time when it is not. */
-const resetAtLabel = (resetsAt: number, now: number): string => {
-    const at = new Date(resetsAt);
-    const today = new Date(now);
-    const sameDay = at.getFullYear() === today.getFullYear() && at.getMonth() === today.getMonth() && at.getDate() === today.getDate();
-    return (sameDay ? CLOCK : WEEKDAY_CLOCK).format(at);
-};
+const resetAtLabel = (resetsAt: number, now: number): string => (isSameDay(resetsAt, now) ? formatClock(resetsAt) : formatWeekdayClock(resetsAt));
 
-/* How long the window still has, at the coarsest unit that still says something: `4d`, `3h 12m`, `9m`. */
-const resetInLabel = (resetsAt: number, now: number): string | null => {
-    const left = resetsAt - now;
-    if (left <= 0) {
-        return null;
-    }
-    if (left >= DAY) {
-        return `${Math.floor(left / DAY)}d ${Math.round((left % DAY) / HOUR)}h`;
-    }
-    if (left >= HOUR) {
-        return `${Math.floor(left / HOUR)}h ${Math.round((left % HOUR) / MINUTE)}m`;
-    }
-    return `${Math.max(1, Math.round(left / MINUTE))}m`;
-};
+/* How long the window still has, or nothing once it has run out. */
+const resetInLabel = (resetsAt: number, now: number): string | null => (resetsAt <= now ? null : formatCountdown(resetsAt - now));
 
 /* How much of the window has run, or null when the provider named neither a reset nor a length. */
 const elapsedShare = (window: UsageWindow, now: number): number | null => {
@@ -47,6 +27,7 @@ const elapsedShare = (window: UsageWindow, now: number): number | null => {
 };
 
 function WindowBar({ window, now, compact }: { window: UsageWindow; now: number; compact: boolean }) {
+    const { t } = useTranslation('usage');
     const percent = Math.round(window.used * 100);
     const elapsed = elapsedShare(window, now);
     // The bar fills as the quota is spent, so the mark beside it is how much of the window has run.
@@ -57,7 +38,7 @@ function WindowBar({ window, now, compact }: { window: UsageWindow; now: number;
     const bar = (
         <div
             role="progressbar"
-            aria-label={`${window.label}, ${percent}% used`}
+            aria-label={t('limits.bar', { window: window.label, percent })}
             aria-valuenow={percent}
             aria-valuemin={0}
             aria-valuemax={100}
@@ -85,7 +66,7 @@ function WindowBar({ window, now, compact }: { window: UsageWindow; now: number;
         <div className="flex flex-col gap-1">
             <div className="flex items-baseline gap-2 text-xs">
                 <span className="text-text">{window.label}</span>
-                <span className="ml-auto tabular-nums text-text-muted">{percent}% used</span>
+                <span className="ml-auto tabular-nums text-text-muted">{t('limits.used', { percent })}</span>
             </div>
             {compact ? (
                 bar
@@ -94,13 +75,10 @@ function WindowBar({ window, now, compact }: { window: UsageWindow; now: number;
                     label={
                         <span className="flex flex-col gap-0.5">
                             <span>
-                                {percent}% used{mark !== null && ` · ${mark}% of the window passed`}
+                                {t('limits.used', { percent })}
+                                {mark !== null && ` · ${t('limits.windowPassed', { percent: mark })}`}
                             </span>
-                            {mark !== null && (
-                                <span className="text-text-muted">
-                                    {mark <= percent ? 'Spending faster than the window gives back.' : 'Spending slower than the window gives back.'}
-                                </span>
-                            )}
+                            {mark !== null && <span className="text-text-muted">{mark <= percent ? t('limits.faster') : t('limits.slower')}</span>}
                         </span>
                     }
                 >
@@ -111,7 +89,7 @@ function WindowBar({ window, now, compact }: { window: UsageWindow; now: number;
                 share that line, and a reset that wrapped would read as two of them. */}
             {resetsAt !== null && (
                 <p className="text-xs whitespace-nowrap text-text-faint">
-                    Resets {resetsAt}
+                    {t('limits.resets', { at: resetsAt })}
                     {resetsIn !== null && ` · ${resetsIn}`}
                 </p>
             )}
@@ -121,15 +99,15 @@ function WindowBar({ window, now, compact }: { window: UsageWindow; now: number;
 
 const explain = (provider: UsageLimitsProvider): string | null => {
     if (provider.unavailable === null) {
-        return provider.windows.length === 0 ? 'No limits reported yet.' : null;
+        return provider.windows.length === 0 ? i18next.t('usage:limits.none') : null;
     }
     if (provider.unavailable.reason === 'not-installed') {
-        return 'Not installed on this machine.';
+        return i18next.t('usage:limits.notInstalled');
     }
     if (provider.unavailable.reason === 'no-subscription') {
-        return 'This account uses an API key, which has no plan limits.';
+        return i18next.t('usage:limits.noSubscription');
     }
-    return provider.unavailable.message ?? 'The CLI could not be reached.';
+    return provider.unavailable.message ?? i18next.t('usage:limits.unreachable');
 };
 
 interface LimitsListProps {

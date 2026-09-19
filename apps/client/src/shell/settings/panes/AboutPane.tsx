@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
+import i18next from 'i18next';
 import { Copy, ExternalLink } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { desktop, isDesktop } from '@/desktop/bridge';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -14,12 +16,11 @@ import { BrandSymbol } from '@/ui/Brand';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
 
-const TAGLINE = 'Space for AI Engineering.';
-
+/* The three links, each with its words under `about.links.<id>`. */
 const LINKS = [
-    { label: 'ruimte.app', description: 'Website and downloads.', href: 'https://ruimte.app' },
-    { label: 'Source on GitHub', description: 'Source code and issues.', href: 'https://github.com/basmilius/ruimte' },
-    { label: 'Report a problem', description: 'Describe what you saw and what you expected.', href: 'https://github.com/basmilius/ruimte/issues/new' }
+    { id: 'website', href: 'https://ruimte.app' },
+    { id: 'source', href: 'https://github.com/basmilius/ruimte' },
+    { id: 'report', href: 'https://github.com/basmilius/ruimte/issues/new' }
 ];
 
 const PLATFORM_NAMES: Record<string, string> = { darwin: 'macOS', win32: 'Windows', linux: 'Linux' };
@@ -35,27 +36,34 @@ interface Detail {
    in a browser and in a shell that started before it passed them on. */
 const detailsOf = (server: ServerInfo | undefined): Detail[] => {
     const versions = desktop()?.versions;
-    const machine = server?.label ?? server?.model ?? 'Not connected';
+    const machine = server?.label ?? server?.model ?? i18next.t('settings:about.details.notConnected');
     const rows: Detail[] = [
         {
-            label: 'Machine',
+            label: i18next.t('settings:about.details.machine.label'),
             value: server?.version ? `${machine}, ${server.version}` : machine,
-            description: 'The machine of the current workspace, and its version.'
+            description: i18next.t('settings:about.details.machine.description')
         }
     ];
     if (versions) {
         rows.push({ label: 'Electron', value: versions.electron }, { label: 'Chromium', value: versions.chrome }, { label: 'Node', value: versions.node });
     }
     const platform = server?.platform ?? null;
+    const unknown = i18next.t('settings:about.details.unknown');
     rows.push(
-        { label: 'Platform', value: platform ? (PLATFORM_NAMES[platform] ?? platform) : 'Unknown' },
-        { label: 'Data folder', value: server?.home ?? 'Unknown', description: 'Where the machine stores sessions, chats and worktrees.', mono: true }
+        { label: i18next.t('settings:about.details.platform'), value: platform ? (PLATFORM_NAMES[platform] ?? platform) : unknown },
+        {
+            label: i18next.t('settings:about.details.dataFolder.label'),
+            value: server?.home ?? unknown,
+            description: i18next.t('settings:about.details.dataFolder.description'),
+            mono: true
+        }
     );
     return rows;
 };
 
 /* Who Ruimte is, which versions this window runs, and the one update button there is. */
 export function AboutPane() {
+    const { t } = useTranslation('settings');
     const endpointId = useFocusedMachine().endpointId;
     const server = useServers((s) => s.byEndpoint[endpointId]);
     const updates = useUpdates();
@@ -83,7 +91,7 @@ export function AboutPane() {
     };
 
     const copyDetails = (): void => {
-        const lines = [`Ruimte ${version ?? 'unknown'}`, ...details.map((row) => `${row.label}: ${row.value}`)];
+        const lines = [`Ruimte ${version ?? t('about.unknownVersion')}`, ...details.map((row) => `${row.label}: ${row.value}`)];
         copyText(lines.join('\n'));
     };
 
@@ -92,9 +100,9 @@ export function AboutPane() {
             <header className="flex flex-col items-center gap-1 pt-2 pb-1 text-center">
                 <BrandSymbol size={64} />
                 <h3 className="mt-2 text-lg font-semibold text-text">Ruimte</h3>
-                <p className="text-sm text-text-muted">{TAGLINE}</p>
+                <p className="text-sm text-text-muted">{t('about.tagline')}</p>
                 <p className="mt-2 text-sm text-text">
-                    Version {version ?? 'unknown'}
+                    {t('about.version', { version: version ?? t('about.unknownVersion') })}
                     {updates.supported && <span className="text-text-muted"> · {headline}</span>}
                 </p>
                 {updates.supported && detail && <p className="max-w-96 text-xs text-text-muted">{detail}</p>}
@@ -107,10 +115,10 @@ export function AboutPane() {
                 )}
             </header>
             <SettingsSection
-                title="Details"
+                title={t('about.details.title')}
                 action={
                     <Button variant="secondary" onClick={copyDetails}>
-                        <Icon icon={Copy} size={12} /> Copy details
+                        <Icon icon={Copy} size={12} /> {t('about.details.copy')}
                     </Button>
                 }
             >
@@ -126,23 +134,23 @@ export function AboutPane() {
                 ))}
             </SettingsSection>
             {updates.supported && (
-                <SettingsSection title="Updates" description="Installing always waits for you.">
+                <SettingsSection title={t('about.updates.title')} description={t('about.updates.description')}>
                     <SettingsRow
-                        label="Download updates automatically"
-                        description="On, new versions download in the background. Off, you start each download yourself."
-                        control={<Toggle checked={autoDownload} onChange={setAuto} label="Download updates automatically" />}
+                        label={t('about.updates.auto.label')}
+                        description={t('about.updates.auto.description')}
+                        control={<Toggle checked={autoDownload} onChange={setAuto} label={t('about.updates.auto.label')} />}
                     />
                 </SettingsSection>
             )}
-            <SettingsSection title="Links">
+            <SettingsSection title={t('about.links.title')}>
                 {LINKS.map((link) => (
                     <SettingsRow
                         key={link.href}
-                        label={link.label}
-                        description={link.description}
+                        label={t(`about.links.${link.id}.label`)}
+                        description={t(`about.links.${link.id}.description`)}
                         control={
                             <Button variant="secondary" href={link.href}>
-                                Open <Icon icon={ExternalLink} size={12} />
+                                {t('common:action.open')} <Icon icon={ExternalLink} size={12} />
                             </Button>
                         }
                     />
@@ -163,6 +171,7 @@ function WhatsNewLink({ label, version }: { label: string; version: string }) {
 
 /* The one thing worth doing in the state the app is in. */
 export function UpdateAction() {
+    const { t } = useTranslation('settings');
     const status = useUpdates((s) => s.status);
     const check = useUpdates((s) => s.check);
     const download = useUpdates((s) => s.download);
@@ -171,20 +180,20 @@ export function UpdateAction() {
     if (status === 'ready') {
         return (
             <Button variant="positive" onClick={install}>
-                Restart to install
+                {t('about.updates.install')}
             </Button>
         );
     }
     if (status === 'available') {
         return (
             <Button variant="primary" onClick={() => void download()}>
-                Download
+                {t('about.updates.download')}
             </Button>
         );
     }
     return (
         <Button variant="secondary" disabled={status === 'checking' || status === 'downloading'} onClick={() => void check()}>
-            {status === 'checking' ? 'Checking' : 'Check for updates'}
+            {status === 'checking' ? t('about.updates.checking') : t('about.updates.check')}
         </Button>
     );
 }

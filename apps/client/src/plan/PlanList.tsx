@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import {
@@ -23,11 +24,23 @@ import {
     type LucideIcon
 } from 'lucide-react';
 import { PLAN_LIMITS, type Plan, type PlanStepState } from '@ruimte/contracts';
-import { effectiveChecks, planProgress, progressText } from '@ruimte/plan';
+import { effectiveChecks, planProgress } from '@ruimte/plan';
 import { Markdown } from '@/chat/ui/Markdown';
+import { formatMoment } from '@/format/datetime';
 import { collapsedOf, planClient, planViewKey, usePlanReveal, usePlanViewPrefs } from '@/plan/plan-actions';
 import { usePlanAgent } from '@/plan/plan-agent';
-import { asksForNote, PERSON_STATES, planRows, stateLabel, stepMarkdown, stepSetBy, TEST_OUTCOMES, toggledState, type PlanRow } from '@/plan/plan-view';
+import {
+    asksForNote,
+    PERSON_STATES,
+    planRows,
+    progressParts,
+    stateLabel,
+    stepMarkdown,
+    stepSetBy,
+    TEST_OUTCOMES,
+    toggledState,
+    type PlanRow
+} from '@/plan/plan-view';
 import { chatWorking } from '@/state/agent-work';
 import { useChatRow } from '@/state/chats';
 import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
@@ -69,15 +82,9 @@ const TOGGLE_ROW = 'cursor-default rounded-md outline-none hover:bg-surface-hove
 // The length of `.plan-step-revealed` in `styles.css`, which also ends the mark with motion turned off.
 const REVEAL_MS = 1600;
 
-const TIME = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
-const DAY_AND_TIME = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-
 const whenText = (at: string): string => {
     const date = new Date(at);
-    if (Number.isNaN(date.getTime())) {
-        return '';
-    }
-    return date.toDateString() === new Date().toDateString() ? TIME.format(date) : DAY_AND_TIME.format(date);
+    return Number.isNaN(date.getTime()) ? '' : formatMoment(date);
 };
 
 interface PlanListProps {
@@ -92,6 +99,7 @@ interface PlanListProps {
  * nothing here adds, edits, moves or removes an item.
  */
 export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
+    const { t } = useTranslation('plan');
     const filter = usePlanViewPrefs((s) => s.filter);
     const collapseDone = usePlanViewPrefs((s) => s.collapseDone);
     const planKey = planViewKey(endpointId, chatId, plan.id);
@@ -155,12 +163,10 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
                 </div>
                 {plan.meta.summary && <p className="text-xs whitespace-pre-wrap text-text-muted select-text">{plan.meta.summary}</p>}
                 <div className="flex flex-wrap gap-x-3 text-xs text-text-muted tabular-nums">
-                    <span>{plan.meta.kind === 'test' ? 'Test plan' : 'Steps'}</span>
-                    {progressText(plan)
-                        .split(', ')
-                        .map((part) => (
-                            <span key={part}>{part}</span>
-                        ))}
+                    <span>{t(`header.kind.${plan.meta.kind}`)}</span>
+                    {progressParts(plan).map((part) => (
+                        <span key={part}>{part}</span>
+                    ))}
                 </div>
                 {plan.meta.status && <p className="text-xs text-text select-text">{plan.meta.status}</p>}
                 <div className="mt-1 flex h-1.5 overflow-hidden rounded-full bg-surface-sunken" aria-hidden>
@@ -175,7 +181,7 @@ export function PlanList({ endpointId, chatId, plan }: PlanListProps) {
             <div ref={scroller} className="min-h-0 grow overflow-y-auto py-1">
                 {rows.length === 0 && (
                     <p className="px-4 py-6 text-center text-xs text-text-muted">
-                        {filter === 'issues' ? 'No issues.' : filter === 'open' ? 'Nothing is open.' : 'This plan has no steps yet.'}
+                        {filter === 'issues' ? t('empty.issues') : filter === 'open' ? t('empty.open') : t('empty.all')}
                     </p>
                 )}
                 {rows.map((row) => (
@@ -201,11 +207,12 @@ interface StepContext {
 
 /* The ring of the step an agent is on while its chat works; a pause once it stopped, so a still ring never reads as work. */
 function ActiveRing({ working, agent, size }: { working: boolean; agent: string; size: number }) {
+    const { t } = useTranslation('plan');
     if (working) {
         return <Icon icon={LoaderCircle} size={size} className="shrink-0 animate-spin text-accent" />;
     }
     return (
-        <Tooltip label={`${agent} stopped here`}>
+        <Tooltip label={t('agent.stoppedHere', { agent })}>
             <span className="inline-flex shrink-0 text-text-muted">
                 <Icon icon={CirclePause} size={size} />
             </span>
@@ -282,6 +289,7 @@ function PlanRowView({ row, context }: { row: PlanRow; context: StepContext }) {
 }
 
 function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; context: StepContext }) {
+    const { t } = useTranslation(['plan', 'common']);
     const { plan } = context;
     const step = row.item;
     const parent = row.progress !== null;
@@ -312,7 +320,7 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
                 </span>
                 <div className="min-w-0 grow">
                     <div className={clsx('text-sm wrap-anywhere select-text', finished ? 'text-text-muted' : 'text-text')}>{step.title}</div>
-                    {stopped && <div className="text-xs text-text-muted">{context.agent} stopped here</div>}
+                    {stopped && <div className="text-xs text-text-muted">{t('agent.stoppedHere', { agent: context.agent })}</div>}
                     {step.description && (
                         <div className="text-text-muted select-text">
                             <Markdown text={step.description} fileLinks={false} />
@@ -350,7 +358,7 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
                     <ContextMenu.Popup className="menu-popup min-w-48">
                         {!parent && !locked && (
                             <>
-                                <div className={MENU_LABEL}>Status</div>
+                                <div className={MENU_LABEL}>{t('step.menu.status')}</div>
                                 {PERSON_STATES.map((state) => (
                                     <ContextMenu.Item
                                         key={state}
@@ -371,15 +379,15 @@ function StepRow({ row, context }: { row: Extract<PlanRow, { type: 'step' }>; co
                             </>
                         )}
                         <ContextMenu.Item className="menu-item" onClick={() => context.setEditingNote(step.id)}>
-                            <Icon icon={StickyNote} size={14} /> {step.note ? 'Edit note' : 'Add note'}
+                            <Icon icon={StickyNote} size={14} /> {step.note ? t('step.menu.editNote') : t('step.menu.addNote')}
                         </ContextMenu.Item>
                         {locked && (
                             <ContextMenu.Item className="menu-item" onClick={() => context.unlock(step.id)}>
-                                <Icon icon={LockOpen} size={14} /> Unlock
+                                <Icon icon={LockOpen} size={14} /> {t('step.menu.unlock')}
                             </ContextMenu.Item>
                         )}
                         <ContextMenu.Item className="menu-item" onClick={() => copyText(stepMarkdown(plan.meta.kind, step))}>
-                            <Icon icon={Copy} size={14} /> Copy
+                            <Icon icon={Copy} size={14} /> {t('common:action.copy')}
                         </ContextMenu.Item>
                     </ContextMenu.Popup>
                 </ContextMenu.Positioner>
@@ -400,6 +408,7 @@ function StepAside({
     locked: boolean;
     setBy: ReturnType<typeof stepSetBy>;
 }) {
+    const { t } = useTranslation('plan');
     const { agent } = context;
     if (row.progress !== null) {
         return (
@@ -416,7 +425,7 @@ function StepAside({
         <span className="mt-px flex h-5 shrink-0 items-center gap-1 text-xs whitespace-nowrap text-text-faint">
             {setBy.text && <span>{setBy.text}</span>}
             {locked && (
-                <Tooltip label={[`Only ${agent} checks this step`, setBy.tooltip].filter(Boolean).join('. ')}>
+                <Tooltip label={[t('step.lockedBy', { agent }), setBy.tooltip].filter(Boolean).join('. ')}>
                     <span className="inline-flex">
                         <Icon icon={Lock} size={12} />
                     </span>
@@ -428,6 +437,7 @@ function StepAside({
 
 /* `setBy` goes in the mark's tooltip only while nothing else in the row carries it; a locked step says it on its lock. */
 function StepMark({ row, context, locked, setBy }: { row: Extract<PlanRow, { type: 'step' }>; context: StepContext; locked: boolean; setBy: string | null }) {
+    const { t } = useTranslation('plan');
     const { plan } = context;
     const state = row.state;
     // A parent has no state of its own to set; its count at the end of the row says how far it is.
@@ -447,13 +457,17 @@ function StepMark({ row, context, locked, setBy }: { row: Extract<PlanRow, { typ
                 {glyph}
             </span>
         );
-        return stopped ? <Tooltip label={`${context.agent} stopped here`}>{mark}</Tooltip> : mark;
+        return stopped ? <Tooltip label={t('agent.stoppedHere', { agent: context.agent })}>{mark}</Tooltip> : mark;
     }
     if (plan.meta.kind === 'steps') {
         const next = toggledState(state);
         return (
             <Tooltip
-                label={stopped ? `${context.agent} stopped here` : [setBy, `Mark as ${stateLabel('steps', next).toLowerCase()}`].filter(Boolean).join('. ')}
+                label={
+                    stopped
+                        ? t('agent.stoppedHere', { agent: context.agent })
+                        : [setBy, t('step.markAs', { state: stateLabel('steps', next).toLowerCase() })].filter(Boolean).join('. ')
+                }
             >
                 <button
                     type="button"
@@ -468,7 +482,7 @@ function StepMark({ row, context, locked, setBy }: { row: Extract<PlanRow, { typ
     }
     return (
         <Menu.Root>
-            <Tooltip label={stopped ? `${context.agent} stopped here` : [label, setBy].filter(Boolean).join('. ')}>
+            <Tooltip label={stopped ? t('agent.stoppedHere', { agent: context.agent }) : [label, setBy].filter(Boolean).join('. ')}>
                 <Menu.Trigger
                     aria-label={label}
                     className="grid h-5 w-5 place-items-center rounded-full hover:bg-surface-hover data-[popup-open]:bg-surface-active"
@@ -504,6 +518,7 @@ function StepMark({ row, context, locked, setBy }: { row: Extract<PlanRow, { typ
 
 /* The note under a step, written in place. Enter keeps it, Escape leaves it as it was. */
 function NoteEditor({ initial, onDone }: { initial: string; onDone: (text: string | null) => void }) {
+    const { t } = useTranslation('plan');
     const [text, setText] = useState(initial);
     // Enter and Escape end the edit, and the blur that follows must not end it a second time.
     const ended = useRef(false);
@@ -530,8 +545,8 @@ function NoteEditor({ initial, onDone }: { initial: string; onDone: (text: strin
             rows={2}
             maxLength={PLAN_LIMITS.note}
             value={text}
-            placeholder="What happened?"
-            aria-label="Note"
+            placeholder={t('note.placeholder')}
+            aria-label={t('note.label')}
             className="mt-1 block w-full resize-none rounded-md border border-border bg-surface-sunken px-2 py-1 text-xs text-text outline-none select-text focus:border-accent"
             onChange={(event) => setText(event.target.value)}
             onKeyDown={onKeyDown}

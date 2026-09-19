@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { sessionNodesOfView, type ProjectView, type ViewSessionNode } from '@ruimte/contracts';
 
 /*
@@ -13,10 +14,5 @@ export const sessionNodesOf = (views: readonly ProjectView[]): ViewSessionNode[]
  * about to lose an agent mid-run wants to read how many, and the scrollback of a terminal is gone
  * with the session, which is the part that cannot be undone.
  */
-export const closeWarning = (sessions: number): string => {
-    if (sessions === 0) {
-        return 'Nothing in this project is running. It moves to Recent with its canvas as you left it.';
-    }
-    const what = sessions === 1 ? 'its running session' : `its ${sessions} running sessions`;
-    return `Closing ends ${what}. A terminal loses its scrollback and an agent stops. The project moves to Recent with its canvas as you left it.`;
-};
+export const closeWarning = (sessions: number): string =>
+    sessions === 0 ? i18next.t('project:close.idle') : i18next.t('project:close.ending', { count: sessions });

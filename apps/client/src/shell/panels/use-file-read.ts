@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import i18next from 'i18next';
 import type { FsReadResult } from '@ruimte/contracts';
 import { dirnameOf } from '@/shell/panels/files-tree';
 import { folderWatches } from '@/state/fs-watch';
@@ -38,7 +39,7 @@ export const useFileRead = (path: string): { state: FileRead; retry(): void } =>
             })
             .catch((error: unknown) => {
                 if (!cancelled) {
-                    setState({ status: 'error', message: error instanceof TransportError ? error.message : 'Could not read the file' });
+                    setState({ status: 'error', message: error instanceof TransportError ? error.message : i18next.t('panels:file.readFailed') });
                 }
             });
         return () => {

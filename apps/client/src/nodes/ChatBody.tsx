@@ -1,5 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
+import i18next from 'i18next';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import type { AgentKind, ModelSelection } from '@ruimte/contracts';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { defaultProvider, readChatPreferences, selectionFor } from '@/chat/preferences';
@@ -21,6 +23,7 @@ const DiffPool = lazy(() => import('@/chat/ui/DiffPool'));
 
 /* The body of a chat, the same on a canvas inside a frame and filling a view of its own. */
 export function ChatBody({ id, focused, onCanvas = false }: { id: string; focused: boolean; onCanvas?: boolean }) {
+    const { t } = useTranslation('canvas');
     const info = useChatRow(id, (row) => row?.info);
     const providerFixed = useNodeHost(id)?.providerFixed === true;
     useSuggestedTitle(id, info?.suggestedTitle);
@@ -46,7 +49,8 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
             })
             .catch((e: unknown) => {
                 if (!cancelled) {
-                    setFailure(e instanceof Error ? e.message : 'The chat could not be opened');
+                    // Not the hook's `t`: the effect would then depend on it and reopen the chat on a language change.
+                    setFailure(e instanceof Error ? e.message : i18next.t('canvas:chat.openFailed'));
                 }
             });
         return () => {
@@ -58,7 +62,7 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
     /* The chat remembers the new CLI, so a reload opens it on the same one. */
     const retarget = (provider: AgentKind, selection: ModelSelection): void => {
         updateHost(id, { provider });
-        chatClient.retarget(id, provider, selection).catch((e: unknown) => setFailure(e instanceof Error ? e.message : 'The provider could not be changed'));
+        chatClient.retarget(id, provider, selection).catch((e: unknown) => setFailure(e instanceof Error ? e.message : t('chat.retargetFailed')));
     };
 
     const send = (text: string, extras: ChatSendExtras): void => {
@@ -69,12 +73,12 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
         if (host && !host.titleSource && title) {
             renameHost(id, title, 'auto');
         }
-        chatClient.send(id, text, extras).catch((e: unknown) => setFailure(e instanceof Error ? e.message : 'The message could not be sent'));
+        chatClient.send(id, text, extras).catch((e: unknown) => setFailure(e instanceof Error ? e.message : t('chat.sendFailed')));
     };
 
     return (
         <div className="relative flex h-full flex-col bg-surface">
-            {status !== 'open' && <NodeNotice>{status === 'closed' ? 'Reconnecting to the machine' : 'Connecting to the machine'}</NodeNotice>}
+            {status !== 'open' && <NodeNotice>{status === 'closed' ? t('notice.reconnecting') : t('notice.connecting')}</NodeNotice>}
             {failure && (
                 <NodeNotice
                     tone="error"
@@ -112,11 +116,11 @@ export function ChatBody({ id, focused, onCanvas = false }: { id: string; focuse
                     {shown && (
                         <div className="absolute inset-0 flex flex-col bg-surface">
                             {shown.kind === 'list' ? (
-                                <ErrorBoundary key="list" label="The sub-agents failed to render" resetKeys={['list']}>
+                                <ErrorBoundary key="list" label={t('chat.subagentsFailed')} resetKeys={['list']}>
                                     <SubagentList chatId={id} />
                                 </ErrorBoundary>
                             ) : (
-                                <ErrorBoundary key={shown.toolUseId} label="This conversation failed to render" resetKeys={[shown.toolUseId]}>
+                                <ErrorBoundary key={shown.toolUseId} label={t('chat.conversationFailed')} resetKeys={[shown.toolUseId]}>
                                     <SubagentTimeline chatId={id} toolUseId={shown.toolUseId} />
                                 </ErrorBoundary>
                             )}

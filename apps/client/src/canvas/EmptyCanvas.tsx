@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { Bot, FileText, Globe, LayoutGrid, LayoutTemplate, LoaderCircle, MessageSquare, PenTool, StickyNote, Terminal, Type, Workflow } from 'lucide-react';
+import { Trans, useTranslation } from 'react-i18next';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { emptyCanvasSections, emptyCanvasSize, type EmptyCanvasTile } from '@/canvas/empty-canvas';
 import { toWorld } from '@/canvas/math';
@@ -28,20 +29,17 @@ interface TileLook {
     run(): void;
 }
 
-const NODE_LOOK = {
-    chat: { icon: MessageSquare, title: 'Chat', description: 'Pick a model' },
-    terminal: { icon: Terminal, title: 'Terminal', description: 'A shell' },
-    browser: { icon: Globe, title: 'Browser', description: 'A web page' },
-    note: { icon: StickyNote, title: 'Note', description: 'Markdown' },
-    group: { icon: LayoutGrid, title: 'Group', description: 'A frame around nodes' }
+/* The mark of a node kind; its name is `kinds.<kind>` and what it does `empty.node.<kind>`. */
+const NODE_ICON = {
+    chat: MessageSquare,
+    terminal: Terminal,
+    browser: Globe,
+    note: StickyNote,
+    group: LayoutGrid
 } as const;
 
-/* A section of the grid, and the order its tiles take in the tab order. */
-const SECTIONS = [
-    { key: 'agents', label: 'Agents' },
-    { key: 'place', label: 'Add' },
-    { key: 'project', label: 'From this project' }
-] as const;
+/* The sections of the grid, in the order their tiles take in the tab order. */
+const SECTIONS = ['agents', 'place', 'project'] as const;
 
 /*
  * What an empty canvas offers, as tiles that put the node in the middle of the camera the way the dock
@@ -50,6 +48,7 @@ const SECTIONS = [
  * reaches the canvas, which box-selects as it always does.
  */
 export function EmptyCanvas() {
+    const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
     const viewport = useCanvas((s) => s.viewport);
     const layouts = useCanvas((s) => s.layouts);
@@ -72,7 +71,7 @@ export function EmptyCanvas() {
                 return {
                     icon: <AgentIcon kind={tile.provider} size={16} />,
                     title: tile.name,
-                    description: tile.target === 'chat' ? 'Chat' : 'In a terminal',
+                    description: tile.target === 'chat' ? t('empty.agent.chat') : t('empty.agent.terminal'),
                     run: () => {
                         if (provider) {
                             addAgentNodeAtCenter(tile.target, provider);
@@ -83,54 +82,52 @@ export function EmptyCanvas() {
             case 'connecting':
                 return {
                     icon: <Icon icon={LoaderCircle} size={16} className="animate-spin" />,
-                    title: 'Connecting',
-                    description: 'Asking for agents',
+                    title: t('empty.connecting.title'),
+                    description: t('empty.connecting.description'),
                     disabled: true,
                     run: () => undefined
                 };
             case 'setup':
                 return {
                     icon: <Icon icon={Bot} size={16} />,
-                    title: 'Set up an agent',
-                    description: 'No agent CLI on this machine',
+                    title: t('empty.setup.title'),
+                    description: t('empty.setup.description'),
                     run: () => useUi.getState().setSettings({ open: true, section: 'agents' })
                 };
-            case 'node': {
-                const look = NODE_LOOK[tile.node];
+            case 'node':
                 return {
-                    icon: <Icon icon={look.icon} size={16} />,
-                    title: look.title,
-                    description: look.description,
+                    icon: <Icon icon={NODE_ICON[tile.node]} size={16} />,
+                    title: t(`kinds.${tile.node}`),
+                    description: t(`empty.node.${tile.node}`),
                     shortcut: ADD_NODE_SHORTCUTS[tile.node],
                     run: () => void addNodeAtCenter(tile.node)
                 };
-            }
             case 'file':
                 return {
                     icon: <Icon icon={FileText} size={16} />,
-                    title: 'File',
-                    description: 'From the project folder',
+                    title: t('kinds.file'),
+                    description: t('empty.file'),
                     run: () => useUi.getState().openFilePicker({ kind: 'node', at: center() })
                 };
             case 'text':
                 return {
                     icon: <Icon icon={Type} size={16} />,
-                    title: 'Text',
-                    description: 'Or double-click',
+                    title: t('kinds.text'),
+                    description: t('empty.text'),
                     run: () => void canvasStore.getState().addText(center())
                 };
             case 'layout':
                 return {
                     icon: <Icon icon={LayoutTemplate} size={16} />,
                     title: tile.name,
-                    description: 'Apply this layout',
+                    description: t('empty.layout'),
                     run: () => canvasStore.getState().applyLayout(tile.name)
                 };
             case 'view':
                 return {
                     icon: <Icon icon={tile.view === 'drawing' ? PenTool : Workflow} size={16} />,
                     title: tile.name,
-                    description: tile.view === 'drawing' ? 'Show the drawing here' : 'Show the diagram here',
+                    description: tile.view === 'drawing' ? t('empty.drawing') : t('empty.diagram'),
                     run: () => void showOnCanvas(tile.viewId)
                 };
         }
@@ -138,7 +135,7 @@ export function EmptyCanvas() {
 
     const hint = (
         <p className="text-center text-xs text-text-muted">
-            Drop files here, right-click for more, or press <Kbd shortcut={APP_SHORTCUTS.palette} className={TOOLTIP_KBD} />.
+            <Trans t={t} i18nKey="empty.hint" components={{ palette: <Kbd shortcut={APP_SHORTCUTS.palette} className={TOOLTIP_KBD} /> }} />
         </p>
     );
 
@@ -149,7 +146,7 @@ export function EmptyCanvas() {
             {size === 'compact' && (
                 <div className="pointer-events-auto flex max-w-full flex-col items-center gap-3">
                     <div className="flex max-w-full flex-wrap justify-center gap-1">
-                        {SECTIONS.flatMap(({ key }) => sections[key]).map((tile) => {
+                        {SECTIONS.flatMap((key) => sections[key]).map((tile) => {
                             const look = lookOf(tile);
                             return (
                                 <Tooltip key={tile.id} label={look.description ? `${look.title}: ${look.description}` : look.title} kbd={look.shortcut}>
@@ -165,9 +162,9 @@ export function EmptyCanvas() {
             )}
             {size === 'full' && (
                 <div className="pointer-events-auto flex max-h-full w-full max-w-3xl flex-col gap-5 overflow-auto">
-                    {SECTIONS.filter(({ key }) => sections[key].length > 0).map(({ key, label }) => (
+                    {SECTIONS.filter((key) => sections[key].length > 0).map((key) => (
                         <section key={key} className="flex flex-col gap-2">
-                            <h2 className={`${SECTION_LABEL} px-1`}>{label}</h2>
+                            <h2 className={`${SECTION_LABEL} px-1`}>{t(`empty.sections.${key}`)}</h2>
                             <div className="grid grid-cols-3 gap-2">
                                 {sections[key].map((tile) => {
                                     const look = lookOf(tile);

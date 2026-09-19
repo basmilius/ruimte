@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { LoaderCircle, Sparkles } from 'lucide-react';
 import type { GitCapabilitiesResult, GitStatus } from '@ruimte/contracts';
 import { COMMIT_MESSAGE } from '@/shell/panels/classes';
@@ -27,6 +28,7 @@ interface CommitBoxProps {
  * only unstaged work in front of them.
  */
 export function CommitBox({ cwd, status, capabilities, busy, onCommit }: CommitBoxProps) {
+    const { t } = useTranslation('panels');
     const message = useGit((s) => s.messages[cwd] ?? '');
     const [writing, setWriting] = useState(false);
     const writingId = useRef<string | null>(null);
@@ -59,8 +61,8 @@ export function CommitBox({ cwd, status, capabilities, busy, onCommit }: CommitB
                 useGit.getState().setMessage(cwd, suggestion.body === '' ? suggestion.subject : `${suggestion.subject}\n\n${suggestion.body}`);
             })
             .catch((error: unknown) => {
-                const text = error instanceof Error ? error.message : 'The message could not be written.';
-                useToasts.getState().show({ title: 'Could not write the message', description: text.split('\n')[0], kind: 'error', output: text });
+                const text = error instanceof Error ? error.message : t('git.commit.writeFailedBody');
+                useToasts.getState().show({ title: t('git.commit.writeFailedTitle'), description: text.split('\n')[0], kind: 'error', output: text });
             })
             .finally(() => {
                 writingId.current = null;
@@ -74,7 +76,7 @@ export function CommitBox({ cwd, status, capabilities, busy, onCommit }: CommitB
                 className={COMMIT_MESSAGE}
                 rows={3}
                 spellCheck={false}
-                placeholder="Summary, then a blank line and the details"
+                placeholder={t('git.commit.placeholder')}
                 value={message}
                 onChange={(event) => useGit.getState().setMessage(cwd, event.target.value)}
                 onKeyDown={(event) => {
@@ -86,22 +88,22 @@ export function CommitBox({ cwd, status, capabilities, busy, onCommit }: CommitB
             />
             <div className="flex flex-wrap items-center gap-2">
                 {capabilities !== null && capabilities.messageProvider !== null && (
-                    <Tooltip label={writing ? 'Stop writing the message' : `Let ${capabilities.messageProvider} write the message from the staged changes`}>
+                    <Tooltip label={writing ? t('git.commit.stopWriting') : t('git.commit.letWrite', { provider: capabilities.messageProvider })}>
                         <Button size="sm" disabled={!changed} onClick={write}>
                             <Icon icon={writing ? LoaderCircle : Sparkles} size={12} className={writing ? 'animate-spin' : undefined} />
-                            {writing ? 'Writing' : 'Write message'}
+                            {writing ? t('git.commit.writing') : t('git.commit.write')}
                         </Button>
                     </Tooltip>
                 )}
                 <span className="grow" />
-                <Tooltip label={ready ? 'Commit and push' : 'Needs a message and a change'}>
+                <Tooltip label={ready ? t('git.commit.commitAndPushHint') : t('git.commit.needsMessage')}>
                     <Button size="sm" variant="secondary" disabled={!ready} onClick={() => commit(true)}>
-                        Commit &amp; Push
+                        {t('git.commit.commitAndPush')}
                     </Button>
                 </Tooltip>
-                <Tooltip label={staged ? 'Commit what is staged' : 'Stage every change and commit it'}>
+                <Tooltip label={staged ? t('git.commit.commitStagedHint') : t('git.commit.stageAllHint')}>
                     <Button size="sm" variant="primary" disabled={!ready} onClick={() => commit(false)}>
-                        {staged ? 'Commit' : 'Stage all and commit'}
+                        {staged ? t('git.commit.commit') : t('git.commit.stageAllAndCommit')}
                     </Button>
                 </Tooltip>
             </div>

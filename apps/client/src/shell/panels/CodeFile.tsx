@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { WrapText } from 'lucide-react';
 import type { FsReadText } from '@ruimte/contracts';
+import { formatNumber } from '@/format/number';
 import { useFileActions } from '@/shell/panels/file-actions';
 import { FileScroll } from '@/shell/panels/FileScroll';
 import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
@@ -146,7 +148,8 @@ export interface CodeFileProps {
 
 /* Any text file, highlighted a block at a time. */
 export function CodeFile({ read, toolbarExtra }: CodeFileProps) {
-    const theme = useTheme((t) => t.resolved);
+    const { t } = useTranslation('panels');
+    const theme = useTheme((s) => s.resolved);
     const [wrap, setWrap] = useState(false);
     // A jump to a line is asked of a tab, so a node or a view of its own never answers one.
     const tabKey = useFileActions()?.tabKey ?? null;
@@ -169,13 +172,13 @@ export function CodeFile({ read, toolbarExtra }: CodeFileProps) {
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar>
                 {plain && (
-                    <Tooltip label={`Over ${HIGHLIGHT_MAX_LINES.toLocaleString()} lines, so syntax highlighting is off`}>
-                        <Pill>Plain text</Pill>
+                    <Tooltip label={t('file.code.plainReason', { lines: formatNumber(HIGHLIGHT_MAX_LINES) })}>
+                        <Pill>{t('file.code.plainText')}</Pill>
                     </Tooltip>
                 )}
                 {toolbarExtra}
                 {toolbarExtra !== undefined && <Separator />}
-                <FileToolbarToggle icon={WrapText} label={wrap ? 'Stop wrapping long lines' : 'Wrap long lines'} active={wrap} onClick={() => setWrap(!wrap)} />
+                <FileToolbarToggle icon={WrapText} label={wrap ? t('file.code.unwrap') : t('file.code.wrap')} active={wrap} onClick={() => setWrap(!wrap)} />
             </FileToolbar>
             <FileScroll className="file-code" data-wrap={wrap}>
                 {chunks.map((chunk) => {

@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { DeviceAction, DeviceDetail, DeviceFrame, DeviceInfo, DeviceInput, LiveStreamFrame } from '@ruimte/contracts';
 import { useDevices } from '@/devices/state';
 import { TransportError, type Transport, type TransportStatus } from '@/transport/transport';
@@ -192,7 +193,7 @@ export class DeviceClient {
             return devices;
         } catch (error) {
             if (!disconnected(error)) {
-                useDevices.getState().fail(this.endpointId, messageOf(error, 'The devices could not be read'));
+                useDevices.getState().fail(this.endpointId, messageOf(error, i18next.t('machines:device.listFailed')));
             }
             throw error;
         }

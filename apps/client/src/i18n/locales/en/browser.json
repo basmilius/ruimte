@@ -1,0 +1,68 @@
+{
+  "menu": {
+    "back": "Back",
+    "forward": "Forward",
+    "link": {
+      "openInNode": "Open link in new browser node",
+      "openExternal": "Open link in system browser",
+      "copyAddress": "Copy link address",
+      "copyText": "Copy link text"
+    },
+    "image": {
+      "copy": "Copy image",
+      "copyAddress": "Copy image address",
+      "save": "Save image as..."
+    },
+    "selection": {
+      "search": "Search the web for \"{{text}}\""
+    },
+    "inspect": "Inspect element"
+  },
+  "error": {
+    "offline": {
+      "title": "No internet connection",
+      "hint": "Check the network connection."
+    },
+    "dns": {
+      "title": "That address has no server",
+      "hint": "Check the spelling, or whether the address exists on this network."
+    },
+    "refused": {
+      "title": "The server refused the connection",
+      "hint": "Nothing is listening on that address. Check that the server is running."
+    },
+    "certificate": {
+      "title": "The connection is not secure",
+      "hint": "The certificate is not valid, so the page was not loaded."
+    },
+    "timeout": {
+      "title": "The server took too long",
+      "hint": "It may be busy, or unreachable from here."
+    },
+    "blocked": {
+      "title": "The page was blocked",
+      "hint": "A policy, an extension or the page itself stopped the request."
+    },
+    "address": {
+      "title": "That address cannot be opened",
+      "hint": "Check the scheme and the spelling."
+    },
+    "other": {
+      "title": "The page did not load"
+    }
+  },
+  "stream": {
+    "pageLabel": "Remote web page",
+    "starting": "Starting browser…",
+    "frameFailed": "A frame could not be drawn",
+    "startFailed": "The browser could not start",
+    "notReady": "The browser stream is not ready yet",
+    "status": "The browser stream returned {{status}}",
+    "unknownFormat": "The machine returned an unknown stream format",
+    "stopped": "The browser stream stopped",
+    "failed": "The remote browser failed"
+  },
+  "node": {
+    "fallbackTitle": "Browser"
+  }
+}

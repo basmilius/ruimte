@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { ChatTurnItem } from '@ruimte/contracts';
 import { agentTurnLabel, turnLabel } from '@/chat/logic/timeline';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
@@ -42,7 +43,7 @@ const settledTurn = (chat: ChatsById[string] | undefined): ChatTurnItem | null =
 const turnBody = (nodeId: string): string => {
     const turn = settledTurn(useChats.getState().byKey[endpointKey(currentEndpointId(), nodeId)]);
     if (turn === null) {
-        return 'Finished';
+        return i18next.t('shell:notifications.finished');
     }
     const chat = useChats.getState().byKey[endpointKey(currentEndpointId(), nodeId)];
     const items = chat ? chat.order.flatMap((id) => (chat.items[id]?.turnId === turn.id ? [chat.items[id]!] : [])) : [];
@@ -139,7 +140,7 @@ export const startAgentNotifications = (): (() => void) => {
             if (previous.get(node.id) === 'needs-you' || !canNotify()) {
                 continue;
             }
-            shown.set(node.id, notify(node.id, node.title, 'Needs you', `ruimte-${node.id}`, !agentsTurnSound));
+            shown.set(node.id, notify(node.id, node.title, i18next.t('shell:notifications.needsYou'), `ruimte-${node.id}`, !agentsTurnSound));
         }
         previous = current;
         // After the loop above, so the permission lands on a tag the plain wait has just let go of.

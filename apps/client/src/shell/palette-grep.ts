@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import i18next from 'i18next';
 import type { FsGrepMatch } from '@ruimte/contracts';
 import { useFocusedMachine } from '@/transport/connections';
 
@@ -92,7 +93,7 @@ export const useGrepSearch = (folder: string | null, query: string, options: Gre
                 })
                 .catch((e: unknown) => {
                     if (mine === generation.current) {
-                        setAnswer({ ...NOTHING, query: trimmed, failure: e instanceof Error ? e.message : 'That search cannot be run' });
+                        setAnswer({ ...NOTHING, query: trimmed, failure: e instanceof Error ? e.message : i18next.t('shell:findInFiles.badSearch') });
                     }
                 });
         }, GREP_DEBOUNCE_MS);

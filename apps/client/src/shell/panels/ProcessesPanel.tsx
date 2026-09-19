@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Dialog } from '@base-ui-components/react/dialog';
@@ -20,7 +21,7 @@ import {
 } from 'lucide-react';
 import type { ProcessAlert, ProcessGroup, ProcessGroupKind, ProcessRow, ProcessSignal, ProcessSort } from '@ruimte/contracts';
 import {
-    ACTION_LABELS,
+    actionLabel,
     alertActions,
     alertPlacement,
     alertText,
@@ -52,15 +53,13 @@ import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
-const SCOPES = [
-    { id: 'ruimte', label: 'Ruimte' },
-    { id: 'all', label: 'All' }
-] as const;
+/* The two scopes and the three sortable columns as ids; their words come from `panels:processes`. */
+const SCOPES = ['ruimte', 'all'] as const;
 
-const COLUMNS: readonly { sort: ProcessSort; label: string; tooltip: string; width: string }[] = [
-    { sort: 'cpu', label: 'CPU', tooltip: 'Sort by CPU', width: 'w-12' },
-    { sort: 'memory', label: 'Memory', tooltip: 'Sort by memory', width: 'w-16' },
-    { sort: 'disk', label: 'Disk', tooltip: 'Sort by disk', width: 'w-16' }
+const COLUMNS: readonly { sort: ProcessSort; width: string }[] = [
+    { sort: 'cpu', width: 'w-12' },
+    { sort: 'memory', width: 'w-16' },
+    { sort: 'disk', width: 'w-16' }
 ];
 
 const GROUP_ICONS: Record<ProcessGroupKind, LucideIcon> = { terminal: Terminal, chat: MessageSquare, app: AppWindow, daemon: Server, other: Cpu };
@@ -134,6 +133,7 @@ function Numbers({ row }: { row: { cpu: number | null; memory: number | null; di
 }
 
 function SignalMenu({ target, onSignal, onForce }: { target: Target; onSignal(target: Target, signal: ProcessSignal): void; onForce(target: Target): void }) {
+    const { t } = useTranslation('panels');
     return (
         <ContextMenu.Portal>
             <ContextMenu.Positioner className="z-(--z-popup)">
@@ -142,13 +142,13 @@ function SignalMenu({ target, onSignal, onForce }: { target: Target; onSignal(ta
                         {target.name} ({target.pid})
                     </div>
                     <ContextMenu.Item className="menu-item" onClick={() => onSignal(target, 'SIGINT')}>
-                        <Icon icon={Pause} size={14} /> Interrupt <span className={MENU_HINT}>SIGINT</span>
+                        <Icon icon={Pause} size={14} /> {t('processes.signal.interrupt')} <span className={MENU_HINT}>SIGINT</span>
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => onSignal(target, 'SIGTERM')}>
-                        <Icon icon={CircleStop} size={14} /> Terminate <span className={MENU_HINT}>SIGTERM</span>
+                        <Icon icon={CircleStop} size={14} /> {t('processes.signal.terminate')} <span className={MENU_HINT}>SIGTERM</span>
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item text-status-error" onClick={() => onForce(target)}>
-                        <Icon icon={OctagonX} size={14} /> Force quit... <span className={MENU_HINT}>SIGKILL</span>
+                        <Icon icon={OctagonX} size={14} /> {t('processes.signal.forceQuit')} <span className={MENU_HINT}>SIGKILL</span>
                     </ContextMenu.Item>
                 </ContextMenu.Popup>
             </ContextMenu.Positioner>
@@ -157,12 +157,13 @@ function SignalMenu({ target, onSignal, onForce }: { target: Target; onSignal(ta
 }
 
 function AlertLine({ alert, now, onAction, onDismiss }: { alert: ProcessAlert; now: number; onAction(action: AlertAction): void; onDismiss(): void }) {
+    const { t } = useTranslation('common');
     return (
         <div className="flex flex-col gap-1.5 border-b border-border bg-surface-sunken py-2 pr-2 pl-3">
             <div className="flex items-start gap-1.5">
                 <Icon icon={TriangleAlert} size={12} className="mt-0.5 text-status-needs-you" />
                 <p className="grow text-xs text-text">{alertText(alert, now)}</p>
-                <Tooltip label="Dismiss" name>
+                <Tooltip label={t('action.dismiss')} name>
                     <button className="icon-btn -my-1 h-6 w-6 shrink-0" onClick={onDismiss}>
                         <Icon icon={X} size={12} />
                     </button>
@@ -171,7 +172,7 @@ function AlertLine({ alert, now, onAction, onDismiss }: { alert: ProcessAlert; n
             <div className="flex flex-wrap gap-1.5 pl-[18px]">
                 {alertActions(alert).map((action) => (
                     <Button key={action} size="sm" variant="secondary" onClick={() => onAction(action)}>
-                        {ACTION_LABELS[action]}
+                        {actionLabel(action)}
                     </Button>
                 ))}
             </div>
@@ -186,6 +187,7 @@ function AlertLine({ alert, now, onAction, onDismiss }: { alert: ProcessAlert; n
  * names the process this row showed.
  */
 export function ProcessesPanel() {
+    const { t } = useTranslation('panels');
     useProcessesFeed();
     const transport = useTransport();
     const endpointId = useEndpointId();
@@ -202,12 +204,13 @@ export function ProcessesPanel() {
     const [toggled, setToggled] = useState<ReadonlySet<string>>(new Set());
     const [highlight, setHighlight] = useState<Target | null>(null);
     const [forcing, setForcing] = useState<Target | null>(null);
+    const scopes = useMemo(() => SCOPES.map((id) => ({ id, label: id === 'ruimte' ? 'Ruimte' : t('processes.scope.all') })), [t]);
 
     const header = (
         <PanelHeaderSlot>
             {machineName !== null && <span className="min-w-0 truncate text-xs text-text-muted">{machineName}</span>}
             <span className="grow" />
-            <Segmented value={scope} options={SCOPES} label="Which processes" onChange={(next) => useProcesses.getState().setScope(next)} />
+            <Segmented value={scope} options={scopes} label={t('processes.scopeLabel')} onChange={(next) => useProcesses.getState().setScope(next)} />
         </PanelHeaderSlot>
     );
 
@@ -216,7 +219,7 @@ export function ProcessesPanel() {
             <div className="grid grow place-items-center">
                 {header}
                 <EmptyState icon={<Icon icon={Activity} size={20} />}>
-                    {platform === 'win32' ? 'Process monitoring is not available on Windows yet.' : 'Process monitoring is not available on this platform yet.'}
+                    {platform === 'win32' ? t('processes.unsupportedWindows') : t('processes.unsupported')}
                 </EmptyState>
             </div>
         );
@@ -225,7 +228,7 @@ export function ProcessesPanel() {
         return (
             <div className="grid grow place-items-center">
                 {header}
-                <EmptyState icon={<Icon icon={Activity} size={20} />}>This machine is not answering.</EmptyState>
+                <EmptyState icon={<Icon icon={Activity} size={20} />}>{t('machineNotAnswering')}</EmptyState>
             </div>
         );
     }
@@ -234,7 +237,7 @@ export function ProcessesPanel() {
         return (
             <div className="grid grow place-items-center">
                 {header}
-                <EmptyState icon={<Icon icon={Activity} size={20} />}>Measuring processes...</EmptyState>
+                <EmptyState icon={<Icon icon={Activity} size={20} />}>{t('processes.measuring')}</EmptyState>
             </div>
         );
     }
@@ -272,11 +275,13 @@ export function ProcessesPanel() {
     const signal = (target: Target, kind: ProcessSignal): void => {
         transport
             .request('processes.signal', { pid: target.pid, startTime: target.startTime, signal: kind })
-            .catch((e: unknown) => fail(`Could not signal ${target.name}`, e));
+            .catch((e: unknown) => fail(t('processes.signalFailed', { name: target.name }), e));
     };
     const act = (alert: ProcessAlert, action: AlertAction): void => {
         const target =
-            alert.pid !== null && alert.startTime !== null ? { pid: alert.pid, startTime: alert.startTime, name: alert.name ?? 'The process' } : null;
+            alert.pid !== null && alert.startTime !== null
+                ? { pid: alert.pid, startTime: alert.startTime, name: alert.name ?? t('processes.theProcess') }
+                : null;
         if (action === 'show') {
             const place = alertPlacement(alert, groups);
             const group = groups.find((entry) => entry.id === place);
@@ -287,13 +292,13 @@ export function ProcessesPanel() {
             return;
         }
         if (action === 'resume' && alert.nodeId !== null) {
-            transport.request('agent.resume', { sessionId: alert.nodeId }).catch((e: unknown) => fail('Could not resume the agent', e));
+            transport.request('agent.resume', { sessionId: alert.nodeId }).catch((e: unknown) => fail(t('processes.resumeFailed'), e));
             return;
         }
         const chat = alert.nodeId !== null && groups.some((group) => group.kind === 'chat' && group.nodeId === alert.nodeId);
         if (action === 'interrupt' && chat) {
             // A chat has a turn to cancel, which is the interrupt its CLI understands.
-            transport.request('chat.cancel', { chatId: alert.nodeId! }).catch((e: unknown) => fail('Could not interrupt the turn', e));
+            transport.request('chat.cancel', { chatId: alert.nodeId! }).catch((e: unknown) => fail(t('processes.interruptFailed'), e));
             return;
         }
         if (target !== null) {
@@ -311,17 +316,17 @@ export function ProcessesPanel() {
                 <div className="flex items-center gap-3 text-xs text-text-faint">
                     <span className="flex items-center gap-1.5">
                         <span className="h-px w-3 bg-text-muted" />
-                        This machine
+                        {t('processes.legend.machine')}
                     </span>
                     <span className="flex items-center gap-1.5">
                         <span className="h-2 w-3 rounded-sm bg-accent/30" />
                         Ruimte
                     </span>
                     <span className="grow" />
-                    {series.fine ? 'Last 10 minutes' : 'Last 24 hours'}
+                    {series.fine ? t('processes.range.fine') : t('processes.range.coarse')}
                 </div>
                 <ProcessChart
-                    label="CPU"
+                    label={t('processes.column.cpu')}
                     headline={formatPercent(machine.cpu)}
                     points={series.points}
                     windowMs={series.windowMs}
@@ -332,8 +337,8 @@ export function ProcessesPanel() {
                     format={(value) => formatPercent(value)}
                 />
                 <ProcessChart
-                    label="Memory"
-                    headline={`${formatBytes(machine.memoryUsed)} of ${formatBytes(machine.memoryTotal)}`}
+                    label={t('processes.column.memory')}
+                    headline={t('processes.memoryHeadline', { used: formatBytes(machine.memoryUsed), total: formatBytes(machine.memoryTotal) })}
                     points={series.points}
                     windowMs={series.windowMs}
                     end={now}
@@ -345,12 +350,12 @@ export function ProcessesPanel() {
                 <ProcessChart
                     label={
                         <Tooltip
-                            label={`Total for the processes Ruimte can read.${machine.diskFree === null ? '' : ` ${formatBytes(machine.diskFree)} free.`}`}
+                            label={`${t('processes.diskTooltip')}${machine.diskFree === null ? '' : ` ${t('processes.diskFree', { size: formatBytes(machine.diskFree) })}`}`}
                         >
-                            <span>Disk</span>
+                            <span>{t('processes.column.disk')}</span>
                         </Tooltip>
                     }
-                    headline={`Read ${formatRate(machine.diskRead)}, write ${formatRate(machine.diskWrite)}`}
+                    headline={t('processes.diskHeadline', { read: formatRate(machine.diskRead), write: formatRate(machine.diskWrite) })}
                     points={series.points}
                     windowMs={series.windowMs}
                     end={now}
@@ -361,9 +366,9 @@ export function ProcessesPanel() {
                 />
             </div>
             <div className="flex h-8 shrink-0 items-center gap-1.5 border-b border-border pr-3 pl-3">
-                <span className={clsx(SECTION_LABEL, 'grow')}>Node</span>
+                <span className={clsx(SECTION_LABEL, 'grow')}>{t('processes.column.node')}</span>
                 {COLUMNS.map((column) => (
-                    <Tooltip key={column.sort} label={column.tooltip}>
+                    <Tooltip key={column.sort} label={t(`processes.sortBy.${column.sort}`)}>
                         <button
                             aria-pressed={sort === column.sort}
                             className={clsx(
@@ -377,7 +382,7 @@ export function ProcessesPanel() {
                             {/* The sort only runs high to low, so one arrow is the whole state. On the
                                 other columns it shows under the pointer to say they sort as well. */}
                             <Icon icon={ArrowDown} size={12} className={clsx('shrink-0', sort !== column.sort && 'opacity-0 group-hover:opacity-100')} />
-                            {column.label}
+                            {t(`processes.column.${column.sort}`)}
                         </button>
                     </Tooltip>
                 ))}
@@ -397,7 +402,7 @@ export function ProcessesPanel() {
                             <button
                                 className="icon-btn h-6 w-6 shrink-0"
                                 aria-expanded={open}
-                                aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
+                                aria-label={open ? t('processes.collapse', { name: title }) : t('processes.expand', { name: title })}
                                 onClick={() => toggle(group.id)}
                             >
                                 <Icon icon={ChevronRight} size={14} className={clsx(open && 'rotate-90')} />
@@ -410,7 +415,7 @@ export function ProcessesPanel() {
                             ) : (
                                 <span className="min-w-0 truncate text-sm text-text">{title}</span>
                             )}
-                            {!known && <span className="min-w-0 shrink truncate text-xs text-text-faint">another project</span>}
+                            {!known && <span className="min-w-0 shrink truncate text-xs text-text-faint">{t('processes.anotherProject')}</span>}
                             {group.hidden > 0 && <span className="shrink-0 text-xs text-text-faint tabular-nums">+{group.hidden}</span>}
                             {here.length > 0 && <Icon icon={TriangleAlert} size={12} className="shrink-0 text-status-needs-you" />}
                             <span className="grow" />
@@ -468,12 +473,10 @@ export function ProcessesPanel() {
                 <Dialog.Portal>
                     <Dialog.Backdrop className="dialog-backdrop" />
                     <Dialog.Popup className="dialog-popup w-[420px] p-5">
-                        <Dialog.Title className="text-base font-semibold text-text">Force quit {forcing?.name}?</Dialog.Title>
-                        <p className="mt-1 text-xs text-text-muted">
-                            SIGKILL ends process {forcing?.pid} immediately. It cannot save or clean up, so files it was writing may be left incomplete.
-                        </p>
+                        <Dialog.Title className="text-base font-semibold text-text">{t('processes.force.title', { name: forcing?.name })}</Dialog.Title>
+                        <p className="mt-1 text-xs text-text-muted">{t('processes.force.description', { pid: forcing?.pid })}</p>
                         <div className="mt-4 flex items-center justify-end gap-2">
-                            <Button onClick={() => setForcing(null)}>Cancel</Button>
+                            <Button onClick={() => setForcing(null)}>{t('common:action.cancel')}</Button>
                             <Button
                                 variant="danger"
                                 onClick={() => {
@@ -483,7 +486,7 @@ export function ProcessesPanel() {
                                     setForcing(null);
                                 }}
                             >
-                                <Icon icon={OctagonX} size={12} /> Force quit
+                                <Icon icon={OctagonX} size={12} /> {t('processes.force.confirm')}
                             </Button>
                         </div>
                     </Dialog.Popup>

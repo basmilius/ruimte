@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { create } from 'zustand';
 import { PROVIDER_NAMES, type Account, type ProviderId } from '@ruimte/pulsar';
 
@@ -24,6 +25,8 @@ export const dismissAccountConfirmation = (): void => {
 
 /* Named after the provider the person picked, since the account may be shown as another one. */
 export const signedInConfirmation = (provider: ProviderId, account: Account): string =>
-    account.login === null ? `Signed in with ${PROVIDER_NAMES[provider]}` : `Signed in with ${PROVIDER_NAMES[provider]} as ${account.login}`;
+    account.login === null
+        ? i18next.t('machines:account.confirmation.signedIn', { provider: PROVIDER_NAMES[provider] })
+        : i18next.t('machines:account.confirmation.signedInAs', { provider: PROVIDER_NAMES[provider], login: account.login });
 
-export const linkedConfirmation = (provider: ProviderId): string => `${PROVIDER_NAMES[provider]} added to your account`;
+export const linkedConfirmation = (provider: ProviderId): string => i18next.t('machines:account.confirmation.linked', { provider: PROVIDER_NAMES[provider] });

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import type { LucideIcon } from 'lucide-react';
 import {
     ArrowLeft,
@@ -62,6 +63,7 @@ export const usePage = (id: string): { url: string; available: boolean } => {
 
 /* Back, forward, the address and reload: in the node's own bar, or in the toolbar for a browser view. */
 export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }) {
+    const { t } = useTranslation('canvas');
     const state = useBrowserRow(id, (row) => row);
     const preferredScale = useBrowserStreamQuality((store) => store.scale);
     const setScale = useBrowserStreamQuality((store) => store.setScale);
@@ -102,25 +104,29 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
     return (
         <>
             <div className={BTN_GROUP}>
-                <Tooltip label="Back" name>
+                <Tooltip label={t('browser.back')} name>
                     <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!state?.canGoBack} onClick={() => command('back')}>
                         <Icon icon={ArrowLeft} size={16} />
                     </button>
                 </Tooltip>
-                <Tooltip label="Forward" name>
+                <Tooltip label={t('browser.forward')} name>
                     <button className="icon-btn h-7 w-7 disabled:opacity-40" disabled={!state?.canGoForward} onClick={() => command('forward')}>
                         <Icon icon={ArrowRight} size={16} />
                     </button>
                 </Tooltip>
                 {/* While a page is on its way the same square ends it, the way every browser does it. */}
                 {state?.loading ? (
-                    <Tooltip label="Stop loading" name>
+                    <Tooltip label={t('browser.stop')} name>
                         <button className="icon-btn h-7 w-7" onClick={() => command('stop')}>
                             <Icon icon={X} size={16} />
                         </button>
                     </Tooltip>
                 ) : (
-                    <Tooltip label="Reload" kbd={`${formatShortcut(KEY_SHORTCUTS.shift, isApplePlatform())} skips the cache`} name>
+                    <Tooltip
+                        label={t('common:action.reload')}
+                        kbd={t('browser.reloadHint', { shortcut: formatShortcut(KEY_SHORTCUTS.shift, isApplePlatform()) })}
+                        name
+                    >
                         <button className="icon-btn h-7 w-7" onClick={(e) => command('reload', e.shiftKey)}>
                             <Icon icon={RotateCw} size={16} />
                         </button>
@@ -137,8 +143,8 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                 <input
                     ref={field}
                     className="grow bg-transparent font-sans text-sm text-text outline-none placeholder:text-text-faint"
-                    aria-label="Address"
-                    placeholder="Enter an address"
+                    aria-label={t('browser.address')}
+                    placeholder={t('browser.addressPlaceholder')}
                     value={editing ? url : prettyUrl(url)}
                     spellCheck={false}
                     tabIndex={focused ? 0 : -1}
@@ -166,7 +172,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                 />
                 {/* A guest reports a start and a stop and nothing in between, so the line sweeps
                     rather than fills: it says the wait is the page's, not how far along it is. */}
-                {state?.loading && <div className="progress-line absolute inset-x-0 bottom-0" role="progressbar" aria-label="Loading the page" />}
+                {state?.loading && <div className="progress-line absolute inset-x-0 bottom-0" role="progressbar" aria-label={t('browser.loading')} />}
             </div>
             <div className={BTN_GROUP}>
                 {!native && (
@@ -174,7 +180,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                         value={String(scale)}
                         onValueChange={(value) => setScale(Number(value))}
                         items={scaleItems}
-                        label="Browser stream DPI"
+                        label={t('browser.streamDpi')}
                         size="sm"
                         variant="ghost"
                         align="end"
@@ -182,7 +188,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                         className="w-[76px] justify-center tabular-nums"
                     />
                 )}
-                <Tooltip label="Open in the system browser" name>
+                <Tooltip label={t('browser.openExternal')} name>
                     <button
                         className="icon-btn h-7 w-7"
                         onClick={() => {
@@ -198,7 +204,7 @@ export function BrowserToolbar({ id, focused }: { id: string; focused: boolean }
                     </button>
                 </Tooltip>
                 {native && (
-                    <Tooltip label="Inspect" name>
+                    <Tooltip label={t('browser.inspect')} name>
                         <button className="icon-btn h-7 w-7" onClick={() => browserRegistry.inspect(key)}>
                             <Icon icon={Code} size={16} />
                         </button>
@@ -231,6 +237,7 @@ const ERROR_ICON: Record<LoadErrorKind, LucideIcon> = {
  * what the layer puts over the node and over a browser view's whole column alike.
  */
 function BrowserErrorPlate({ id }: { id: string }) {
+    const { t } = useTranslation('canvas');
     const failure = useBrowserRow(id, (row) => row?.error ?? null);
     const key = endpointKey(useEndpointId(), id);
     // The host is the page's parent, adopted by the layer long before any load can fail.
@@ -247,11 +254,11 @@ function BrowserErrorPlate({ id }: { id: string }) {
                     <div className="flex items-center gap-2">
                         {error.retryable && (
                             <Button variant="secondary" size="sm" onClick={() => browserRegistry.reload(key, true)}>
-                                Try again
+                                {t('common:action.retry')}
                             </Button>
                         )}
                         <Button variant="secondary" size="sm" onClick={() => void desktop()?.openExternal(failure.url)}>
-                            Open in system browser
+                            {t('browser.error.openExternal')}
                         </Button>
                     </div>
                 }

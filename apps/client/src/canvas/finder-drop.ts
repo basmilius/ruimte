@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { finderRefusal, type FinderRefusal } from '@/canvas/drop';
 import { desktop } from '@/desktop/bridge';
 import { fileManagerName, serverInfoOf } from '@/state/server';
@@ -7,13 +8,13 @@ import { useToasts } from '@/state/toasts';
 const refusalToast = (refusal: FinderRefusal, fileManager: string, machine: string | null): { title: string; description: string } => {
     if (refusal === 'no-bridge') {
         return {
-            title: `Files from ${fileManager} only drop in the desktop app`,
-            description: 'Open the file from the Files panel instead.'
+            title: i18next.t('canvas:drop.noBridge.title', { app: fileManager }),
+            description: i18next.t('canvas:drop.noBridge.description')
         };
     }
     return {
-        title: `This project runs on ${machine ?? 'another machine'}`,
-        description: `That machine cannot read files from ${fileManager}. Open the file from the Files panel instead.`
+        title: i18next.t('canvas:drop.otherMachine.title', { machine: machine ?? i18next.t('canvas:drop.otherMachine.unknown') }),
+        description: i18next.t('canvas:drop.otherMachine.description', { app: fileManager })
     };
 };
 

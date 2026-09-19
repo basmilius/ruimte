@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { LiveStreamDecoder, LIVE_STREAM_CONTENT_TYPE, type BrowserInput, type LiveStreamFrame } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { CircleAlert } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { browserClientFor } from '@/transport/connections';
 import { credentialFor } from '@/endpoint/credentials';
 import { useEndpointId } from '@/state/keys';
@@ -69,7 +71,7 @@ class FramePainter {
                 bitmap.close();
             }
         } catch (error) {
-            this.failed(error instanceof Error ? error.message : 'A frame could not be drawn');
+            this.failed(error instanceof Error ? error.message : i18next.t('browser:stream.frameFailed'));
         } finally {
             this.drawing = false;
             if (this.pending) {
@@ -80,6 +82,7 @@ class FramePainter {
 }
 
 export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: string; initialUrl: string; className?: string }) {
+    const { t } = useTranslation('browser');
     const endpointId = useEndpointId();
     const endpoint = useEndpoints((state) => state.endpoints.find((entry) => entry.id === endpointId) ?? null);
     const row = useBrowserRow(id, (state) => state);
@@ -136,7 +139,9 @@ export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: str
         appliedScale.current = scaleRef.current;
         void client.open(id, initialUrl.current, width, height, direct ? 'events' : 'http', scaleRef.current).then(
             () => mounted && setReady(true),
-            (error) => mounted && setStreamError(error instanceof Error ? error.message : 'The browser could not start')
+            /* i18next.t and not the hook's `t`: that one changes identity when the language does, and
+               this effect opens the page again every time it runs. */
+            (error) => mounted && setStreamError(error instanceof Error ? error.message : i18next.t('browser:stream.startFailed'))
         );
         const observer = new ResizeObserver(([entry]) => {
             if (!entry) {
@@ -188,10 +193,12 @@ export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: str
                         signal: controller.signal
                     });
                     if (!response.ok || !response.body) {
-                        throw new Error(response.status === 404 ? 'The browser stream is not ready yet' : `The browser stream returned ${response.status}`);
+                        throw new Error(
+                            response.status === 404 ? i18next.t('browser:stream.notReady') : i18next.t('browser:stream.status', { status: response.status })
+                        );
                     }
                     if (!response.headers.get('content-type')?.startsWith(LIVE_STREAM_CONTENT_TYPE.split(';')[0]!)) {
-                        throw new Error('The machine returned an unknown stream format');
+                        throw new Error(i18next.t('browser:stream.unknownFormat'));
                     }
                     const decoder = new LiveStreamDecoder();
                     const reader = response.body.getReader();
@@ -206,7 +213,7 @@ export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: str
                     }
                 } catch (error) {
                     if (!controller.signal.aborted) {
-                        setStreamError(error instanceof Error ? error.message : 'The browser stream stopped');
+                        setStreamError(error instanceof Error ? error.message : i18next.t('browser:stream.stopped'));
                     }
                 }
                 await wait(RETRY_MS, controller.signal);
@@ -231,7 +238,7 @@ export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: str
             <canvas
                 ref={canvas}
                 className="h-full w-full touch-none outline-none"
-                aria-label="Remote web page"
+                aria-label={t('stream.pageLabel')}
                 tabIndex={0}
                 onContextMenu={(event) => event.preventDefault()}
                 onPointerDown={(event) => {
@@ -311,7 +318,7 @@ export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: str
                     send({ kind: 'text', text: event.clipboardData.getData('text/plain') });
                 }}
             />
-            {!imageReady && !visibleError && <div className="absolute inset-0 grid place-items-center text-xs text-text-muted">Starting browser…</div>}
+            {!imageReady && !visibleError && <div className="absolute inset-0 grid place-items-center text-xs text-text-muted">{t('stream.starting')}</div>}
             {visibleError && (
                 <div className="absolute inset-0 grid place-items-center bg-bg/90 px-6 text-center text-xs text-text-muted" role="alert">
                     <EmptyState icon={<Icon icon={CircleAlert} size={24} />}>{visibleError}</EmptyState>

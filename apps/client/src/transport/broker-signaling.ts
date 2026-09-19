@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import {
     BrokerPeer,
     brokerHostOf,
@@ -68,7 +69,7 @@ export class BrokerSockets {
                 }
             }
         } else {
-            queueMicrotask(() => member.lost(`The broker URL ${url} does not open`));
+            queueMicrotask(() => member.lost(i18next.t('machines:broker.badUrl', { url })));
         }
         return {
             relay: (to, envelope) => joined?.peer.relay(to, envelope) ?? Promise.resolve(null),
@@ -147,8 +148,8 @@ export class BrokerSockets {
                     // Without an id the refusal is about the socket, which is then no use to anybody on it.
                     lose(
                         frame.type === 'rate-limited'
-                            ? `The broker at ${host} is limiting this client; trying again in ${secondsOf(frame.retryAfterMs)} seconds`
-                            : `The broker at ${host} refused this client: ${frame.message}`
+                            ? i18next.t('machines:broker.limited', { host, seconds: secondsOf(frame.retryAfterMs) })
+                            : i18next.t('machines:broker.refusedClient', { host, reason: frame.message })
                     );
                 },
                 failed: (reason) => lose(reason)
@@ -158,7 +159,7 @@ export class BrokerSockets {
         this.open.set(id, shared);
         socket.onopen = () => peer.start();
         socket.onmessage = (message) => void peer.receive(String(message.data));
-        socket.onclose = () => lose(`The broker at ${host} could not be reached`);
+        socket.onclose = () => lose(i18next.t('machines:broker.unreachable', { host }));
         socket.onerror = () => {};
         return shared;
     }
@@ -218,7 +219,7 @@ export const brokerSignaling =
                 return;
             }
             if (!(await options.verify(options.machineKey, signalMessage(options.machineKey, clientKey, frame.envelope), frame.signature))) {
-                fail('A signal on the broker names the machine but is not signed by it');
+                fail(i18next.t('machines:direct.unsignedSignal'));
                 return;
             }
             if (!closed) {
@@ -233,7 +234,7 @@ export const brokerSignaling =
                     return;
                 }
                 if (key === null) {
-                    fail('A direct connection over the broker signs in with a key, and this browser cannot make one');
+                    fail(i18next.t('machines:direct.noKeyOverBroker'));
                     return;
                 }
                 signer = key;
@@ -249,19 +250,19 @@ export const brokerSignaling =
                             return;
                         }
                         if (frame.type === 'rate-limited') {
-                            fail(`The broker at ${host} is limiting this client; trying again in ${secondsOf(frame.retryAfterMs)} seconds`);
+                            fail(i18next.t('machines:broker.limited', { host, seconds: secondsOf(frame.retryAfterMs) }));
                             return;
                         }
                         fail(
                             frame.code === 'not-connected'
-                                ? `The machine is not connected to the broker at ${host}. It needs to run with the broker switched on.`
-                                : `The broker at ${host} refused the signal: ${frame.message}`
+                                ? i18next.t('machines:broker.machineAbsent', { host })
+                                : i18next.t('machines:broker.refusedSignal', { host, reason: frame.message })
                         );
                     },
                     lost: (reason) => fail(reason)
                 });
             })
-            .catch((e: unknown) => fail(`Could not sign in to the broker: ${e instanceof Error ? e.message : String(e)}`));
+            .catch((e: unknown) => fail(i18next.t('machines:broker.signInFailed', { reason: e instanceof Error ? e.message : String(e) })));
 
         return {
             send: (signal) => {
@@ -271,7 +272,7 @@ export const brokerSignaling =
                               .access(signer)
                               .then((access) => ({ ...signal, access }))
                               .catch((e: unknown) => {
-                                  fail(`Your account could not vouch for this client: ${e instanceof Error ? e.message : String(e)}`);
+                                  fail(i18next.t('machines:broker.noVouch', { reason: e instanceof Error ? e.message : String(e) }));
                                   return null;
                               })
                         : Promise.resolve(signal);

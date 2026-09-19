@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { FileQuestion } from 'lucide-react';
 import type { FileSurfaceKind } from '@/shell/panels/FileActionItems';
 import { FileBody } from '@/shell/panels/FileBody';
@@ -11,13 +12,14 @@ import { Icon } from '@/ui/Icon';
  * against the project folder here and hand the rest to the same reading layer the preview uses.
  */
 export function FileSurface({ path, on }: { path: string | null; on: FileSurfaceKind }) {
+    const { t } = useTranslation('panels');
     const folder = useProject((s) => s.current?.folder ?? null);
     const resolved = path === null ? null : resolveStoredPath(folder, path);
 
     if (resolved === null) {
         return (
             <EmptyState icon={<Icon icon={FileQuestion} size={16} />} className="h-full">
-                No file to show.
+                {t('file.noFile')}
             </EmptyState>
         );
     }

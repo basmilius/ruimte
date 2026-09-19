@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { DirectSignalPayloadSchema, type DirectSignalPayload } from '@ruimte/contracts';
 import type { IceServer } from '@ruimte/pulsar';
 
@@ -66,7 +67,7 @@ export const socketSignaling =
             }
             if (typeof frame.id === 'string' && frame.id.startsWith('direct-') && frame.ok === false) {
                 // A daemon from before direct connections answers `unknown-request`, which is worth saying in so many words.
-                fail(`The machine did not take the direct connection: ${frame.error?.message ?? 'no reason given'}`);
+                fail(i18next.t('machines:direct.refused', { reason: frame.error?.message ?? i18next.t('machines:direct.noReason') }));
                 return;
             }
             if (frame.type !== 'event' || frame.event !== 'direct.signaled') {
@@ -81,12 +82,12 @@ export const socketSignaling =
         try {
             socket = createSocket(url);
         } catch (e) {
-            fail(`The machine could not be reached to set up a direct connection: ${messageOf(e)}`);
+            fail(i18next.t('machines:direct.unreachableWith', { reason: messageOf(e) }));
             return { send: () => undefined, close: () => undefined };
         }
         socket.onopen = () => events.ready();
         socket.onmessage = (message) => onFrame(String(message.data));
-        socket.onclose = () => fail('The machine could not be reached to set up a direct connection');
+        socket.onclose = () => fail(i18next.t('machines:direct.unreachable'));
         socket.onerror = () => {};
 
         return {

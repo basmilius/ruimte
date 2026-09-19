@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { AuthChallengeResultSchema, type AuthSession, type EndpointInfo } from '@ruimte/contracts';
 import { dropClientLocalOf } from '@/project/client-local';
 import { browserStorage } from '@/project/last-project';
@@ -28,7 +29,7 @@ import { forgetTicket } from './credentials';
 export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
     const parsed = parsePairingUrl(pairingUrl);
     if (!parsed) {
-        throw new Error('That is not a pairing link. A pairing link looks like http://machine:4210/pair#token');
+        throw new Error(i18next.t('machines:pairing.notALink'));
     }
     const refusal = typeof location === 'undefined' ? null : mixedContentRefusal(location.protocol, parsed.httpBaseUrl);
     if (refusal !== null) {
@@ -43,11 +44,11 @@ export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
         body: JSON.stringify({ token: parsed.token, label: clientLabel(), ...(key ? { publicKey: key.publicKey } : {}) })
     });
     if (!response.ok) {
-        throw new Error(await response.text().catch(() => 'That machine refused the pairing'));
+        throw new Error(await response.text().catch(() => i18next.t('machines:pairing.refused')));
     }
     const { sessionToken, endpoint } = (await response.json()) as { sessionToken?: string; endpoint: EndpointInfo };
     if (key && !endpoint.publicKey && !sessionToken) {
-        throw new Error('That machine answered without a key or a token');
+        throw new Error(i18next.t('machines:pairing.noKeyOrToken'));
     }
     // Again with the id the daemon itself put in the pairing answer, for a daemon whose address said nothing.
     refuseOwnDaemon(endpoint.id);
@@ -73,8 +74,8 @@ export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
         useToasts.getState().show({
             id: `endpoint-merged-${record.id}`,
             kind: 'success',
-            title: `${known.label} is already in the list`,
-            description: `That link points to the same machine. Its address is now ${record.httpBaseUrl}.`
+            title: i18next.t('machines:pairing.merged.title', { label: known.label }),
+            description: i18next.t('machines:pairing.merged.description', { address: record.httpBaseUrl })
         });
     }
     return record;
@@ -102,7 +103,7 @@ const daemonAt = async (httpBaseUrl: string): Promise<string | null> => {
 const refuseOwnDaemon = (daemonId: string | null): void => {
     const known = daemonId === null ? null : endpointForDaemon(daemonId);
     if (known?.id === LOCAL_ENDPOINT_ID) {
-        throw new Error(`That link is for the machine that served this page. It is already in the list as ${known.label}.`);
+        throw new Error(i18next.t('machines:pairing.ownDaemon', { label: known.label }));
     }
 };
 

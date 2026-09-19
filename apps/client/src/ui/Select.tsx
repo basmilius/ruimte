@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Select as BaseSelect } from '@base-ui-components/react/select';
+import i18next from 'i18next';
 import clsx from 'clsx';
 import { Check, ChevronDown } from 'lucide-react';
 import { MENU_LABEL } from '@/ui/classes';
@@ -77,7 +78,7 @@ export function Select<T extends string>({
     onValueChange,
     items,
     label,
-    placeholder = 'Select',
+    placeholder = i18next.t('common:action.select'),
     size = 'md',
     variant = 'outlined',
     disabled,

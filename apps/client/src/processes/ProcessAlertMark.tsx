@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import clsx from 'clsx';
 import { TriangleAlert } from 'lucide-react';
 import type { ProcessAlert } from '@ruimte/contracts';
@@ -23,7 +24,8 @@ export function ProcessAlertMark({ alerts, className }: { alerts: readonly Proce
     if (first === undefined) {
         return null;
     }
-    const label = alerts.length === 1 ? alertText(first, Date.now()) : `${alertText(first, Date.now())}, and ${alerts.length - 1} more`;
+    const text = alertText(first, Date.now());
+    const label = alerts.length === 1 ? text : i18next.t('processes:alert.more', { count: alerts.length - 1, text });
     return (
         <Tooltip label={label} name>
             <span

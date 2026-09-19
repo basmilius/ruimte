@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { PANELS } from '@/shell/panels';
@@ -38,6 +39,7 @@ function PanelBody({ kind }: { kind: PanelKind }) {
 
 /* Keep the inner column at its stored width while the outer split animates, avoiding content reflow. */
 export function Panel() {
+    const { t } = useTranslation('shell');
     const panel = useUi((s) => s.panel);
     const open = panel.open;
     const [leadingHeaderSlot, setLeadingHeaderSlot] = useState<HTMLElement | null>(null);
@@ -76,7 +78,7 @@ export function Panel() {
         };
     }, [open, settled]);
 
-    const label = entry?.label ?? 'Panel';
+    const label = entry === undefined ? t('panel.fallback') : t(`panel.names.${entry.kind}`);
 
     return (
         <aside
@@ -107,14 +109,14 @@ export function Panel() {
                         <span className={`${SECTION_LABEL} panel-title shrink-0`}>{label}</span>
                         {/* The panel's own controls, between its name and the close button. */}
                         <div ref={setHeaderSlot} className="flex min-w-0 grow items-center gap-2" />
-                        <Tooltip label={`Close ${label}`} kbd={CANVAS_SHORTCUTS.togglePanel} name>
+                        <Tooltip label={t('panel.close', { name: label })} kbd={CANVAS_SHORTCUTS.togglePanel} name>
                             <button className="icon-btn shrink-0" onClick={() => useUi.getState().setPanel({ open: false })}>
                                 <Icon icon={X} size={16} />
                             </button>
                         </Tooltip>
                     </header>
                     <PanelHeaderProvider hosts={{ leading: leadingHeaderSlot, titleSignal, trailing: headerSlot }}>
-                        <ErrorBoundary label="This panel failed to render" resetKeys={[panel.kind]} className="min-h-0 grow">
+                        <ErrorBoundary label={t('panel.failed')} resetKeys={[panel.kind]} className="min-h-0 grow">
                             <PanelBody kind={panel.kind} />
                         </ErrorBoundary>
                     </PanelHeaderProvider>

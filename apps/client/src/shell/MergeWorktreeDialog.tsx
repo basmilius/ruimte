@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import i18next from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import type { Worktree, WorktreeMergeStrategy } from '@ruimte/contracts';
 import { agentsEndedWith } from '@/agents/end-children';
@@ -10,6 +12,8 @@ import {
     hasLooseWork,
     isOverwriteRefusal,
     MERGE_STRATEGIES,
+    mergeStrategyLabel,
+    mergeStrategyLine,
     mergeContents,
     mergedDescription,
     mergeTitle,
@@ -42,6 +46,7 @@ type Reading = { request: WorktreeMergeRequest; worktrees: Worktree[]; failure: 
  * when an agent is still working in one: the button then stops it first.
  */
 export function MergeWorktreeDialog() {
+    const { t } = useTranslation(['shell', 'common']);
     const request = useUi((s) => s.worktreeMerge);
     const endpointId = useEndpointId();
     const transport = useTransport();
@@ -76,11 +81,11 @@ export function MergeWorktreeDialog() {
                 }
                 const found = request.paths.map((path) => answer.worktrees.find((entry) => entry.path === path)).filter((entry) => entry !== undefined);
                 const usable = found.filter((entry) => !entry.missing);
-                setReading({ request, worktrees: usable, failure: usable.length === 0 ? 'There is no worktree left to merge.' : null });
+                setReading({ request, worktrees: usable, failure: usable.length === 0 ? t('merge.nothingLeft') : null });
             })
             .catch((error: unknown) => {
                 if (!cancelled) {
-                    setReading({ request, worktrees: [], failure: error instanceof Error ? error.message : 'Could not read the worktrees.' });
+                    setReading({ request, worktrees: [], failure: error instanceof Error ? error.message : t('merge.unreadable') });
                 }
             });
         return () => {
@@ -159,11 +164,13 @@ export function MergeWorktreeDialog() {
         void mergeWithToasts(transport, request.folder, runs, () => worktreeLists.reload(endpointId, request.folder));
     };
 
+    // The agents a stop takes along are a clause inside the sentence, so the two counts each pick their own wording.
+    const endedClause = ended === 0 ? '' : working.length === 1 ? t('merge.endedByIt', { count: ended }) : t('merge.endedByThem', { count: ended });
     const agentLine =
         working.length > 0
-            ? `${working.map((node) => node.title || node.kind).join(', ')} ${working.length === 1 ? 'is' : 'are'} still working. Merging stops ${working.length === 1 ? 'it' : 'them'} first${ended > 0 ? `, and the ${ended === 1 ? 'agent' : `${ended} agents`} ${working.length === 1 ? 'it' : 'they'} opened` : ''}.`
+            ? t('merge.working', { count: working.length, names: working.map((node) => node.title || node.kind).join(', '), ended: endedClause })
             : draft.remove && live.length > 0
-              ? `${live.map((node) => node.title || node.kind).join(', ')} ${live.length === 1 ? 'is' : 'are'} still open in it and ${live.length === 1 ? 'is' : 'are'} stopped before the worktree goes.`
+              ? t('merge.live', { count: live.length, names: live.map((node) => node.title || node.kind).join(', ') })
               : null;
 
     return (
@@ -171,9 +178,9 @@ export function MergeWorktreeDialog() {
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
                 <Dialog.Popup className="dialog-popup w-[460px] p-5">
-                    <Dialog.Title className="text-base font-semibold text-text">{worktrees.length > 0 ? mergeTitle(worktrees) : 'Merge worktree'}</Dialog.Title>
+                    <Dialog.Title className="text-base font-semibold text-text">{worktrees.length > 0 ? mergeTitle(worktrees) : t('merge.title')}</Dialog.Title>
                     <p className="mt-1 text-sm text-text-muted">
-                        {shown === null ? 'Counting what is in it...' : (shown.failure ?? `It holds ${mergeContents(worktrees)}.`)}
+                        {shown === null ? t('removeWorktree.counting') : (shown.failure ?? t('merge.holds', { contents: mergeContents(worktrees) }))}
                     </p>
                     {agentLine !== null && <p className="mt-2 text-sm text-status-warning">{agentLine}</p>}
                     {shown !== null && shown.failure === null && (
@@ -181,21 +188,19 @@ export function MergeWorktreeDialog() {
                             {loose && (
                                 <div className="mt-4 flex flex-col gap-1.5">
                                     <label className="flex items-center justify-between gap-3">
-                                        <span className="text-sm text-text">Commit the uncommitted files first</span>
+                                        <span className="text-sm text-text">{t('merge.commitFirst')}</span>
                                         <Toggle
-                                            label="Commit the uncommitted files first"
+                                            label={t('merge.commitFirst')}
                                             checked={draft.commitFirst}
                                             onChange={(commitFirst) => setDraft({ ...draft, commitFirst })}
                                         />
                                     </label>
-                                    {!draft.commitFirst && (
-                                        <span className="text-xs text-text-faint">Without that commit the merge would leave half of the work behind.</span>
-                                    )}
+                                    {!draft.commitFirst && <span className="text-xs text-text-faint">{t('merge.commitFirstHint')}</span>}
                                 </div>
                             )}
                             {single !== undefined && ((loose && draft.commitFirst) || strategy === 'squash') && (
                                 <label className="mt-3 flex flex-col gap-1.5">
-                                    <span className={SECTION_LABEL}>Commit message</span>
+                                    <span className={SECTION_LABEL}>{t('merge.commitMessage')}</span>
                                     <input
                                         className="field font-mono"
                                         spellCheck={false}
@@ -205,29 +210,25 @@ export function MergeWorktreeDialog() {
                                 </label>
                             )}
                             <div className="mt-4 flex flex-col gap-1.5">
-                                <span className={SECTION_LABEL}>Strategy</span>
+                                <span className={SECTION_LABEL}>{t('merge.strategy')}</span>
                                 <Segmented
-                                    label="Strategy"
+                                    label={t('merge.strategy')}
                                     value={strategy}
-                                    options={MERGE_STRATEGIES.map((entry) => ({ id: entry.value, label: entry.label }))}
+                                    options={MERGE_STRATEGIES.map((value) => ({ id: value, label: mergeStrategyLabel(value) }))}
                                     onChange={(value: WorktreeMergeStrategy) => useSettings.getState().update({ worktreeMergeStrategy: value })}
                                 />
-                                <span className="text-xs text-text-faint">{MERGE_STRATEGIES.find((entry) => entry.value === strategy)?.line}</span>
+                                <span className="text-xs text-text-faint">{mergeStrategyLine(strategy)}</span>
                             </div>
                             <label className="mt-4 flex items-center justify-between gap-3">
-                                <span className="text-sm text-text">
-                                    {worktrees.length === 1
-                                        ? 'Remove the worktree and its branch afterwards'
-                                        : 'Remove each worktree and its branch afterwards'}
-                                </span>
-                                <Toggle label="Remove afterwards" checked={draft.remove} onChange={(remove) => setDraft({ ...draft, remove })} />
+                                <span className="text-sm text-text">{t('merge.removeAfterwards', { count: worktrees.length })}</span>
+                                <Toggle label={t('merge.removeAfterwardsShort')} checked={draft.remove} onChange={(remove) => setDraft({ ...draft, remove })} />
                             </label>
                         </>
                     )}
                     <div className="mt-5 flex items-center justify-end gap-2">
-                        <Button onClick={close}>Cancel</Button>
+                        <Button onClick={close}>{t('common:action.cancel')}</Button>
                         <Button variant="primary" disabled={blocked} onClick={confirm}>
-                            {stopAgent ? 'Stop and merge' : 'Merge'}
+                            {stopAgent ? t('merge.stopAndMerge') : t('merge.merge')}
                         </Button>
                     </div>
                 </Dialog.Popup>
@@ -276,9 +277,12 @@ const mergeWithToasts = async (transport: Transport, folder: string, runs: reado
                 toasts.set(
                     actionId,
                     useToasts.getState().show({
-                        title: `Merging ${run.worktree.branch}`,
+                        title: i18next.t('shell:merge.merging', { branch: run.worktree.branch }),
                         kind: 'progress',
-                        action: { label: 'Cancel', run: () => void transport.request('git.cancel', { actionId }).catch(() => undefined) }
+                        action: {
+                            label: i18next.t('common:action.cancel'),
+                            run: () => void transport.request('git.cancel', { actionId }).catch(() => undefined)
+                        }
                     })
                 );
             },
@@ -286,10 +290,7 @@ const mergeWithToasts = async (transport: Transport, folder: string, runs: reado
                 const id = toasts.get(actionId);
                 const run = runs.find((entry) => entry.worktree.path === outcome.worktree.path);
                 const skipped = runs.length - 1 - runs.findIndex((entry) => entry.worktree.path === outcome.worktree.path);
-                const rest =
-                    outcome.kind !== 'merged' && skipped > 0
-                        ? ` ${skipped === 1 ? 'The other worktree stays' : `The other ${skipped} worktrees stay`} as ${skipped === 1 ? 'it was' : 'they were'}.`
-                        : '';
+                const rest = outcome.kind !== 'merged' && skipped > 0 ? ` ${i18next.t('shell:merge.othersStay', { count: skipped })}` : '';
                 useToasts.getState().show({ ...(id === undefined ? {} : { id }), ...toastOf(transport, folder, outcome, run, retry, rest) });
             }
         );
@@ -317,45 +318,49 @@ const toastOf = (
             title: outcome.result.summary,
             description:
                 (outcome.result.conflicts?.length ?? 0) > 0
-                    ? `Resolve ${outcome.result.conflicts?.join(', ')} in the git panel and commit, or abort.${rest}`
-                    : `Commit it in the git panel, or abort.${rest}`,
+                    ? i18next.t('shell:merge.resolveThese', { files: outcome.result.conflicts?.join(', '), rest })
+                    : i18next.t('shell:merge.resolve', { rest }),
             kind: 'error',
             output: outcome.result.output,
             action: {
-                label: 'Abort',
+                label: i18next.t('shell:merge.abort'),
                 run: () =>
                     void transport
                         .request('git.worktree-abort', { cwd })
-                        .then(() => useToasts.getState().show({ title: 'Took the merge back', kind: 'success' }))
+                        .then(() => useToasts.getState().show({ title: i18next.t('shell:merge.tookBack'), kind: 'success' }))
                         .catch((error: unknown) =>
-                            useToasts
-                                .getState()
-                                .show({ title: 'Aborting failed', description: error instanceof Error ? error.message : undefined, kind: 'error' })
+                            useToasts.getState().show({
+                                title: i18next.t('shell:merge.abortFailed'),
+                                description: error instanceof Error ? error.message : undefined,
+                                kind: 'error'
+                            })
                         )
             }
         };
     }
-    const title = `Merging ${outcome.worktree.branch} failed`;
+    const title = i18next.t('shell:merge.mergingFailed', { branch: outcome.worktree.branch });
     const base = { title, description: `${outcome.message.split('\n')[0]}${rest}`, kind: 'error' as const, output: outcome.message };
     if (run === undefined) {
         return base;
     }
     if (outcome.code === 'target-not-checked-out') {
         const branch = checkedOutBranch(outcome.message);
-        return branch === null ? base : { ...base, action: { label: `Merge into ${branch}`, run: () => retry(run, { into: branch }) } };
+        return branch === null ? base : { ...base, action: { label: i18next.t('shell:merge.mergeInto', { branch }), run: () => retry(run, { into: branch }) } };
     }
     if (isOverwriteRefusal(outcome)) {
         return {
             ...base,
             action: {
-                label: 'Stash and retry',
+                label: i18next.t('shell:merge.stashAndRetry'),
                 run: () =>
                     void stashTarget(transport, folder, outcome.worktree)
                         .then(() => retry(run, {}))
                         .catch((error: unknown) =>
-                            useToasts
-                                .getState()
-                                .show({ title: 'Stashing failed', description: error instanceof Error ? error.message : undefined, kind: 'error' })
+                            useToasts.getState().show({
+                                title: i18next.t('shell:merge.stashFailed'),
+                                description: error instanceof Error ? error.message : undefined,
+                                kind: 'error'
+                            })
                         )
             }
         };
@@ -368,7 +373,7 @@ const stashTarget = async (transport: Transport, folder: string, worktree: Workt
     const [status, list] = await Promise.all([transport.request('git.status', { cwd: folder }), transport.request('git.worktree-list', { repo: folder })]);
     const cwd = targetCheckout(folder, status.branch, list.worktrees, worktree.from?.branch);
     if (cwd === null) {
-        throw new Error(`${worktree.from?.branch ?? 'The target branch'} is not checked out anywhere.`);
+        throw new Error(i18next.t('shell:merge.notCheckedOut', { branch: worktree.from?.branch ?? i18next.t('shell:merge.targetBranch') }));
     }
     await transport.request('git.action', { cwd, actionId: nextActionId(), kind: 'stash', subject: `Before merging ${worktree.branch}` });
 };

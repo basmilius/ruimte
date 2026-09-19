@@ -7,6 +7,7 @@ import {
     type ProjectViewLocal,
     type SplitLayout
 } from '@ruimte/contracts';
+import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
 import { TransportError, type Transport, type TransportStatus } from '@/transport/transport';
 import type { DrawingState } from '@/state/drawing';
@@ -163,7 +164,9 @@ export class DrawingClient {
         }
         await this.flush();
         await this.flushProject();
-        await this.transport.request('drawing.copy', { projectId, from, to }).catch((e: unknown) => this.report(null, e, 'The drawing could not be copied'));
+        await this.transport
+            .request('drawing.copy', { projectId, from, to })
+            .catch((e: unknown) => this.report(null, e, i18next.t('drawing:error.drawingCopy')));
     }
 
     /* Takes what is on disk, or keeps the screen and writes it over the file's newer rev. */
@@ -299,7 +302,7 @@ export class DrawingClient {
         } catch (e) {
             if (this.open.get(viewId) === drawing) {
                 this.open.delete(viewId);
-                this.report(drawing, e, 'The drawing could not be opened');
+                this.report(drawing, e, i18next.t('drawing:error.drawingOpen'));
             }
         }
     }
@@ -315,7 +318,7 @@ export class DrawingClient {
         try {
             ({ document } = await this.transport.request('drawing.open', { projectId: drawing.projectId, viewId: drawing.viewId }));
         } catch (e) {
-            this.report(drawing, e, 'The drawing could not be opened');
+            this.report(drawing, e, i18next.t('drawing:error.drawingOpen'));
             return;
         }
         if (generation !== drawing.generation || this.open.get(drawing.viewId) !== drawing) {
@@ -390,7 +393,7 @@ export class DrawingClient {
                     stale = true;
                     return;
                 }
-                this.report(drawing, e, 'The drawing could not be saved');
+                this.report(drawing, e, i18next.t('drawing:error.drawingSave'));
             })
             .finally(() => {
                 drawing.saving = null;

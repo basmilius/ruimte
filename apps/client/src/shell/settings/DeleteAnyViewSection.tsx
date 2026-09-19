@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -17,12 +18,13 @@ import { useEndpointConnection } from '@/transport/status';
  * and the icon the machine already carries back unchanged.
  */
 function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
+    const { t } = useTranslation('settings');
     const info = useServers((s) => s.byEndpoint[endpoint.id]);
     const connection = useEndpointConnection(endpoint.id);
     const connected = connection.status === 'open';
     const [busy, setBusy] = useState(false);
     // The row is one of several machines, so the switch says which one it speaks for.
-    const label = `Agents on ${endpoint.label} may delete any view or node`;
+    const label = t('agents.deleteAnyView.rowLabel', { machine: endpoint.label });
 
     const set = async (checked: boolean): Promise<void> => {
         const link = transportFor(endpoint.id);
@@ -48,8 +50,8 @@ function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
             useToasts.getState().show({
                 id: `endpoint-delete-any-view-${endpoint.id}`,
                 kind: 'error',
-                title: `${endpoint.label} could not save the change`,
-                description: e instanceof Error ? e.message : 'The setting is unchanged.'
+                title: t('machine.toast.saveFailed', { machine: endpoint.label }),
+                description: e instanceof Error ? e.message : t('machine.toast.unchanged')
             });
         } finally {
             setBusy(false);
@@ -66,10 +68,10 @@ function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
             }
             description={
                 connected
-                    ? 'Off, an agent only deletes views and nodes it created. On, it can delete any view or node in any project there, including yours.'
+                    ? t('agents.deleteAnyView.description')
                     : connection.noLink === true
-                      ? "Not connected. Change this from the machine's dialog under Remote, or while a project on it is open."
-                      : 'Not answering. Change this once the machine is back.'
+                      ? t('agents.deleteAnyView.notConnected')
+                      : t('machine.notAnswering')
             }
             control={
                 <Toggle checked={info?.agentsDeleteAnyView === true} onChange={(checked) => void set(checked)} label={label} disabled={busy || !connected} />
@@ -83,6 +85,7 @@ function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
  * pane: the pane is about pairing a machine and whether it answers, and this is about an agent.
  */
 export function DeleteAnyViewSection() {
+    const { t } = useTranslation('settings');
     const stored = useEndpoints((s) => s.endpoints);
     const endpoints = useMemo(() => listedEndpoints(stored), [stored]);
     // Nothing here holds a link: opening settings must not connect to every machine, so a switch reads what a connected machine last said.
@@ -94,7 +97,7 @@ export function DeleteAnyViewSection() {
     ];
 
     return (
-        <SettingsSection title="What an agent may delete" description="Saved per machine. Applies to every client connected to it.">
+        <SettingsSection title={t('agents.deleteAnyView.title')} description={t('agents.deleteAnyView.sectionDescription')}>
             {ordered.map((endpoint) => (
                 <DeleteAnyViewRow key={endpoint.id} endpoint={endpoint} />
             ))}

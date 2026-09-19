@@ -1,12 +1,8 @@
+import i18next from 'i18next';
 import { PROTOCOL_VERSION, protocolMismatch, type EndpointInfo, type ProtocolMismatch } from '@ruimte/contracts';
 
-const REFUSALS: Record<ProtocolMismatch, string> = {
-    'daemon-older': 'This machine runs an older Ruimte. Update Ruimte there, or restart it to pick up the update.',
-    'daemon-newer': 'This machine runs a newer Ruimte than this app. Update this app.'
-};
-
 /* What a row and a failed connection say about a machine on another wire version. */
-export const protocolRefusal = (mismatch: ProtocolMismatch): string => REFUSALS[mismatch];
+export const protocolRefusal = (mismatch: ProtocolMismatch): string => i18next.t(`machines:protocol.${mismatch}`);
 
 // A request id the transport never hands out: its own ids are numbers.
 const CHECK_ID = 'protocol';

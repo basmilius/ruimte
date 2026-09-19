@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { create } from 'zustand';
 import type { Machine } from '@ruimte/pulsar';
 import { hasLocalMachine, listedEndpoints } from '@/state/local-machine';
@@ -60,7 +61,7 @@ export const addMachineToAccount = async (endpointId: string): Promise<void> => 
     const account = usePulsarAccount.getState().account;
     const link = transportFor(endpointId);
     if (!account || !link) {
-        throw new Error('Sign in, and connect to the machine, first');
+        throw new Error(i18next.t('machines:account.signInAndConnect'));
     }
     const { registration } = await link.request('endpoint.signRegistration', { accountId: account.id });
     await withAccessToken((client, token) => client.registerMachine(token, registration));
@@ -81,7 +82,7 @@ export const openAccountMachine = (machine: Machine): Endpoint => {
     }
     const row = endpointForAccountMachine(machine);
     if (!row) {
-        throw new Error(`${machine.name} is not connected to a broker yet, so it can only be reached on its own network`);
+        throw new Error(i18next.t('machines:account.noBroker', { name: machine.name }));
     }
     useEndpoints.getState().add(row);
     return row;

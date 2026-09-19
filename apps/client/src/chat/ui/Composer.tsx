@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { indentLess, indentMore, insertNewline } from '@codemirror/commands';
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
@@ -22,7 +23,7 @@ import {
     type MentionQuery,
     type TextRange
 } from '@/chat/mentions';
-import { COMPOSER_STOP_LABEL, composerStopOf } from '@/chat/subagent-list';
+import { composerStopLabel, composerStopOf } from '@/chat/subagent-list';
 import { PROMPT_MAX_CHARS, pasteBecomesAttachment, pastedTextName, promptGuard, usableSlashCommands } from '@/chat/guards';
 import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferences';
 import { STASH_SHORTCUT, stashDraft, type StashedPrompt, useStash } from '@/chat/stash';
@@ -36,6 +37,7 @@ import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { ModelPicker, ModePicker, OptionsPicker, StashPicker } from '@/chat/ui/Pickers';
 import { UploadThumb } from '@/chat/ui/UploadThumb';
 import { isApplePlatform } from '@/desktop/bridge';
+import { formatNumber } from '@/format/number';
 import { useChatRow } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useProviders } from '@/state/providers';
@@ -56,11 +58,7 @@ const NOTICE_MS = 4000;
 const PROMPT_HISTORY = 50;
 
 // Commands the composer handles itself; the CLI's own ones are sent through as text.
-const LOCAL_COMMANDS = [
-    { name: 'model', hint: 'Switch the model' },
-    { name: 'compact', hint: 'Compact the context' },
-    { name: 'clear', hint: 'Start a new context' }
-];
+const LOCAL_COMMANDS = ['model', 'compact', 'clear'];
 
 /* Files and paths dropped on the card become attachments and chips there. CodeMirror would paste a
    file's text, or the drag's own text, at the drop point on top of that. */
@@ -108,6 +106,7 @@ const splitPath = (path: string): { name: string; dir: string } => {
 
 // Keep the editor mounted while a pending request takes over, so its selection and draft survive.
 export function Composer({ chatId, info, focused, onCanvas, disabled, providerFixed, onSend, onRetarget }: ComposerProps) {
+    const { t } = useTranslation('chat');
     const [draft, setDraft] = useState<ChatDraft>(() => readDraft(chatId));
     const [historyIndex, setHistoryIndex] = useState<number | null>(null);
     const [menuIndex, setMenuIndex] = useState(0);
@@ -243,12 +242,17 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
             return [];
         }
         const known = new Set(skills.map((skill) => skill.name));
-        const own = LOCAL_COMMANDS.map((command) => ({ ...command, local: true, skill: false }));
+        const own = LOCAL_COMMANDS.map((name) => ({ name, hint: t(`composer.commands.${name}`), local: true, skill: false }));
         const cli = usableSlashCommands(info.slashCommands)
-            .filter((name) => !LOCAL_COMMANDS.some((command) => command.name === name))
-            .map((name) => ({ name, hint: known.has(name) ? 'Skill' : `${provider?.name ?? 'CLI'} command`, local: false, skill: known.has(name) }));
+            .filter((name) => !LOCAL_COMMANDS.includes(name))
+            .map((name) => ({
+                name,
+                hint: known.has(name) ? t('composer.commands.skill') : t('composer.commands.cli', { cli: provider?.name ?? t('composer.commands.anyCli') }),
+                local: false,
+                skill: known.has(name)
+            }));
         return [...own, ...cli].filter((command) => command.name.startsWith(commandQuery)).slice(0, 8);
-    }, [commandQuery, info.slashCommands, provider?.name, skills]);
+    }, [commandQuery, info.slashCommands, provider?.name, skills, t]);
 
     const skillMatches = useMemo(() => {
         if (skillQuery === null) {
@@ -312,7 +316,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                 setConfirmClear(true);
                 return;
             }
-            setNotice('The thread could not be cleared');
+            setNotice(t('composer.notice.clearFailed'));
         }
     };
 
@@ -389,7 +393,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
             return;
         }
         if (capabilities?.attachments === false) {
-            setNotice(`${provider?.name ?? 'This agent'} takes no attachments`);
+            setNotice(t('composer.notice.noAttachments', { agent: provider?.name ?? t('composer.notice.thisAgent') }));
             return;
         }
         const checked = checkAttachmentLimits(
@@ -398,14 +402,14 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
             draft.attachments.reduce((bytes, attachment) => bytes + uploadBytes(attachment), 0)
         );
         if (checked.rejected[0]) {
-            setNotice(`${checked.rejected[0].name || 'That file'}: ${checked.rejected[0].reason}`);
+            setNotice(t('composer.notice.rejected', { name: checked.rejected[0].name || t('composer.notice.thatFile'), reason: checked.rejected[0].reason }));
         }
         if (checked.accepted.length === 0) {
             return;
         }
         readAttachments(checked.accepted.map((entry) => entry.file))
             .then((attachments) => setDraft((current) => ({ ...current, attachments: [...current.attachments, ...attachments] })))
-            .catch(() => setNotice('That file could not be read'));
+            .catch(() => setNotice(t('composer.notice.unreadable')));
     };
 
     const removeAttachment = (index: number): void => {
@@ -658,7 +662,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
         () => true
     );
 
-    const placeholder = disabled ? 'Not connected to the machine' : 'Ask anything, / for commands, @ for files, $ for skills';
+    const placeholder = disabled ? t('composer.placeholder.disconnected') : t('composer.placeholder.ready');
 
     return (
         <div className="chat-column-content pointer-events-none relative z-10 w-full">
@@ -666,7 +670,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                 in the thread, because the composer is the one thing whose height it always clears. */}
             {!atEnd && (
                 <div className="absolute inset-x-0 bottom-full mb-2 flex justify-center">
-                    <Tooltip label="Jump to the end" name>
+                    <Tooltip label={t('composer.jumpToEnd')} name>
                         <button
                             className={`${FLOAT} pointer-events-auto grid h-8 w-8 place-items-center rounded-full text-text-muted hover:text-text`}
                             onClick={() => scrollTimelineToEnd(chatId)}
@@ -766,9 +770,11 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                     )}
                     {mentionMenuOpen && (
                         <div className="border-b border-border px-1.5 py-1.5">
-                            {mention.query === '' && files.length > 0 && <div className={MENU_LABEL}>Files in this folder</div>}
+                            {mention.query === '' && files.length > 0 && <div className={MENU_LABEL}>{t('composer.mentions.here')}</div>}
                             {files.length === 0 && (
-                                <div className="px-2 py-1 text-xs text-text-faint">{mention.query ? 'No files match' : 'No files here'}</div>
+                                <div className="px-2 py-1 text-xs text-text-faint">
+                                    {mention.query ? t('composer.mentions.noMatch') : t('composer.mentions.empty')}
+                                </div>
                             )}
                             {files.map((path, index) => {
                                 const { name, dir } = splitPath(path);
@@ -794,9 +800,11 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                             {queue.map((message) => (
                                 <div key={message.id} className="group/queued flex items-center gap-2 rounded-md px-1.5 py-1 text-xs text-text-muted">
                                     <Icon icon={Clock} size={12} className="shrink-0 text-text-faint" />
-                                    <span className="min-w-0 grow truncate">{message.text || `${message.attachments?.length ?? 0} attachments`}</span>
+                                    <span className="min-w-0 grow truncate">
+                                        {message.text || t('composer.queue.attachments', { count: message.attachments?.length ?? 0 })}
+                                    </span>
                                     <span className={`${BTN_GROUP} opacity-0 transition-opacity group-hover/queued:opacity-100 focus-within:opacity-100`}>
-                                        <Tooltip label="Send now" name>
+                                        <Tooltip label={t('composer.queue.sendNow')} name>
                                             <button
                                                 className="icon-btn h-5 w-5 rounded"
                                                 onClick={() => void chatClient.sendNow(chatId, message.id).catch(() => undefined)}
@@ -804,7 +812,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                                                 <Icon icon={FastForward} size={12} />
                                             </button>
                                         </Tooltip>
-                                        <Tooltip label="Remove" name>
+                                        <Tooltip label={t('common:action.remove')} name>
                                             <button
                                                 className="icon-btn h-5 w-5 rounded"
                                                 onClick={() => void chatClient.unqueue(chatId, message.id).catch(() => undefined)}
@@ -832,7 +840,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                                             <span className="pl-5 text-xs text-text-faint">{formatBytes(uploadBytes(attachment))}</span>
                                         </span>
                                     )}
-                                    <Tooltip label={`Remove ${attachment.name}`}>
+                                    <Tooltip label={t('composer.removeAttachment', { name: attachment.name })}>
                                         <button
                                             className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-surface-raised text-text-muted opacity-0 transition-opacity hover:text-text group-hover/thumb:opacity-100 focus-visible:opacity-100"
                                             onClick={() => removeAttachment(index)}
@@ -871,8 +879,8 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                     {notice && <div className="px-3.5 pb-1 text-xs text-status-error">{notice}</div>}
                     {guard.visible && (
                         <div className={clsx('px-3.5 pb-1 text-right text-xs tabular-nums', guard.tooLong ? 'text-status-error' : 'text-text-faint')}>
-                            {guard.count.toLocaleString('en-US')} / {PROMPT_MAX_CHARS.toLocaleString('en-US')}
-                            {guard.tooLong && ' characters, too long to send'}
+                            {formatNumber(guard.count)} / {formatNumber(PROMPT_MAX_CHARS)}
+                            {guard.tooLong && ` ${t('composer.tooLong')}`}
                         </div>
                     )}
                     <div className="flex items-center gap-1 px-2 pb-2">
@@ -894,7 +902,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                         <span className="grow" />
                         <ContextMeter usage={info.usage} disabled={busy || disabled} onCompact={() => void chatClient.compact(chatId).catch(() => undefined)} />
                         {busy && (
-                            <Tooltip label={COMPOSER_STOP_LABEL} name>
+                            <Tooltip label={composerStopLabel()} name>
                                 <button
                                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-status-error text-accent-text"
                                     onClick={(event) => stop(event.shiftKey)}
@@ -905,7 +913,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                         )}
                         {/* While a turn runs the same button queues the message instead of sending it. */}
                         {(!busy || !isEmptyDraft(draft)) && (
-                            <Tooltip label={busy ? 'Queue' : 'Send'} kbd={KEY_SHORTCUTS.modEnter} name>
+                            <Tooltip label={busy ? t('composer.queueButton') : t('composer.send')} kbd={KEY_SHORTCUTS.modEnter} name>
                                 <button
                                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-accent-text hover:brightness-90 disabled:opacity-40 disabled:hover:brightness-100"
                                     disabled={isEmptyDraft(draft) || disabled || guard.tooLong}
@@ -922,12 +930,12 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                 <Dialog.Portal>
                     <Dialog.Backdrop className="dialog-backdrop" />
                     <Dialog.Popup className="dialog-popup w-[420px] p-5">
-                        <Dialog.Title className="text-base font-semibold text-text">Clear the thread?</Dialog.Title>
-                        <p className="mt-1 text-xs text-text-muted">A turn is running. Stop it and clear the thread?</p>
+                        <Dialog.Title className="text-base font-semibold text-text">{t('composer.clear.title')}</Dialog.Title>
+                        <p className="mt-1 text-xs text-text-muted">{t('composer.clear.description')}</p>
                         <div className="mt-4 flex items-center justify-end gap-2">
-                            <Button onClick={() => setConfirmClear(false)}>Cancel</Button>
+                            <Button onClick={() => setConfirmClear(false)}>{t('common:action.cancel')}</Button>
                             <Button variant="danger" onClick={() => void clearThread(true)}>
-                                Stop and clear
+                                {t('composer.clear.confirm')}
                             </Button>
                         </div>
                     </Dialog.Popup>

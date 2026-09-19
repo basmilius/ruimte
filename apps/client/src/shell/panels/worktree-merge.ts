@@ -1,16 +1,16 @@
+import i18next from 'i18next';
 import type { Worktree, WorktreeMergePayload, WorktreeMergeResult, WorktreeMergeStrategy } from '@ruimte/contracts';
 import { TransportError } from '@/transport';
 import type { Transport } from '@/transport/transport';
 
-const count = (value: number, one: string, many: string): string => `${value} ${value === 1 ? one : many}`;
+/* The three ways a worktree lands, in the order the dialog offers them. */
+export const MERGE_STRATEGIES: readonly WorktreeMergeStrategy[] = ['squash', 'merge', 'rebase'];
 
-/* The three ways a worktree lands, in the order the dialog offers them, each with the one line it says. */
-export const MERGE_STRATEGIES: ReadonlyArray<{ value: WorktreeMergeStrategy; label: string; line: string }> = [
-    { value: 'squash', label: 'Squash', line: 'One commit on the target with the message below.' },
-    { value: 'merge', label: 'Merge', line: 'A merge commit; every commit of the worktree stays in the history.' },
-    { value: 'rebase', label: 'Rebase', line: 'The commits on top of the target, in a straight line.' }
-];
+/* Asked for when the dialog draws, not held: the language is not in yet at import time. */
+export const mergeStrategyLabel = (value: WorktreeMergeStrategy): string => i18next.t(`panels:worktree.merge.strategy.${value}.label`);
 
+/* The one line under the picker that says what the strategy does. */
+export const mergeStrategyLine = (value: WorktreeMergeStrategy): string => i18next.t(`panels:worktree.merge.strategy.${value}.line`);
 /* "2 commits and 3 uncommitted files", over one worktree or all of a group's; "nothing yet" when there is none. */
 export const mergeContents = (worktrees: readonly Worktree[]): string => {
     let commits = 0;
@@ -20,10 +20,13 @@ export const mergeContents = (worktrees: readonly Worktree[]): string => {
         loose += (worktree.work?.changed ?? 0) + (worktree.work?.untracked ?? 0);
     }
     const parts = [
-        ...(commits > 0 ? [count(commits, 'commit', 'commits')] : []),
-        ...(loose > 0 ? [count(loose, 'uncommitted file', 'uncommitted files')] : [])
+        ...(commits > 0 ? [i18next.t('panels:worktree.counts.commits', { count: commits })] : []),
+        ...(loose > 0 ? [i18next.t('panels:worktree.work.changed', { count: loose })] : [])
     ];
-    return parts.length === 0 ? 'nothing yet' : parts.join(' and ');
+    if (parts.length === 0) {
+        return i18next.t('panels:worktree.merge.nothing');
+    }
+    return parts.length === 1 ? parts[0]! : i18next.t('panels:worktree.work.join', { head: parts[0], tail: parts[1] });
 };
 
 export const hasLooseWork = (worktree: Worktree): boolean => (worktree.work?.changed ?? 0) + (worktree.work?.untracked ?? 0) > 0;
@@ -32,11 +35,17 @@ export const hasLooseWork = (worktree: Worktree): boolean => (worktree.work?.cha
 export const mergeTitle = (worktrees: readonly Worktree[]): string => {
     const targets = new Set(worktrees.map((worktree) => worktree.from?.branch ?? null));
     const into = targets.size === 1 ? [...targets][0] : null;
-    const what = worktrees.length === 1 ? (worktrees[0]?.branch ?? 'worktree') : `${worktrees.length} worktrees`;
-    return into === null || into === undefined ? `Merge ${what}` : `Merge ${what} into ${into}`;
+    const what =
+        worktrees.length === 1
+            ? (worktrees[0]?.branch ?? i18next.t('panels:worktree.merge.one'))
+            : i18next.t('panels:worktree.merge.several', { count: worktrees.length });
+    return into === null || into === undefined
+        ? i18next.t('panels:worktree.merge.title', { what })
+        : i18next.t('panels:worktree.merge.titleInto', { what, into });
 };
 
-/* The message a commit of the worktree's own work gets: the node that did it, or the branch. */
+/* The message a commit of the worktree's own work gets: the node that did it, or the branch. It
+   stays English in every language, because it is written into the repository and not onto a screen. */
 export const defaultSubject = (nodeTitle: string | null, branch: string): string => `${nodeTitle?.trim() || branch}: work of the agent`;
 
 export type MergeOutcome =
@@ -76,7 +85,7 @@ export const runMerges = async (
                 kind: 'refused',
                 worktree: run.worktree,
                 code: error instanceof TransportError ? error.code : 'failed',
-                message: error instanceof Error ? error.message : 'That did not work.'
+                message: error instanceof Error ? error.message : i18next.t('panels:error.generic')
             };
         }
         outcomes.push(outcome);
@@ -115,10 +124,10 @@ export const targetCheckout = (folder: string, folderBranch: string | null, work
 /* What the toast of a merge that went through adds: that the worktree stayed and why, or that it is gone. */
 export const mergedDescription = (result: WorktreeMergeResult): string | undefined => {
     if (result.kept !== undefined) {
-        return `The worktree stays: ${result.kept}`;
+        return i18next.t('panels:worktree.merge.kept', { reason: result.kept });
     }
     if (result.removed === true) {
-        return result.branchDeleted === false ? 'Removed the worktree; its branch stays.' : 'Removed the worktree and its branch.';
+        return result.branchDeleted === false ? i18next.t('panels:worktree.merge.removedKeptBranch') : i18next.t('panels:worktree.merge.removed');
     }
     return undefined;
 };

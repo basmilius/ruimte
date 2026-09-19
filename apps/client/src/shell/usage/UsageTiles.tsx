@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { UsageTotals } from '@ruimte/contracts';
 import { formatTokens, totalTokensOf } from '@/shell/usage/format';
 import { useMoney } from '@/shell/usage/money';
@@ -9,20 +10,21 @@ interface UsageTilesProps {
 
 /* What the period moved, split by the kinds of token that are priced differently. */
 export function UsageTiles({ totals, cacheSavingsUsd }: UsageTilesProps) {
+    const { t } = useTranslation('usage');
     const money = useMoney();
-    const tiles: { label: string; value: string }[] = [
-        { label: 'Processed', value: formatTokens(totalTokensOf(totals)) },
-        { label: 'Uncached input', value: formatTokens(totals.input) },
-        { label: 'Cached input', value: formatTokens(totals.cacheRead) },
-        { label: 'Cache writes', value: formatTokens(totals.cacheWrite) },
-        { label: 'Output', value: formatTokens(totals.output) },
-        { label: 'Cache savings', value: money(cacheSavingsUsd) }
+    const tiles: { id: string; value: string }[] = [
+        { id: 'processed', value: formatTokens(totalTokensOf(totals)) },
+        { id: 'uncachedInput', value: formatTokens(totals.input) },
+        { id: 'cachedInput', value: formatTokens(totals.cacheRead) },
+        { id: 'cacheWrites', value: formatTokens(totals.cacheWrite) },
+        { id: 'output', value: formatTokens(totals.output) },
+        { id: 'cacheSavings', value: money(cacheSavingsUsd) }
     ];
     return (
         <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
             {tiles.map((tile) => (
-                <div key={tile.label} className="rounded-xl border border-border bg-surface px-4 py-3">
-                    <p className="text-xs text-text-muted">{tile.label}</p>
+                <div key={tile.id} className="rounded-xl border border-border bg-surface px-4 py-3">
+                    <p className="text-xs text-text-muted">{t(`tiles.${tile.id}`)}</p>
                     <p className="mt-0.5 text-base font-medium tabular-nums">{tile.value}</p>
                 </div>
             ))}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import {
     Check,
     ChevronRight,
@@ -26,14 +27,6 @@ import { closeVoicePanel, startVoice, stopVoice, undoVoiceAction, undoVoiceActio
 import { idleVoiceBands, type IdleVoiceBands } from '@/voice/idle-waveform';
 import { useVoice, type VoiceAction, type VoiceActionKind, type VoicePhase, type VoiceUtterance } from '@/voice/state';
 import { voiceTimeline, type VoiceTimelineEntry } from '@/voice/timeline';
-
-const phaseLabel: Record<VoicePhase, string> = {
-    idle: 'Ready',
-    connecting: 'Connecting…',
-    listening: 'Listening',
-    closing: 'Ending…',
-    error: 'Needs attention'
-};
 
 const DEFAULT_WIDTH = 380;
 const MIN_WIDTH = 320;
@@ -112,17 +105,19 @@ function useDisplayedWaveform(phase: VoicePhase, inputBands: number[], outputBan
 }
 
 function VoiceStatus({ elapsed, phase }: { elapsed: number; phase: VoicePhase }) {
+    const { t } = useTranslation('voice');
     return (
         <div className="flex shrink-0 items-center gap-1.5 text-[10px] text-text-muted" role="status">
             <span
                 className={clsx('h-1.5 w-1.5 rounded-full', phase === 'listening' ? 'bg-positive' : phase === 'error' ? 'bg-status-error' : 'bg-text-faint')}
             />
-            <span className="tabular-nums">{phase === 'listening' ? `Live · ${durationLabel(elapsed)}` : phaseLabel[phase]}</span>
+            <span className="tabular-nums">{phase === 'listening' ? t('phase.live', { elapsed: durationLabel(elapsed) }) : t(`phase.${phase}`)}</span>
         </div>
     );
 }
 
 function VoiceWaveform({ phase }: { phase: VoicePhase }) {
+    const { t } = useTranslation('voice');
     const inputBands = useVoice((state) => state.inputBands);
     const outputBands = useVoice((state) => state.outputBands);
     const listening = phase === 'listening';
@@ -135,13 +130,17 @@ function VoiceWaveform({ phase }: { phase: VoicePhase }) {
     return (
         <section
             className="relative z-10 shrink-0 px-4 pt-4 pb-5 after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-8 after:bg-gradient-to-b after:from-surface after:to-transparent"
-            aria-label="Conversation audio activity"
+            aria-label={t('waveform')}
         >
             <div className="flex items-center justify-between text-[10px] font-medium tracking-wide uppercase">
-                <span className={inputSpeaking ? 'text-text' : 'text-text-muted'}>You · {inputLabel}</span>
-                <span className={outputSpeaking ? 'text-accent' : 'text-text-muted'}>Voice · {outputLabel}</span>
+                <span className={inputSpeaking ? 'text-text' : 'text-text-muted'}>
+                    {t('speaker.person')} · {inputLabel}
+                </span>
+                <span className={outputSpeaking ? 'text-accent' : 'text-text-muted'}>
+                    {t('speaker.assistant')} · {outputLabel}
+                </span>
             </div>
-            <div className="relative mt-3 flex h-14 items-center gap-0.5" role="img" aria-label="Your voice above the line and Voice below it">
+            <div className="relative mt-3 flex h-14 items-center gap-0.5" role="img" aria-label={t('waveformLines')}>
                 <span className="absolute inset-x-0 top-1/2 z-10 h-px bg-surface" />
                 {displayed.input.map((input, index) => {
                     const output = displayed.output[index] ?? 0;
@@ -178,6 +177,7 @@ function useElapsedSeconds(startedAt: number | null): number {
 }
 
 function ActionEvent({ action }: { action: VoiceAction }) {
+    const { t } = useTranslation('voice');
     const completed = action.status === 'completed';
 
     return (
@@ -195,7 +195,7 @@ function ActionEvent({ action }: { action: VoiceAction }) {
                             size={15}
                             className="col-start-1 row-start-1 text-positive transition-opacity group-hover/action:opacity-0 group-focus-within/action:opacity-0"
                         />
-                        <Tooltip label="Undo action" name>
+                        <Tooltip label={t('actions.undo')} name>
                             <button
                                 className="icon-btn col-start-1 row-start-1 pointer-events-none opacity-0 transition-opacity group-hover/action:pointer-events-auto group-hover/action:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
                                 onClick={() => undoVoiceAction(action.id)}
@@ -220,6 +220,7 @@ const actionDetail = (detail: string): { item: string; context: string | null } 
 };
 
 function ActionGroup({ actions }: { actions: VoiceAction[] }) {
+    const { t } = useTranslation('voice');
     const [open, setOpen] = useState(true);
     const details = actions.map((action) => actionDetail(action.detail));
     const context = details[0]?.context && details.every((detail) => detail.context === details[0]?.context) ? details[0].context : null;
@@ -233,7 +234,7 @@ function ActionGroup({ actions }: { actions: VoiceAction[] }) {
                 <button
                     className="-m-1 grid h-6 w-6 shrink-0 place-items-center rounded-md p-1 hover:bg-surface-hover"
                     type="button"
-                    aria-label={open ? 'Collapse note actions' : 'Expand note actions'}
+                    aria-label={open ? t('actions.collapse') : t('actions.expand')}
                     aria-expanded={open}
                     onClick={() => setOpen(!open)}
                 >
@@ -253,7 +254,7 @@ function ActionGroup({ actions }: { actions: VoiceAction[] }) {
                 </button>
                 <button className="min-w-0 grow text-left" type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
                     <span className="min-w-0 grow truncate text-xs text-text">
-                        <span className="font-medium">{actions.length} notes added</span>
+                        <span className="font-medium">{t('actions.notesAdded', { count: actions.length })}</span>
                         {context && <span className="text-text-muted"> · {context}</span>}
                     </span>
                 </button>
@@ -265,7 +266,7 @@ function ActionGroup({ actions }: { actions: VoiceAction[] }) {
                                 size={15}
                                 className="col-start-1 row-start-1 text-positive transition-opacity group-hover/action-group:opacity-0 group-focus-within/action-group:opacity-0"
                             />
-                            <Tooltip label={`Undo ${actions.length} note actions`} name>
+                            <Tooltip label={t('actions.undoGroup', { count: actions.length })} name>
                                 <button
                                     className="icon-btn col-start-1 row-start-1 pointer-events-none opacity-0 transition-opacity group-hover/action-group:pointer-events-auto group-hover/action-group:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
                                     onClick={() => undoVoiceActions(undoableIds)}
@@ -298,6 +299,7 @@ function ActionGroup({ actions }: { actions: VoiceAction[] }) {
 const isActionEntry = (entry: VoiceTimelineEntry): boolean => entry.kind === 'action' || entry.kind === 'action-group';
 
 function TranscriptEntry({ streaming, utterance }: { streaming: boolean; utterance: VoiceUtterance }) {
+    const { t } = useTranslation('voice');
     return (
         <div>
             <div
@@ -306,17 +308,18 @@ function TranscriptEntry({ streaming, utterance }: { streaming: boolean; utteran
                     utterance.speaker === 'assistant' ? 'text-accent' : 'text-text-muted'
                 )}
             >
-                {utterance.speaker === 'assistant' ? 'Voice' : 'You'} · {durationLabel(Math.floor(utterance.startMs / 1_000))}
+                {utterance.speaker === 'assistant' ? t('speaker.assistant') : t('speaker.person')} · {durationLabel(Math.floor(utterance.startMs / 1_000))}
             </div>
             <p className="text-sm leading-6 text-text whitespace-pre-wrap [text-wrap:pretty]">
                 {streaming ? <FadingWords text={utterance.text} /> : utterance.text}
             </p>
-            {utterance.interrupted && <p className="mt-1 text-[10px] text-text-faint">Interrupted</p>}
+            {utterance.interrupted && <p className="mt-1 text-[10px] text-text-faint">{t('speaker.interrupted')}</p>}
         </div>
     );
 }
 
 export function VoicePanel() {
+    const { t } = useTranslation('voice');
     const open = useVoice((state) => state.open);
     const phase = useVoice((state) => state.phase);
     const error = useVoice((state) => state.error);
@@ -357,10 +360,10 @@ export function VoicePanel() {
                     >
                         <span className="flex grow items-center gap-2 text-xs font-semibold text-text">
                             <Icon icon={Mic} size={14} className="text-text-muted" />
-                            Voice
+                            {t('title')}
                         </span>
                         <VoiceStatus elapsed={elapsed} phase={phase} />
-                        <Tooltip label="Close voice panel" name>
+                        <Tooltip label={t('close')} name>
                             <button className="icon-btn" onClick={closeVoicePanel}>
                                 <Icon icon={X} size={16} />
                             </button>
@@ -375,12 +378,8 @@ export function VoicePanel() {
                                         <Icon icon={Mic} size={17} />
                                     </div>
                                 )}
-                                <p className="text-sm font-medium text-text">{active ? 'Listening…' : 'Talk to your workspace'}</p>
-                                {!active && (
-                                    <p className="max-w-64 text-xs leading-relaxed text-text-muted">
-                                        Ask about what is on screen, focus another view, add a note or open a terminal.
-                                    </p>
-                                )}
+                                <p className="text-sm font-medium text-text">{active ? t('empty.listening') : t('empty.title')}</p>
+                                {!active && <p className="max-w-64 text-xs leading-relaxed text-text-muted">{t('empty.description')}</p>}
                             </div>
                         )}
                         <div>
@@ -410,7 +409,7 @@ export function VoicePanel() {
                             onClick={() => (active ? stopVoice() : void startVoice())}
                         >
                             <Icon icon={active ? MicOff : Mic} size={14} />
-                            {active ? 'End conversation' : transcript.length > 0 ? 'Start new conversation' : 'Start Voice conversation'}
+                            {active ? t('conversation.end') : transcript.length > 0 ? t('conversation.restart') : t('conversation.start')}
                         </Button>
                     </footer>
                 </div>

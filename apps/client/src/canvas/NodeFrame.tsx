@@ -1,6 +1,7 @@
 import type { CanvasNodeKind } from '@ruimte/contracts';
 import { memo, useMemo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import {
     ChevronDown,
@@ -78,14 +79,6 @@ const ICONS: Record<CanvasNodeKind, ReactNode> = {
     unknown: <Icon icon={CircleQuestionMark} size={14} />
 };
 
-const STATUS_LABEL: Record<AgentStatus, string> = {
-    running: 'Running',
-    'needs-you': 'Needs you',
-    idle: 'Idle',
-    error: 'Error',
-    exited: 'Session ended'
-};
-
 const STATUS_CLASS: Record<AgentStatus, string> = {
     running: 'bg-status-running',
     'needs-you': 'bg-status-needs-you',
@@ -115,13 +108,14 @@ const EDGE_STYLE: Record<(typeof RESIZE_EDGES)[number], string> = {
 /* `plain` drops the tooltip: inside a control that already has a name of its own, a second tooltip
    under the pointer only fights the first one. */
 export function StatusDot({ status, className, plain = false }: { status: AgentStatus; className?: string; plain?: boolean }) {
+    const { t } = useTranslation('canvas');
     const dot = (
         <span className={clsx('inline-block h-2 w-2 shrink-0 rounded-full', STATUS_CLASS[status], status === 'running' && 'animate-pulse', className)} />
     );
     if (plain) {
         return dot;
     }
-    return <Tooltip label={STATUS_LABEL[status]}>{dot}</Tooltip>;
+    return <Tooltip label={t(`status.${status}`)}>{dot}</Tooltip>;
 }
 
 function Title({ id, title, editing, muted, onDone }: { id: string; title: string; editing: boolean; muted: boolean; onDone: () => void }) {
@@ -166,15 +160,17 @@ function Title({ id, title, editing, muted, onDone }: { id: string; title: strin
  * every frame; the children it hands through are the same elements and React skips them.
  */
 function NodeBodyBoundary({ kind, children }: { kind: CanvasNodeKind; children: ReactNode }) {
+    const { t } = useTranslation('canvas');
     const rev = useProject((s) => s.rev);
     return (
-        <ErrorBoundary label="This node failed to render" resetKeys={[rev, kind]} compact>
+        <ErrorBoundary label={t('node.failed')} resetKeys={[rev, kind]} compact>
             {children}
         </ErrorBoundary>
     );
 }
 
 export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: number }) {
+    const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
     const transport = useOptionalConnection()?.transport ?? null;
     const node = useCanvas((s) => s.nodes[id]);
@@ -276,7 +272,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                     )}
                 >
                     {isGroup && (
-                        <Tooltip label={collapsed ? 'Expand' : 'Collapse'} name>
+                        <Tooltip label={collapsed ? t('group.expand') : t('group.collapse')} name>
                             <button className="icon-btn h-7 w-7" onClick={() => canvasStore.getState().toggleGroupCollapse(id)}>
                                 {collapsed ? <Icon icon={ChevronRight} size={16} /> : <Icon icon={ChevronDown} size={16} />}
                             </button>
@@ -304,7 +300,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                         )}
                     </span>
                     {node.kind === 'chat' && !renaming && <SubagentBreadcrumb chatId={id} className="grow" />}
-                    {collapsed && <Pill className="tabular-nums">{node.memberIds?.length ?? 0} inside</Pill>}
+                    {collapsed && <Pill className="tabular-nums">{t('group.inside', { count: node.memberIds?.length ?? 0 })}</Pill>}
                     {node.kind === 'chat' && !renaming && <ForkPill chatId={id} />}
                     {node.kind === 'chat' && !renaming && <PlanPill chatId={id} />}
                     {nodeWorktree && !renaming && (
@@ -317,7 +313,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                     {isGroup && !node.worktree && groupWorktrees.length > 0 && (
                         <Tooltip label={groupWorktrees.map((worktree) => worktree.branch).join(', ')}>
                             <Pill className="tabular-nums" icon={<Icon icon={GitBranch} size={12} />}>
-                                {groupWorktrees.length === 1 ? '1 worktree' : `${groupWorktrees.length} worktrees`}
+                                {t('group.worktrees', { count: groupWorktrees.length })}
                             </Pill>
                         </Tooltip>
                     )}
@@ -329,13 +325,13 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                         </Tooltip>
                     )}
                     {node.kind === 'terminal' && hasContext && !renaming && (
-                        <Tooltip label="Linked context. The agent reads it with ruimte-context.">
-                            <Pill icon={<Icon icon={Link2} size={12} />}>context</Pill>
+                        <Tooltip label={t('node.context.tooltip')}>
+                            <Pill icon={<Icon icon={Link2} size={12} />}>{t('node.context.pill')}</Pill>
                         </Tooltip>
                     )}
                     {status && !renaming && (
                         <Pill className="gap-1.5" icon={<StatusDot status={status} plain />}>
-                            {STATUS_LABEL[status]}
+                            {t(`status.${status}`)}
                         </Pill>
                     )}
                     {/* Up close this is already gone, since looking clears it. It is for the canvas
@@ -347,12 +343,12 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                     {node.kind === 'device' && <DeviceToolbar id={id} />}
                     <div className={`${BTN_GROUP} shrink-0`}>
                         {node.kind === 'chat' && <SubagentButton chatId={id} />}
-                        <Tooltip label="Zoom to node" name>
+                        <Tooltip label={t('node.zoomTo')} name>
                             <button className="icon-btn h-7 w-7" onClick={() => canvasStore.getState().goToNode(id)}>
                                 <Icon icon={Maximize2} size={16} />
                             </button>
                         </Tooltip>
-                        <Tooltip label="Close node" name>
+                        <Tooltip label={t('node.close')} name>
                             <button className="icon-btn h-7 w-7" onClick={remove}>
                                 <Icon icon={X} size={16} />
                             </button>

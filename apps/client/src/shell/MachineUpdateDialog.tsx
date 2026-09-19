@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { desktop, type BackgroundServiceState } from '@/desktop/bridge';
 import { machineUpdateAnswer, machineUpdatePrompt, type MachineUpdateAnswer } from '@/shell/machine-update';
@@ -10,6 +11,7 @@ import { Button } from '@/ui/Button';
  * inside the desktop app, where the shell carries the restart out.
  */
 export function MachineUpdateDialog() {
+    const { t } = useTranslation('shell');
     const bridge = desktop()?.backgroundService ?? null;
     const [state, setState] = useState<BackgroundServiceState | null>(null);
     const [busy, setBusy] = useState(false);
@@ -64,10 +66,10 @@ export function MachineUpdateDialog() {
                     <Dialog.Description className="mt-1 text-xs break-words text-text-muted">{prompt.description}</Dialog.Description>
                     <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
                         <Button variant="danger" disabled={busy} onClick={() => void answer(machineUpdateAnswer('restart'))}>
-                            Restart now
+                            {t('machineUpdate.restartNow')}
                         </Button>
                         <Button autoFocus disabled={busy} onClick={() => void answer(machineUpdateAnswer('idle'))}>
-                            When idle
+                            {t('machineUpdate.whenIdle')}
                         </Button>
                     </div>
                 </Dialog.Popup>

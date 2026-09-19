@@ -24,6 +24,7 @@ import {
     Workflow
 } from 'lucide-react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { isCanvasView, isSessionView, type AgentKind, type CanvasNodeKind, viewIconOf } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { renameViewAction } from '@/actions/client-actions';
@@ -166,8 +167,9 @@ function RenameField({ value, onDone }: { value: string; onDone(next: string | n
 
 /* A folded canvas still says one of its nodes has a warning, the way it says one needs you. */
 function ProcessWarningMark() {
+    const { t } = useTranslation('shell');
     return (
-        <Tooltip label="Process warning, see the processes panel">
+        <Tooltip label={t('sidebar.processWarning')}>
             <span className="inline-flex shrink-0 text-status-needs-you">
                 <Icon icon={TriangleAlert} size={12} />
             </span>
@@ -176,6 +178,7 @@ function ProcessWarningMark() {
 }
 
 function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarNodeRow }) {
+    const { t } = useTranslation('shell');
     const { node } = row;
     const title = useBrowserDisplayTitle(node.id, node.title, node.titleSource);
     const picked = useCanvas((s) => s.selection.includes(node.id));
@@ -235,7 +238,7 @@ function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarN
                 {row.viewName && <span className="min-w-0 shrink truncate text-xs text-text-faint">{row.viewName}</span>}
                 <span className="grow" />
                 {node.draft && (
-                    <Tooltip label="Unsent draft">
+                    <Tooltip label={t('sidebar.unsentDraft')}>
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />
                     </Tooltip>
                 )}
@@ -262,6 +265,7 @@ interface ViewRowProps extends RowProps {
  * reorders like any other row, because it earns its keep by where it sits between them.
  */
 function SeparatorRow({ row, tabbable, onFocus, onArrow, onDelete, onDrag }: Omit<ViewRowProps, 'onToggle'>) {
+    const { t } = useTranslation(['shell', 'common']);
     const { view } = row;
     return (
         <ContextMenu.Root>
@@ -269,7 +273,7 @@ function SeparatorRow({ row, tabbable, onFocus, onArrow, onDelete, onDrag }: Omi
                 render={<div />}
                 draggable
                 role="separator"
-                aria-label="Separator"
+                aria-label={t('viewKinds.separator')}
                 data-sidebar-row={row.rowId}
                 data-view-index={row.index}
                 tabIndex={tabbable ? 0 : -1}
@@ -290,7 +294,7 @@ function SeparatorRow({ row, tabbable, onFocus, onArrow, onDelete, onDrag }: Omi
                 <ContextMenu.Positioner className="z-(--z-popup)">
                     <ContextMenu.Popup className="menu-popup">
                         <ContextMenu.Item className="menu-item text-status-error" onClick={onDelete}>
-                            <Icon icon={Trash} size={14} /> Delete
+                            <Icon icon={Trash} size={14} /> {t('common:action.delete')}
                         </ContextMenu.Item>
                     </ContextMenu.Popup>
                 </ContextMenu.Positioner>
@@ -305,6 +309,7 @@ function SeparatorRow({ row, tabbable, onFocus, onArrow, onDelete, onDrag }: Omi
  * person may still delete it.
  */
 function UnknownViewRow({ row, tabbable, onFocus, onArrow, onDelete }: Omit<ViewRowProps, 'onToggle' | 'onDrag'>) {
+    const { t } = useTranslation(['shell', 'common']);
     const { view } = row;
     return (
         <ContextMenu.Root>
@@ -323,7 +328,7 @@ function UnknownViewRow({ row, tabbable, onFocus, onArrow, onDelete }: Omit<View
                     }
                 }}
             >
-                <Tooltip label="This view needs a newer version of Ruimte">
+                <Tooltip label={t('sidebar.needsNewerRuimte')}>
                     <span className="flex min-w-0 grow items-center gap-2">
                         <span className={ICON_SLOT}>
                             <ViewGlyph id={view.id} kind={view.kind} />
@@ -336,7 +341,7 @@ function UnknownViewRow({ row, tabbable, onFocus, onArrow, onDelete }: Omit<View
                 <ContextMenu.Positioner className="z-(--z-popup)">
                     <ContextMenu.Popup className="menu-popup">
                         <ContextMenu.Item className="menu-item text-status-error" onClick={onDelete}>
-                            <Icon icon={Trash} size={14} /> Delete
+                            <Icon icon={Trash} size={14} /> {t('common:action.delete')}
                         </ContextMenu.Item>
                     </ContextMenu.Popup>
                 </ContextMenu.Positioner>
@@ -346,6 +351,7 @@ function UnknownViewRow({ row, tabbable, onFocus, onArrow, onDelete }: Omit<View
 }
 
 function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }: ViewRowProps) {
+    const { t } = useTranslation(['shell', 'common']);
     const { view } = row;
     const title = useBrowserDisplayTitle(view.id, view.name, view.titleSource);
     const [renaming, setRenaming] = useState(false);
@@ -433,11 +439,11 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                 <span className="min-w-0 truncate">{view.kind === 'browser' ? title : view.name}</span>
                 {/* Colour alone would say nothing to a screen reader, and a view standing in another
                     cell is not the same as one that is closed. */}
-                {row.beside && <span className="sr-only">, open in another cell</span>}
+                {row.beside && <span className="sr-only">{t('sidebar.openInAnotherCell')}</span>}
                 <span className="grow" />
                 {row.count > 0 && <span className="shrink-0 text-xs tabular-nums text-text-faint">{row.count}</span>}
                 {row.draft && (
-                    <Tooltip label="Unsent draft">
+                    <Tooltip label={t('sidebar.unsentDraft')}>
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />
                     </Tooltip>
                 )}
@@ -448,29 +454,29 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
                 <ContextMenu.Positioner className="z-(--z-popup)">
                     <ContextMenu.Popup className="menu-popup">
                         <ContextMenu.Item className="menu-item" onClick={() => setRenaming(true)}>
-                            <Icon icon={Pencil} size={14} /> Rename <kbd>F2</kbd>
+                            <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <kbd>F2</kbd>
                         </ContextMenu.Item>
                         <ContextMenu.Item className="menu-item" onClick={() => askViewIcon(view.id)}>
-                            <Icon icon={Smile} size={14} /> Change icon…
+                            <Icon icon={Smile} size={14} /> {t('viewMenu.changeIcon')}
                         </ContextMenu.Item>
                         {(view.kind === 'canvas' || view.kind === 'drawing' || view.kind === 'diagram') && (
                             <ContextMenu.Item className="menu-item" onClick={() => duplicateViewOf(view.id)}>
-                                <Icon icon={Copy} size={14} /> Duplicate
+                                <Icon icon={Copy} size={14} /> {t('sidebar.duplicate')}
                             </ContextMenu.Item>
                         )}
                         {view.kind !== 'canvas' && view.kind !== 'drawing' && view.kind !== 'diagram' && view.kind !== 'file' && (
                             <ContextMenu.Item className="menu-item" onClick={() => putOnCanvas(view.id)}>
-                                <Icon icon={Frame} size={14} /> Put on canvas
+                                <Icon icon={Frame} size={14} /> {t('viewMenu.putOnCanvas')}
                             </ContextMenu.Item>
                         )}
                         {view.kind === 'chat' && <ForkMenuItem chatId={view.id} />}
                         {(view.kind === 'drawing' || view.kind === 'diagram' || view.kind === 'file') && (
                             <ContextMenu.Item className="menu-item" onClick={() => showViewOnCanvas(view.id)}>
-                                <Icon icon={Frame} size={14} /> Show on the canvas
+                                <Icon icon={Frame} size={14} /> {t('viewMenu.showOnCanvas')}
                             </ContextMenu.Item>
                         )}
                         <ContextMenu.Item className="menu-item text-status-error" onClick={onDelete}>
-                            <Icon icon={Trash} size={14} /> Delete
+                            <Icon icon={Trash} size={14} /> {t('common:action.delete')}
                         </ContextMenu.Item>
                     </ContextMenu.Popup>
                 </ContextMenu.Positioner>
@@ -480,6 +486,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
 }
 
 export function Sidebar() {
+    const { t } = useTranslation('shell');
     const source = useSidebarSource();
     const endpointId = useEndpointId();
     const sessions = useSessions((s) => s.byKey);
@@ -630,7 +637,7 @@ export function Sidebar() {
                 <div ref={listRef} className="mt-2 min-h-0 grow overflow-auto px-2">
                     {empty ? (
                         <div className="flex flex-col gap-2 px-1 pt-2">
-                            <p className="px-1 text-xs text-text-muted">This project has no views yet. Start with one of these.</p>
+                            <p className="px-1 text-xs text-text-muted">{t('sidebar.noViews')}</p>
                             <NewViewTiles />
                         </div>
                     ) : (
@@ -745,7 +752,7 @@ export function Sidebar() {
                 <div className="flex shrink-0 items-center gap-1 border-t border-border p-2">
                     <Menu.Root>
                         <Menu.Trigger className="flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-50 disabled:hover:bg-transparent data-[popup-open]:bg-surface-active">
-                            <Icon icon={Plus} size={14} /> New view
+                            <Icon icon={Plus} size={14} /> {t('viewMenu.newView')}
                         </Menu.Trigger>
                         <Menu.Portal>
                             <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={6} align="start">
@@ -757,11 +764,11 @@ export function Sidebar() {
                     </Menu.Root>
                     <ConnectionDot />
                     <UsageLimitsCard>
-                        <button className="icon-btn" aria-label="Usage" onClick={() => useUi.getState().setUsageOpen(true)}>
+                        <button className="icon-btn" aria-label={t('sidebar.usage')} onClick={() => useUi.getState().setUsageOpen(true)}>
                             <Icon icon={ChartNoAxesColumn} size={16} />
                         </button>
                     </UsageLimitsCard>
-                    <Tooltip label="Settings" kbd={APP_SHORTCUTS.settings} name>
+                    <Tooltip label={t('settingsDialog.title')} kbd={APP_SHORTCUTS.settings} name>
                         <button className="icon-btn" onClick={() => useUi.getState().setSettings({ open: true })}>
                             <Icon icon={Settings} size={16} />
                         </button>

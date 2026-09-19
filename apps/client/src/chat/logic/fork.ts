@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import {
     isCanvasView,
     type AgentKind,
@@ -35,16 +36,16 @@ const turnsOf = (items: Record<string, ChatItem>, order: readonly string[]): Cha
  */
 export const forkRefusal = (info: ChatInfo | null, turn: ChatItem | undefined): string | null => {
     if (info === null || turn?.kind !== 'turn') {
-        return 'This turn is not in the conversation';
+        return i18next.t('chat:fork.refusal.notInConversation');
     }
     if (!FORKABLE_PROVIDERS.has(info.provider)) {
-        return 'This CLI has no conversation that can be forked';
+        return i18next.t('chat:fork.refusal.cliCannotFork');
     }
     if (info.agentSessionId === null) {
-        return 'The CLI never started a conversation here';
+        return i18next.t('chat:fork.refusal.noConversation');
     }
     if (turn.state === 'running' || info.activeTurnId !== null) {
-        return 'Wait for the turn to end';
+        return i18next.t('chat:fork.refusal.turnRunning');
     }
     return null;
 };
@@ -52,10 +53,10 @@ export const forkRefusal = (info: ChatInfo | null, turn: ChatItem | undefined): 
 /* Why a fork cannot write a summary for its original right now, or null when it can. */
 export const summaryRefusal = (state: { busy: boolean; originalPresent: boolean }): string | null => {
     if (!state.originalPresent) {
-        return 'The original is no longer in this project';
+        return i18next.t('chat:fork.refusal.originalGone');
     }
     if (state.busy) {
-        return 'Wait for the turn to end';
+        return i18next.t('chat:fork.refusal.turnRunning');
     }
     return null;
 };
@@ -94,12 +95,12 @@ export const forkPointOf = (items: Record<string, ChatItem>, order: readonly str
 
 /* The line at the top of the dialog: which turn, and what it was about. */
 export const forkPointLabel = (point: ForkPoint, maxPrompt = 60): string => {
-    const where = point.last ? 'After the last turn' : `After turn ${point.number} of ${point.total}`;
+    const where = point.last ? i18next.t('chat:fork.point.afterLast') : i18next.t('chat:fork.point.afterTurn', { number: point.number, total: point.total });
     if (point.prompt === null) {
         return where;
     }
     const prompt = point.prompt.length > maxPrompt ? `${point.prompt.slice(0, maxPrompt - 3)}...` : point.prompt;
-    return `${where}: "${prompt}"`;
+    return i18next.t('chat:fork.point.about', { where, prompt });
 };
 
 /* The turn a row of the thread belongs to, which is the turn "Fork from here" on that row goes on after. */
@@ -168,10 +169,10 @@ export const forkPayload = (input: {
 export const branchRefusal = (branch: string, taken: readonly string[]): string | null => {
     const name = branch.trim();
     if (name === '') {
-        return 'Name the branch';
+        return i18next.t('chat:fork.branch.unnamed');
     }
     if (taken.includes(name)) {
-        return 'A branch with this name exists already';
+        return i18next.t('chat:fork.branch.taken');
     }
     return null;
 };

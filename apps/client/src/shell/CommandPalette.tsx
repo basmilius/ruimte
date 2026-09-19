@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
+import i18next from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import {
     ArrowLeft,
@@ -118,7 +120,7 @@ interface Entry extends Command {
     here?: boolean;
     /* Pushed to the end of the row, where a state belongs: the hint next to a name is about the name. */
     trailing?: React.ReactNode;
-    section: 'Recent' | 'Jump to' | 'Files' | 'Views' | 'Projects' | 'Actions' | 'Folders' | 'Machines';
+    section: 'recent' | 'jump' | 'files' | 'views' | 'projects' | 'actions' | 'folders' | 'machines';
     /* The folder a browse row stands for: what Enter steps into, and what Tab completes the field
        to without stepping in. Navigating is the palette's own business, so such a row has no `run`. */
     browsePath?: string;
@@ -139,7 +141,7 @@ const requestBrowse = async (endpointId: string, partialPath: string, cwd: strin
         const socket = transportFor(await ensureMachine(endpointId)) ?? fallback;
         return { result: await socket.request('fs.browse', { partialPath, cwd: cwd ?? undefined }), failure: null };
     } catch (e) {
-        return { result: null, failure: e instanceof Error ? e.message : 'That path cannot be read' };
+        return { result: null, failure: e instanceof Error ? e.message : i18next.t('shell:palette.unreadablePath') };
     }
 };
 
@@ -176,6 +178,7 @@ function SearchToggle({ icon, label, active, onClick }: { icon: LucideIcon; labe
 
 /* Cmd+K: jump to a node, run an action, or type a path to open a folder as a project. */
 export function CommandPalette() {
+    const { t } = useTranslation(['shell', 'common']);
     const open = useUi((s) => s.paletteOpen);
     const seed = useUi((s) => s.paletteSeed);
     const setOpen = useUi((s) => s.setPaletteOpen);
@@ -535,7 +538,7 @@ export function CommandPalette() {
                                 <span className={clsx('h-1.5 w-1.5 shrink-0 rounded-full', linkDot(link))} />
                             </>
                         ),
-                        section: 'Machines' as const,
+                        section: 'machines' as const,
                         run: () => chooseMachine(row.endpointId)
                     };
                 });
@@ -553,7 +556,7 @@ export function CommandPalette() {
                     id: 'browse-up',
                     label: '..',
                     icon: <Icon icon={CornerLeftUp} size={14} />,
-                    section: 'Folders',
+                    section: 'folders',
                     browsePath: up,
                     run: () => undefined
                 });
@@ -566,7 +569,7 @@ export function CommandPalette() {
                     id: `dir-${entry.fullPath}`,
                     label: entry.name,
                     icon: entry.hasCanvas ? <Icon icon={FolderCheck} size={14} /> : <Icon icon={Folder} size={14} />,
-                    section: 'Folders',
+                    section: 'folders',
                     browsePath: entry.fullPath,
                     run: () => undefined
                 });
@@ -585,10 +588,10 @@ export function CommandPalette() {
                 .map((node) => ({
                     id: `node-${node.id}`,
                     label: node.title,
-                    hint: here ? node.kind : `${node.kind} in ${view.name}`,
+                    hint: here ? t(`nodeKinds.${node.kind}`) : t('palette.kindInView', { kind: t(`nodeKinds.${node.kind}`), view: view.name }),
                     icon: KIND_ICON[node.kind],
                     here,
-                    section: 'Jump to' as const,
+                    section: 'jump' as const,
                     run: () => revealNode(node.id)
                 }));
         });
@@ -605,7 +608,7 @@ export function CommandPalette() {
                     path={view.kind === 'file' ? view.path : null}
                 />
             ),
-            section: 'Views' as const,
+            section: 'views' as const,
             run: () => showView(view.id)
         }));
         /* One list with the machine on the row, rather than a section per machine: a project is
@@ -614,15 +617,15 @@ export function CommandPalette() {
         const switches: Entry[] = projects
             .filter((row) => row.summary.available && !(row.summary.projectId === currentProjectId && row.endpointId === currentEndpointId))
             .map(({ endpointId, summary }) => {
-                const where = summary.folder ?? 'Not in a folder';
-                const label = endpoints.find((endpoint) => endpoint.id === endpointId)?.label ?? 'Another machine';
-                const machine = connected.includes(endpointId) ? label : `${label}, not connected`;
+                const where = summary.folder ?? t('projectMenu.noFolder');
+                const label = endpoints.find((endpoint) => endpoint.id === endpointId)?.label ?? t('start.anotherMachine');
+                const machine = connected.includes(endpointId) ? label : t('palette.machineNotConnected', { machine: label });
                 return {
                     id: `project-${endpointId}-${summary.projectId}`,
                     label: summary.name,
                     hint: projectMachines.size > 1 ? `${machine} · ${where}` : where,
                     icon: <ProjectGlyph projectId={summary.projectId} endpointId={endpointId} icon={summary.icon} color={summary.color} size={14} />,
-                    section: 'Projects',
+                    section: 'projects',
                     run: () => void openProject(endpointId, summary.projectId).catch(() => undefined)
                 };
             });
@@ -636,7 +639,7 @@ export function CommandPalette() {
                 // The folder the file sits in; a name on its own says too little in a deep tree.
                 hint: path.slice(0, Math.max(path.length - name.length - 1, 0)) || undefined,
                 icon: <FileIcon path={path} size={14} />,
-                section: 'Files' as const,
+                section: 'files' as const,
                 run: () => openFile(path)
             };
         });
@@ -657,10 +660,10 @@ export function CommandPalette() {
             const split = sortByRecency(commands, recents);
             const featured = split.rest.filter((command) => OPENING_COMMAND_IDS.includes(command.id));
             return [
-                ...split.recent.slice(0, OPENING_RECENTS).map((command) => asEntry(command, 'Recent')),
+                ...split.recent.slice(0, OPENING_RECENTS).map((command) => asEntry(command, 'recent')),
                 ...jumps.filter((entry) => entry.here === true).slice(0, OPENING_JUMPS),
                 ...viewSwitches,
-                ...featured.map((command) => asEntry(command, 'Actions'))
+                ...featured.map((command) => asEntry(command, 'actions'))
             ];
         }
         /* Every section is filtered on its own, so the file results can keep their place in the
@@ -672,7 +675,7 @@ export function CommandPalette() {
             ...files,
             ...viewSwitches.filter(keep),
             ...switches.filter(keep),
-            ...commands.map((command) => asEntry(command, 'Actions')).filter(keep)
+            ...commands.map((command) => asEntry(command, 'actions')).filter(keep)
         ];
     }, [
         browsing,
@@ -698,7 +701,8 @@ export function CommandPalette() {
         projects,
         servers,
         currentProjectId,
-        currentEndpointId
+        currentEndpointId,
+        t
     ]);
 
     /* Every list opens with its first row highlighted, browsing included, so Enter walks into the
@@ -750,11 +754,11 @@ export function CommandPalette() {
         }
     };
 
-    const browseLabel = browseRow?.label ?? endpoints.find((endpoint) => endpoint.id === browseEndpointId)?.label ?? 'This machine';
+    const browseLabel = browseRow?.label ?? endpoints.find((endpoint) => endpoint.id === browseEndpointId)?.label ?? t('connection.thisMachine');
     const browseIcon = browseRow ? iconOfEntry(browseRow.entry, servers[browseEndpointId]?.icon ?? null) : (servers[browseEndpointId]?.icon ?? null);
     const backTo = browse === null ? null : browseBack(browse, machines.length).to;
-    const backLabel = backTo === 'folders' ? 'Back to the folders' : backTo === 'machines' ? 'Browse another machine' : 'Back to the palette';
-    const submitLabel = presence === 'missing' ? 'Create and open' : 'Open folder';
+    const backLabel = backTo === 'folders' ? t('palette.backToFolders') : backTo === 'machines' ? t('palette.browseAnother') : t('palette.backToPalette');
+    const submitLabel = presence === 'missing' ? t('palette.createAndOpen') : t('projectMenu.openFolder');
     // Enter means "use what I typed" until a row is highlighted, and then the shortcut takes that over.
     const submitShortcut = active === undefined ? KEY_SHORTCUTS.enter : KEY_SHORTCUTS.modEnter;
     /* The shell's own picker, which only makes sense for the daemon that served this page: the word
@@ -775,7 +779,7 @@ export function CommandPalette() {
             return;
         }
         // Jumping to a node, a file, a view or a project is not a command; only what "Actions" lists comes back.
-        if (entry.section !== 'Jump to' && entry.section !== 'Files' && entry.section !== 'Views' && entry.section !== 'Projects') {
+        if (entry.section !== 'jump' && entry.section !== 'files' && entry.section !== 'views' && entry.section !== 'projects') {
             setRecents(rememberRecent(entry.id));
         }
         setOpen(false);
@@ -833,13 +837,7 @@ export function CommandPalette() {
                             aria-activedescendant={
                                 grepping ? (activeHit >= 0 ? optionId(activeHit) : undefined) : active ? optionId(entries.indexOf(active)) : undefined
                             }
-                            aria-label={
-                                grepping
-                                    ? 'Search the files in this folder'
-                                    : picking
-                                      ? 'Pick a file from this folder'
-                                      : 'Jump to a node, run a command, or open a folder'
-                            }
+                            aria-label={grepping ? t('palette.searchFiles') : picking ? t('palette.pickFile') : t('palette.inputLabel')}
                             /* A path stays in the same sans font as everything else: monospace makes
                                it read as something to be read rather than something to be typed. */
                             className={clsx(
@@ -848,14 +846,14 @@ export function CommandPalette() {
                             )}
                             placeholder={
                                 grepping
-                                    ? 'Search the files in this folder'
+                                    ? t('palette.searchFiles')
                                     : picking
-                                      ? 'Pick a file from this folder'
+                                      ? t('palette.pickFile')
                                       : machineStep
-                                        ? 'Search machines'
+                                        ? t('palette.searchMachines')
                                         : browsing
-                                          ? 'Enter a folder path, for example ~/projects/my-app'
-                                          : 'Jump to a node, run a command, or type a path like ~/projects to open a folder'
+                                          ? t('palette.pathPlaceholder')
+                                          : t('palette.placeholder')
                             }
                             value={query}
                             spellCheck={false}
@@ -905,19 +903,19 @@ export function CommandPalette() {
                             <span className={BTN_GROUP}>
                                 <SearchToggle
                                     icon={CaseSensitive}
-                                    label="Match case"
+                                    label={t('palette.matchCase')}
                                     active={grepOptions.caseSensitive}
                                     onClick={() => setGrepOptions((current) => ({ ...current, caseSensitive: !current.caseSensitive }))}
                                 />
                                 <SearchToggle
                                     icon={WholeWord}
-                                    label="Whole words"
+                                    label={t('palette.wholeWords')}
                                     active={grepOptions.wholeWord}
                                     onClick={() => setGrepOptions((current) => ({ ...current, wholeWord: !current.wholeWord }))}
                                 />
                                 <SearchToggle
                                     icon={Regex}
-                                    label="Regular expression"
+                                    label={t('palette.regex')}
                                     active={grepOptions.regex}
                                     onClick={() => setGrepOptions((current) => ({ ...current, regex: !current.regex }))}
                                 />
@@ -935,25 +933,25 @@ export function CommandPalette() {
                         )}
                         {!browsing && <Kbd shortcut={KEY_SHORTCUTS.escape} className={TOOLTIP_KBD} />}
                     </div>
-                    <div id={LIST_ID} className="max-h-[50vh] overflow-auto p-1.5" role="listbox" aria-label="Results">
+                    <div id={LIST_ID} className="max-h-[50vh] overflow-auto p-1.5" role="listbox" aria-label={t('palette.results')}>
                         <div aria-live="polite">
                             {entries.length === 0 && !browsing && !grepping && !picking && (
-                                <div className="px-3 py-6 text-center text-xs text-text-faint">Nothing matches</div>
+                                <div className="px-3 py-6 text-center text-xs text-text-faint">{t('palette.noMatch')}</div>
                             )}
                             {picking && entries.length === 0 && (
                                 <div className="px-3 py-6 text-center text-xs text-text-faint">
-                                    {folder === null ? 'This project has no folder.' : 'No file in this folder matches'}
+                                    {folder === null ? t('palette.noProjectFolder') : t('palette.noFileMatch')}
                                 </div>
                             )}
                             {grepping && query.trim() !== '' && !grep.busy && grep.failure === null && grep.matches.length === 0 && (
-                                <div className="px-3 py-6 text-center text-xs text-text-faint">No line in this folder matches</div>
+                                <div className="px-3 py-6 text-center text-xs text-text-faint">{t('palette.noLineMatch')}</div>
                             )}
                             {grepping && query.trim() === '' && (
-                                <div className="px-3 py-6 text-center text-xs text-text-faint">Type to search every file in this folder.</div>
+                                <div className="px-3 py-6 text-center text-xs text-text-faint">{t('palette.typeToSearch')}</div>
                             )}
                             {machineStep && entries.length === 0 && (
                                 <div className="px-3 py-6 text-center text-xs text-text-faint">
-                                    {machines.length === 0 ? 'No machine yet. Sign in to open the machines on your account.' : 'No machine matches'}
+                                    {machines.length === 0 ? t('palette.noMachineYet') : t('palette.noMachineMatch')}
                                 </div>
                             )}
                             {/* The machine whose folders were asked for, while its link comes up or after it did not. */}
@@ -963,17 +961,17 @@ export function CommandPalette() {
                                     {linkWait.state === 'connecting' ? (
                                         <span role="status">
                                             {browseRow?.entry.endpoint?.pairedBy === 'statement' || browseRow?.entry.endpoint === null
-                                                ? `Connecting to ${browseLabel} through your account...`
-                                                : `Connecting to ${browseLabel}...`}
+                                                ? t('palette.connectingThroughAccount', { machine: browseLabel })
+                                                : t('switch.connecting', { machine: browseLabel })}
                                         </span>
                                     ) : (
                                         <>
-                                            <span className="text-text-muted">{browseLabel} is not reachable</span>
+                                            <span className="text-text-muted">{t('palette.notReachable', { machine: browseLabel })}</span>
                                             <span className="max-w-md text-status-error" role="alert">
                                                 {linkWait.reason}
                                             </span>
                                             <Button size="sm" variant="secondary" onClick={retry}>
-                                                Try again
+                                                {t('common:action.retry')}
                                                 <Kbd shortcut={KEY_SHORTCUTS.enter} className={TOOLTIP_KBD} />
                                             </Button>
                                         </>
@@ -993,13 +991,13 @@ export function CommandPalette() {
                         {/* An empty folder is the label with nothing under it: no spinner, no message,
                             and the previous listing stays up until the next one lands. */}
                         {browsing && !machineStep && linkWait === null && entries.length === 0 && (
-                            <div className={`${SECTION_LABEL} px-2.5 pt-1.5 pb-1`}>Folders</div>
+                            <div className={`${SECTION_LABEL} px-2.5 pt-1.5 pb-1`}>{t('palette.sections.folders')}</div>
                         )}
                         {entries.map((entry, i) => {
                             const first = i === 0 || entries[i - 1]!.section !== entry.section;
                             return (
                                 <div key={entry.id}>
-                                    {first && <div className={`${SECTION_LABEL} px-2.5 pt-1.5 pb-1`}>{entry.section}</div>}
+                                    {first && <div className={`${SECTION_LABEL} px-2.5 pt-1.5 pb-1`}>{t(`palette.sections.${entry.section}`)}</div>}
                                     <button
                                         id={optionId(i)}
                                         role="option"
@@ -1020,9 +1018,7 @@ export function CommandPalette() {
                             );
                         })}
                         {/* fs.browse says whether the typed folder exists, so a missing one can be offered for creation. */}
-                        {presence === 'missing' && (
-                            <div className="px-3 py-6 text-center text-xs text-text-faint">Press Enter to create this folder and open it as a project</div>
-                        )}
+                        {presence === 'missing' && <div className="px-3 py-6 text-center text-xs text-text-faint">{t('palette.createHint')}</div>}
                     </div>
                     {grepping && (
                         <div className="flex items-center gap-3 border-t border-border px-3 py-2 text-xs text-text-faint">
@@ -1033,14 +1029,14 @@ export function CommandPalette() {
                             ) : (
                                 <span>
                                     {grep.matches.length === 0
-                                        ? 'Nothing yet'
-                                        : `${grep.matches.length}${grep.truncated ? '+' : ''} in ${grep.files} file${grep.files === 1 ? '' : 's'}`}
+                                        ? t('palette.nothingYet')
+                                        : t('palette.grepCount', { count: grep.files, hits: `${grep.matches.length}${grep.truncated ? '+' : ''}` })}
                                 </span>
                             )}
                             <span className="grow" />
                             <span>
-                                <Kbd shortcut={KEY_SHORTCUTS.enter} className={TOOLTIP_KBD} /> opens the file,{' '}
-                                <Kbd shortcut={KEY_SHORTCUTS.backspace} className={TOOLTIP_KBD} /> on an empty search goes back
+                                <Kbd shortcut={KEY_SHORTCUTS.enter} className={TOOLTIP_KBD} /> {t('palette.grepEnterHint')}{' '}
+                                <Kbd shortcut={KEY_SHORTCUTS.backspace} className={TOOLTIP_KBD} /> {t('palette.grepBackHint')}
                             </span>
                         </div>
                     )}
@@ -1048,20 +1044,20 @@ export function CommandPalette() {
                         <div className="flex items-center gap-3 border-t border-border px-3 py-2 text-xs text-text-faint">
                             <span className="flex shrink-0 items-center gap-1.5">
                                 <kbd className={TOOLTIP_KBD}>↑</kbd>
-                                <kbd className={TOOLTIP_KBD}>↓</kbd> Navigate
+                                <kbd className={TOOLTIP_KBD}>↓</kbd> {t('palette.navigate')}
                             </span>
                             {/* The Enter hint is left out once the typed path can be opened, because
                                 the button in the field is already saying so. */}
                             {linkWait === null && (active !== undefined || query.trim() === '') && (
                                 <span className="flex shrink-0 items-center gap-1.5">
-                                    <Kbd shortcut={KEY_SHORTCUTS.enter} className={TOOLTIP_KBD} /> Select
+                                    <Kbd shortcut={KEY_SHORTCUTS.enter} className={TOOLTIP_KBD} /> {t('common:action.select')}
                                 </span>
                             )}
                             <span className="flex shrink-0 items-center gap-1.5">
-                                <Kbd shortcut={KEY_SHORTCUTS.backspace} className={TOOLTIP_KBD} /> Back
+                                <Kbd shortcut={KEY_SHORTCUTS.backspace} className={TOOLTIP_KBD} /> {t('projectBanner.back')}
                             </span>
                             <span className="flex shrink-0 items-center gap-1.5">
-                                <Kbd shortcut={KEY_SHORTCUTS.escape} className={TOOLTIP_KBD} /> Close
+                                <Kbd shortcut={KEY_SHORTCUTS.escape} className={TOOLTIP_KBD} /> {t('common:action.close')}
                             </span>
                             <span className="grow" />
                             {failure && (
@@ -1078,7 +1074,7 @@ export function CommandPalette() {
                                         void nativeDialog.pickFolder(listing?.result?.parentPath).then((picked) => (picked ? submitPath(picked) : undefined))
                                     }
                                 >
-                                    Browse in {fileManagerName(nativeDialog.platform)}
+                                    {t('palette.browseIn', { app: fileManagerName(nativeDialog.platform) })}
                                 </Button>
                             )}
                         </div>

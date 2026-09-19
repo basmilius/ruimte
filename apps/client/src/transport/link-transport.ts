@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import {
     EVENT_SCHEMAS,
     REQUEST_SCHEMAS,
@@ -126,7 +127,7 @@ export class LinkTransport implements PooledTransport {
         if (link) {
             link.close();
             this.log.info('Reconnecting to the machine');
-            this.rejectPending('disconnected', 'The connection closed before the machine answered');
+            this.rejectPending('disconnected', i18next.t('machines:connection.closedBeforeAnswer'));
         }
         this.connect();
     }
@@ -152,7 +153,7 @@ export class LinkTransport implements PooledTransport {
 
     request<T extends RequestType>(type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']> {
         if (this.status !== 'open' || !this.link) {
-            return Promise.reject(new TransportError('not-connected', 'The machine is not connected'));
+            return Promise.reject(new TransportError('not-connected', i18next.t('machines:connection.notConnected')));
         }
         const id = String(this.nextId++);
         const promise = new Promise<RequestMap[T]['result']>((resolve, reject) => {
@@ -246,7 +247,7 @@ export class LinkTransport implements PooledTransport {
                 // Scheduling first, so the closed status arrives with the attempt it announces.
                 this.scheduleReconnect();
                 this.setConnection({ status: 'closed', failure, relayed: false });
-                this.rejectPending('disconnected', 'The connection closed before the machine answered');
+                this.rejectPending('disconnected', i18next.t('machines:connection.closedBeforeAnswer'));
             }
         };
         let link: Link;
@@ -255,7 +256,7 @@ export class LinkTransport implements PooledTransport {
         } catch (e) {
             // An opener that throws would otherwise leave the transport connecting forever, with no link and no timer.
             if (this.linkToken === token) {
-                events.close(`Could not open a connection: ${e instanceof Error ? e.message : String(e)}`);
+                events.close(i18next.t('machines:connection.openFailed', { reason: e instanceof Error ? e.message : String(e) }));
             }
             return;
         }
@@ -320,7 +321,7 @@ export class LinkTransport implements PooledTransport {
         }
         const result = REQUEST_SCHEMAS[entry.type].result.safeParse(frame.result);
         if (!result.success) {
-            entry.reject(new TransportError('bad-reply', `The reply to ${entry.type} does not match its contract`));
+            entry.reject(new TransportError('bad-reply', i18next.t('machines:connection.badReply', { type: entry.type })));
             return;
         }
         entry.resolve(result.data);
@@ -348,7 +349,7 @@ export class LinkTransport implements PooledTransport {
 
 const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> =>
     new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error(`No address within ${Math.round(timeoutMs / 1000)} seconds`)), timeoutMs);
+        const timer = setTimeout(() => reject(new Error(i18next.t('machines:connection.noAddress', { seconds: Math.round(timeoutMs / 1000) }))), timeoutMs);
         promise.then(
             (value) => {
                 clearTimeout(timer);

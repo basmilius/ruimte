@@ -441,7 +441,11 @@ const createWindow = (): Electron.BrowserWindow => {
             preload: join(here, 'preload.cjs'),
             contextIsolation: true,
             nodeIntegration: false,
-            webviewTag: true
+            webviewTag: true,
+            // On macOS the first is `NSLocale.currentLocale`, so it follows the Region setting, and
+            // the second is the language order from System Settings; `app.getLocale()` would hand
+            // back the language of the bundle, which is `en-US` even on a Dutch Mac.
+            additionalArguments: [`--ruimte-system-locale=${app.getSystemLocale()}`, `--ruimte-system-languages=${app.getPreferredSystemLanguages().join(',')}`]
         }
     });
     const contents = window.webContents;

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
+import { useTranslation } from 'react-i18next';
 import { messageOf } from '@/pulsar/account';
 import { Button } from '@/ui/Button';
 
@@ -15,6 +16,7 @@ interface ConfirmDialogProps {
 
 /* One destructive step, asked before it happens, over whichever dialog it was opened from. */
 export function ConfirmDialog({ open, onOpenChange, title, description, confirmLabel, onConfirm }: ConfirmDialogProps) {
+    const { t } = useTranslation('common');
     const [busy, setBusy] = useState(false);
     const [failure, setFailure] = useState<string | null>(null);
 
@@ -50,7 +52,7 @@ export function ConfirmDialog({ open, onOpenChange, title, description, confirmL
                         </p>
                     )}
                     <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
-                        <Button onClick={() => onOpenChange(false)}>Cancel</Button>
+                        <Button onClick={() => onOpenChange(false)}>{t('action.cancel')}</Button>
                         <Button variant="danger" disabled={busy} onClick={() => void confirm()}>
                             {confirmLabel}
                         </Button>

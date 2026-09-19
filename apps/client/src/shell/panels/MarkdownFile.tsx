@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Code, Eye } from 'lucide-react';
 import type { FsReadText } from '@ruimte/contracts';
 import { Markdown } from '@/chat/ui/Markdown';
@@ -17,11 +18,12 @@ type MarkdownView = 'preview' | 'source';
  * toolbar, so the switch does not move when it is used.
  */
 export function MarkdownFile({ path, name, read }: { path: string; name: string; read: FsReadText }) {
+    const { t } = useTranslation('panels');
     const [view, setView] = useState<MarkdownView>('preview');
     const toggle = (
         <div className={BTN_GROUP}>
-            <FileToolbarToggle icon={Eye} label="Preview" active={view === 'preview'} onClick={() => setView('preview')} />
-            <FileToolbarToggle icon={Code} label="Source" active={view === 'source'} onClick={() => setView('source')} />
+            <FileToolbarToggle icon={Eye} label={t('file.view.preview')} active={view === 'preview'} onClick={() => setView('preview')} />
+            <FileToolbarToggle icon={Code} label={t('file.view.source')} active={view === 'source'} onClick={() => setView('source')} />
         </div>
     );
 

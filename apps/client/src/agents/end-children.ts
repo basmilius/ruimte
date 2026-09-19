@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { create } from 'zustand';
 import type { Worktree } from '@ruimte/contracts';
 import type { Transport } from '@/transport/transport';
@@ -13,13 +14,11 @@ export interface PendingEnd {
 
 export const useEndingAgents = create<{ pending: PendingEnd | null }>(() => ({ pending: null }));
 
-export const endsAgentsWarning = (agents: number): string =>
-    `Also ends ${agents === 1 ? 'the agent' : `the ${agents} agents`} it opened. ${agents === 1 ? 'Its node stays' : 'Their nodes stay'} on the canvas with what ${agents === 1 ? 'it' : 'they'} did so far.`;
+export const endsAgentsWarning = (agents: number): string => i18next.t('agents:ending.alsoEnds', { count: agents });
 
-export const stopsTaskWarning = (agents: number): string =>
-    `Ends the agent working on this task and cancels the task without waking the chat that gave it. Its node stays on the canvas.${agents === 0 ? '' : ` ${endsAgentsWarning(agents)}`}`;
+export const stopsTaskWarning = (agents: number): string => `${i18next.t('agents:ending.stopsTask')}${agents === 0 ? '' : ` ${endsAgentsWarning(agents)}`}`;
 
-export const stopsSubagentsWarning = (agents: number): string => `Stops the turn and marks the chat's own sub-agents as stopped. ${endsAgentsWarning(agents)}`;
+export const stopsSubagentsWarning = (agents: number): string => `${i18next.t('agents:ending.stopsSubagents')} ${endsAgentsWarning(agents)}`;
 
 /*
  * The live agents these nodes opened, counted once however many of them opened the same one. A

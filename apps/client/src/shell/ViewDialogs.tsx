@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Trash } from 'lucide-react';
 import { renameViewAction } from '@/actions/client-actions';
@@ -14,6 +15,7 @@ import { Icon } from '@/ui/Icon';
 
 /* Renaming, deleting, promoting, picking a mark and a new page: everything a view asks before it happens. */
 export function ViewDialogs() {
+    const { t } = useTranslation(['shell', 'common']);
     const dialog = useUi((s) => s.viewDialog);
     const setDialog = useUi((s) => s.setViewDialog);
     const viewId = dialog && 'viewId' in dialog ? dialog.viewId : null;
@@ -56,22 +58,22 @@ export function ViewDialogs() {
                 <Dialog.Popup className="dialog-popup w-[420px] p-5">
                     {dialog?.kind === 'rename' && (
                         <>
-                            <Dialog.Title className="text-base font-semibold text-text">Rename view</Dialog.Title>
-                            <p className="mt-1 text-sm text-text-muted">Everyone with the folder sees this name.</p>
+                            <Dialog.Title className="text-base font-semibold text-text">{t('viewDialogs.rename.title')}</Dialog.Title>
+                            <p className="mt-1 text-sm text-text-muted">{t('viewDialogs.rename.description')}</p>
                         </>
                     )}
                     {dialog?.kind === 'new-browser' && (
                         <>
-                            <Dialog.Title className="text-base font-semibold text-text">New browser view</Dialog.Title>
-                            <p className="mt-1 text-sm text-text-muted">An address without a scheme opens over https.</p>
+                            <Dialog.Title className="text-base font-semibold text-text">{t('viewDialogs.newBrowser.title')}</Dialog.Title>
+                            <p className="mt-1 text-sm text-text-muted">{t('viewDialogs.newBrowser.description')}</p>
                         </>
                     )}
                     {(dialog?.kind === 'rename' || dialog?.kind === 'new-browser') && (
                         <input
                             autoFocus
                             className="field mt-3"
-                            aria-label={dialog.kind === 'rename' ? 'View name' : 'Address'}
-                            placeholder={dialog.kind === 'rename' ? 'Name' : 'localhost:5173'}
+                            aria-label={dialog.kind === 'rename' ? t('viewDialogs.rename.label') : t('viewDialogs.newBrowser.label')}
+                            placeholder={dialog.kind === 'rename' ? t('viewDialogs.rename.placeholder') : 'localhost:5173'}
                             value={value}
                             onChange={(e) => setValue(e.target.value)}
                             onKeyDown={(e) => {
@@ -84,24 +86,26 @@ export function ViewDialogs() {
                     )}
                     {dialog?.kind === 'delete' && (
                         <>
-                            <Dialog.Title className="text-base font-semibold text-text">Delete {view?.name}?</Dialog.Title>
+                            <Dialog.Title className="text-base font-semibold text-text">
+                                {t('viewDialogs.delete.title', { name: view?.name ?? '' })}
+                            </Dialog.Title>
                             <p className="mt-1 text-sm text-text-muted">
-                                {view && viewIsBusy(view)
-                                    ? 'Something in this view is still running. Deleting it ends those sessions.'
-                                    : 'Removes the view and everything on it.'}
+                                {view && viewIsBusy(view) ? t('viewDialogs.delete.busy') : t('viewDialogs.delete.description')}
                             </p>
                         </>
                     )}
                     {dialog?.kind === 'promote' && (
                         <>
-                            <Dialog.Title className="text-base font-semibold text-text">Open {nodeTitle} as a view?</Dialog.Title>
-                            <p className="mt-1 text-sm text-text-muted">The session keeps running. The lines to this node are lost.</p>
+                            <Dialog.Title className="text-base font-semibold text-text">
+                                {t('viewDialogs.promote.title', { name: nodeTitle ?? '' })}
+                            </Dialog.Title>
+                            <p className="mt-1 text-sm text-text-muted">{t('viewDialogs.promote.description')}</p>
                         </>
                     )}
                     {dialog?.kind === 'icon' && view && <ViewIconDialog view={view} onClose={close} />}
                     {/* The icon dialog writes on every click and carries its own way out. */}
                     <div className={clsx('mt-4 flex items-center justify-end gap-2', dialog?.kind === 'icon' && 'hidden')}>
-                        <Button onClick={close}>Cancel</Button>
+                        <Button onClick={close}>{t('common:action.cancel')}</Button>
                         {dialog?.kind === 'delete' && (
                             <Button
                                 variant="danger"
@@ -112,7 +116,7 @@ export function ViewDialogs() {
                                     close();
                                 }}
                             >
-                                <Icon icon={Trash} size={12} /> Delete
+                                <Icon icon={Trash} size={12} /> {t('common:action.delete')}
                             </Button>
                         )}
                         {dialog?.kind === 'promote' && (
@@ -123,12 +127,12 @@ export function ViewDialogs() {
                                     close();
                                 }}
                             >
-                                Open as view
+                                {t('viewDialogs.promote.confirm')}
                             </Button>
                         )}
                         {(dialog?.kind === 'rename' || dialog?.kind === 'new-browser') && (
                             <Button variant="primary" disabled={!value.trim()} onClick={submit}>
-                                {dialog.kind === 'rename' ? 'Rename' : 'Open'}
+                                {dialog.kind === 'rename' ? t('common:action.rename') : t('common:action.open')}
                             </Button>
                         )}
                     </div>

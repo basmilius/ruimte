@@ -1,0 +1,90 @@
+{
+  "state": {
+    "steps": {
+      "open": "Open",
+      "active": "Active",
+      "done": "Done",
+      "failed": "Failed",
+      "skipped": "Skipped",
+      "blocked": "Blocked",
+      "warning": "Warning",
+      "info": "Info"
+    },
+    "test": {
+      "open": "Not run",
+      "active": "Running",
+      "done": "Passed",
+      "failed": "Failed",
+      "skipped": "Skipped",
+      "blocked": "Blocked",
+      "warning": "Warning",
+      "info": "Info"
+    }
+  },
+  "agent": {
+    "unknown": "The agent",
+    "stoppedHere": "{{agent}} stopped here"
+  },
+  "active": {
+    "more_one": "{{title}} and {{count}} more",
+    "more_other": "{{title}} and {{count}} more"
+  },
+  "setBy": {
+    "person": "you",
+    "personAt": "you · {{when}}",
+    "agent": "{{agent}} set it",
+    "agentAt": "{{agent}} set it at {{when}}"
+  },
+  "results": {
+    "title": "Results of the plan \"{{title}}\":"
+  },
+  "pill": {
+    "count_one": "{{count}} plan in this chat",
+    "count_other": "{{count}} plans in this chat",
+    "unseen": "New plan",
+    "failed": "A step failed"
+  },
+  "toast": {
+    "notChanged": "The plan did not change",
+    "copied": "Copied the plan as Markdown"
+  },
+  "header": {
+    "kind": {
+      "steps": "Steps",
+      "test": "Test plan"
+    }
+  },
+  "empty": {
+    "all": "This plan has no steps yet.",
+    "open": "Nothing is open.",
+    "issues": "No issues."
+  },
+  "step": {
+    "menu": {
+      "status": "Status",
+      "addNote": "Add note",
+      "editNote": "Edit note",
+      "unlock": "Unlock"
+    },
+    "markAs": "Mark as {{state}}",
+    "lockedBy": "Only {{agent}} checks this step"
+  },
+  "note": {
+    "label": "Note",
+    "placeholder": "What happened?"
+  },
+  "progress": {
+    "ranOf": "{{finished}} of {{total}} run",
+    "doneOf": "{{done}} of {{total}} done",
+    "passed": "{{count}} passed",
+    "warning_one": "{{count}} warning",
+    "warning_other": "{{count}} warnings",
+    "withWarning_one": "{{count}} with a warning",
+    "withWarning_other": "{{count}} with warnings",
+    "info": "{{count}} info",
+    "withInfo": "{{count}} with info",
+    "failed": "{{count}} failed",
+    "skipped": "{{count}} skipped",
+    "blocked": "{{count}} blocked"
+  }
+}

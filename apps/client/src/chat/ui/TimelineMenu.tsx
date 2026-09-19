@@ -1,4 +1,5 @@
 import type { RefObject } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Braces, Copy, Eye, FileText, GitFork, MessageSquare, Scan } from 'lucide-react';
 import { forkRefusal, turnIdOfRow } from '@/chat/logic/fork';
@@ -31,6 +32,7 @@ export function TimelineMenuPopup({
     /* The chat whose own thread this is; a thread in its place (a sub-agent's) has nothing to fork. */
     chatId?: string | null;
 }) {
+    const { t } = useTranslation('chat');
     const message = target.row === null ? null : messageTextOf(target.row);
     const turnId = chatId === null || target.row === null ? null : turnIdOfRow(target.row);
     const forkBlocked = useChatRow(chatId ?? '', (row) => (turnId === null ? null : forkRefusal(row?.info ?? null, row?.structure[turnId])));
@@ -49,21 +51,21 @@ export function TimelineMenuPopup({
             <ContextMenu.Positioner className="z-(--z-popup)">
                 <ContextMenu.Popup className="menu-popup">
                     <ContextMenu.Item className="menu-item" disabled={target.selection === ''} onClick={() => copyText(target.selection)}>
-                        <Icon icon={Copy} size={14} /> Copy <Kbd shortcut={EDIT_SHORTCUTS.copy} />
+                        <Icon icon={Copy} size={14} /> {t('common:action.copy')} <Kbd shortcut={EDIT_SHORTCUTS.copy} />
                     </ContextMenu.Item>
                     {message !== null && (
                         <ContextMenu.Item className="menu-item" onClick={() => copyText(message)}>
-                            <Icon icon={MessageSquare} size={14} /> Copy message
+                            <Icon icon={MessageSquare} size={14} /> {t('timeline.menu.copyMessage')}
                         </ContextMenu.Item>
                     )}
                     {target.code !== null && (
                         <ContextMenu.Item className="menu-item" onClick={() => copyText(target.code ?? '')}>
-                            <Icon icon={Braces} size={14} /> Copy code
+                            <Icon icon={Braces} size={14} /> {t('timeline.menu.copyCode')}
                         </ContextMenu.Item>
                     )}
                     {markdown !== null && (
                         <ContextMenu.Item className="menu-item" onClick={() => copyText(markdown)}>
-                            <Icon icon={FileText} size={14} /> Copy as markdown
+                            <Icon icon={FileText} size={14} /> {t('timeline.menu.copyMarkdown')}
                         </ContextMenu.Item>
                     )}
                     {chatId !== null && turnId !== null && (
@@ -72,19 +74,19 @@ export function TimelineMenuPopup({
                             disabled={forkBlocked !== null}
                             onClick={() => useUi.getState().setForkDialog({ chatId, turnId })}
                         >
-                            <Icon icon={GitFork} size={14} /> Fork from here
+                            <Icon icon={GitFork} size={14} /> {t('timeline.menu.forkFromHere')}
                             {forkBlocked !== null && <span className={MENU_HINT}>{forkBlocked}</span>}
                         </ContextMenu.Item>
                     )}
                     <ContextMenu.Separator className={MENU_SEPARATOR} />
                     <ContextMenu.Item className="menu-item" onClick={() => selectAllWithin(thread.current)}>
-                        <Icon icon={Scan} size={14} /> Select all
+                        <Icon icon={Scan} size={14} /> {t('common:action.selectAll')}
                     </ContextMenu.Item>
                     {target.path !== null && (
                         <>
                             <ContextMenu.Separator className={MENU_SEPARATOR} />
                             <ContextMenu.Item className="menu-item" onClick={openInPreview}>
-                                <Icon icon={Eye} size={14} /> Open in preview
+                                <Icon icon={Eye} size={14} /> {t('timeline.menu.openInPreview')}
                             </ContextMenu.Item>
                         </>
                     )}

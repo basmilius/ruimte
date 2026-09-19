@@ -1,9 +1,13 @@
+import i18next from 'i18next';
 import type { RuntimeMode } from '@ruimte/contracts';
 
-/* The labels and hints for the runtime modes, shared by the composer's mode picker and the settings dialog. */
-export const RUNTIME_MODES: Array<{ id: RuntimeMode; label: string; hint: string }> = [
-    { id: 'supervised', label: 'Supervised', hint: 'Asks before commands and file changes' },
-    { id: 'auto-accept-edits', label: 'Auto-accept edits', hint: 'File edits go through, commands still ask' },
-    { id: 'auto', label: 'Auto', hint: 'The agent reviews routine actions itself' },
-    { id: 'full-access', label: 'Full access', hint: 'Never asks for approval' }
-];
+/*
+ * The runtime modes in the order they are offered, shared by the composer's mode picker, the
+ * settings dialog and the agent menus. Only the ids live here: the words are in `modes.<id>` of the
+ * `chat` namespace, read when a surface draws one rather than when this module loads.
+ */
+export const RUNTIME_MODES: readonly RuntimeMode[] = ['supervised', 'auto-accept-edits', 'auto', 'full-access'];
+
+export const runtimeModeLabel = (mode: RuntimeMode): string => i18next.t(`chat:modes.${mode}.label`);
+
+export const runtimeModeHint = (mode: RuntimeMode): string => i18next.t(`chat:modes.${mode}.hint`);

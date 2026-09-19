@@ -1,0 +1,237 @@
+{
+  "accents": {
+    "red": "Rood",
+    "orange": "Oranje",
+    "amber": "Amber",
+    "yellow": "Geel",
+    "lime": "Limoen",
+    "green": "Groen",
+    "emerald": "Smaragd",
+    "teal": "Blauwgroen",
+    "cyan": "Cyaan",
+    "sky": "Hemelsblauw",
+    "blue": "Blauw",
+    "indigo": "Indigo",
+    "violet": "Violet",
+    "purple": "Paars",
+    "fuchsia": "Fuchsia",
+    "pink": "Roze",
+    "rose": "Rozerood"
+  },
+  "noteColors": {
+    "yellow": "Geel",
+    "green": "Groen",
+    "blue": "Blauw",
+    "pink": "Roze",
+    "gray": "Grijs"
+  },
+  "locks": {
+    "pan": {
+      "label": "Verschuiven",
+      "hint": "Het canvas blijft staan"
+    },
+    "zoom": {
+      "label": "Zoomen",
+      "hint": "Wiel en knijpen worden genegeerd"
+    },
+    "move": {
+      "label": "Nodes verplaatsen",
+      "hint": "Nodes blijven waar ze staan"
+    },
+    "resize": {
+      "label": "Nodes herschalen",
+      "hint": "De grepen zijn verborgen"
+    }
+  },
+  "status": {
+    "running": "Bezig",
+    "needs-you": "Wacht op jou",
+    "idle": "Inactief",
+    "error": "Fout",
+    "exited": "Sessie beëindigd"
+  },
+  "node": {
+    "failed": "Deze node kon niet worden getekend",
+    "zoomTo": "Naar node zoomen",
+    "close": "Node sluiten",
+    "context": {
+      "tooltip": "Gekoppelde context. De agent leest die met ruimte-context.",
+      "pill": "context"
+    }
+  },
+  "group": {
+    "expand": "Uitklappen",
+    "collapse": "Inklappen",
+    "inside_one": "{{count}} erin",
+    "inside_other": "{{count}} erin",
+    "worktrees_one": "{{count}} worktree",
+    "worktrees_other": "{{count}} worktrees"
+  },
+  "menu": {
+    "doubleClick": "dbl-klik",
+    "duplicate": "Dupliceren",
+    "connect": "Verbinden met...",
+    "connectHint": "Klik daarna een node aan",
+    "unbindWorktree": "Worktree loskoppelen",
+    "unbindWorktreeHint": "De checkout blijft staan",
+    "bindWorktree": "Aan worktree koppelen",
+    "mergeWorktrees_one": "Worktree mergen...",
+    "mergeWorktrees_other": "Worktrees mergen...",
+    "removeWorktrees_one": "Worktree verwijderen...",
+    "removeWorktrees_other": "Worktrees verwijderen...",
+    "viewWorktree": "Worktree bekijken",
+    "openInChat": "In een chat openen",
+    "openInTerminal": "In een terminal openen",
+    "openAsView": "Als weergave openen",
+    "openAsViewHint": "De sessie blijft behouden",
+    "reveal": "Tonen in {{app}}",
+    "startAgentFromNote": "Agent starten vanuit de notitie",
+    "noteColor": "Kleur van de notitie",
+    "color": "Kleur",
+    "noAccent": "Geen"
+  },
+  "kinds": {
+    "terminal": "Terminal",
+    "chat": "Chat",
+    "browser": "Browser",
+    "group": "Groep",
+    "note": "Notitie",
+    "file": "Bestand",
+    "text": "Tekst"
+  },
+  "canvasMenu": {
+    "addHere": "Hier toevoegen",
+    "file": "Bestand...",
+    "groupSelection": "Selectie groeperen",
+    "zoomToFit": "Passend zoomen",
+    "settings": "Instellingen"
+  },
+  "empty": {
+    "sections": {
+      "agents": "Agents",
+      "place": "Toevoegen",
+      "project": "Uit dit project"
+    },
+    "agent": {
+      "chat": "Chat",
+      "terminal": "In een terminal"
+    },
+    "connecting": {
+      "title": "Verbinden",
+      "description": "Agents opvragen"
+    },
+    "setup": {
+      "title": "Een agent instellen",
+      "description": "Geen agent-CLI op deze machine"
+    },
+    "node": {
+      "chat": "Kies een model",
+      "terminal": "Een shell",
+      "browser": "Een webpagina",
+      "note": "Markdown",
+      "group": "Een kader om nodes heen"
+    },
+    "file": "Uit de projectmap",
+    "text": "Of dubbelklik",
+    "layout": "Deze indeling toepassen",
+    "drawing": "De tekening hier tonen",
+    "diagram": "Het diagram hier tonen",
+    "hint": "Sleep bestanden hierheen, klik met rechts voor meer, of druk op <palette/>."
+  },
+  "promptStack": {
+    "goToNode": "Naar de node",
+    "previous": "Vorige prompt",
+    "next": "Volgende prompt",
+    "position": "{{index}} van {{count}}",
+    "failed": "Deze prompt kon niet worden getekend"
+  },
+  "approval": {
+    "wantsPermission": "{{tool}} vraagt toestemming",
+    "wantsToRun": "wil iets uitvoeren",
+    "more_one": "nog {{count}}",
+    "more_other": "nog {{count}}"
+  },
+  "text": {
+    "placeholder": "Typ iets",
+    "font": "Lettertype",
+    "size": "Grootte",
+    "bold": "Vet",
+    "italic": "Cursief",
+    "fonts": {
+      "sans": "Sans",
+      "hand": "Hand",
+      "mono": "Mono"
+    }
+  },
+  "delete": {
+    "nodes_one": "{{count}} node",
+    "nodes_other": "{{count}} nodes"
+  },
+  "drop": {
+    "noBridge": {
+      "title": "Bestanden uit {{app}} kun je alleen in de desktop-app neerzetten",
+      "description": "Open het bestand via het paneel Bestanden."
+    },
+    "otherMachine": {
+      "title": "Dit project draait op {{machine}}",
+      "description": "Die machine kan geen bestanden uit {{app}} lezen. Open het bestand via het paneel Bestanden.",
+      "unknown": "een andere machine"
+    }
+  },
+  "edit": {
+    "cut": "Knippen",
+    "paste": "Plakken"
+  },
+  "note": {
+    "placeholder": "Schrijf een notitie. Markdown werkt.",
+    "empty": "Klik om te schrijven"
+  },
+  "drawing": {
+    "gone": "Deze tekening is uit het project verwijderd.",
+    "empty": "Nog niets getekend. Dubbelklik om te tekenen."
+  },
+  "diagram": {
+    "gone": "Dit diagram is uit het project verwijderd.",
+    "empty": "Nog niets in dit diagram. Een agent vult het met ruimte-context view diagram; dubbelklik om het te openen.",
+    "label": "Diagram"
+  },
+  "file": {
+    "none": "Geen bestand"
+  },
+  "unknown": {
+    "needsNewer": "Deze node vraagt om een nieuwere versie van Ruimte"
+  },
+  "notice": {
+    "connecting": "Verbinden met de machine",
+    "reconnecting": "Opnieuw verbinden met de machine"
+  },
+  "terminal": {
+    "startFailed": "De sessie kon niet worden gestart",
+    "sessionEnded": "[sessie beëindigd]",
+    "exited": "[proces gestopt met code {{code}}]",
+    "resume": "Hervatten",
+    "restart": "Opnieuw starten"
+  },
+  "chat": {
+    "openFailed": "De chat kon niet worden geopend",
+    "retargetFailed": "De provider kon niet worden gewijzigd",
+    "sendFailed": "Het bericht kon niet worden verstuurd",
+    "subagentsFailed": "De sub-agents konden niet worden getekend",
+    "conversationFailed": "Dit gesprek kon niet worden getekend"
+  },
+  "browser": {
+    "back": "Terug",
+    "forward": "Vooruit",
+    "stop": "Laden stoppen",
+    "reloadHint": "{{shortcut}} slaat de cache over",
+    "address": "Adres",
+    "addressPlaceholder": "Voer een adres in",
+    "loading": "De pagina laadt",
+    "streamDpi": "DPI van de browserstream",
+    "openExternal": "In de systeembrowser openen",
+    "inspect": "Inspecteren",
+    "error": {
+      "openExternal": "In systeembrowser openen"
+    }
+  }
+}

@@ -7,11 +7,12 @@ import type { UsageCurrency } from '@/shell/usage/format';
 export type UsagePeriod = 'today' | '7d' | '30d' | '90d';
 export type UsageMetric = 'cost' | 'tokens';
 
-export const USAGE_PERIODS: readonly { id: UsagePeriod; label: string; days: number }[] = [
-    { id: 'today', label: 'Today', days: 1 },
-    { id: '7d', label: '7 days', days: 7 },
-    { id: '30d', label: '30 days', days: 30 },
-    { id: '90d', label: '90 days', days: 90 }
+/* Only the id and the length: a store has no words, so the page names a period in its own language. */
+export const USAGE_PERIODS: readonly { id: UsagePeriod; days: number }[] = [
+    { id: 'today', days: 1 },
+    { id: '7d', days: 7 },
+    { id: '30d', days: 30 },
+    { id: '90d', days: 90 }
 ];
 
 const STORAGE_KEY = 'ruimte.usage';

@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { useMemo } from 'react';
 import { create } from 'zustand';
 import type { ChatItem, ChatSubagentItem } from '@ruimte/contracts';
@@ -33,7 +34,8 @@ const NO_ITEMS: readonly string[] = [];
 
 export const crumbOf = (item: ChatSubagentItem): SubagentStep => ({ kind: 'agent', toolUseId: item.toolUseId, description: item.description });
 
-const stepLabel = (step: SubagentStep): string => (step.kind === 'list' ? 'Sub-agents' : step.description || 'Sub-agent');
+const stepLabel = (step: SubagentStep): string =>
+    step.kind === 'list' ? i18next.t('chat:subagents.title') : step.description || i18next.t('chat:rows.subagent.label');
 
 /* A row in the main agent's thread opens its conversation straight away, without the list above it. */
 export const openFromMain = (step: SubagentStep): SubagentTrail => [step];

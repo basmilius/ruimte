@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { desktop, type OpenAiLivePreferences } from '@/desktop/bridge';
 
 export interface LiveEvent {
@@ -61,7 +62,7 @@ export class LiveSession {
         await gatheringComplete(this.#peer);
         const offer = this.#peer.localDescription?.sdp;
         if (!offer) {
-            throw new Error('Ruimte could not create a microphone session');
+            throw new Error(i18next.t('voice:error.noSession'));
         }
         const answer = await bridge.createLiveSession(offer, preferences);
         await this.#peer.setRemoteDescription({ type: 'answer', sdp: answer.transport.sdp });

@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { useEffect, useState } from 'react';
 import type { ByteResource } from '@ruimte/contracts';
 import { credentialFor } from '@/endpoint/credentials';
@@ -96,7 +97,7 @@ export const useMachineUrl = (resource: MachineResource | null, endpointId?: str
         const lease = cache.acquire(key, () => {
             const transport = transportFor(machineId);
             if (!transport) {
-                return Promise.reject(new Error('This machine is not known here'));
+                return Promise.reject(new Error(i18next.t('machines:connection.unknownMachine')));
             }
             return readResource((piece) => transport.request('bytes.read', piece), payload);
         });

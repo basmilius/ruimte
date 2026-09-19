@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { useToasts } from '@/state/toasts';
 import type { Transport } from '@/transport/transport';
 
@@ -13,8 +14,13 @@ export const stageFiles = async (transport: Transport, cwd: string, paths: reado
         await transport.request('git.stage', { cwd, paths: [...paths], staged });
         return true;
     } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'That did not work.';
-        useToasts.getState().show({ title: staged ? 'Staging failed' : 'Unstaging failed', description: message, kind: 'error', output: message });
+        const message = error instanceof Error ? error.message : i18next.t('panels:error.generic');
+        useToasts.getState().show({
+            title: staged ? i18next.t('panels:git.stage.failed') : i18next.t('panels:git.stage.unstageFailed'),
+            description: message,
+            kind: 'error',
+            output: message
+        });
         return false;
     }
 };

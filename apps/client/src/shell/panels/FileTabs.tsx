@@ -1,4 +1,5 @@
 import { useEffect, useRef, type WheelEvent as ReactWheelEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { GitCommitHorizontal, GitCompare, Pin, X } from 'lucide-react';
 import { PATHS_DRAG_TYPE } from '@/canvas/drop';
@@ -35,6 +36,7 @@ const TAB_CLOSE =
  * says this is a diff and not the file.
  */
 export function FileTabs() {
+    const { t } = useTranslation('panels');
     const tabs = useFiles((s) => s.tabs);
     const active = useFiles((s) => s.active);
     const counts = useGit((s) => s.counts);
@@ -62,12 +64,13 @@ export function FileTabs() {
                 const commit = tab.view?.commit;
                 const checkout = isCheckoutDiff(tab.path, tab.view);
                 const count = counts[tab.key];
-                const label = commit !== undefined ? commit.slice(0, 7) : checkout ? basenameOf(tab.path) : tab.view ? 'Changes' : basenameOf(tab.path);
+                const label =
+                    commit !== undefined ? commit.slice(0, 7) : checkout ? basenameOf(tab.path) : tab.view ? t('git.tab.changes') : basenameOf(tab.path);
                 const hint =
                     commit !== undefined
-                        ? `The commit ${commit.slice(0, 7)}`
+                        ? t('git.tab.commitHint', { hash: commit.slice(0, 7) })
                         : checkout
-                          ? `Everything ${basenameOf(tab.path)} changed since ${tab.view?.base ?? 'the base branch'}`
+                          ? t('git.tab.checkoutHint', { name: basenameOf(tab.path), base: tab.view?.base ?? t('worktree.baseBranch') })
                           : tab.view
                             ? basenameOf(tab.path)
                             : tab.path;
@@ -108,7 +111,7 @@ export function FileTabs() {
                                 </button>
                             </Tooltip>
                             {tab.pinned && <Icon icon={Pin} size={12} className="shrink-0 text-text-muted" />}
-                            <Tooltip label={`Close ${label}`} kbd={CANVAS_SHORTCUTS.closeCell} name>
+                            <Tooltip label={t('file.tab.closeNamed', { name: label })} kbd={CANVAS_SHORTCUTS.closeCell} name>
                                 <button className={TAB_CLOSE} onClick={() => useFiles.getState().close(tab.key)}>
                                     <Icon icon={X} size={12} />
                                 </button>

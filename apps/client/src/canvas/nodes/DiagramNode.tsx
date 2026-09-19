@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Workflow } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { layoutOf } from '@ruimte/diagram';
 import { DiagramScene } from '@/diagram/DiagramScene';
 import { useDiagramMirror } from '@/diagram/mirror';
@@ -27,6 +28,7 @@ export function DiagramPlate({ id }: { id: string }) {
  * takes no pointer, so a press drags the node; a double-click opens the view, where a diagram is edited.
  */
 export function DiagramNode({ id }: { id: string }) {
+    const { t } = useTranslation('canvas');
     const viewId = useCanvas((s) => s.nodes[id]?.viewId ?? null);
     const mirror = useDiagramMirror(viewId);
     const content = mirror?.content ?? null;
@@ -38,13 +40,13 @@ export function DiagramNode({ id }: { id: string }) {
         <div className="h-full w-full" onDoubleClick={() => viewId && showView(viewId)}>
             {mirror?.gone && (
                 <EmptyState icon={<Icon icon={Workflow} size={16} />} className="h-full">
-                    This diagram was removed from the project.
+                    {t('diagram.gone')}
                 </EmptyState>
             )}
             {/* No "being written" state: the daemon cannot know an agent is about to write one. */}
             {!mirror?.gone && !drawn && !mirror?.loading && (
                 <EmptyState icon={<Icon icon={Workflow} size={16} />} className="h-full">
-                    Nothing in this diagram yet. An agent fills it with ruimte-context view diagram; double-click to open it.
+                    {t('diagram.empty')}
                 </EmptyState>
             )}
             {drawn && box && (
@@ -53,7 +55,7 @@ export function DiagramNode({ id }: { id: string }) {
                     viewBox={`${box.x - PADDING} ${box.y - PADDING} ${box.w + PADDING * 2} ${box.h + PADDING * 2}`}
                     preserveAspectRatio="xMidYMid meet"
                     role="img"
-                    aria-label={content.meta.title || 'Diagram'}
+                    aria-label={content.meta.title || t('diagram.label')}
                     style={{ fontFamily: 'var(--font-sans)' }}
                 >
                     <DiagramScene content={content} layout={layout} />

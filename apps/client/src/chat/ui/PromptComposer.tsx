@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArrowDown, Hand, MessageCircleQuestionMark } from 'lucide-react';
 import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { chatClient } from '@/chat';
@@ -34,6 +35,7 @@ export function PromptComposer({
     onAllAnswered?: () => void;
     children: ReactNode;
 }) {
+    const { t } = useTranslation('chat');
     const session = usePromptSession({ prompts: pending, idOf: requestIdOf, pick: nextPrompt, disabled });
     const ref = useRef<HTMLDivElement>(null);
     const { active, activeId: activeKey } = session;
@@ -56,7 +58,7 @@ export function PromptComposer({
                     onClick={() => bringPromptToFront(chatId)}
                 >
                     <Icon icon={active.kind === 'approval' ? Hand : MessageCircleQuestionMark} size={16} className="shrink-0 text-status-needs-you" />
-                    <span className="grow">Waiting for your answer below</span>
+                    <span className="grow">{t('composer.waitingBelow')}</span>
                     <Icon icon={ArrowDown} size={16} className="shrink-0" />
                 </button>
             )}

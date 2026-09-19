@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import { Popover } from '@base-ui-components/react/popover';
 import clsx from 'clsx';
@@ -69,6 +70,7 @@ interface ModelPickerProps {
  * only that CLI, which drops the group headers and leaves its own catalog to choose from.
  */
 export function ModelPicker({ providers, provider, selection, open, onOpenChange, onChange }: ModelPickerProps) {
+    const { t } = useTranslation('chat');
     const [query, setQuery] = useState('');
     const [legacyOpen, setLegacyOpen] = useState(false);
     const [index, setIndex] = useState(0);
@@ -136,7 +138,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
 
     return (
         <Popover.Root open={open} onOpenChange={setOpen}>
-            <Tooltip label={owner ? `${owner.name} · ${current?.name ?? selection.model}` : 'Choose model'} kbd="/model">
+            <Tooltip label={owner ? `${owner.name} · ${current?.name ?? selection.model}` : t('pickers.model.choose')} kbd="/model">
                 <Popover.Trigger className={triggerClass}>
                     <AgentIcon kind={provider} size={12} />
                     <span className="max-w-40 truncate">{current?.name ?? selection.model}</span>
@@ -151,7 +153,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                             <input
                                 ref={inputRef}
                                 className="h-9 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
-                                placeholder="Search models"
+                                placeholder={t('pickers.model.search')}
                                 spellCheck={false}
                                 value={query}
                                 onChange={(e) => {
@@ -164,7 +166,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                         <div ref={listRef} className="max-h-72 overflow-auto p-1" role="listbox">
                             {entries.length === 0 && (
                                 <div className="px-3 py-6 text-center text-xs text-text-faint">
-                                    {providers.length === 0 ? 'No chat provider installed' : 'No models match'}
+                                    {providers.length === 0 ? t('pickers.model.noProvider') : t('pickers.model.noMatch')}
                                 </div>
                             )}
                             {entries.map((entry, i) => {
@@ -178,7 +180,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                                             onClick={() => choose(entry)}
                                         >
                                             <Icon icon={legacyOpen ? ChevronDown : ChevronRight} size={12} />
-                                            Legacy models ({entry.count})
+                                            {t('pickers.model.legacyGroup', { count: entry.count })}
                                         </button>
                                     );
                                 }
@@ -208,7 +210,7 @@ export function ModelPicker({ providers, provider, selection, open, onOpenChange
                                                 <span className="rounded bg-accent-soft px-1 text-xs font-medium text-accent">{entry.model.badge}</span>
                                             )}
                                             <span className="grow" />
-                                            {entry.model.legacy && <span className="text-xs text-text-faint">Legacy</span>}
+                                            {entry.model.legacy && <span className="text-xs text-text-faint">{t('pickers.model.legacy')}</span>}
                                         </button>
                                     </div>
                                 );
@@ -231,6 +233,7 @@ export function OptionsPicker({
     selection: ModelSelection;
     onChange(id: string, value: string | boolean): void;
 }) {
+    const { t } = useTranslation('chat');
     if (!model || model.options.length === 0) {
         return null;
     }
@@ -248,7 +251,7 @@ export function OptionsPicker({
         <Menu.Root>
             <Menu.Trigger className={triggerClass}>
                 <Icon icon={SlidersHorizontal} size={12} />
-                <span className="max-w-48 truncate">{summary || 'Options'}</span>
+                <span className="max-w-48 truncate">{summary || t('pickers.options.label')}</span>
             </Menu.Trigger>
             <Popup minWidth="min-w-52">
                 {model.options.map((option, index) => (
@@ -299,13 +302,14 @@ export function OptionsPicker({
  * draft held are named on the row but not kept, because their bytes never go to storage.
  */
 export function StashPicker({ onRestore }: { onRestore(prompt: StashedPrompt): void }) {
+    const { t } = useTranslation('chat');
     const prompts = useStash((s) => s.prompts);
     if (prompts.length === 0) {
         return null;
     }
     return (
         <Popover.Root>
-            <Tooltip label="Stashed prompts" kbd={STASH_SHORTCUT}>
+            <Tooltip label={t('pickers.stash.title')} kbd={STASH_SHORTCUT}>
                 <Popover.Trigger className={triggerClass}>
                     <Icon icon={Bookmark} size={12} />
                     <span className="tabular-nums">{prompts.length}</span>
@@ -314,7 +318,7 @@ export function StashPicker({ onRestore }: { onRestore(prompt: StashedPrompt): v
             <Popover.Portal>
                 <Popover.Positioner className="z-(--z-popup)" side="top" sideOffset={8} align="start">
                     <Popover.Popup className="picker-popup w-80">
-                        <div className={`${SECTION_LABEL} px-3 pt-2`}>Stashed prompts</div>
+                        <div className={`${SECTION_LABEL} px-3 pt-2`}>{t('pickers.stash.title')}</div>
                         <div className="max-h-72 overflow-auto p-1">
                             {prompts.map((prompt) => (
                                 <div key={prompt.id} className="group/stash flex items-start gap-1">
@@ -322,14 +326,12 @@ export function StashPicker({ onRestore }: { onRestore(prompt: StashedPrompt): v
                                         className="flex min-w-0 grow flex-col gap-0.5 rounded-md px-2 py-1.5 text-left text-xs text-text-muted hover:bg-surface-hover hover:text-text"
                                         onClick={() => onRestore(prompt)}
                                     >
-                                        <span className="line-clamp-2 whitespace-pre-wrap">{prompt.text || 'No text'}</span>
+                                        <span className="line-clamp-2 whitespace-pre-wrap">{prompt.text || t('pickers.stash.noText')}</span>
                                         {prompt.attachments.length > 0 && (
-                                            <span className="text-text-faint">
-                                                {prompt.attachments.length} {prompt.attachments.length === 1 ? 'file' : 'files'}, not kept
-                                            </span>
+                                            <span className="text-text-faint">{t('pickers.stash.files', { count: prompt.attachments.length })}</span>
                                         )}
                                     </Popover.Close>
-                                    <Tooltip label="Delete" name>
+                                    <Tooltip label={t('common:action.delete')} name>
                                         <button
                                             className="icon-btn mt-1 h-6 w-6 shrink-0 rounded opacity-0 group-hover/stash:opacity-100 focus-visible:opacity-100"
                                             onClick={() => forgetStashed(prompt.id)}
@@ -347,23 +349,28 @@ export function StashPicker({ onRestore }: { onRestore(prompt: StashedPrompt): v
     );
 }
 
-const MODE_ITEMS: SelectItem<RuntimeMode>[] = RUNTIME_MODES.map((mode) => ({
-    value: mode.id,
-    label: mode.label,
-    description: mode.hint,
-    icon: <Icon icon={Shield} size={12} />
-}));
-
 /* When the agent has to ask, from ask-for-everything to never. Full access is tinted, because it
    is the one setting where the composer should keep reminding you what it agreed to. */
 export function ModePicker({ runtimeMode, onChange }: { runtimeMode: RuntimeMode; onChange(mode: RuntimeMode): void }) {
+    const { t } = useTranslation('chat');
+    const items = useMemo<SelectItem<RuntimeMode>[]>(
+        () =>
+            RUNTIME_MODES.map((mode) => ({
+                value: mode,
+                label: t(`modes.${mode}.label`),
+                description: t(`modes.${mode}.hint`),
+                icon: <Icon icon={Shield} size={12} />
+            })),
+        // The words change with the language, and `t` is the one thing that says it did.
+        [t]
+    );
     return (
         <Select
             value={runtimeMode}
-            label="Permissions"
+            label={t('pickers.mode.label')}
             size="sm"
             variant="ghost"
-            items={MODE_ITEMS}
+            items={items}
             className={clsx(runtimeMode === 'full-access' && 'text-status-needs-you hover:text-status-needs-you')}
             onValueChange={onChange}
         />

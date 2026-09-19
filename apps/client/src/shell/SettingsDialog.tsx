@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Tabs } from '@base-ui-components/react/tabs';
 import { X } from 'lucide-react';
@@ -11,12 +12,10 @@ import { MachinesPane } from '@/shell/settings/panes/MachinesPane';
 import { UsagePane } from '@/shell/settings/panes/UsagePane';
 import { ViewsPane } from '@/shell/settings/panes/ViewsPane';
 import { VoicePane } from '@/shell/settings/panes/VoicePane';
-import { ALL_SETTINGS_SECTIONS } from '@/shell/settings/sections';
+import { ALL_SETTINGS_SECTIONS, sectionDescription, sectionLabel } from '@/shell/settings/sections';
 import { useUi, type SettingsSectionId } from '@/state/ui';
 import { Icon } from '@/ui/Icon';
 import { Select } from '@/ui/Select';
-
-const SECTION_ITEMS = ALL_SETTINGS_SECTIONS.map((entry) => ({ value: entry.id, label: entry.label }));
 
 const PANES: Record<SettingsSectionId, () => React.JSX.Element> = {
     appearance: AppearancePane,
@@ -32,10 +31,13 @@ const PANES: Record<SettingsSectionId, () => React.JSX.Element> = {
 
 /* Sections on the left, one pane on the right. Opens on the section the caller asked for, or the last one. */
 export function SettingsDialog() {
+    const { t } = useTranslation('shell');
     const open = useUi((s) => s.settings.open);
     const section = useUi((s) => s.settings.section);
     const setSettings = useUi((s) => s.setSettings);
     const meta = ALL_SETTINGS_SECTIONS.find((entry) => entry.id === section) ?? ALL_SETTINGS_SECTIONS[0]!;
+    // Built on every render rather than once: the words move with the language, the list does not.
+    const items = ALL_SETTINGS_SECTIONS.map((entry) => ({ value: entry.id, label: sectionLabel(entry.id) }));
 
     return (
         <Dialog.Root open={open} onOpenChange={(next) => setSettings({ open: next })}>
@@ -51,16 +53,16 @@ export function SettingsDialog() {
                         className="flex min-h-0 min-w-0 grow max-[640px]:flex-col"
                     >
                         <div className="flex w-48 shrink-0 flex-col gap-3 border-r border-border bg-surface p-3 max-[960px]:w-40 max-[640px]:w-auto max-[640px]:flex-row max-[640px]:items-center max-[640px]:border-r-0 max-[640px]:border-b">
-                            <Dialog.Title className="px-2.5 pt-2 text-base font-semibold text-text max-[640px]:pt-0">Settings</Dialog.Title>
+                            <Dialog.Title className="px-2.5 pt-2 text-base font-semibold text-text max-[640px]:pt-0">{t('settingsDialog.title')}</Dialog.Title>
                             <div className="min-w-0 max-[640px]:hidden">
                                 <SettingsNav />
                             </div>
                             <div className="min-w-0 grow min-[641px]:hidden">
                                 <Select
                                     value={section}
-                                    items={SECTION_ITEMS}
+                                    items={items}
                                     onValueChange={(value) => setSettings({ section: value })}
-                                    label="Settings section"
+                                    label={t('settingsDialog.section')}
                                 />
                             </div>
                         </div>
@@ -69,10 +71,10 @@ export function SettingsDialog() {
                         <div className="flex min-h-0 min-w-0 grow flex-col">
                             <div className="flex min-w-0 items-start gap-4 px-6 pt-5 pb-4 max-[960px]:px-4">
                                 <div className="min-w-0 grow">
-                                    <h2 className="text-base font-semibold text-text">{meta.label}</h2>
-                                    <p className="mt-0.5 text-xs break-words text-text-muted">{meta.description}</p>
+                                    <h2 className="text-base font-semibold text-text">{sectionLabel(meta.id)}</h2>
+                                    <p className="mt-0.5 text-xs break-words text-text-muted">{sectionDescription(meta.id)}</p>
                                 </div>
-                                <Dialog.Close className="icon-btn h-7 w-7 shrink-0" aria-label="Close settings">
+                                <Dialog.Close className="icon-btn h-7 w-7 shrink-0" aria-label={t('settingsDialog.close')}>
                                     <Icon icon={X} size={16} />
                                 </Dialog.Close>
                             </div>
@@ -91,7 +93,7 @@ export function SettingsDialog() {
                             })}
                         </div>
                     </Tabs.Root>
-                    <Dialog.Description className="sr-only">{meta.description}</Dialog.Description>
+                    <Dialog.Description className="sr-only">{sectionDescription(meta.id)}</Dialog.Description>
                 </Dialog.Popup>
             </Dialog.Portal>
         </Dialog.Root>

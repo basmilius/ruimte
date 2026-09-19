@@ -1,0 +1,28 @@
+{
+  "unreadable": "-",
+  "alert": {
+    "unnamedProcess": "A process",
+    "unnamedAgent": "The agent",
+    "silent": "Working, but silent for {{elapsed}}",
+    "busyAfterTurn": "{{name}} still uses {{percent}} of a core after its turn ended",
+    "memory": "{{name}} uses {{size}}",
+    "agentGone": "{{agent}} has exited, but still shows as running",
+    "orphan": "{{name}} is still running after its terminal closed",
+    "probeHung": "{{name}}, started by Ruimte, has run for {{elapsed}}",
+    "more_one": "{{text}}, and {{count}} more",
+    "more_other": "{{text}}, and {{count}} more"
+  },
+  "action": {
+    "interrupt": "Interrupt",
+    "terminate": "Terminate",
+    "show": "Show process",
+    "resume": "Resume"
+  },
+  "group": {
+    "terminal": "Terminal",
+    "chat": "Chat",
+    "app": "Ruimte app",
+    "daemon": "Machine tasks",
+    "other": "Other processes"
+  }
+}

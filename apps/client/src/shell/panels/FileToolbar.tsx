@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { Menu } from '@base-ui-components/react/menu';
 import { MoreHorizontal, WrapText, type LucideIcon } from 'lucide-react';
@@ -74,7 +75,8 @@ export function FileToolbarToggle({ icon, label, active, disabled = false, onCli
 /* The code view's wrap control as every other view draws it: there, so the switch beside it keeps its
    place, and inert, because there are no lines of source to wrap. */
 export function DisabledWrapToggle() {
-    return <FileToolbarToggle icon={WrapText} label="Wrap long lines (source view only)" active={false} disabled onClick={() => undefined} />;
+    const { t } = useTranslation('panels');
+    return <FileToolbarToggle icon={WrapText} label={t('file.toolbar.wrapDisabled')} active={false} disabled onClick={() => undefined} />;
 }
 
 /*
@@ -84,6 +86,7 @@ export function DisabledWrapToggle() {
  * `useFileActions`, so no renderer has to hand it over.
  */
 function FileMenu() {
+    const { t } = useTranslation('common');
     const actions = useFileActions();
 
     if (!actions) {
@@ -92,7 +95,7 @@ function FileMenu() {
 
     return (
         <Menu.Root>
-            <Tooltip label="More" name>
+            <Tooltip label={t('action.more')} name>
                 <Menu.Trigger className="icon-btn h-7 w-7">
                     <Icon icon={MoreHorizontal} size={14} />
                 </Menu.Trigger>

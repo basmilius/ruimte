@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { create } from 'zustand';
 import { isCanvasView, type Plan } from '@ruimte/contracts';
 import { planToMarkdown } from '@ruimte/plan';
@@ -109,7 +110,7 @@ export const focusChat = (chatId: string): void => {
 
 export const copyPlanMarkdown = (plan: Plan): void => {
     copyText(planToMarkdown(plan));
-    useToasts.getState().show({ kind: 'success', title: 'Copied the plan as Markdown' });
+    useToasts.getState().show({ kind: 'success', title: i18next.t('plan:toast.copied') });
 };
 
 /*

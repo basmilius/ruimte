@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Copy, GitCommitHorizontal } from 'lucide-react';
 import type { GitCommit } from '@ruimte/contracts';
@@ -37,6 +38,7 @@ interface CommitLogProps {
 export function CommitLog({ cwd, revision, reading, onOpen }: CommitLogProps) {
     /* What was asked for, so the answer to the question before this one is not drawn and a status
        that moved reads as loading without an effect that has to empty the state first. */
+    const { t } = useTranslation('panels');
     const asked = `${cwd}\u0000${revision}`;
     const [held, setHeld] = useState<{ asked: string; commits: GitCommit[]; cursor: string | null; failed: boolean } | null>(null);
     const [page, setPage] = useState<string | null>(null);
@@ -86,14 +88,14 @@ export function CommitLog({ cwd, revision, reading, onOpen }: CommitLogProps) {
     if (state === 'error') {
         return (
             <div className="grid min-h-0 grow place-items-center">
-                <EmptyState icon={<Icon icon={GitCommitHorizontal} size={20} />}>Could not read the history.</EmptyState>
+                <EmptyState icon={<Icon icon={GitCommitHorizontal} size={20} />}>{t('git.log.failed')}</EmptyState>
             </div>
         );
     }
     if (state === 'ready' && commits.length === 0) {
         return (
             <div className="grid min-h-0 grow place-items-center">
-                <EmptyState icon={<Icon icon={GitCommitHorizontal} size={20} />}>No commits yet.</EmptyState>
+                <EmptyState icon={<Icon icon={GitCommitHorizontal} size={20} />}>{t('git.log.empty')}</EmptyState>
             </div>
         );
     }
@@ -128,14 +130,14 @@ export function CommitLog({ cwd, revision, reading, onOpen }: CommitLogProps) {
                                 <ContextMenu.Positioner className="z-(--z-popup)">
                                     <ContextMenu.Popup className="menu-popup">
                                         <ContextMenu.Item className="menu-item" onClick={() => onOpen(commit)}>
-                                            <Icon icon={GitCommitHorizontal} size={14} /> Open the commit
+                                            <Icon icon={GitCommitHorizontal} size={14} /> {t('git.log.open')}
                                         </ContextMenu.Item>
                                         <ContextMenu.Separator className={MENU_SEPARATOR} />
                                         <ContextMenu.Item className="menu-item" onClick={() => copyText(commit.hash)}>
-                                            <Icon icon={Copy} size={14} /> Copy commit hash
+                                            <Icon icon={Copy} size={14} /> {t('file.tab.copyCommit')}
                                         </ContextMenu.Item>
                                         <ContextMenu.Item className="menu-item" onClick={() => copyText(commit.subject)}>
-                                            <Icon icon={Copy} size={14} /> Copy subject
+                                            <Icon icon={Copy} size={14} /> {t('git.log.copySubject')}
                                         </ContextMenu.Item>
                                     </ContextMenu.Popup>
                                 </ContextMenu.Positioner>
@@ -147,7 +149,7 @@ export function CommitLog({ cwd, revision, reading, onOpen }: CommitLogProps) {
             {cursor !== null && (
                 <div className="flex justify-center p-2">
                     <Button size="sm" variant="secondary" disabled={loadingMore} onClick={() => loadMore(cursor)}>
-                        {loadingMore ? 'Loading' : 'Load more'}
+                        {loadingMore ? t('common:state.loading') : t('git.log.loadMore')}
                     </Button>
                 </div>
             )}

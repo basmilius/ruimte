@@ -1,4 +1,5 @@
 import { CircleQuestionMark } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useCanvas } from '@/state/canvas';
 import { Icon } from '@/ui/Icon';
 
@@ -7,6 +8,7 @@ import { Icon } from '@/ui/Icon';
  * so and names the kind, which is what a person searches the release notes for.
  */
 export function UnknownNodePlate({ id }: { id: string }) {
+    const { t } = useTranslation('canvas');
     const kind = useCanvas((s) => {
         const raw = s.nodes[id]?.raw?.kind;
         return typeof raw === 'string' ? raw : null;
@@ -14,7 +16,7 @@ export function UnknownNodePlate({ id }: { id: string }) {
     return (
         <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-4 text-center text-text-faint">
             <Icon icon={CircleQuestionMark} size={20} />
-            <span className="text-sm">This node needs a newer version of Ruimte</span>
+            <span className="text-sm">{t('unknown.needsNewer')}</span>
             {kind !== null && <span className="font-mono text-xs">{kind}</span>}
         </div>
     );

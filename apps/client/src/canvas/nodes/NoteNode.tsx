@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { ClipboardPaste, Copy, Scan, Scissors } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Markdown } from '@/chat/ui/Markdown';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 import { MENU_SEPARATOR } from '@/ui/classes';
@@ -14,6 +15,7 @@ import { Kbd } from '@/ui/Kbd';
  * is saved with the project and, linked into an agent, read by it as a text source.
  */
 export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
+    const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
     const body = useCanvas((s) => s.nodes[id]?.body ?? '');
     const ref = useRef<HTMLTextAreaElement>(null);
@@ -54,7 +56,7 @@ export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
                     <textarea
                         ref={ref}
                         value={body}
-                        placeholder="Write a note. Markdown works."
+                        placeholder={t('note.placeholder')}
                         spellCheck={false}
                         className="h-full w-full resize-none bg-transparent px-3 py-2.5 font-sans text-sm leading-normal text-text outline-none placeholder:text-text-faint"
                         onChange={(e) => canvasStore.getState().updateNode(id, { body: e.target.value })}
@@ -64,7 +66,7 @@ export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
                     <ContextMenu.Positioner className="z-(--z-popup)">
                         <ContextMenu.Popup className="menu-popup">
                             <ContextMenu.Item className="menu-item" disabled={selected === ''} onClick={() => copyText(selected)}>
-                                <Icon icon={Copy} size={14} /> Copy <Kbd shortcut={EDIT_SHORTCUTS.copy} />
+                                <Icon icon={Copy} size={14} /> {t('common:action.copy')} <Kbd shortcut={EDIT_SHORTCUTS.copy} />
                             </ContextMenu.Item>
                             <ContextMenu.Item
                                 className="menu-item"
@@ -74,14 +76,14 @@ export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
                                     replaceSelection('');
                                 }}
                             >
-                                <Icon icon={Scissors} size={14} /> Cut <Kbd shortcut={EDIT_SHORTCUTS.cut} />
+                                <Icon icon={Scissors} size={14} /> {t('edit.cut')} <Kbd shortcut={EDIT_SHORTCUTS.cut} />
                             </ContextMenu.Item>
                             <ContextMenu.Item className="menu-item" onClick={() => void paste()}>
-                                <Icon icon={ClipboardPaste} size={14} /> Paste <Kbd shortcut={EDIT_SHORTCUTS.paste} />
+                                <Icon icon={ClipboardPaste} size={14} /> {t('edit.paste')} <Kbd shortcut={EDIT_SHORTCUTS.paste} />
                             </ContextMenu.Item>
                             <ContextMenu.Separator className={MENU_SEPARATOR} />
                             <ContextMenu.Item className="menu-item" onClick={() => ref.current?.select()}>
-                                <Icon icon={Scan} size={14} /> Select all <Kbd shortcut={EDIT_SHORTCUTS.selectAll} />
+                                <Icon icon={Scan} size={14} /> {t('common:action.selectAll')} <Kbd shortcut={EDIT_SHORTCUTS.selectAll} />
                             </ContextMenu.Item>
                         </ContextMenu.Popup>
                     </ContextMenu.Positioner>
@@ -98,7 +100,7 @@ export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={() => canvasStore.getState().activateNode(id)}
             >
-                Click to write
+                {t('note.empty')}
             </button>
         );
     }

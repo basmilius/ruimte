@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import {
     ChannelLiveness,
     channelBinding,
@@ -48,14 +49,8 @@ export interface WebRtcLinkOptions {
     pingTickMs?: number;
 }
 
-const CLOSE_REASONS: Record<string, string> = {
-    declined: 'The machine is opening too many direct connections at once',
-    failed: 'The machine could not answer the direct connection',
-    timeout: 'The machine gave up waiting for the direct connection',
-    done: 'The machine ended the direct connection',
-    'not-paired': 'The machine does not know this client. Its access was revoked, or it lost the pairing; pair again to connect.',
-    'statements-refused': 'The machine turns away sign-in through an account. Pair with a link to connect.'
-};
+/* Why the machine hung up. A reason this version has no words for still says the connection went. */
+const closeReason = (reason: string): string => i18next.t(`machines:direct.closed.${reason}`, { defaultValue: i18next.t('machines:direct.closed.other') });
 
 const connectionIdOf = (): string => {
     const bytes = crypto.getRandomValues(new Uint8Array(16));
@@ -127,7 +122,7 @@ export const webRtcLink =
         };
 
         const timer = setTimeout(
-            () => end(`The direct connection did not come up within ${Math.round((options.timeoutMs ?? CONNECT_TIMEOUT_MS) / 1000)} seconds`),
+            () => end(i18next.t('machines:direct.timedOut', { seconds: Math.round((options.timeoutMs ?? CONNECT_TIMEOUT_MS) / 1000) })),
             options.timeoutMs ?? CONNECT_TIMEOUT_MS
         );
 
@@ -140,7 +135,7 @@ export const webRtcLink =
                     channel.send(piece);
                 }
             } catch (e) {
-                end(`The direct connection refused a frame: ${messageOf(e)}`);
+                end(i18next.t('machines:direct.frameRefused', { reason: messageOf(e) }));
             }
         };
 
@@ -150,7 +145,9 @@ export const webRtcLink =
             }
             if (incoming.kind === 'answer' && peer && offerSdp !== null && binding === null) {
                 binding = channelBinding(offerSdp, incoming.sdp);
-                void peer.setRemoteDescription({ type: 'answer', sdp: incoming.sdp }).catch((e) => end(`The machine's answer did not apply: ${messageOf(e)}`));
+                void peer
+                    .setRemoteDescription({ type: 'answer', sdp: incoming.sdp })
+                    .catch((e) => end(i18next.t('machines:direct.answerNotApplied', { reason: messageOf(e) })));
                 return;
             }
             if (incoming.kind === 'candidate' && peer && incoming.candidate !== '') {
@@ -160,7 +157,7 @@ export const webRtcLink =
                 return;
             }
             if (incoming.kind === 'close') {
-                end(CLOSE_REASONS[incoming.reason] ?? 'The machine closed the direct connection');
+                end(closeReason(incoming.reason));
             }
         };
 
@@ -169,7 +166,7 @@ export const webRtcLink =
             const challenge = DirectChallengeFrameSchema.safeParse(json);
             if (challenge.success) {
                 if (binding === null) {
-                    throw new Error('The channel opened before the answer that describes it');
+                    throw new Error(i18next.t('machines:direct.channelEarly'));
                 }
                 // Checked before anything is proved: a machine on another wire could not read what follows anyway.
                 const mismatch = protocolMismatch(challenge.data.protocol);
@@ -182,11 +179,11 @@ export const webRtcLink =
             }
             const verdict = DirectVerdictFrameSchema.safeParse(json);
             if (!verdict.success) {
-                throw new Error('The machine answered the direct connection with something other than its handshake');
+                throw new Error(i18next.t('machines:direct.badHandshake'));
             }
             if (verdict.data.type === 'direct.refused') {
                 const mismatch = verdict.data.protocol === undefined ? null : protocolMismatch(verdict.data.protocol);
-                end(mismatch !== null ? protocolRefusal(mismatch) : `The machine refused the direct connection: ${verdict.data.reason}`);
+                end(mismatch !== null ? protocolRefusal(mismatch) : i18next.t('machines:direct.refusedVerdict', { reason: verdict.data.reason }));
                 return;
             }
             authenticated = true;
@@ -196,7 +193,7 @@ export const webRtcLink =
             let sampling = false;
             liveness = new ChannelLiveness({
                 ping: (id) => sendFrame(directPingFrame(id)),
-                dead: () => end('The machine stopped answering over the direct connection'),
+                dead: () => end(i18next.t('machines:direct.dead')),
                 received: () => received,
                 idleMs: options.pingIdleMs,
                 timeoutMs: options.pingTimeoutMs
@@ -240,7 +237,7 @@ export const webRtcLink =
             const piece = typeof data === 'string' ? data : new TextDecoder().decode(data as ArrayBuffer);
             const result = assembler.push(piece, authenticated ? FRAME_CHARS : HANDSHAKE_FRAME_CHARS);
             if (result.kind === 'invalid') {
-                end('The machine sent a frame this client cannot read');
+                end(i18next.t('machines:direct.badFrame'));
                 return;
             }
             if (result.kind === 'partial') {
@@ -260,13 +257,13 @@ export const webRtcLink =
             peer = created;
             channel = created.createDataChannel(DIRECT_CHANNEL_LABEL, { ordered: true });
             channel.onmessage = (message) => onPiece(message.data);
-            channel.onclose = () => end(authenticated ? 'The direct connection closed' : 'The channel closed before the machine let this client in');
+            channel.onclose = () => end(i18next.t(authenticated ? 'machines:direct.channelClosed' : 'machines:direct.channelClosedEarly'));
             created.onconnectionstatechange = () => {
                 if (created.connectionState === 'failed') {
                     end(
                         routeServers.some((server) => (Array.isArray(server.urls) ? server.urls : [server.urls]).some((url) => /^turns?:/.test(url)))
-                            ? 'No network path to the machine: ICE failed, through the relay as well.'
-                            : 'No network path to the machine: ICE failed. A direct connection needs UDP between both sides, and this route offers no relay.'
+                            ? i18next.t('machines:direct.noPathWithRelay')
+                            : i18next.t('machines:direct.noPath')
                     );
                 }
             };
@@ -277,7 +274,7 @@ export const webRtcLink =
             }
             offerSdp = created.localDescription?.sdp ?? null;
             if (offerSdp === null) {
-                throw new Error('The browser made no offer');
+                throw new Error(i18next.t('machines:direct.noOffer'));
             }
             signaling?.send({ kind: 'offer', sdp: offerSdp });
         };
@@ -286,7 +283,7 @@ export const webRtcLink =
         const opened = open(url)(connectionId, {
             ready: (routeServers) => {
                 if (!ended) {
-                    void negotiate(routeServers ?? []).catch((e) => end(`Could not set up a direct connection: ${messageOf(e)}`));
+                    void negotiate(routeServers ?? []).catch((e) => end(i18next.t('machines:direct.setupFailed', { reason: messageOf(e) })));
                 }
             },
             signal: onSignal,

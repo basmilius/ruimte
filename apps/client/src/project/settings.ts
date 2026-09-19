@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { ProjectIconChoice, ProjectSummary } from '@ruimte/contracts';
 import { ensureMachine } from '@/endpoint/reach';
 import { useProjectList } from '@/state/project-list';
@@ -12,7 +13,7 @@ const connectedTransport = async (endpointId: string): Promise<{ endpointId: str
     const connectedId = await ensureMachine(endpointId);
     const transport = transportFor(connectedId);
     if (!transport) {
-        throw new Error('That machine is no longer connected');
+        throw new Error(i18next.t('project:error.machineDisconnected'));
     }
     return { endpointId: connectedId, transport };
 };

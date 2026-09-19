@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { AgentKind, Plan, PlanItem, PlanSection, PlanStep, PlanStepState, PlanText } from '@ruimte/contracts';
 import { allItems, allSteps, isParentStep, planProgress, stepState, type PlanProgress } from '@ruimte/plan';
 
@@ -128,7 +129,7 @@ export const activeStepsLabel = (steps: readonly ActiveStep[]): string => {
     if (steps.length === 0) {
         return '';
     }
-    return steps.length === 1 ? steps[0].title : `${steps[0].title} and ${steps.length - 1} more`;
+    return steps.length === 1 ? steps[0].title : i18next.t('plan:active.more', { title: steps[0].title, count: steps.length - 1 });
 };
 
 /* The step a click on the active item goes to: the first, and on each next click the one after the last. */
@@ -176,21 +177,7 @@ export const revealOptions = (plan: Pick<Plan, 'items'>, options: PlanViewOption
 };
 
 /* What a state reads as in a plan of this kind: a test is passed, not done. */
-export const stateLabel = (kind: Plan['meta']['kind'], state: PlanStepState): string => {
-    if (kind === 'test') {
-        return {
-            open: 'Not run',
-            active: 'Running',
-            done: 'Passed',
-            failed: 'Failed',
-            skipped: 'Skipped',
-            blocked: 'Blocked',
-            warning: 'Warning',
-            info: 'Info'
-        }[state];
-    }
-    return { open: 'Open', active: 'Active', done: 'Done', failed: 'Failed', skipped: 'Skipped', blocked: 'Blocked', warning: 'Warning', info: 'Info' }[state];
-};
+export const stateLabel = (kind: Plan['meta']['kind'], state: PlanStepState): string => i18next.t(`plan:state.${kind}.${state}`);
 
 /* The states a person picks from; active is the agent's word for where it works. */
 export const PERSON_STATES: readonly PlanStepState[] = ['open', 'done', 'warning', 'info', 'failed', 'skipped', 'blocked'];
@@ -204,12 +191,13 @@ export const asksForNote = (state: PlanStepState): boolean => state === 'failed'
 /* A click on the mark of a step in a steps plan: done, or back to open. */
 export const toggledState = (state: PlanStepState): PlanStepState => (state === 'done' ? 'open' : 'done');
 
+/* Product names, the same word in every language. */
 const AGENT_NAMES: Record<string, string> = { claude: 'Claude', codex: 'Codex', gemini: 'Gemini', copilot: 'Copilot' };
 
 /* The short name of the agent a chat runs, as a person calls it. */
 export const agentName = (provider: AgentKind | string | null | undefined): string => {
     if (!provider) {
-        return 'The agent';
+        return i18next.t('plan:agent.unknown');
     }
     return AGENT_NAMES[provider] ?? provider.charAt(0).toUpperCase() + provider.slice(1);
 };
@@ -223,10 +211,10 @@ export const stepSetBy = (step: Pick<PlanStep, 'by'>, state: PlanStepState, agen
         return { text: null, tooltip: null };
     }
     if (step.by === 'person') {
-        return { text: when ? `you · ${when}` : 'you', tooltip: null };
+        return { text: when ? i18next.t('plan:setBy.personAt', { when }) : i18next.t('plan:setBy.person'), tooltip: null };
     }
     if (step.by === 'agent') {
-        return { text: null, tooltip: when ? `${agent} set it at ${when}` : `${agent} set it` };
+        return { text: null, tooltip: when ? i18next.t('plan:setBy.agentAt', { agent, when }) : i18next.t('plan:setBy.agent', { agent }) };
     }
     return { text: null, tooltip: null };
 };
@@ -246,7 +234,7 @@ export const resultsText = (plan: Plan): string | null => {
     if (groups.length === 0) {
         return null;
     }
-    return [`Results of the plan "${plan.meta.title}":`, ...groups.map((group) => [group.heading, ...group.lines].join('\n'))].join('\n\n');
+    return [i18next.t('plan:results.title', { title: plan.meta.title }), ...groups.map((group) => [group.heading, ...group.lines].join('\n'))].join('\n\n');
 };
 
 /* One step as a line of Markdown, for Copy in its menu. */
@@ -255,4 +243,34 @@ export const stepMarkdown = (kind: Plan['meta']['kind'], step: PlanStep): string
     const mark = state === 'done' ? '[x]' : '[ ]';
     const label = state === 'open' || state === 'done' ? '' : ` (${stateLabel(kind, state).toLowerCase()})`;
     return `- ${mark} ${step.title}${label}${step.note ? `\n    > ${step.note.replace(/\n/g, '\n    > ')}` : ''}`;
+};
+
+/*
+ * The plan header, counted out in words. `progressText` in `@ruimte/plan` writes the same numbers
+ * for an agent, which reads English whatever the person in front of the screen reads, so the two
+ * are separate rather than one with a language argument.
+ */
+export const progressParts = (plan: Pick<Plan, 'meta' | 'items'>): string[] => {
+    const progress = planProgress(plan.items);
+    const extra = (count: number, key: string): string[] => (count > 0 ? [i18next.t(`plan:progress.${key}`, { count })] : []);
+    if (plan.meta.kind === 'test') {
+        return [
+            i18next.t('plan:progress.ranOf', { finished: progress.finished, total: progress.total }),
+            i18next.t('plan:progress.passed', { count: progress.done }),
+            ...extra(progress.warning, 'warning'),
+            ...extra(progress.info, 'info'),
+            ...extra(progress.failed, 'failed'),
+            ...extra(progress.skipped, 'skipped'),
+            ...extra(progress.blocked, 'blocked')
+        ];
+    }
+    // In a steps plan a warning or info is still done; the extras say which of the done steps to read.
+    return [
+        i18next.t('plan:progress.doneOf', { done: progress.done + progress.warning + progress.info, total: progress.total }),
+        ...extra(progress.warning, 'withWarning'),
+        ...extra(progress.info, 'withInfo'),
+        ...extra(progress.failed, 'failed'),
+        ...extra(progress.skipped, 'skipped'),
+        ...extra(progress.blocked, 'blocked')
+    ];
 };

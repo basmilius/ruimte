@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import clsx from 'clsx';
+import i18next from 'i18next';
 import { Copy, RotateCw, TriangleAlert } from 'lucide-react';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP } from '@/ui/classes';
@@ -71,16 +72,16 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                     <p className="line-clamp-4 text-xs break-words text-text-muted">{errorMessageOf(error)}</p>
                     <div className={clsx('flex items-center gap-2', compact ? 'mt-1' : 'mt-2')}>
                         <Button variant="secondary" size="sm" onClick={() => this.reset()}>
-                            Try again
+                            {i18next.t('common:action.retry')}
                         </Button>
                         {reload && (
                             <Button variant="secondary" size="sm" onClick={() => window.location.reload()}>
                                 <Icon icon={RotateCw} size={14} />
-                                Reload
+                                {i18next.t('common:action.reload')}
                             </Button>
                         )}
                         <div className={BTN_GROUP}>
-                            <Tooltip label="Copy error" name>
+                            <Tooltip label={i18next.t('common:action.copyError')} name>
                                 <button className="icon-btn h-7 w-7" onClick={() => copyText(errorReport(label, error, componentStack))}>
                                     <Icon icon={Copy} size={14} />
                                 </button>

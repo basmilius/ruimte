@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 /* The failure classes worth their own sentence. Anything Chromium reports outside them is `other`,
    which says what happened without inventing a reason for it. */
 export type LoadErrorKind = 'offline' | 'dns' | 'refused' | 'certificate' | 'timeout' | 'blocked' | 'address' | 'other';
@@ -20,48 +22,31 @@ interface Copy {
     retryable: boolean;
 }
 
-const COPY: Record<LoadErrorKind, Copy> = {
-    offline: {
-        title: 'No internet connection',
-        hint: 'Check the network connection.',
-        retryable: true
-    },
-    dns: {
-        title: 'That address has no server',
-        hint: 'Check the spelling, or whether the address exists on this network.',
-        retryable: true
-    },
-    refused: {
-        title: 'The server refused the connection',
-        hint: 'Nothing is listening on that address. Check that the server is running.',
-        retryable: true
-    },
-    certificate: {
-        title: 'The connection is not secure',
-        hint: 'The certificate is not valid, so the page was not loaded.',
-        retryable: true
-    },
-    timeout: {
-        title: 'The server took too long',
-        hint: 'It may be busy, or unreachable from here.',
-        retryable: true
-    },
-    blocked: {
-        title: 'The page was blocked',
-        hint: 'A policy, an extension or the page itself stopped the request.',
-        retryable: true
-    },
-    address: {
-        title: 'That address cannot be opened',
-        hint: 'Check the scheme and the spelling.',
-        retryable: false
-    },
-    other: {
-        title: 'The page did not load',
-        hint: null,
-        retryable: true
-    }
+/* What a class is apart from its words: whether it has anything to check, and whether running the
+   same navigation again could end any differently. */
+interface Shape {
+    hint: boolean;
+    retryable: boolean;
+}
+
+const SHAPE: Record<LoadErrorKind, Shape> = {
+    offline: { hint: true, retryable: true },
+    dns: { hint: true, retryable: true },
+    refused: { hint: true, retryable: true },
+    certificate: { hint: true, retryable: true },
+    timeout: { hint: true, retryable: true },
+    blocked: { hint: true, retryable: true },
+    address: { hint: true, retryable: false },
+    other: { hint: false, retryable: true }
 };
+
+/* Read at the moment of the failure rather than kept in a table: words built at module level are
+   the language the window started in, and stay it after a person picks another one. */
+const copyOf = (kind: LoadErrorKind): Copy => ({
+    title: i18next.t(`browser:error.${kind}.title`),
+    hint: SHAPE[kind].hint ? i18next.t(`browser:error.${kind}.hint`) : null,
+    retryable: SHAPE[kind].retryable
+});
 
 /* The codes worth naming, from Chromium's `net_error_list.h`. */
 const KIND_BY_CODE = new Map<number, LoadErrorKind>([
@@ -109,5 +94,5 @@ const kindOf = (code: number, symbol: string): LoadErrorKind => {
 export const classifyLoadError = (code: number, description: string): LoadError => {
     const symbol = symbolOf(code, description);
     const kind = kindOf(code, symbol);
-    return { kind, symbol, ...COPY[kind] };
+    return { kind, symbol, ...copyOf(kind) };
 };

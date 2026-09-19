@@ -141,6 +141,13 @@ export interface DesktopBridge {
     /* What the shell is built on, for About and a bug report. Optional for the same reason
        `onBrowserContextMenu` is. */
     versions?: { electron: string; chrome: string; node: string };
+    /* The region the operating system writes numbers and dates in, which Chromium's own locale is
+       not: that one is the language of the app bundle, and the bundle names one language.
+       Read once, when the window opened, so a region changed since then lands on the next start. */
+    systemLocale?: string;
+    /* The languages the operating system asks for, best first, read the same way and at the same
+       moment as the region. */
+    systemLanguages?: string[];
     pickFolder(initialPath?: string): Promise<string | null>;
     openExternal(url: string): Promise<void>;
     openGuestDevTools(webContentsId: number): void;

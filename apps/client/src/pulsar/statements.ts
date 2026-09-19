@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { accessRequestMessage, type AccessRequestPayload, type AccessStatement, type SignalAccess } from '@ruimte/pulsar';
 import type { ClientKey } from '@/endpoint/client-key';
 import { currentClientLabel } from '@/endpoint/client-label';
@@ -20,7 +21,7 @@ export const requestSignalAccess = async (
     const signature = await key.sign(accessRequestMessage(machineId, key.publicKey, nonce));
     const statement = await request({ machineId, clientPublicKey: key.publicKey, nonce, signature });
     if (statement.machineId !== machineId || statement.clientPublicKey !== key.publicKey || statement.nonce !== nonce) {
-        throw new Error('Your account answered with a statement for something else');
+        throw new Error(i18next.t('machines:account.statementMismatch'));
     }
     return { statement, label: label.slice(0, 80) };
 };

@@ -1,0 +1,28 @@
+{
+  "ending": {
+    "alsoEnds_one": "Beëindigt ook de agent die hij opende. Zijn node blijft op het canvas staan met wat hij tot nu toe deed.",
+    "alsoEnds_other": "Beëindigt ook de {{count}} agents die hij opende. Hun nodes blijven op het canvas staan met wat ze tot nu toe deden.",
+    "stopsTask": "Beëindigt de agent die aan deze taak werkt en annuleert de taak zonder de chat te wekken die hem gaf. Zijn node blijft op het canvas staan.",
+    "stopsSubagents": "Stopt de turn en markeert de sub-agents van de chat als gestopt."
+  },
+  "dialog": {
+    "stopTitle": "{{what}} stoppen?",
+    "deleteTitle": "{{what}} verwijderen?",
+    "removeWorktree_one": "Verwijder ook de worktree en zijn branch",
+    "removeWorktree_other": "Verwijder ook de {{count}} worktrees zonder werk en hun branches",
+    "removeWorktreeToggle": "Verwijder ook de worktree",
+    "stop": "Stoppen",
+    "delete": "Verwijderen",
+    "worktreeRemoved": "Worktree {{branch}} verwijderd",
+    "worktreeStays": "Worktree {{branch}} blijft staan",
+    "worktreeFailed": "Dat lukte niet."
+  },
+  "menu": {
+    "none": "Geen agent-CLI gevonden",
+    "connecting": "Verbinden"
+  },
+  "target": {
+    "chat": "Agent (Chat)",
+    "terminal": "Agent (Terminal)"
+  }
+}

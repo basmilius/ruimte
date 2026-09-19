@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { Endpoint } from '@/state/endpoints';
 import type { ConnectionState } from '@/transport/transport';
 
@@ -29,7 +30,7 @@ export interface MachineLinkDeps {
 /* The one error a wait ends on when the person who asked stopped waiting, so a caller can tell it from a failure. */
 export class MachineWaitCancelled extends Error {
     constructor() {
-        super('Stopped waiting for that machine');
+        super(i18next.t('machines:link.cancelled'));
         this.name = 'MachineWaitCancelled';
     }
 }
@@ -160,10 +161,10 @@ export class MachineLinks {
                 if (state.status === 'open') {
                     finish(null);
                 } else if (state.status === 'closed') {
-                    finish(state.failure ?? 'That machine is not answering');
+                    finish(state.failure ?? i18next.t('machines:link.silent'));
                 }
             };
-            const timer = setTimeout(() => finish('That machine is not answering'), deps.timeoutMs ?? ENSURE_TIMEOUT_MS);
+            const timer = setTimeout(() => finish(i18next.t('machines:link.silent')), deps.timeoutMs ?? ENSURE_TIMEOUT_MS);
             signal.addEventListener('abort', onAbort, { once: true });
             off = deps.subscribe(endpointId, check);
             // A link waiting out its backoff is tried now: a person just asked for this machine.

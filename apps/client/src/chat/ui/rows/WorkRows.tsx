@@ -1,5 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
+import i18next from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { ChevronRight, FileDiff, GitFork, X } from 'lucide-react';
 import type { ChatCheckpointDiff, ChatCheckpointFile, ChatFileChange, ChatInfo, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
 import { chatClient } from '@/chat';
@@ -18,7 +20,8 @@ const UnifiedDiff = lazy(() => import('@/chat/ui/UnifiedDiff'));
 
 const OUTPUT_LIMIT = 4000;
 
-const clip = (text: string): string => (text.length > OUTPUT_LIMIT ? `${text.slice(0, OUTPUT_LIMIT)}\n[${text.length - OUTPUT_LIMIT} more characters]` : text);
+const clip = (text: string): string =>
+    text.length > OUTPUT_LIMIT ? `${text.slice(0, OUTPUT_LIMIT)}\n${i18next.t('chat:work.moreCharacters', { count: text.length - OUTPUT_LIMIT })}` : text;
 
 export function ToggleLine({
     icon,
@@ -63,18 +66,19 @@ export function ToggleLine({
 }
 
 function ToolBody({ tool }: { tool: ChatToolItem }) {
+    const { t } = useTranslation('chat');
     const patches = unifiedChanges(tool);
     const changes = patches.length > 0 ? [] : fileChanges(tool.name, tool.input);
     return (
         <div className="mt-1.5 mb-2 ml-6 overflow-hidden rounded-md border border-border bg-surface-raised">
             {patches.length > 0 ? (
-                <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">Loading diff</div>}>
+                <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">{t('work.loadingDiff')}</div>}>
                     {patches.map((change, index) => (
                         <UnifiedDiff key={index} change={change} />
                     ))}
                 </Suspense>
             ) : changes.length > 0 ? (
-                <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">Loading diff</div>}>
+                <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">{t('work.loadingDiff')}</div>}>
                     {changes.map((change, index) => (
                         <EditDiff key={index} change={change} />
                     ))}
@@ -121,17 +125,18 @@ export function WorkRow({ tool, nested }: { tool: ChatToolItem; nested?: boolean
 
 /* "running for 12s" next to a live call; like WorkingRow, the timer writes the text itself. */
 export function RunningFor({ startedAt }: { startedAt: number }) {
+    const { t } = useTranslation('chat');
     const ref = useRef<HTMLSpanElement>(null);
     useEffect(() => {
         const tick = (): void => {
             if (ref.current) {
-                ref.current.textContent = `running for ${formatElapsed(Date.now() - startedAt)}`;
+                ref.current.textContent = t('work.runningFor', { elapsed: formatElapsed(Date.now() - startedAt) });
             }
         };
         tick();
         const timer = window.setInterval(tick, 1000);
         return () => window.clearInterval(timer);
-    }, [startedAt]);
+    }, [startedAt, t]);
     return <span ref={ref} className="shrink-0 text-xs text-text-faint tabular-nums" />;
 }
 
@@ -192,6 +197,7 @@ export function TurnFoldRow({
     expanded: boolean;
     onToggle(): void;
 }) {
+    const { t } = useTranslation('chat');
     const endpointId = useEndpointId();
     // A count, so the selector answers a number and never a new object.
     const forks = useChats((s) => forksAfter(forkInfosOn(s.byKey, endpointId), chatId, turn.id));
@@ -210,9 +216,9 @@ export function TurnFoldRow({
                 {label}
             </button>
             {forks > 0 && (
-                <Tooltip label={forks === 1 ? 'A fork goes on after this turn' : `${forks} forks go on after this turn`}>
+                <Tooltip label={t('work.forksAfter', { count: forks })}>
                     <span className="mb-0.5 flex items-center gap-1 text-xs text-text-faint">
-                        <Icon icon={GitFork} size={12} /> {forks === 1 ? 'Forked' : `Forked ${forks}x`}
+                        <Icon icon={GitFork} size={12} /> {t('work.forked', { count: forks })}
                     </span>
                 </Tooltip>
             )}
@@ -220,15 +226,17 @@ export function TurnFoldRow({
     );
 }
 
-const omittedLabel = (reason: 'binary' | 'too-large'): string => (reason === 'binary' ? 'Binary file, no diff' : 'Too large to show');
+const omittedLabel = (reason: 'binary' | 'too-large'): string =>
+    reason === 'binary' ? i18next.t('chat:work.omitted.binary') : i18next.t('chat:work.omitted.tooLarge');
 
 /* One file of a turn's checkpoint diff: its patch, or the reason there is none. */
 function CheckpointFileBody({ file }: { file: ChatCheckpointFile }) {
+    const { t } = useTranslation('chat');
     if (file.omitted) {
         return <div className="px-3 py-2 text-xs text-text-faint">{omittedLabel(file.omitted)}</div>;
     }
     return (
-        <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">Loading diff</div>}>
+        <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">{t('work.loadingDiff')}</div>}>
             <UnifiedDiff change={file} />
         </Suspense>
     );
@@ -253,6 +261,7 @@ export function ChangedFilesRow({
     chatId: string;
     turnId: string;
 }) {
+    const { t } = useTranslation('chat');
     const [open, setOpen] = useState<Record<string, boolean>>({});
     const [fetched, setFetched] = useState<ChatCheckpointDiff | null>(null);
     useEffect(() => {
@@ -278,10 +287,8 @@ export function ChangedFilesRow({
             <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
                 <div className="flex items-center gap-2 px-3 py-2 text-xs text-text-muted">
                     <Icon icon={FileDiff} size={12} />
-                    <span className="font-medium text-text">
-                        {checkpointDiff.files.length} changed file{checkpointDiff.files.length === 1 ? '' : 's'}
-                    </span>
-                    {checkpointDiff.truncated && <span className="text-text-faint">and more, truncated</span>}
+                    <span className="font-medium text-text">{t('work.changedFiles', { count: checkpointDiff.files.length })}</span>
+                    {checkpointDiff.truncated && <span className="text-text-faint">{t('work.andMore')}</span>}
                 </div>
                 {checkpointDiff.files.map((file) => (
                     <div key={file.path} className="border-t border-border">
@@ -323,6 +330,7 @@ function ProviderChangedFiles({
     open: Record<string, boolean>;
     setOpen: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
 }) {
+    const { t } = useTranslation('chat');
     const byPath = new Map<string, { edits: FileChange[]; patches: ChatFileChange[] }>();
     const entryFor = (path: string) => {
         const existing = byPath.get(path);
@@ -349,9 +357,7 @@ function ProviderChangedFiles({
         <div className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
             <div className="flex items-center gap-2 px-3 py-2 text-xs text-text-muted">
                 <Icon icon={FileDiff} size={12} />
-                <span className="font-medium text-text">
-                    {byPath.size} changed file{byPath.size === 1 ? '' : 's'}
-                </span>
+                <span className="font-medium text-text">{t('work.changedFiles', { count: byPath.size })}</span>
             </div>
             {[...byPath].map(([path, entry]) => {
                 const count = entry.edits.length + entry.patches.length;
@@ -365,13 +371,11 @@ function ProviderChangedFiles({
                             <Icon icon={ChevronRight} size={12} className={clsx('shrink-0 text-text-faint transition-transform', open[path] && 'rotate-90')} />
                             <span className="min-w-0 truncate font-mono text-text">{path}</span>
                             <span className="grow" />
-                            <span className="text-text-faint">
-                                {count} edit{count === 1 ? '' : 's'}
-                            </span>
+                            <span className="text-text-faint">{t('work.edits', { count })}</span>
                         </button>
                         {open[path] && (
                             <div className="border-t border-border">
-                                <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">Loading diff</div>}>
+                                <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">{t('work.loadingDiff')}</div>}>
                                     {entry.patches.map((change, index) => (
                                         <UnifiedDiff key={`patch-${index}`} change={change} />
                                     ))}
@@ -392,6 +396,7 @@ const pad = (n: number): string => String(n).padStart(2, '0');
 
 /* "Working for 00:14": the timer writes the text itself, so a tick never re-renders the thread. */
 export function WorkingRow({ startedAt }: { startedAt: number }) {
+    const { t } = useTranslation('chat');
     const ref = useRef<HTMLSpanElement>(null);
     useEffect(() => {
         const tick = (): void => {
@@ -411,7 +416,7 @@ export function WorkingRow({ startedAt }: { startedAt: number }) {
             <span className={`${ROW_GUTTER} text-accent`}>
                 <span className="h-2 w-2 rounded-full bg-status-running" />
             </span>
-            <span className="chat-live-text">Working for</span>
+            <span className="chat-live-text">{t('work.workingFor')}</span>
             <span ref={ref} className="tabular-nums" />
         </div>
     );

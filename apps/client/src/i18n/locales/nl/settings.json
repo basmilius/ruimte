@@ -1,0 +1,691 @@
+{
+  "appearance": {
+    "theme": {
+      "title": "Thema",
+      "label": "Thema",
+      "description": "Systeem volgt je besturingssysteem.",
+      "options": {
+        "system": "Systeem",
+        "light": "Licht",
+        "dark": "Donker"
+      }
+    },
+    "accent": {
+      "label": "Accentkleur",
+      "description": "Selectieranden, focus en de cursor in een terminal.",
+      "more": "Meer kleuren"
+    },
+    "interface": {
+      "title": "Interface",
+      "fontSize": {
+        "label": "Tekstgrootte interface",
+        "description": "Schaalt tekst en ruimte overal, behalve in terminals en code."
+      },
+      "dock": {
+        "label": "Dock verbergen",
+        "description": "De balk onder een canvas of tekening blijft weg tot de muis de onderrand nadert."
+      }
+    },
+    "language": {
+      "label": "Taal",
+      "description": "Systeem volgt je besturingssysteem en valt terug op Engels voor een taal die Ruimte nog niet spreekt.",
+      "system": "Systeem"
+    },
+    "region": {
+      "label": "Regio",
+      "description": "Datums en getallen lezen als {{example}}.",
+      "language": "Volg de taal",
+      "system": "Systeem"
+    },
+    "terminal": {
+      "title": "Terminal",
+      "font": {
+        "label": "Lettertype",
+        "description": "Valt terug op het systeemlettertype als het niet is geïnstalleerd.",
+        "system": "Systeem"
+      },
+      "fontSize": {
+        "label": "Tekstgrootte"
+      }
+    }
+  },
+  "sections": {
+    "title": "Onderdelen van de instellingen",
+    "appearance": {
+      "label": "Uiterlijk",
+      "description": "Thema, accentkleur, het lettertype van de terminal en de regio waarin getallen en datums worden geschreven."
+    },
+    "keyboard": {
+      "label": "Toetsenbord",
+      "description": "Elke sneltoets."
+    },
+    "views": {
+      "label": "Weergaven",
+      "description": "Hoe tekeningen en browserpagina's zich gedragen."
+    },
+    "files": {
+      "label": "Bestanden en Git",
+      "description": "Wat de panelen Bestanden en Git tonen, en waar het bladeren naar een map begint."
+    },
+    "agents": {
+      "label": "Agents",
+      "description": "Standaarden, permissies en meldingen voor agents."
+    },
+    "usage": {
+      "label": "Verbruik",
+      "description": "De valuta van de verbruikspagina."
+    },
+    "voice": {
+      "label": "Voice",
+      "description": "Toegang tot GPT-Live en spraakinstellingen."
+    },
+    "machines": {
+      "label": "Remote",
+      "description": "Je machines, het account dat ze delen en hoe elke machine bereikt wordt."
+    },
+    "about": {
+      "label": "Over",
+      "description": "Versie, gegevens van de machine en links."
+    }
+  },
+  "controls": {
+    "stepper": {
+      "smaller": "Kleiner",
+      "larger": "Groter",
+      "smallerFor": "{{label}}: kleiner",
+      "largerFor": "{{label}}: groter"
+    }
+  },
+  "usage": {
+    "title": "Verbruik",
+    "currency": {
+      "label": "Valuta",
+      "dollars": "Prijzen zoals gepubliceerd, in dollars.",
+      "noRate": "Nog geen wisselkoers. De pagina toont dollars zolang die er niet is.",
+      "converted": "Omgerekend met de ECB-referentiekoers van {{date}}.",
+      "options": {
+        "USD": "Dollars",
+        "EUR": "Euro's"
+      }
+    }
+  },
+  "gesture": {
+    "drag": "slepen",
+    "scroll": "scrollen",
+    "click": "klikken"
+  },
+  "views": {
+    "drawing": {
+      "title": "Tekening",
+      "snap": {
+        "label": "Uitlijnen op het raster",
+        "description": "Vormen landen op het raster van 8 eenheden terwijl je ze tekent, verplaatst of van formaat verandert. Lijnen uit de vrije hand lijnen nooit uit."
+      }
+    },
+    "browser": {
+      "title": "Browser",
+      "swipe": {
+        "label": "Vegen tussen pagina's",
+        "description": "Twee vingers naar links of rechts op het trackpad gaan terug of vooruit in een browsernode of -weergave. Een pagina die zelf zijwaarts scrolt houdt het gebaar."
+      }
+    }
+  },
+  "files": {
+    "files": {
+      "title": "Bestanden",
+      "openFiles": {
+        "label": "Geopende bestanden",
+        "description": "Boven dit aantal sluit het oudste tabblad dat niet is vastgezet. Dubbelklik op een tabblad om het vast te zetten."
+      },
+      "hidden": {
+        "label": "Verborgen bestanden tonen",
+        "description": "Dotfiles en mappen die met een punt beginnen."
+      },
+      "browseStart": {
+        "label": "Bladeren beginnen in",
+        "description": "De map waarin het opdrachtenpalet begint als je bladert. Geldt voor elke machine. Leeg of niet gevonden valt terug op de thuismap."
+      }
+    },
+    "git": {
+      "title": "Git",
+      "layout": {
+        "label": "Diffweergave",
+        "description": "Gestapeld toont één kolom. Gesplitst zet de oude en de nieuwe versie naast elkaar.",
+        "options": {
+          "stacked": "Gestapeld",
+          "split": "Gesplitst"
+        }
+      },
+      "whitespace": {
+        "label": "Witruimtewijzigingen tonen",
+        "description": "Uit verbergt wijzigingen die alleen witruimte raken, in de diff en in de aantallen."
+      }
+    }
+  },
+  "shortcuts": {
+    "commands": {
+      "title": "Opdrachten"
+    },
+    "canvas": {
+      "title": "Canvas",
+      "palette": "Opdrachtenpalet",
+      "findInFiles": "Zoeken in bestanden",
+      "pan": "Het canvas verschuiven",
+      "zoomPointer": "Zoomen rond de muis",
+      "zoomIn": "Inzoomen",
+      "zoomOut": "Uitzoomen",
+      "undo": "Ongedaan maken",
+      "redo": "Opnieuw"
+    },
+    "selection": {
+      "title": "Selectie",
+      "selectAll": "Alles selecteren",
+      "add": "Toevoegen aan de selectie",
+      "delete": "De selectie verwijderen",
+      "escape": "De selectie opheffen, of de node verlaten waar je in zit"
+    },
+    "views": {
+      "title": "Weergaven",
+      "goTo": "Naar weergave 1 tot 9",
+      "previous": "Vorige weergave",
+      "next": "Volgende weergave",
+      "new": "Nieuwe canvasweergave",
+      "rename": "Het gefocuste item in de zijbalk hernoemen"
+    },
+    "split": {
+      "title": "Splitsen",
+      "right": "De cel naar rechts splitsen",
+      "down": "De cel naar beneden splitsen",
+      "focusNeighbor": "De cel ernaast focussen (elke pijltoets)",
+      "close": "De gefocuste cel sluiten"
+    },
+    "drawing": {
+      "title": "Tekening",
+      "select": "Selecteren (1)",
+      "hand": "Verschuiven (hand)",
+      "rectangle": "Rechthoek (2)",
+      "diamond": "Ruit (3)",
+      "ellipse": "Ellips (4)",
+      "arrow": "Pijl (5)",
+      "line": "Lijn (6)",
+      "freehand": "Vrije hand (7)",
+      "text": "Tekst (8)",
+      "eraser": "Gum (0)",
+      "keepTool": "Het gereedschap geselecteerd houden na het tekenen",
+      "lock": "De selectie vergrendelen of ontgrendelen",
+      "duplicate": "De selectie dupliceren",
+      "bringToFront": "Naar voren halen",
+      "sendToBack": "Naar achteren sturen",
+      "snap": "Uitlijnen op het raster aan- of uitzetten tijdens het slepen",
+      "copy": "De selectie kopiëren",
+      "paste": "Plakken in de tekening"
+    },
+    "panels": {
+      "title": "Panelen",
+      "toggle": "Het laatst geopende paneel tonen of verbergen"
+    },
+    "prompts": {
+      "title": "Prompts",
+      "answerFront": "De voorste prompt van het canvas beantwoorden",
+      "primary": "Toestaan, Volgende of Antwoorden",
+      "previous": "Vorige prompt in de stapel",
+      "next": "Volgende prompt in de stapel",
+      "escape": "Terug naar waar je was"
+    },
+    "chat": {
+      "title": "Chat",
+      "previousMessage": "Vorig bericht dat je stuurde",
+      "nextMessage": "Volgend bericht dat je stuurde"
+    },
+    "browser": {
+      "title": "Browser",
+      "back": "Terug",
+      "forward": "Vooruit"
+    },
+    "nodes": {
+      "title": "Nodes",
+      "nextNode": "De focus naar de volgende node verplaatsen",
+      "select": "De node selecteren waar het toetsenbord op staat",
+      "escape": "De selectie opheffen (een terminal geeft Escape door aan zijn programma)",
+      "leave": "Een terminalnode verlaten"
+    },
+    "terminal": {
+      "title": "Terminal",
+      "clear": "Het scherm en de scrollback wissen",
+      "lineStart": "Naar het begin van de regel",
+      "lineEnd": "Naar het einde van de regel",
+      "wordBack": "Eén woord terug",
+      "wordForward": "Eén woord vooruit",
+      "deleteToLineStart": "Verwijderen tot het begin van de regel"
+    }
+  },
+  "keyboard": {
+    "search": "Sneltoetsen zoeken",
+    "clearSearch": "Zoekopdracht wissen",
+    "noMatch": "Niets komt overeen met \"{{query}}\".",
+    "browserNote": "In een browsertabblad horen {{newView}} en {{closeCell}} bij de browser."
+  },
+  "backgroundService": {
+    "title": "Als Ruimte afsluit",
+    "keepRunning": {
+      "label": "Deze machine laten draaien als Ruimte afsluit",
+      "description": "Sessies en agents werken door op de achtergrond, zodat deze machine bereikbaar blijft vanaf je andere clients en het web."
+    },
+    "unavailable": {
+      "dev": "De dev-app draait altijd een eigen machine en stopt die als hij afsluit.",
+      "windows": "Nog niet beschikbaar op Windows, dus deze machine stopt als Ruimte afsluit.",
+      "appimage": "Niet beschikbaar voor de AppImage, die weg is zodra Ruimte afsluit. Installeer het deb- of rpm-pakket om deze machine te laten draaien."
+    },
+    "pending": {
+      "takeOver": "Ruimte draait deze machine nu zelf. Vanaf de volgende keer dat Ruimte afsluit blijft die draaien.",
+      "handBack": "Deze machine stopt als Ruimte afsluit, en vanaf de volgende start draait Ruimte die zelf."
+    },
+    "restart": {
+      "label": "Herstarten om de update af te ronden",
+      "action": "Herstarten"
+    },
+    "failure": "De achtergrondservice heeft deze machine niet gedraaid: {{reason}}",
+    "linger": {
+      "label": "Blijven draaien nadat je uitlogt",
+      "on": "Lingering staat aan, dus deze machine blijft draaien nadat je uitlogt.",
+      "off": "Zonder dat stopt deze machine als je uitlogt uit je desktopsessie.",
+      "action": "Toestaan"
+    },
+    "stop": {
+      "label": "De machine stoppen",
+      "description": "Beëindigt elke sessie hier en sluit Ruimte af. De machine start weer zodra je Ruimte opent.",
+      "action": "Stoppen"
+    },
+    "confirmStop": {
+      "title": "Deze machine stoppen en Ruimte afsluiten?",
+      "description": "Elke terminal en agent op deze machine eindigt, en geen enkele andere client kan erbij tot je Ruimte weer opent.",
+      "action": "Stoppen en afsluiten"
+    },
+    "confirmRestart": {
+      "title": "Deze machine nu herstarten?",
+      "description": "Elke terminal en agent op deze machine eindigt, en de machine komt terug op de bijgewerkte versie.",
+      "action": "Nu herstarten"
+    },
+    "confirmLinger": {
+      "title": "Blijven draaien nadat je uitlogt?",
+      "description": "Ruimte draait loginctl enable-linger voor je gebruiker, zodat je gebruikersservices zonder sessie blijven draaien. Ongedaan maken doe je met loginctl disable-linger.",
+      "action": "Toestaan"
+    }
+  },
+  "reach": {
+    "thisMachine": "Deze machine",
+    "paired": "Gekoppeld",
+    "onAccount": "Op je account",
+    "openedThroughAccount": "Geopend via je account"
+  },
+  "agents": {
+    "deleteAnyView": {
+      "title": "Wat een agent mag verwijderen",
+      "sectionDescription": "Per machine opgeslagen. Geldt voor elke client die ermee verbonden is.",
+      "rowLabel": "Agents op {{machine}} mogen elke weergave of node verwijderen",
+      "description": "Uit verwijdert een agent alleen weergaven en nodes die hij zelf maakte. Aan mag hij elke weergave en node in elk project daar verwijderen, ook die van jou.",
+      "notConnected": "Niet verbonden. Pas dit aan vanuit het venster van de machine onder Remote, of terwijl er een project op open staat."
+    },
+    "defaults": {
+      "title": "Standaarden voor nieuwe agents",
+      "description": "Een model kiezen in een chat verandert hier ook de standaard.",
+      "noChatCli": "Geen agent-CLI met chatondersteuning gevonden op deze machine.",
+      "usesCliDefault": "Gebruikt het standaardmodel van de CLI zelf.",
+      "modelFor": "Standaardmodel voor {{provider}}",
+      "providerDefault": "Standaard van de provider",
+      "legacyModel": "{{name}} (legacy)",
+      "permissions": "Permissies",
+      "terminalMode": "Terminal-agents starten in"
+    },
+    "here": {
+      "title": "Wat een agent hier mag",
+      "description": "Deze instellingen gelden alleen voor deze client.",
+      "approvals": {
+        "label": "Vraag mij om toestemming in de node",
+        "description": "Verzoeken om toestemming van terminal-agents verschijnen in de header van de node, en het eerste antwoord telt. Staat dit venster op de achtergrond, dan krijg je ook een notificatie, want een verzoek verloopt na een paar minuten. Uit antwoord je in de terminal."
+      },
+      "showViews": {
+        "label": "Een agent een weergave laten tonen",
+        "description": "Aan vervangt de weergave waarin je werkt door de weergave die een agent opent, en een banner brengt je terug. Uit biedt de banner een knop om ernaartoe te gaan."
+      }
+    },
+    "working": {
+      "title": "Terwijl een agent werkt",
+      "description": "Deze instellingen gelden alleen voor deze computer.",
+      "turnNotify": {
+        "label": "Laat het weten als een turn eindigt",
+        "description": "Stuurt een notificatie als een agent klaar is terwijl dit venster op de achtergrond staat."
+      },
+      "sound": {
+        "label": "Een geluid spelen bij een notificatie",
+        "description": "Geldt voor elke notificatie van een agent."
+      },
+      "keepAwake": {
+        "label": "Deze computer wakker houden",
+        "description": "Houdt de computer wakker terwijl een agent werkt, want slapen pauzeert de agent. Het scherm mag nog uitgaan.",
+        "toggle": "Deze computer wakker houden terwijl een agent werkt"
+      }
+    },
+    "chats": {
+      "title": "Chats",
+      "streaming": {
+        "label": "Antwoorden tonen",
+        "words": {
+          "label": "Woord voor woord",
+          "description": "Volgt de agent terwijl hij schrijft."
+        },
+        "blocks": {
+          "label": "Alinea voor alinea",
+          "description": "Toont elke alinea zodra die compleet is."
+        },
+        "whole": {
+          "label": "Als het antwoord af is",
+          "description": "Wacht tot het antwoord af is."
+        }
+      }
+    },
+    "providers": {
+      "title": "Providers",
+      "description": "Agent-CLI's die op het PATH van de machine staan. Installeer er een en herstart Ruimte op die machine om er een toe te voegen.",
+      "none": "Geen providers gevonden",
+      "version": "Versie {{version}}.",
+      "chatAndTerminal": "Chat en terminal.",
+      "terminalOnly": "Alleen terminal.",
+      "reportsStatus": "Meldt de status van de agent.",
+      "noStatus": "Meldt de status van de agent niet.",
+      "installed": "Geïnstalleerd",
+      "missing": "Ontbreekt"
+    }
+  },
+  "about": {
+    "tagline": "Space for AI Engineering.",
+    "version": "Versie {{version}}",
+    "unknownVersion": "onbekend",
+    "details": {
+      "title": "Details",
+      "copy": "Details kopiëren",
+      "notConnected": "Niet verbonden",
+      "unknown": "Onbekend",
+      "machine": {
+        "label": "Machine",
+        "description": "De machine van de huidige workspace, en de versie ervan."
+      },
+      "platform": "Platform",
+      "dataFolder": {
+        "label": "Datamap",
+        "description": "Waar de machine sessies, chats en worktrees bewaart."
+      }
+    },
+    "updates": {
+      "title": "Updates",
+      "description": "Installeren wacht altijd op jou.",
+      "auto": {
+        "label": "Updates automatisch downloaden",
+        "description": "Aan worden nieuwe versies op de achtergrond gedownload. Uit start je elke download zelf."
+      },
+      "check": "Controleren op updates",
+      "checking": "Bezig met controleren",
+      "download": "Downloaden",
+      "install": "Herstarten om te installeren"
+    },
+    "links": {
+      "title": "Links",
+      "website": {
+        "label": "ruimte.app",
+        "description": "Website en downloads."
+      },
+      "source": {
+        "label": "Broncode op GitHub",
+        "description": "Broncode en issues."
+      },
+      "report": {
+        "label": "Een probleem melden",
+        "description": "Beschrijf wat je zag en wat je verwachtte."
+      }
+    }
+  },
+  "voice": {
+    "key": {
+      "title": "OpenAI GPT-Live",
+      "sectionDescription": "Een aparte project key is aan te raden, om het verbruik te volgen en hem te kunnen intrekken.",
+      "label": "API key",
+      "fieldLabel": "OpenAI API key",
+      "desktopOnly": "API keys kun je instellen in de Ruimte-desktopapp.",
+      "create": "API key aanmaken",
+      "checking": "Bezig met de keychain van de desktop…",
+      "configured": "Ingesteld",
+      "notConfigured": "Niet ingesteld",
+      "persistent": "Versleuteld met de keychain van deze computer. Ruimte toont de opgeslagen waarde nooit meer.",
+      "session": "Versleutelen is niet beschikbaar, dus deze key blijft alleen bewaard tot Ruimte afsluit.",
+      "missing": "Nodig voor GPT-Live. De key blijft in de desktop-shell en wordt nooit in een project bewaard.",
+      "replacePlaceholder": "Voer een vervangende key in",
+      "remove": "Opgeslagen API key verwijderen",
+      "saveFailure": "De API key kon niet worden opgeslagen."
+    },
+    "toast": {
+      "readFailed": "Kon de instellingen van GPT-Live niet lezen",
+      "saved": "OpenAI API key opgeslagen",
+      "saveFailed": "Kon de API key niet opslaan",
+      "removed": "Opgeslagen OpenAI API key verwijderd",
+      "removeFailed": "Kon de API key niet verwijderen"
+    },
+    "microphone": {
+      "systemDefault": "Systeemstandaard",
+      "systemDefaultHint": "Volgt de invoerkeuze van macOS",
+      "unavailable": "Microfoon niet beschikbaar",
+      "unavailableHint": "Gebruikt de systeemstandaard tot die terug is"
+    },
+    "conversation": {
+      "title": "Gesprek",
+      "description": "Wijzigingen gelden vanaf het volgende gesprek. Alleen een lopend gesprek stuurt microfoonaudio naar OpenAI.",
+      "microphone": {
+        "label": "Microfoon",
+        "description": "De invoer voor nieuwe gesprekken. iPhones in de buurt verschijnen zodra macOS ze aanbiedt.",
+        "unavailableDescription": "De microfoons konden niet worden opgesomd. Nieuwe gesprekken gebruiken de systeemstandaard.",
+        "selectLabel": "Microfoon voor het gesprek"
+      },
+      "language": {
+        "label": "Taal",
+        "description": "De taal waarin Ruimte luistert en antwoordt.",
+        "selectLabel": "Taal van het gesprek"
+      },
+      "voice": {
+        "label": "Stem",
+        "description": "De ingebouwde Live-stemmen van OpenAI. Marin en Cedar worden aangeraden.",
+        "selectLabel": "Stem van het gesprek",
+        "default": "Standaard · aanbevolen",
+        "recommended": "Aanbevolen"
+      },
+      "confirm": {
+        "label": "Verwijderen bevestigen",
+        "description": "Vraag het voordat Voice weergaven of nodes verwijdert. Staat dit uit, dan worden gesproken verzoeken om iets te verwijderen meteen uitgevoerd.",
+        "toggle": "Verwijderen door Voice bevestigen"
+      }
+    }
+  },
+  "identity": {
+    "name": "Naam",
+    "nameLabel": "Naam van de machine",
+    "nameHint": "Laat leeg om de standaardnaam te gebruiken.",
+    "emoji": "Emoji",
+    "useEmoji": "Emoji gebruiken",
+    "icon": "Icoon",
+    "noIcon": "Geen icoon",
+    "gone": "Die machine staat niet meer in de lijst",
+    "saveFailed": "De machine kon de wijziging niet opslaan"
+  },
+  "machine": {
+    "notAnswering": "Geeft geen antwoord. Pas dit aan zodra de machine terug is.",
+    "unsupported": "Deze machine draait een versie zonder deze instelling.",
+    "unsupportedReason": "Deze machine draait een versie zonder deze instelling",
+    "toast": {
+      "saveFailed": "{{machine}} kon de wijziging niet opslaan",
+      "unchanged": "De instelling is onveranderd."
+    },
+    "direct": {
+      "label": "Direct",
+      "brokerOnly": "Alleen bereikbaar via de broker, dus deze machine is altijd direct.",
+      "viaBroker": "Verbinden via WebRTC, gevonden via de broker op {{host}} (experimenteel).",
+      "description": "Verbinden via WebRTC in plaats van via de socket (experimenteel).",
+      "toggle": "Direct verbinden met {{machine}} (experimenteel)"
+    },
+    "broker": {
+      "label": "Broker",
+      "modes": {
+        "default": "Standaard",
+        "custom": "Eigen",
+        "off": "Uit"
+      },
+      "description": "Hoe een ingelogde client de machine vindt zonder het adres. {{where}}{{fixed}}",
+      "on": "Op {{host}}.",
+      "none": "Geen broker.",
+      "fixed": " Ingesteld bij het starten van de machine, dus deze keuze wacht tot die zonder dat draait.",
+      "selectLabel": "Broker voor {{machine}}",
+      "urlLabel": "Broker-URL voor {{machine}}"
+    },
+    "refuse": {
+      "label": "Inloggen via een account weigeren",
+      "description": "Aan laat alleen een pairing link een nieuwe client binnen. Uit komt een client die is ingelogd op een account waar deze machine op staat er ook in, en die verschijnt onder Apps met toegang. Clients die al toegang hebben, houden die.",
+      "toggle": "Inloggen via een account weigeren op {{machine}}"
+    },
+    "streaming": {
+      "label": "Streamen van browser en apparaten",
+      "description": "Sta deze machine toe browserpagina's en schermen van apparaten te streamen naar clients zonder eigen native weergave.",
+      "toggle": "Streamen van browser en apparaten toestaan vanaf {{machine}}"
+    },
+    "access": {
+      "title": "Apps met toegang",
+      "description": "Browsers en apps die aan deze machine gekoppeld zijn.",
+      "showLink": "Pairing link tonen",
+      "listFailed": "Kon de gekoppelde clients niet opsommen",
+      "linkFailed": "Kon geen pairing link maken",
+      "empty": "Verder heeft niets toegang tot deze machine.",
+      "thisClient": "deze client",
+      "revoke": "Toegang intrekken",
+      "revokeOne": "{{label}} intrekken",
+      "session": "{{origin}} {{date}}, laatst gezien {{ago}}",
+      "origin": {
+        "statement": "Ingelogd via een account",
+        "link": "Gekoppeld met een link"
+      },
+      "silent": {
+        "label": "Geeft geen antwoord",
+        "description": "De lijst laadt zodra de machine terug is."
+      },
+      "link": {
+        "label": "Pairing link",
+        "loopback": "Deze machine accepteert alleen lokale verbindingen. Start hem met --host 0.0.0.0 zodat andere machines de link kunnen gebruiken.",
+        "description": "Plak hem onder Een machine toevoegen op het andere apparaat. Hij werkt één keer en verloopt na tien minuten.",
+        "copy": "Pairing link kopiëren",
+        "copied": "Gekopieerd"
+      },
+      "confirm": {
+        "title": "{{label}} intrekken?",
+        "current": "Dit is de client die je gebruikt. Hij verliest toegang tot deze machine en vergeet die hier. Koppel opnieuw om weer toegang te krijgen.",
+        "statement": "Hij verliest toegang bij de volgende verbinding, en inloggen via een account laat hem er niet meer in. Opnieuw koppelen vraagt om een link.",
+        "link": "Hij verliest toegang bij de volgende verbinding. Opnieuw koppelen vraagt om een nieuwe link.",
+        "action": "Intrekken"
+      }
+    }
+  },
+  "machineDialog": {
+    "availableWhenAnswering": "Beschikbaar zodra de machine antwoordt",
+    "openFailed": "{{machine}} kon niet worden geopend",
+    "addFailed": "{{machine}} is niet aan je account toegevoegd",
+    "notOpened": {
+      "title": "Niet geopend op deze client",
+      "label": "Open hem om de naam, het icoon en de verbinding te wijzigen",
+      "canOpen": "Hij verbindt via de broker, op gezag van je account.",
+      "noBroker": "Deze machine is nog niet verbonden met een broker, dus hij is alleen op zijn eigen netwerk te bereiken."
+    },
+    "identity": {
+      "title": "Naam en icoon",
+      "description": "Elke client die aan deze machine koppelt ziet ze."
+    },
+    "connection": "Verbinding",
+    "streaming": "Streaming",
+    "account": {
+      "title": "Account",
+      "registrationFailure": "Kon deze machine niet bijwerken op je account: {{reason}}",
+      "addAgain": {
+        "label": "Opnieuw aan je account toevoegen",
+        "description": "Iemand heeft deze machine van je account gehaald, dus hij komt er niet vanzelf op terug.",
+        "action": "Toevoegen"
+      }
+    },
+    "remove": {
+      "title": "Verwijderen",
+      "forget": {
+        "label": "Vergeten op deze client",
+        "description": "Laat de pairing en de regel van deze machine hier los. De machine, je account en andere clients houden de hunne.",
+        "action": "Vergeten"
+      },
+      "account": {
+        "label": "Van account verwijderen",
+        "local": "Elke andere client die op je account is ingelogd laat deze machine vallen. Hier blijft hij staan, want deze app draait erop.",
+        "description": "Elke client die op je account is ingelogd laat deze machine vallen, ook een die via een link gekoppeld is. Opnieuw koppelen met een link zet hem terug.",
+        "action": "Verwijderen"
+      }
+    },
+    "confirmForget": {
+      "title": "{{machine}} vergeten op deze client?",
+      "description": "De sessies en projecten blijven op de machine staan. Koppel opnieuw met een nieuwe link of open hem vanuit je account om hem hier terug te krijgen.",
+      "action": "Vergeten"
+    },
+    "confirmRemove": {
+      "title": "{{machine}} van je account verwijderen?",
+      "description": "Elke client die op je account is ingelogd laat hem vallen bij de volgende verversing, ook een client die via een link gekoppeld is. Clients die uitgelogd zijn houden hem. De machine houdt zijn pairings.",
+      "action": "Verwijderen"
+    }
+  },
+  "machines": {
+    "title": "Machines",
+    "description": "Elke machine heeft zijn eigen sessies, projecten en bestanden. Open er een project op om daar te werken.",
+    "empty": {
+      "label": "Nog geen machines",
+      "description": "Voeg er een toe om de projecten, terminals en agents ervan hiervandaan te openen."
+    },
+    "notOpened": "Niet geopend op deze client",
+    "notOpenedAria": "{{machine}}. Niet geopend op deze client",
+    "mismatch": "Op dit adres antwoordt een andere machine. Koppel opnieuw om te verbinden.",
+    "rowAria": "{{machine}}, {{reach}}",
+    "viaRelay": "{{reach}} · via relay",
+    "dot": {
+      "aria": "{{machine}}. {{status}}",
+      "brokerOnly": "Alleen bereikbaar via de broker",
+      "direct": "Directe verbinding (experimenteel)",
+      "directBroker": "Directe verbinding via de broker (experimenteel)"
+    },
+    "account": {
+      "title": "Account",
+      "description": "Machines op je account open je vanaf elke client waarop je inlogt.",
+      "unavailable": {
+        "label": "Inloggen werkt in de desktopapp en op station.ruimte.app.",
+        "description": "Het account stuurt een inlog alleen daarheen terug."
+      },
+      "signedOut": {
+        "label": "Niet ingelogd",
+        "description": "Machines die je bereikt terwijl je ingelogd bent, komen vanzelf op je account, en de machines daarvan verschijnen hier."
+      },
+      "signingIn": {
+        "label": "Bezig met inloggen",
+        "description": "Rond het inloggen af in de browser en kom dan hier terug."
+      },
+      "signOut": "Uitloggen",
+      "onlyIdentity": "{{detail}}. De enige manier om op dit account in te loggen, dus die blijft tot je er een toevoegt.",
+      "finishWith": "Rond het inloggen met {{provider}} af en kom dan hier terug.",
+      "notAdded": "Niet toegevoegd. Voeg hem toe om dit account ook met {{provider}} te openen."
+    },
+    "add": {
+      "title": "Een machine toevoegen",
+      "description": "Plak een pairing link van de andere machine.",
+      "linkLabel": "Pairing link",
+      "hint": "Je vindt hem onder Pairing link tonen in het venster van die machine, of door daar `ruimte pair` te draaien. Een machine die iemand van je account haalde, komt er weer op zodra je koppelt terwijl je ingelogd bent.",
+      "codeHint": "Voor een machine zonder de app die `ruimte login` draaide",
+      "withCode": "Een machine koppelen met een code",
+      "pair": "Koppelen",
+      "failed": "Koppelen mislukt",
+      "reclaimFailed": "{{machine}} is gekoppeld, maar staat niet terug op je account"
+    }
+  }
+}

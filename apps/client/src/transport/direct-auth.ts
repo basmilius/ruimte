@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import {
     clientChannelMessage,
     daemonChannelMessage,
@@ -45,10 +46,10 @@ export const proveChallenge = async (credentials: ProofCredentials, challenge: D
     if (pinned !== null) {
         const identical = daemon.publicKey === pinned.publicKey && (pinned.daemonId === null || pinned.daemonId === daemon.id);
         if (!identical || !(await verifyDaemon(pinned.publicKey, daemonChannelMessage(daemon.id, challenge.challenge, binding), daemon.signature))) {
-            throw new Error(`${credentials.label} did not prove its identity over the direct connection`);
+            throw new Error(i18next.t('machines:direct.notProven', { label: credentials.label }));
         }
         if (credentials.key === null) {
-            throw new Error('A direct connection signs in with a key, and this browser cannot make one');
+            throw new Error(i18next.t('machines:direct.noKey'));
         }
         const signature = await credentials.key.sign(
             clientChannelMessage(pinned.daemonId ?? daemon.id, challenge.challenge, credentials.key.publicKey, binding)
@@ -63,14 +64,14 @@ export const proveChallenge = async (credentials: ProofCredentials, challenge: D
             proof: await hmac(credentials.secret, localSecretChannelMessage(daemon.id, challenge.challenge, binding))
         };
     }
-    throw new Error('A direct connection needs a paired key. Pair this machine again.');
+    throw new Error(i18next.t('machines:direct.needsPairedKey'));
 };
 
 /* The proof for one row, with what this client holds for it right now. */
 export const directProof = async (endpointId: string, challenge: DirectChallengeFrame, binding: string): Promise<DirectProofFrame> => {
     const endpoint = endpointById(endpointId);
     if (!endpoint) {
-        throw new Error('This machine is no longer in the list');
+        throw new Error(i18next.t('machines:link.notInList'));
     }
     const pinned = endpoint.daemonPublicKey === null ? null : { publicKey: endpoint.daemonPublicKey, daemonId: endpoint.daemonId };
     return proveChallenge(

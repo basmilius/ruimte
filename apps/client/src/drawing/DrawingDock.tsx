@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import {
     Check,
@@ -39,63 +40,48 @@ import { Kbd } from '@/ui/Kbd';
 
 interface ToolRow {
     tool: DrawingTool;
-    label: string;
     kbd: string;
     icon: typeof Square;
 }
 
+/* The letter is the key on the keyboard, not a word, so it stays out of the translations. */
 const TOOLS: ToolRow[] = [
-    { tool: 'select', label: 'Select', kbd: 'V', icon: MousePointer2 },
-    { tool: 'hand', label: 'Pan', kbd: 'H', icon: Hand },
-    { tool: 'rect', label: 'Rectangle', kbd: 'R', icon: Square },
-    { tool: 'diamond', label: 'Diamond', kbd: 'D', icon: Diamond },
-    { tool: 'ellipse', label: 'Ellipse', kbd: 'O', icon: Circle },
-    { tool: 'arrow', label: 'Arrow', kbd: 'A', icon: MoveUpRight },
-    { tool: 'line', label: 'Line', kbd: 'L', icon: Minus },
-    { tool: 'freehand', label: 'Draw', kbd: 'P', icon: Pencil },
-    { tool: 'text', label: 'Text', kbd: 'T', icon: Type },
-    { tool: 'note', label: 'Sticky note', kbd: 'N', icon: StickyNote },
-    { tool: 'eraser', label: 'Eraser', kbd: 'E', icon: Eraser }
+    { tool: 'select', kbd: 'V', icon: MousePointer2 },
+    { tool: 'hand', kbd: 'H', icon: Hand },
+    { tool: 'rect', kbd: 'R', icon: Square },
+    { tool: 'diamond', kbd: 'D', icon: Diamond },
+    { tool: 'ellipse', kbd: 'O', icon: Circle },
+    { tool: 'arrow', kbd: 'A', icon: MoveUpRight },
+    { tool: 'line', kbd: 'L', icon: Minus },
+    { tool: 'freehand', kbd: 'P', icon: Pencil },
+    { tool: 'text', kbd: 'T', icon: Type },
+    { tool: 'note', kbd: 'N', icon: StickyNote },
+    { tool: 'eraser', kbd: 'E', icon: Eraser }
 ];
 
-const WIDTHS: Array<{ value: DrawingStyle['strokeWidth']; label: string }> = [
-    { value: 1, label: 'Thin' },
-    { value: 2, label: 'Medium' },
-    { value: 4, label: 'Bold' }
+/* A width is a number on the wire, so the row carries the name its label is keyed on. */
+const WIDTHS: Array<{ value: DrawingStyle['strokeWidth']; key: string }> = [
+    { value: 1, key: 'thin' },
+    { value: 2, key: 'medium' },
+    { value: 4, key: 'bold' }
 ];
 
-const STROKE_STYLES: Array<{ value: DrawingStyle['strokeStyle']; label: string }> = [
-    { value: 'solid', label: 'Solid' },
-    { value: 'dashed', label: 'Dashed' },
-    { value: 'dotted', label: 'Dotted' }
-];
+const STROKE_STYLES: Array<DrawingStyle['strokeStyle']> = ['solid', 'dashed', 'dotted'];
 
-const FILLS: Array<{ value: DrawingStyle['fill']; label: string }> = [
-    { value: 'none', label: 'None' },
-    { value: 'hachure', label: 'Hachure' },
-    { value: 'solid', label: 'Solid' }
-];
+const FILLS: Array<DrawingStyle['fill']> = ['none', 'hachure', 'solid'];
 
 /* What Excalidraw calls the three hands a drawing can be made by. */
-const ROUGHNESS: Array<{ value: DrawingStyle['roughness']; label: string }> = [
-    { value: 0, label: 'Architect' },
-    { value: 1, label: 'Artist' },
-    { value: 2, label: 'Cartoonist' }
+const ROUGHNESS: Array<{ value: DrawingStyle['roughness']; key: string }> = [
+    { value: 0, key: 'architect' },
+    { value: 1, key: 'artist' },
+    { value: 2, key: 'cartoonist' }
 ];
 
-const FONTS: Array<{ value: DrawingStyle['font']; label: string }> = [
-    { value: 'hand', label: 'Hand' },
-    { value: 'sans', label: 'Sans' },
-    { value: 'mono', label: 'Mono' }
-];
+const FONTS: Array<DrawingStyle['font']> = ['hand', 'sans', 'mono'];
 
 const TEXT_SIZES = [16, 20, 28, 36];
 
-const ALIGNMENTS: Array<{ value: DrawingStyle['align']; label: string }> = [
-    { value: 'left', label: 'Left' },
-    { value: 'center', label: 'Center' },
-    { value: 'right', label: 'Right' }
-];
+const ALIGNMENTS: Array<DrawingStyle['align']> = ['left', 'center', 'right'];
 
 const SWATCH = 'h-5 w-5 rounded-full border border-border-strong';
 
@@ -118,6 +104,7 @@ function RadioRow({ label, value }: { label: string; value: string | number }) {
  * canvas dock returns null on a view of its own, so the two never share the bottom of the screen.
  */
 export function DrawingDock() {
+    const { t } = useTranslation('drawing');
     const drawingStore = useDrawingStore();
     const { tool, toolLocked, style, zoom, hasSelection, canUndo, canRedo, anyLocked, exportBackground, empty } = useDrawing(
         useShallow((s) => ({
@@ -140,13 +127,13 @@ export function DrawingDock() {
         <DockShell data-drawing-chrome className="px-4" barClassName="flex-wrap justify-center">
             <div className={BTN_GROUP}>
                 {TOOLS.map((row) => (
-                    <Tooltip key={row.tool} label={row.label} kbd={row.kbd} name>
+                    <Tooltip key={row.tool} label={t(`tools.${row.tool}`)} kbd={row.kbd} name>
                         <button className="icon-btn" data-active={tool === row.tool} onClick={() => drawingStore.getState().setTool(row.tool)}>
                             <Icon icon={row.icon} size={16} />
                         </button>
                     </Tooltip>
                 ))}
-                <Tooltip label="Keep the tool" kbd="Q" name>
+                <Tooltip label={t('tools.keep')} kbd="Q" name>
                     <button className="icon-btn" data-active={toolLocked} onClick={() => drawingStore.getState().toggleToolLock()}>
                         <Icon icon={toolLocked ? Lock : LockOpen} size={16} />
                     </button>
@@ -157,21 +144,21 @@ export function DrawingDock() {
 
             <div className={BTN_GROUP}>
                 <Menu.Root>
-                    <Tooltip label="Color">
-                        <Menu.Trigger className="icon-btn" aria-label="Color">
+                    <Tooltip label={t('color.label')}>
+                        <Menu.Trigger className="icon-btn" aria-label={t('color.label')}>
                             <span className={SWATCH} style={{ background: `var(--draw-${style.stroke})` }} />
                         </Menu.Trigger>
                     </Tooltip>
                     <Menu.Portal>
                         <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="center">
                             <Menu.Popup className="menu-popup">
-                                <div className={MENU_LABEL}>Stroke</div>
+                                <div className={MENU_LABEL}>{t('color.stroke')}</div>
                                 <Swatches value={style.stroke} onPick={(stroke) => set({ stroke })} />
                                 <Menu.Separator className={MENU_SEPARATOR} />
-                                <div className={MENU_LABEL}>Fill</div>
+                                <div className={MENU_LABEL}>{t('color.fill')}</div>
                                 <Swatches value={style.fillColor} onPick={(fillColor) => set({ fillColor })} />
                                 <Menu.Separator className={MENU_SEPARATOR} />
-                                <div className={MENU_LABEL}>Sticky note</div>
+                                <div className={MENU_LABEL}>{t('color.note')}</div>
                                 <Swatches value={style.noteColor} onPick={(noteColor) => set({ noteColor })} paper />
                             </Menu.Popup>
                         </Menu.Positioner>
@@ -179,7 +166,7 @@ export function DrawingDock() {
                 </Menu.Root>
 
                 <Menu.Root>
-                    <Tooltip label="Style" name>
+                    <Tooltip label={t('style.label')} name>
                         <Menu.Trigger className="icon-btn">
                             <Icon icon={Palette} size={16} />
                         </Menu.Trigger>
@@ -187,48 +174,48 @@ export function DrawingDock() {
                     <Menu.Portal>
                         <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="center">
                             <Menu.Popup className="menu-popup min-w-44">
-                                <div className={MENU_LABEL}>Stroke width</div>
+                                <div className={MENU_LABEL}>{t('style.strokeWidth')}</div>
                                 <Menu.RadioGroup value={style.strokeWidth} onValueChange={(value: DrawingStyle['strokeWidth']) => set({ strokeWidth: value })}>
                                     {WIDTHS.map((row) => (
-                                        <RadioRow key={row.value} label={row.label} value={row.value} />
+                                        <RadioRow key={row.value} label={t(`style.widths.${row.key}`)} value={row.value} />
                                     ))}
                                 </Menu.RadioGroup>
                                 <Menu.Separator className={MENU_SEPARATOR} />
-                                <div className={MENU_LABEL}>Stroke style</div>
+                                <div className={MENU_LABEL}>{t('style.strokeStyle')}</div>
                                 <Menu.RadioGroup value={style.strokeStyle} onValueChange={(value: DrawingStyle['strokeStyle']) => set({ strokeStyle: value })}>
-                                    {STROKE_STYLES.map((row) => (
-                                        <RadioRow key={row.value} label={row.label} value={row.value} />
+                                    {STROKE_STYLES.map((strokeStyle) => (
+                                        <RadioRow key={strokeStyle} label={t(`style.strokeStyles.${strokeStyle}`)} value={strokeStyle} />
                                     ))}
                                 </Menu.RadioGroup>
                                 <Menu.Separator className={MENU_SEPARATOR} />
-                                <div className={MENU_LABEL}>Fill</div>
+                                <div className={MENU_LABEL}>{t('style.fill')}</div>
                                 <Menu.RadioGroup value={style.fill} onValueChange={(value: DrawingStyle['fill']) => set({ fill: value })}>
-                                    {FILLS.map((row) => (
-                                        <RadioRow key={row.value} label={row.label} value={row.value} />
+                                    {FILLS.map((fill) => (
+                                        <RadioRow key={fill} label={t(`style.fills.${fill}`)} value={fill} />
                                     ))}
                                 </Menu.RadioGroup>
                                 <Menu.Separator className={MENU_SEPARATOR} />
-                                <div className={MENU_LABEL}>Sloppiness</div>
+                                <div className={MENU_LABEL}>{t('style.sloppiness')}</div>
                                 <Menu.RadioGroup value={style.roughness} onValueChange={(value: DrawingStyle['roughness']) => set({ roughness: value })}>
                                     {ROUGHNESS.map((row) => (
-                                        <RadioRow key={row.value} label={row.label} value={row.value} />
+                                        <RadioRow key={row.value} label={t(`style.roughness.${row.key}`)} value={row.value} />
                                     ))}
                                 </Menu.RadioGroup>
                                 <Menu.Separator className={MENU_SEPARATOR} />
-                                <div className={MENU_LABEL}>Text</div>
+                                <div className={MENU_LABEL}>{t('style.text')}</div>
                                 <Menu.RadioGroup value={style.font} onValueChange={(value: DrawingStyle['font']) => set({ font: value })}>
-                                    {FONTS.map((row) => (
-                                        <RadioRow key={row.value} label={row.label} value={row.value} />
+                                    {FONTS.map((font) => (
+                                        <RadioRow key={font} label={t(`style.fonts.${font}`)} value={font} />
                                     ))}
                                 </Menu.RadioGroup>
                                 <Menu.RadioGroup value={style.textSize} onValueChange={(value: number) => set({ textSize: value })}>
                                     {TEXT_SIZES.map((size) => (
-                                        <RadioRow key={size} label={`${size} px`} value={size} />
+                                        <RadioRow key={size} label={t('style.textSize', { size })} value={size} />
                                     ))}
                                 </Menu.RadioGroup>
                                 <Menu.RadioGroup value={style.align} onValueChange={(value: DrawingStyle['align']) => set({ align: value })}>
-                                    {ALIGNMENTS.map((row) => (
-                                        <RadioRow key={row.value} label={row.label} value={row.value} />
+                                    {ALIGNMENTS.map((align) => (
+                                        <RadioRow key={align} label={t(`style.alignments.${align}`)} value={align} />
                                     ))}
                                 </Menu.RadioGroup>
                                 {anyLocked && (
@@ -238,7 +225,7 @@ export function DrawingDock() {
                                             <span className="grid h-4 w-4 place-items-center">
                                                 <Icon icon={LockOpen} size={14} />
                                             </span>
-                                            Unlock all
+                                            {t('style.unlockAll')}
                                         </Menu.Item>
                                     </>
                                 )}
@@ -251,13 +238,13 @@ export function DrawingDock() {
             <Separator />
 
             <div className={BTN_GROUP}>
-                <Tooltip label="Zoom out" name>
+                <Tooltip label={t('zoom.out')} name>
                     <button className="icon-btn" onClick={() => drawingStore.getState().zoomTo(Math.round(zoom * 100 - 10) / 100)}>
                         <Icon icon={Minus} size={16} />
                     </button>
                 </Tooltip>
                 <Menu.Root>
-                    <Tooltip label="Zoom presets">
+                    <Tooltip label={t('zoom.presets')}>
                         <Menu.Trigger className="h-8 min-w-14 rounded-lg px-1 text-xs tabular-nums text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active data-[popup-open]:text-text">
                             {Math.round(zoom * 100)}%
                         </Menu.Trigger>
@@ -283,24 +270,24 @@ export function DrawingDock() {
                                     <span className="grid h-4 w-4 place-items-center">
                                         <Icon icon={Maximize} size={14} />
                                     </span>
-                                    Zoom to fit <Kbd shortcut={DRAWING_SHORTCUTS.fitAll} />
+                                    {t('zoom.fit')} <Kbd shortcut={DRAWING_SHORTCUTS.fitAll} />
                                 </Menu.Item>
                                 <Menu.Item className="menu-item" disabled={!hasSelection} onClick={() => drawingStore.getState().zoomToSelection()}>
                                     <span className="grid h-4 w-4 place-items-center">
                                         <Icon icon={Scan} size={14} />
                                     </span>
-                                    Zoom to selection <Kbd shortcut={DRAWING_SHORTCUTS.zoomSelection} />
+                                    {t('zoom.selection')} <Kbd shortcut={DRAWING_SHORTCUTS.zoomSelection} />
                                 </Menu.Item>
                             </Menu.Popup>
                         </Menu.Positioner>
                     </Menu.Portal>
                 </Menu.Root>
-                <Tooltip label="Zoom in" name>
+                <Tooltip label={t('zoom.in')} name>
                     <button className="icon-btn" onClick={() => drawingStore.getState().zoomTo(Math.round(zoom * 100 + 10) / 100)}>
                         <Icon icon={Plus} size={16} />
                     </button>
                 </Tooltip>
-                <Tooltip label="Fit everything" kbd={DRAWING_SHORTCUTS.fitAll} name>
+                <Tooltip label={t('zoom.fitEverything')} kbd={DRAWING_SHORTCUTS.fitAll} name>
                     <button className="icon-btn" onClick={() => drawingStore.getState().fitAll()}>
                         <Icon icon={Maximize} size={16} />
                     </button>
@@ -311,7 +298,7 @@ export function DrawingDock() {
 
             <div className={BTN_GROUP}>
                 <Menu.Root>
-                    <Tooltip label="Export" name>
+                    <Tooltip label={t('export.label')} name>
                         <Menu.Trigger className="icon-btn">
                             <Icon icon={MoreHorizontal} size={16} />
                         </Menu.Trigger>
@@ -319,18 +306,18 @@ export function DrawingDock() {
                     <Menu.Portal>
                         <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="end">
                             <Menu.Popup className="menu-popup min-w-52">
-                                <div className={MENU_LABEL}>{hasSelection ? 'Export the selection' : 'Export the drawing'}</div>
+                                <div className={MENU_LABEL}>{hasSelection ? t('export.selection') : t('export.drawing')}</div>
                                 <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDrawingPng(drawingStore)}>
-                                    <Icon icon={Copy} size={14} /> Copy as PNG
+                                    <Icon icon={Copy} size={14} /> {t('export.copyPng')}
                                 </Menu.Item>
                                 <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDrawingPng(drawingStore)}>
-                                    <Icon icon={Download} size={14} /> Save PNG
+                                    <Icon icon={Download} size={14} /> {t('export.savePng')}
                                 </Menu.Item>
                                 <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDrawingSvg(drawingStore)}>
-                                    <Icon icon={Copy} size={14} /> Copy as SVG
+                                    <Icon icon={Copy} size={14} /> {t('export.copySvg')}
                                 </Menu.Item>
                                 <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDrawingSvg(drawingStore)}>
-                                    <Icon icon={Download} size={14} /> Save SVG
+                                    <Icon icon={Download} size={14} /> {t('export.saveSvg')}
                                 </Menu.Item>
                                 <Menu.Separator className={MENU_SEPARATOR} />
                                 <Menu.CheckboxItem
@@ -344,18 +331,18 @@ export function DrawingDock() {
                                             <Icon icon={Check} size={12} />
                                         </Menu.CheckboxItemIndicator>
                                     </span>
-                                    With background
+                                    {t('export.withBackground')}
                                 </Menu.CheckboxItem>
                             </Menu.Popup>
                         </Menu.Positioner>
                     </Menu.Portal>
                 </Menu.Root>
-                <Tooltip label="Undo" kbd={DRAWING_SHORTCUTS.undo} name>
+                <Tooltip label={t('common:action.undo')} kbd={DRAWING_SHORTCUTS.undo} name>
                     <button className="icon-btn" disabled={!canUndo} onClick={() => drawingStore.getState().undo()}>
                         <Icon icon={Undo2} size={16} />
                     </button>
                 </Tooltip>
-                <Tooltip label="Redo" kbd={DRAWING_SHORTCUTS.redo} name>
+                <Tooltip label={t('common:action.redo')} kbd={DRAWING_SHORTCUTS.redo} name>
                     <button className="icon-btn" disabled={!canRedo} onClick={() => drawingStore.getState().redo()}>
                         <Icon icon={Redo2} size={16} />
                     </button>
@@ -367,13 +354,14 @@ export function DrawingDock() {
 
 /* The ten palette names as circles; the file keeps the name, the theme keeps the value. A diagram picks its tones here too. */
 export function Swatches({ value, onPick, paper = false }: { value: DrawingColor; onPick: (color: DrawingColor) => void; paper?: boolean }) {
+    const { t } = useTranslation('drawing');
     return (
         <div className="flex gap-1 px-2 py-1.5">
             {DRAWING_COLORS.map((color) => (
-                <Tooltip key={color} label={color}>
+                <Tooltip key={color} label={t(`color.names.${color}`)}>
                     <button
                         className={`${SWATCH} ${color === value ? 'ring-2 ring-accent ring-offset-1 ring-offset-surface-raised' : ''}`}
-                        aria-label={color}
+                        aria-label={t(`color.names.${color}`)}
                         style={{ background: `var(--draw${paper ? '-paper' : ''}-${color})` }}
                         onClick={() => onPick(color)}
                     />

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { GitBranch } from 'lucide-react';
 import { focusedCanvas, useCanvas } from '@/state/canvas';
@@ -17,6 +18,7 @@ const branchFromTitle = (title: string): string =>
 
 /* Binds a group to a git worktree of the project's repository; every node made inside it starts there. */
 export function WorktreeDialog() {
+    const { t } = useTranslation(['shell', 'common']);
     const groupId = useUi((s) => s.worktreeDialogFor);
     const close = useUi((s) => s.setWorktreeDialogFor);
     const group = useCanvas((s) => (groupId ? s.nodes[groupId] : undefined));
@@ -41,7 +43,7 @@ export function WorktreeDialog() {
             setBranch(null);
             close(null);
         } catch (e) {
-            setFailure(e instanceof Error ? e.message : 'Could not create the worktree');
+            setFailure(e instanceof Error ? e.message : t('worktreeDialog.failed'));
         } finally {
             setBusy(false);
         }
@@ -61,18 +63,16 @@ export function WorktreeDialog() {
                 <Dialog.Backdrop className="dialog-backdrop" />
                 <Dialog.Popup className="dialog-popup w-[420px] p-5">
                     <Dialog.Title className="flex items-center gap-2 text-base font-semibold text-text">
-                        <Icon icon={GitBranch} size={16} /> Bind to a worktree
+                        <Icon icon={GitBranch} size={16} /> {t('worktreeDialog.title')}
                     </Dialog.Title>
                     {folder ? (
                         <>
-                            <p className="mt-1 text-sm text-text-muted">
-                                Creates a checkout of this branch. Every terminal and chat you add to the group starts in it.
-                            </p>
+                            <p className="mt-1 text-sm text-text-muted">{t('worktreeDialog.description')}</p>
                             <input
                                 autoFocus
                                 className="field mt-3 font-mono text-code"
-                                aria-label="Branch name"
-                                placeholder="branch name"
+                                aria-label={t('worktreeDialog.branchLabel')}
+                                placeholder={t('worktreeDialog.branchPlaceholder')}
                                 value={value}
                                 spellCheck={false}
                                 onChange={(e) => setBranch(e.target.value)}
@@ -85,13 +85,13 @@ export function WorktreeDialog() {
                             />
                         </>
                     ) : (
-                        <p className="mt-1 text-sm text-text-muted">This project is not in a folder, so it has no repository.</p>
+                        <p className="mt-1 text-sm text-text-muted">{t('worktreeDialog.noFolder')}</p>
                     )}
                     {failure && <p className="mt-2 text-sm text-status-error">{failure}</p>}
                     <div className="mt-4 flex items-center justify-end gap-2">
-                        <Button onClick={() => close(null)}>Cancel</Button>
+                        <Button onClick={() => close(null)}>{t('common:action.cancel')}</Button>
                         <Button variant="primary" disabled={busy || !folder || !value.trim()} onClick={() => void submit()}>
-                            {busy ? 'Creating checkout...' : 'Bind'}
+                            {busy ? t('worktreeDialog.creating') : t('worktreeDialog.bind')}
                         </Button>
                     </div>
                 </Dialog.Popup>

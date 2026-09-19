@@ -1,0 +1,104 @@
+{
+  "dialog": {
+    "title": "Usage",
+    "description": "Cost, tokens and plan limits",
+    "close": "Close usage",
+    "rescan": "Scan again",
+    "machine": "Machine",
+    "period": "Period",
+    "metric": "Metric",
+    "failed": "Usage failed to render",
+    "periods": {
+      "today": "Today",
+      "7d": "7 days",
+      "30d": "30 days",
+      "90d": "90 days"
+    },
+    "metrics": {
+      "cost": "Cost",
+      "tokens": "Tokens"
+    }
+  },
+  "empty": {
+    "noTranscripts": "No Claude or Codex transcripts found. The machine reads ~/.claude/projects and ~/.codex/sessions.",
+    "noUsage": "No usage on this machine yet."
+  },
+  "agents": {
+    "none": "This machine has no agent CLI installed.",
+    "installed": "This machine has {{list}}.",
+    "settings": "Agents settings"
+  },
+  "machineNote": {
+    "unnamed": "This machine",
+    "disconnected": "{{machine}} is not connected.",
+    "connecting": "Connecting to {{machine}}...",
+    "silent": "{{machine}} is not answering.",
+    "stale": "These are the numbers of the last scan that reached it."
+  },
+  "provenance": {
+    "failed": "Could not read the transcripts. Showing the last successful scan.",
+    "scanned_one": "Scanned {{time}}, {{files}} file",
+    "scanned_other": "Scanned {{time}}, {{files}} files",
+    "bundledPrices": "Prices from the bundled table",
+    "fetchedPrices": "Prices from LiteLLM, {{date}}",
+    "rate": "{{currency}} at the ECB rate of {{date}}"
+  },
+  "summary": {
+    "sessions_one": "{{sessions}} session",
+    "sessions_other": "{{sessions}} sessions",
+    "calls_one": "{{calls}} call",
+    "calls_other": "{{calls}} calls",
+    "apiRates": "at API rates"
+  },
+  "tiles": {
+    "processed": "Processed",
+    "uncachedInput": "Uncached input",
+    "cachedInput": "Cached input",
+    "cacheWrites": "Cache writes",
+    "output": "Output",
+    "cacheSavings": "Cache savings"
+  },
+  "chart": {
+    "total": "Total"
+  },
+  "breakdown": {
+    "title": "Breakdown",
+    "tabs": {
+      "models": "Models",
+      "projects": "Projects",
+      "day": "Day"
+    },
+    "models": {
+      "model": "Model",
+      "calls": "Calls",
+      "input": "Input",
+      "output": "Output",
+      "cache": "Cache R/W",
+      "cost": "Cost",
+      "share": "Share",
+      "pricedAs": "Priced as {{model}}",
+      "noPrice": "No price known for this model"
+    },
+    "days": {
+      "day": "Day",
+      "total": "Total",
+      "tokens": "Tokens",
+      "empty": "No activity in this window."
+    }
+  },
+  "limits": {
+    "title": "Limits",
+    "explain": "The mark on a bar shows how much of its window has passed. A bar past its mark is spending faster than the window gives back.",
+    "loading": "Loading limits...",
+    "used": "{{percent}}% used",
+    "bar": "{{window}}, {{percent}}% used",
+    "windowPassed": "{{percent}}% of the window passed",
+    "faster": "Spending faster than the window gives back.",
+    "slower": "Spending slower than the window gives back.",
+    "resets": "Resets {{at}}",
+    "none": "No limits reported yet.",
+    "notInstalled": "Not installed on this machine.",
+    "noSubscription": "This account uses an API key, which has no plan limits.",
+    "unreachable": "The CLI could not be reached."
+  }
+}

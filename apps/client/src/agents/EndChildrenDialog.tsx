@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
+import i18next from 'i18next';
 import { Square, Trash } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { endsAgentsWarning, stopsSubagentsWarning, stopsTaskWarning, useEndingAgents, type PendingEnd } from '@/agents/end-children';
 import { hasWork, leftBehindLine, removedToast } from '@/shell/panels/worktree-rows';
 import { Toggle } from '@/shell/settings/controls';
@@ -29,6 +31,8 @@ const warningOf = (pending: PendingEnd | null): string | null => {
  * that hold no work along with the nodes; one with work stays, since nothing removes work on its own.
  */
 export function EndChildrenDialog() {
+    const { t } = useTranslation('agents');
+    const { t: common } = useTranslation();
     const pending = useEndingAgents((s) => s.pending);
     const transport = useTransport();
     const endpointId = useEndpointId();
@@ -49,7 +53,7 @@ export function EndChildrenDialog() {
                 <Dialog.Backdrop className="dialog-backdrop" />
                 <Dialog.Popup className="dialog-popup w-[420px] p-5">
                     <Dialog.Title className="text-base font-semibold text-text">
-                        {stop ? 'Stop' : 'Delete'} {pending?.what}?
+                        {stop ? t('dialog.stopTitle', { what: pending?.what }) : t('dialog.deleteTitle', { what: pending?.what })}
                     </Dialog.Title>
                     {warning !== null && <p className="mt-1 text-sm text-text-muted">{warning}</p>}
                     {offered?.worktrees.map((worktree) => (
@@ -59,16 +63,12 @@ export function EndChildrenDialog() {
                     ))}
                     {clean.length > 0 && (
                         <label className="mt-3 flex items-center justify-between gap-3">
-                            <span className="text-sm text-text">
-                                {clean.length === 1
-                                    ? 'Also remove the worktree and its branch'
-                                    : `Also remove the ${clean.length} worktrees without work and their branches`}
-                            </span>
-                            <Toggle label="Also remove the worktree" checked={removal.remove} onChange={(remove) => setRemoval({ pending, remove })} />
+                            <span className="text-sm text-text">{t('dialog.removeWorktree', { count: clean.length })}</span>
+                            <Toggle label={t('dialog.removeWorktreeToggle')} checked={removal.remove} onChange={(remove) => setRemoval({ pending, remove })} />
                         </label>
                     )}
                     <div className="mt-4 flex items-center justify-end gap-2">
-                        <Button onClick={close}>Cancel</Button>
+                        <Button onClick={close}>{common('action.cancel')}</Button>
                         <Button
                             variant="danger"
                             onClick={() => {
@@ -79,7 +79,7 @@ export function EndChildrenDialog() {
                                 close();
                             }}
                         >
-                            <Icon icon={stop ? Square : Trash} size={12} /> {stop ? 'Stop' : 'Delete'}
+                            <Icon icon={stop ? Square : Trash} size={12} /> {stop ? t('dialog.stop') : t('dialog.delete')}
                         </Button>
                     </div>
                 </Dialog.Popup>
@@ -93,10 +93,16 @@ const removeClean = async (transport: Transport, folder: string, worktrees: read
     for (const worktree of worktrees) {
         try {
             const result = await transport.request('git.worktree-remove', { repo: folder, path: worktree.path });
-            useToasts.getState().show({ title: `Removed worktree ${worktree.branch}`, ...(removedToast(worktree.branch, result) ?? {}), kind: 'success' });
+            useToasts.getState().show({
+                title: i18next.t('agents:dialog.worktreeRemoved', { branch: worktree.branch }),
+                ...(removedToast(worktree.branch, result) ?? {}),
+                kind: 'success'
+            });
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'That did not work.';
-            useToasts.getState().show({ title: `Worktree ${worktree.branch} stays`, description: message, kind: 'error', output: message });
+            const message = error instanceof Error ? error.message : i18next.t('agents:dialog.worktreeFailed');
+            useToasts
+                .getState()
+                .show({ title: i18next.t('agents:dialog.worktreeStays', { branch: worktree.branch }), description: message, kind: 'error', output: message });
         }
     }
 };

@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { openAccountMachine, rowForAccountMachine, usePulsarMachines } from '@/pulsar/machines';
 import { useEndpoints } from '@/state/endpoints';
 import { pool } from '@/transport';
@@ -8,7 +9,7 @@ const links = new MachineLinks({
     createRow: (id) => {
         const machine = usePulsarMachines.getState().machines?.find((entry) => entry.id === id);
         if (!machine) {
-            throw new Error('That machine is no longer in the list or on your account');
+            throw new Error(i18next.t('machines:link.notOnAccount'));
         }
         return openAccountMachine(machine);
     },

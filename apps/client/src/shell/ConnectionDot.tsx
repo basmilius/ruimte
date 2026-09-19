@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tooltip } from '@/ui/Tooltip';
 import { describeConnection, describeLastSeen, describeMachine, describePing, describeVersion, tooltipMachines } from '@/shell/connection-info';
 import { useConnectedEndpoints, useConnection, useEndpointConnection, useLastSeenAt } from '@/transport/status';
@@ -45,12 +46,13 @@ function MachineRow({ endpoint }: { endpoint: Endpoint }) {
 /* The tooltip's body. It only mounts while the tooltip is open, so the extra measurement it asks
    for on mount is one per look, not one per render of the dot. */
 function ConnectionDetails({ connection }: { connection: ConnectionState }) {
+    const { t } = useTranslation('shell');
     const activeId = useEndpoints((s) => s.activeId);
     const endpoints = useEndpoints((s) => s.endpoints);
     const connected = useConnectedEndpoints();
     const latency = useLatency(activeId);
     const lastSeenAt = useLastSeenAt(activeId);
-    const endpointLabel = endpoints.find((entry) => entry.id === activeId)?.label ?? 'This machine';
+    const endpointLabel = endpoints.find((entry) => entry.id === activeId)?.label ?? t('connection.thisMachine');
     const machineLabel = useServer((s) => s.label);
     const reachability = useServer((s) => s.reachability);
     const platform = useServer((s) => s.platform);
@@ -84,6 +86,8 @@ function ConnectionDetails({ connection }: { connection: ConnectionState }) {
 }
 
 export function ConnectionDot() {
+    // Only to redraw the label when the language changes; the words themselves come from `connection-info.ts`.
+    useTranslation('shell');
     const connection = useConnection();
     const activeId = useEndpoints((s) => s.activeId);
     const latency = useLatency(activeId);

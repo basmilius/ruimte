@@ -1,5 +1,6 @@
 import clsx from 'clsx';
 import { CheckCheck, LoaderCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { activeStepIds } from '@ruimte/plan';
 import { openPlanFromPill } from '@/plan/plan-panel-watch';
 import { hasFailedStep, planCounter } from '@/plan/plan-view';
@@ -18,6 +19,7 @@ import { Tooltip } from '@/ui/Tooltip';
  * Pressing it puts the plan in the panel, even after the panel was closed.
  */
 export function PlanPill({ chatId }: { chatId: string }) {
+    const { t } = useTranslation('plan');
     const endpointId = useEndpointId();
     const plans = useChatPlans(chatId);
     const unseenId = usePlans((s) => s.unseen[endpointKey(endpointId, chatId)] ?? null);
@@ -30,7 +32,12 @@ export function PlanPill({ chatId }: { chatId: string }) {
     }
     const failed = hasFailedStep(plan);
     const busy = working && activeStepIds(plan).length > 0;
-    const label = [plan.meta.title, plans.length > 1 ? `${plans.length} plans in this chat` : null, unseen ? 'New plan' : null, failed ? 'A step failed' : null]
+    const label = [
+        plan.meta.title,
+        plans.length > 1 ? t('pill.count', { count: plans.length }) : null,
+        unseen ? t('pill.unseen') : null,
+        failed ? t('pill.failed') : null
+    ]
         .filter((part): part is string => part !== null)
         .join('. ');
     return (

@@ -1,0 +1,124 @@
+{
+  "tools": {
+    "select": "Select",
+    "hand": "Pan",
+    "rect": "Rectangle",
+    "diamond": "Diamond",
+    "ellipse": "Ellipse",
+    "arrow": "Arrow",
+    "line": "Line",
+    "freehand": "Draw",
+    "text": "Text",
+    "note": "Sticky note",
+    "eraser": "Eraser",
+    "keep": "Keep the tool"
+  },
+  "color": {
+    "label": "Color",
+    "stroke": "Stroke",
+    "fill": "Fill",
+    "note": "Sticky note",
+    "names": {
+      "ink": "ink",
+      "muted": "muted",
+      "accent": "accent",
+      "red": "red",
+      "orange": "orange",
+      "yellow": "yellow",
+      "green": "green",
+      "blue": "blue",
+      "purple": "purple",
+      "pink": "pink"
+    }
+  },
+  "style": {
+    "label": "Style",
+    "strokeWidth": "Stroke width",
+    "widths": {
+      "thin": "Thin",
+      "medium": "Medium",
+      "bold": "Bold"
+    },
+    "strokeStyle": "Stroke style",
+    "strokeStyles": {
+      "solid": "Solid",
+      "dashed": "Dashed",
+      "dotted": "Dotted"
+    },
+    "fill": "Fill",
+    "fills": {
+      "none": "None",
+      "hachure": "Hachure",
+      "solid": "Solid"
+    },
+    "sloppiness": "Sloppiness",
+    "roughness": {
+      "architect": "Architect",
+      "artist": "Artist",
+      "cartoonist": "Cartoonist"
+    },
+    "text": "Text",
+    "fonts": {
+      "hand": "Hand",
+      "sans": "Sans",
+      "mono": "Mono"
+    },
+    "textSize": "{{size}} px",
+    "alignments": {
+      "left": "Left",
+      "center": "Center",
+      "right": "Right"
+    },
+    "unlockAll": "Unlock all"
+  },
+  "zoom": {
+    "out": "Zoom out",
+    "in": "Zoom in",
+    "presets": "Zoom presets",
+    "fit": "Zoom to fit",
+    "selection": "Zoom to selection",
+    "fitEverything": "Fit everything"
+  },
+  "export": {
+    "label": "Export",
+    "selection": "Export the selection",
+    "drawing": "Export the drawing",
+    "diagram": "Export the diagram",
+    "copyPng": "Copy as PNG",
+    "savePng": "Save PNG",
+    "copySvg": "Copy as SVG",
+    "saveSvg": "Save SVG",
+    "withBackground": "With background"
+  },
+  "diagram": {
+    "title": "Diagram",
+    "openJson": "Open the JSON file",
+    "copyJson": "Copy as JSON",
+    "nodeLabel": "Label",
+    "tone": "Tone",
+    "resetPosition": "Reset position",
+    "empty": {
+      "description": "This diagram is empty. An agent writes one from what you tell it.",
+      "agent": {
+        "title": "Ask an agent",
+        "description": "A chat beside it on the canvas"
+      },
+      "json": {
+        "title": "Open JSON",
+        "description": "Write the nodes and edges by hand"
+      },
+      "example": {
+        "title": "Insert an example",
+        "description": "A small flow to edit into your own"
+      }
+    }
+  },
+  "error": {
+    "drawingCopy": "The drawing could not be copied",
+    "drawingOpen": "The drawing could not be opened",
+    "drawingSave": "The drawing could not be saved",
+    "diagramCopy": "The diagram could not be copied",
+    "diagramOpen": "The diagram could not be opened",
+    "diagramSave": "The diagram could not be saved"
+  }
+}

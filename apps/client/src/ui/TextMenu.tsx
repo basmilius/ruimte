@@ -1,6 +1,7 @@
 import { useRef, useState, type ComponentProps, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Copy, Scan } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
@@ -16,6 +17,7 @@ import { Kbd } from '@/ui/Kbd';
  * nothing at all.
  */
 export function TextMenu({ children, ...rest }: ComponentProps<'div'>) {
+    const { t } = useTranslation();
     const host = useRef<HTMLDivElement>(null);
     // Read when the menu opens: a selection made after that is not the one the click was about.
     const [selection, setSelection] = useState('');
@@ -37,11 +39,11 @@ export function TextMenu({ children, ...rest }: ComponentProps<'div'>) {
                 <ContextMenu.Positioner className="z-(--z-popup)">
                     <ContextMenu.Popup className="menu-popup">
                         <ContextMenu.Item className="menu-item" disabled={selection === ''} onClick={() => copyText(selection)}>
-                            <Icon icon={Copy} size={14} /> Copy <Kbd shortcut={EDIT_SHORTCUTS.copy} />
+                            <Icon icon={Copy} size={14} /> {t('action.copy')} <Kbd shortcut={EDIT_SHORTCUTS.copy} />
                         </ContextMenu.Item>
                         <ContextMenu.Separator className={MENU_SEPARATOR} />
                         <ContextMenu.Item className="menu-item" onClick={() => selectAllWithin(host.current)}>
-                            <Icon icon={Scan} size={14} /> Select all <Kbd shortcut={EDIT_SHORTCUTS.selectAll} />
+                            <Icon icon={Scan} size={14} /> {t('action.selectAll')} <Kbd shortcut={EDIT_SHORTCUTS.selectAll} />
                         </ContextMenu.Item>
                     </ContextMenu.Popup>
                 </ContextMenu.Positioner>

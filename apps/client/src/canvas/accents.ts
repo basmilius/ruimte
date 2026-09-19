@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { NODE_ACCENT_NAMES, type NodeAccent } from '@ruimte/contracts';
 
 export type AccentId = NodeAccent;
@@ -28,11 +29,11 @@ const ACCENT_COLORS: Record<AccentId, string> = {
     rose: '#ec003f'
 };
 
-export const NODE_ACCENTS: readonly { id: AccentId; label: string; color: string }[] = NODE_ACCENT_NAMES.map((id) => ({
-    id,
-    label: `${id[0]!.toUpperCase()}${id.slice(1)}`,
-    color: ACCENT_COLORS[id]
-}));
+export const NODE_ACCENTS: readonly { id: AccentId; color: string }[] = NODE_ACCENT_NAMES.map((id) => ({ id, color: ACCENT_COLORS[id] }));
+
+/* Asked for when a menu draws one, never held: this list is built before i18next has any words, so
+   a name taken at import would stay in whichever language loaded first. */
+export const accentLabel = (id: AccentId): string => i18next.t(`canvas:accents.${id}`);
 
 /* The five a settings row shows in the open, blue (the one Ruimte carries) first and the others
    spread around the wheel. The rest sits behind the overflow beside them, which wears the accent

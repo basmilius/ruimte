@@ -2,9 +2,10 @@ import type { ReactNode } from 'react';
 import { Menu } from '@base-ui-components/react/menu';
 import { Bot, ChevronRight, MessageSquare } from 'lucide-react';
 import type { ProviderInfo } from '@ruimte/contracts';
+import { useTranslation } from 'react-i18next';
 import { AgentIcon } from '@/agents/AgentIcon';
-import { AGENT_TARGET_LABEL, type AgentTarget } from '@/agents/nodes';
-import { RUNTIME_MODES } from '@/chat/runtime-modes';
+import { agentTargetLabel, type AgentTarget } from '@/agents/nodes';
+import { runtimeModeLabel } from '@/chat/runtime-modes';
 import { useChatPreferences } from '@/chat/preferences';
 import { useProviders } from '@/state/providers';
 import { MENU_HINT } from '@/ui/classes';
@@ -32,16 +33,17 @@ function Submenu({ label, icon, children }: { label: string; icon: ReactNode; ch
  * Agents settings pane is where "where did Gemini go" gets answered, not a disabled row here.
  */
 function AgentRows({ target, onPick }: { target: AgentTarget; onPick(target: AgentTarget, provider: ProviderInfo): void }) {
+    const { t } = useTranslation('agents');
     const providers = useProviders((s) => s.providers);
     const loaded = useProviders((s) => s.loaded);
     const runtimeMode = useChatPreferences((s) => s.terminalRuntimeMode);
     const rows = providers.filter((provider) => provider.installed && provider.capabilities[target]);
-    const modeLabel = RUNTIME_MODES.find((mode) => mode.id === runtimeMode)?.label;
+    const modeLabel = runtimeModeLabel(runtimeMode);
 
     if (rows.length === 0) {
         return (
             <Menu.Item className="menu-item" disabled>
-                {loaded ? 'No agent CLI found' : 'Connecting'}
+                {loaded ? t('menu.none') : t('menu.connecting')}
             </Menu.Item>
         );
     }
@@ -69,10 +71,10 @@ export function ChatAgentSubmenu({ label, icon, onPick }: { label: string; icon:
 export function AgentSubmenus({ onPick }: { onPick(target: AgentTarget, provider: ProviderInfo): void }) {
     return (
         <>
-            <Submenu label={AGENT_TARGET_LABEL.chat} icon={<Icon icon={MessageSquare} size={14} />}>
+            <Submenu label={agentTargetLabel('chat')} icon={<Icon icon={MessageSquare} size={14} />}>
                 <AgentRows target="chat" onPick={onPick} />
             </Submenu>
-            <Submenu label={AGENT_TARGET_LABEL.terminal} icon={<Icon icon={Bot} size={14} />}>
+            <Submenu label={agentTargetLabel('terminal')} icon={<Icon icon={Bot} size={14} />}>
                 <AgentRows target="terminal" onPick={onPick} />
             </Submenu>
         </>

@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+import { formatPercent } from '@/format/number';
 import { create } from 'zustand';
 import { desktop, type UpdateState } from '@/desktop/bridge';
 import { compareVersions, isVersion, openReleaseNotes, setPreviousSeenVersion } from '@/state/release-notes';
@@ -31,27 +33,25 @@ export const hasUpdate = (state: UpdateState): boolean => state.status === 'avai
 
 /* The line About leads with. The detail is empty where the headline says it all. */
 export const describeUpdate = (state: UpdateState): { headline: string; detail: string } => {
+    const version = state.version ?? i18next.t('state:update.unknownVersion');
     switch (state.status) {
         case 'unsupported':
-            return {
-                headline: 'Updates come from the desktop app',
-                detail: ''
-            };
+            return { headline: i18next.t('state:update.unsupported'), detail: '' };
         case 'checking':
-            return { headline: 'Checking for updates', detail: '' };
+            return { headline: i18next.t('state:update.checking'), detail: '' };
         case 'available':
-            return { headline: `Version ${state.version ?? 'unknown'} is available`, detail: '' };
+            return { headline: i18next.t('state:update.available', { version }), detail: '' };
         case 'downloading':
-            return { headline: `Downloading ${state.version ?? 'the update'}`, detail: `${Math.round(state.percent ?? 0)}%` };
-        case 'ready':
             return {
-                headline: `Version ${state.version ?? 'unknown'} is ready`,
-                detail: 'Ruimte restarts to install it. Nothing you have open is lost.'
+                headline: i18next.t('state:update.downloading', { version: state.version ?? i18next.t('state:update.theUpdate') }),
+                detail: formatPercent(Math.round(state.percent ?? 0))
             };
+        case 'ready':
+            return { headline: i18next.t('state:update.ready', { version }), detail: i18next.t('state:update.readyDetail') };
         case 'error':
-            return { headline: 'The last check did not finish', detail: state.error ?? 'No reason given.' };
+            return { headline: i18next.t('state:update.failed'), detail: state.error ?? i18next.t('state:update.failedDetail') };
         default:
-            return { headline: 'Ruimte is up to date', detail: '' };
+            return { headline: i18next.t('state:update.current'), detail: '' };
     }
 };
 

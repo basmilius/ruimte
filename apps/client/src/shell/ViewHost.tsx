@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { isCanvasView, isFileView, type ProjectView } from '@ruimte/contracts';
 import { Canvas } from '@/canvas/Canvas';
 import { SplitGrid } from '@/shell/SplitGrid';
@@ -92,6 +93,7 @@ function BrowserViewSurface({ id }: { id: string }) {
  * would mean nine hidden canvases. The shortcuts moved to the workspace (`canvas/canvas-shortcuts.ts`).
  */
 export function ViewSurface({ view }: { view: ProjectView }) {
+    const { t } = useTranslation('shell');
     /* A view draws from the project document, and a drawing or a diagram from a file of its own as
        well. Reading an editor this cell has none of is the blank one, which never changes. */
     const rev = useProject((s) => s.rev);
@@ -100,7 +102,7 @@ export function ViewSurface({ view }: { view: ProjectView }) {
     return (
         /* Inside the cell and around the view alone: the cell's toolbar and the dock stay usable,
            and the cells beside it never notice. */
-        <ErrorBoundary label="This view failed to render" resetKeys={[view.id, rev, drawing, diagram]}>
+        <ErrorBoundary label={t('viewHost.failed')} resetKeys={[view.id, rev, drawing, diagram]}>
             {isCanvasView(view) ? <Canvas /> : <StandaloneView view={view} />}
         </ErrorBoundary>
     );

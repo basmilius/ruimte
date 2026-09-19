@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject, type WheelEvent as ReactWheelEvent } from 'react';
+import i18next from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { CircleAlert, LoaderCircle } from 'lucide-react';
 import {
     HEVC_STREAM_CONTENT_TYPE,
@@ -89,7 +91,7 @@ class FramePainter {
 
     private decodeVideo(frame: LiveStreamFrame): void {
         if (!('VideoDecoder' in window)) {
-            this.failed('This browser cannot decode the device video stream');
+            this.failed(i18next.t('machines:device.stream.noDecoder'));
             return;
         }
         const chunkType = this.videoGate.accept(frame.data, this.videoDecoder?.decodeQueueSize ?? 0);
@@ -127,7 +129,7 @@ class FramePainter {
             }
             this.videoGate.reset();
             this.videoDecoder = null;
-            this.failed(error instanceof Error ? error.message : 'The device video stream could not be decoded');
+            this.failed(error instanceof Error ? error.message : i18next.t('machines:device.stream.undecodable'));
         }
     }
 
@@ -148,7 +150,7 @@ class FramePainter {
                 bitmap.close();
             }
         } catch (error) {
-            this.failed(error instanceof Error ? error.message : 'A simulator frame could not be drawn');
+            this.failed(error instanceof Error ? error.message : i18next.t('machines:device.stream.frameFailed'));
         } finally {
             this.drawing = false;
             if (this.pending) {
@@ -159,6 +161,7 @@ class FramePainter {
 }
 
 export function DeviceStream({ device }: { device: DeviceInfo }) {
+    const { t } = useTranslation('machines');
     const endpointId = useEndpointId();
     const endpoint = useEndpoints((state) => state.endpoints.find((entry) => entry.id === endpointId) ?? null);
     const canvas = useRef<HTMLCanvasElement>(null);
@@ -213,7 +216,7 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
         });
         void client.open(target, direct ? 'events' : 'http').then(
             (id) => mounted && setStreamId(id),
-            (error) => mounted && setStreamError(error instanceof Error ? error.message : 'The simulator could not start streaming')
+            (error) => mounted && setStreamError(error instanceof Error ? error.message : i18next.t('machines:device.stream.startFailed'))
         );
         return () => {
             mounted = false;
@@ -241,12 +244,16 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
                     const headers = credential ? { Authorization: `Bearer ${credential}` } : undefined;
                     const response = await fetch(`${endpoint.httpBaseUrl}/live-stream/${encodeURIComponent(streamId)}`, { headers, signal: controller.signal });
                     if (!response.ok || !response.body) {
-                        throw new Error(response.status === 404 ? 'The device stream is not ready yet' : `The device stream returned ${response.status}`);
+                        throw new Error(
+                            response.status === 404
+                                ? i18next.t('machines:device.stream.notReady')
+                                : i18next.t('machines:device.stream.httpStatus', { status: response.status })
+                        );
                     }
                     const contentType = response.headers.get('content-type') ?? '';
                     const hevc = contentType.startsWith(HEVC_STREAM_CONTENT_TYPE.split(';')[0]!);
                     if (!hevc && !contentType.startsWith(LIVE_STREAM_CONTENT_TYPE.split(';')[0]!)) {
-                        throw new Error('The machine returned an unknown stream format');
+                        throw new Error(i18next.t('machines:device.stream.unknownFormat'));
                     }
                     const decoder = new LiveStreamDecoder();
                     const reader = response.body.getReader();
@@ -261,7 +268,7 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
                     }
                 } catch (error) {
                     if (!controller.signal.aborted) {
-                        setStreamError(error instanceof Error ? error.message : 'The simulator stream stopped');
+                        setStreamError(error instanceof Error ? error.message : i18next.t('machines:device.stream.stopped'));
                     }
                 }
                 await wait(RETRY_MS, controller.signal);
@@ -516,7 +523,7 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
             <canvas
                 ref={canvas}
                 className="block h-auto max-h-full w-auto max-w-full touch-none outline-none"
-                aria-label={`${device.name} screen`}
+                aria-label={t('device.stream.screen', { name: device.name })}
                 tabIndex={0}
                 onContextMenu={(event) => event.preventDefault()}
                 onPointerDown={onPointerDown}
@@ -528,7 +535,7 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
             {!imageReady && !streamError && (
                 <div className="absolute inset-0 grid place-items-center text-xs text-text-muted">
                     <span className="flex items-center gap-2">
-                        <Icon icon={LoaderCircle} size={14} className="animate-spin" /> Starting device...
+                        <Icon icon={LoaderCircle} size={14} className="animate-spin" /> {t('device.stream.starting')}
                     </span>
                 </div>
             )}

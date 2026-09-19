@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { Machine } from '@ruimte/pulsar';
 import { LOCAL_ENDPOINT_ID, type Endpoint } from '@/state/endpoints';
 
@@ -53,16 +54,16 @@ export const mergeMachines = ({ endpoints, accountMachines, showLocal }: MergeIn
 export const reachLabel = (entry: MachineEntry): string => {
     const parts: string[] = [];
     if (entry.local) {
-        parts.push('This machine');
+        parts.push(i18next.t('settings:reach.thisMachine'));
     }
     if (entry.paired) {
-        parts.push('Paired');
+        parts.push(i18next.t('settings:reach.paired'));
     }
     if (entry.onAccount) {
-        parts.push('On your account');
+        parts.push(i18next.t('settings:reach.onAccount'));
     } else if (entry.endpoint !== null && !entry.local && !entry.paired) {
         // A row opened from the account while this client cannot see the account list.
-        parts.push('Opened through your account');
+        parts.push(i18next.t('settings:reach.openedThroughAccount'));
     }
     return parts.map((part, index) => (index === 0 ? part : part.toLowerCase())).join(', ');
 };

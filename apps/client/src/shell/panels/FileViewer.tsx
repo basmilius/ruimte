@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { FileText, Search } from 'lucide-react';
 import { DiffFile } from '@/shell/panels/DiffFile';
 import { FileBody } from '@/shell/panels/FileBody';
@@ -15,12 +16,13 @@ import { Tile } from '@/ui/Tile';
 
 /* The preview with no tab up: a file to open, a search through the folder, and what was closed a moment ago. */
 function EmptyPreview() {
+    const { t } = useTranslation('panels');
     const folder = useProject((s) => s.current?.folder ?? null);
     const recent = useFiles((s) => s.recent);
     if (folder === null && recent.length === 0) {
         return (
             <div className="grid min-h-0 grow place-items-center">
-                <EmptyState icon={<Icon icon={FileText} size={20} />}>A file opens here from the Files panel or a link in a chat.</EmptyState>
+                <EmptyState icon={<Icon icon={FileText} size={20} />}>{t('file.empty.hint')}</EmptyState>
             </div>
         );
     }
@@ -32,13 +34,13 @@ function EmptyPreview() {
                         <Tile
                             size="sm"
                             icon={<Icon icon={FileText} size={14} />}
-                            title="Open file"
+                            title={t('file.empty.openFile')}
                             onClick={() => useUi.getState().openFilePicker({ kind: 'tab' })}
                         />
                         <Tile
                             size="sm"
                             icon={<Icon icon={Search} size={14} />}
-                            title="Find in files"
+                            title={t('file.empty.findInFiles')}
                             shortcut={APP_SHORTCUTS.findInFiles}
                             onClick={() => useUi.getState().openFindInFiles()}
                         />
@@ -46,7 +48,7 @@ function EmptyPreview() {
                 )}
                 {recent.length > 0 && (
                     <section className="flex flex-col gap-1">
-                        <h2 className={`${SECTION_LABEL} px-2`}>Closed a moment ago</h2>
+                        <h2 className={`${SECTION_LABEL} px-2`}>{t('file.empty.recent')}</h2>
                         {recent.map((path) => (
                             <button
                                 key={path}

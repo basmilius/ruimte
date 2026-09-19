@@ -1,4 +1,5 @@
 import type { KeyboardEvent, ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Hand, MessageCircleQuestionMark, type LucideIcon } from 'lucide-react';
 import { isApplePlatform } from '@/desktop/bridge';
 import { headingKey, isPrimaryKey, staysInCard, stepIndex, toolbarKey } from '@/prompts/logic/keys';
@@ -11,7 +12,6 @@ export const PROMPT_SURFACE =
 export type PromptCardKind = 'approval' | 'question' | 'waiting';
 
 const ICONS: Record<PromptCardKind, LucideIcon> = { approval: Hand, question: MessageCircleQuestionMark, waiting: MessageCircleQuestionMark };
-const LABELS: Record<PromptCardKind, string> = { approval: 'Permission request', question: 'Question', waiting: 'Waiting in the terminal' };
 
 interface PromptCardProps {
     kind: PromptCardKind;
@@ -60,8 +60,9 @@ function onCardKeyDown(event: KeyboardEvent<HTMLDivElement>) {
 
 /* What every prompt looks like, whatever asked it: in a chat's composer and in a canvas's stack. */
 export function PromptCard({ kind, heading, meta, top, actions, busy, disabled, error, children }: PromptCardProps) {
+    const { t } = useTranslation('prompts');
     const card = (
-        <div className="prompt-card flex min-h-0 flex-col gap-2 p-3" role="group" aria-label={LABELS[kind]} aria-busy={busy} onKeyDown={onCardKeyDown}>
+        <div className="prompt-card flex min-h-0 flex-col gap-2 p-3" role="group" aria-label={t(`card.${kind}`)} aria-busy={busy} onKeyDown={onCardKeyDown}>
             <div className="max-h-[min(50dvh,480px)] overflow-auto overscroll-contain">
                 <div className="flex flex-col gap-2">
                     <div className="flex items-start gap-2">
@@ -72,7 +73,7 @@ export function PromptCard({ kind, heading, meta, top, actions, busy, disabled, 
                     </div>
                     {meta && <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-text-muted">{meta}</div>}
                     {children}
-                    {disabled && <p className="text-xs text-text-muted">Not connected to the machine</p>}
+                    {disabled && <p className="text-xs text-text-muted">{t('error.notConnected')}</p>}
                     {error && (
                         <p role="alert" className="text-xs text-status-error">
                             {error}
@@ -80,7 +81,7 @@ export function PromptCard({ kind, heading, meta, top, actions, busy, disabled, 
                     )}
                 </div>
             </div>
-            <div role="toolbar" aria-label="Actions" className="flex flex-wrap items-center gap-1.5">
+            <div role="toolbar" aria-label={t('toolbar')} className="flex flex-wrap items-center gap-1.5">
                 {actions}
             </div>
         </div>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { CircleAlert, Eye, GitBranch } from 'lucide-react';
 import { diagramClient, drawingClient, projectClient } from '@/project';
 import { Banner } from '@/shell/Banner';
@@ -9,6 +10,7 @@ import { Button } from '@/ui/Button';
 
 // One banner slot: possible data loss outranks an agent's repeatable view request.
 export function ProjectBanner() {
+    const { t } = useTranslation(['shell', 'common']);
     const projectConflict = useProject((s) => s.conflict);
     const drawingConflict = useDrawing((s) => s.conflict);
     const diagramConflict = useDiagram((s) => s.conflict);
@@ -29,11 +31,11 @@ export function ProjectBanner() {
         return notice === null ? null : (
             <Banner icon={Eye} tone="neutral" message={notice.message}>
                 <Button size="sm" onClick={() => useDocument.getState().dismissNotice()}>
-                    {notice.action?.kind === 'go' ? 'Stay here' : 'Dismiss'}
+                    {notice.action?.kind === 'go' ? t('projectBanner.stayHere') : t('common:action.dismiss')}
                 </Button>
                 {notice.action !== null && (
                     <Button size="sm" variant="primary" onClick={() => useDocument.getState().runNotice()}>
-                        {notice.action.kind === 'go' ? 'Go there' : 'Back'}
+                        {notice.action.kind === 'go' ? t('projectBanner.goThere') : t('projectBanner.back')}
                     </Button>
                 )}
             </Banner>
@@ -53,18 +55,18 @@ export function ProjectBanner() {
         }
     };
     return conflict ? (
-        <Banner icon={GitBranch} tone="attention" message={`The ${file} changed on disk while you had unsaved edits.`}>
+        <Banner icon={GitBranch} tone="attention" message={t(`projectBanner.conflict.${file}`)}>
             <Button size="sm" onClick={() => resolve('theirs')}>
-                Take the file
+                {t('projectBanner.takeTheirs')}
             </Button>
             <Button size="sm" variant="primary" onClick={() => resolve('mine')}>
-                Keep mine
+                {t('projectBanner.keepMine')}
             </Button>
         </Banner>
     ) : (
         <Banner icon={CircleAlert} tone="error" message={error}>
             <Button size="sm" onClick={dismiss}>
-                Dismiss
+                {t('common:action.dismiss')}
             </Button>
         </Banner>
     );

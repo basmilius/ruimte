@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FileWarning, LoaderCircle } from 'lucide-react';
 import type { FileSurfaceKind } from '@/shell/panels/FileActionItems';
 import { FileActionsContext } from '@/shell/panels/file-actions';
@@ -26,6 +27,7 @@ function WithoutRenderer({ children }: { children: ReactNode }) {
  * one error state, and a renderer only ever sees a file that is there.
  */
 export function FileBody({ path, name, on, tabKey }: { path: string; name: string; on: FileSurfaceKind; tabKey?: string }) {
+    const { t } = useTranslation('panels');
     const { state, retry } = useFileRead(path);
     const actions = useMemo(() => ({ path, name, on, tabKey, refresh: retry }), [path, name, on, tabKey, retry]);
 
@@ -33,7 +35,7 @@ export function FileBody({ path, name, on, tabKey }: { path: string; name: strin
         if (state.status === 'loading') {
             return (
                 <WithoutRenderer>
-                    <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>Reading {name}...</EmptyState>
+                    <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>{t('file.reading', { name })}</EmptyState>
                 </WithoutRenderer>
             );
         }
@@ -44,7 +46,7 @@ export function FileBody({ path, name, on, tabKey }: { path: string; name: strin
                         icon={<Icon icon={FileWarning} size={20} />}
                         action={
                             <Button variant="secondary" size="sm" onClick={retry}>
-                                Try again
+                                {t('common:action.retry')}
                             </Button>
                         }
                     >

@@ -1,0 +1,90 @@
+{
+  "state": {
+    "steps": {
+      "open": "Open",
+      "active": "Bezig",
+      "done": "Klaar",
+      "failed": "Mislukt",
+      "skipped": "Overgeslagen",
+      "blocked": "Geblokkeerd",
+      "warning": "Waarschuwing",
+      "info": "Info"
+    },
+    "test": {
+      "open": "Niet uitgevoerd",
+      "active": "Loopt",
+      "done": "Geslaagd",
+      "failed": "Mislukt",
+      "skipped": "Overgeslagen",
+      "blocked": "Geblokkeerd",
+      "warning": "Waarschuwing",
+      "info": "Info"
+    }
+  },
+  "agent": {
+    "unknown": "De agent",
+    "stoppedHere": "{{agent}} stopte hier"
+  },
+  "active": {
+    "more_one": "{{title}} en nog {{count}}",
+    "more_other": "{{title}} en nog {{count}}"
+  },
+  "setBy": {
+    "person": "jij",
+    "personAt": "jij · {{when}}",
+    "agent": "{{agent}} zette dit",
+    "agentAt": "{{agent}} zette dit om {{when}}"
+  },
+  "results": {
+    "title": "Resultaten van het plan \"{{title}}\":"
+  },
+  "pill": {
+    "count_one": "{{count}} plan in deze chat",
+    "count_other": "{{count}} plannen in deze chat",
+    "unseen": "Nieuw plan",
+    "failed": "Een stap is mislukt"
+  },
+  "toast": {
+    "notChanged": "Het plan is niet gewijzigd",
+    "copied": "Plan als Markdown gekopieerd"
+  },
+  "header": {
+    "kind": {
+      "steps": "Stappen",
+      "test": "Testplan"
+    }
+  },
+  "empty": {
+    "all": "Dit plan heeft nog geen stappen.",
+    "open": "Er staat niets open.",
+    "issues": "Geen problemen."
+  },
+  "step": {
+    "menu": {
+      "status": "Status",
+      "addNote": "Notitie toevoegen",
+      "editNote": "Notitie bewerken",
+      "unlock": "Ontgrendelen"
+    },
+    "markAs": "Markeren als {{state}}",
+    "lockedBy": "Alleen {{agent}} vinkt deze stap af"
+  },
+  "note": {
+    "label": "Notitie",
+    "placeholder": "Wat is er gebeurd?"
+  },
+  "progress": {
+    "ranOf": "{{finished}} van {{total}} gedraaid",
+    "doneOf": "{{done}} van {{total}} klaar",
+    "passed": "{{count}} geslaagd",
+    "warning_one": "{{count}} waarschuwing",
+    "warning_other": "{{count}} waarschuwingen",
+    "withWarning_one": "{{count}} met een waarschuwing",
+    "withWarning_other": "{{count}} met waarschuwingen",
+    "info": "{{count}} met info",
+    "withInfo": "{{count}} met info",
+    "failed": "{{count}} mislukt",
+    "skipped": "{{count}} overgeslagen",
+    "blocked": "{{count}} geblokkeerd"
+  }
+}

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import clsx from 'clsx';
 import { RotateCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -9,13 +10,15 @@ interface NodeNoticeProps {
     children: ReactNode;
     /* Present when the notice is something the reader can act on; draws the retry button. */
     onRetry?: () => void;
+    /* Overrides the button's name where a retry is something more precise than trying again. */
     retryLabel?: string;
 }
 
 /* The card a node floats over its own content when it cannot show that content: connecting,
    failed to start, the page did not load. One shape for all three, so a terminal, a chat and a
    browser report trouble the same way. */
-export function NodeNotice({ tone = 'muted', children, onRetry, retryLabel = 'Try again' }: NodeNoticeProps) {
+export function NodeNotice({ tone = 'muted', children, onRetry, retryLabel }: NodeNoticeProps) {
+    const { t } = useTranslation('canvas');
     return (
         <div
             className={clsx(
@@ -27,7 +30,7 @@ export function NodeNotice({ tone = 'muted', children, onRetry, retryLabel = 'Tr
         >
             <span className="grow select-text">{children}</span>
             {onRetry && (
-                <Tooltip label={retryLabel} name>
+                <Tooltip label={retryLabel ?? t('common:action.retry')} name>
                     <button className="icon-btn h-7 w-7 shrink-0" onClick={onRetry}>
                         <Icon icon={RotateCw} size={16} />
                     </button>

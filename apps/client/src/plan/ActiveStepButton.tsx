@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { CirclePause, LoaderCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { Plan } from '@ruimte/contracts';
 import { useHeld } from '@/plan/hold';
 import { revealPlanStep } from '@/plan/plan-actions';
@@ -24,6 +25,7 @@ const sameFlag = (a: true, b: true): boolean => a === b;
  * @param planKey The key of the plan's view state, from `planViewKey`.
  */
 export function ActiveStepButton({ chatId, plan, planKey }: { chatId: string; plan: Plan; planKey: string }) {
+    const { t } = useTranslation('plan');
     const live = activeSteps(plan);
     const steps = useHeld(live.length > 0 ? live : null, sameActiveSteps, ACTIVE_HOLD_MS);
     const liveWorking = useChatRow(chatId, (row) => chatWorking(row));
@@ -36,7 +38,7 @@ export function ActiveStepButton({ chatId, plan, planKey }: { chatId: string; pl
     }
 
     const title = activeStepsLabel(steps);
-    const label = working ? title : `${title}. ${agent} stopped here`;
+    const label = working ? title : `${title}. ${t('agent.stoppedHere', { agent })}`;
     const go = (): void => {
         const target = nextActiveTarget(steps, last.current);
         if (target === null) {

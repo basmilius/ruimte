@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { GitFork } from 'lucide-react';
 import { CHAT_FORK_TITLE_MAX, type ChatForkInfoResult } from '@ruimte/contracts';
@@ -27,12 +28,7 @@ import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Icon } from '@/ui/Icon';
-import { Select, type SelectItem } from '@/ui/Select';
-
-const SHAPE_ITEMS: Record<ForkShape, SelectItem<ForkShape>> = {
-    node: { value: 'node', label: 'A node beside it' },
-    view: { value: 'view', label: 'A new view' }
-};
+import { Select } from '@/ui/Select';
 
 /*
  * Forks a chat after one of its turns, with the history up to and including that turn: a chat view
@@ -40,6 +36,7 @@ const SHAPE_ITEMS: Record<ForkShape, SelectItem<ForkShape>> = {
  * is where the person clicked, so the dialog only says which one it is.
  */
 export function ForkDialog() {
+    const { t } = useTranslation('shell');
     const fork = useUi((s) => s.forkDialog);
     const close = (): void => useUi.getState().setForkDialog(null);
     return (
@@ -55,9 +52,9 @@ export function ForkDialog() {
                 <Dialog.Backdrop className="dialog-backdrop" />
                 <Dialog.Popup className="dialog-popup w-[440px] p-5">
                     <Dialog.Title className="flex items-center gap-2 text-base font-semibold text-text">
-                        <Icon icon={GitFork} size={16} /> Fork this conversation
+                        <Icon icon={GitFork} size={16} /> {t('fork.title')}
                     </Dialog.Title>
-                    <ErrorBoundary label="The fork dialog failed to render" resetKeys={[fork?.chatId, fork?.turnId]}>
+                    <ErrorBoundary label={t('fork.failedToRender')} resetKeys={[fork?.chatId, fork?.turnId]}>
                         {fork !== null && <ForkForm key={`${fork.chatId}:${fork.turnId}`} chatId={fork.chatId} turnId={fork.turnId} onDone={close} />}
                     </ErrorBoundary>
                 </Dialog.Popup>
@@ -67,6 +64,7 @@ export function ForkDialog() {
 }
 
 function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; onDone(): void }) {
+    const { t } = useTranslation(['shell', 'common']);
     const transport = useTransport();
     const info = useChatRow(chatId, (row) => row?.info ?? null);
     const items = useChatRow(chatId, (row) => row?.structure);
@@ -74,9 +72,9 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
     const origin = useDocument((s) => forkOriginIn(s.views, chatId)?.shape ?? 'node');
     const viewName = useDocument((s) => forkOriginIn(s.views, chatId)?.title);
     // A node's live editor names it before a save has brought the document up to date.
-    const originalTitle = canvasOfNode(chatId)?.getState().nodes[chatId]?.title ?? viewName ?? 'Chat';
+    const originalTitle = canvasOfNode(chatId)?.getState().nodes[chatId]?.title ?? viewName ?? t('planPanel.chat');
     const shapes = forkShapes(origin);
-    const [title, setTitle] = useState(`${originalTitle} (fork)`.slice(0, CHAT_FORK_TITLE_MAX));
+    const [title, setTitle] = useState(t('fork.copyTitle', { title: originalTitle }).slice(0, CHAT_FORK_TITLE_MAX));
     const [shape, setShape] = useState<ForkShape>(shapes[0]!);
     const [busy, setBusy] = useState(false);
     const [failure, setFailure] = useState<string | null>(null);
@@ -144,7 +142,7 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
             }
             onDone();
         } catch (e) {
-            setFailure(e instanceof Error ? e.message : 'The fork could not be made');
+            setFailure(e instanceof Error ? e.message : t('fork.failed'));
         } finally {
             setBusy(false);
         }
@@ -152,16 +150,14 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
 
     return (
         <>
-            <p className="mt-1 text-sm text-text-muted">{point ? forkPointLabel(point) : 'This turn is no longer in the conversation.'}</p>
+            <p className="mt-1 text-sm text-text-muted">{point ? forkPointLabel(point) : t('fork.turnGone')}</p>
             <p className="mt-2 text-sm text-text-muted">
-                {shape === 'view'
-                    ? `A new chat view goes on from there, right after ${origin === 'view' ? 'the original' : 'its canvas'} in the sidebar. Nothing is sent until you write the first message.`
-                    : 'A new chat node goes on from there, beside the original and with a line from it. Nothing is sent until you write the first message.'}
+                {shape === 'view' ? t('fork.intoView', { after: origin === 'view' ? t('fork.theOriginal') : t('fork.itsCanvas') }) : t('fork.intoNode')}
             </p>
             {chosenCli !== null && pickable.length > 0 && (
                 <>
                     <div className="mt-3 flex items-center justify-between gap-3">
-                        <span className="text-xs text-text-muted">Continue with</span>
+                        <span className="text-xs text-text-muted">{t('fork.continueWith')}</span>
                         <ModelPicker
                             providers={pickable}
                             provider={chosenCli.provider}
@@ -171,15 +167,11 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
                             onChange={chooseCli}
                         />
                     </div>
-                    {switching && (
-                        <p className="mt-1 text-xs text-text-muted">
-                            The new agent gets the last part of the conversation as text and can read the rest of the original itself.
-                        </p>
-                    )}
+                    {switching && <p className="mt-1 text-xs text-text-muted">{t('fork.handoffNote')}</p>}
                 </>
             )}
             <label className="mt-3 block text-xs text-text-muted" htmlFor="fork-title">
-                Title
+                {t('fork.titleLabel')}
             </label>
             <input
                 id="fork-title"
@@ -198,13 +190,13 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
             />
             {shapes.length > 1 && (
                 <div className="mt-3 flex items-center justify-between gap-3">
-                    <span className="text-xs text-text-muted">Fork into</span>
+                    <span className="text-xs text-text-muted">{t('fork.into')}</span>
                     <Select<ForkShape>
-                        label="Fork into"
+                        label={t('fork.into')}
                         variant="outlined"
                         value={shape}
                         onValueChange={setShape}
-                        items={shapes.map((value) => SHAPE_ITEMS[value])}
+                        items={shapes.map((value) => ({ value, label: t(`fork.shapes.${value}`) }))}
                     />
                 </div>
             )}
@@ -223,9 +215,9 @@ function ForkForm({ chatId, turnId, onDone }: { chatId: string; turnId: string; 
             {refusal !== null && <p className="mt-2 text-sm text-text-muted">{refusal}.</p>}
             {failure && <p className="mt-2 text-sm text-status-error">{failure}</p>}
             <div className="mt-4 flex items-center justify-end gap-2">
-                <Button onClick={onDone}>Cancel</Button>
+                <Button onClick={onDone}>{t('common:action.cancel')}</Button>
                 <Button variant="primary" disabled={busy || !ready} onClick={() => void submit()}>
-                    {busy ? 'Forking...' : 'Fork'}
+                    {busy ? t('fork.forking') : t('fork.fork')}
                 </Button>
             </div>
         </>
@@ -250,27 +242,29 @@ interface ForkFolderProps {
  * from where the turn left them, or the original's folder, where nothing is put back.
  */
 function ForkFolder({ folder, last, inWorktree, onInWorktree, branch, onBranch, branchProblem, filesAfterTurn, onFilesAfterTurn, onSubmit }: ForkFolderProps) {
+    const { t } = useTranslation('shell');
     if (folder === null) {
-        return <p className="mt-3 text-sm text-text-muted">Looking at the folder...</p>;
+        return <p className="mt-3 text-sm text-text-muted">{t('fork.lookingAtFolder')}</p>;
     }
-    const sharedNote = last ? null : 'The files stay as they are now; the agent is told the folder is newer than this turn.';
+    const sharedNote = last ? null : t('fork.sharedNote');
     if (!folder.repository) {
         return (
             <p className="mt-3 text-sm text-text-muted">
-                This folder is not in a git repository; the fork works in the same folder.{sharedNote === null ? '' : ` ${sharedNote}`}
+                {t('fork.noRepository')}
+                {sharedNote === null ? '' : ` ${sharedNote}`}
             </p>
         );
     }
     return (
         <>
             <div className="mt-3 flex items-center justify-between gap-3">
-                <span className="text-sm text-text">Work in a git worktree</span>
-                <Toggle label="Work in a git worktree" checked={inWorktree} onChange={onInWorktree} />
+                <span className="text-sm text-text">{t('fork.useWorktree')}</span>
+                <Toggle label={t('fork.useWorktree')} checked={inWorktree} onChange={onInWorktree} />
             </div>
             {inWorktree ? (
                 <>
                     <label className="mt-2 block text-xs text-text-muted" htmlFor="fork-branch">
-                        Branch
+                        {t('fork.branch')}
                     </label>
                     <input
                         id="fork-branch"
@@ -287,20 +281,16 @@ function ForkFolder({ folder, last, inWorktree, onInWorktree, branch, onBranch, 
                     />
                     {branchProblem !== null && <p className="mt-1 text-xs text-status-error">{branchProblem}</p>}
                     <div className="mt-3 flex items-center justify-between gap-3">
-                        <span className="text-sm text-text">{last ? 'Take the uncommitted files along' : 'Undo the work after this turn'}</span>
+                        <span className="text-sm text-text">{last ? t('fork.takeFiles') : t('fork.undoAfterTurn')}</span>
                         <Toggle
-                            label={last ? 'Take the uncommitted files along' : 'Undo the work after this turn'}
+                            label={last ? t('fork.takeFiles') : t('fork.undoAfterTurn')}
                             checked={filesAfterTurn && folder.filesAfterTurn}
                             disabled={!folder.filesAfterTurn}
                             onChange={onFilesAfterTurn}
                         />
                     </div>
                     <p className="mt-1 text-xs text-text-muted">
-                        {!folder.filesAfterTurn
-                            ? 'The files of this turn are no longer in the repository, so the worktree starts from HEAD.'
-                            : filesAfterTurn
-                              ? 'The worktree starts from the files as they were after this turn; the original keeps its own.'
-                              : 'The worktree starts from HEAD, without uncommitted work.'}
+                        {!folder.filesAfterTurn ? t('fork.filesGone') : filesAfterTurn ? t('fork.fromTurnFiles') : t('fork.fromHead')}
                     </p>
                 </>
             ) : (

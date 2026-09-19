@@ -1,4 +1,5 @@
 import type { NodeTitleSource } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { deriveNodeTitle } from '@/chat/title';
 import { useBrowserRow } from '@/browser/registry';
 
@@ -7,7 +8,7 @@ export const browserDisplayTitle = (sharedTitle: string, source: NodeTitleSource
     if (source === 'user') {
         return sharedTitle;
     }
-    const fallback = source === 'auto' ? 'Browser' : sharedTitle;
+    const fallback = source === 'auto' ? i18next.t('browser:node.fallbackTitle') : sharedTitle;
     return failed ? fallback : (deriveNodeTitle(pageTitle ?? '') ?? fallback);
 };
 

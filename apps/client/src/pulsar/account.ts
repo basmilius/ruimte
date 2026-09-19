@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { create } from 'zustand';
 import {
     APP_REDIRECT_LOOPBACK_PATH,
@@ -49,7 +50,8 @@ export const usePulsarAccount = create<AccountState>(() => ({
     linking: null
 }));
 
-const SESSION_ENDED = 'Your session on this device ended. Sign in again to open your machines.';
+/* Read when a session ends rather than at module load, where the words are not in yet. */
+const sessionEnded = (): string => i18next.t('machines:account.sessionEndedOnDevice');
 
 let platform: PulsarPlatform | null = null;
 let tokens: AccessTokens | null = null;
@@ -119,7 +121,7 @@ const finishWebSignIn = async (given: PulsarPlatform, web: NonNullable<PulsarPla
 const finishWebLink = async (given: PulsarPlatform, provider: ProviderId, payload: IdentityLinkCompletePayload): Promise<void> => {
     const restored = await given.keeper.restore().catch(() => null);
     if (!restored) {
-        signedOut(null, SESSION_ENDED);
+        signedOut(null, sessionEnded());
         return;
     }
     usePulsarAccount.setState({ status: 'signed-in', account: restored.account, error: null, notice: null });
@@ -152,7 +154,7 @@ export const startPulsarAccount = async (given: PulsarPlatform | null = desktopP
         usePulsarAccount.setState({ status: 'unavailable', account: null, error: null, notice: null });
         return;
     }
-    tokens = new AccessTokens(given.keeper, { onSignedOut: () => signedOut(null, SESSION_ENDED) });
+    tokens = new AccessTokens(given.keeper, { onSignedOut: () => signedOut(null, sessionEnded()) });
     void loadProviders();
     if (given.web && location.pathname === APP_REDIRECT_LOOPBACK_PATH) {
         await finishWebSignIn(given, given.web);
@@ -284,7 +286,7 @@ export const signOutOfPulsar = async (): Promise<void> => {
 
 const addressBookClient = (): Promise<AddressBookClient> => {
     if (!platform) {
-        return Promise.reject(new Error('Signing in works in the desktop app and at station.ruimte.app'));
+        return Promise.reject(new Error(i18next.t('machines:account.signInUnavailable')));
     }
     book ??= platform.addressBook().then((baseUrl) => new AddressBookClient({ baseUrl }));
     return book;
@@ -298,7 +300,7 @@ export const withAccessToken = async <T>(call: (client: AddressBookClient, token
     const client = await addressBookClient();
     const token = await tokens?.token();
     if (!token) {
-        throw new Error('Sign in to your account first');
+        throw new Error(i18next.t('machines:account.signInFirst'));
     }
     try {
         return await call(client, token);
@@ -308,7 +310,7 @@ export const withAccessToken = async <T>(call: (client: AddressBookClient, token
         }
         const fresh = await tokens?.refreshNow();
         if (!fresh) {
-            throw new Error('Your session ended. Sign in again.');
+            throw new Error(i18next.t('machines:account.sessionEnded'));
         }
         return call(client, fresh);
     }

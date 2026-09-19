@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { UsageTotals } from '@ruimte/contracts';
 import type { UsageMetric } from '@/state/usage';
 import { ProviderLogo } from '@/ui/ProviderLogo';
@@ -18,6 +19,7 @@ interface UsageSummaryProps {
  * legend, which is why the mark is the same color the bar segment is drawn in.
  */
 export function UsageSummary({ metric, costUsd, totals, sessions, providers }: UsageSummaryProps) {
+    const { t } = useTranslation('usage');
     const money = useMoney();
     return (
         <div className="flex flex-col gap-4">
@@ -25,7 +27,8 @@ export function UsageSummary({ metric, costUsd, totals, sessions, providers }: U
                 <p className="text-4xl font-semibold tabular-nums">{metric === 'cost' ? money(costUsd) : formatTokens(totalTokensOf(totals))}</p>
                 {/* A subscription is not billed per call, so the figure says what it is: API rates. */}
                 <p className="mt-1 text-xs text-text-muted">
-                    {formatCount(sessions)} {sessions === 1 ? 'session' : 'sessions'} · {formatCount(totals.calls)} calls · at API rates
+                    {t('summary.sessions', { count: sessions, sessions: formatCount(sessions) })} ·{' '}
+                    {t('summary.calls', { count: totals.calls, calls: formatCount(totals.calls) })} · {t('summary.apiRates')}
                 </p>
             </div>
             <div className="flex flex-col gap-2">

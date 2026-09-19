@@ -6,7 +6,7 @@ import { routeDraft, routeEdge, selfRoute, SIDE_NORMAL, type Obstacle, type Side
 import { markerPath, type MarkerShape } from '@/canvas/marker-path';
 import type { Point, Rect } from '@/canvas/math';
 import { useEndpointId } from '@/state/keys';
-import { TASK_EDGE_LABEL, edgeTask, useTasks } from '@/state/tasks';
+import { edgeTask, taskEdgeLabel, useTasks } from '@/state/tasks';
 
 function EdgeLabel({
     ids,
@@ -161,7 +161,7 @@ export function EdgeLayer() {
                 const active = hovered === key || line.ids.some((id) => selection.includes(id));
                 // A line a task went along says how the task stands, and only looks open while it is.
                 const task = edgeTask(tasks, line.edge.from, line.edge.to) ?? (line.back === null ? null : edgeTask(tasks, line.back.from, line.back.to));
-                const label = task === null ? line.label : TASK_EDGE_LABEL[task.status];
+                const label = task === null ? line.label : taskEdgeLabel(task.status);
                 const look = edgeLook(lineRole(line, readsContext, drivenByAgent), {
                     pair: line.back !== null,
                     openTask: task !== null && task.status === 'open'

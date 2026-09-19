@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { CloudUpload, Plug, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { forgetEndpoint } from '@/endpoint';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { messageOf, usePulsarAccount, withAccessToken } from '@/pulsar/account';
@@ -21,8 +22,6 @@ import { useEndpointConnection, useMachineHold } from '@/transport/status';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 
-const NOT_ANSWERING = 'Available once the machine answers';
-
 const ACTION_DEPS: MachineActionDeps = {
     forgetEndpoint,
     deleteFromAccount: (machineId) => withAccessToken((client, token) => client.deleteMachine(token, machineId)),
@@ -32,6 +31,7 @@ const ACTION_DEPS: MachineActionDeps = {
 type Confirming = 'forget' | 'remove' | null;
 
 function MachineDialogBody({ entry }: { entry: MachineEntry }) {
+    const { t } = useTranslation('settings');
     // The dialog is a person looking at this machine, the one place in the pane that connects to it: its name, broker and paired clients are live.
     useMachineHold(entry.endpoint);
     const connection = useEndpointConnection(entry.endpoint?.id ?? entry.id);
@@ -43,7 +43,7 @@ function MachineDialogBody({ entry }: { entry: MachineEntry }) {
     const [confirming, setConfirming] = useState<Confirming>(null);
     const [busy, setBusy] = useState(false);
     const model = machineDialogModel(entry, { connected: connection.status === 'open', signedIn, removedMachineIds });
-    const reason = model.settings === 'not-answering' ? NOT_ANSWERING : null;
+    const reason = model.settings === 'not-answering' ? t('machineDialog.availableWhenAnswering') : null;
     const name = nameOf(entry);
 
     const failed = (title: string, e: unknown): void => {
@@ -57,7 +57,7 @@ function MachineDialogBody({ entry }: { entry: MachineEntry }) {
         try {
             openAccountMachine(entry.machine);
         } catch (e) {
-            failed(`${name} could not be opened`, e);
+            failed(t('machineDialog.openFailed', { machine: name }), e);
         }
     };
 
@@ -69,7 +69,7 @@ function MachineDialogBody({ entry }: { entry: MachineEntry }) {
         try {
             await addMachineToAccount(entry.endpoint.id);
         } catch (e) {
-            failed(`${name} was not added to your account`, e);
+            failed(t('machineDialog.addFailed', { machine: name }), e);
         } finally {
             setBusy(false);
         }
@@ -83,23 +83,19 @@ function MachineDialogBody({ entry }: { entry: MachineEntry }) {
                     <Dialog.Title className="truncate text-base font-semibold text-text">{name}</Dialog.Title>
                     <Dialog.Description className="mt-0.5 text-xs break-words text-text-muted">{reachLabel(entry)}</Dialog.Description>
                 </div>
-                <Dialog.Close className="icon-btn h-7 w-7 shrink-0" aria-label="Close">
+                <Dialog.Close className="icon-btn h-7 w-7 shrink-0" aria-label={t('common:action.close')}>
                     <Icon icon={X} size={16} />
                 </Dialog.Close>
             </div>
             <div className="flex min-h-0 min-w-0 flex-col gap-5 overflow-y-auto px-5 pb-5">
                 {entry.endpoint === null && (
-                    <SettingsSection title="Not opened on this client">
+                    <SettingsSection title={t('machineDialog.notOpened.title')}>
                         <SettingsRow
-                            label="Open it to change its name, icon and connection"
-                            description={
-                                model.canOpen
-                                    ? 'It connects through the broker, on the strength of your account.'
-                                    : 'This machine is not connected to a broker yet, so it can only be reached on its own network.'
-                            }
+                            label={t('machineDialog.notOpened.label')}
+                            description={model.canOpen ? t('machineDialog.notOpened.canOpen') : t('machineDialog.notOpened.noBroker')}
                             control={
                                 <Button variant="secondary" disabled={!model.canOpen} onClick={open}>
-                                    <Icon icon={Plug} size={12} /> Open
+                                    <Icon icon={Plug} size={12} /> {t('common:action.open')}
                                 </Button>
                             }
                         />
@@ -107,7 +103,7 @@ function MachineDialogBody({ entry }: { entry: MachineEntry }) {
                 )}
                 {entry.endpoint !== null && (
                     <>
-                        <SettingsSection title="Name and icon" description="Every client that pairs with this machine sees these.">
+                        <SettingsSection title={t('machineDialog.identity.title')} description={t('machineDialog.identity.description')}>
                             <MachineIdentityForm
                                 key={`${info?.nameSource ?? ''}:${info?.label ?? ''}:${JSON.stringify(info?.icon ?? null)}`}
                                 endpointId={entry.endpoint.id}
@@ -116,28 +112,28 @@ function MachineDialogBody({ entry }: { entry: MachineEntry }) {
                             />
                         </SettingsSection>
                         {entry.local && <BackgroundServiceSection />}
-                        <SettingsSection title="Connection">
+                        <SettingsSection title={t('machineDialog.connection')}>
                             <DirectRow endpoint={entry.endpoint} available={model.direct} />
                             <BrokerRow endpoint={entry.endpoint} reason={reason} />
                         </SettingsSection>
-                        <SettingsSection title="Streaming">
+                        <SettingsSection title={t('machineDialog.streaming')}>
                             <StreamingRow endpoint={entry.endpoint} reason={reason} />
                         </SettingsSection>
-                        <SettingsSection title="Account">
+                        <SettingsSection title={t('machineDialog.account.title')}>
                             {registrationFailure && (
                                 <p className="px-4 py-3 text-xs break-words text-status-error" role="alert">
-                                    Could not update this machine on your account: {registrationFailure}
+                                    {t('machineDialog.account.registrationFailure', { reason: registrationFailure })}
                                 </p>
                             )}
                             <RefuseStatementsRow endpoint={entry.endpoint} reason={reason} />
                             {model.canAddToAccountAgain && (
                                 <SettingsRow
-                                    label="Add to your account again"
-                                    description="Someone took this machine off your account, so it does not join on its own."
+                                    label={t('machineDialog.account.addAgain.label')}
+                                    description={t('machineDialog.account.addAgain.description')}
                                     control={
                                         <WithReason reason={reason}>
                                             <Button variant="secondary" disabled={busy || reason !== null} onClick={() => void addAgain()}>
-                                                <Icon icon={CloudUpload} size={12} /> Add
+                                                <Icon icon={CloudUpload} size={12} /> {t('machineDialog.account.addAgain.action')}
                                             </Button>
                                         </WithReason>
                                     }
@@ -148,29 +144,25 @@ function MachineDialogBody({ entry }: { entry: MachineEntry }) {
                     </>
                 )}
                 {(model.canForget || model.canRemoveFromAccount) && (
-                    <SettingsSection title="Remove">
+                    <SettingsSection title={t('machineDialog.remove.title')}>
                         {model.canForget && (
                             <SettingsRow
-                                label="Forget on this client"
-                                description="Drops the pairing and this machine's row here. The machine, your account and other clients keep theirs."
+                                label={t('machineDialog.remove.forget.label')}
+                                description={t('machineDialog.remove.forget.description')}
                                 control={
                                     <Button variant="secondary" onClick={() => setConfirming('forget')}>
-                                        Forget
+                                        {t('machineDialog.remove.forget.action')}
                                     </Button>
                                 }
                             />
                         )}
                         {model.canRemoveFromAccount && (
                             <SettingsRow
-                                label="Remove from account"
-                                description={
-                                    entry.local
-                                        ? 'Every other client signed in to your account drops this machine. It stays here, since this app runs on it.'
-                                        : 'Every client signed in to your account drops this machine, one that paired by link included. Pairing again by link puts it back.'
-                                }
+                                label={t('machineDialog.remove.account.label')}
+                                description={entry.local ? t('machineDialog.remove.account.local') : t('machineDialog.remove.account.description')}
                                 control={
                                     <Button variant="secondary" onClick={() => setConfirming('remove')}>
-                                        Remove
+                                        {t('machineDialog.remove.account.action')}
                                     </Button>
                                 }
                             />
@@ -181,17 +173,17 @@ function MachineDialogBody({ entry }: { entry: MachineEntry }) {
             <ConfirmDialog
                 open={confirming === 'forget'}
                 onOpenChange={(next) => setConfirming(next ? 'forget' : null)}
-                title={`Forget ${name} on this client?`}
-                description="Its sessions and projects stay on the machine. To get it back here, pair again with a new link or open it from your account."
-                confirmLabel="Forget"
+                title={t('machineDialog.confirmForget.title', { machine: name })}
+                description={t('machineDialog.confirmForget.description')}
+                confirmLabel={t('machineDialog.confirmForget.action')}
                 onConfirm={() => forgetOnClient(entry, ACTION_DEPS)}
             />
             <ConfirmDialog
                 open={confirming === 'remove'}
                 onOpenChange={(next) => setConfirming(next ? 'remove' : null)}
-                title={`Remove ${name} from your account?`}
-                description="Every client signed in to your account drops it the next time it refreshes, including a client that paired by link. Clients that are signed out keep it. The machine keeps its pairings."
-                confirmLabel="Remove"
+                title={t('machineDialog.confirmRemove.title', { machine: name })}
+                description={t('machineDialog.confirmRemove.description')}
+                confirmLabel={t('machineDialog.confirmRemove.action')}
                 onConfirm={() => removeFromAccount(entry, ACTION_DEPS)}
             />
         </>

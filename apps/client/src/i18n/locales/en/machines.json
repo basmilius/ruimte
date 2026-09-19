@@ -1,0 +1,263 @@
+{
+  "device": {
+    "controls": {
+      "home": "Home",
+      "gestures": "Device gestures",
+      "swipeHome": "Swipe home",
+      "appSwitcher": "App switcher",
+      "lock": "Lock",
+      "siri": "Siri",
+      "rotate": "Rotate device",
+      "rotateLeft": "Left",
+      "rotateRight": "Right"
+    },
+    "state": {
+      "booted": "{{name}} is running.",
+      "shutdown": "{{name}} is stopped.",
+      "transitioning": "{{name}} is changing state."
+    },
+    "boot": "Start simulator",
+    "noStream": "Screen streaming is not available in this build.",
+    "noReference": "This simulator has no device reference.",
+    "finding": "Finding {{name}}...",
+    "notInstalled": "{{name}} with {{runtime}} is not installed on this machine.",
+    "plate": "Simulator",
+    "listFailed": "The devices could not be read",
+    "stream": {
+      "screen": "{{name}} screen",
+      "starting": "Starting device...",
+      "noDecoder": "This browser cannot decode the device video stream",
+      "undecodable": "The device video stream could not be decoded",
+      "frameFailed": "A simulator frame could not be drawn",
+      "startFailed": "The simulator could not start streaming",
+      "notReady": "The device stream is not ready yet",
+      "httpStatus": "The device stream returned {{status}}",
+      "unknownFormat": "The machine returned an unknown stream format",
+      "stopped": "The simulator stream stopped"
+    },
+    "tools": {
+      "title": "Simulator tools",
+      "close": "Close tools",
+      "loading": "Reading simulator settings…",
+      "readFailed": "The simulator settings could not be read",
+      "changeFailed": "The simulator setting could not be changed",
+      "bundleId": "Bundle ID",
+      "app": {
+        "title": "App",
+        "urlPlaceholder": "https://… or myapp://",
+        "open": "Open",
+        "launch": "Launch",
+        "terminate": "Terminate"
+      },
+      "display": {
+        "title": "Display",
+        "appearance": "Appearance",
+        "light": "Light",
+        "dark": "Dark",
+        "textSize": "Text size",
+        "liquidGlass": "Liquid Glass",
+        "clear": "Clear",
+        "tinted": "Tinted",
+        "colorFilter": "Color filter",
+        "reduceMotion": "Reduce Motion",
+        "increaseContrast": "Increase Contrast",
+        "reduceTransparency": "Reduce Transparency",
+        "showBorders": "Show Borders",
+        "voiceOver": "VoiceOver"
+      },
+      "textSizes": {
+        "small": "Small",
+        "default": "Default",
+        "large": "Large",
+        "extra-large": "Extra large"
+      },
+      "colorFilters": {
+        "none": "None",
+        "grayscale": "Grayscale",
+        "red-green": "Red / green",
+        "green-red": "Green / red",
+        "blue-yellow": "Blue / yellow"
+      },
+      "location": {
+        "title": "Location",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "preset": "Location preset",
+        "presetPlaceholder": "Preset…",
+        "set": "Set",
+        "clear": "Clear"
+      },
+      "permissions": {
+        "title": "Permissions",
+        "label": "Permission",
+        "grant": "Grant",
+        "revoke": "Revoke",
+        "reset": "Reset",
+        "kinds": {
+          "camera": "Camera",
+          "microphone": "Microphone",
+          "photos": "Photos",
+          "contacts": "Contacts",
+          "calendar": "Calendar",
+          "reminders": "Reminders",
+          "location": "Location",
+          "motion": "Motion",
+          "media-library": "Media library",
+          "faceid": "Face ID"
+        }
+      },
+      "push": {
+        "title": "Push notification",
+        "alertText": "Alert text",
+        "send": "Send"
+      }
+    }
+  },
+  "pairing": {
+    "notALink": "That is not a pairing link. A pairing link looks like http://machine:4210/pair#token",
+    "refused": "That machine refused the pairing",
+    "noKeyOrToken": "That machine answered without a key or a token",
+    "ownDaemon": "That link is for the machine that served this page. It is already in the list as {{label}}.",
+    "merged": {
+      "title": "{{label}} is already in the list",
+      "description": "That link points to the same machine. Its address is now {{address}}."
+    }
+  },
+  "handshake": {
+    "wrongKey": "{{address}} does not hold the key this client paired with",
+    "noEndpoint": "No endpoint {{id}} to connect to",
+    "unknownKey": {
+      "title": "{{label}} does not know this client",
+      "description": "Its access was revoked, or the machine lost the pairing. Pair again to connect."
+    },
+    "imposter": {
+      "title": "{{label}} cannot prove its identity",
+      "description": "{{address}} answers with a different key than the one this client paired with. Pair again to connect."
+    }
+  },
+  "identity": {
+    "mismatch": {
+      "title": "{{label}} answers as another machine",
+      "description": "{{address}} is not the machine this client paired with. Pair again to connect."
+    },
+    "merged": {
+      "title": "{{label}} is already in the list",
+      "description": "{{address}} is another address of {{machine}}."
+    }
+  },
+  "link": {
+    "cancelled": "Stopped waiting for that machine",
+    "silent": "That machine is not answering",
+    "notInList": "That machine is no longer in the list",
+    "notOnAccount": "That machine is no longer in the list or on your account"
+  },
+  "storage": {
+    "indexedDbClosed": "IndexedDB would not open",
+    "indexedDbRefused": "IndexedDB refused the request"
+  },
+  "account": {
+    "yours": {
+      "github": "your GitHub account",
+      "apple": "your Apple ID"
+    },
+    "this": {
+      "github": "this GitHub account",
+      "apple": "this Apple ID"
+    },
+    "noun": {
+      "github": "GitHub account",
+      "apple": "Apple ID"
+    },
+    "signedInWithProvider": "Signed in with {{provider}}",
+    "signedInAsLogin": "Signed in as {{login}}",
+    "takeover": {
+      "or": "or",
+      "warning": "Anyone who takes over {{names}} can reach your machines, so turn on two-factor authentication there."
+    },
+    "confirmation": {
+      "signedIn": "Signed in with {{provider}}",
+      "signedInAs": "Signed in with {{provider}} as {{login}}",
+      "linked": "{{provider}} added to your account"
+    },
+    "sessionEndedOnDevice": "Your session on this device ended. Sign in again to open your machines.",
+    "sessionEnded": "Your session ended. Sign in again.",
+    "signInUnavailable": "Signing in works in the desktop app and at station.ruimte.app",
+    "signInFirst": "Sign in to your account first",
+    "statementMismatch": "Your account answered with a statement for something else",
+    "signInAndConnect": "Sign in, and connect to the machine, first",
+    "noBroker": "{{name}} is not connected to a broker yet, so it can only be reached on its own network"
+  },
+  "signIn": {
+    "wrongCallback": "The answer from the browser does not belong to this sign-in. Try again.",
+    "cancelled": "Signing in was cancelled.",
+    "failed": "Signing in did not work ({{error}}).",
+    "noCode": "The browser came back without a sign-in code. Try again.",
+    "notStarted": "This page did not start a sign-in. Sign in again.",
+    "tooLong": "The sign-in took too long. Sign in again."
+  },
+  "protocol": {
+    "daemon-older": "This machine runs an older Ruimte. Update Ruimte there, or restart it to pick up the update.",
+    "daemon-newer": "This machine runs a newer Ruimte than this app. Update this app."
+  },
+  "broker": {
+    "badUrl": "The broker URL {{url}} does not open",
+    "limited": "The broker at {{host}} is limiting this client; trying again in {{seconds}} seconds",
+    "refusedClient": "The broker at {{host}} refused this client: {{reason}}",
+    "unreachable": "The broker at {{host}} could not be reached",
+    "machineAbsent": "The machine is not connected to the broker at {{host}}. It needs to run with the broker switched on.",
+    "refusedSignal": "The broker at {{host}} refused the signal: {{reason}}",
+    "signInFailed": "Could not sign in to the broker: {{reason}}",
+    "noVouch": "Your account could not vouch for this client: {{reason}}"
+  },
+  "direct": {
+    "closed": {
+      "declined": "The machine is opening too many direct connections at once",
+      "failed": "The machine could not answer the direct connection",
+      "timeout": "The machine gave up waiting for the direct connection",
+      "done": "The machine ended the direct connection",
+      "not-paired": "The machine does not know this client. Its access was revoked, or it lost the pairing; pair again to connect.",
+      "statements-refused": "The machine turns away sign-in through an account. Pair with a link to connect.",
+      "other": "The machine closed the direct connection"
+    },
+    "channelEarly": "The channel opened before the answer that describes it",
+    "badHandshake": "The machine answered the direct connection with something other than its handshake",
+    "dead": "The machine stopped answering over the direct connection",
+    "badFrame": "The machine sent a frame this client cannot read",
+    "channelClosed": "The direct connection closed",
+    "channelClosedEarly": "The channel closed before the machine let this client in",
+    "noPathWithRelay": "No network path to the machine: ICE failed, through the relay as well.",
+    "noPath": "No network path to the machine: ICE failed. A direct connection needs UDP between both sides, and this route offers no relay.",
+    "noOffer": "The browser made no offer",
+    "refused": "The machine did not take the direct connection: {{reason}}",
+    "noReason": "no reason given",
+    "unreachable": "The machine could not be reached to set up a direct connection",
+    "unreachableWith": "The machine could not be reached to set up a direct connection: {{reason}}",
+    "unsignedSignal": "A signal on the broker names the machine but is not signed by it",
+    "noKeyOverBroker": "A direct connection over the broker signs in with a key, and this browser cannot make one",
+    "notProven": "{{label}} did not prove its identity over the direct connection",
+    "noKey": "A direct connection signs in with a key, and this browser cannot make one",
+    "needsPairedKey": "A direct connection needs a paired key. Pair this machine again.",
+    "timedOut": "The direct connection did not come up within {{seconds}} seconds",
+    "frameRefused": "The direct connection refused a frame: {{reason}}",
+    "answerNotApplied": "The machine's answer did not apply: {{reason}}",
+    "refusedVerdict": "The machine refused the direct connection: {{reason}}",
+    "setupFailed": "Could not set up a direct connection: {{reason}}"
+  },
+  "connection": {
+    "notConnected": "The machine is not connected",
+    "closedBeforeAnswer": "The connection closed before the machine answered",
+    "noMachine": "No machine is picked. Sign in and open one of your machines.",
+    "unknownMachine": "This machine is not known here",
+    "openFailed": "Could not open a connection: {{reason}}",
+    "badReply": "The reply to {{type}} does not match its contract",
+    "noAddress": "No address within {{seconds}} seconds"
+  },
+  "file": {
+    "tooLarge": "This file is {{size}} MB; at most {{max}} MB loads over a direct connection",
+    "emptyPiece": "The machine sent an empty piece before the end of the file",
+    "changed": "The file changed while it was loading"
+  },
+  "station": {
+    "mixedContent": "This page is served over https, and a browser does not let it reach a machine on plain http. Add the machine to your account from the desktop app and open it here, or put it behind https."
+  }
+}

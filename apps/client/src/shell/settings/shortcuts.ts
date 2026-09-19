@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import { PROMPT_SHORTCUTS } from '@/prompts/logic/keys';
@@ -19,50 +20,53 @@ export interface ShortcutGroup {
 
 const MOD_HELD = shortcut('Mod');
 
+/* The words of one row, read while the list is built rather than when this file loads. */
+const say = (key: string): string => i18next.t(`settings:shortcuts.${key}`);
+
 /*
  * The shortcuts the handlers bind directly and that no command in `commands.ts` names, per platform.
  * The list is by hand on purpose: the handlers are chains of conditions, not one table.
  */
 export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
     {
-        title: 'Canvas',
+        title: say('canvas.title'),
         shortcuts: [
-            { keys: APP_SHORTCUTS.palette, label: 'Command palette' },
-            { keys: APP_SHORTCUTS.findInFiles, label: 'Find in files' },
-            { keys: shortcut('Space'), then: 'drag', label: 'Pan the canvas' },
-            { keys: MOD_HELD, then: 'scroll', label: 'Zoom around the pointer' },
-            { keys: CANVAS_SHORTCUTS.zoomIn, label: 'Zoom in' },
-            { keys: CANVAS_SHORTCUTS.zoomOut, label: 'Zoom out' },
-            { keys: CANVAS_SHORTCUTS.undo, label: 'Undo' },
-            { keys: CANVAS_SHORTCUTS.redo, label: 'Redo' }
+            { keys: APP_SHORTCUTS.palette, label: say('canvas.palette') },
+            { keys: APP_SHORTCUTS.findInFiles, label: say('canvas.findInFiles') },
+            { keys: shortcut('Space'), then: i18next.t('settings:gesture.drag'), label: say('canvas.pan') },
+            { keys: MOD_HELD, then: i18next.t('settings:gesture.scroll'), label: say('canvas.zoomPointer') },
+            { keys: CANVAS_SHORTCUTS.zoomIn, label: say('canvas.zoomIn') },
+            { keys: CANVAS_SHORTCUTS.zoomOut, label: say('canvas.zoomOut') },
+            { keys: CANVAS_SHORTCUTS.undo, label: say('canvas.undo') },
+            { keys: CANVAS_SHORTCUTS.redo, label: say('canvas.redo') }
         ]
     },
     {
-        title: 'Selection',
+        title: say('selection.title'),
         shortcuts: [
-            { keys: CANVAS_SHORTCUTS.selectAll, label: 'Select everything' },
-            { keys: KEY_SHORTCUTS.shift, then: 'click', label: 'Add to the selection' },
-            { keys: CANVAS_SHORTCUTS.deleteSelection, label: 'Delete the selection' },
-            { keys: KEY_SHORTCUTS.escape, label: 'Clear the selection, or leave the node you are in' }
+            { keys: CANVAS_SHORTCUTS.selectAll, label: say('selection.selectAll') },
+            { keys: KEY_SHORTCUTS.shift, then: i18next.t('settings:gesture.click'), label: say('selection.add') },
+            { keys: CANVAS_SHORTCUTS.deleteSelection, label: say('selection.delete') },
+            { keys: KEY_SHORTCUTS.escape, label: say('selection.escape') }
         ]
     },
     {
-        title: 'Views',
+        title: say('views.title'),
         shortcuts: [
-            { keys: viewShortcut(0)!, label: 'Go to view 1 to 9' },
-            { keys: CANVAS_SHORTCUTS.previousView, label: 'Previous view' },
-            { keys: CANVAS_SHORTCUTS.nextView, label: 'Next view' },
-            { keys: CANVAS_SHORTCUTS.newView, label: 'New canvas view' },
-            { keys: shortcut('F2'), label: 'Rename the focused sidebar item' }
+            { keys: viewShortcut(0)!, label: say('views.goTo') },
+            { keys: CANVAS_SHORTCUTS.previousView, label: say('views.previous') },
+            { keys: CANVAS_SHORTCUTS.nextView, label: say('views.next') },
+            { keys: CANVAS_SHORTCUTS.newView, label: say('views.new') },
+            { keys: shortcut('F2'), label: say('views.rename') }
         ]
     },
     {
-        title: 'Split',
+        title: say('split.title'),
         shortcuts: [
-            { keys: CANVAS_SHORTCUTS.splitRight, label: 'Split the cell to the right' },
-            { keys: CANVAS_SHORTCUTS.splitDown, label: 'Split the cell down' },
-            { keys: FOCUS_SHORTCUTS.left, label: 'Focus the neighboring cell (any arrow key)' },
-            { keys: CANVAS_SHORTCUTS.closeCell, label: 'Close the focused cell' }
+            { keys: CANVAS_SHORTCUTS.splitRight, label: say('split.right') },
+            { keys: CANVAS_SHORTCUTS.splitDown, label: say('split.down') },
+            { keys: FOCUS_SHORTCUTS.left, label: say('split.focusNeighbor') },
+            { keys: CANVAS_SHORTCUTS.closeCell, label: say('split.close') }
         ]
     },
     {
@@ -71,63 +75,63 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
          * it, and the tools are the letters every sketching app uses. They never fire while a text
          * is being edited or a dialog is up.
          */
-        title: 'Drawing',
+        title: say('drawing.title'),
         shortcuts: [
-            { keys: shortcut('V'), label: 'Select (1)' },
-            { keys: shortcut('H'), label: 'Pan (hand)' },
-            { keys: shortcut('R'), label: 'Rectangle (2)' },
-            { keys: shortcut('D'), label: 'Diamond (3)' },
-            { keys: shortcut('O'), label: 'Ellipse (4)' },
-            { keys: shortcut('A'), label: 'Arrow (5)' },
-            { keys: shortcut('L'), label: 'Line (6)' },
-            { keys: shortcut('P'), label: 'Freehand (7)' },
-            { keys: shortcut('T'), label: 'Text (8)' },
-            { keys: shortcut('E'), label: 'Eraser (0)' },
-            { keys: shortcut('Q'), label: 'Keep the tool selected after drawing' },
-            { keys: DRAWING_SHORTCUTS.lock, label: 'Lock or unlock the selection' },
-            { keys: DRAWING_SHORTCUTS.duplicate, label: 'Duplicate the selection' },
-            { keys: DRAWING_SHORTCUTS.bringToFront, label: 'Bring to front' },
-            { keys: DRAWING_SHORTCUTS.sendToBack, label: 'Send to back' },
-            { keys: MOD_HELD, then: 'drag', label: 'Toggle grid snapping while dragging' },
-            { keys: DRAWING_SHORTCUTS.copy, label: 'Copy the selection' },
-            { keys: DRAWING_SHORTCUTS.paste, label: 'Paste into the drawing' }
+            { keys: shortcut('V'), label: say('drawing.select') },
+            { keys: shortcut('H'), label: say('drawing.hand') },
+            { keys: shortcut('R'), label: say('drawing.rectangle') },
+            { keys: shortcut('D'), label: say('drawing.diamond') },
+            { keys: shortcut('O'), label: say('drawing.ellipse') },
+            { keys: shortcut('A'), label: say('drawing.arrow') },
+            { keys: shortcut('L'), label: say('drawing.line') },
+            { keys: shortcut('P'), label: say('drawing.freehand') },
+            { keys: shortcut('T'), label: say('drawing.text') },
+            { keys: shortcut('E'), label: say('drawing.eraser') },
+            { keys: shortcut('Q'), label: say('drawing.keepTool') },
+            { keys: DRAWING_SHORTCUTS.lock, label: say('drawing.lock') },
+            { keys: DRAWING_SHORTCUTS.duplicate, label: say('drawing.duplicate') },
+            { keys: DRAWING_SHORTCUTS.bringToFront, label: say('drawing.bringToFront') },
+            { keys: DRAWING_SHORTCUTS.sendToBack, label: say('drawing.sendToBack') },
+            { keys: MOD_HELD, then: i18next.t('settings:gesture.drag'), label: say('drawing.snap') },
+            { keys: DRAWING_SHORTCUTS.copy, label: say('drawing.copy') },
+            { keys: DRAWING_SHORTCUTS.paste, label: say('drawing.paste') }
         ]
     },
     {
-        title: 'Panels',
-        shortcuts: [{ keys: CANVAS_SHORTCUTS.togglePanel, label: 'Toggle the last open panel' }]
+        title: say('panels.title'),
+        shortcuts: [{ keys: CANVAS_SHORTCUTS.togglePanel, label: say('panels.toggle') }]
     },
     {
-        title: 'Prompts',
+        title: say('prompts.title'),
         shortcuts: [
-            { keys: CANVAS_SHORTCUTS.focusPrompts, label: 'Answer the front prompt of the canvas' },
-            { keys: PROMPT_SHORTCUTS.primary, label: 'Allow, Next or Answer' },
-            { keys: PROMPT_SHORTCUTS.previousPrompt, label: 'Previous prompt in the stack' },
-            { keys: PROMPT_SHORTCUTS.nextPrompt, label: 'Next prompt in the stack' },
-            { keys: KEY_SHORTCUTS.escape, label: 'Back to where you were' }
+            { keys: CANVAS_SHORTCUTS.focusPrompts, label: say('prompts.answerFront') },
+            { keys: PROMPT_SHORTCUTS.primary, label: say('prompts.primary') },
+            { keys: PROMPT_SHORTCUTS.previousPrompt, label: say('prompts.previous') },
+            { keys: PROMPT_SHORTCUTS.nextPrompt, label: say('prompts.next') },
+            { keys: KEY_SHORTCUTS.escape, label: say('prompts.escape') }
         ]
     },
     {
-        title: 'Chat',
+        title: say('chat.title'),
         shortcuts: [
-            { keys: CANVAS_SHORTCUTS.previousMessage, label: 'Previous message you sent' },
-            { keys: CANVAS_SHORTCUTS.nextMessage, label: 'Next message you sent' }
+            { keys: CANVAS_SHORTCUTS.previousMessage, label: say('chat.previousMessage') },
+            { keys: CANVAS_SHORTCUTS.nextMessage, label: say('chat.nextMessage') }
         ]
     },
     {
-        title: 'Browser',
+        title: say('browser.title'),
         shortcuts: [
-            { keys: CANVAS_SHORTCUTS.browserBack, label: 'Back' },
-            { keys: CANVAS_SHORTCUTS.browserForward, label: 'Forward' }
+            { keys: CANVAS_SHORTCUTS.browserBack, label: say('browser.back') },
+            { keys: CANVAS_SHORTCUTS.browserForward, label: say('browser.forward') }
         ]
     },
     {
-        title: 'Nodes',
+        title: say('nodes.title'),
         shortcuts: [
-            { keys: shortcut('Tab'), label: 'Move focus to the next node' },
-            { keys: KEY_SHORTCUTS.enter, label: 'Select the node the keyboard is on' },
-            { keys: KEY_SHORTCUTS.escape, label: 'Clear the selection (a terminal passes Escape to its program)' },
-            { keys: platformShortcut(LEAVE_NODE_SHORTCUT, apple), label: 'Leave a terminal node' }
+            { keys: shortcut('Tab'), label: say('nodes.nextNode') },
+            { keys: KEY_SHORTCUTS.enter, label: say('nodes.select') },
+            { keys: KEY_SHORTCUTS.escape, label: say('nodes.escape') },
+            { keys: platformShortcut(LEAVE_NODE_SHORTCUT, apple), label: say('nodes.leave') }
         ]
     },
     {
@@ -137,16 +141,16 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
          * shortcut here is the palette's everywhere else on macOS. The line motions are what macOS gives
          * every native terminal, so only macOS lists them.
          */
-        title: 'Terminal',
+        title: say('terminal.title'),
         shortcuts: [
-            { keys: platformShortcut(CLEAR_SHORTCUT, apple), label: 'Clear the screen and the scrollback' },
+            { keys: platformShortcut(CLEAR_SHORTCUT, apple), label: say('terminal.clear') },
             ...(apple
                 ? [
-                      { keys: shortcut('Meta+ArrowLeft'), label: 'Move to the beginning of the line' },
-                      { keys: shortcut('Meta+ArrowRight'), label: 'Move to the end of the line' },
-                      { keys: shortcut('Alt+ArrowLeft'), label: 'Move back one word' },
-                      { keys: shortcut('Alt+ArrowRight'), label: 'Move forward one word' },
-                      { keys: shortcut('Meta+Backspace'), label: 'Delete to the beginning of the line' }
+                      { keys: shortcut('Meta+ArrowLeft'), label: say('terminal.lineStart') },
+                      { keys: shortcut('Meta+ArrowRight'), label: say('terminal.lineEnd') },
+                      { keys: shortcut('Alt+ArrowLeft'), label: say('terminal.wordBack') },
+                      { keys: shortcut('Alt+ArrowRight'), label: say('terminal.wordForward') },
+                      { keys: shortcut('Meta+Backspace'), label: say('terminal.deleteToLineStart') }
                   ]
                 : [])
         ]
@@ -155,7 +159,7 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
 
 /* Commands that carry a shortcut become the first group. */
 export const commandShortcuts = (commands: ReadonlyArray<{ label: string; shortcut?: Shortcut }>): ShortcutGroup => ({
-    title: 'Commands',
+    title: say('commands.title'),
     shortcuts: commands.flatMap((command) => (command.shortcut ? [{ keys: command.shortcut, label: command.label }] : []))
 });
 

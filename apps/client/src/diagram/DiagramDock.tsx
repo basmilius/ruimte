@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import { Check, Copy, Download, Maximize, Minus, MoreHorizontal, Plus, Redo2, Undo2 } from 'lucide-react';
 import { activeZoomPreset, ZOOM_PRESETS } from '@/canvas/math';
@@ -15,6 +16,7 @@ import { Tooltip } from '@/ui/Tooltip';
  * a drawing has them. The way to the JSON file stays in the bar above the view, since it is about the file.
  */
 export function DiagramDock() {
+    const { t } = useTranslation('drawing');
     const store = useDiagramStore();
     const zoom = useDiagram((s) => s.camera.zoom);
     const empty = useDiagram((s) => s.content.nodes.length === 0);
@@ -25,13 +27,13 @@ export function DiagramDock() {
     return (
         <DockShell data-diagram-chrome className="px-4">
             <div className={BTN_GROUP}>
-                <Tooltip label="Zoom out" name>
+                <Tooltip label={t('zoom.out')} name>
                     <button className="icon-btn" onClick={() => store.getState().zoomTo(Math.round(zoom * 100 - 10) / 100)}>
                         <Icon icon={Minus} size={16} />
                     </button>
                 </Tooltip>
                 <Menu.Root>
-                    <Tooltip label="Zoom presets">
+                    <Tooltip label={t('zoom.presets')}>
                         <Menu.Trigger className="h-8 min-w-14 rounded-lg px-1 text-xs tabular-nums text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active data-[popup-open]:text-text">
                             {Math.round(zoom * 100)}%
                         </Menu.Trigger>
@@ -56,18 +58,18 @@ export function DiagramDock() {
                                     <span className="grid h-4 w-4 place-items-center">
                                         <Icon icon={Maximize} size={14} />
                                     </span>
-                                    Zoom to fit
+                                    {t('zoom.fit')}
                                 </Menu.Item>
                             </Menu.Popup>
                         </Menu.Positioner>
                     </Menu.Portal>
                 </Menu.Root>
-                <Tooltip label="Zoom in" name>
+                <Tooltip label={t('zoom.in')} name>
                     <button className="icon-btn" onClick={() => store.getState().zoomTo(Math.round(zoom * 100 + 10) / 100)}>
                         <Icon icon={Plus} size={16} />
                     </button>
                 </Tooltip>
-                <Tooltip label="Fit everything" name>
+                <Tooltip label={t('zoom.fitEverything')} name>
                     <button className="icon-btn" onClick={() => store.getState().fitAll()}>
                         <Icon icon={Maximize} size={16} />
                     </button>
@@ -78,7 +80,7 @@ export function DiagramDock() {
 
             <div className={BTN_GROUP}>
                 <Menu.Root>
-                    <Tooltip label="Export" name>
+                    <Tooltip label={t('export.label')} name>
                         <Menu.Trigger className="icon-btn">
                             <Icon icon={MoreHorizontal} size={16} />
                         </Menu.Trigger>
@@ -86,29 +88,29 @@ export function DiagramDock() {
                     <Menu.Portal>
                         <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="end">
                             <Menu.Popup className="menu-popup min-w-52">
-                                <div className={MENU_LABEL}>Export the diagram</div>
+                                <div className={MENU_LABEL}>{t('export.diagram')}</div>
                                 <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDiagramPng(store)}>
-                                    <Icon icon={Copy} size={14} /> Copy as PNG
+                                    <Icon icon={Copy} size={14} /> {t('export.copyPng')}
                                 </Menu.Item>
                                 <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDiagramPng(store)}>
-                                    <Icon icon={Download} size={14} /> Save PNG
+                                    <Icon icon={Download} size={14} /> {t('export.savePng')}
                                 </Menu.Item>
                                 <Menu.Item className="menu-item" disabled={empty} onClick={() => void copyDiagramSvg(store)}>
-                                    <Icon icon={Copy} size={14} /> Copy as SVG
+                                    <Icon icon={Copy} size={14} /> {t('export.copySvg')}
                                 </Menu.Item>
                                 <Menu.Item className="menu-item" disabled={empty} onClick={() => void saveDiagramSvg(store)}>
-                                    <Icon icon={Download} size={14} /> Save SVG
+                                    <Icon icon={Download} size={14} /> {t('export.saveSvg')}
                                 </Menu.Item>
                             </Menu.Popup>
                         </Menu.Positioner>
                     </Menu.Portal>
                 </Menu.Root>
-                <Tooltip label="Undo" kbd={CANVAS_SHORTCUTS.undo} name>
+                <Tooltip label={t('common:action.undo')} kbd={CANVAS_SHORTCUTS.undo} name>
                     <button className="icon-btn" disabled={!canUndo} onClick={() => store.getState().undo()}>
                         <Icon icon={Undo2} size={16} />
                     </button>
                 </Tooltip>
-                <Tooltip label="Redo" kbd={CANVAS_SHORTCUTS.redo} name>
+                <Tooltip label={t('common:action.redo')} kbd={CANVAS_SHORTCUTS.redo} name>
                     <button className="icon-btn" disabled={!canRedo} onClick={() => store.getState().redo()}>
                         <Icon icon={Redo2} size={16} />
                     </button>

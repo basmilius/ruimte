@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { GitActionKind, GitActionPhase, GitStatus } from '@ruimte/contracts';
 
 export interface PushButton {
@@ -14,63 +15,33 @@ export interface PushButton {
  * button says which of the two it is instead of failing halfway.
  */
 export const pushButton = (status: GitStatus | null): PushButton => {
+    const push = i18next.t('panels:git.push.label');
     if (status === null || !status.repo) {
-        return { label: 'Push', kind: 'push', disabled: true, reason: 'No repository' };
+        return { label: push, kind: 'push', disabled: true, reason: i18next.t('panels:git.push.noRepo') };
     }
     if (status.detached || status.branch === null) {
-        return { label: 'Push', kind: 'push', disabled: true, reason: 'No branch to push on a detached HEAD' };
+        return { label: push, kind: 'push', disabled: true, reason: i18next.t('panels:git.push.detached') };
     }
     if (status.upstream === null) {
-        return { label: 'Publish branch', kind: 'publish', disabled: false, reason: `Push ${status.branch} to origin and track it` };
+        return {
+            label: i18next.t('panels:git.push.publish'),
+            kind: 'publish',
+            disabled: false,
+            reason: i18next.t('panels:git.push.publishReason', { branch: status.branch })
+        };
     }
     if (status.ahead === 0) {
-        return { label: 'Push', kind: 'push', disabled: true, reason: 'Nothing to push' };
+        return { label: push, kind: 'push', disabled: true, reason: i18next.t('panels:git.push.nothing') };
     }
-    const commits = status.ahead === 1 ? '1 commit' : `${status.ahead} commits`;
-    return { label: 'Push', kind: 'push', disabled: false, reason: `Push ${commits} to ${status.upstream}` };
-};
-
-const PHASE_LABEL: Record<GitActionPhase, string> = {
-    start: 'Starting',
-    fetch: 'Fetching',
-    stage: 'Staging',
-    commit: 'Committing',
-    push: 'Pushing',
-    pull: 'Pulling',
-    branch: 'Switching branch',
-    stash: 'Stashing',
-    merge: 'Merging',
-    rebase: 'Rebasing',
-    pr: 'Opening the pull request',
-    done: 'Done',
-    failed: 'That did not work'
+    return { label: push, kind: 'push', disabled: false, reason: i18next.t('panels:git.push.reason', { count: status.ahead, upstream: status.upstream }) };
 };
 
 /* The title of the toast while an action runs: where it is, in the words a person would use. */
-export const phaseLabel = (phase: GitActionPhase): string => PHASE_LABEL[phase];
+export const phaseLabel = (phase: GitActionPhase): string => i18next.t(`panels:git.phase.${phase}`);
 
-const ACTION_TITLE: Partial<Record<GitActionKind, string>> = {
-    fetch: 'Fetching',
-    pull: 'Pulling',
-    push: 'Pushing',
-    publish: 'Publishing the branch',
-    'force-push': 'Force pushing',
-    sync: 'Syncing',
-    checkout: 'Switching branch',
-    'create-branch': 'Creating the branch',
-    'rename-branch': 'Renaming the branch',
-    'delete-branch': 'Deleting the branch',
-    merge: 'Merging',
-    rebase: 'Rebasing',
-    stash: 'Stashing',
-    'stash-pop': 'Popping the stash',
-    commit: 'Committing',
-    'commit-push': 'Committing and pushing',
-    'create-pr': 'Opening the pull request'
-};
-
-/* What the toast says the moment an action starts, before git has written a line. */
-export const actionTitle = (kind: GitActionKind): string => ACTION_TITLE[kind] ?? 'Working';
+/* What the toast says the moment an action starts, before git has written a line. A kind this
+   version has no words for still gets a title rather than the name of a missing key. */
+export const actionTitle = (kind: GitActionKind): string => i18next.t(`panels:git.action.${kind}`, { defaultValue: i18next.t('panels:git.action.working') });
 
 /* The first line is the subject and the rest is the body, the way git itself reads a message. */
 export const splitMessage = (message: string): { subject: string; body: string } => {

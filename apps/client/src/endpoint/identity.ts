@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { EndpointInfo } from '@ruimte/contracts';
 import { forgetEndpoint } from '@/endpoint';
 import { rekeyClientLocal } from '@/project/client-local';
@@ -70,8 +71,8 @@ const settleId = (endpointId: string, daemonId: string): string => {
     useToasts.getState().show({
         id: `endpoint-identity-${endpoint.id}`,
         kind: 'error',
-        title: `${endpoint.label} answers as another machine`,
-        description: `${endpoint.httpBaseUrl} is not the machine this client paired with. Pair again to connect.`
+        title: i18next.t('machines:identity.mismatch.title', { label: endpoint.label }),
+        description: i18next.t('machines:identity.mismatch.description', { address: endpoint.httpBaseUrl })
     });
     return endpoint.id;
 };
@@ -87,8 +88,8 @@ const reportOneMachine = (kept: Endpoint, dropped: Endpoint): void => {
     useToasts.getState().show({
         id: `endpoint-merged-${dropped.id}`,
         kind: 'success',
-        title: `${dropped.label} is already in the list`,
-        description: `${dropped.httpBaseUrl} is another address of ${kept.label}.`
+        title: i18next.t('machines:identity.merged.title', { label: dropped.label }),
+        description: i18next.t('machines:identity.merged.description', { address: dropped.httpBaseUrl, machine: kept.label })
     });
 };
 

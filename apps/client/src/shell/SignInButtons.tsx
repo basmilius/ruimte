@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { PROVIDER_NAMES, type ProviderId } from '@ruimte/pulsar';
 import { signInToPulsar, usePulsarAccount } from '@/pulsar/account';
 import { Button } from '@/ui/Button';
@@ -17,9 +18,11 @@ interface ProviderButtonProps {
  * choice is less prominent than the other, which is what Apple's guidelines ask of the Apple button.
  */
 export function ProviderButton({ provider, verb, disabled, onClick }: ProviderButtonProps) {
+    const { t } = useTranslation('shell');
+    const name = PROVIDER_NAMES[provider];
     return (
         <Button variant="inverse" disabled={disabled} onClick={onClick}>
-            <SignInMark provider={provider} /> {verb} with {PROVIDER_NAMES[provider]}
+            <SignInMark provider={provider} /> {verb === 'Continue' ? t('signIn.continueWith', { provider: name }) : t('signIn.signInWith', { provider: name })}
         </Button>
     );
 }

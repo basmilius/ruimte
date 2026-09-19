@@ -1,0 +1,28 @@
+{
+  "unreadable": "-",
+  "alert": {
+    "unnamedProcess": "Een proces",
+    "unnamedAgent": "De agent",
+    "silent": "Werkt, maar is al {{elapsed}} stil",
+    "busyAfterTurn": "{{name}} gebruikt nog {{percent}} van een core nadat de turn afliep",
+    "memory": "{{name}} gebruikt {{size}}",
+    "agentGone": "{{agent}} is gestopt, maar staat nog als actief",
+    "orphan": "{{name}} draait nog nadat de terminal sloot",
+    "probeHung": "{{name}}, gestart door Ruimte, draait al {{elapsed}}",
+    "more_one": "{{text}}, en nog {{count}}",
+    "more_other": "{{text}}, en nog {{count}}"
+  },
+  "action": {
+    "interrupt": "Onderbreken",
+    "terminate": "Afsluiten",
+    "show": "Proces tonen",
+    "resume": "Hervatten"
+  },
+  "group": {
+    "terminal": "Terminal",
+    "chat": "Chat",
+    "app": "Ruimte-app",
+    "daemon": "Taken van de machine",
+    "other": "Overige processen"
+  }
+}

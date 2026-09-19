@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { ProviderId } from '@ruimte/pulsar';
 
 /*
@@ -74,13 +75,15 @@ export class LoginError extends Error {
  */
 export const codeFromCallback = (callback: LoginCallback, expectedState: string): string => {
     if (callback.state !== expectedState) {
-        throw new LoginError('The answer from the browser does not belong to this sign-in. Try again.');
+        throw new LoginError(i18next.t('machines:signIn.wrongCallback'));
     }
     if (callback.error !== null) {
-        throw new LoginError(callback.error === 'access_denied' ? 'Signing in was cancelled.' : `Signing in did not work (${callback.error}).`);
+        throw new LoginError(
+            callback.error === 'access_denied' ? i18next.t('machines:signIn.cancelled') : i18next.t('machines:signIn.failed', { error: callback.error })
+        );
     }
     if (!callback.code) {
-        throw new LoginError('The browser came back without a sign-in code. Try again.');
+        throw new LoginError(i18next.t('machines:signIn.noCode'));
     }
     return callback.code;
 };

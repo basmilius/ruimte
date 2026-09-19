@@ -1,21 +1,17 @@
 import { memo, useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { PreviewCard } from '@base-ui-components/react/preview-card';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { Copy, GitFork, type LucideIcon } from 'lucide-react';
 import { layoutTicks, messageAt, slotInView, slotOf, tickWidth, TICK_HEIGHT_PX, type ScrubberTick } from '@/chat/logic/scrubber';
+import { formatMoment } from '@/format/datetime';
 import { MENU_SEPARATOR } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
 
 const PREVIEW_CHARS = 280;
 
-const CLOCK = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
-const DAY_CLOCK = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-
-const timeOf = (createdAt: number): string => {
-    const date = new Date(createdAt);
-    return date.toDateString() === new Date().toDateString() ? CLOCK.format(date) : DAY_CLOCK.format(date);
-};
+const timeOf = (createdAt: number): string => formatMoment(createdAt);
 
 /* What the card may do to the chat the strip belongs to; absent, the card only offers what needs no chat. */
 export interface CardChat {
@@ -27,6 +23,7 @@ export interface CardChat {
 type CardActionId = 'copy-message' | 'fork';
 
 interface CardAction {
+    /* The key of its label in the `chat` namespace; the card reads the words where it draws them. */
     label: string;
     icon: LucideIcon;
     /* Whether a tick of this kind offers the action. */
@@ -36,14 +33,14 @@ interface CardAction {
 
 const CARD_ACTIONS: Record<CardActionId, CardAction> = {
     'copy-message': {
-        label: 'Copy message',
+        label: 'timeline.menu.copyMessage',
         icon: Copy,
         // A wake carries the machine's label, not anything a person wrote.
         offers: (tick) => tick.kind === 'person' && tick.text !== '',
         run: (tick) => copyText(tick.text)
     },
     fork: {
-        label: 'Fork from here',
+        label: 'timeline.menu.forkFromHere',
         icon: GitFork,
         offers: (tick, chat) => chat !== null && tick.turnId !== null && chat.canFork(tick.turnId),
         run: (tick, chat) => {
@@ -69,6 +66,7 @@ interface ScrubberProps {
  * it points at, so a thousand ticks are a thousand spans and not a thousand popups.
  */
 export const Scrubber = memo(function Scrubber({ ticks, firstInView, lastInView, onPick, chat = null }: ScrubberProps) {
+    const { t } = useTranslation('chat');
     // State rather than a ref: the card's anchor is built during render and has to change when the strip does.
     const [strip, setStrip] = useState<HTMLDivElement | null>(null);
     const [height, setHeight] = useState(0);
@@ -120,7 +118,7 @@ export const Scrubber = memo(function Scrubber({ ticks, firstInView, lastInView,
                     <div
                         ref={setStrip}
                         role="navigation"
-                        aria-label="Messages in this thread"
+                        aria-label={t('scrubber.strip')}
                         className="relative h-full w-full cursor-pointer select-none"
                         onPointerMove={(e) => {
                             setPointing(true);
@@ -163,11 +161,11 @@ export const Scrubber = memo(function Scrubber({ ticks, firstInView, lastInView,
                             <>
                                 <div className="px-2.5 pt-1.5 pb-2">
                                     <div className="flex items-baseline justify-between gap-3 text-xs text-text-faint">
-                                        <span>{hoveredTick.kind === 'person' ? 'You' : 'Tasks'}</span>
+                                        <span>{hoveredTick.kind === 'person' ? t('rows.user.heading') : t('scrubber.tasks')}</span>
                                         <time className="tabular-nums">{timeOf(hoveredTick.createdAt)}</time>
                                     </div>
                                     <p className="mt-1 line-clamp-4 text-sm break-words whitespace-pre-line text-text">
-                                        {hoveredTick.text.slice(0, PREVIEW_CHARS) || 'No text'}
+                                        {hoveredTick.text.slice(0, PREVIEW_CHARS) || t('pickers.stash.noText')}
                                     </p>
                                 </div>
                                 {actions.length > 0 && (
@@ -180,7 +178,7 @@ export const Scrubber = memo(function Scrubber({ ticks, firstInView, lastInView,
                                                 className="menu-item w-full hover:bg-surface-hover"
                                                 onClick={() => action.run(hoveredTick, chat)}
                                             >
-                                                <Icon icon={action.icon} size={14} /> {action.label}
+                                                <Icon icon={action.icon} size={14} /> {t(action.label)}
                                             </button>
                                         ))}
                                     </>

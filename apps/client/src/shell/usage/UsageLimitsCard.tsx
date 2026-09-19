@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { useState, type ReactElement } from 'react';
 import clsx from 'clsx';
 import { PreviewCard } from '@base-ui-components/react/preview-card';
@@ -11,7 +12,7 @@ function CardBody() {
     const now = useMinute();
 
     if (limits === null) {
-        return <p className="text-xs text-text-faint">Loading limits...</p>;
+        return <p className="text-xs text-text-faint">{i18next.t('usage:limits.loading')}</p>;
     }
     return <LimitsList limits={limits} now={now} compact />;
 }
@@ -28,7 +29,7 @@ export function UsageLimitsCard({ children }: { children: ReactElement<Record<st
             <PreviewCard.Portal>
                 <PreviewCard.Positioner side="top" align="end" sideOffset={8} className="z-(--z-popup)">
                     <PreviewCard.Popup className="menu-popup w-64 p-3">
-                        <h2 className={clsx(SECTION_LABEL, 'mb-3 block')}>Limits</h2>
+                        <h2 className={clsx(SECTION_LABEL, 'mb-3 block')}>{i18next.t('usage:limits.title')}</h2>
                         {opened && <CardBody />}
                     </PreviewCard.Popup>
                 </PreviewCard.Positioner>

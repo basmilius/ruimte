@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { isCanvasView, isOpenableView } from '@ruimte/contracts';
 import { focusedCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
@@ -22,16 +23,16 @@ let clockTimer: number | null = null;
 const undo = new Map<string, () => void>();
 const chatFollowUps = new Map<string, VoiceChatFollowUp>();
 
-const failureText = (error: unknown): string => (error instanceof Error ? error.message : 'GPT-Live could not start');
+const failureText = (error: unknown): string => (error instanceof Error ? error.message : i18next.t('voice:error.start'));
 
 const microphoneFailureText = (error: unknown): string => {
     if (error instanceof DOMException && error.name === 'NotAllowedError') {
-        return 'Microphone access was denied. Allow it in System Settings, then try again.';
+        return i18next.t('voice:error.microphoneDenied');
     }
     if (error instanceof DOMException && error.name === 'NotFoundError') {
-        return 'No microphone was found.';
+        return i18next.t('voice:error.microphoneMissing');
     }
-    return error instanceof Error ? error.message : 'The microphone could not be opened.';
+    return error instanceof Error ? error.message : i18next.t('voice:error.microphoneFailed');
 };
 
 const temporalContext = (): string => {
@@ -44,7 +45,7 @@ const temporalContext = (): string => {
 const workspaceContext = (): string => {
     const document = useDocument.getState();
     const active = activeViewOf(document);
-    const project = useProject.getState().current?.name ?? 'Untitled project';
+    const project = useProject.getState().current?.name ?? i18next.t('voice:untitledProject');
     const views = document.views
         .filter(isOpenableView)
         .map((view) => `${view.name} (${view.kind})`)
@@ -120,7 +121,7 @@ const handleEvent = (event: LiveEvent): void => {
         return;
     }
     if (event.type === 'session.error') {
-        useVoice.setState({ phase: 'error', error: 'GPT-Live reported a session error' });
+        useVoice.setState({ phase: 'error', error: i18next.t('voice:error.session') });
     }
 };
 

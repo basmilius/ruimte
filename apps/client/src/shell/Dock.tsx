@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import {
     Check,
@@ -22,7 +23,7 @@ import { isCanvasView } from '@ruimte/contracts';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentNode } from '@/agents/nodes';
 import { activeZoomPreset, toWorld, ZOOM_PRESETS } from '@/canvas/math';
-import { LOCK_ROWS } from '@/canvas/locks';
+import { LOCK_KEYS, lockHint, lockLabel } from '@/canvas/locks';
 import type { StoreApi } from 'zustand';
 import { useCanvas, useCanvasStore, type CanvasState, type NodeKind } from '@/state/canvas';
 import { activeViewOf, useDocument } from '@/state/document';
@@ -47,6 +48,7 @@ const centerWorld = (store: StoreApi<CanvasState>) => {
  * section, and the way out of a body is Escape, the shortcut a terminal uses, or its row in the list.
  */
 export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) => void }) {
+    const { t } = useTranslation(['shell', 'common']);
     /* The canvas under this dock. It is drawn in the focused cell only, so the focused editor would
        answer the same today, but reading the cell keeps that a coincidence rather than a rule. */
     const canvasStore = useCanvasStore();
@@ -80,7 +82,7 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
             <StatusSummary />
 
             <Menu.Root>
-                <Tooltip label="Add" name>
+                <Tooltip label={t('dock.add')} name>
                     <Menu.Trigger className="icon-btn">
                         <Icon icon={Plus} size={16} />
                     </Menu.Trigger>
@@ -89,24 +91,24 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                     <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="start">
                         <Menu.Popup className="menu-popup">
                             <Menu.Item className="menu-item" onClick={() => add('terminal')}>
-                                <Icon icon={Terminal} size={14} /> Terminal <Kbd shortcut={ADD_NODE_SHORTCUTS.terminal} />
+                                <Icon icon={Terminal} size={14} /> {t('nodeKinds.terminal')} <Kbd shortcut={ADD_NODE_SHORTCUTS.terminal} />
                             </Menu.Item>
                             <Menu.Item className="menu-item" onClick={() => add('chat')}>
-                                <Icon icon={MessageSquare} size={14} /> Chat <Kbd shortcut={ADD_NODE_SHORTCUTS.chat} />
+                                <Icon icon={MessageSquare} size={14} /> {t('nodeKinds.chat')} <Kbd shortcut={ADD_NODE_SHORTCUTS.chat} />
                             </Menu.Item>
                             <AgentSubmenus onPick={(target, provider) => addAgentNode(target, provider, centerWorld(canvasStore))} />
                             <Menu.Item className="menu-item" onClick={() => add('browser')}>
-                                <Icon icon={Globe} size={14} /> Browser <Kbd shortcut={ADD_NODE_SHORTCUTS.browser} />
+                                <Icon icon={Globe} size={14} /> {t('nodeKinds.browser')} <Kbd shortcut={ADD_NODE_SHORTCUTS.browser} />
                             </Menu.Item>
                             <Menu.Item className="menu-item" onClick={() => add('group')}>
-                                <Icon icon={LayoutGrid} size={14} /> Group <Kbd shortcut={ADD_NODE_SHORTCUTS.group} />
+                                <Icon icon={LayoutGrid} size={14} /> {t('nodeKinds.group')} <Kbd shortcut={ADD_NODE_SHORTCUTS.group} />
                             </Menu.Item>
                             <Menu.Item className="menu-item" onClick={() => add('note')}>
-                                <Icon icon={StickyNote} size={14} /> Note <Kbd shortcut={ADD_NODE_SHORTCUTS.note} />
+                                <Icon icon={StickyNote} size={14} /> {t('nodeKinds.note')} <Kbd shortcut={ADD_NODE_SHORTCUTS.note} />
                             </Menu.Item>
                             <Menu.Separator className={MENU_SEPARATOR} />
                             <Menu.Item className="menu-item" onClick={() => canvasStore.getState().addText(centerWorld(canvasStore))}>
-                                <Icon icon={Type} size={14} /> Text <span className={MENU_HINT}>dbl-click</span>
+                                <Icon icon={Type} size={14} /> {t('nodeKinds.text')} <span className={MENU_HINT}>{t('dock.doubleClick')}</span>
                             </Menu.Item>
                         </Menu.Popup>
                     </Menu.Positioner>
@@ -115,13 +117,13 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
 
             <Separator />
             <div className={BTN_GROUP}>
-                <Tooltip label="Zoom out" name>
+                <Tooltip label={t('dock.zoomOut')} name>
                     <button className="icon-btn" onClick={() => canvasStore.getState().zoomTo(Math.round(zoom * 100 - 10) / 100)}>
                         <Icon icon={Minus} size={16} />
                     </button>
                 </Tooltip>
                 <Menu.Root>
-                    <Tooltip label="Zoom presets">
+                    <Tooltip label={t('dock.zoomPresets')}>
                         <Menu.Trigger className="h-8 min-w-14 rounded-lg px-1 text-xs tabular-nums text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active data-[popup-open]:text-text">
                             {zoomPct}%
                         </Menu.Trigger>
@@ -147,25 +149,25 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                                     <span className="grid h-4 w-4 place-items-center">
                                         <Icon icon={Maximize} size={14} />
                                     </span>{' '}
-                                    Zoom to fit <Kbd shortcut={CANVAS_SHORTCUTS.fitAll} />
+                                    {t('dock.zoomToFit')} <Kbd shortcut={CANVAS_SHORTCUTS.fitAll} />
                                 </Menu.Item>
                                 <Menu.Item className="menu-item" disabled={!hasSelection} onClick={() => canvasStore.getState().zoomToSelection()}>
                                     <span className="grid h-4 w-4 place-items-center">
                                         <Icon icon={Scan} size={14} />
                                     </span>{' '}
-                                    Zoom to selection <Kbd shortcut={CANVAS_SHORTCUTS.zoomSelection} />
+                                    {t('dock.zoomToSelection')} <Kbd shortcut={CANVAS_SHORTCUTS.zoomSelection} />
                                 </Menu.Item>
                             </Menu.Popup>
                         </Menu.Positioner>
                     </Menu.Portal>
                 </Menu.Root>
 
-                <Tooltip label="Zoom in" name>
+                <Tooltip label={t('dock.zoomIn')} name>
                     <button className="icon-btn" onClick={() => canvasStore.getState().zoomTo(Math.round(zoom * 100 + 10) / 100)}>
                         <Icon icon={Plus} size={16} />
                     </button>
                 </Tooltip>
-                <Tooltip label="Fit everything" kbd={CANVAS_SHORTCUTS.fitAll} name>
+                <Tooltip label={t('dock.fitEverything')} kbd={CANVAS_SHORTCUTS.fitAll} name>
                     <button className="icon-btn" onClick={() => canvasStore.getState().fitAll()}>
                         <Icon icon={Maximize} size={16} />
                     </button>
@@ -175,7 +177,7 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
 
             <div className={BTN_GROUP}>
                 <Menu.Root>
-                    <Tooltip label="Lock" name>
+                    <Tooltip label={t('dock.lock')} name>
                         <Menu.Trigger className="icon-btn" data-active={anyLocked}>
                             {anyLocked ? <Icon icon={Lock} size={16} /> : <Icon icon={LockOpen} size={16} />}
                         </Menu.Trigger>
@@ -183,13 +185,13 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                     <Menu.Portal>
                         <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="end">
                             <Menu.Popup className="menu-popup">
-                                <div className={MENU_LABEL}>Refuse gestures</div>
-                                {LOCK_ROWS.map((row) => (
+                                <div className={MENU_LABEL}>{t('dock.refuseGestures')}</div>
+                                {LOCK_KEYS.map((key) => (
                                     <Menu.CheckboxItem
-                                        key={row.key}
+                                        key={key}
                                         className="menu-item"
-                                        checked={locks[row.key]}
-                                        onCheckedChange={() => canvasStore.getState().toggleLock(row.key)}
+                                        checked={locks[key]}
+                                        onCheckedChange={() => canvasStore.getState().toggleLock(key)}
                                         closeOnClick={false}
                                     >
                                         <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
@@ -198,24 +200,24 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                                             </Menu.CheckboxItemIndicator>
                                         </span>
                                         <span>
-                                            <span className="block">{row.label}</span>
-                                            <span className="block text-xs text-text-faint">{row.hint}</span>
+                                            <span className="block">{lockLabel(key)}</span>
+                                            <span className="block text-xs text-text-faint">{lockHint(key)}</span>
                                         </span>
                                     </Menu.CheckboxItem>
                                 ))}
                                 <Menu.Separator className={MENU_SEPARATOR} />
                                 <Menu.Item className="menu-item" onClick={() => canvasStore.getState().setAllLocks(!allLocked)}>
                                     {allLocked ? <Icon icon={LockOpen} size={14} /> : <Icon icon={Lock} size={14} />}
-                                    {allLocked ? 'Unlock everything' : 'Lock everything'}
+                                    {allLocked ? t('dock.unlockEverything') : t('dock.lockEverything')}
                                 </Menu.Item>
-                                <div className="px-2.5 pb-1.5 pt-1 text-xs text-text-faint">Buttons and shortcuts still work while locked.</div>
+                                <div className="px-2.5 pb-1.5 pt-1 text-xs text-text-faint">{t('dock.lockHint')}</div>
                             </Menu.Popup>
                         </Menu.Positioner>
                     </Menu.Portal>
                 </Menu.Root>
 
                 <Menu.Root>
-                    <Tooltip label="Layouts" name>
+                    <Tooltip label={t('dock.layouts')} name>
                         <Menu.Trigger className="icon-btn">
                             <Icon icon={LayoutTemplate} size={16} />
                         </Menu.Trigger>
@@ -223,13 +225,13 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                     <Menu.Portal>
                         <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="end">
                             <Menu.Popup className="menu-popup min-w-48">
-                                <div className={MENU_LABEL}>Saved layouts</div>
-                                {layouts.length === 0 && <div className="px-2.5 pb-1.5 text-xs text-text-faint">Nothing saved yet.</div>}
+                                <div className={MENU_LABEL}>{t('dock.savedLayouts')}</div>
+                                {layouts.length === 0 && <div className="px-2.5 pb-1.5 text-xs text-text-faint">{t('dock.noLayouts')}</div>}
                                 {layouts.map((layout) => (
                                     <Menu.Item key={layout.name} className="menu-item group" onClick={() => canvasStore.getState().applyLayout(layout.name)}>
                                         <Icon icon={LayoutTemplate} size={14} className="text-text-faint" />
                                         <span className="truncate">{layout.name}</span>
-                                        <Tooltip label="Delete" name>
+                                        <Tooltip label={t('common:action.delete')} name>
                                             <span
                                                 role="button"
                                                 className="ml-auto grid h-5 w-5 place-items-center rounded text-text-faint opacity-0 hover:bg-surface-hover hover:text-text group-hover:opacity-100 group-data-[highlighted]:opacity-100"
@@ -246,7 +248,7 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                                 ))}
                                 <Menu.Separator className={MENU_SEPARATOR} />
                                 <Menu.Item className="menu-item" onClick={() => useUi.getState().setLayoutDialogOpen(true)}>
-                                    <Icon icon={Save} size={14} /> Save current layout
+                                    <Icon icon={Save} size={14} /> {t('dock.saveLayout')}
                                 </Menu.Item>
                             </Menu.Popup>
                         </Menu.Positioner>

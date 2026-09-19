@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { createStore, type StoreApi } from 'zustand';
 import type { ProjectSummary } from '@ruimte/contracts';
 
@@ -138,7 +139,7 @@ export class ProjectSwitch {
                 }
             });
         } catch (e) {
-            failure = e instanceof Error ? e.message : 'That could not be opened';
+            failure = e instanceof Error ? e.message : i18next.t('project:error.couldNotOpen');
         }
         if (signal.aborted) {
             // A pick made while this one was going back owns the screen now, and going back would undo it.

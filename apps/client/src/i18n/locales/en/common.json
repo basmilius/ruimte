@@ -1,0 +1,36 @@
+{
+  "action": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "copy": "Copy",
+    "copyError": "Copy error",
+    "delete": "Delete",
+    "dismiss": "Dismiss",
+    "done": "Done",
+    "edit": "Edit",
+    "more": "More",
+    "open": "Open",
+    "redo": "Redo",
+    "reload": "Reload",
+    "remove": "Remove",
+    "rename": "Rename",
+    "retry": "Try again",
+    "save": "Save",
+    "search": "Search",
+    "select": "Select",
+    "selectAll": "Select all",
+    "undo": "Undo"
+  },
+  "state": {
+    "loading": "Loading",
+    "empty": "Nothing here yet",
+    "error": "Something went wrong",
+    "sidebarFailed": "The sidebar failed to render"
+  },
+  "answer": {
+    "yes": "Yes",
+    "no": "No"
+  },
+  "unseen": "Finished while you were away"
+}

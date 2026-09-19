@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import clsx from 'clsx';
 import { CircleHelp, Folder, Info } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { UsageModel, UsageProject, UsageProvider, UsageSummaryResult } from '@ruimte/contracts';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { Segmented } from '@/shell/settings/controls';
@@ -36,11 +37,7 @@ const HEAD = 'flex h-6 items-center gap-2 px-2 text-xs text-text-faint';
    again: the first column then starts on the same line as every other section of the page. */
 const TABLE = '-mx-2 flex flex-col';
 
-const TABS: readonly { id: Breakdown; label: string }[] = [
-    { id: 'models', label: 'Models' },
-    { id: 'projects', label: 'Projects' },
-    { id: 'day', label: 'Day' }
-];
+const TABS: readonly Breakdown[] = ['models', 'projects', 'day'];
 
 /* A share of the biggest row, never under one pixel: a row that did something has to be visible. */
 const barWidth = (value: number, top: number): number => (value <= 0 || top <= 0 ? 0 : Math.max(1, Math.round((value / top) * 100)));
@@ -56,6 +53,7 @@ function ProviderMark({ provider }: { provider: UsageProvider }) {
 }
 
 function ModelRows({ models, metric, total }: { models: readonly UsageModel[]; metric: UsageMetric; total: number }) {
+    const { t } = useTranslation('usage');
     const money = useMoney();
     /* On the tokens metric the biggest row is the one that moved the most, not the dearest. */
     const sorted = [...models].sort((a, b) =>
@@ -64,13 +62,13 @@ function ModelRows({ models, metric, total }: { models: readonly UsageModel[]; m
     return (
         <div className={TABLE}>
             <div className={HEAD}>
-                <span className="grow">Model</span>
-                <span className="w-16 text-right">Calls</span>
-                <span className="w-16 text-right">Input</span>
-                <span className="w-16 text-right">Output</span>
-                <span className="w-24 text-right">Cache R/W</span>
-                <span className="w-20 text-right">Cost</span>
-                <span className="w-12 text-right">Share</span>
+                <span className="grow">{t('breakdown.models.model')}</span>
+                <span className="w-16 text-right">{t('breakdown.models.calls')}</span>
+                <span className="w-16 text-right">{t('breakdown.models.input')}</span>
+                <span className="w-16 text-right">{t('breakdown.models.output')}</span>
+                <span className="w-24 text-right">{t('breakdown.models.cache')}</span>
+                <span className="w-20 text-right">{t('breakdown.models.cost')}</span>
+                <span className="w-12 text-right">{t('breakdown.models.share')}</span>
             </div>
             {sorted.map((model) => (
                 <div key={`${model.provider} ${model.model}`} className={ROW}>
@@ -79,7 +77,7 @@ function ModelRows({ models, metric, total }: { models: readonly UsageModel[]; m
                         <span className="truncate">{displayModel(model.model)}</span>
                     </Tooltip>
                     {model.priceBasis === 'family' && model.pricedAs !== null && (
-                        <Tooltip label={`Priced as ${model.pricedAs}`}>
+                        <Tooltip label={t('breakdown.models.pricedAs', { model: model.pricedAs })}>
                             <span className="text-text-faint">
                                 <Icon icon={Info} size={12} />
                             </span>
@@ -93,7 +91,7 @@ function ModelRows({ models, metric, total }: { models: readonly UsageModel[]; m
                     </span>
                     <span className="w-20 text-right tabular-nums">
                         {model.costUsd === null ? (
-                            <Tooltip label="No price known for this model">
+                            <Tooltip label={t('breakdown.models.noPrice')}>
                                 <span className="inline-flex items-center gap-1 text-text-faint">
                                     <Icon icon={CircleHelp} size={12} />?
                                 </span>
@@ -156,22 +154,23 @@ function ProjectRows({ projects }: { projects: readonly UsageProject[] }) {
 
 /* The chart written out per calendar day, a column per provider that did anything in the period. */
 function DayRows({ summary, providers }: { summary: UsageSummaryResult; providers: readonly UsageProvider[] }) {
+    const { t } = useTranslation('usage');
     const money = useMoney();
     const rows = deriveDays(summary);
     if (rows.length === 0) {
-        return <p className="px-2 py-6 text-center text-xs text-text-muted">No activity in this window.</p>;
+        return <p className="px-2 py-6 text-center text-xs text-text-muted">{t('breakdown.days.empty')}</p>;
     }
     return (
         <div className={TABLE}>
             <div className={HEAD}>
-                <span className="grow">Day</span>
+                <span className="grow">{t('breakdown.days.day')}</span>
                 {providers.map((provider) => (
                     <span key={provider} className="w-20 text-right">
                         {PROVIDER_LABELS[provider]}
                     </span>
                 ))}
-                <span className="w-20 text-right">Total</span>
-                <span className="w-16 text-right">Tokens</span>
+                <span className="w-20 text-right">{t('breakdown.days.total')}</span>
+                <span className="w-16 text-right">{t('breakdown.days.tokens')}</span>
             </div>
             {rows.map((row) => (
                 <div key={row.slot} className={ROW}>
@@ -198,14 +197,20 @@ interface UsageBreakdownProps {
 
 /* The same period cut three ways: which model, which checkout, and which day it went on. */
 export function UsageBreakdown({ summary, metric, providers }: UsageBreakdownProps) {
+    const { t } = useTranslation('usage');
     const [tab, setTab] = useState<Breakdown>('models');
     const total = summary.models.reduce((sum, model) => sum + (model.costUsd ?? 0), 0);
     return (
         <section className="flex flex-col gap-3">
             <div className="flex items-center gap-3">
-                <h2 className={SECTION_LABEL}>Breakdown</h2>
+                <h2 className={SECTION_LABEL}>{t('breakdown.title')}</h2>
                 <div className="ml-auto">
-                    <Segmented value={tab} options={TABS} onChange={(id) => setTab(id)} label="Breakdown" />
+                    <Segmented
+                        value={tab}
+                        options={TABS.map((id) => ({ id, label: t(`breakdown.tabs.${id}`) }))}
+                        onChange={(id) => setTab(id)}
+                        label={t('breakdown.title')}
+                    />
                 </div>
             </div>
             {tab === 'models' && <ModelRows models={summary.models} metric={metric} total={total} />}

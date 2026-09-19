@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PenTool } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { boundsOfElements } from '@ruimte/drawing';
 import { cameraToFit } from '@/canvas/math';
 import { loadDrawingFont } from '@/drawing/fonts';
@@ -19,6 +20,7 @@ const PADDING = 24;
  * opens the view, which is where a drawing is drawn.
  */
 export function DrawingNode({ id }: { id: string }) {
+    const { t } = useTranslation('canvas');
     const viewId = useCanvas((s) => s.nodes[id]?.viewId ?? null);
     const mirror = useDrawingMirror(viewId);
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -74,12 +76,12 @@ export function DrawingNode({ id }: { id: string }) {
         <div ref={boxRef} className="h-full w-full" onDoubleClick={() => viewId && showView(viewId)}>
             {mirror?.gone && (
                 <EmptyState icon={<Icon icon={PenTool} size={16} />} className="h-full">
-                    This drawing was removed from the project.
+                    {t('drawing.gone')}
                 </EmptyState>
             )}
             {!mirror?.gone && elements.length === 0 && !mirror?.loading && (
                 <EmptyState icon={<Icon icon={PenTool} size={16} />} className="h-full">
-                    Nothing drawn yet. Double-click to draw.
+                    {t('drawing.empty')}
                 </EmptyState>
             )}
             <canvas ref={canvasRef} className="h-full w-full" style={{ display: elements.length === 0 ? 'none' : undefined }} />

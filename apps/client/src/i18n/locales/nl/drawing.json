@@ -1,0 +1,124 @@
+{
+  "tools": {
+    "select": "Selecteren",
+    "hand": "Verschuiven",
+    "rect": "Rechthoek",
+    "diamond": "Ruit",
+    "ellipse": "Ellips",
+    "arrow": "Pijl",
+    "line": "Lijn",
+    "freehand": "Tekenen",
+    "text": "Tekst",
+    "note": "Memo",
+    "eraser": "Gum",
+    "keep": "Gereedschap vasthouden"
+  },
+  "color": {
+    "label": "Kleur",
+    "stroke": "Lijn",
+    "fill": "Vulling",
+    "note": "Memo",
+    "names": {
+      "ink": "inkt",
+      "muted": "gedempt",
+      "accent": "accent",
+      "red": "rood",
+      "orange": "oranje",
+      "yellow": "geel",
+      "green": "groen",
+      "blue": "blauw",
+      "purple": "paars",
+      "pink": "roze"
+    }
+  },
+  "style": {
+    "label": "Stijl",
+    "strokeWidth": "Lijndikte",
+    "widths": {
+      "thin": "Dun",
+      "medium": "Gemiddeld",
+      "bold": "Dik"
+    },
+    "strokeStyle": "Lijnstijl",
+    "strokeStyles": {
+      "solid": "Doorgetrokken",
+      "dashed": "Gestreept",
+      "dotted": "Gestippeld"
+    },
+    "fill": "Vulling",
+    "fills": {
+      "none": "Geen",
+      "hachure": "Arcering",
+      "solid": "Effen"
+    },
+    "sloppiness": "Slordigheid",
+    "roughness": {
+      "architect": "Architect",
+      "artist": "Kunstenaar",
+      "cartoonist": "Cartoonist"
+    },
+    "text": "Tekst",
+    "fonts": {
+      "hand": "Handschrift",
+      "sans": "Sans",
+      "mono": "Mono"
+    },
+    "textSize": "{{size}} px",
+    "alignments": {
+      "left": "Links",
+      "center": "Gecentreerd",
+      "right": "Rechts"
+    },
+    "unlockAll": "Alles ontgrendelen"
+  },
+  "zoom": {
+    "out": "Uitzoomen",
+    "in": "Inzoomen",
+    "presets": "Zoomniveaus",
+    "fit": "Passend zoomen",
+    "selection": "Zoomen naar selectie",
+    "fitEverything": "Alles passend maken"
+  },
+  "export": {
+    "label": "Exporteren",
+    "selection": "De selectie exporteren",
+    "drawing": "De tekening exporteren",
+    "diagram": "Het diagram exporteren",
+    "copyPng": "Kopiëren als PNG",
+    "savePng": "PNG opslaan",
+    "copySvg": "Kopiëren als SVG",
+    "saveSvg": "SVG opslaan",
+    "withBackground": "Met achtergrond"
+  },
+  "diagram": {
+    "title": "Diagram",
+    "openJson": "Het JSON-bestand openen",
+    "copyJson": "Kopiëren als JSON",
+    "nodeLabel": "Label",
+    "tone": "Tint",
+    "resetPosition": "Positie terugzetten",
+    "empty": {
+      "description": "Dit diagram is leeg. Een agent schrijft er een uit wat je hem vertelt.",
+      "agent": {
+        "title": "Vraag het een agent",
+        "description": "Een chat ernaast op het canvas"
+      },
+      "json": {
+        "title": "JSON openen",
+        "description": "Schrijf de nodes en verbindingen met de hand"
+      },
+      "example": {
+        "title": "Een voorbeeld invoegen",
+        "description": "Een kleine flow om je eigen van te maken"
+      }
+    }
+  },
+  "error": {
+    "drawingCopy": "De tekening kon niet worden gekopieerd",
+    "drawingOpen": "De tekening kon niet worden geopend",
+    "drawingSave": "De tekening kon niet worden opgeslagen",
+    "diagramCopy": "Het diagram kon niet worden gekopieerd",
+    "diagramOpen": "Het diagram kon niet worden geopend",
+    "diagramSave": "Het diagram kon niet worden opgeslagen"
+  }
+}

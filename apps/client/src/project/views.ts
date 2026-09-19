@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import {
     isCanvasView,
     isDiagramView,
@@ -148,7 +149,7 @@ export const askAgentAboutDiagram = (viewId: string): string | null => {
         return null;
     }
     canvas.addEdge(mirror, chat);
-    offerDraft(chat, `Fill the empty diagram "${view.name ?? viewId}" with \`ruimte-context view diagram ${viewId}\`. It should show `);
+    offerDraft(chat, i18next.t('project:diagram.draft', { name: view.name ?? viewId, viewId }));
     canvas.goToNode(chat);
     return chat;
 };
@@ -314,8 +315,11 @@ export const askDeleteView = (id: string): void => {
             .exportViews()
             .find((each) => each.id === id) ?? view;
     const sessions = sessionNodesOfView(exported).map((node) => node.id);
-    void askBeforeEndingAgents(transportFor(currentEndpointId()), sessions, ('name' in view ? view.name : undefined) ?? 'this view', () =>
-        deleteViewAsking(view)
+    void askBeforeEndingAgents(
+        transportFor(currentEndpointId()),
+        sessions,
+        ('name' in view ? view.name : undefined) ?? i18next.t('project:view.fallbackName'),
+        () => deleteViewAsking(view)
     );
 };
 

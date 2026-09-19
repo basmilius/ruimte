@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { Plan, PlanPersonOp, PlanStepState } from '@ruimte/contracts';
 import { applyPlanOps } from '@ruimte/plan';
 import { endpointKey } from '@/state/keys';
@@ -16,7 +17,7 @@ const storeSink: PlanWriteSink = {
     current: (endpointId, chatId, planId) => usePlans.getState().byChat[endpointKey(endpointId, chatId)]?.find((plan) => plan.id === planId),
     put: (endpointId, chatId, plan) => usePlans.getState().putPlan(endpointId, chatId, plan),
     failed: (message) => {
-        useToasts.getState().show({ kind: 'error', title: 'The plan did not change', description: message });
+        useToasts.getState().show({ kind: 'error', title: i18next.t('plan:toast.notChanged'), description: message });
     }
 };
 

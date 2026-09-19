@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Worktree } from '@ruimte/contracts';
 import { GitPrompt } from '@/shell/panels/GitDialogs';
 import { removeAllQuestion, removedToast } from '@/shell/panels/worktree-rows';
@@ -19,6 +20,7 @@ type Reading = { key: string; worktrees: Worktree[]; failure: string | null };
  * in one, merging first is offered next to removing.
  */
 export function RemoveWorktreeDialog() {
+    const { t } = useTranslation(['shell', 'common']);
     const removal = useUi((s) => s.worktreeRemoval);
     const endpointId = useEndpointId();
     const transport = useTransport();
@@ -38,12 +40,12 @@ export function RemoveWorktreeDialog() {
             .then((answer) => {
                 if (!cancelled) {
                     const worktrees = removal.paths.map((path) => answer.worktrees.find((entry) => entry.path === path)).filter((entry) => entry !== undefined);
-                    setReading({ key, worktrees, failure: worktrees.length === 0 ? 'This worktree is already gone.' : null });
+                    setReading({ key, worktrees, failure: worktrees.length === 0 ? t('removeWorktree.alreadyGone') : null });
                 }
             })
             .catch((error: unknown) => {
                 if (!cancelled) {
-                    setReading({ key, worktrees: [], failure: error instanceof Error ? error.message : 'Could not read the worktree.' });
+                    setReading({ key, worktrees: [], failure: error instanceof Error ? error.message : t('removeWorktree.unreadable') });
                 }
             });
         return () => {
@@ -73,7 +75,11 @@ export function RemoveWorktreeDialog() {
                     path: worktree.path,
                     ...(question.force ? { force: true } : {})
                 });
-                useToasts.getState().show({ title: `Removed worktree ${worktree.branch}`, ...(removedToast(worktree.branch, result) ?? {}), kind: 'success' });
+                useToasts.getState().show({
+                    title: t('removeWorktree.removed', { branch: worktree.branch }),
+                    ...(removedToast(worktree.branch, result) ?? {}),
+                    kind: 'success'
+                });
             }
             close();
         } catch (error: unknown) {
@@ -83,8 +89,8 @@ export function RemoveWorktreeDialog() {
                 return;
             }
             close();
-            const message = error instanceof Error ? error.message : 'That did not work.';
-            useToasts.getState().show({ title: 'Removing the worktree failed', description: message, kind: 'error', output: message });
+            const message = error instanceof Error ? error.message : t('removeWorktree.didNotWork');
+            useToasts.getState().show({ title: t('removeWorktree.failed'), description: message, kind: 'error', output: message });
         } finally {
             setBusy(false);
             worktreeLists.reload(endpointId, removal.folder);
@@ -94,10 +100,10 @@ export function RemoveWorktreeDialog() {
     return (
         <GitPrompt
             open={removal !== null}
-            title={question?.title ?? 'Remove this worktree?'}
+            title={question?.title ?? t('removeWorktree.title')}
             description={
                 shown === null ? (
-                    'Counting what is in it...'
+                    t('removeWorktree.counting')
                 ) : shown.failure !== null ? (
                     shown.failure
                 ) : (
@@ -107,13 +113,13 @@ export function RemoveWorktreeDialog() {
                     </>
                 )
             }
-            confirmLabel={question?.confirmLabel ?? 'Remove'}
+            confirmLabel={question?.confirmLabel ?? t('common:action.remove')}
             danger
             busy={busy || question === null}
             secondary={
                 removal !== null && question?.force === true && mergeable.length > 0
                     ? {
-                          label: 'Merge first...',
+                          label: t('removeWorktree.mergeFirst'),
                           onClick: () => {
                               close();
                               useUi.getState().setWorktreeMerge({ folder: removal.folder, paths: mergeable.map((worktree) => worktree.path), remove: true });

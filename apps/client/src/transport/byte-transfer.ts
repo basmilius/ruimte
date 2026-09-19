@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { BYTES_CHUNK_MAX, BYTES_READ_MAX_BYTES, type ByteResource, type BytesReadPayload, type BytesReadResult } from '@ruimte/contracts';
 
 export type ReadPiece = (payload: BytesReadPayload) => Promise<BytesReadResult>;
@@ -43,9 +44,7 @@ export const readResource = async (read: ReadPiece, resource: ByteResource, opti
         let changed = false;
         const first = await read({ resource, offset: 0, length: chunkBytes });
         if (first.size > maxBytes) {
-            throw new Error(
-                `This file is ${Math.ceil(first.size / 1024 / 1024)} MB; at most ${Math.ceil(maxBytes / 1024 / 1024)} MB loads over a direct connection`
-            );
+            throw new Error(i18next.t('machines:file.tooLarge', { size: Math.ceil(first.size / 1024 / 1024), max: Math.ceil(maxBytes / 1024 / 1024) }));
         }
         let piece = first;
         for (;;) {
@@ -60,7 +59,7 @@ export const readResource = async (read: ReadPiece, resource: ByteResource, opti
                 break;
             }
             if (bytes.length === 0) {
-                throw new Error('The machine sent an empty piece before the end of the file');
+                throw new Error(i18next.t('machines:file.emptyPiece'));
             }
             piece = await read({ resource, offset, length: chunkBytes });
         }
@@ -68,7 +67,7 @@ export const readResource = async (read: ReadPiece, resource: ByteResource, opti
             return new Blob(parts, { type: blobTypeFor(first.mime) });
         }
         if (restarts <= 0) {
-            throw new Error('The file changed while it was loading');
+            throw new Error(i18next.t('machines:file.changed'));
         }
         restarts -= 1;
     }

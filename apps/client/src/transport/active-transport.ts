@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { EventMap, EventType, RequestMap, RequestType } from '@ruimte/contracts';
 import { TransportError, type ConnectionState, type Transport, type TransportStatus } from './transport';
 
@@ -54,7 +55,7 @@ export class ActiveTransport implements Transport {
 
     request<T extends RequestType>(type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']> {
         if (!this.bound) {
-            return Promise.reject(new TransportError('not-connected', 'The machine is not connected'));
+            return Promise.reject(new TransportError('not-connected', i18next.t('machines:connection.notConnected')));
         }
         return this.bound.request(type, payload);
     }

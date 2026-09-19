@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { Machine } from '@ruimte/pulsar';
 import type { AccountStatus } from '@/pulsar/account';
 
@@ -48,5 +49,5 @@ export const mixedContentRefusal = (pageProtocol: string, machineUrl: string): s
     if (pageProtocol !== 'https:' || !/^(http|ws):/i.test(machineUrl)) {
         return null;
     }
-    return 'This page is served over https, and a browser does not let it reach a machine on plain http. Add the machine to your account from the desktop app and open it here, or put it behind https.';
+    return i18next.t('machines:station.mixedContent');
 };

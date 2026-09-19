@@ -1,27 +1,24 @@
 import type { UsageProvider, UsageRate, UsageTotals } from '@ruimte/contracts';
+import { formatDay, formatHour, formatWeekdayDay } from '@/format/datetime';
+import { formatDecimal, formatMoney, formatNumber } from '@/format/number';
 
 /* Dollars are what a price table is in; euros are what the page can be set to. */
 export type UsageCurrency = 'USD' | 'EUR';
 
 /* Every number on this page is read in the region of the machine looking at it, as a bank statement
-   would be: `$5,480.96` in the US, `€ 5.480,96` in the Netherlands. The labels stay English. */
-const numbers = (options: Intl.NumberFormatOptions): Intl.NumberFormat => new Intl.NumberFormat(undefined, options);
-
-const COUNT = numbers({});
-const TOKENS = numbers({ maximumFractionDigits: 1 });
-
-export const formatCount = (value: number): string => COUNT.format(Math.round(value));
+   would be: `$5,480.96` in the US, `$ 5.480,96` in the Netherlands. The labels stay English. */
+export const formatCount = (value: number): string => formatNumber(value);
 
 /* `1.2M`, `412K`, `640`: a token count is read as a size, not counted. */
 export const formatTokens = (value: number): string => {
     const rounded = Math.round(value);
     if (rounded >= 1_000_000) {
-        return `${TOKENS.format(rounded >= 10_000_000 ? Math.round(rounded / 1_000_000) : rounded / 1_000_000)}M`;
+        return `${formatDecimal(rounded >= 10_000_000 ? Math.round(rounded / 1_000_000) : rounded / 1_000_000)}M`;
     }
     if (rounded >= 1_000) {
-        return `${TOKENS.format(rounded >= 10_000 ? Math.round(rounded / 1_000) : rounded / 1_000)}K`;
+        return `${formatDecimal(rounded >= 10_000 ? Math.round(rounded / 1_000) : rounded / 1_000)}K`;
     }
-    return COUNT.format(rounded);
+    return formatNumber(rounded);
 };
 
 /*
@@ -33,12 +30,10 @@ export const moneyFormat = (currency: UsageCurrency, rate: UsageRate | null): ((
     const converts = currency !== 'USD' && rate !== null && rate.currency === currency;
     const factor = converts ? rate.rate : 1;
     const code = converts ? currency : 'USD';
-    const plain = numbers({ style: 'currency', currency: code });
-    // Under a cent the two decimals of a currency read as zero, which is the one thing it is not.
-    const small = numbers({ style: 'currency', currency: code, maximumFractionDigits: 4 });
     return (usd) => {
         const value = usd * factor;
-        return value !== 0 && Math.abs(value) < 0.01 ? small.format(value) : plain.format(value);
+        // Under a cent the two decimals of a currency read as zero, which is the one thing it is not.
+        return formatMoney(value, code, value !== 0 && Math.abs(value) < 0.01 ? 4 : undefined);
     };
 };
 
@@ -66,17 +61,11 @@ export const addTotals = (into: UsageTotals, from: UsageTotals): UsageTotals => 
 
 export const EMPTY_TOTALS: UsageTotals = { calls: 0, input: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, output: 0, reasoning: 0 };
 
-const DAY_LABEL = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-const SHORT_DAY = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
-
 /* A slot is `2026-09-10` or `2026-09-10T14`, already in the viewer's own zone, so it is read as
    plain wall clock and never handed to a parser that would shift it back. */
 const dateOfSlot = (slot: string): Date => new Date(Number(slot.slice(0, 4)), Number(slot.slice(5, 7)) - 1, Number(slot.slice(8, 10)));
 
 const hourOfSlot = (slot: string): number | null => (slot.length > 10 ? Number(slot.slice(11, 13)) : null);
-
-/* An hour of the day in the region's own clock, so a 24 hour country never reads `2 PM`. */
-const HOUR_LABEL = new Intl.DateTimeFormat(undefined, { hour: 'numeric' });
 
 const atHour = (slot: string, hour: number): Date => {
     const day = dateOfSlot(slot);
@@ -86,19 +75,17 @@ const atHour = (slot: string, hour: number): Date => {
 
 export const slotLabel = (slot: string): string => {
     const hour = hourOfSlot(slot);
-    return hour === null ? DAY_LABEL.format(dateOfSlot(slot)) : HOUR_LABEL.format(atHour(slot, hour));
+    return hour === null ? formatWeekdayDay(dateOfSlot(slot)) : formatHour(atHour(slot, hour));
 };
 
 export const slotAxisLabel = (slot: string): string => {
     const hour = hourOfSlot(slot);
-    return hour === null ? SHORT_DAY.format(dateOfSlot(slot)) : HOUR_LABEL.format(atHour(slot, hour));
+    return hour === null ? formatDay(dateOfSlot(slot)) : formatHour(atHour(slot, hour));
 };
 
-const CLOCK = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
+export { formatClock } from '@/format/datetime';
 
-export const formatClock = (at: number): string => CLOCK.format(new Date(at));
-
-export const formatDate = (at: number): string => SHORT_DAY.format(new Date(at));
+export const formatDate = (at: number): string => formatDay(at);
 
 /*
  * A model id as a person reads it: without its vendor prefix and its date, and with the version

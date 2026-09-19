@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { isCanvasView, isDiagramView, isDrawingView, isSessionView, type AgentKind, type ProviderInfo } from '@ruimte/contracts';
 import { addAgentNode, addAgentView, type AgentTarget } from '@/agents/nodes';
 import { toWorld } from '@/canvas/math';
@@ -78,7 +79,7 @@ const agentCommands = (target: AgentTarget, providers: ProviderInfo[], onCanvas:
                 ? [
                       {
                           id: `agent-${target}-${provider.kind}`,
-                          label: `New ${provider.name} ${target}`,
+                          label: i18next.t(`shell:palette.newAgent.${target}`, { name: provider.name }),
                           agent: provider.kind,
                           run: () => void addAgentNode(target, provider, centerWorld())
                       }
@@ -86,8 +87,8 @@ const agentCommands = (target: AgentTarget, providers: ProviderInfo[], onCanvas:
                 : []),
             {
                 id: `agent-view-${target}-${provider.kind}`,
-                label: `New ${provider.name} ${target} view`,
-                hint: 'Without a canvas',
+                label: i18next.t(`shell:palette.newAgentView.${target}`, { name: provider.name }),
+                hint: i18next.t('shell:palette.hints.withoutCanvas'),
                 agent: provider.kind,
                 run: () => void addAgentView(target, provider)
             }
@@ -108,7 +109,7 @@ const moveNodeCommands = (): Command[] => {
         .filter((view) => isCanvasView(view) && view.id !== activeViewId)
         .map((view) => ({
             id: `view-move-${view.id}`,
-            label: `Move node to ${view.name}`,
+            label: i18next.t('shell:palette.moveNodeTo', { view: view.name }),
             hint: node.title,
             run: () => useDocument.getState().moveNodeToView(node.id, view.id)
         }));
@@ -137,15 +138,22 @@ export const appCommands = (): Command[] => {
     /* The start screen is outside every project, so only the rows about the window are offered there. */
     const inWorkspace = windowWorkspace() !== null;
     return [
-        { id: 'open-folder', label: 'Open a folder as a project', run: () => useUi.getState().openFolderBrowser() },
+        { id: 'open-folder', label: i18next.t('shell:palette.commands.openFolder'), run: () => useUi.getState().openFolderBrowser() },
         ...(folder
-            ? [{ id: 'find-in-files', label: 'Find in files', shortcut: APP_SHORTCUTS.findInFiles, run: () => useUi.getState().openFindInFiles() }]
+            ? [
+                  {
+                      id: 'find-in-files',
+                      label: i18next.t('shell:palette.commands.findInFiles'),
+                      shortcut: APP_SHORTCUTS.findInFiles,
+                      run: () => useUi.getState().openFindInFiles()
+                  }
+              ]
             : []),
         ...(folder
             ? [
                   {
                       id: 'reveal',
-                      label: `Open project in ${fileManagerName(serverInfoOf(currentEndpointId()).platform)}`,
+                      label: i18next.t('shell:palette.commands.reveal', { app: fileManagerName(serverInfoOf(currentEndpointId()).platform) }),
                       run: () =>
                           void transportFor(currentEndpointId())
                               ?.request('fs.reveal', { path: folder })
@@ -155,78 +163,134 @@ export const appCommands = (): Command[] => {
             : []),
         ...(inWorkspace
             ? [
-                  { id: 'view-new', label: 'New canvas view', shortcut: CANVAS_SHORTCUTS.newView, run: () => void newCanvasView() },
+                  {
+                      id: 'view-new',
+                      label: i18next.t('shell:palette.commands.newCanvasView'),
+                      shortcut: CANVAS_SHORTCUTS.newView,
+                      run: () => void newCanvasView()
+                  },
                   ...(activeViewId
                       ? [
-                            { id: 'view-rename', label: 'Rename view', run: () => askRenameView(activeViewId) },
-                            { id: 'view-delete', label: 'Delete view', run: () => askDeleteView(activeViewId) }
+                            { id: 'view-rename', label: i18next.t('shell:viewMenu.renameView'), run: () => askRenameView(activeViewId) },
+                            { id: 'view-delete', label: i18next.t('shell:viewMenu.deleteView'), run: () => askDeleteView(activeViewId) }
                         ]
                       : []),
-                  { id: 'view-new-drawing', label: 'New drawing view', run: () => void newDrawingView() },
-                  { id: 'view-new-diagram', label: 'New diagram view', run: () => void newDiagramView() },
-                  ...(folder ? [{ id: 'view-new-file', label: 'New file view', run: () => useUi.getState().openFilePicker({ kind: 'view' }) }] : []),
-                  { id: 'view-new-terminal', label: 'New terminal view', run: () => void newTerminalView() },
-                  { id: 'view-new-separator', label: 'New separator', run: () => void newSeparatorView() },
+                  { id: 'view-new-drawing', label: i18next.t('shell:palette.commands.newDrawingView'), run: () => void newDrawingView() },
+                  { id: 'view-new-diagram', label: i18next.t('shell:palette.commands.newDiagramView'), run: () => void newDiagramView() },
+                  ...(folder
+                      ? [
+                            {
+                                id: 'view-new-file',
+                                label: i18next.t('shell:palette.commands.newFileView'),
+                                run: () => useUi.getState().openFilePicker({ kind: 'view' })
+                            }
+                        ]
+                      : []),
+                  { id: 'view-new-terminal', label: i18next.t('shell:palette.commands.newTerminalView'), run: () => void newTerminalView() },
+                  { id: 'view-new-separator', label: i18next.t('shell:palette.commands.newSeparator'), run: () => void newSeparatorView() },
                   {
                       id: 'view-new-browser',
-                      label: 'New browser view',
+                      label: i18next.t('shell:viewDialogs.newBrowser.title'),
                       run: () => useUi.getState().setViewDialog({ kind: 'new-browser' })
                   },
                   ...(selected && canOpenAsView(selected.kind)
-                      ? [{ id: 'view-promote', label: 'Open as view', hint: selected.title, run: () => askOpenAsView(selected.id) }]
+                      ? [
+                            {
+                                id: 'view-promote',
+                                label: i18next.t('shell:viewDialogs.promote.confirm'),
+                                hint: selected.title,
+                                run: () => askOpenAsView(selected.id)
+                            }
+                        ]
                       : []),
                   ...(activeView && isSessionView(activeView)
-                      ? [{ id: 'view-demote', label: 'Put on canvas', hint: activeView.name, run: () => void putOnCanvas(activeView.id) }]
+                      ? [
+                            {
+                                id: 'view-demote',
+                                label: i18next.t('shell:viewMenu.putOnCanvas'),
+                                hint: activeView.name,
+                                run: () => void putOnCanvas(activeView.id)
+                            }
+                        ]
                       : []),
                   ...agentCommands('chat', providersOf(currentEndpointId()).providers, onCanvas),
                   ...agentCommands('terminal', providersOf(currentEndpointId()).providers, onCanvas),
                   ...(onCanvas
                       ? [
                             ...moveNodeCommands(),
-                            { id: 'add-terminal', label: 'New terminal', shortcut: ADD_NODE_SHORTCUTS.terminal, run: () => void addNodeAtCenter('terminal') },
-                            { id: 'add-chat', label: 'New chat', shortcut: ADD_NODE_SHORTCUTS.chat, run: () => void addNodeAtCenter('chat') },
-                            { id: 'add-browser', label: 'New browser', shortcut: ADD_NODE_SHORTCUTS.browser, run: () => void addNodeAtCenter('browser') },
-                            { id: 'add-group', label: 'New group', shortcut: ADD_NODE_SHORTCUTS.group, run: () => void addNodeAtCenter('group') },
-                            { id: 'add-note', label: 'New note', shortcut: ADD_NODE_SHORTCUTS.note, run: () => void addNodeAtCenter('note') },
+                            {
+                                id: 'add-terminal',
+                                label: i18next.t('shell:palette.commands.newTerminal'),
+                                shortcut: ADD_NODE_SHORTCUTS.terminal,
+                                run: () => void addNodeAtCenter('terminal')
+                            },
+                            {
+                                id: 'add-chat',
+                                label: i18next.t('shell:palette.commands.newChat'),
+                                shortcut: ADD_NODE_SHORTCUTS.chat,
+                                run: () => void addNodeAtCenter('chat')
+                            },
+                            {
+                                id: 'add-browser',
+                                label: i18next.t('shell:palette.commands.newBrowser'),
+                                shortcut: ADD_NODE_SHORTCUTS.browser,
+                                run: () => void addNodeAtCenter('browser')
+                            },
+                            {
+                                id: 'add-group',
+                                label: i18next.t('shell:palette.commands.newGroup'),
+                                shortcut: ADD_NODE_SHORTCUTS.group,
+                                run: () => void addNodeAtCenter('group')
+                            },
+                            {
+                                id: 'add-note',
+                                label: i18next.t('shell:palette.commands.newNote'),
+                                shortcut: ADD_NODE_SHORTCUTS.note,
+                                run: () => void addNodeAtCenter('note')
+                            },
                             ...(folder
                                 ? [
                                       {
                                           id: 'add-file',
-                                          label: 'Show a file on the canvas',
-                                          hint: 'Read-only',
+                                          label: i18next.t('shell:palette.commands.showFile'),
+                                          hint: i18next.t('shell:palette.hints.readOnly'),
                                           run: () => useUi.getState().openFilePicker({ kind: 'node', at: centerWorld() })
                                       }
                                   ]
                                 : []),
                             {
                                 id: 'group-selection',
-                                label: 'Group selection',
-                                hint: canvas.selection.length === 0 ? 'Select nodes first' : undefined,
+                                label: i18next.t('shell:palette.commands.groupSelection'),
+                                hint: canvas.selection.length === 0 ? i18next.t('shell:palette.hints.selectFirst') : undefined,
                                 shortcut: CANVAS_SHORTCUTS.group,
                                 run: () => void focusedCanvas().getState().groupSelection()
                             },
-                            { id: 'add-text', label: 'New text', run: () => void focusedCanvas().getState().addText(centerWorld()) },
+                            {
+                                id: 'add-text',
+                                label: i18next.t('shell:palette.commands.newText'),
+                                run: () => void focusedCanvas().getState().addText(centerWorld())
+                            },
                             {
                                 id: 'layout-save',
-                                label: 'Save layout as',
-                                hint: 'Remember where everything sits',
+                                label: i18next.t('shell:palette.commands.saveLayoutAs'),
+                                hint: i18next.t('shell:palette.hints.rememberLayout'),
                                 run: () => useUi.getState().setLayoutDialogOpen(true)
                             },
                             ...canvas.layouts.flatMap((layout) => [
                                 {
                                     id: `layout-apply-${layout.name}`,
-                                    label: `Apply layout: ${layout.name}`,
+                                    label: i18next.t('shell:palette.applyLayout', { name: layout.name }),
                                     run: () => focusedCanvas().getState().applyLayout(layout.name)
                                 },
                                 {
                                     id: `layout-delete-${layout.name}`,
-                                    label: `Delete layout: ${layout.name}`,
+                                    label: i18next.t('shell:palette.deleteLayout', { name: layout.name }),
                                     run: () => focusedCanvas().getState().deleteLayout(layout.name)
                                 }
                             ]),
                             {
                                 id: 'lock',
-                                label: anyLocked ? 'Unlock everything' : 'Lock everything',
+                                label: anyLocked ? i18next.t('shell:dock.unlockEverything') : i18next.t('shell:dock.lockEverything'),
                                 run: () => focusedCanvas().getState().setAllLocks(!anyLocked)
                             }
                         ]
@@ -234,52 +298,126 @@ export const appCommands = (): Command[] => {
                   // A drawing has a camera of its own, so the same three rows act on whichever is on screen.
                   ...(onCanvas || drawing || diagram
                       ? [
-                            { id: 'fit', label: 'Zoom to fit', shortcut: CANVAS_SHORTCUTS.fitAll, run: () => zoomTarget().fitAll() },
+                            { id: 'fit', label: i18next.t('shell:dock.zoomToFit'), shortcut: CANVAS_SHORTCUTS.fitAll, run: () => zoomTarget().fitAll() },
                             {
                                 id: 'zoom-selection',
-                                label: 'Zoom to selection',
+                                label: i18next.t('shell:dock.zoomToSelection'),
                                 shortcut: CANVAS_SHORTCUTS.zoomSelection,
                                 run: () => zoomTarget().zoomToSelection()
                             },
-                            { id: 'zoom-reset', label: 'Zoom to 100%', shortcut: CANVAS_SHORTCUTS.zoomReset, run: () => zoomTarget().zoomTo(1) }
+                            {
+                                id: 'zoom-reset',
+                                label: i18next.t('shell:palette.commands.zoomReset'),
+                                shortcut: CANVAS_SHORTCUTS.zoomReset,
+                                run: () => zoomTarget().zoomTo(1)
+                            }
                         ]
                       : []),
                   ...(diagram && activeView
                       ? [
                             ...(useProject.getState().current?.folder
-                                ? [{ id: 'diagram-open-json', label: 'Open the diagram as JSON', run: () => openDiagramJson(activeView.id) }]
+                                ? [
+                                      {
+                                          id: 'diagram-open-json',
+                                          label: i18next.t('shell:palette.commands.diagramOpenJson'),
+                                          run: () => openDiagramJson(activeView.id)
+                                      }
+                                  ]
                                 : []),
-                            { id: 'diagram-show-on-canvas', label: 'Show the diagram on canvas', run: () => void showOnCanvas(activeView.id) },
-                            { id: 'diagram-copy-json', label: 'Copy the diagram as JSON', run: () => void copyDiagramJson(focusedDiagram()) },
-                            { id: 'diagram-copy-png', label: 'Copy the diagram as PNG', run: () => void copyDiagramPng(focusedDiagram()) },
-                            { id: 'diagram-save-png', label: 'Save the diagram as PNG', run: () => void saveDiagramPng(focusedDiagram()) },
-                            { id: 'diagram-copy-svg', label: 'Copy the diagram as SVG', run: () => void copyDiagramSvg(focusedDiagram()) },
-                            { id: 'diagram-save-svg', label: 'Save the diagram as SVG', run: () => void saveDiagramSvg(focusedDiagram()) }
+                            {
+                                id: 'diagram-show-on-canvas',
+                                label: i18next.t('shell:palette.commands.diagramOnCanvas'),
+                                run: () => void showOnCanvas(activeView.id)
+                            },
+                            {
+                                id: 'diagram-copy-json',
+                                label: i18next.t('shell:palette.commands.diagramCopyJson'),
+                                run: () => void copyDiagramJson(focusedDiagram())
+                            },
+                            {
+                                id: 'diagram-copy-png',
+                                label: i18next.t('shell:palette.commands.diagramCopyPng'),
+                                run: () => void copyDiagramPng(focusedDiagram())
+                            },
+                            {
+                                id: 'diagram-save-png',
+                                label: i18next.t('shell:palette.commands.diagramSavePng'),
+                                run: () => void saveDiagramPng(focusedDiagram())
+                            },
+                            {
+                                id: 'diagram-copy-svg',
+                                label: i18next.t('shell:palette.commands.diagramCopySvg'),
+                                run: () => void copyDiagramSvg(focusedDiagram())
+                            },
+                            {
+                                id: 'diagram-save-svg',
+                                label: i18next.t('shell:palette.commands.diagramSaveSvg'),
+                                run: () => void saveDiagramSvg(focusedDiagram())
+                            }
                         ]
                       : []),
                   ...(drawing && activeView
                       ? [
-                            { id: 'drawing-show-on-canvas', label: 'Show the drawing on canvas', run: () => void showOnCanvas(activeView.id) },
-                            { id: 'drawing-copy-png', label: 'Copy the drawing as PNG', run: () => void copyDrawingPng(focusedDrawing()) },
-                            { id: 'drawing-save-png', label: 'Save the drawing as PNG', run: () => void saveDrawingPng(focusedDrawing()) },
-                            { id: 'drawing-copy-svg', label: 'Copy the drawing as SVG', run: () => void copyDrawingSvg(focusedDrawing()) },
-                            { id: 'drawing-save-svg', label: 'Save the drawing as SVG', run: () => void saveDrawingSvg(focusedDrawing()) }
+                            {
+                                id: 'drawing-show-on-canvas',
+                                label: i18next.t('shell:palette.commands.drawingOnCanvas'),
+                                run: () => void showOnCanvas(activeView.id)
+                            },
+                            {
+                                id: 'drawing-copy-png',
+                                label: i18next.t('shell:palette.commands.drawingCopyPng'),
+                                run: () => void copyDrawingPng(focusedDrawing())
+                            },
+                            {
+                                id: 'drawing-save-png',
+                                label: i18next.t('shell:palette.commands.drawingSavePng'),
+                                run: () => void saveDrawingPng(focusedDrawing())
+                            },
+                            {
+                                id: 'drawing-copy-svg',
+                                label: i18next.t('shell:palette.commands.drawingCopySvg'),
+                                run: () => void copyDrawingSvg(focusedDrawing())
+                            },
+                            {
+                                id: 'drawing-save-svg',
+                                label: i18next.t('shell:palette.commands.drawingSaveSvg'),
+                                run: () => void saveDrawingSvg(focusedDrawing())
+                            }
                         ]
                       : [])
               ]
             : []),
-        { id: 'usage', label: 'Usage', hint: 'Cost, tokens and plan limits', run: () => useUi.getState().setUsageOpen(true) },
-        { id: 'sidebar', label: 'Toggle sidebar', shortcut: APP_SHORTCUTS.sidebar, run: () => useUi.getState().toggleSidebar() },
-        { id: 'panel-files', label: 'Toggle files panel', run: () => useUi.getState().togglePanel('files') },
-        { id: 'panel-git', label: 'Toggle git panel', run: () => useUi.getState().togglePanel('git') },
-        { id: 'panel-processes', label: 'Toggle processes panel', run: () => useUi.getState().togglePanel('processes') },
-        { id: 'theme', label: 'Toggle light and dark', run: () => useTheme.getState().toggle() },
-        { id: 'settings', label: 'Settings', shortcut: APP_SHORTCUTS.settings, run: () => useUi.getState().setSettings({ open: true }) },
-        { id: 'settings-keyboard', label: 'Keyboard shortcuts', run: () => useUi.getState().setSettings({ open: true, section: 'keyboard' }) },
+        {
+            id: 'usage',
+            label: i18next.t('shell:sidebar.usage'),
+            hint: i18next.t('shell:palette.hints.usage'),
+            run: () => useUi.getState().setUsageOpen(true)
+        },
+        {
+            id: 'sidebar',
+            label: i18next.t('shell:palette.commands.toggleSidebar'),
+            shortcut: APP_SHORTCUTS.sidebar,
+            run: () => useUi.getState().toggleSidebar()
+        },
+        { id: 'panel-files', label: i18next.t('shell:palette.commands.toggleFiles'), run: () => useUi.getState().togglePanel('files') },
+        { id: 'panel-git', label: i18next.t('shell:palette.commands.toggleGit'), run: () => useUi.getState().togglePanel('git') },
+        { id: 'panel-processes', label: i18next.t('shell:palette.commands.toggleProcesses'), run: () => useUi.getState().togglePanel('processes') },
+        { id: 'theme', label: i18next.t('shell:palette.commands.toggleTheme'), run: () => useTheme.getState().toggle() },
+        {
+            id: 'settings',
+            label: i18next.t('shell:settingsDialog.title'),
+            shortcut: APP_SHORTCUTS.settings,
+            run: () => useUi.getState().setSettings({ open: true })
+        },
+        {
+            id: 'settings-keyboard',
+            label: i18next.t('shell:palette.commands.keyboardShortcuts'),
+            run: () => useUi.getState().setSettings({ open: true, section: 'keyboard' })
+        },
         {
             id: 'settings-machines',
-            label: 'Remote',
-            hint: 'Your machines, your account and pairing',
+            label: i18next.t('shell:palette.commands.remote'),
+            hint: i18next.t('shell:palette.hints.remote'),
             run: () => useUi.getState().setSettings({ open: true, section: 'machines' })
         }
     ];

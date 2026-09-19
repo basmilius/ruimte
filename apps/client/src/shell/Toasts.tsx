@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { Check, CircleAlert, Copy, LoaderCircle, X } from 'lucide-react';
 import { useToasts, type Toast } from '@/state/toasts';
 import { Button } from '@/ui/Button';
@@ -21,6 +22,7 @@ const TONE = {
 
 /* Nothing else in the app copies text, so the button says whether it worked instead of a toast about a toast. */
 function CopyOutput({ output }: { output: string }) {
+    const { t } = useTranslation('shell');
     const [copied, setCopied] = useState(false);
     return (
         <Button
@@ -30,12 +32,13 @@ function CopyOutput({ output }: { output: string }) {
                 void navigator.clipboard.writeText(output).then(() => setCopied(true));
             }}
         >
-            <Icon icon={Copy} size={12} /> {copied ? 'Copied' : 'Copy output'}
+            <Icon icon={Copy} size={12} /> {copied ? t('toasts.copied') : t('toasts.copyOutput')}
         </Button>
     );
 }
 
 function ToastCard({ toast }: { toast: Toast }) {
+    const { t } = useTranslation('common');
     return (
         <div className={`flex items-start gap-2 rounded-[10px] p-2.5 pl-3 ${FLOAT}`}>
             {/* The box is as tall as the title's own line, so the mark centers on that line instead
@@ -61,7 +64,7 @@ function ToastCard({ toast }: { toast: Toast }) {
                     </div>
                 )}
             </div>
-            <Tooltip label="Dismiss" name>
+            <Tooltip label={t('action.dismiss')} name>
                 <button className="icon-btn -mt-1 -mr-1 h-6 w-6 shrink-0" onClick={() => useToasts.getState().dismiss(toast.id)}>
                     <Icon icon={X} size={12} />
                 </button>

@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
 import { Mic } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 import { closeVoicePanel } from '@/voice/controller';
 import { refreshVoiceCredential, useVoice } from '@/voice/state';
 
 export function VoiceButton() {
+    const { t } = useTranslation('voice');
     const configured = useVoice((state) => state.credential?.configured === true);
     const open = useVoice((state) => state.open);
     const active = useVoice((state) => state.phase === 'connecting' || state.phase === 'listening');
@@ -18,7 +20,7 @@ export function VoiceButton() {
         return null;
     }
     return (
-        <Tooltip label="Voice" name>
+        <Tooltip label={t('button')} name>
             <button
                 className="icon-btn"
                 aria-pressed={open}

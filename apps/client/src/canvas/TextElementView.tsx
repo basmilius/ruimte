@@ -1,5 +1,6 @@
 import { memo, useEffect, useRef } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import type { DrawingFont } from '@ruimte/contracts';
 import { loadDrawingFont } from '@/drawing/fonts';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
@@ -12,6 +13,7 @@ export const FONT_STACK: Record<DrawingFont, string> = {
 };
 
 export const TextElementView = memo(function TextElementView({ id }: { id: string }) {
+    const { t } = useTranslation('canvas');
     const canvasStore = useCanvasStore();
     const text = useCanvas((s) => s.texts[id]);
     const selected = useCanvas((s) => s.selection.includes(id));
@@ -58,7 +60,7 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
         <div
             ref={ref}
             data-text-id={id}
-            data-placeholder="Type something"
+            data-placeholder={t('text.placeholder')}
             className={clsx(
                 'text-element absolute whitespace-pre rounded-sm px-1 py-0.5 leading-tight text-text',
                 text.bold ? 'font-bold' : 'font-medium',

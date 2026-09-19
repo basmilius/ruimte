@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+import { useTranslation } from 'react-i18next';
 import type { AgentKind, ModelInfo, ProviderInfo, RuntimeMode } from '@ruimte/contracts';
 import {
     forgetChatSelection,
@@ -7,7 +9,7 @@ import {
     useChatPreferences,
     type ChatPreferences
 } from '@/chat/preferences';
-import { RUNTIME_MODES } from '@/chat/runtime-modes';
+import { RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@/chat/runtime-modes';
 import { canKeepAwake } from '@/desktop/bridge';
 import { DeleteAnyViewSection } from '@/shell/settings/DeleteAnyViewSection';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
@@ -19,13 +21,16 @@ import { Select, type SelectItem } from '@/ui/Select';
 
 const PROVIDER_DEFAULT = '';
 
-/* Both mode rows offer the same choices, and each one explains itself in the popup. */
-const runtimeModeItems: SelectItem<RuntimeMode>[] = RUNTIME_MODES.map((mode) => ({ value: mode.id, label: mode.label, description: mode.hint }));
+/* Both mode rows offer the same choices, and each one explains itself in the popup. Built while the
+   pane draws, so the words are the ones the interface is in right now. */
+const runtimeModeItems = (): SelectItem<RuntimeMode>[] =>
+    RUNTIME_MODES.map((mode) => ({ value: mode, label: runtimeModeLabel(mode), description: runtimeModeHint(mode) }));
 
 /* What a provider offers, in one sentence: where it can be opened and whether its hooks report status. */
 const providerAbilities = (provider: ProviderInfo): string => {
-    const where = provider.capabilities.chat ? 'Chat and terminal.' : 'Terminal only.';
-    return `${where} ${provider.capabilities.hooks ? 'Reports agent status.' : 'Does not report agent status.'}`;
+    const where = provider.capabilities.chat ? i18next.t('settings:agents.providers.chatAndTerminal') : i18next.t('settings:agents.providers.terminalOnly');
+    const status = provider.capabilities.hooks ? i18next.t('settings:agents.providers.reportsStatus') : i18next.t('settings:agents.providers.noStatus');
+    return `${where} ${status}`;
 };
 
 /* One row per knob the chosen model exposes; the composer's option picker shows the same descriptors. */
@@ -64,21 +69,25 @@ function ModelOptionRows({ provider, model, options }: { provider: AgentKind; mo
 
 /* The remembered model of one CLI, with the knobs of that model under it. */
 function ProviderModelRows({ provider, preferences }: { provider: ProviderInfo; preferences: ChatPreferences }) {
+    const { t } = useTranslation('settings');
     const selection = selectionFor(preferences, provider.kind);
     const model = provider.models.find((entry) => entry.slug === selection?.model);
     return (
         <>
             <SettingsRow
                 label={provider.name}
-                description={model ? undefined : "Uses the CLI's own default model."}
+                description={model ? undefined : t('agents.defaults.usesCliDefault')}
                 control={
                     <Select
                         value={model?.slug ?? PROVIDER_DEFAULT}
-                        label={`Default model for ${provider.name}`}
+                        label={t('agents.defaults.modelFor', { provider: provider.name })}
                         align="end"
                         items={[
-                            { value: PROVIDER_DEFAULT, label: 'Provider default' },
-                            ...provider.models.map((entry) => ({ value: entry.slug, label: `${entry.name}${entry.legacy ? ' (legacy)' : ''}` }))
+                            { value: PROVIDER_DEFAULT, label: t('agents.defaults.providerDefault') },
+                            ...provider.models.map((entry) => ({
+                                value: entry.slug,
+                                label: entry.legacy ? t('agents.defaults.legacyModel', { name: entry.name }) : entry.name
+                            }))
                         ]}
                         onValueChange={(value) =>
                             value === PROVIDER_DEFAULT
@@ -94,6 +103,7 @@ function ProviderModelRows({ provider, preferences }: { provider: ProviderInfo; 
 }
 
 export function AgentsPane() {
+    const { t } = useTranslation('settings');
     const providers = useProviders((s) => s.providers);
     const loaded = useProviders((s) => s.loaded);
     const preferences = useChatPreferences();
@@ -108,10 +118,10 @@ export function AgentsPane() {
 
     return (
         <>
-            <SettingsSection title="Defaults for new agents" description="Picking a model in a chat also changes its default here.">
+            <SettingsSection title={t('agents.defaults.title')} description={t('agents.defaults.description')}>
                 {withModels.length === 0 &&
                     (loaded ? (
-                        <SettingsRow muted label="No agent CLI with chat support found on this machine." />
+                        <SettingsRow muted label={t('agents.defaults.noChatCli')} />
                     ) : (
                         <SettingsRow label={<Skeleton className="w-32" />} control={<Skeleton className="w-24" />} />
                     ))}
@@ -119,109 +129,121 @@ export function AgentsPane() {
                     <ProviderModelRows key={provider.kind} provider={provider} preferences={preferences} />
                 ))}
                 <SettingsRow
-                    label="Permissions"
+                    label={t('agents.defaults.permissions')}
                     control={
                         <Select
                             value={preferences.runtimeMode}
-                            label="Permissions"
+                            label={t('agents.defaults.permissions')}
                             align="end"
-                            items={runtimeModeItems}
+                            items={runtimeModeItems()}
                             onValueChange={(value) => rememberChatPreferences({ runtimeMode: value })}
                         />
                     }
                 />
                 <SettingsRow
-                    label="Terminal agents start in"
+                    label={t('agents.defaults.terminalMode')}
                     control={
                         <Select
                             value={preferences.terminalRuntimeMode}
-                            label="Terminal agents start in"
+                            label={t('agents.defaults.terminalMode')}
                             align="end"
-                            items={runtimeModeItems}
+                            items={runtimeModeItems()}
                             onValueChange={(value) => rememberChatPreferences({ terminalRuntimeMode: value })}
                         />
                     }
                 />
             </SettingsSection>
-            <SettingsSection title="What an agent may do here" description="These settings apply to this client only.">
+            <SettingsSection title={t('agents.here.title')} description={t('agents.here.description')}>
                 <SettingsRow
-                    label="Ask me for permission in the node"
-                    description="Permission requests from terminal agents appear in the node header, and the first answer wins. With this window in the background you also get a notification, since a request expires after a few minutes. Off, you answer in the terminal."
+                    label={t('agents.here.approvals.label')}
+                    description={t('agents.here.approvals.description')}
                     control={
                         <Toggle
                             checked={agentsApprovals}
                             onChange={(checked) => update({ agentsApprovals: checked })}
-                            label="Ask me for permission in the node"
+                            label={t('agents.here.approvals.label')}
                         />
                     }
                 />
                 <SettingsRow
-                    label="Let an agent show you a view"
-                    description="On, a view an agent opens replaces the one you are working in, and a banner takes you back. Off, the banner offers a button to go there."
+                    label={t('agents.here.showViews.label')}
+                    description={t('agents.here.showViews.description')}
                     control={
-                        <Toggle checked={agentsShowViews} onChange={(checked) => update({ agentsShowViews: checked })} label="Let an agent show you a view" />
+                        <Toggle
+                            checked={agentsShowViews}
+                            onChange={(checked) => update({ agentsShowViews: checked })}
+                            label={t('agents.here.showViews.label')}
+                        />
                     }
                 />
             </SettingsSection>
             <DeleteAnyViewSection />
-            <SettingsSection title="While an agent works" description="These settings apply to this computer only.">
+            <SettingsSection title={t('agents.working.title')} description={t('agents.working.description')}>
                 <SettingsRow
-                    label="Tell me when a turn ends"
-                    description="Sends a notification when an agent finishes while this window is in the background."
+                    label={t('agents.working.turnNotify.label')}
+                    description={t('agents.working.turnNotify.description')}
                     control={
-                        <Toggle checked={agentsTurnNotify} onChange={(checked) => update({ agentsTurnNotify: checked })} label="Tell me when a turn ends" />
+                        <Toggle
+                            checked={agentsTurnNotify}
+                            onChange={(checked) => update({ agentsTurnNotify: checked })}
+                            label={t('agents.working.turnNotify.label')}
+                        />
                     }
                 />
                 {/* Not hidden with the switch above it any more: a question and a permission notify
                     whatever that one says, so this is the only answer to "may this make noise". */}
                 <SettingsRow
-                    label="Play a sound with a notification"
-                    description="Applies to every agent notification."
+                    label={t('agents.working.sound.label')}
+                    description={t('agents.working.sound.description')}
                     control={
                         <Toggle
                             checked={agentsTurnSound}
                             onChange={(checked) => update({ agentsTurnSound: checked })}
-                            label="Play a sound with a notification"
+                            label={t('agents.working.sound.label')}
                         />
                     }
                 />
                 {/* A browser cannot keep anything awake, so it is told nothing about a switch it has no way to honor. */}
                 {canKeepAwake() && (
                     <SettingsRow
-                        label="Keep this computer awake"
-                        description="Keeps the computer awake while an agent works, since sleep pauses the agent. The display can still turn off."
+                        label={t('agents.working.keepAwake.label')}
+                        description={t('agents.working.keepAwake.description')}
                         control={
                             <Toggle
                                 checked={agentsKeepAwake}
                                 onChange={(checked) => update({ agentsKeepAwake: checked })}
-                                label="Keep this computer awake while an agent works"
+                                label={t('agents.working.keepAwake.toggle')}
                             />
                         }
                     />
                 )}
             </SettingsSection>
-            <SettingsSection title="Chats">
+            <SettingsSection title={t('agents.chats.title')}>
                 <SettingsRow
-                    label="Show replies"
+                    label={t('agents.chats.streaming.label')}
                     control={
                         <Select
                             value={chatStreaming}
-                            label="Show replies"
+                            label={t('agents.chats.streaming.label')}
                             align="end"
                             items={[
-                                { value: 'words', label: 'Word by word', description: 'Follows the agent as it writes.' },
-                                { value: 'blocks', label: 'Paragraph by paragraph', description: 'Shows each paragraph once it is complete.' },
-                                { value: 'whole', label: 'When complete', description: 'Waits until the reply is done.' }
+                                { value: 'words', label: t('agents.chats.streaming.words.label'), description: t('agents.chats.streaming.words.description') },
+                                {
+                                    value: 'blocks',
+                                    label: t('agents.chats.streaming.blocks.label'),
+                                    description: t('agents.chats.streaming.blocks.description')
+                                },
+                                { value: 'whole', label: t('agents.chats.streaming.whole.label'), description: t('agents.chats.streaming.whole.description') }
                             ]}
                             onValueChange={(value) => update({ chatStreaming: value })}
                         />
                     }
                 />
             </SettingsSection>
-            <SettingsSection title="Providers" description="Agent CLIs found on the machine's PATH. To add one, install it and restart Ruimte on that machine.">
+            <SettingsSection title={t('agents.providers.title')} description={t('agents.providers.description')}>
                 {providers.length === 0 &&
                     (loaded ? (
-                        <SettingsRow muted label="No providers found" />
+                        <SettingsRow muted label={t('agents.providers.none')} />
                     ) : (
                         <>
                             <SettingsRow label={<Skeleton className="w-28" />} control={<Skeleton className="w-16" />} />
@@ -233,9 +255,17 @@ export function AgentsPane() {
                         key={provider.kind}
                         label={provider.name}
                         description={
-                            provider.installed ? `${provider.version ? `Version ${provider.version}. ` : ''}${providerAbilities(provider)}` : undefined
+                            provider.installed
+                                ? `${provider.version ? `${t('agents.providers.version', { version: provider.version })} ` : ''}${providerAbilities(provider)}`
+                                : undefined
                         }
-                        control={provider.installed ? <Badge tone="idle">Installed</Badge> : <Badge tone="muted">Missing</Badge>}
+                        control={
+                            provider.installed ? (
+                                <Badge tone="idle">{t('agents.providers.installed')}</Badge>
+                            ) : (
+                                <Badge tone="muted">{t('agents.providers.missing')}</Badge>
+                            )
+                        }
                     />
                 ))}
             </SettingsSection>

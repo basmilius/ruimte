@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { BackgroundServiceState } from '@/desktop/bridge';
 
 /* What the Background section of This machine shows, from what the shell says about its service. */
@@ -15,17 +16,11 @@ export interface BackgroundServiceRow {
     lingerOn: boolean;
 }
 
-const UNAVAILABLE: Record<Exclude<BackgroundServiceState['support'], 'supported'>, string> = {
-    dev: 'The dev app always runs a machine of its own and stops it when it quits.',
-    windows: 'Not available on Windows yet, so this machine stops when Ruimte quits.',
-    appimage: 'Not available for the AppImage, which is gone once Ruimte quits. Install the deb or rpm package to keep this machine running.'
-};
-
 export const backgroundServiceRow = (state: BackgroundServiceState): BackgroundServiceRow => {
     if (state.support !== 'supported') {
         return {
             toggle: null,
-            unavailable: UNAVAILABLE[state.support],
+            unavailable: i18next.t(`settings:backgroundService.unavailable.${state.support}`),
             pending: null,
             failure: state.failure,
             canStop: false,
@@ -35,9 +30,9 @@ export const backgroundServiceRow = (state: BackgroundServiceState): BackgroundS
     }
     let pending: string | null = null;
     if (state.keepRunning && state.owner === 'app') {
-        pending = 'Ruimte runs this machine itself right now. It keeps running from the next time Ruimte quits.';
+        pending = i18next.t('settings:backgroundService.pending.takeOver');
     } else if (!state.keepRunning && state.owner === 'service') {
-        pending = 'This machine stops when Ruimte quits, and Ruimte runs it itself from the next start.';
+        pending = i18next.t('settings:backgroundService.pending.handBack');
     }
     return {
         toggle: { checked: state.keepRunning },

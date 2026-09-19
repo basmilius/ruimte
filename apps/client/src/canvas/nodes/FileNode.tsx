@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { FileSurface } from '@/shell/panels/FileSurface';
 import { basenameOf } from '@/shell/panels/files-tree';
 import { useCanvas } from '@/state/canvas';
@@ -10,11 +11,12 @@ import { FileIcon } from '@/ui/FileIcon';
  * with its own plate.
  */
 export function FilePlate({ id }: { id: string }) {
+    const { t } = useTranslation('canvas');
     const path = useCanvas((s) => s.nodes[id]?.path ?? null);
     return (
         <div className="flex h-full w-full items-center justify-center gap-2 px-4 text-text-faint" aria-hidden="true">
             {path !== null && <FileIcon path={path} size={20} />}
-            <span className="truncate text-sm">{path === null ? 'No file' : basenameOf(path)}</span>
+            <span className="truncate text-sm">{path === null ? t('file.none') : basenameOf(path)}</span>
         </div>
     );
 }

@@ -7,6 +7,7 @@ import {
     type ProjectViewLocal,
     type SplitLayout
 } from '@ruimte/contracts';
+import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
 import { TransportError, type Transport, type TransportStatus } from '@/transport/transport';
 import type { DiagramState } from '@/state/diagram';
@@ -163,7 +164,9 @@ export class DiagramClient {
         }
         await this.flush();
         await this.flushProject();
-        await this.transport.request('diagram.copy', { projectId, from, to }).catch((e: unknown) => this.report(null, e, 'The diagram could not be copied'));
+        await this.transport
+            .request('diagram.copy', { projectId, from, to })
+            .catch((e: unknown) => this.report(null, e, i18next.t('drawing:error.diagramCopy')));
     }
 
     /* Takes what is on disk, or keeps the screen and writes it over the file's newer rev. */
@@ -301,7 +304,7 @@ export class DiagramClient {
         } catch (e) {
             if (this.open.get(viewId) === diagram) {
                 this.open.delete(viewId);
-                this.report(diagram, e, 'The diagram could not be opened');
+                this.report(diagram, e, i18next.t('drawing:error.diagramOpen'));
             }
         }
     }
@@ -317,7 +320,7 @@ export class DiagramClient {
         try {
             ({ document } = await this.transport.request('diagram.open', { projectId: diagram.projectId, viewId: diagram.viewId }));
         } catch (e) {
-            this.report(diagram, e, 'The diagram could not be opened');
+            this.report(diagram, e, i18next.t('drawing:error.diagramOpen'));
             return;
         }
         if (generation !== diagram.generation || this.open.get(diagram.viewId) !== diagram) {
@@ -392,7 +395,7 @@ export class DiagramClient {
                     stale = true;
                     return;
                 }
-                this.report(diagram, e, 'The diagram could not be saved');
+                this.report(diagram, e, i18next.t('drawing:error.diagramSave'));
             })
             .finally(() => {
                 diagram.saving = null;

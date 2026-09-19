@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import type { FileTree as FileTreeModel, FileTreeRowDecoration, FileTreeRowDecorationContext, FileTreeVisibleRow } from '@pierre/trees';
 import { FileTree, useFileTree, useFileTreeSelector } from '@pierre/trees/react';
@@ -20,12 +21,8 @@ import { FILE_TREE_ICONS } from '@/ui/file-icon';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
-const GROUPS: ReadonlyArray<{ state: GitFileState; label: string }> = [
-    { state: 'conflicted', label: 'Conflicted' },
-    { state: 'staged', label: 'Staged' },
-    { state: 'unstaged', label: 'Changes' },
-    { state: 'untracked', label: 'Untracked' }
-];
+/* The groups in the order a person acts on them; each one reads its heading out of `git.group`. */
+const GROUPS: readonly GitFileState[] = ['conflicted', 'staged', 'unstaged', 'untracked'];
 
 /* Opening a folder brings rows into view that may have to fold up in turn, so folding settles over
    a few passes; a tree that never settles stops here rather than looping. */
@@ -105,6 +102,7 @@ interface ListProps {
  * confirm, and offers the things a row has no room for: the file itself, the two reveals, the paths.
  */
 export function GitFileList({ status, collapsed, reading, busy, onOpen, onOpenFile, onStage, onDiscard }: ListProps) {
+    const { t } = useTranslation('panels');
     const platform = useServer((s) => s.platform);
     const folder = useProject((s) => s.current?.folder ?? null);
 
@@ -114,29 +112,29 @@ export function GitFileList({ status, collapsed, reading, busy, onOpen, onOpenFi
     if (!status.repo) {
         return (
             <div className="grid grow place-items-center">
-                <EmptyState icon={<Icon icon={GitBranch} size={20} />}>This folder is not a git repository.</EmptyState>
+                <EmptyState icon={<Icon icon={GitBranch} size={20} />}>{t('git.list.noRepo')}</EmptyState>
             </div>
         );
     }
     if (status.files.length === 0) {
         return (
             <div className="grid grow place-items-center">
-                <EmptyState icon={<Icon icon={GitBranch} size={20} />}>No changes.</EmptyState>
+                <EmptyState icon={<Icon icon={GitBranch} size={20} />}>{t('git.list.noChanges')}</EmptyState>
             </div>
         );
     }
     return (
         <div className="min-h-0 grow overflow-y-auto py-1">
-            {GROUPS.map((group) => {
-                const files = status.files.filter((file) => file.state === group.state);
+            {GROUPS.map((state) => {
+                const files = status.files.filter((file) => file.state === state);
                 if (files.length === 0) {
                     return null;
                 }
                 return (
                     <GitGroup
-                        key={group.state}
-                        label={group.label}
-                        state={group.state}
+                        key={state}
+                        label={t(`git.group.${state}`)}
+                        state={state}
                         files={files}
                         root={status.root}
                         folder={folder}
@@ -151,7 +149,7 @@ export function GitFileList({ status, collapsed, reading, busy, onOpen, onOpenFi
                     />
                 );
             })}
-            {status.truncated && <p className="px-3 py-2 text-xs text-text-faint">More files changed than this list holds.</p>}
+            {status.truncated && <p className="px-3 py-2 text-xs text-text-faint">{t('diff.moreFiles')}</p>}
         </div>
     );
 }
@@ -171,6 +169,7 @@ interface GroupProps extends Omit<ListProps, 'status'> {
  * in the other. Each tree is exactly as tall as its rows, so the four of them scroll as one list.
  */
 function GitGroup({ label, state, files, root, folder, platform, collapsed, reading, busy, onOpen, onOpenFile, onStage, onDiscard }: GroupProps) {
+    const { t } = useTranslation('panels');
     const staged = state === 'staged';
     const conflicted = state === 'conflicted';
     const [menuPath, setMenuPath] = useState<string | null>(null);
@@ -299,7 +298,7 @@ function GitGroup({ label, state, files, root, folder, platform, collapsed, read
                 <span className="tabular-nums text-text-faint">{files.length}</span>
                 <span className="grow" />
                 {!conflicted && (
-                    <Tooltip label={staged ? `Unstage everything in ${label}` : `Stage everything in ${label}`} name>
+                    <Tooltip label={staged ? t('git.list.unstageGroup', { group: label }) : t('git.list.stageGroup', { group: label })} name>
                         <button
                             className="icon-btn h-6 w-6"
                             disabled={busy}
@@ -325,21 +324,21 @@ function GitGroup({ label, state, files, root, folder, platform, collapsed, read
                             {menuFile !== undefined && (
                                 <>
                                     <ContextMenu.Item className="menu-item" onClick={() => onOpen(menuFile)}>
-                                        <Icon icon={FileDiff} size={14} /> Open changes
+                                        <Icon icon={FileDiff} size={14} /> {t('git.list.openChanges')}
                                     </ContextMenu.Item>
                                     <ContextMenu.Item className="menu-item" disabled={isGone(menuFile)} onClick={() => onOpenFile(menuFile)}>
-                                        <Icon icon={FileText} size={14} /> Open the file itself
+                                        <Icon icon={FileText} size={14} /> {t('file.tab.openItself')}
                                     </ContextMenu.Item>
                                     <ContextMenu.Separator className={MENU_SEPARATOR} />
                                     <ContextMenu.Item className="menu-item" disabled={busy} onClick={() => onStage([menuFile.path], !staged)}>
                                         <Icon icon={staged ? Minus : Plus} size={14} />
-                                        {staged ? 'Unstage' : conflicted ? 'Stage as resolved' : 'Stage'}
+                                        {staged ? t('git.list.unstage') : conflicted ? t('git.list.stageResolved') : t('git.list.stage')}
                                     </ContextMenu.Item>
                                     {/* A conflict is resolved by staging it or by a merge tool; discarding one side of it
                                         silently is the one way out that loses work nobody can name afterwards. */}
                                     {!conflicted && (
                                         <ContextMenu.Item className="menu-item" disabled={busy} onClick={() => onDiscard(menuFile)}>
-                                            <Icon icon={Trash2} size={14} /> Discard changes
+                                            <Icon icon={Trash2} size={14} /> {t('git.list.discard')}
                                         </ContextMenu.Item>
                                     )}
                                     <ContextMenu.Separator className={MENU_SEPARATOR} />
@@ -356,13 +355,13 @@ function GitGroup({ label, state, files, root, folder, platform, collapsed, read
                                 <>
                                     <ContextMenu.Item className="menu-item" onClick={() => useGit.getState().toggleDir(menuDir)}>
                                         <Icon icon={collapsed.includes(menuDir) ? ChevronsUpDown : ChevronsDownUp} size={14} />
-                                        {collapsed.includes(menuDir) ? 'Expand this folder' : 'Collapse this folder'}
+                                        {collapsed.includes(menuDir) ? t('git.list.expandFolder') : t('git.list.collapseFolder')}
                                     </ContextMenu.Item>
                                     {/* A conflict is staged file by file, after it has been looked at; a whole
                                         folder of them at once is not a thing to offer behind one click. */}
                                     {!conflicted && (
                                         <ContextMenu.Item className="menu-item" disabled={busy} onClick={() => onStage(pathsUnder(files, menuDir), !staged)}>
-                                            <Icon icon={staged ? Minus : Plus} size={14} /> {staged ? 'Unstage everything here' : 'Stage everything here'}
+                                            <Icon icon={staged ? Minus : Plus} size={14} /> {staged ? t('git.list.unstageHere') : t('git.list.stageHere')}
                                         </ContextMenu.Item>
                                     )}
                                     <ContextMenu.Separator className={MENU_SEPARATOR} />
@@ -397,6 +396,7 @@ function RowPathItems({
     platform: string | null;
     gone: boolean;
 }) {
+    const { t } = useTranslation('panels');
     const transport = useTransport();
     return (
         <>
@@ -405,7 +405,7 @@ function RowPathItems({
                 disabled={gone || !revealableInFiles(folder, absolute)}
                 onClick={() => useFiles.getState().revealInFiles(absolute)}
             >
-                <Icon icon={Folder} size={14} /> Reveal in the Files panel
+                <Icon icon={Folder} size={14} /> {t('file.menu.revealInFiles')}
             </ContextMenu.Item>
             <ContextMenu.Item
                 className="menu-item"
@@ -414,14 +414,14 @@ function RowPathItems({
                     void transport.request('fs.reveal', { path: absolute }).catch(() => undefined);
                 }}
             >
-                <Icon icon={CornerUpRight} size={14} /> Reveal in {fileManagerName(platform)}
+                <Icon icon={CornerUpRight} size={14} /> {t('file.revealIn', { app: fileManagerName(platform) })}
             </ContextMenu.Item>
             <ContextMenu.Separator className={MENU_SEPARATOR} />
             <ContextMenu.Item className="menu-item" onClick={() => copyText(absolute)}>
-                <Icon icon={Copy} size={14} /> Copy path
+                <Icon icon={Copy} size={14} /> {t('file.menu.copyPath')}
             </ContextMenu.Item>
             <ContextMenu.Item className="menu-item" onClick={() => copyText(relative)}>
-                <Icon icon={Copy} size={14} /> Copy relative path
+                <Icon icon={Copy} size={14} /> {t('file.menu.copyRelativePath')}
             </ContextMenu.Item>
         </>
     );

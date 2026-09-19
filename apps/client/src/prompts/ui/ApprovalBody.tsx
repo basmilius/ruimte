@@ -1,5 +1,6 @@
 import { Suspense, lazy, useState } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import type { ChatApprovalItem } from '@ruimte/contracts';
 import { approvalChanges, fileChanges } from '@/chat/logic/tools';
 import { isApplePlatform } from '@/desktop/bridge';
@@ -21,6 +22,7 @@ export function CommandBox({ command, cwd }: { command: string; cwd?: string }) 
 }
 
 function ApprovalDetails({ item }: { item: ChatApprovalItem }) {
+    const { t } = useTranslation('prompts');
     const [expanded, setExpanded] = useState(false);
     const patches = approvalChanges(item.input);
     const edits = patches.length ? [] : fileChanges(item.toolName, item.input);
@@ -29,12 +31,12 @@ function ApprovalDetails({ item }: { item: ChatApprovalItem }) {
         <>
             {item.description && <p className="text-sm text-text-muted">{item.description}</p>}
             {patches.length + edits.length > 1 && (
-                <p className="text-xs text-text-muted">Allow applies to all {patches.length + edits.length} changes in this request.</p>
+                <p className="text-xs text-text-muted">{t('approval.allChanges', { count: patches.length + edits.length })}</p>
             )}
             {patches.length + edits.length > 0 ? (
                 <div className="overflow-hidden rounded-xl bg-surface-sunken">
                     <div className={clsx('overflow-auto', !expanded && 'max-h-44')}>
-                        <Suspense fallback={<p className="p-3 text-xs text-text-muted">Loading diff…</p>}>
+                        <Suspense fallback={<p className="p-3 text-xs text-text-muted">{t('approval.loadingDiff')}</p>}>
                             {patches.map((change, i) => (
                                 <UnifiedDiff key={i} change={change} />
                             ))}
@@ -45,7 +47,7 @@ function ApprovalDetails({ item }: { item: ChatApprovalItem }) {
                     </div>
                     <div className="flex items-center border-t border-border p-1">
                         <Button size="sm" className="rounded-full!" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
-                            {expanded ? 'Collapse diff' : 'View full diff'}
+                            {expanded ? t('approval.collapseDiff') : t('approval.viewDiff')}
                         </Button>
                     </div>
                 </div>
@@ -53,7 +55,7 @@ function ApprovalDetails({ item }: { item: ChatApprovalItem }) {
                 <CommandBox command={input.command} cwd={typeof input.cwd === 'string' ? input.cwd : undefined} />
             ) : (
                 <details>
-                    <summary className="flex h-7 cursor-pointer items-center text-xs text-text-muted">Details</summary>
+                    <summary className="flex h-7 cursor-pointer items-center text-xs text-text-muted">{t('approval.details')}</summary>
                     <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-surface-sunken p-3 font-mono text-code text-text select-text">
                         {JSON.stringify(item.input, null, 2)}
                     </pre>
@@ -77,6 +79,7 @@ export function ApprovalBody({
     denyReason: boolean;
     locked: boolean;
 }) {
+    const { t } = useTranslation('prompts');
     return (
         <>
             <ApprovalDetails item={item} />
@@ -84,8 +87,8 @@ export function ApprovalBody({
                 <textarea
                     className="field min-h-16 text-sm"
                     autoFocus
-                    aria-label="Reason for declining"
-                    placeholder="Reason for declining, optional"
+                    aria-label={t('approval.reasonLabel')}
+                    placeholder={t('approval.reasonPlaceholder')}
                     disabled={locked}
                     value={draft.reason}
                     onChange={(e) => onDraft({ ...draft, reason: e.target.value })}

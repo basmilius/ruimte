@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import i18next from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import { ArrowDown, ArrowUp, ChevronsDownUp, ChevronsUpDown, Folder, GitPullRequest, MoreHorizontal, RefreshCw } from 'lucide-react';
 import {
@@ -73,6 +75,7 @@ type Dialog =
  * progress lands in a toast, so a push says where it is and a failure keeps what git wrote.
  */
 export function GitPanel() {
+    const { t } = useTranslation('panels');
     const nodes = useCanvas((s) => s.nodes);
     const selection = useCanvas((s) => s.selection);
     const folder = useProject((s) => s.current?.folder ?? null);
@@ -125,7 +128,7 @@ export function GitPanel() {
             setHeld({ cwd, status: answer, failure: null });
             setRevision((count) => count + 1);
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'Could not read the status.';
+            const message = error instanceof Error ? error.message : i18next.t('panels:git.panel.statusFailed');
             setHeld((previous) => ({ cwd, status: previous?.cwd === cwd ? previous.status : null, failure: message }));
         }
     }, [transport, cwd]);
@@ -228,14 +231,14 @@ export function GitPanel() {
             .request('git.discard', { cwd, paths: [file.path] })
             .then(({ stash }) => {
                 useToasts.getState().show({
-                    title: stash === null ? `${file.path} had nothing to discard` : `Stashed ${file.path}`,
-                    ...(stash === null ? {} : { description: `Restore ${stash} with "git stash pop".` }),
+                    title: stash === null ? t('git.panel.discardNothing', { path: file.path }) : t('git.panel.discardStashed', { path: file.path }),
+                    ...(stash === null ? {} : { description: t('git.panel.discardRestore', { stash }) }),
                     kind: 'success'
                 });
             })
             .catch((error: unknown) => {
-                const message = error instanceof Error ? error.message : 'That did not work.';
-                useToasts.getState().show({ title: 'Discard failed', description: message, kind: 'error', output: message });
+                const message = error instanceof Error ? error.message : t('error.generic');
+                useToasts.getState().show({ title: t('git.panel.discardFailed'), description: message, kind: 'error', output: message });
             })
             .finally(() => {
                 setBusy(false);
@@ -331,7 +334,7 @@ export function GitPanel() {
     if (cwd === null) {
         return (
             <div className="grid grow place-items-center">
-                <EmptyState icon={<Icon icon={Folder} size={20} />}>This canvas has no folder.</EmptyState>
+                <EmptyState icon={<Icon icon={Folder} size={20} />}>{t('git.panel.noFolder')}</EmptyState>
             </div>
         );
     }
@@ -386,12 +389,12 @@ export function GitPanel() {
                 <div className={FILE_TOOLBAR}>
                     {status.files.length > 0 && (
                         <span className={BTN_GROUP}>
-                            <Tooltip label="Expand all folders" name>
+                            <Tooltip label={t('git.panel.expandAll')} name>
                                 <button className="icon-btn h-7 w-7" onClick={() => useGit.getState().setCollapsedDirs([])}>
                                     <Icon icon={ChevronsUpDown} size={14} />
                                 </button>
                             </Tooltip>
-                            <Tooltip label="Collapse all folders" name>
+                            <Tooltip label={t('git.panel.collapseAll')} name>
                                 <button className="icon-btn h-7 w-7" onClick={() => useGit.getState().setCollapsedDirs(allDirs(status.files))}>
                                     <Icon icon={ChevronsDownUp} size={14} />
                                 </button>
@@ -399,7 +402,7 @@ export function GitPanel() {
                         </span>
                     )}
                     <span className="grow" />
-                    <Tooltip label="Refresh" name>
+                    <Tooltip label={t('file.menu.refresh')} name>
                         <button
                             className="icon-btn h-7 w-7"
                             disabled={busy}
@@ -484,39 +487,39 @@ export function GitPanel() {
 
             <GitPrompt
                 open={dialog?.kind === 'create-branch'}
-                title="Create a branch"
-                description="Starts from the current commit and switches to it."
-                field={{ label: 'Name', placeholder: 'feature/what-it-does' }}
-                confirmLabel="Create branch"
+                title={t('git.dialog.createBranch.title')}
+                description={t('git.dialog.createBranch.description')}
+                field={{ label: t('git.dialog.name'), placeholder: 'feature/what-it-does' }}
+                confirmLabel={t('git.dialog.createBranch.confirm')}
                 busy={busy}
                 onConfirm={(name) => void act('create-branch', { name })}
                 onClose={() => setDialog(null)}
             />
             <GitPrompt
                 open={dialog?.kind === 'rename-branch'}
-                title="Rename this branch"
-                description="The remote branch keeps the old name until the next push."
-                field={{ label: 'Name', initial: status?.branch ?? '' }}
-                confirmLabel="Rename branch"
+                title={t('git.dialog.renameBranch.title')}
+                description={t('git.dialog.renameBranch.description')}
+                field={{ label: t('git.dialog.name'), initial: status?.branch ?? '' }}
+                confirmLabel={t('git.dialog.renameBranch.confirm')}
                 busy={busy}
                 onConfirm={(name) => void act('rename-branch', { name })}
                 onClose={() => setDialog(null)}
             />
             <GitPrompt
                 open={dialog?.kind === 'stash'}
-                title="Stash the changes"
-                description="Stashes every change, including untracked files, and resets the working tree to HEAD."
-                field={{ label: 'Message', placeholder: 'Optional' }}
-                confirmLabel="Stash changes"
+                title={t('git.dialog.stash.title')}
+                description={t('git.dialog.stash.description')}
+                field={{ label: t('git.dialog.message'), placeholder: t('git.dialog.optional') }}
+                confirmLabel={t('git.dialog.stash.confirm')}
                 busy={busy}
                 onConfirm={(subject) => void act('stash', { subject })}
                 onClose={() => setDialog(null)}
             />
             <GitPrompt
                 open={dialog?.kind === 'force-push'}
-                title="Force push this branch?"
-                description="Overwrites the remote branch with this checkout. It stops if someone else pushed since the last fetch."
-                confirmLabel="Force push"
+                title={t('git.dialog.forcePush.title')}
+                description={t('git.dialog.forcePush.description')}
+                confirmLabel={t('git.dialog.forcePush.confirm')}
                 danger
                 busy={busy}
                 onConfirm={() => void act('force-push')}
@@ -524,9 +527,9 @@ export function GitPanel() {
             />
             <GitPrompt
                 open={dialog?.kind === 'switch'}
-                title={dialog?.kind === 'switch' ? `Switch to ${dialog.ref.name}?` : 'Switch branch?'}
-                description='This checkout has uncommitted changes. Stash them first and restore them later with "git stash pop".'
-                confirmLabel="Stash and switch"
+                title={dialog?.kind === 'switch' ? t('git.dialog.switch.title', { branch: dialog.ref.name }) : t('git.dialog.switch.fallback')}
+                description={t('git.dialog.switch.description')}
+                confirmLabel={t('git.dialog.switch.confirm')}
                 busy={busy}
                 onConfirm={() => {
                     if (dialog?.kind === 'switch') {
@@ -537,13 +540,11 @@ export function GitPanel() {
             />
             <GitPrompt
                 open={dialog?.kind === 'confirm-delete'}
-                title={dialog?.kind === 'confirm-delete' ? `Delete ${dialog.ref}?` : 'Delete this branch?'}
+                title={dialog?.kind === 'confirm-delete' ? t('git.dialog.deleteBranch.title', { branch: dialog.ref }) : t('git.dialog.deleteBranch.fallback')}
                 description={
-                    dialog?.kind === 'confirm-delete' && dialog.force
-                        ? 'This branch has commits that no other branch has. Deleting it loses them.'
-                        : 'Deletes the local branch. A remote branch with the same name stays.'
+                    dialog?.kind === 'confirm-delete' && dialog.force ? t('git.dialog.deleteBranch.unmerged') : t('git.dialog.deleteBranch.description')
                 }
-                confirmLabel={dialog?.kind === 'confirm-delete' && dialog.force ? 'Delete anyway' : 'Delete branch'}
+                confirmLabel={dialog?.kind === 'confirm-delete' && dialog.force ? t('git.dialog.deleteBranch.anyway') : t('git.dialog.deleteBranch.confirm')}
                 danger
                 busy={busy}
                 onConfirm={() => {
@@ -555,9 +556,9 @@ export function GitPanel() {
             />
             <GitPrompt
                 open={dialog?.kind === 'discard'}
-                title={dialog?.kind === 'discard' ? `Discard ${basenameOf(dialog.file.path)}?` : 'Discard this file?'}
-                description='Reverts the file to HEAD. The changes are stashed first, so "git stash pop" restores them.'
-                confirmLabel="Discard"
+                title={dialog?.kind === 'discard' ? t('git.dialog.discard.title', { name: basenameOf(dialog.file.path) }) : t('git.dialog.discard.fallback')}
+                description={t('git.dialog.discard.description')}
+                confirmLabel={t('git.dialog.discard.confirm')}
                 danger
                 busy={busy}
                 onConfirm={() => {
@@ -569,11 +570,11 @@ export function GitPanel() {
             />
             <GitPrompt
                 open={dialog?.kind === 'pull-request'}
-                title="Open a pull request"
-                description="Publishes the branch first if needed. The pull request opens in your browser."
-                field={{ label: 'Title', initial: dialog?.kind === 'pull-request' ? dialog.subject : '' }}
-                area={{ label: 'Description', placeholder: 'What this changes and why.' }}
-                confirmLabel="Create pull request"
+                title={t('git.dialog.pullRequest.title')}
+                description={t('git.dialog.pullRequest.description')}
+                field={{ label: t('git.dialog.pullRequest.subject'), initial: dialog?.kind === 'pull-request' ? dialog.subject : '' }}
+                area={{ label: t('git.dialog.pullRequest.body'), placeholder: t('git.dialog.pullRequest.bodyPlaceholder') }}
+                confirmLabel={t('git.dialog.pullRequest.confirm')}
                 busy={busy}
                 onConfirm={(subject, body) =>
                     void act(
@@ -584,7 +585,7 @@ export function GitPanel() {
                                 result.url === undefined
                                     ? undefined
                                     : {
-                                          label: 'Open',
+                                          label: t('common:action.open'),
                                           run: () => openUrl(result.url ?? '')
                                       }
                         }
@@ -597,14 +598,14 @@ export function GitPanel() {
                 title={
                     dialog?.kind === 'pick-branch'
                         ? dialog.action === 'merge'
-                            ? 'Merge a branch into this one'
+                            ? t('git.dialog.pick.merge')
                             : dialog.action === 'rebase'
-                              ? 'Rebase this branch onto'
-                              : 'Delete a branch'
-                        : 'Pick a branch'
+                              ? t('git.dialog.pick.rebase')
+                              : t('git.dialog.pick.delete')
+                        : t('git.dialog.pick.fallback')
                 }
                 choices={pickableBranches(dialog, refs, branches, status)}
-                empty="No other branches."
+                empty={t('git.dialog.pick.empty')}
                 onPick={(name) => {
                     if (dialog?.kind !== 'pick-branch') {
                         return;
@@ -619,10 +620,10 @@ export function GitPanel() {
             />
             <GitChoice
                 open={dialog?.kind === 'pick-stash'}
-                title="Pop a stash"
-                description="Applies the stash to the working tree and removes it."
+                title={t('git.dialog.popStash.title')}
+                description={t('git.dialog.popStash.description')}
                 choices={stashes.map((stash) => ({ value: stash.ref, label: stash.ref, hint: stash.message }))}
-                empty="No stashes."
+                empty={t('git.dialog.popStash.empty')}
                 onPick={(ref) => void act('stash-pop', { ref })}
                 onClose={() => setDialog(null)}
             />
@@ -638,7 +639,7 @@ const pickableBranches = (dialog: Dialog | null, refs: readonly GitRef[], locals
     const source = dialog.action === 'delete-branch' ? locals : refs;
     return source
         .filter((ref) => !ref.current && ref.name !== status?.branch)
-        .map((ref) => ({ value: ref.name, label: ref.name, ...(ref.isDefault ? { hint: 'default' } : {}) }));
+        .map((ref) => ({ value: ref.name, label: ref.name, ...(ref.isDefault ? { hint: i18next.t('panels:git.branchMenu.default') } : {}) }));
 };
 
 /* The pull request opens where every other link does: the system browser, not a node on the canvas. */
@@ -663,9 +664,10 @@ interface ActionsMenuProps {
 
 /* Everything that is not the one button next to it. The order is how often a person reaches for it. */
 function ActionsMenu({ busy, canPullRequest, stashes, onOpen, onAction, onDialog, onPullRequest }: ActionsMenuProps) {
+    const { t } = useTranslation('panels');
     return (
         <Menu.Root onOpenChange={(open) => open && onOpen()}>
-            <Tooltip label="More git actions" name>
+            <Tooltip label={t('git.actions.more')} name>
                 <Menu.Trigger className="icon-btn h-7 w-7" disabled={busy}>
                     <Icon icon={MoreHorizontal} size={14} />
                 </Menu.Trigger>
@@ -674,45 +676,45 @@ function ActionsMenu({ busy, canPullRequest, stashes, onOpen, onAction, onDialog
                 <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
                     <Menu.Popup className="menu-popup">
                         <Menu.Item className="menu-item" onClick={() => onAction('pull')}>
-                            Pull
+                            {t('git.actions.pull')}
                         </Menu.Item>
                         <Menu.Item className="menu-item" onClick={() => onAction('push')}>
-                            Push
+                            {t('git.actions.push')}
                         </Menu.Item>
                         <Menu.Item className="menu-item" onClick={() => onAction('sync')}>
-                            Sync
-                            <span className={MENU_HINT}>pull, then push</span>
+                            {t('git.actions.sync')}
+                            <span className={MENU_HINT}>{t('git.actions.syncHint')}</span>
                         </Menu.Item>
                         <Menu.Separator className={MENU_SEPARATOR} />
                         <Menu.Item className="menu-item" onClick={() => onAction('fetch')}>
-                            Fetch
+                            {t('git.actions.fetch')}
                         </Menu.Item>
                         <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'force-push' })}>
-                            Force push
+                            {t('git.actions.forcePush')}
                         </Menu.Item>
                         <Menu.Separator className={MENU_SEPARATOR} />
                         <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'merge' })}>
-                            Merge branch...
+                            {t('git.actions.merge')}
                         </Menu.Item>
                         <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'rebase' })}>
-                            Rebase onto...
+                            {t('git.actions.rebase')}
                         </Menu.Item>
                         <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'rename-branch' })}>
-                            Rename branch...
+                            {t('git.actions.renameBranch')}
                         </Menu.Item>
                         <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'delete-branch' })}>
-                            Delete branch...
+                            {t('git.actions.deleteBranch')}
                         </Menu.Item>
                         <Menu.Separator className={MENU_SEPARATOR} />
                         <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'stash' })}>
-                            Stash changes...
+                            {t('git.actions.stash')}
                         </Menu.Item>
                         <Menu.Item
                             className="menu-item"
                             disabled={stashes.length === 0}
                             onClick={() => (stashes.length > 1 ? onDialog({ kind: 'pick-stash' }) : onAction('stash-pop'))}
                         >
-                            Pop stash
+                            {t('git.actions.popStash')}
                             {stashes.length > 1 && <span className={MENU_HINT}>{stashes.length}</span>}
                         </Menu.Item>
                         {canPullRequest && (
@@ -720,7 +722,7 @@ function ActionsMenu({ busy, canPullRequest, stashes, onOpen, onAction, onDialog
                                 <Menu.Separator className={MENU_SEPARATOR} />
                                 <Menu.Item className="menu-item" onClick={onPullRequest}>
                                     <Icon icon={GitPullRequest} size={14} />
-                                    Create pull request...
+                                    {t('git.actions.pullRequest')}
                                 </Menu.Item>
                             </>
                         )}

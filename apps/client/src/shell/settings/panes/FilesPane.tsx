@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Segmented, Stepper, Toggle } from '@/shell/settings/controls';
@@ -5,6 +6,7 @@ import { FILES_TAB_LIMIT_RANGE, useSettings } from '@/state/settings';
 
 /* The two panels beside the canvas: what the Files panel shows and keeps open, and how the Git panel lists what changed. */
 export function FilesPane() {
+    const { t } = useTranslation('settings');
     const filesTabLimit = useSettings((s) => s.filesTabLimit);
     const filesShowHidden = useSettings((s) => s.filesShowHidden);
     const browseStartFolder = useSettings((s) => s.browseStartFolder);
@@ -14,33 +16,35 @@ export function FilesPane() {
 
     return (
         <>
-            <SettingsSection title="Files">
+            <SettingsSection title={t('files.files.title')}>
                 <SettingsRow
-                    label="Open files"
-                    description="Past this number, the oldest unpinned tab closes. Double-click a tab to pin it."
+                    label={t('files.files.openFiles.label')}
+                    description={t('files.files.openFiles.description')}
                     control={
                         <Stepper
                             value={filesTabLimit}
                             min={FILES_TAB_LIMIT_RANGE.min}
                             max={FILES_TAB_LIMIT_RANGE.max}
                             step={FILES_TAB_LIMIT_RANGE.step}
-                            label="Open files"
+                            label={t('files.files.openFiles.label')}
                             onChange={(value) => update({ filesTabLimit: value })}
                         />
                     }
                 />
                 <SettingsRow
-                    label="Show hidden files"
-                    description="Dotfiles and dot folders."
-                    control={<Toggle checked={filesShowHidden} onChange={(checked) => update({ filesShowHidden: checked })} label="Show hidden files" />}
+                    label={t('files.files.hidden.label')}
+                    description={t('files.files.hidden.description')}
+                    control={
+                        <Toggle checked={filesShowHidden} onChange={(checked) => update({ filesShowHidden: checked })} label={t('files.files.hidden.label')} />
+                    }
                 />
                 <SettingsRow
-                    label="Start browsing in"
-                    description="The folder the command palette starts in when you browse. Applies to every machine. Empty or missing falls back to the home folder."
+                    label={t('files.files.browseStart.label')}
+                    description={t('files.files.browseStart.description')}
                     control={
                         <input
                             className="field w-64 font-mono text-code"
-                            aria-label="Start browsing in"
+                            aria-label={t('files.files.browseStart.label')}
                             placeholder="~/projects"
                             value={browseStartFolder}
                             spellCheck={false}
@@ -50,26 +54,28 @@ export function FilesPane() {
                     }
                 />
             </SettingsSection>
-            <SettingsSection title="Git">
+            <SettingsSection title={t('files.git.title')}>
                 <SettingsRow
-                    label="Diff layout"
-                    description="Stacked shows one column. Split puts the old and new versions side by side."
+                    label={t('files.git.layout.label')}
+                    description={t('files.git.layout.description')}
                     control={
                         <Segmented
                             value={diffLayout}
                             options={[
-                                { id: 'stacked', label: 'Stacked' },
-                                { id: 'split', label: 'Split' }
+                                { id: 'stacked', label: t('files.git.layout.options.stacked') },
+                                { id: 'split', label: t('files.git.layout.options.split') }
                             ]}
-                            label="Diff layout"
+                            label={t('files.git.layout.label')}
                             onChange={(value) => update({ diffLayout: value })}
                         />
                     }
                 />
                 <SettingsRow
-                    label="Show whitespace changes"
-                    description="Off hides changes that only touch whitespace, in the diff and in the counts."
-                    control={<Toggle checked={diffWhitespace} onChange={(checked) => update({ diffWhitespace: checked })} label="Show whitespace changes" />}
+                    label={t('files.git.whitespace.label')}
+                    description={t('files.git.whitespace.description')}
+                    control={
+                        <Toggle checked={diffWhitespace} onChange={(checked) => update({ diffWhitespace: checked })} label={t('files.git.whitespace.label')} />
+                    }
                 />
             </SettingsSection>
         </>

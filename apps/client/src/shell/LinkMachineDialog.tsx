@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
+import i18next from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Check, KeyRound, X } from 'lucide-react';
 import { ProjectIconChoiceSchema } from '@ruimte/contracts';
@@ -28,6 +30,7 @@ interface LinkMachineDialogProps {
  * account; the machine signs its own registration for it from the terminal a moment later.
  */
 export function LinkMachineDialog({ open, onOpenChange, initialCode, nested = false }: LinkMachineDialogProps) {
+    const { t } = useTranslation(['shell', 'common']);
     const accountStatus = usePulsarAccount((s) => s.status);
     const account = usePulsarAccount((s) => s.account);
     const accountError = usePulsarAccount((s) => s.error);
@@ -69,7 +72,7 @@ export function LinkMachineDialog({ open, onOpenChange, initialCode, nested = fa
         run(async () => {
             const userCode = normalizeUserCode(typed);
             if (userCode === null) {
-                throw new Error('That is not a code. It is eight letters, like BCDF-GHJK, as the terminal printed it.');
+                throw new Error(i18next.t('shell:linkMachine.badCode'));
             }
             setLookup(await withAccessToken((client, token) => client.lookupDeviceLink(token, { userCode })));
         });
@@ -110,18 +113,14 @@ export function LinkMachineDialog({ open, onOpenChange, initialCode, nested = fa
             <Dialog.Portal>
                 <Dialog.Backdrop className={clsx('dialog-backdrop', nested && 'dialog-backdrop-nested')} forceRender />
                 <Dialog.Popup className={clsx('dialog-popup w-[460px] max-w-[calc(100vw-32px)] p-5', nested && 'dialog-popup-nested')}>
-                    <Dialog.Title className="text-base font-semibold text-text">Link a machine with a code</Dialog.Title>
-                    <Dialog.Description className="mt-1 text-xs text-text-muted">
-                        For a machine without the app: run `ruimte login` there, and enter the code it prints.
-                    </Dialog.Description>
+                    <Dialog.Title className="text-base font-semibold text-text">{t('linkMachine.title')}</Dialog.Title>
+                    <Dialog.Description className="mt-1 text-xs text-text-muted">{t('linkMachine.description')}</Dialog.Description>
 
-                    {step === 'unavailable' && (
-                        <p className="mt-3 text-sm text-text">Approving a machine works in the desktop app and at station.ruimte.app.</p>
-                    )}
-                    {step === 'signing-in' && <p className="mt-3 text-sm text-text-muted">Signing in...</p>}
+                    {step === 'unavailable' && <p className="mt-3 text-sm text-text">{t('linkMachine.unavailable')}</p>}
+                    {step === 'signing-in' && <p className="mt-3 text-sm text-text-muted">{t('linkMachine.signingIn')}</p>}
                     {step === 'sign-in' && (
                         <div className="mt-3 flex flex-col items-start gap-2">
-                            <p className="text-sm text-text">Sign in to the account the machine should join.</p>
+                            <p className="text-sm text-text">{t('linkMachine.signIn')}</p>
                             {accountError !== null && <p className="text-xs break-words text-status-error">{accountError}</p>}
                             <SignInButtons />
                         </div>
@@ -131,7 +130,7 @@ export function LinkMachineDialog({ open, onOpenChange, initialCode, nested = fa
                             <input
                                 autoFocus
                                 className="field mt-3 min-w-0 font-mono text-code tracking-widest uppercase"
-                                aria-label="Code from the terminal"
+                                aria-label={t('linkMachine.codeLabel')}
                                 placeholder="BCDF-GHJK"
                                 value={code}
                                 spellCheck={false}
@@ -145,7 +144,7 @@ export function LinkMachineDialog({ open, onOpenChange, initialCode, nested = fa
                                 }}
                             />
                             {account !== null && (
-                                <p className="mt-1.5 text-xs break-words text-text-faint">The machine joins the account of {accountName(account)}.</p>
+                                <p className="mt-1.5 text-xs break-words text-text-faint">{t('linkMachine.joinsAccount', { account: accountName(account) })}</p>
                             )}
                         </>
                     )}
@@ -158,18 +157,15 @@ export function LinkMachineDialog({ open, onOpenChange, initialCode, nested = fa
                                     <span className="font-mono text-xs text-text-faint">{keyFingerprint(machine.publicKey)}</span>
                                 </span>
                             </div>
-                            <p className="text-xs break-words text-text-muted">
-                                Check that the terminal printed this key fingerprint. Once added, every client signed in to this account can open this machine,
-                                and the machine can see who opens it.
-                            </p>
+                            <p className="text-xs break-words text-text-muted">{t('linkMachine.checkFingerprint')}</p>
                         </div>
                     )}
                     {step === 'added' && (
                         <p className="mt-3 text-sm break-words text-text">
-                            Approved. {machine?.name ?? 'The machine'} joins your account as soon as its terminal finishes, which takes a few seconds.
+                            {t('linkMachine.approved', { machine: machine?.name ?? t('linkMachine.theMachine') })}
                         </p>
                     )}
-                    {step === 'denied' && <p className="mt-3 text-sm break-words text-text">Denied. The terminal says so and nothing was added.</p>}
+                    {step === 'denied' && <p className="mt-3 text-sm break-words text-text">{t('linkMachine.denied')}</p>}
 
                     {failure !== null && (
                         <p className="mt-2 text-xs break-words text-status-error" role="alert">
@@ -180,23 +176,23 @@ export function LinkMachineDialog({ open, onOpenChange, initialCode, nested = fa
                     <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
                         {step === 'enter-code' && (
                             <>
-                                <Button onClick={() => close(false)}>Cancel</Button>
+                                <Button onClick={() => close(false)}>{t('common:action.cancel')}</Button>
                                 <Button variant="primary" disabled={busy || !code} onClick={() => void find()}>
-                                    <Icon icon={KeyRound} size={12} /> Continue
+                                    <Icon icon={KeyRound} size={12} /> {t('linkMachine.continue')}
                                 </Button>
                             </>
                         )}
                         {step === 'confirm' && (
                             <>
                                 <Button disabled={busy} onClick={() => void decide(false)}>
-                                    <Icon icon={X} size={12} /> Deny
+                                    <Icon icon={X} size={12} /> {t('linkMachine.deny')}
                                 </Button>
                                 <Button variant="primary" disabled={busy} onClick={() => void decide(true)}>
-                                    <Icon icon={Check} size={12} /> Add to my account
+                                    <Icon icon={Check} size={12} /> {t('linkMachine.approve')}
                                 </Button>
                             </>
                         )}
-                        {step !== 'enter-code' && step !== 'confirm' && <Button onClick={() => close(false)}>Close</Button>}
+                        {step !== 'enter-code' && step !== 'confirm' && <Button onClick={() => close(false)}>{t('common:action.close')}</Button>}
                     </div>
                 </Dialog.Popup>
             </Dialog.Portal>

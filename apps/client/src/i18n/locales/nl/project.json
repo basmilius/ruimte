@@ -1,0 +1,27 @@
+{
+  "error": {
+    "machineGone": "Die machine staat niet meer in de lijst",
+    "machineDisconnected": "Die machine is niet meer verbonden",
+    "openFailed": "Dat project kon niet worden geopend",
+    "couldNotOpen": "Dat kon niet worden geopend",
+    "canvasNotSaved": "Het canvas kon niet worden opgeslagen",
+    "reopenFailed": "Het project kon niet opnieuw worden geopend"
+  },
+  "close": {
+    "idle": "Er draait niets in dit project. Het gaat naar Recent met het canvas zoals je het achterliet.",
+    "ending_one": "Sluiten beëindigt de lopende sessie. Een terminal verliest zijn scrollback en een agent stopt. Het project gaat naar Recent met het canvas zoals je het achterliet.",
+    "ending_other": "Sluiten beëindigt de {{count}} lopende sessies. Een terminal verliest zijn scrollback en een agent stopt. Het project gaat naar Recent met het canvas zoals je het achterliet."
+  },
+  "showView": {
+    "someone": "Een agent",
+    "alreadyThere": "{{agent}} wees naar {{view}}, waar je al naar keek",
+    "follow": "{{agent}} liet {{view}} zien in de cel waarin je werkte",
+    "go": "{{agent}} vroeg je om naar {{view}} te kijken"
+  },
+  "diagram": {
+    "draft": "Vul het lege diagram \"{{name}}\" met `ruimte-context view diagram {{viewId}}`. Het moet dit laten zien: "
+  },
+  "view": {
+    "fallbackName": "deze weergave"
+  }
+}

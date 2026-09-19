@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { BackgroundServiceBridge, BackgroundServiceState } from '@/desktop/bridge';
 
 export interface MachineUpdatePrompt {
@@ -5,12 +6,8 @@ export interface MachineUpdatePrompt {
     description: string;
 }
 
-const endsWhat = (work: number | null): string => {
-    if (work === null) {
-        return 'This ends the terminals and agents running on it.';
-    }
-    return `This ends ${work} running ${work === 1 ? 'terminal or agent' : 'terminals and agents'}.`;
-};
+const endsWhat = (work: number | null): string =>
+    work === null ? i18next.t('shell:machineUpdate.endsUnknown') : i18next.t('shell:machineUpdate.ends', { count: work });
 
 /*
  * The question after an update, while the service still runs the older build because work was
@@ -25,7 +22,7 @@ export const machineUpdatePrompt = (
     if (pending === null || pending.answered || !bridge.restartNow || !bridge.restartWhenIdle) {
         return null;
     }
-    return { title: 'Ruimte was updated', description: `Restart this machine now? ${endsWhat(pending.work)}` };
+    return { title: i18next.t('shell:machineUpdate.title'), description: i18next.t('shell:machineUpdate.description', { ends: endsWhat(pending.work) }) };
 };
 
 export type MachineUpdateAnswer = 'restart-now' | 'when-idle';
@@ -35,4 +32,4 @@ export const machineUpdateAnswer = (action: 'restart' | 'idle' | 'dismiss'): Mac
 
 /* The line in This machine while the older build keeps running, which is where "Restart now" stays reachable. */
 export const pendingRestartLine = (state: BackgroundServiceState): string | null =>
-    state.pendingRestart ? 'Ruimte was updated, and this machine still runs the previous version. It restarts on its own once nothing runs on it.' : null;
+    state.pendingRestart ? i18next.t('shell:machineUpdate.pendingLine') : null;

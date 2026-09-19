@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { isRecentProject } from '@ruimte/contracts';
 import { FolderOpen, LogIn, MonitorSmartphone, Plus, RotateCw } from 'lucide-react';
 import { isDesktop } from '@/desktop/bridge';
@@ -69,8 +70,9 @@ function MachineRow({ entry }: { entry: MachineEntry }) {
 
 /* A project to go back to. A row of a machine that is not connected is what that machine last answered, so it says so. */
 function RecentRow({ row }: { row: ProjectMenuRow }) {
+    const { t } = useTranslation('shell');
     const { summary } = row;
-    const where = [row.machineLabel, row.connected ? null : 'not connected', isRecentProject(summary) ? 'closed' : null]
+    const where = [row.machineLabel, row.connected ? null : t('start.notConnected'), isRecentProject(summary) ? t('start.closed') : null]
         .filter((part) => part !== null)
         .join(' · ');
     return (
@@ -86,7 +88,8 @@ function RecentRow({ row }: { row: ProjectMenuRow }) {
 
 /* The project the cold start could not open, on top of Recent with why, one click from trying again. */
 function FailedRow({ failure, row }: { failure: BootFailure; row: ProjectMenuRow | null }) {
-    const machine = useEndpoints((s) => s.endpoints.find((endpoint) => endpoint.id === failure.endpointId)?.label ?? 'Another machine');
+    const { t } = useTranslation(['shell', 'common']);
+    const machine = useEndpoints((s) => s.endpoints.find((endpoint) => endpoint.id === failure.endpointId)?.label ?? t('start.anotherMachine'));
     return (
         <div className="flex min-h-10 w-full min-w-0 items-center gap-3 rounded-md px-2 py-1.5">
             {row ? (
@@ -95,13 +98,13 @@ function FailedRow({ failure, row }: { failure: BootFailure; row: ProjectMenuRow
                 <span className="size-4 shrink-0 rounded-sm bg-text-faint" />
             )}
             <span className="flex min-w-0 grow flex-col">
-                <span className="truncate text-sm text-text">{row?.summary.name ?? 'The last project'}</span>
+                <span className="truncate text-sm text-text">{row?.summary.name ?? t('start.lastProject')}</span>
                 <span className="truncate text-xs text-status-error">
                     {machine} · {failure.reason}
                 </span>
             </span>
             <Button size="sm" variant="secondary" onClick={() => void openProject(failure.endpointId, failure.projectId)}>
-                <Icon icon={RotateCw} size={12} /> Try again
+                <Icon icon={RotateCw} size={12} /> {t('common:action.retry')}
             </Button>
         </div>
     );
@@ -109,6 +112,7 @@ function FailedRow({ failure, row }: { failure: BootFailure; row: ProjectMenuRow
 
 /* Signing in, as a card with the buttons of every provider: one click would have to guess which. */
 function SignInCard({ description }: { description: string }) {
+    const { t } = useTranslation('shell');
     const notice = usePulsarAccount((s) => s.notice);
     const error = usePulsarAccount((s) => s.error);
     return (
@@ -118,7 +122,7 @@ function SignInCard({ description }: { description: string }) {
                     <Icon icon={LogIn} size={16} />
                 </span>
                 <span className="flex min-w-0 flex-col">
-                    <span className="text-sm font-medium text-text">Sign in</span>
+                    <span className="text-sm font-medium text-text">{t('start.signIn')}</span>
                     <span className={clsx('text-xs', error ? 'text-status-error' : 'text-text-muted')}>{notice ?? error ?? description}</span>
                 </span>
             </span>
@@ -131,20 +135,21 @@ const FOOTER_BUTTON = 'flex items-center gap-1.5 rounded-sm hover:text-text';
 
 /* The keys that work from here, and which Ruimte this is. It stays at the bottom, and what scrolls under it fades out. */
 function Footer() {
+    const { t } = useTranslation('shell');
     const currentVersion = useUpdates((s) => s.currentVersion);
     const version = isDesktop() && currentVersion ? currentVersion : null;
     return (
         <footer className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 bg-linear-to-t from-bg from-40% to-transparent px-8 pt-10 pb-4 text-xs text-text-faint *:pointer-events-auto">
             <button className={FOOTER_BUTTON} onClick={() => runAppShortcut('palette')}>
-                <Kbd shortcut={APP_SHORTCUTS.palette} className={TOOLTIP_KBD} /> Command palette
+                <Kbd shortcut={APP_SHORTCUTS.palette} className={TOOLTIP_KBD} /> {t('start.commandPalette')}
             </button>
             <button className={FOOTER_BUTTON} onClick={() => runAppShortcut('settings')}>
-                <Kbd shortcut={APP_SHORTCUTS.settings} className={TOOLTIP_KBD} /> Settings
+                <Kbd shortcut={APP_SHORTCUTS.settings} className={TOOLTIP_KBD} /> {t('settingsDialog.title')}
             </button>
-            {version && <span>Version {version}</span>}
+            {version && <span>{t('connection.version', { version })}</span>}
             {version && canShowReleaseNotes() && (
                 <button className={FOOTER_BUTTON} onClick={() => openReleaseNotes(version)}>
-                    What's new
+                    {t('start.whatsNew')}
                 </button>
             )}
         </footer>
@@ -152,6 +157,7 @@ function Footer() {
 }
 
 function StartContent() {
+    const { t } = useTranslation('shell');
     const endpoints = useEndpoints((s) => s.endpoints);
     const activeId = useEndpoints((s) => s.activeId);
     const rows = useProjectList((s) => s.projects);
@@ -184,11 +190,9 @@ function StartContent() {
     const openFolder = (): void => useUi.getState().openFolderBrowser();
 
     const machineList = (
-        <Section label="Machines">
+        <Section label={t('start.machines')}>
             {machines.length === 0 ? (
-                <p className="px-2 text-xs text-text-muted">
-                    No machine is on your account yet. Sign in to the desktop app on a machine that runs with a broker, and it joins your account on its own.
-                </p>
+                <p className="px-2 text-xs text-text-muted">{t('start.noMachines')}</p>
             ) : (
                 <div className="flex flex-col gap-px">
                     {machines.map((entry) => (
@@ -207,77 +211,75 @@ function StartContent() {
                 <div className="mx-auto flex w-full max-w-md grow flex-col gap-3">
                     <Tile
                         icon={<Icon icon={FolderOpen} size={16} />}
-                        title="Open folder"
-                        description="The folder of something you work on"
+                        title={t('projectMenu.openFolder')}
+                        description={t('start.openFolderFirst')}
                         primary
                         className="py-5"
                         onClick={openFolder}
                     />
-                    <p className="px-1 pb-2 text-center text-xs text-text-muted">
-                        A project is a folder with a .ruimte/project.json in it, which Ruimte writes the first time the folder opens.
-                    </p>
+                    <p className="px-1 pb-2 text-center text-xs text-text-muted">{t('start.projectIsAFolder')}</p>
                     <div className="grid grid-cols-2 gap-2">
                         <Tile
                             icon={<Icon icon={Plus} size={16} />}
-                            title="New project"
-                            description="Without a folder"
+                            title={t('projectMenu.newProject')}
+                            description={t('start.withoutFolder')}
                             disabled={newOn === null}
                             onClick={() => setDialog('new')}
                         />
                         <Tile
                             icon={<Icon icon={MonitorSmartphone} size={16} />}
-                            title="Connect machine"
-                            description="With a link"
+                            title={t('start.connectMachine')}
+                            description={t('start.withALink')}
                             onClick={() => setDialog('add')}
                         />
                     </div>
-                    {offerSignIn && <SignInCard description="Reach the machines on your account." />}
+                    {offerSignIn && <SignInCard description={t('start.reachMachines')} />}
                 </div>
             ) : (
                 <div className="grid grow grid-cols-1 items-start gap-10 md:grid-cols-2">
                     <div className="flex min-w-0 flex-col gap-8">
                         {boot === 'machines' && machineList}
-                        <Section label="Start">
+                        <Section label={t('start.start')}>
                             <div className="flex flex-col gap-2">
-                                {boot === 'sign-in' && <SignInCard description="Sign in to open the machines on your account from this browser." />}
+                                {boot === 'sign-in' && <SignInCard description={t('start.signInForMachines')} />}
                                 {(boot === 'loading' || boot === 'signing-in') && (
                                     <Tile
                                         icon={<Icon icon={LogIn} size={16} />}
-                                        title={boot === 'signing-in' ? 'Signing in...' : 'Looking up your machines...'}
-                                        description="Everything else waits for your machines"
+                                        title={boot === 'signing-in' ? t('linkMachine.signingIn') : t('start.lookingUpMachines')}
+                                        description={t('start.waitsForMachines')}
                                         disabled
                                     />
                                 )}
                                 <Tile
                                     icon={<Icon icon={FolderOpen} size={16} />}
-                                    title="Open folder"
-                                    description="On a machine"
+                                    title={t('projectMenu.openFolder')}
+                                    description={t('start.onAMachine')}
                                     primary={!waiting}
                                     disabled={waiting}
                                     onClick={openFolder}
                                 />
                                 <Tile
                                     icon={<Icon icon={Plus} size={16} />}
-                                    title="New project"
-                                    description={newOn === null ? 'Open a machine first' : 'Without a folder'}
+                                    title={t('projectMenu.newProject')}
+                                    description={newOn === null ? t('start.openMachineFirst') : t('start.withoutFolder')}
                                     disabled={waiting || newOn === null}
                                     onClick={() => setDialog('new')}
                                 />
                                 <Tile
                                     icon={<Icon icon={MonitorSmartphone} size={16} />}
-                                    title="Connect machine"
-                                    description="With a pairing link"
+                                    title={t('start.connectMachine')}
+                                    description={t('start.withPairingLink')}
                                     disabled={waiting}
                                     onClick={() => setDialog('add')}
                                 />
-                                {offerSignIn && <SignInCard description="Reach the machines on your account." />}
+                                {offerSignIn && <SignInCard description={t('start.reachMachines')} />}
                             </div>
                         </Section>
                         {boot === null && machineList}
                     </div>
                     <div className="flex min-w-0 flex-col gap-8">
                         {(failure !== null || listed.length > 0) && (
-                            <Section label="Recent">
+                            <Section label={t('start.recent')}>
                                 <div className="flex flex-col gap-px">
                                     {failure !== null && <FailedRow failure={failure} row={failedRow} />}
                                     {listed.map((row) => (
@@ -293,10 +295,10 @@ function StartContent() {
             <ProjectNameDialog
                 open={dialog === 'new'}
                 onOpenChange={(open) => setDialog(open ? 'new' : null)}
-                title="New project"
-                description="Stored in the app, not in a folder. To share a project through git, open a folder instead."
-                action="Create"
-                fallback="Untitled project"
+                title={t('projectMenu.newProject')}
+                description={t('projectMenu.newProjectDescription')}
+                action={t('projectMenu.create')}
+                fallback={t('projectMenu.untitled')}
                 onSubmit={async (name) => {
                     if (newOn !== null) {
                         await createProjectOn(newOn, name);
@@ -319,13 +321,14 @@ function StartContent() {
  * are. It fills the window and has no sidebar, so the strip at the top is what drags the window.
  */
 export function StartScreen() {
+    const { t } = useTranslation('shell');
     const inset = useTrafficLightInset();
     return (
         <div className="flex h-full w-full flex-col bg-bg">
             <div className="app-drag h-12 shrink-0" style={{ paddingLeft: inset ?? STRIP_PADDING_PX }} />
             <div className="relative min-h-0 grow">
                 <div className="h-full overflow-auto">
-                    <ErrorBoundary label="The start screen failed to render">
+                    <ErrorBoundary label={t('start.failed')}>
                         <StartContent />
                     </ErrorBoundary>
                 </div>

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toolSummary } from '@/chat/logic/tools';
 import { answerValue, promptAnswers, questionAnswer, type PromptAction, type PromptDraft } from '@/prompts/logic/prompts';
 import { approvalButtons, type PromptSubject } from '@/prompts/logic/subjects';
@@ -25,6 +26,7 @@ interface Props {
 
 /* A permission request or question, answered in place: a chat's, or a terminal's drawn the same way. */
 export function PromptView({ subject, draft, onDraft, onAction, more, hasDraft, denyReason, disabled, sending, error, top, onReveal }: Props) {
+    const { t } = useTranslation('prompts');
     const locked = sending || disabled;
     const buttons = approvalButtons(subject, draft.reason).map(({ action, ...button }) => ({ ...button, onPress: () => onAction(action) }));
 
@@ -32,18 +34,18 @@ export function PromptView({ subject, draft, onDraft, onAction, more, hasDraft, 
         return (
             <PromptCard
                 kind="waiting"
-                heading="Waiting for you in its terminal"
+                heading={t('waiting.heading')}
                 top={top}
                 busy={false}
                 disabled={false}
                 error={null}
                 actions={
                     <div className="ml-auto flex items-center">
-                        <PromptPrimary onClick={onReveal}>Go to terminal</PromptPrimary>
+                        <PromptPrimary onClick={onReveal}>{t('waiting.goToTerminal')}</PromptPrimary>
                     </div>
                 }
             >
-                <p className="text-sm text-text-muted">This question can only be answered in the terminal.</p>
+                <p className="text-sm text-text-muted">{t('waiting.body')}</p>
             </PromptCard>
         );
     }
@@ -53,7 +55,7 @@ export function PromptView({ subject, draft, onDraft, onAction, more, hasDraft, 
         return (
             <PromptCard
                 kind="approval"
-                heading={request.toolName === 'Bash' ? 'Run command' : request.toolName}
+                heading={request.toolName === 'Bash' ? t('approval.runCommand') : request.toolName}
                 top={top}
                 busy={sending}
                 disabled={disabled}
@@ -89,13 +91,9 @@ export function PromptView({ subject, draft, onDraft, onAction, more, hasDraft, 
     const meta =
         more > 0 || hasDraft || multiple ? (
             <>
-                {more > 0 && <span className="tabular-nums">{more + 1} requests waiting</span>}
-                {multiple && (
-                    <span className="tabular-nums">
-                        Question {draft.index + 1} of {item.questions.length}
-                    </span>
-                )}
-                {hasDraft && <span>Draft saved</span>}
+                {more > 0 && <span className="tabular-nums">{t('meta.waiting', { count: more + 1 })}</span>}
+                {multiple && <span className="tabular-nums">{t('meta.question', { index: draft.index + 1, total: item.questions.length })}</span>}
+                {hasDraft && <span>{t('meta.draftSaved')}</span>}
             </>
         ) : null;
 
@@ -103,7 +101,7 @@ export function PromptView({ subject, draft, onDraft, onAction, more, hasDraft, 
         return (
             <PromptCard
                 kind="approval"
-                heading={`${item.toolName === 'Bash' ? 'Run command' : item.toolName} ${item.toolName === 'Bash' ? '' : toolSummary(item.toolName, item.input)}`}
+                heading={`${item.toolName === 'Bash' ? t('approval.runCommand') : item.toolName} ${item.toolName === 'Bash' ? '' : toolSummary(item.toolName, item.input)}`}
                 meta={meta}
                 top={top}
                 busy={sending}

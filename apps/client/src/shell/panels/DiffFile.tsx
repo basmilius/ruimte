@@ -1,4 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
+import i18next from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { Columns2, FileDiff, FileWarning, GitBranch, GitCompare, LoaderCircle, RefreshCw, Rows2, Space, WrapText } from 'lucide-react';
 import type { GitDiffFile, GitDiffPayload, GitDiffResult, GitDiffScope } from '@ruimte/contracts';
 import { FILE_TOOLBAR } from '@/shell/panels/classes';
@@ -19,7 +21,8 @@ const UnifiedDiff = lazy(() => import('@/chat/ui/UnifiedDiff'));
 
 type DiffState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; diff: GitDiffResult };
 
-const omittedLabel = (omitted: GitDiffResult['omitted']): string => (omitted === 'binary' ? 'Binary files have no diff.' : 'This diff is too large to show.');
+const omittedLabel = (omitted: GitDiffResult['omitted']): string =>
+    omitted === 'binary' ? i18next.t('panels:diff.omitted.binary') : i18next.t('panels:diff.omitted.tooLarge');
 
 /*
  * A changed file as its diff, in a tab of the preview panel next to the tab that holds the file
@@ -38,6 +41,7 @@ export function DiffFile({ tabKey, path, name, view }: { tabKey: string; path: s
 
 /* One changed file, in whichever scope the tab is set to. */
 function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: string; name: string; view: FileTabView }) {
+    const { t } = useTranslation('panels');
     const layout = useSettings((s) => s.diffLayout);
     const whitespace = useSettings((s) => s.diffWhitespace);
     const [wrap, setWrap] = useState(true);
@@ -69,7 +73,7 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
             })
             .catch((error: unknown) => {
                 if (alive) {
-                    setHeld({ asked, state: { status: 'error', message: error instanceof Error ? error.message : 'Could not read the diff.' } });
+                    setHeld({ asked, state: { status: 'error', message: error instanceof Error ? error.message : i18next.t('panels:diff.readFailed') } });
                 }
             });
         return () => {
@@ -92,23 +96,23 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
                     <span className={BTN_GROUP}>
                         <FileToolbarToggle
                             icon={FileDiff}
-                            label="Against the working tree"
+                            label={t('diff.scope.worktree')}
                             active={view.scope === 'worktree'}
                             onClick={() => setScope('worktree')}
                         />
-                        <FileToolbarToggle icon={GitBranch} label="Against the base branch" active={view.scope === 'base'} onClick={() => setScope('base')} />
+                        <FileToolbarToggle icon={GitBranch} label={t('diff.scope.base')} active={view.scope === 'base'} onClick={() => setScope('base')} />
                     </span>
                     <Separator />
                     <span className={BTN_GROUP}>
                         <FileToolbarToggle
                             icon={Rows2}
-                            label="Stacked"
+                            label={t('diff.layout.stacked')}
                             active={layout === 'stacked'}
                             onClick={() => useSettings.getState().update({ diffLayout: 'stacked' })}
                         />
                         <FileToolbarToggle
                             icon={Columns2}
-                            label="Split"
+                            label={t('diff.layout.split')}
                             active={layout === 'split'}
                             onClick={() => useSettings.getState().update({ diffLayout: 'split' })}
                         />
@@ -116,13 +120,13 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
                     <Separator />
                     <FileToolbarToggle
                         icon={Space}
-                        label={whitespace ? 'Ignore whitespace changes' : 'Show whitespace changes'}
+                        label={whitespace ? t('diff.whitespace.ignore') : t('diff.whitespace.show')}
                         active={whitespace}
                         onClick={() => useSettings.getState().update({ diffWhitespace: !whitespace })}
                     />
                     <FileToolbarToggle
                         icon={WrapText}
-                        label={wrap ? 'Stop wrapping long lines' : 'Wrap long lines'}
+                        label={wrap ? t('file.code.unwrap') : t('file.code.wrap')}
                         active={wrap}
                         onClick={() => setWrap(!wrap)}
                     />
@@ -134,10 +138,11 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
 }
 
 function DiffBody({ state, wrap, layout, relative }: { state: DiffState; wrap: boolean; layout: 'stacked' | 'split'; relative: string }) {
+    const { t } = useTranslation('panels');
     if (state.status === 'loading') {
         return (
             <div className="file-diff grid min-h-0 grow place-items-center">
-                <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>Reading the diff of {relative}...</EmptyState>
+                <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>{t('diff.reading', { path: relative })}</EmptyState>
             </div>
         );
     }
@@ -158,13 +163,13 @@ function DiffBody({ state, wrap, layout, relative }: { state: DiffState; wrap: b
     if (state.diff.diff === '') {
         return (
             <div className="file-diff grid min-h-0 grow place-items-center">
-                <EmptyState icon={<Icon icon={GitCompare} size={20} />}>Nothing changed in {relative} in this scope.</EmptyState>
+                <EmptyState icon={<Icon icon={GitCompare} size={20} />}>{t('diff.noChange', { path: relative })}</EmptyState>
             </div>
         );
     }
     return (
         <div className="file-diff min-h-0 grow overflow-auto">
-            <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">Loading diff</div>}>
+            <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">{t('diff.loading')}</div>}>
                 <UnifiedDiff
                     change={{ path: relative, kind: 'update', diff: state.diff.diff }}
                     overflow={wrap ? 'wrap' : 'scroll'}
@@ -184,6 +189,7 @@ type CommitState = { status: 'loading' } | { status: 'error'; message: string } 
  * tab is a whole checkout against `base`, which is how a worktree shows what it holds.
  */
 function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string; commit?: string; base?: string | null }) {
+    const { t } = useTranslation('panels');
     const layout = useSettings((s) => s.diffLayout);
     const [wrap, setWrap] = useState(true);
     const [now] = useState(() => Math.floor(Date.now() / 1000));
@@ -210,7 +216,7 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
             })
             .catch((error: unknown) => {
                 if (alive) {
-                    setHeld({ asked, state: { status: 'error', message: error instanceof Error ? error.message : 'Could not read the commit.' } });
+                    setHeld({ asked, state: { status: 'error', message: error instanceof Error ? error.message : i18next.t('panels:diff.commitFailed') } });
                 }
             });
         return () => {
@@ -225,36 +231,36 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <div className={FILE_TOOLBAR}>
                 <span className="truncate font-mono text-xs text-text-muted">
-                    {commit === undefined ? `Since ${base ?? 'the base branch'}` : (meta?.shortHash ?? commit.slice(0, 7))}
+                    {commit === undefined ? t('diff.since', { base: base ?? t('worktree.baseBranch') }) : (meta?.shortHash ?? commit.slice(0, 7))}
                 </span>
                 <span className="grow" />
                 {commit === undefined && (
                     <>
-                        <FileToolbarToggle icon={RefreshCw} label="Read again" active={false} onClick={() => setNonce((count) => count + 1)} />
+                        <FileToolbarToggle icon={RefreshCw} label={t('diff.readAgain')} active={false} onClick={() => setNonce((count) => count + 1)} />
                         <Separator />
                     </>
                 )}
                 <span className={BTN_GROUP}>
                     <FileToolbarToggle
                         icon={Rows2}
-                        label="Stacked"
+                        label={t('diff.layout.stacked')}
                         active={layout === 'stacked'}
                         onClick={() => useSettings.getState().update({ diffLayout: 'stacked' })}
                     />
                     <FileToolbarToggle
                         icon={Columns2}
-                        label="Split"
+                        label={t('diff.layout.split')}
                         active={layout === 'split'}
                         onClick={() => useSettings.getState().update({ diffLayout: 'split' })}
                     />
                 </span>
                 <Separator />
-                <FileToolbarToggle icon={WrapText} label={wrap ? 'Stop wrapping long lines' : 'Wrap long lines'} active={wrap} onClick={() => setWrap(!wrap)} />
+                <FileToolbarToggle icon={WrapText} label={wrap ? t('file.code.unwrap') : t('file.code.wrap')} active={wrap} onClick={() => setWrap(!wrap)} />
             </div>
             {state.status === 'loading' && (
                 <div className="file-diff grid min-h-0 grow place-items-center">
                     <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>
-                        {commit === undefined ? 'Reading the changes.' : 'Reading the commit.'}
+                        {commit === undefined ? t('diff.readingChanges') : t('diff.readingCommit')}
                     </EmptyState>
                 </div>
             )}
@@ -269,8 +275,8 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
                         {commit === undefined ? (
                             <p className="text-xs text-text-faint">
                                 {files.length === 0
-                                    ? `Nothing changed since ${base ?? 'the base branch'}.`
-                                    : `Commits, uncommitted changes and new files since ${base ?? 'the base branch'}.`}
+                                    ? t('diff.nothingSince', { base: base ?? t('worktree.baseBranch') })
+                                    : t('diff.sinceSummary', { base: base ?? t('worktree.baseBranch') })}
                             </p>
                         ) : (
                             <>
@@ -290,9 +296,9 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
                                 </li>
                             ))}
                         </ul>
-                        {state.diff.truncated === true && <p className="mt-2 text-xs text-text-faint">More files changed than this list holds.</p>}
+                        {state.diff.truncated === true && <p className="mt-2 text-xs text-text-faint">{t('diff.moreFiles')}</p>}
                     </div>
-                    <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">Loading diff</div>}>
+                    <Suspense fallback={<div className="px-3 py-2 text-xs text-text-faint">{t('diff.loading')}</div>}>
                         {files.map((file) =>
                             file.diff === '' ? (
                                 <p key={file.path} className="px-3 py-2 text-xs text-text-faint">

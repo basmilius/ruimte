@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { desktop } from '@/desktop/bridge';
 
 export interface MicrophoneSnapshot {
@@ -153,24 +154,24 @@ export class MicrophoneMonitor {
 
     async #open(): Promise<MediaStream> {
         if ((await desktop()?.requestMicrophoneAccess?.()) === false) {
-            throw new DOMException('Microphone access is disabled in System Settings', 'NotAllowedError');
+            throw new DOMException(i18next.t('voice:error.microphoneDisabled'), 'NotAllowedError');
         }
         const stream = await openMicrophoneStream(this.#deviceId);
         if (this.#stopped) {
             stream.getTracks().forEach((track) => track.stop());
-            throw new DOMException('The microphone test was stopped', 'AbortError');
+            throw new DOMException(i18next.t('voice:error.microphoneStopped'), 'AbortError');
         }
         const track = stream.getAudioTracks()[0];
         if (!track) {
             stream.getTracks().forEach((candidate) => candidate.stop());
-            throw new Error('No microphone audio track was available');
+            throw new Error(i18next.t('voice:error.noAudioTrack'));
         }
         this.#stream = stream;
         this.#waveform = new WaveformMonitor((bands) => {
-            this.#onSnapshot({ deviceName: track.label || 'Default microphone', bands, trackStatus: this.#trackStatus(track) });
+            this.#onSnapshot({ deviceName: track.label || i18next.t('voice:microphone.default'), bands, trackStatus: this.#trackStatus(track) });
         });
         this.#onSnapshot({
-            deviceName: track.label || 'Default microphone',
+            deviceName: track.label || i18next.t('voice:microphone.default'),
             bands: Array(WAVEFORM_BAND_COUNT).fill(0),
             trackStatus: this.#trackStatus(track)
         });

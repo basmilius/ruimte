@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import clsx from 'clsx';
 import { Check, ChevronDown, GitBranch, Plus, Search } from 'lucide-react';
@@ -40,6 +41,7 @@ const prefixOf = (target: GitTarget): string | null => {
 };
 
 export function BranchMenu({ target, targets, branch, detached, refs, loading, onOpen, onPickTarget, onCheckout, onCreate }: BranchMenuProps) {
+    const { t } = useTranslation('panels');
     const [query, setQuery] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -48,7 +50,7 @@ export function BranchMenu({ target, targets, branch, detached, refs, loading, o
         return needle === '' ? refs : refs.filter((ref) => ref.name.toLowerCase().includes(needle));
     }, [refs, query]);
 
-    const label = detached ? 'detached' : (branch ?? target.label);
+    const label = detached ? t('git.branchMenu.detached') : (branch ?? target.label);
     const prefix = prefixOf(target);
     const current = refs.find((ref) => ref.current)?.name ?? branch ?? '';
 
@@ -61,7 +63,7 @@ export function BranchMenu({ target, targets, branch, detached, refs, loading, o
                 }
             }}
         >
-            <Tooltip label={prefix === null ? 'The branch this checkout is on' : `${label}, in the worktree ${prefix}`}>
+            <Tooltip label={prefix === null ? t('git.branchMenu.tooltip') : t('git.branchMenu.tooltipWorktree', { branch: label, worktree: prefix })}>
                 <Menu.Trigger className="inline-flex h-6 min-w-0 shrink items-center gap-1 rounded-full bg-surface-sunken px-2 text-xs text-text-muted hover:text-text">
                     <Icon icon={GitBranch} size={12} className="shrink-0" />
                     {prefix !== null && <span className="max-w-24 truncate text-text-faint">{prefix}</span>}
@@ -72,7 +74,7 @@ export function BranchMenu({ target, targets, branch, detached, refs, loading, o
             <Menu.Portal>
                 <Menu.Positioner className="z-(--z-popup)" side="bottom" align="start" sideOffset={6}>
                     <Menu.Popup className="menu-popup max-h-96 w-80 overflow-y-auto">
-                        <div className={MENU_LABEL}>Checkout</div>
+                        <div className={MENU_LABEL}>{t('git.branchMenu.checkout')}</div>
                         <Menu.RadioGroup
                             value={target.cwd ?? ''}
                             onValueChange={(value: string) => {
@@ -95,15 +97,15 @@ export function BranchMenu({ target, targets, branch, detached, refs, loading, o
                             ))}
                             {targets.length === 0 && (
                                 <Menu.Item className="menu-item" disabled>
-                                    No checkouts
+                                    {t('git.branchMenu.noCheckouts')}
                                 </Menu.Item>
                             )}
                         </Menu.RadioGroup>
                         <Menu.Separator className={MENU_SEPARATOR} />
-                        <div className={MENU_LABEL}>Branches</div>
+                        <div className={MENU_LABEL}>{t('git.branchMenu.branches')}</div>
                         <Menu.Item className="menu-item" onClick={onCreate}>
                             <Icon icon={Plus} size={14} />
-                            Create branch...
+                            {t('git.branchMenu.create')}
                         </Menu.Item>
                         {refs.length > FILTER_FROM && (
                             <div className="mx-1 my-1 flex items-center gap-2 rounded-lg border border-border px-2.5">
@@ -111,7 +113,7 @@ export function BranchMenu({ target, targets, branch, detached, refs, loading, o
                                 <input
                                     ref={inputRef}
                                     className="h-8 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
-                                    placeholder="Search branches"
+                                    placeholder={t('git.branchMenu.search')}
                                     spellCheck={false}
                                     value={query}
                                     onChange={(event) => setQuery(event.target.value)}
@@ -126,8 +128,8 @@ export function BranchMenu({ target, targets, branch, detached, refs, loading, o
                                 />
                             </div>
                         )}
-                        {loading && <p className="px-3 py-2 text-xs text-text-faint">Reading the branches.</p>}
-                        {!loading && shown.length === 0 && <p className="px-3 py-2 text-xs text-text-faint">No branch by that name.</p>}
+                        {loading && <p className="px-3 py-2 text-xs text-text-faint">{t('git.branchMenu.loading')}</p>}
+                        {!loading && shown.length === 0 && <p className="px-3 py-2 text-xs text-text-faint">{t('git.branchMenu.noMatch')}</p>}
                         <Menu.RadioGroup
                             value={current}
                             onValueChange={(value: string) => {
@@ -150,8 +152,8 @@ export function BranchMenu({ target, targets, branch, detached, refs, loading, o
                                         </Menu.RadioItemIndicator>
                                     </span>
                                     <span className="truncate font-mono text-xs">{ref.name}</span>
-                                    {ref.isDefault && <span className={MENU_HINT}>default</span>}
-                                    {ref.worktree !== undefined && <span className={`${MENU_HINT} truncate`}>in another worktree</span>}
+                                    {ref.isDefault && <span className={MENU_HINT}>{t('git.branchMenu.default')}</span>}
+                                    {ref.worktree !== undefined && <span className={`${MENU_HINT} truncate`}>{t('git.branchMenu.inWorktree')}</span>}
                                 </Menu.RadioItem>
                             ))}
                         </Menu.RadioGroup>

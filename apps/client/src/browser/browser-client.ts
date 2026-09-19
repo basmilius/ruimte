@@ -1,4 +1,5 @@
 import type { BrowserFrame, BrowserInfo, BrowserInput, LiveStreamFrame } from '@ruimte/contracts';
+import i18next from 'i18next';
 import { endpointKey } from '@/state/keys';
 import { useBrowser } from './registry';
 import { TransportError, type Transport, type TransportStatus } from '@/transport/transport';
@@ -187,7 +188,7 @@ export class BrowserClient {
     private fail(browserId: string, error: unknown): void {
         useBrowser.getState().patch(endpointKey(this.endpointId, browserId), {
             loading: false,
-            streamError: error instanceof Error ? error.message : 'The remote browser failed'
+            streamError: error instanceof Error ? error.message : i18next.t('browser:stream.failed')
         });
     }
 

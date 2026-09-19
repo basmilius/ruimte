@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { CircleCheck } from 'lucide-react';
 import { projectNodes, revealNode } from '@/project/views';
@@ -43,6 +44,7 @@ function Walker({ label, count, ids, children }: { label: string; count: number;
  * `state/attention.ts`, which is also what the dock badge and the shell's quit guard read.
  */
 export function StatusSummary() {
+    const { t } = useTranslation('shell');
     const views = useDocument((s) => s.views);
     const activeViewId = useDocument((s) => s.activeViewId);
     const order = useCanvas(useShallow((s) => s.order));
@@ -64,15 +66,15 @@ export function StatusSummary() {
         <>
             <div className="flex items-center gap-1">
                 {groups.needsYou.length > 0 && (
-                    <Walker label="Go to the next node that needs you, in any view" count={groups.needsYou.length} ids={groups.needsYou}>
+                    <Walker label={t('status.nextNeedsYou')} count={groups.needsYou.length} ids={groups.needsYou}>
                         <StatusDot status="needs-you" plain />
                     </Walker>
                 )}
                 {groups.working.length > 0 && (
-                    <Tooltip label="Agents working">
+                    <Tooltip label={t('status.working')}>
                         <span
                             role="status"
-                            aria-label={`${groups.working.length} agents working`}
+                            aria-label={t('status.workingCount', { count: groups.working.length })}
                             className="flex h-8 items-center gap-1.5 px-2 text-xs tabular-nums text-text-muted"
                         >
                             <StatusDot status="running" plain />
@@ -81,7 +83,7 @@ export function StatusSummary() {
                     </Tooltip>
                 )}
                 {groups.finished.length > 0 && (
-                    <Walker label="Go to the next agent that finished while you were away" count={groups.finished.length} ids={groups.finished}>
+                    <Walker label={t('status.nextFinished')} count={groups.finished.length} ids={groups.finished}>
                         <Icon icon={CircleCheck} size={12} className="text-status-idle" />
                     </Walker>
                 )}

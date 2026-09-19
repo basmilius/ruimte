@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { Bot } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem } from '@ruimte/contracts';
 import { SubagentConversation } from '@/chat/subagent-conversation';
@@ -93,6 +94,7 @@ function Preview({ preview }: { preview: SubagentPreview }) {
 }
 
 function Entry({ chatId, item, work, now }: { chatId: string; item: ChatSubagentItem; work: readonly ChatItem[]; now: number }) {
+    const { t } = useTranslation('chat');
     const endpointId = useEndpointId();
     const refused = useSubagentSupport((s) => s.unsupported[endpointId] === true);
     const taskId = taskIdOf(item);
@@ -112,7 +114,7 @@ function Entry({ chatId, item, work, now }: { chatId: string; item: ChatSubagent
                 onClick={() => show(openFromList(crumbOf(item)))}
             >
                 <span className="flex min-w-0 items-center gap-2">
-                    <Tooltip label={word}>
+                    <Tooltip label={t(`subagents.status.${word}`)}>
                         <span className={clsx(ROW_GUTTER, look.tone)}>
                             <Icon icon={look.icon} size={14} className={clsx(look.spins && 'animate-spin')} />
                         </span>
@@ -120,7 +122,7 @@ function Entry({ chatId, item, work, now }: { chatId: string; item: ChatSubagent
                     {/* The title reads at the size of the chat's own messages; the line under it stays small. */}
                     <span className="min-w-0 truncate text-sm font-medium text-text">{subagentTitle(item)}</span>
                     {/* The icon says the state to the eye; a screen reader hears it with the title. */}
-                    <span className="sr-only">, {word}</span>
+                    <span className="sr-only">, {t(`subagents.status.${word}`)}</span>
                     {time !== null && <span className="ml-auto shrink-0 pl-3 text-text-muted tabular-nums">{time}</span>}
                 </span>
                 {preview !== null && (
@@ -168,6 +170,7 @@ function Section({
  * settled under Done, each with the latest thing it did. Picking one opens its conversation.
  */
 export function SubagentList({ chatId }: { chatId: string }) {
+    const { t } = useTranslation('chat');
     const subagents = useOpenableSubagents(chatId);
     const order = useChatRow(chatId, (row) => row?.order) ?? NO_ITEMS;
     const structure = useChatRow(chatId, (row) => row?.structure) ?? NO_STRUCTURE;
@@ -175,13 +178,13 @@ export function SubagentList({ chatId }: { chatId: string }) {
     const sections = useMemo(() => sectionSubagents(subagents, work), [subagents, work]);
     const now = useListClock(sections.active.length > 0);
     if (subagents.length === 0) {
-        return <EmptyState icon={<Icon icon={Bot} size={16} />}>This chat has no sub-agents to open.</EmptyState>;
+        return <EmptyState icon={<Icon icon={Bot} size={16} />}>{t('subagents.empty')}</EmptyState>;
     }
     return (
         <div className="chat-thread h-full min-h-0 overflow-auto px-4 pt-1 pb-3">
             <div className="chat-column-content flex flex-col gap-4">
-                <Section label="Active" chatId={chatId} items={sections.active} work={work} now={now} />
-                <Section label="Done" chatId={chatId} items={sections.done} work={work} now={now} />
+                <Section label={t('subagents.active')} chatId={chatId} items={sections.active} work={work} now={now} />
+                <Section label={t('subagents.done')} chatId={chatId} items={sections.done} work={work} now={now} />
             </div>
         </div>
     );

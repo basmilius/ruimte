@@ -9,6 +9,7 @@ import {
     type MouseEvent as ReactMouseEvent,
     type ReactNode
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import { FileTree, useFileTree } from '@pierre/trees/react';
@@ -101,6 +102,7 @@ const EMPTY_CACHE: EntryCache = new Map();
  * agent writes shows up on its own.
  */
 export function FilesPanel() {
+    const { t } = useTranslation('panels');
     const folder = useProject((s) => s.current?.folder ?? null);
     const platform = useServer((s) => s.platform);
     const reachability = useServer((s) => s.reachability);
@@ -429,7 +431,7 @@ export function FilesPanel() {
     if (!folder) {
         return (
             <div className="grid grow place-items-center">
-                <EmptyState icon={<Icon icon={Folder} size={20} />}>This canvas has no folder.</EmptyState>
+                <EmptyState icon={<Icon icon={Folder} size={20} />}>{t('git.panel.noFolder')}</EmptyState>
             </div>
         );
     }
@@ -438,20 +440,22 @@ export function FilesPanel() {
        way, a folder with nothing in it, or a filter nothing here answers to. */
     const placeholder = (): ReactNode => {
         if (searching) {
-            return matches.length > 0 ? null : <EmptyState icon={<Icon icon={Search} size={20} />}>No files match the filter.</EmptyState>;
+            return matches.length > 0 ? null : <EmptyState icon={<Icon icon={Search} size={20} />}>{t('files.noMatch')}</EmptyState>;
         }
         if (!cache.has(folder)) {
-            return <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>Reading {basenameOf(folder)}.</EmptyState>;
+            return (
+                <EmptyState icon={<Icon icon={LoaderCircle} size={20} className="animate-spin" />}>
+                    {t('files.reading', { name: basenameOf(folder) })}
+                </EmptyState>
+            );
         }
         if (treeInput.paths.length > 0) {
             return null;
         }
         if (!showHidden && (cache.get(folder)?.length ?? 0) > 0) {
-            return (
-                <EmptyState icon={<Icon icon={Folder} size={20} />}>This folder only has hidden files. Turn on Show hidden files in the More menu.</EmptyState>
-            );
+            return <EmptyState icon={<Icon icon={Folder} size={20} />}>{t('files.onlyHidden')}</EmptyState>;
         }
-        return <EmptyState icon={<Icon icon={Folder} size={20} />}>This folder is empty.</EmptyState>;
+        return <EmptyState icon={<Icon icon={Folder} size={20} />}>{t('files.empty')}</EmptyState>;
     };
 
     const empty = placeholder();
@@ -463,8 +467,8 @@ export function FilesPanel() {
                     <Icon icon={Search} size={14} className="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 text-text-faint" aria-hidden />
                     <input
                         className="field h-7 pl-8 text-xs"
-                        placeholder="Filter files"
-                        aria-label="Filter files"
+                        placeholder={t('files.filter')}
+                        aria-label={t('files.filter')}
                         spellCheck={false}
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
@@ -477,7 +481,7 @@ export function FilesPanel() {
                     />
                 </span>
                 <Menu.Root>
-                    <Tooltip label="More" name>
+                    <Tooltip label={t('common:action.more')} name>
                         <Menu.Trigger className="icon-btn h-7 w-7">
                             <Icon icon={MoreHorizontal} size={14} />
                         </Menu.Trigger>
@@ -486,7 +490,7 @@ export function FilesPanel() {
                         <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
                             <Menu.Popup className="menu-popup">
                                 <Menu.Item className="menu-item" onClick={() => useUi.getState().openFindInFiles()}>
-                                    <Icon icon={FileSearch} size={14} /> Find in files <Kbd shortcut={APP_SHORTCUTS.findInFiles} />
+                                    <Icon icon={FileSearch} size={14} /> {t('file.empty.findInFiles')} <Kbd shortcut={APP_SHORTCUTS.findInFiles} />
                                 </Menu.Item>
                                 <Menu.Separator className={MENU_SEPARATOR} />
                                 <Menu.CheckboxItem
@@ -500,18 +504,18 @@ export function FilesPanel() {
                                             <Icon icon={Check} size={12} />
                                         </Menu.CheckboxItemIndicator>
                                     </span>
-                                    Show hidden files
+                                    {t('files.showHidden')}
                                 </Menu.CheckboxItem>
                                 <Menu.Separator className={MENU_SEPARATOR} />
                                 <Menu.Item className="menu-item" onClick={expandAll}>
-                                    <Icon icon={ChevronsUpDown} size={14} /> Expand all folders
+                                    <Icon icon={ChevronsUpDown} size={14} /> {t('git.panel.expandAll')}
                                 </Menu.Item>
                                 <Menu.Item className="menu-item" onClick={collapseAll}>
-                                    <Icon icon={ChevronsDownUp} size={14} /> Collapse all folders
+                                    <Icon icon={ChevronsDownUp} size={14} /> {t('git.panel.collapseAll')}
                                 </Menu.Item>
                                 <Menu.Separator className={MENU_SEPARATOR} />
                                 <Menu.Item className="menu-item" onClick={refresh}>
-                                    <Icon icon={RefreshCw} size={14} /> Refresh
+                                    <Icon icon={RefreshCw} size={14} /> {t('file.menu.refresh')}
                                 </Menu.Item>
                             </Menu.Popup>
                         </Menu.Positioner>
@@ -520,7 +524,7 @@ export function FilesPanel() {
             </div>
             {reachability !== null && reachability !== 'loopback' && (
                 <div className="flex h-7 shrink-0 items-center px-2">
-                    <Pill>{machine ?? 'Remote machine'}</Pill>
+                    <Pill>{machine ?? t('files.remoteMachine')}</Pill>
                 </div>
             )}
             {empty !== null ? (
@@ -553,11 +557,11 @@ export function FilesPanel() {
                         <ContextMenu.Positioner className="z-(--z-popup)">
                             <ContextMenu.Popup className="menu-popup">
                                 <ContextMenu.Item className="menu-item" onClick={onMenuPath((_absolute, treePath) => openPath(treePath))}>
-                                    <Icon icon={FolderOpen} size={14} /> Open
+                                    <Icon icon={FolderOpen} size={14} /> {t('common:action.open')}
                                 </ContextMenu.Item>
                                 {changedStatus !== null && (
                                     <ContextMenu.Item className="menu-item" onClick={openChanges}>
-                                        <Icon icon={FileDiff} size={14} /> Open changes
+                                        <Icon icon={FileDiff} size={14} /> {t('git.list.openChanges')}
                                     </ContextMenu.Item>
                                 )}
                                 <ContextMenu.Item
@@ -566,31 +570,31 @@ export function FilesPanel() {
                                         void transport.request('fs.reveal', { path: absolute }).catch(() => undefined);
                                     })}
                                 >
-                                    <Icon icon={CornerUpRight} size={14} /> Reveal in {fileManagerName(platform)}
+                                    <Icon icon={CornerUpRight} size={14} /> {t('file.revealIn', { app: fileManagerName(platform) })}
                                 </ContextMenu.Item>
                                 {menuPath !== null && !isDirectoryPath(menuPath) && (
                                     <>
                                         <ContextMenu.Separator className={MENU_SEPARATOR} />
                                         <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => showFileOnCanvas(absolute))}>
-                                            <Icon icon={Frame} size={14} /> Show on the canvas
+                                            <Icon icon={Frame} size={14} /> {t('file.menu.showOnCanvas')}
                                         </ContextMenu.Item>
                                         <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => newFileView(absolute))}>
-                                            <Icon icon={Columns2} size={14} /> Open as a view
+                                            <Icon icon={Columns2} size={14} /> {t('file.menu.openAsView')}
                                         </ContextMenu.Item>
                                     </>
                                 )}
                                 <ContextMenu.Separator className={MENU_SEPARATOR} />
                                 <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => copyText(basenameOf(absolute)))}>
-                                    <Icon icon={Copy} size={14} /> Copy name
+                                    <Icon icon={Copy} size={14} /> {t('files.copyName')}
                                 </ContextMenu.Item>
                                 <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => copyText(absolute))}>
-                                    <Icon icon={Copy} size={14} /> Copy path
+                                    <Icon icon={Copy} size={14} /> {t('file.menu.copyPath')}
                                 </ContextMenu.Item>
                                 <ContextMenu.Item
                                     className="menu-item"
                                     onClick={onMenuPath((_absolute, treePath) => copyText(isDirectoryPath(treePath) ? treePath.slice(0, -1) : treePath))}
                                 >
-                                    <Icon icon={Copy} size={14} /> Copy relative path
+                                    <Icon icon={Copy} size={14} /> {t('file.menu.copyRelativePath')}
                                 </ContextMenu.Item>
                             </ContextMenu.Popup>
                         </ContextMenu.Positioner>

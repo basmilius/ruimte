@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { useEffect, useState } from 'react';
 import { WebviewParking } from '@/browser/WebviewParking';
 import { useCanvasShortcuts } from '@/canvas/canvas-shortcuts';
@@ -56,7 +57,7 @@ function WorkspaceShell({ workspace }: { workspace: Workspace }) {
     return (
         <ConnectionProvider connection={workspace.connection}>
             <div className="flex h-full w-full bg-bg">
-                <ErrorBoundary label="The sidebar failed to render" className="h-full w-[248px] shrink-0 border-r border-border">
+                <ErrorBoundary label={i18next.t('common:state.sidebarFailed')} className="h-full w-[248px] shrink-0 border-r border-border">
                     <Sidebar />
                 </ErrorBoundary>
                 <main className="flex min-w-0 grow">
@@ -139,7 +140,7 @@ export function App() {
         <TooltipProvider>
             {/* The last resort, for a failure outside every view, node and panel. It unmounts the
                 parked browser pages as well, which is why everything below carries a boundary of its own. */}
-            <ErrorBoundary label="Something went wrong" className="fixed inset-0 bg-bg" reload>
+            <ErrorBoundary label={i18next.t('common:state.error')} className="fixed inset-0 bg-bg" reload>
                 <WindowContent />
                 <CommandPalette />
                 <SettingsDialog />

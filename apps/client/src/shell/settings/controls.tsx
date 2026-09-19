@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import clsx from 'clsx';
 import { Switch } from '@base-ui-components/react/switch';
+import { useTranslation } from 'react-i18next';
 import { Minus, Plus } from 'lucide-react';
 import { BTN_GROUP } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
@@ -75,6 +76,7 @@ interface StepperProps {
 
 /* A number with minus and plus; the buttons form one group so they read as a single control. */
 export function Stepper({ value, min, max, step, unit, label, onChange }: StepperProps) {
+    const { t } = useTranslation('settings');
     const nudge = (direction: -1 | 1): void => {
         const next = Math.round((value + direction * step) * 100) / 100;
         onChange(Math.min(max, Math.max(min, next)));
@@ -86,13 +88,23 @@ export function Stepper({ value, min, max, step, unit, label, onChange }: Steppe
                 {unit}
             </span>
             <div className={`${BTN_GROUP} rounded-lg bg-surface-sunken p-0.5`}>
-                <Tooltip label="Smaller">
-                    <button className="icon-btn h-7 w-7" aria-label={`${label}: smaller`} disabled={value <= min} onClick={() => nudge(-1)}>
+                <Tooltip label={t('controls.stepper.smaller')}>
+                    <button
+                        className="icon-btn h-7 w-7"
+                        aria-label={t('controls.stepper.smallerFor', { label })}
+                        disabled={value <= min}
+                        onClick={() => nudge(-1)}
+                    >
                         <Icon icon={Minus} size={16} />
                     </button>
                 </Tooltip>
-                <Tooltip label="Larger">
-                    <button className="icon-btn h-7 w-7" aria-label={`${label}: larger`} disabled={value >= max} onClick={() => nudge(1)}>
+                <Tooltip label={t('controls.stepper.larger')}>
+                    <button
+                        className="icon-btn h-7 w-7"
+                        aria-label={t('controls.stepper.largerFor', { label })}
+                        disabled={value >= max}
+                        onClick={() => nudge(1)}
+                    >
                         <Icon icon={Plus} size={16} />
                     </button>
                 </Tooltip>

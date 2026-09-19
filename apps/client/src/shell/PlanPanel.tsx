@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import { Check, ChevronDown, ChevronsDownUp, ChevronsUpDown, Copy, LockOpen, MoreHorizontal, Send, X } from 'lucide-react';
 import type { Plan } from '@ruimte/contracts';
@@ -27,11 +28,8 @@ const MIN_GRID_WIDTH = 360;
 // The same number as `.panel-shell` in `styles.css`.
 const TRANSITION_MS = 200;
 
-const FILTERS: { id: PlanFilter; label: string }[] = [
-    { id: 'all', label: 'All' },
-    { id: 'open', label: 'Open' },
-    { id: 'issues', label: 'Issues' }
-];
+/* Only the ids; the words a person reads are `planPanel.filters.<id>`, read inside the menu. */
+const FILTERS: readonly PlanFilter[] = ['all', 'open', 'issues'];
 
 const hasLockedStep = (plan: Plan): boolean => allSteps(plan.items).some((step) => effectiveChecks(plan, step) === 'agent');
 
@@ -42,6 +40,7 @@ const hasLockedStep = (plan: Plan): boolean => allSteps(plan.items).some((step) 
  * what is on screen.
  */
 export function PlanPanel() {
+    const { t } = useTranslation('shell');
     const anchor = useUi((s) => s.planAnchor);
     const open = useUi((s) => s.planOpen);
     const rightOfIt = useUi((s) => s.preview.open || s.panel.open);
@@ -111,7 +110,7 @@ export function PlanPanel() {
                         inset={open && !rightOfIt && hasOverlayControls()}
                     />
                     {/* The header stays, so the panel can still be closed when a plan fails to draw. */}
-                    <ErrorBoundary label="This plan failed to render" resetKeys={[shown.plan.id]} className="min-h-0 grow">
+                    <ErrorBoundary label={t('planPanel.failed')} resetKeys={[shown.plan.id]} className="min-h-0 grow">
                         <PlanList key={shown.plan.id} endpointId={endpointId} chatId={shown.chatId} plan={shown.plan} />
                     </ErrorBoundary>
                 </div>
@@ -121,6 +120,7 @@ export function PlanPanel() {
 }
 
 function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: string; chatId: string; plans: readonly Plan[]; plan: Plan; inset: boolean }) {
+    const { t } = useTranslation('shell');
     const title = useDocument((s) => forkOriginIn(s.views, chatId)?.title ?? null);
     const index = plans.findIndex((entry) => entry.id === plan.id);
     const results = resultsText(plan);
@@ -130,19 +130,19 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
 
     return (
         <header className={clsx('app-drag flex h-12 shrink-0 items-center gap-1 border-b border-border pr-2 pl-3', inset && 'toolbar-overlay-inset')}>
-            <Tooltip label="Show this chat">
+            <Tooltip label={t('planPanel.showChat')}>
                 <button
                     type="button"
                     className="min-w-0 truncate rounded-md px-1 py-0.5 text-xs font-medium text-text-muted hover:text-text"
                     onClick={() => focusChat(chatId)}
                 >
-                    {title ?? 'Chat'}
+                    {title ?? t('planPanel.chat')}
                 </button>
             </Tooltip>
             {plans.length > 1 && index >= 0 && (
                 <Menu.Root>
                     <Menu.Trigger className="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-text-muted tabular-nums hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active">
-                        Plan {plans.length - index} of {plans.length}
+                        {t('planPanel.planOf', { number: plans.length - index, total: plans.length })}
                         <Icon icon={ChevronDown} size={12} />
                     </Menu.Trigger>
                     <Menu.Portal>
@@ -164,7 +164,7 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
             <div className={clsx(BTN_GROUP, 'ml-auto shrink-0')}>
                 <ActiveStepButton chatId={chatId} plan={plan} planKey={planKey} />
                 <Menu.Root>
-                    <Tooltip label="Plan actions" name>
+                    <Tooltip label={t('planPanel.actions')} name>
                         <Menu.Trigger className="icon-btn">
                             <Icon icon={MoreHorizontal} size={16} />
                         </Menu.Trigger>
@@ -172,16 +172,16 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
                     <Menu.Portal>
                         <Menu.Positioner className="z-(--z-popup)" side="bottom" sideOffset={6} align="end">
                             <Menu.Popup className="menu-popup min-w-56">
-                                <div className={MENU_LABEL}>Show</div>
+                                <div className={MENU_LABEL}>{t('planPanel.show')}</div>
                                 <Menu.RadioGroup value={filter} onValueChange={(value: PlanFilter) => usePlanViewPrefs.getState().setFilter(value)}>
-                                    {FILTERS.map((entry) => (
-                                        <Menu.RadioItem key={entry.id} value={entry.id} className="menu-item">
+                                    {FILTERS.map((id) => (
+                                        <Menu.RadioItem key={id} value={id} className="menu-item">
                                             <span className="grid h-4 w-4 place-items-center">
                                                 <Menu.RadioItemIndicator>
                                                     <Icon icon={Check} size={14} />
                                                 </Menu.RadioItemIndicator>
                                             </span>
-                                            {entry.label}
+                                            {t(`planPanel.filters.${id}`)}
                                         </Menu.RadioItem>
                                     ))}
                                 </Menu.RadioGroup>
@@ -196,20 +196,20 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
                                             <Icon icon={Check} size={14} />
                                         </Menu.CheckboxItemIndicator>
                                     </span>
-                                    Collapse done
+                                    {t('planPanel.collapseDone')}
                                 </Menu.CheckboxItem>
                                 <Menu.Item className="menu-item" onClick={() => expandAll(planKey)}>
-                                    <Icon icon={ChevronsUpDown} size={14} /> Expand all
+                                    <Icon icon={ChevronsUpDown} size={14} /> {t('planPanel.expandAll')}
                                 </Menu.Item>
                                 <Menu.Item className="menu-item" onClick={() => collapseAll(planKey, plan)}>
-                                    <Icon icon={ChevronsDownUp} size={14} /> Collapse all
+                                    <Icon icon={ChevronsDownUp} size={14} /> {t('planPanel.collapseAll')}
                                 </Menu.Item>
                                 <Menu.Separator className={MENU_SEPARATOR} />
                                 <Menu.Item className="menu-item" onClick={() => copyPlanMarkdown(plan)}>
-                                    <Icon icon={Copy} size={14} /> Copy as Markdown
+                                    <Icon icon={Copy} size={14} /> {t('planPanel.copyMarkdown')}
                                 </Menu.Item>
                                 <Menu.Item className="menu-item" disabled={results === null} onClick={() => sendResultsToChat(chatId, plan)}>
-                                    <Icon icon={Send} size={14} /> Send results to chat
+                                    <Icon icon={Send} size={14} /> {t('planPanel.sendResults')}
                                 </Menu.Item>
                                 <Menu.Separator className={MENU_SEPARATOR} />
                                 <Menu.Item
@@ -217,13 +217,13 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
                                     disabled={!hasLockedStep(plan)}
                                     onClick={() => void planClient.unlock(endpointId, chatId, plan.id, 'all')}
                                 >
-                                    <Icon icon={LockOpen} size={14} /> Unlock all
+                                    <Icon icon={LockOpen} size={14} /> {t('planPanel.unlockAll')}
                                 </Menu.Item>
                             </Menu.Popup>
                         </Menu.Positioner>
                     </Menu.Portal>
                 </Menu.Root>
-                <Tooltip label="Close the plan" name>
+                <Tooltip label={t('planPanel.close')} name>
                     <button type="button" className="icon-btn" onClick={closePlanPanel}>
                         <Icon icon={X} size={16} />
                     </button>

@@ -1,0 +1,538 @@
+{
+  "sidebar": {
+    "hide": "Zijbalk verbergen",
+    "show": "Zijbalk tonen",
+    "needsYou": "Wacht op jou",
+    "processWarning": "Waarschuwing over een proces, zie het processen-paneel",
+    "unsentDraft": "Niet-verstuurde prompt",
+    "needsNewerRuimte": "Deze weergave heeft een nieuwere versie van Ruimte nodig",
+    "noViews": "Dit project heeft nog geen weergaven. Begin met een van deze.",
+    "duplicate": "Dupliceren",
+    "usage": "Verbruik",
+    "openInAnotherCell": ", open in een andere cel"
+  },
+  "panel": {
+    "fallback": "Paneel",
+    "close": "{{name}} sluiten",
+    "failed": "Dit paneel kon niet worden getekend",
+    "names": {
+      "files": "Bestanden",
+      "git": "Git",
+      "devices": "Apparaten",
+      "processes": "Processen"
+    }
+  },
+  "layoutDialog": {
+    "title": "Indeling opslaan",
+    "description": "Slaat op waar elke node en tekst staat, zodat je die later kunt toepassen.",
+    "nameLabel": "Naam van de indeling",
+    "namePlaceholder": "Naam"
+  },
+  "machineLost": {
+    "retrying": "Bezig de machine opnieuw te bereiken...",
+    "silent": "Deze machine antwoordt niet.",
+    "openAnother": "Ander project openen"
+  },
+  "signIn": {
+    "signInWith": "Inloggen met {{provider}}",
+    "continueWith": "Doorgaan met {{provider}}"
+  },
+  "connection": {
+    "connected": "Verbonden",
+    "relayed": "Verbonden via relay",
+    "noLink": "Niet verbonden",
+    "connecting": "Verbinden",
+    "disconnected": "Verbinding verbroken",
+    "reconnecting": "Opnieuw verbinden, poging {{attempt}}",
+    "reconnectingIn": "{{attempt}}, volgende poging over {{seconds}}s",
+    "lastSeen": "Laatst verbonden {{ago}}",
+    "thisMac": "Deze Mac",
+    "thisMachine": "Deze machine",
+    "version": "Versie {{version}}",
+    "ping": "Ping {{latency}}",
+    "reachability": {
+      "loopback": "Op deze machine",
+      "lan": "Op het lokale netwerk",
+      "tunnel": "Via een tunnel",
+      "public": "Op het openbare internet"
+    }
+  },
+  "machineUpdate": {
+    "title": "Ruimte is bijgewerkt",
+    "description": "Deze machine nu herstarten? {{ends}}",
+    "endsUnknown": "Dat beëindigt de terminals en agents die erop draaien.",
+    "ends_one": "Dat beëindigt {{count}} draaiende terminal of agent.",
+    "ends_other": "Dat beëindigt {{count}} draaiende terminals en agents.",
+    "pendingLine": "Ruimte is bijgewerkt en deze machine draait nog de vorige versie. Hij herstart vanzelf zodra er niets meer op draait.",
+    "restartNow": "Nu herstarten",
+    "whenIdle": "Zodra het stil is"
+  },
+  "approvals": {
+    "terminal": "Terminal",
+    "title": "{{where}} vraagt toestemming",
+    "onMachine": "{{name}} op {{machine}}",
+    "body": "{{what}} ({{expires}})",
+    "expiresInSeconds": "verloopt over {{seconds}}s",
+    "expiresInMinutes": "verloopt over {{minutes}}m"
+  },
+  "notifications": {
+    "finished": "Klaar",
+    "needsYou": "Wacht op jou"
+  },
+  "browse": {
+    "machineSilent": "Die machine antwoordt niet",
+    "connecting": "Verbinden...",
+    "notReachable": "Niet bereikbaar: {{reason}}",
+    "throughAccount": "Verbindt via je account",
+    "notConnected": "Niet verbonden",
+    "networkOnly": "Alleen op het eigen netwerk"
+  },
+  "findInFiles": {
+    "badSearch": "Die zoekopdracht kan niet worden uitgevoerd"
+  },
+  "status": {
+    "nextNeedsYou": "Ga naar de volgende node die op jou wacht, in welke weergave dan ook",
+    "working": "Agents aan het werk",
+    "workingCount_one": "{{count}} agent aan het werk",
+    "workingCount_other": "{{count}} agents aan het werk",
+    "nextFinished": "Ga naar de volgende agent die klaar was terwijl je weg was"
+  },
+  "toasts": {
+    "copied": "Gekopieerd",
+    "copyOutput": "Output kopiëren"
+  },
+  "projectName": {
+    "failed": "Dat werkte niet",
+    "label": "Projectnaam",
+    "placeholder": "Naam"
+  },
+  "viewIcon": {
+    "title": "Icoon van de weergave",
+    "separator": "Scheiding",
+    "pickedHere": "Hier gekozen",
+    "defaultForKind": "Standaard voor dit soort",
+    "emoji": "Emoji",
+    "useEmoji": "Emoji gebruiken",
+    "icon": "Icoon",
+    "useDefault": "Standaard gebruiken"
+  },
+  "projectBanner": {
+    "stayHere": "Hier blijven",
+    "goThere": "Ga erheen",
+    "back": "Terug",
+    "takeTheirs": "Het bestand nemen",
+    "keepMine": "Die van mij houden",
+    "conflict": {
+      "canvas": "Het canvas is op schijf gewijzigd terwijl je niet-opgeslagen bewerkingen had.",
+      "drawing": "De tekening is op schijf gewijzigd terwijl je niet-opgeslagen bewerkingen had.",
+      "diagram": "Het diagram is op schijf gewijzigd terwijl je niet-opgeslagen bewerkingen had."
+    }
+  },
+  "viewDialogs": {
+    "rename": {
+      "title": "Weergave hernoemen",
+      "description": "Iedereen met de map ziet deze naam.",
+      "label": "Naam van de weergave",
+      "placeholder": "Naam"
+    },
+    "newBrowser": {
+      "title": "Nieuwe browserweergave",
+      "description": "Een adres zonder scheme opent via https.",
+      "label": "Adres"
+    },
+    "delete": {
+      "title": "{{name}} verwijderen?",
+      "description": "Verwijdert de weergave en alles erop.",
+      "busy": "Er draait nog iets in deze weergave. Verwijderen beëindigt die sessies."
+    },
+    "promote": {
+      "title": "{{name}} als weergave openen?",
+      "description": "De sessie blijft draaien. De lijnen naar deze node gaan verloren.",
+      "confirm": "Als weergave openen"
+    }
+  },
+  "viewHost": {
+    "failed": "Deze weergave kon niet worden getekend"
+  },
+  "toolbar": {
+    "unsaved": "Niet-opgeslagen wijzigingen",
+    "saved": "Alles opgeslagen",
+    "search": "Zoeken",
+    "opening": "Het project wordt geopend",
+    "updateReady": "Versie {{version}} staat klaar om te installeren",
+    "updateOnTheWay": "Er is een update onderweg"
+  },
+  "settingsDialog": {
+    "title": "Instellingen",
+    "section": "Onderdeel van de instellingen",
+    "close": "Instellingen sluiten"
+  },
+  "worktreeDialog": {
+    "title": "Aan een worktree koppelen",
+    "description": "Maakt een checkout van deze branch. Elke terminal en chat die je aan de groep toevoegt, start erin.",
+    "branchLabel": "Naam van de branch",
+    "branchPlaceholder": "naam van de branch",
+    "noFolder": "Dit project staat niet in een map en heeft dus geen repository.",
+    "creating": "Checkout maken...",
+    "bind": "Koppelen",
+    "failed": "Kon de worktree niet maken"
+  },
+  "cellToolbar": {
+    "view": "Weergave",
+    "drag": "{{name}}, sleep om hem naar een andere cel te verplaatsen",
+    "moreActions": "Meer acties",
+    "closeCell": "Deze cel sluiten"
+  },
+  "preview": {
+    "closeAll": "Alle tabs sluiten",
+    "failed": "Deze voorvertoning kon niet worden getekend"
+  },
+  "viewKinds": {
+    "canvas": "Canvas",
+    "drawing": "Tekening",
+    "diagram": "Diagram",
+    "terminal": "Terminal",
+    "browser": "Browser",
+    "file": "Bestand",
+    "separator": "Scheiding"
+  },
+  "viewMenu": {
+    "filePick": "Bestand...",
+    "splitRight": "Rechts splitsen",
+    "splitDown": "Naar beneden splitsen",
+    "views": "Weergaven",
+    "newView": "Weergave",
+    "putOnCanvas": "Op het canvas zetten",
+    "showOnCanvas": "Op het canvas tonen",
+    "renameView": "Weergave hernoemen",
+    "changeIcon": "Icoon wijzigen…",
+    "deleteView": "Weergave verwijderen"
+  },
+  "planPanel": {
+    "failed": "Dit plan kon niet worden getekend",
+    "showChat": "Deze chat tonen",
+    "chat": "Chat",
+    "planOf": "Plan {{number}} van {{total}}",
+    "actions": "Acties voor het plan",
+    "show": "Tonen",
+    "filters": {
+      "all": "Alles",
+      "open": "Open",
+      "issues": "Problemen"
+    },
+    "collapseDone": "Afgeronde inklappen",
+    "expandAll": "Alles uitklappen",
+    "collapseAll": "Alles inklappen",
+    "copyMarkdown": "Kopiëren als Markdown",
+    "sendResults": "Resultaten naar de chat sturen",
+    "unlockAll": "Alles ontgrendelen",
+    "close": "Plan sluiten"
+  },
+  "nodeKinds": {
+    "terminal": "Terminal",
+    "chat": "Chat",
+    "browser": "Browser",
+    "group": "Groep",
+    "note": "Notitie",
+    "text": "Tekst",
+    "device": "Apparaat",
+    "drawing": "Tekening",
+    "diagram": "Diagram",
+    "file": "Bestand",
+    "unknown": "Onbekend"
+  },
+  "dock": {
+    "add": "Toevoegen",
+    "doubleClick": "dubbelklik",
+    "zoomOut": "Uitzoomen",
+    "zoomIn": "Inzoomen",
+    "zoomPresets": "Zoomstanden",
+    "zoomToFit": "Zoomen tot alles past",
+    "zoomToSelection": "Zoomen naar de selectie",
+    "fitEverything": "Alles laten passen",
+    "lock": "Vergrendelen",
+    "refuseGestures": "Gebaren weigeren",
+    "unlockEverything": "Alles ontgrendelen",
+    "lockEverything": "Alles vergrendelen",
+    "lockHint": "Knoppen en sneltoetsen blijven werken terwijl alles vergrendeld is.",
+    "layouts": "Indelingen",
+    "savedLayouts": "Opgeslagen indelingen",
+    "noLayouts": "Nog niets opgeslagen.",
+    "saveLayout": "Huidige indeling opslaan"
+  },
+  "projectMenu": {
+    "noFolder": "Niet in een map",
+    "folderGone": "Die map bestaat niet meer",
+    "actionsFor": "Acties voor {{name}}",
+    "openIn": "Openen in {{app}}",
+    "projectSettings": "Projectinstellingen…",
+    "closeProject": "Project sluiten",
+    "projects": "Projecten",
+    "recent": "Recente projecten",
+    "newProject": "Nieuw project",
+    "newProjectDescription": "Wordt in de app bewaard, niet in een map. Open een map als je een project via git wilt delen.",
+    "create": "Maken",
+    "untitled": "Naamloos project",
+    "openFolder": "Map openen",
+    "closeTitle": "{{name}} sluiten?"
+  },
+  "projectSettings": {
+    "title": "Projectinstellingen",
+    "name": "Naam",
+    "symbol": "Symbool",
+    "fromFile": "Uit {{file}}",
+    "firstLetter": "De eerste letter van de naam",
+    "chooseImage": "Afbeelding kiezen…",
+    "useFolderIcon": "Het icoon van de map gebruiken",
+    "noFolderImage": "Een project zonder map kan geen afbeelding gebruiken.",
+    "tooLarge": "Die afbeelding is groter dan 256 KB",
+    "unreadable": "Dat bestand kon niet worden gelezen"
+  },
+  "linkMachine": {
+    "title": "Een machine koppelen met een code",
+    "description": "Voor een machine zonder de app: draai daar `ruimte login` en vul de code in die hij toont.",
+    "unavailable": "Een machine goedkeuren kan in de desktop-app en op station.ruimte.app.",
+    "signingIn": "Inloggen...",
+    "signIn": "Log in op het account waar de machine bij hoort.",
+    "codeLabel": "Code uit de terminal",
+    "badCode": "Dat is geen code. Het zijn acht letters, zoals BCDF-GHJK, precies zoals de terminal hem toonde.",
+    "joinsAccount": "De machine komt bij het account van {{account}}.",
+    "checkFingerprint": "Controleer of de terminal deze fingerprint toonde. Zodra hij is toegevoegd, kan elke client die op dit account is ingelogd deze machine openen, en ziet de machine wie hem opent.",
+    "theMachine": "De machine",
+    "approved": "Goedgekeurd. {{machine}} komt bij je account zodra de terminal klaar is, wat een paar seconden duurt.",
+    "denied": "Geweigerd. De terminal meldt dat en er is niets toegevoegd.",
+    "continue": "Doorgaan",
+    "deny": "Weigeren",
+    "approve": "Aan mijn account toevoegen"
+  },
+  "switch": {
+    "connecting": "Verbinden met {{machine}}...",
+    "opening": "{{title}} openen...",
+    "returning": "Terug...",
+    "viaRelay": "via relay",
+    "goBack": "Terug"
+  },
+  "releaseNotes": {
+    "title": "Release notes",
+    "close": "Release notes sluiten",
+    "failed": "De release notes konden niet worden getekend",
+    "new": "Nieuw",
+    "compare": "Vergelijken",
+    "noNotes": "Geen notities bij deze versie.",
+    "viewOnGitHub": "De release op GitHub bekijken",
+    "loadFailed": "De release notes konden niet worden geladen: {{reason}}",
+    "openOnGitHub": "Ze op GitHub openen",
+    "loading": "Release notes laden",
+    "allReleases": "Alle releases op GitHub",
+    "dialogDescription": "Wat er in elke versie van Ruimte is veranderd."
+  },
+  "removeWorktree": {
+    "title": "Deze worktree verwijderen?",
+    "counting": "Tellen wat erin zit...",
+    "alreadyGone": "Deze worktree bestaat al niet meer.",
+    "unreadable": "Kon de worktree niet lezen.",
+    "removed": "Worktree {{branch}} verwijderd",
+    "failed": "De worktree verwijderen is mislukt",
+    "didNotWork": "Dat werkte niet.",
+    "mergeFirst": "Eerst mergen..."
+  },
+  "fork": {
+    "title": "Dit gesprek forken",
+    "failedToRender": "Het fork-venster kon niet worden getekend",
+    "copyTitle": "{{title}} (fork)",
+    "turnGone": "Deze turn zit niet meer in het gesprek.",
+    "theOriginal": "het origineel",
+    "itsCanvas": "het canvas ervan",
+    "intoView": "Een nieuwe chatweergave gaat daarvandaan verder, direct na {{after}} in de zijbalk. Er wordt niets verstuurd tot je het eerste bericht schrijft.",
+    "intoNode": "Een nieuwe chat-node gaat daarvandaan verder, naast het origineel en met een lijn ernaartoe. Er wordt niets verstuurd tot je het eerste bericht schrijft.",
+    "continueWith": "Verder met",
+    "handoffNote": "De nieuwe agent krijgt het laatste deel van het gesprek als tekst en kan de rest van het origineel zelf lezen.",
+    "titleLabel": "Titel",
+    "into": "Forken naar",
+    "shapes": {
+      "node": "Een node ernaast",
+      "view": "Een nieuwe weergave"
+    },
+    "forking": "Forken...",
+    "fork": "Fork",
+    "failed": "De fork kon niet worden gemaakt",
+    "lookingAtFolder": "De map bekijken...",
+    "sharedNote": "De bestanden blijven zoals ze nu zijn; de agent krijgt te horen dat de map nieuwer is dan deze turn.",
+    "noRepository": "Deze map zit niet in een git-repository; de fork werkt in dezelfde map.",
+    "useWorktree": "In een git-worktree werken",
+    "branch": "Branch",
+    "takeFiles": "De niet-gecommitte bestanden meenemen",
+    "undoAfterTurn": "Het werk na deze turn ongedaan maken",
+    "filesGone": "De bestanden van deze turn zitten niet meer in de repository, dus de worktree begint bij HEAD.",
+    "fromTurnFiles": "De worktree begint bij de bestanden zoals ze na deze turn waren; het origineel houdt die van zichzelf.",
+    "fromHead": "De worktree begint bij HEAD, zonder niet-gecommit werk."
+  },
+  "merge": {
+    "title": "Worktree mergen",
+    "nothingLeft": "Er is geen worktree meer om te mergen.",
+    "unreadable": "Kon de worktrees niet lezen.",
+    "holds": "Hij bevat {{contents}}.",
+    "working_one": "{{names}} is nog aan het werk. Mergen stopt hem eerst{{ended}}.",
+    "working_other": "{{names}} zijn nog aan het werk. Mergen stopt ze eerst{{ended}}.",
+    "endedByIt_one": ", en de agent die hij opende",
+    "endedByIt_other": ", en de {{count}} agents die hij opende",
+    "endedByThem_one": ", en de agent die zij openden",
+    "endedByThem_other": ", en de {{count}} agents die zij openden",
+    "live_one": "{{names}} staat er nog open en wordt gestopt voordat de worktree verdwijnt.",
+    "live_other": "{{names}} staan er nog open en worden gestopt voordat de worktree verdwijnt.",
+    "commitFirst": "Eerst de niet-gecommitte bestanden committen",
+    "commitFirstHint": "Zonder die commit laat de merge de helft van het werk achter.",
+    "commitMessage": "Commit message",
+    "strategy": "Strategie",
+    "removeAfterwards_one": "De worktree en zijn branch daarna verwijderen",
+    "removeAfterwards_other": "Elke worktree en zijn branch daarna verwijderen",
+    "removeAfterwardsShort": "Daarna verwijderen",
+    "stopAndMerge": "Stop en merge",
+    "merge": "Merge",
+    "merging": "{{branch}} mergen",
+    "mergingFailed": "{{branch}} mergen is mislukt",
+    "mergeInto": "Mergen naar {{branch}}",
+    "othersStay_one": "De andere worktree blijft zoals hij was.",
+    "othersStay_other": "De andere {{count}} worktrees blijven zoals ze waren.",
+    "resolveThese": "Los {{files}} op in het git-paneel en commit, of breek af.{{rest}}",
+    "resolve": "Commit het in het git-paneel, of breek af.{{rest}}",
+    "abort": "Abort",
+    "tookBack": "De merge is teruggedraaid",
+    "abortFailed": "Abort is mislukt",
+    "stashAndRetry": "Stashen en opnieuw proberen",
+    "stashFailed": "Stashen is mislukt",
+    "targetBranch": "De doelbranch",
+    "notCheckedOut": "{{branch}} staat nergens checked out."
+  },
+  "start": {
+    "failed": "Het startscherm kon niet worden getekend",
+    "start": "Starten",
+    "recent": "Recent",
+    "machines": "Machines",
+    "noMachines": "Er staat nog geen machine op je account. Log in op de desktop-app op een machine die met een broker draait, dan komt die er vanzelf bij.",
+    "notConnected": "niet verbonden",
+    "closed": "gesloten",
+    "anotherMachine": "Een andere machine",
+    "lastProject": "Het laatste project",
+    "signIn": "Inloggen",
+    "signInForMachines": "Log in om de machines op je account vanuit deze browser te openen.",
+    "reachMachines": "Bereik de machines op je account.",
+    "lookingUpMachines": "Je machines opzoeken...",
+    "waitsForMachines": "De rest wacht op je machines",
+    "openFolderFirst": "De map van iets waar je aan werkt",
+    "onAMachine": "Op een machine",
+    "projectIsAFolder": "Een project is een map met een .ruimte/project.json erin, die Ruimte schrijft zodra de map voor het eerst opengaat.",
+    "withoutFolder": "Zonder map",
+    "openMachineFirst": "Open eerst een machine",
+    "connectMachine": "Machine verbinden",
+    "withALink": "Met een link",
+    "withPairingLink": "Met een pairing-link",
+    "commandPalette": "Commandopalet",
+    "whatsNew": "Wat is er nieuw"
+  },
+  "palette": {
+    "newAgent": {
+      "chat": "Nieuwe {{name}}-chat",
+      "terminal": "Nieuwe {{name}}-terminal"
+    },
+    "newAgentView": {
+      "chat": "Nieuwe {{name}}-chatweergave",
+      "terminal": "Nieuwe {{name}}-terminalweergave"
+    },
+    "moveNodeTo": "Node verplaatsen naar {{view}}",
+    "applyLayout": "Indeling toepassen: {{name}}",
+    "deleteLayout": "Indeling verwijderen: {{name}}",
+    "hints": {
+      "withoutCanvas": "Zonder canvas",
+      "readOnly": "Alleen lezen",
+      "selectFirst": "Selecteer eerst nodes",
+      "rememberLayout": "Onthoud waar alles staat",
+      "usage": "Kosten, tokens en limieten van je abonnement",
+      "remote": "Je machines, je account en pairing"
+    },
+    "commands": {
+      "openFolder": "Een map als project openen",
+      "findInFiles": "Zoeken in bestanden",
+      "reveal": "Project openen in {{app}}",
+      "newCanvasView": "Nieuwe canvasweergave",
+      "newDrawingView": "Nieuwe tekenweergave",
+      "newDiagramView": "Nieuwe diagramweergave",
+      "newFileView": "Nieuwe bestandsweergave",
+      "newTerminalView": "Nieuwe terminalweergave",
+      "newSeparator": "Nieuwe scheiding",
+      "newTerminal": "Nieuwe terminal",
+      "newChat": "Nieuwe chat",
+      "newBrowser": "Nieuwe browser",
+      "newGroup": "Nieuwe groep",
+      "newNote": "Nieuwe notitie",
+      "newText": "Nieuwe tekst",
+      "showFile": "Een bestand op het canvas tonen",
+      "groupSelection": "Selectie groeperen",
+      "saveLayoutAs": "Indeling opslaan als",
+      "zoomReset": "Zoomen naar 100%",
+      "diagramOpenJson": "Het diagram als JSON openen",
+      "diagramOnCanvas": "Het diagram op het canvas tonen",
+      "diagramCopyJson": "Het diagram als JSON kopiëren",
+      "diagramCopyPng": "Het diagram als PNG kopiëren",
+      "diagramSavePng": "Het diagram als PNG opslaan",
+      "diagramCopySvg": "Het diagram als SVG kopiëren",
+      "diagramSaveSvg": "Het diagram als SVG opslaan",
+      "drawingOnCanvas": "De tekening op het canvas tonen",
+      "drawingCopyPng": "De tekening als PNG kopiëren",
+      "drawingSavePng": "De tekening als PNG opslaan",
+      "drawingCopySvg": "De tekening als SVG kopiëren",
+      "drawingSaveSvg": "De tekening als SVG opslaan",
+      "toggleSidebar": "Zijbalk aan of uit",
+      "toggleFiles": "Bestandenpaneel aan of uit",
+      "toggleGit": "Git-paneel aan of uit",
+      "toggleProcesses": "Processen-paneel aan of uit",
+      "toggleTheme": "Licht of donker",
+      "keyboardShortcuts": "Sneltoetsen",
+      "remote": "Remote"
+    },
+    "sections": {
+      "recent": "Recent",
+      "jump": "Ga naar",
+      "files": "Bestanden",
+      "views": "Weergaven",
+      "projects": "Projecten",
+      "actions": "Acties",
+      "folders": "Mappen",
+      "machines": "Machines"
+    },
+    "kindInView": "{{kind}} in {{view}}",
+    "machineNotConnected": "{{machine}}, niet verbonden",
+    "unreadablePath": "Dat pad kan niet worden gelezen",
+    "backToFolders": "Terug naar de mappen",
+    "browseAnother": "Een andere machine doorbladeren",
+    "backToPalette": "Terug naar het palet",
+    "createAndOpen": "Maken en openen",
+    "searchFiles": "Zoeken in de bestanden van deze map",
+    "pickFile": "Kies een bestand uit deze map",
+    "searchMachines": "Machines zoeken",
+    "inputLabel": "Ga naar een node, voer een commando uit of open een map",
+    "placeholder": "Ga naar een node, voer een commando uit of typ een pad als ~/projects om een map te openen",
+    "pathPlaceholder": "Vul een pad naar een map in, bijvoorbeeld ~/projects/my-app",
+    "matchCase": "Hoofdlettergevoelig",
+    "wholeWords": "Hele woorden",
+    "regex": "Reguliere expressie",
+    "results": "Resultaten",
+    "noMatch": "Niets komt overeen",
+    "noProjectFolder": "Dit project heeft geen map.",
+    "noFileMatch": "Geen bestand in deze map komt overeen",
+    "noLineMatch": "Geen regel in deze map komt overeen",
+    "typeToSearch": "Typ om elk bestand in deze map te doorzoeken.",
+    "noMachineYet": "Nog geen machine. Log in om de machines op je account te openen.",
+    "noMachineMatch": "Geen machine komt overeen",
+    "connectingThroughAccount": "Verbinden met {{machine}} via je account...",
+    "notReachable": "{{machine}} is niet bereikbaar",
+    "createHint": "Druk op Enter om deze map te maken en als project te openen",
+    "nothingYet": "Nog niets",
+    "grepCount_one": "{{hits}} in {{count}} bestand",
+    "grepCount_other": "{{hits}} in {{count}} bestanden",
+    "grepEnterHint": "opent het bestand,",
+    "grepBackHint": "gaat bij een lege zoekopdracht terug",
+    "navigate": "Navigeren",
+    "browseIn": "Bladeren in {{app}}"
+  }
+}

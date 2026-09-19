@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import clsx from 'clsx';
 import { ImageOff, Minus, Plus, RotateCcw, X } from 'lucide-react';
@@ -40,6 +41,7 @@ const zoomed = (view: View, factor: number, pointX: number, pointY: number): Vie
 
 /* An image on its own, large: the wheel and the buttons zoom, dragging pans, Escape closes. */
 function Lightbox({ src, alt, open, onOpenChange }: { src: string; alt: string; open: boolean; onOpenChange(open: boolean): void }) {
+    const { t } = useTranslation('chat');
     const [view, setView] = useState<View>(START);
     const frameRef = useRef<HTMLDivElement>(null);
     const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
@@ -73,23 +75,23 @@ function Lightbox({ src, alt, open, onOpenChange }: { src: string; alt: string; 
                         <span className="grow" />
                         <span className="tabular-nums text-xs text-text-faint">{Math.round(view.scale * 100)}%</span>
                         <span className={BTN_GROUP}>
-                            <Tooltip label="Zoom out" name>
+                            <Tooltip label={t('image.zoomOut')} name>
                                 <button className="icon-btn h-7 w-7 rounded" disabled={view.scale <= MIN_SCALE} onClick={() => zoomButton(1 / BUTTON_STEP)}>
                                     <Icon icon={Minus} size={16} />
                                 </button>
                             </Tooltip>
-                            <Tooltip label="Zoom in" name>
+                            <Tooltip label={t('image.zoomIn')} name>
                                 <button className="icon-btn h-7 w-7 rounded" disabled={view.scale >= MAX_SCALE} onClick={() => zoomButton(BUTTON_STEP)}>
                                     <Icon icon={Plus} size={16} />
                                 </button>
                             </Tooltip>
-                            <Tooltip label="Reset" name>
+                            <Tooltip label={t('image.reset')} name>
                                 <button className="icon-btn h-7 w-7 rounded" disabled={view.scale === MIN_SCALE} onClick={() => setView(START)}>
                                     <Icon icon={RotateCcw} size={16} />
                                 </button>
                             </Tooltip>
                         </span>
-                        <Tooltip label="Close" kbd="esc" name>
+                        <Tooltip label={t('common:action.close')} kbd="esc" name>
                             <Dialog.Close className="icon-btn h-7 w-7 rounded">
                                 <Icon icon={X} size={16} />
                             </Dialog.Close>
@@ -174,6 +176,7 @@ export function ImageThumb({ resource, endpointId, alt, className }: { resource:
  * asked what the file is; anything that is not an image draws nothing at all.
  */
 export function ReadImage({ path }: { path: string }) {
+    const { t } = useTranslation('chat');
     const [read, setRead] = useState<FsReadResult | null>(null);
     const [failed, setFailed] = useState(false);
     const transport = useTransport();
@@ -201,7 +204,7 @@ export function ReadImage({ path }: { path: string }) {
     if (failed) {
         return (
             <div className="mb-1 ml-8 flex items-center gap-1.5 text-xs text-text-faint">
-                <Icon icon={ImageOff} size={12} /> That file is no longer there
+                <Icon icon={ImageOff} size={12} /> {t('image.gone')}
             </div>
         );
     }

@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { Bot } from 'lucide-react';
 import type { ChatSubagentItem } from '@ruimte/contracts';
 import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
@@ -38,6 +39,7 @@ const toggled = (current: Set<string>, id: string): Set<string> => {
  * stands in the chat's own place, read-only, and a sub-agent it opened goes one level further down.
  */
 export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUseId: string }) {
+    const { t } = useTranslation('chat');
     const endpointId = useEndpointId();
     const { trail, show } = useSubagentTrail(chatId);
     const [state, setState] = useState<SubagentConversationState>(INITIAL_CONVERSATION);
@@ -87,14 +89,12 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
     }, [rows, state.live]);
 
     if (state.status === 'loading') {
-        return <div className="chat-column-content px-4 pt-4 text-xs text-text-faint">Loading the conversation...</div>;
+        return <div className="chat-column-content px-4 pt-4 text-xs text-text-faint">{t('subagents.loading')}</div>;
     }
     if (state.status === 'failed') {
         return (
             <EmptyState icon={<Icon icon={Bot} size={16} />}>
-                {state.unsupported
-                    ? "This machine cannot open a sub-agent's conversation. Update Ruimte there to read it."
-                    : (state.error ?? 'The conversation could not be read.')}
+                {state.unsupported ? t('subagents.unsupported') : (state.error ?? t('subagents.unreadable'))}
             </EmptyState>
         );
     }
@@ -122,11 +122,11 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
                     {state.cursor !== null && (
                         <div className="flex justify-center pb-2">
                             <Button size="sm" disabled={state.loadingEarlier} onClick={loadEarlier}>
-                                {state.loadingEarlier ? 'Loading...' : 'Load earlier'}
+                                {state.loadingEarlier ? t('subagents.loadingEarlier') : t('subagents.loadEarlier')}
                             </Button>
                         </div>
                     )}
-                    {rows.length === 0 && !state.live && <div className="text-xs text-text-faint">Nothing to show yet.</div>}
+                    {rows.length === 0 && !state.live && <div className="text-xs text-text-faint">{t('rows.subagent.nothingYet')}</div>}
                     {rows.map((row, index) => {
                         const previous = index > 0 ? rows[index - 1]! : null;
                         const question = row.kind === 'user';
@@ -145,7 +145,7 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
                             </div>
                         );
                     })}
-                    {state.live && <div className="chat-live-text pt-1 text-xs">Working...</div>}
+                    {state.live && <div className="chat-live-text pt-1 text-xs">{t('subagents.working')}</div>}
                 </div>
             </div>
         </FileLinkContext.Provider>

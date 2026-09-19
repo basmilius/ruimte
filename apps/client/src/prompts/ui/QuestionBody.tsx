@@ -1,5 +1,6 @@
 import { useEffect, useRef, type KeyboardEvent } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { Circle, CircleCheck, Square } from 'lucide-react';
 import type { ChatQuestion } from '@ruimte/contracts';
 import { answerFieldKey, choiceKey, stepIndex } from '@/prompts/logic/keys';
@@ -21,6 +22,7 @@ export function QuestionBody({
     onCommit(answer: PromptAnswer): void;
     locked: boolean;
 }) {
+    const { t } = useTranslation('prompts');
     // The choices, then the "Something else…" field: one list with a single tab stop.
     const items = useRef<(HTMLElement | null)[]>([]);
     const shownQuestion = useRef(question.id);
@@ -81,7 +83,7 @@ export function QuestionBody({
 
     return (
         <div className="flex flex-col gap-2">
-            {question.multiSelect && <p className="text-xs text-text-muted">Choose one or more</p>}
+            {question.multiSelect && <p className="text-xs text-text-muted">{t('question.multiSelect')}</p>}
             {question.choices.length > 0 && (
                 <div role={question.multiSelect ? 'group' : 'radiogroup'} aria-label={question.question} className="flex flex-col gap-2">
                     {question.choices.map((choice, index) => {
@@ -139,8 +141,8 @@ export function QuestionBody({
                             tabIndex={tabStop === question.choices.length ? 0 : -1}
                             data-prompt-entry={tabStop === question.choices.length ? '' : undefined}
                             className="max-h-40 min-w-0 flex-1 resize-none field-sizing-content bg-transparent outline-none placeholder:text-text-muted"
-                            aria-label="Your answer"
-                            placeholder="Something else…"
+                            aria-label={t('question.answerLabel')}
+                            placeholder={t('question.somethingElse')}
                             value={answer.text}
                             disabled={locked}
                             onChange={(e) => onAnswer({ ...answer, custom: true, text: e.target.value })}
@@ -155,8 +157,8 @@ export function QuestionBody({
                         items.current[0] = element;
                     }}
                     className="field min-h-20 text-sm"
-                    aria-label="Your answer"
-                    placeholder="Your answer"
+                    aria-label={t('question.answerLabel')}
+                    placeholder={t('question.answerPlaceholder')}
                     data-prompt-entry=""
                     value={answer.text}
                     disabled={locked}

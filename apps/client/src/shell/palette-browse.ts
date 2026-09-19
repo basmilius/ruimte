@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { nameOf, type MachineEntry } from '@/shell/settings/machine-list';
 import type { ConnectionState } from '@/transport/transport';
 
@@ -124,7 +125,7 @@ export const machineLink = (entry: MachineEntry, connection: ConnectionState, wa
         return { kind: 'failed', reason: connection.failure };
     }
     if (connection.attempts > 0) {
-        return { kind: 'failed', reason: 'That machine is not answering' };
+        return { kind: 'failed', reason: i18next.t('shell:browse.machineSilent') };
     }
     return entry.endpoint.pairedBy === 'statement' ? { kind: 'account' } : { kind: 'idle' };
 };
@@ -135,15 +136,15 @@ export const linkHint = (link: MachineLink): string | undefined => {
         case 'open':
             return undefined;
         case 'connecting':
-            return 'Connecting...';
+            return i18next.t('shell:browse.connecting');
         case 'failed':
-            return `Not reachable: ${link.reason}`;
+            return i18next.t('shell:browse.notReachable', { reason: link.reason });
         case 'account':
-            return 'Connects through your account';
+            return i18next.t('shell:browse.throughAccount');
         case 'idle':
-            return 'Not connected';
+            return i18next.t('shell:browse.notConnected');
         case 'network-only':
-            return 'On its own network only';
+            return i18next.t('shell:browse.networkOnly');
     }
 };
 

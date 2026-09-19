@@ -1,3 +1,6 @@
 [test]
 # Bun reads the bunfig of the folder it runs in, so a run from here needs the root's ignore too.
 pathIgnorePatterns = ["**/*.integration.test.ts"]
+# The client's English words, so a pure function that reads one off i18next is testable
+# without every test file initializing it first.
+preload = ["./test-preload.ts"]

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { Popover } from '@base-ui-components/react/popover';
 import { MoreHorizontal, X } from 'lucide-react';
 import { viewIconOf, type ProjectView } from '@ruimte/contracts';
@@ -68,6 +69,7 @@ const useFolded = (bar: React.RefObject<HTMLElement | null>, actions: React.RefO
  * where a tab bar would be in an app that had tabs, and this app does not.
  */
 export function CellToolbar({ at, view, focused, children }: { at: CellAt; view: ProjectView; focused: boolean; children: ReactElement }) {
+    const { t } = useTranslation('shell');
     /* The file's controls are portaled up into this bar, so every cell holds a host of its own:
        one shared host would put the controls of one file over the bar of another. */
     const [host, setHost] = useState<HTMLElement | null>(null);
@@ -95,7 +97,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
             <header
                 ref={bar}
                 draggable={grabbable}
-                aria-label={`${visibleTitle ?? 'View'}, drag to move it to another cell`}
+                aria-label={t('cellToolbar.drag', { name: visibleTitle ?? t('cellToolbar.view') })}
                 className={clsx(
                     'flex h-10 shrink-0 cursor-grab items-center gap-2 overflow-hidden border-b border-border pr-1.5 pl-2 text-xs active:cursor-grabbing',
                     focused ? 'bg-surface text-text' : 'bg-surface-idle text-text-muted'
@@ -135,8 +137,8 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                 )}
                 {hasViewToolbar && folded && (
                     <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
-                        <Tooltip label="More actions">
-                            <Popover.Trigger className="icon-btn h-7 w-7 cursor-default" aria-label="More actions">
+                        <Tooltip label={t('cellToolbar.moreActions')}>
+                            <Popover.Trigger className="icon-btn h-7 w-7 cursor-default" aria-label={t('cellToolbar.moreActions')}>
                                 <Icon icon={MoreHorizontal} size={14} />
                             </Popover.Trigger>
                         </Tooltip>
@@ -157,7 +159,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                         {controls}
                     </span>
                 )}
-                <Tooltip label="Close this cell">
+                <Tooltip label={t('cellToolbar.closeCell')}>
                     <button type="button" className="icon-btn h-7 w-7 cursor-default" onClick={() => useDocument.getState().closeCellAt(at)}>
                         <Icon icon={X} size={14} />
                     </button>

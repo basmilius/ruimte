@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { ArrowLeft, ArrowRight, Code, Copy, Download, ExternalLink, Globe, Image, Link, RotateCw, Search, Type } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { BrowserContextParams } from '@/desktop/bridge';
@@ -56,21 +57,26 @@ export const buildBrowserMenu = (input: BrowserMenuInput): BrowserMenuItem[][] =
 
     const groups: BrowserMenuItem[][] = [
         [
-            { id: 'back', label: 'Back', icon: ArrowLeft, disabled: !input.canGoBack, action: { kind: 'back' } },
-            { id: 'forward', label: 'Forward', icon: ArrowRight, disabled: !input.canGoForward, action: { kind: 'forward' } },
-            { id: 'reload', label: 'Reload', icon: RotateCw, action: { kind: 'reload' } }
+            { id: 'back', label: i18next.t('browser:menu.back'), icon: ArrowLeft, disabled: !input.canGoBack, action: { kind: 'back' } },
+            { id: 'forward', label: i18next.t('browser:menu.forward'), icon: ArrowRight, disabled: !input.canGoForward, action: { kind: 'forward' } },
+            { id: 'reload', label: i18next.t('common:action.reload'), icon: RotateCw, action: { kind: 'reload' } }
         ]
     ];
 
     if (isWebUrl(input.linkURL)) {
         const url = input.linkURL;
         const link: BrowserMenuItem[] = [
-            { id: 'link-node', label: 'Open link in new browser node', icon: Globe, action: { kind: 'open-beside', url } },
-            { id: 'link-external', label: 'Open link in system browser', icon: ExternalLink, action: { kind: 'open-external', url } },
-            { id: 'link-address', label: 'Copy link address', icon: Link, action: { kind: 'copy-text', text: url } }
+            { id: 'link-node', label: i18next.t('browser:menu.link.openInNode'), icon: Globe, action: { kind: 'open-beside', url } },
+            { id: 'link-external', label: i18next.t('browser:menu.link.openExternal'), icon: ExternalLink, action: { kind: 'open-external', url } },
+            { id: 'link-address', label: i18next.t('browser:menu.link.copyAddress'), icon: Link, action: { kind: 'copy-text', text: url } }
         ];
         if (input.linkText.trim() !== '') {
-            link.push({ id: 'link-text', label: 'Copy link text', icon: Type, action: { kind: 'copy-text', text: input.linkText.trim() } });
+            link.push({
+                id: 'link-text',
+                label: i18next.t('browser:menu.link.copyText'),
+                icon: Type,
+                action: { kind: 'copy-text', text: input.linkText.trim() }
+            });
         }
         groups.push(link);
     }
@@ -78,25 +84,25 @@ export const buildBrowserMenu = (input: BrowserMenuInput): BrowserMenuItem[][] =
     if (input.mediaType === 'image' && input.srcURL !== '') {
         const src = input.srcURL;
         groups.push([
-            { id: 'image-copy', label: 'Copy image', icon: Image, action: { kind: 'copy-image' } },
-            { id: 'image-address', label: 'Copy image address', icon: Link, action: { kind: 'copy-text', text: src } },
+            { id: 'image-copy', label: i18next.t('browser:menu.image.copy'), icon: Image, action: { kind: 'copy-image' } },
+            { id: 'image-address', label: i18next.t('browser:menu.image.copyAddress'), icon: Link, action: { kind: 'copy-text', text: src } },
             // Nothing here handles `will-download`, so Electron asks where to put the file itself.
-            { id: 'image-save', label: 'Save image as...', icon: Download, action: { kind: 'save-image', url: src } }
+            { id: 'image-save', label: i18next.t('browser:menu.image.save'), icon: Download, action: { kind: 'save-image', url: src } }
         ]);
     }
 
     if (input.selectionText !== '') {
         groups.push([
-            { id: 'copy', label: 'Copy', icon: Copy, disabled: !input.editFlags.canCopy, action: { kind: 'copy-selection' } },
+            { id: 'copy', label: i18next.t('common:action.copy'), icon: Copy, disabled: !input.editFlags.canCopy, action: { kind: 'copy-selection' } },
             {
                 id: 'search',
-                label: `Search the web for "${asLabel(input.selectionText)}"`,
+                label: i18next.t('browser:menu.selection.search', { text: asLabel(input.selectionText) }),
                 icon: Search,
                 action: { kind: 'open-external', url: `${SEARCH_URL}${encodeURIComponent(input.selectionText)}` }
             }
         ]);
     }
 
-    groups.push([{ id: 'inspect', label: 'Inspect element', icon: Code, action: { kind: 'inspect' } }]);
+    groups.push([{ id: 'inspect', label: i18next.t('browser:menu.inspect'), icon: Code, action: { kind: 'inspect' } }]);
     return groups;
 };

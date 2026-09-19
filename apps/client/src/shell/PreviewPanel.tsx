@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { hasOverlayControls, isApplePlatform } from '@/desktop/bridge';
 import { FileTabs } from '@/shell/panels/FileTabs';
@@ -35,6 +36,7 @@ const halfOfCanvas = (): number => {
    the panel beside it, it stays mounted and animates its width over an inner column of the stored
    width, so its contents do not reflow while it slides in or out. */
 export function PreviewPanel() {
+    const { t } = useTranslation('shell');
     const activeTab = useFiles((s) => s.active);
     const open = useUi((s) => s.preview.open);
     const panelOpen = useUi((s) => s.panel.open);
@@ -148,14 +150,14 @@ export function PreviewPanel() {
                     >
                         <FileTabs />
                         <Separator />
-                        <Tooltip label="Close all tabs" name>
+                        <Tooltip label={t('preview.closeAll')} name>
                             <button className="icon-btn" onClick={() => useFiles.getState().closeAll()}>
                                 <Icon icon={X} size={16} />
                             </button>
                         </Tooltip>
                     </header>
                     {/* The tabs above stay, so another file is one click away from a broken one. */}
-                    <ErrorBoundary label="This preview failed to render" resetKeys={[activeTab]} className="min-h-0 grow">
+                    <ErrorBoundary label={t('preview.failed')} resetKeys={[activeTab]} className="min-h-0 grow">
                         <FileViewer />
                     </ErrorBoundary>
                 </div>

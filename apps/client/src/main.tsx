@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { App } from '@/App';
+import { initI18n } from '@/i18n';
 import { startAgentNotifications } from '@/shell/notifications';
 import { startAttentionWatch } from '@/state/attention';
 import { startSessionLifecycle } from '@/terminal/lifecycle';
@@ -73,5 +74,9 @@ useTheme.subscribe((state, previous) => {
 if (import.meta.env.DEV) {
     exposeTerminalTestHooks();
 }
+
+/* The words come first: a screen drawn before its language is in is a screen in the wrong one,
+   and swapping it under a person is worse than the moment it takes to load. */
+await initI18n();
 
 createRoot(document.getElementById('root')!).render(<App />);

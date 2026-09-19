@@ -1,34 +1,22 @@
+import i18next from 'i18next';
 import type { GitCommit } from '@ruimte/contracts';
+import { formatDay, formatDayWithYear } from '@/format/datetime';
+import { formatAgo } from '@/format/duration';
 
 const MINUTE = 60;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-const DATE_FORMAT = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
-const DATE_WITH_YEAR = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
 /* The date a row falls back to once "days ago" stops meaning anything, with the year when it is not this one. */
 const dateOf = (at: number, now: number): string => {
     const date = new Date(at * 1000);
-    return date.getFullYear() === new Date(now * 1000).getFullYear() ? DATE_FORMAT.format(date) : DATE_WITH_YEAR.format(date);
+    return date.getFullYear() === new Date(now * 1000).getFullYear() ? formatDay(date) : formatDayWithYear(date);
 };
 
 /* How long ago a commit was written, short enough for the right edge of a log row. */
 export const relativeTime = (at: number, now: number): string => {
     const seconds = Math.max(0, now - at);
-    if (seconds < MINUTE) {
-        return 'just now';
-    }
-    if (seconds < HOUR) {
-        return `${Math.floor(seconds / MINUTE)}m ago`;
-    }
-    if (seconds < DAY) {
-        return `${Math.floor(seconds / HOUR)}h ago`;
-    }
-    if (seconds < 7 * DAY) {
-        return `${Math.floor(seconds / DAY)}d ago`;
-    }
-    return dateOf(at, now);
+    return seconds < 7 * DAY ? formatAgo(seconds * 1000) : dateOf(at, now);
 };
 
 export interface LogSection {
@@ -52,7 +40,7 @@ export const groupCommits = (commits: readonly GitCommit[], now: number): LogSec
     const sections: LogSection[] = [];
     for (const commit of commits) {
         const day = startOfDay(commit.at);
-        const label = day === today ? 'Today' : day === today - DAY ? 'Yesterday' : dateOf(commit.at, now);
+        const label = day === today ? i18next.t('panels:git.log.today') : day === today - DAY ? i18next.t('panels:git.log.yesterday') : dateOf(commit.at, now);
         const last = sections[sections.length - 1];
         if (last?.label === label) {
             last.commits.push(commit);

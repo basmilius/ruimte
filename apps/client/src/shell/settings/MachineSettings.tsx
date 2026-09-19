@@ -1,8 +1,12 @@
 import { useEffect, useState, type ReactElement } from 'react';
+import i18next from 'i18next';
 import { Check, Copy, Link2, Trash } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { brokerHostOf, brokerUrlProblem, type BrokerSetting } from '@ruimte/pulsar';
 import type { AuthSession } from '@ruimte/contracts';
 import { forgetEndpoint } from '@/endpoint';
+import { formatNumericDate } from '@/format/datetime';
+import { formatAgo } from '@/format/duration';
 import { ConfirmDialog } from '@/shell/settings/ConfirmDialog';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -66,8 +70,8 @@ const saveMachineSetting = async (
         useToasts.getState().show({
             id: `endpoint-setting-${endpoint.id}`,
             kind: 'error',
-            title: `${endpoint.label} could not save the change`,
-            description: failureText(e, 'The setting is unchanged.')
+            title: i18next.t('settings:machine.toast.saveFailed', { machine: endpoint.label }),
+            description: failureText(e, i18next.t('settings:machine.toast.unchanged'))
         });
     }
 };
@@ -78,11 +82,12 @@ const saveMachineSetting = async (
  * with the reason on the row, rather than quietly turning back into a socket.
  */
 export function DirectRow({ endpoint, available }: { endpoint: Endpoint; available: boolean }) {
+    const { t } = useTranslation('settings');
     const connection = useEndpointConnection(endpoint.id);
     const failure = endpoint.direct === true && connection.status !== 'open' ? (connection.failure ?? null) : null;
 
     if (!available) {
-        return <SettingsRow muted label="Direct" description="Reached through the broker only, so this machine is always direct." />;
+        return <SettingsRow muted label={t('machine.direct.label')} description={t('machine.direct.brokerOnly')} />;
     }
 
     const toggle = (direct: boolean): void => {
@@ -92,31 +97,28 @@ export function DirectRow({ endpoint, available }: { endpoint: Endpoint; availab
 
     return (
         <SettingsRow
-            label="Direct"
+            label={t('machine.direct.label')}
             description={
                 failure !== null ? (
                     <span className="text-status-error">{failure}</span>
                 ) : endpoint.brokerUrl ? (
-                    `Connect over WebRTC, found through the broker on ${brokerHostOf(endpoint.brokerUrl)} (experimental).`
+                    t('machine.direct.viaBroker', { host: brokerHostOf(endpoint.brokerUrl) })
                 ) : (
-                    'Connect over WebRTC instead of the socket (experimental).'
+                    t('machine.direct.description')
                 )
             }
-            control={<Toggle checked={endpoint.direct === true} onChange={toggle} label={`Connect directly to ${endpoint.label} (experimental)`} />}
+            control={<Toggle checked={endpoint.direct === true} onChange={toggle} label={t('machine.direct.toggle', { machine: endpoint.label })} />}
         />
     );
 }
 
 type BrokerMode = BrokerSetting['mode'];
 
-const MODES: { value: BrokerMode; label: string }[] = [
-    { value: 'default', label: 'Default' },
-    { value: 'custom', label: 'Custom' },
-    { value: 'off', label: 'Off' }
-];
+const MODES: readonly BrokerMode[] = ['default', 'custom', 'off'];
 
 /* Which broker the machine announces itself to. It lives on the machine because the daemon is the one that dials it. */
 export function BrokerRow({ endpoint, reason }: { endpoint: Endpoint; reason: string | null }) {
+    const { t } = useTranslation('settings');
     const info = useServers((s) => s.byEndpoint[endpoint.id]);
     const setting = info?.broker ?? null;
     const [mode, setMode] = useState<BrokerMode>(setting?.mode ?? 'default');
@@ -159,27 +161,27 @@ export function BrokerRow({ endpoint, reason }: { endpoint: Endpoint; reason: st
 
     const description = (): string => {
         if (reason !== null) {
-            return 'Not answering. Change this once the machine is back.';
+            return t('machine.notAnswering');
         }
         if (setting === null) {
-            return 'This machine runs a version without this setting.';
+            return t('machine.unsupported');
         }
-        const where = endpoint.brokerUrl ? `On ${brokerHostOf(endpoint.brokerUrl)}.` : 'No broker.';
-        const fixed = info?.brokerFixed ? ' Set when the machine started, so this choice waits until it runs without that.' : '';
-        return `How a signed-in client finds the machine without its address. ${where}${fixed}`;
+        const where = endpoint.brokerUrl ? t('machine.broker.on', { host: brokerHostOf(endpoint.brokerUrl) }) : t('machine.broker.none');
+        const fixed = info?.brokerFixed ? t('machine.broker.fixed') : '';
+        return t('machine.broker.description', { where, fixed });
     };
 
     return (
         <SettingsRow
-            label="Broker"
+            label={t('machine.broker.label')}
             description={description()}
             control={
                 <WithReason reason={reason}>
                     <Select
                         value={mode}
-                        items={MODES}
+                        items={MODES.map((value) => ({ value, label: t(`machine.broker.modes.${value}`) }))}
                         onValueChange={pick}
-                        label={`Broker for ${endpoint.label}`}
+                        label={t('machine.broker.selectLabel', { machine: endpoint.label })}
                         disabled={busy || reason !== null || setting === null}
                     />
                 </WithReason>
@@ -190,7 +192,7 @@ export function BrokerRow({ endpoint, reason }: { endpoint: Endpoint; reason: st
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
                         <input
                             className="field min-w-0 flex-1 basis-48"
-                            aria-label={`Broker URL for ${endpoint.label}`}
+                            aria-label={t('machine.broker.urlLabel', { machine: endpoint.label })}
                             placeholder="wss://broker.example.com"
                             value={draft}
                             spellCheck={false}
@@ -207,7 +209,7 @@ export function BrokerRow({ endpoint, reason }: { endpoint: Endpoint; reason: st
                             disabled={busy || draft.trim() === '' || (setting.mode === 'custom' && draft.trim() === setting.url)}
                             onClick={saveCustom}
                         >
-                            Save
+                            {t('common:action.save')}
                         </Button>
                     </div>
                     {problem && <div className="text-xs break-words text-status-error">{problem}</div>}
@@ -219,6 +221,7 @@ export function BrokerRow({ endpoint, reason }: { endpoint: Endpoint; reason: st
 
 /* Whether the machine takes a statement from the address book at all; the daemon is what lets a key in. */
 export function RefuseStatementsRow({ endpoint, reason }: { endpoint: Endpoint; reason: string | null }) {
+    const { t } = useTranslation('settings');
     const refuses = useServers((s) => s.byEndpoint[endpoint.id]?.refuseStatements === true);
     const [busy, setBusy] = useState(false);
 
@@ -230,18 +233,14 @@ export function RefuseStatementsRow({ endpoint, reason }: { endpoint: Endpoint; 
 
     return (
         <SettingsRow
-            label="Refuse sign-in through an account"
-            description={
-                reason === null
-                    ? 'On, only a pairing link lets a new client in. Off, a client signed in to an account this machine is on gets in, and shows up under Apps with access. Clients that already have access keep it.'
-                    : 'Not answering. Change this once the machine is back.'
-            }
+            label={t('machine.refuse.label')}
+            description={reason === null ? t('machine.refuse.description') : t('machine.notAnswering')}
             control={
                 <WithReason reason={reason}>
                     <Toggle
                         checked={refuses}
                         onChange={(checked) => void set(checked)}
-                        label={`Refuse sign-in through an account on ${endpoint.label}`}
+                        label={t('machine.refuse.toggle', { machine: endpoint.label })}
                         disabled={busy || reason !== null}
                     />
                 </WithReason>
@@ -252,9 +251,10 @@ export function RefuseStatementsRow({ endpoint, reason }: { endpoint: Endpoint; 
 
 /* One daemon policy covers today's browser stream and the device streams that will follow it. */
 export function StreamingRow({ endpoint, reason }: { endpoint: Endpoint; reason: string | null }) {
+    const { t } = useTranslation('settings');
     const allowed = useServers((s) => s.byEndpoint[endpoint.id]?.streamingAllowed ?? null);
     const [busy, setBusy] = useState(false);
-    const unavailable = reason ?? (allowed === null ? 'This machine runs a version without this setting' : null);
+    const unavailable = reason ?? (allowed === null ? t('machine.unsupportedReason') : null);
 
     const set = async (checked: boolean): Promise<void> => {
         setBusy(true);
@@ -264,20 +264,14 @@ export function StreamingRow({ endpoint, reason }: { endpoint: Endpoint; reason:
 
     return (
         <SettingsRow
-            label="Browser and device streaming"
-            description={
-                reason !== null
-                    ? 'Not answering. Change this once the machine is back.'
-                    : allowed === null
-                      ? 'This machine runs a version without this setting.'
-                      : 'Allow this machine to stream browser pages and device screens to clients without a native view of their own.'
-            }
+            label={t('machine.streaming.label')}
+            description={reason !== null ? t('machine.notAnswering') : allowed === null ? t('machine.unsupported') : t('machine.streaming.description')}
             control={
                 <WithReason reason={unavailable}>
                     <Toggle
                         checked={allowed !== false}
                         onChange={(checked) => void set(checked)}
-                        label={`Allow browser and device streaming from ${endpoint.label}`}
+                        label={t('machine.streaming.toggle', { machine: endpoint.label })}
                         disabled={busy || unavailable !== null}
                     />
                 </WithReason>
@@ -286,19 +280,7 @@ export function StreamingRow({ endpoint, reason }: { endpoint: Endpoint; reason:
     );
 }
 
-const ago = (timestamp: number): string => {
-    const seconds = Math.max(0, Math.round((Date.now() - timestamp) / 1000));
-    if (seconds < 60) {
-        return 'just now';
-    }
-    if (seconds < 3600) {
-        return `${Math.floor(seconds / 60)}m ago`;
-    }
-    if (seconds < 86_400) {
-        return `${Math.floor(seconds / 3600)}h ago`;
-    }
-    return `${Math.floor(seconds / 86_400)}d ago`;
-};
+const ago = (timestamp: number): string => formatAgo(Date.now() - timestamp);
 
 /* A pairing link that names the loopback address can only be a machine that nobody else can reach. */
 const onlyLoopback = (link: string): boolean => {
@@ -312,6 +294,7 @@ const onlyLoopback = (link: string): boolean => {
 
 /* The browsers and apps that paired with one machine, each with a way to cut it off, and on this machine a way to invite one. */
 export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
+    const { t } = useTranslation('settings');
     const reachability = useServers((s) => s.byEndpoint[endpoint.id]?.reachability ?? endpoint.reachability);
     const status = useEndpointConnection(endpoint.id).status;
     const [sessions, setSessions] = useState<AuthSession[] | null>(null);
@@ -332,7 +315,7 @@ export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
                 setSessions(answer.sessions);
                 setFailure(null);
             })
-            .catch((e: unknown) => setFailure(failureText(e, 'Could not list paired clients')));
+            .catch((e: unknown) => setFailure(failureText(e, t('machine.access.listFailed'))));
     };
 
     // The list belongs to the machine behind the socket, so it loads again on every reconnect.
@@ -368,7 +351,7 @@ export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
             setLink((await transport.request('auth.pairingToken', {})).url);
             setCopied(false);
         } catch (e) {
-            setFailure(failureText(e, 'Could not create a pairing link'));
+            setFailure(failureText(e, t('machine.access.linkFailed')));
         } finally {
             setBusy(false);
         }
@@ -391,28 +374,24 @@ export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
 
     return (
         <SettingsSection
-            title="Apps with access"
-            description="Browsers and apps paired with this machine."
+            title={t('machine.access.title')}
+            description={t('machine.access.description')}
             action={
                 reachability === 'loopback' && (
                     <Button variant="secondary" disabled={busy || status !== 'open'} onClick={() => void showLink()}>
-                        <Icon icon={Link2} size={12} /> Show pairing link
+                        <Icon icon={Link2} size={12} /> {t('machine.access.showLink')}
                     </Button>
                 )
             }
         >
             {link && (
                 <SettingsRow
-                    label="Pairing link"
-                    description={
-                        onlyLoopback(link)
-                            ? 'This machine only accepts local connections. Start it with --host 0.0.0.0 so other machines can use the link.'
-                            : 'Paste it under Add a machine on the other device. It works once and expires after ten minutes.'
-                    }
+                    label={t('machine.access.link.label')}
+                    description={onlyLoopback(link) ? t('machine.access.link.loopback') : t('machine.access.link.description')}
                 >
                     <div className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface-sunken p-2.5">
                         <code className="min-w-0 grow truncate font-mono text-code text-text select-text">{link}</code>
-                        <Tooltip label={copied ? 'Copied' : 'Copy pairing link'} name>
+                        <Tooltip label={copied ? t('machine.access.link.copied') : t('machine.access.link.copy')} name>
                             <button className="icon-btn h-7 w-7 shrink-0" onClick={copyLink}>
                                 {copied ? <Icon icon={Check} size={16} /> : <Icon icon={Copy} size={16} />}
                             </button>
@@ -421,25 +400,33 @@ export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
                 </SettingsRow>
             )}
             {status !== 'open' && sessions === null && failure === null && (
-                <SettingsRow muted label="Not answering" description="The list loads once the machine is back." />
+                <SettingsRow muted label={t('machine.access.silent.label')} description={t('machine.access.silent.description')} />
             )}
             {status === 'open' && listed === null && failure === null && (
                 <SettingsRow label={<Skeleton className="w-40" />} control={<Skeleton className="w-8" />} />
             )}
-            {listed?.length === 0 && <SettingsRow muted label="Nothing else has access to this machine." />}
+            {listed?.length === 0 && <SettingsRow muted label={t('machine.access.empty')} />}
             {listed?.map((session) => (
                 <SettingsRow
                     key={session.id}
                     label={
                         <span className="break-words">
                             {session.label}
-                            {session.current && <span className="ml-1.5 text-xs text-accent">this client</span>}
+                            {session.current && <span className="ml-1.5 text-xs text-accent">{t('machine.access.thisClient')}</span>}
                         </span>
                     }
-                    description={`${session.origin === 'statement' ? 'Signed in through an account' : 'Paired with a link'} ${new Date(session.createdAt).toLocaleDateString()}, last seen ${ago(session.lastSeenAt)}`}
+                    description={t('machine.access.session', {
+                        origin: session.origin === 'statement' ? t('machine.access.origin.statement') : t('machine.access.origin.link'),
+                        date: formatNumericDate(session.createdAt),
+                        ago: ago(session.lastSeenAt)
+                    })}
                     control={
-                        <Tooltip label="Revoke access">
-                            <button className="icon-btn h-8 w-8 shrink-0" aria-label={`Revoke ${session.label}`} onClick={() => setTarget(session)}>
+                        <Tooltip label={t('machine.access.revoke')}>
+                            <button
+                                className="icon-btn h-8 w-8 shrink-0"
+                                aria-label={t('machine.access.revokeOne', { label: session.label })}
+                                onClick={() => setTarget(session)}
+                            >
                                 <Icon icon={Trash} size={16} />
                             </button>
                         </Tooltip>
@@ -450,15 +437,15 @@ export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
             <ConfirmDialog
                 open={target !== null}
                 onOpenChange={(open) => (open ? undefined : setTarget(null))}
-                title={`Revoke ${target?.label ?? 'this client'}?`}
+                title={t('machine.access.confirm.title', { label: target?.label ?? t('machine.access.thisClient') })}
                 description={
                     target?.current
-                        ? 'This is the client you are using. It loses access to this machine and forgets it here. Pair again to regain access.'
+                        ? t('machine.access.confirm.current')
                         : target?.origin === 'statement'
-                          ? 'It loses access the next time it connects, and signing in through an account will not let it back in. Pairing again needs a link.'
-                          : 'It loses access the next time it connects. Pairing again needs a new link.'
+                          ? t('machine.access.confirm.statement')
+                          : t('machine.access.confirm.link')
                 }
-                confirmLabel="Revoke"
+                confirmLabel={t('machine.access.confirm.action')}
                 onConfirm={revoke}
             />
         </SettingsSection>

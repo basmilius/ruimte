@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { AgentKind, AgentStatus, CanvasNodeKind, NodeTitleSource, ProjectIconChoice, ProjectViewKind, Task } from '@ruimte/contracts';
 
 export interface SidebarNode {
@@ -120,7 +121,7 @@ export const buildSidebar = ({ project, expandedIds }: SidebarInput): SidebarSec
         }
     }
     if (waiting.length > 0) {
-        sections.push({ id: 'needs-you', kind: 'needs-you', label: 'Needs you', rows: waiting, viewCount: 0 });
+        sections.push({ id: 'needs-you', kind: 'needs-you', label: i18next.t('shell:sidebar.needsYou'), rows: waiting, viewCount: 0 });
     }
 
     const rows: SidebarRow[] = [];

@@ -1,0 +1,312 @@
+{
+  "attachments": {
+    "rejected": {
+      "empty": "The file is empty",
+      "tooLarge": "Larger than {{size}}",
+      "tooMany_one": "At most {{count}} file per message",
+      "tooMany_other": "At most {{count}} files per message",
+      "tooHeavy": "Attachments must total at most {{size}} per message"
+    },
+    "unreadable": "Could not read {{name}}",
+    "unreadableThumbnail": "Could not read the thumbnail"
+  },
+  "fork": {
+    "refusal": {
+      "notInConversation": "This turn is not in the conversation",
+      "cliCannotFork": "This CLI has no conversation that can be forked",
+      "noConversation": "The CLI never started a conversation here",
+      "turnRunning": "Wait for the turn to end",
+      "originalGone": "The original is no longer in this project"
+    },
+    "point": {
+      "afterLast": "After the last turn",
+      "afterTurn": "After turn {{number}} of {{total}}",
+      "about": "{{where}}: \"{{prompt}}\""
+    },
+    "branch": {
+      "unnamed": "Name the branch",
+      "taken": "A branch with this name exists already"
+    },
+    "pill": {
+      "label": "Fork",
+      "of": "Fork of {{title}}",
+      "when": "Forked, {{at}}",
+      "whenTurn": "Forked after turn {{turn}}, {{at}}",
+      "orphaned": "{{when}}. The original is no longer in this project."
+    },
+    "menu": {
+      "fork": "Fork conversation...",
+      "summarize": "Summarize for the original",
+      "summarizeFor": "Summarize for {{title}}",
+      "showOriginal": "Show original",
+      "summaryFailed": "The summary could not be asked for"
+    }
+  },
+  "contextMeter": {
+    "aria": "{{percent}}% of the context used",
+    "percent": "{{percent}}% of context",
+    "title": "Context",
+    "turns": "Turns",
+    "cost": "Cost",
+    "compact": "Compact context"
+  },
+  "rows": {
+    "user": {
+      "heading": "You",
+      "showAll": "Show all",
+      "showLess": "Show less"
+    },
+    "report": {
+      "heading": "Report"
+    },
+    "reply": {
+      "agent": "Agent",
+      "writing": "Writing..."
+    },
+    "thinking": {
+      "live": "Thinking...",
+      "thoughtFor": "Thought for {{duration}}"
+    },
+    "note": {
+      "hide": "Hide",
+      "show": "Show",
+      "openFork": "Open fork"
+    },
+    "compaction": {
+      "plain": "Context compacted",
+      "from": "Context compacted from {{tokens}} tokens"
+    },
+    "approval": {
+      "allow": "Allowed",
+      "allow-always": "Always allowed",
+      "deny": "Declined",
+      "cancelled": "No longer needed"
+    },
+    "question": {
+      "notAnswered": "(not answered)",
+      "dismissed": "(dismissed)"
+    },
+    "subagent": {
+      "task": "Task",
+      "label": "Sub-agent",
+      "background": "background",
+      "done": "done",
+      "doneIn": "done in {{duration}}",
+      "failed": "failed",
+      "failedIn": "failed in {{duration}}",
+      "nothingYet": "Nothing to show yet.",
+      "truncated": "Only the beginning of this agent's work is kept.",
+      "showResult": "Show result",
+      "hideResult": "Hide result"
+    }
+  },
+  "work": {
+    "moreCharacters_one": "[{{count}} more character]",
+    "moreCharacters_other": "[{{count}} more characters]",
+    "loadingDiff": "Loading diff",
+    "runningFor": "running for {{elapsed}}",
+    "forksAfter_one": "A fork goes on after this turn",
+    "forksAfter_other": "{{count}} forks go on after this turn",
+    "forked_one": "Forked",
+    "forked_other": "Forked {{count}}x",
+    "omitted": {
+      "binary": "Binary file, no diff",
+      "tooLarge": "Too large to show"
+    },
+    "changedFiles_one": "{{count}} changed file",
+    "changedFiles_other": "{{count}} changed files",
+    "andMore": "and more, truncated",
+    "edits_one": "{{count}} edit",
+    "edits_other": "{{count}} edits",
+    "workingFor": "Working for"
+  },
+  "timeline": {
+    "empty": {
+      "ready": "{{model}} is ready. Ask it anything.",
+      "ask": "Ask anything.",
+      "canRead": "It can read",
+      "worksIn": "It works in"
+    },
+    "stripFailed": "The message strip failed to render",
+    "menu": {
+      "copyMessage": "Copy message",
+      "copyCode": "Copy code",
+      "copyMarkdown": "Copy as markdown",
+      "forkFromHere": "Fork from here",
+      "openInPreview": "Open in preview"
+    }
+  },
+  "group": {
+    "tools": {
+      "Read_one": "Read {{count}} file",
+      "Read_other": "Read {{count}} files",
+      "Edit_one": "Edited {{count}} file",
+      "Edit_other": "Edited {{count}} files",
+      "Write_one": "Wrote {{count}} file",
+      "Write_other": "Wrote {{count}} files",
+      "MultiEdit_one": "Edited {{count}} file",
+      "MultiEdit_other": "Edited {{count}} files",
+      "NotebookEdit_one": "Edited {{count}} notebook",
+      "NotebookEdit_other": "Edited {{count}} notebooks",
+      "ApplyPatch_one": "Edited {{count}} file",
+      "ApplyPatch_other": "Edited {{count}} files",
+      "Bash_one": "Ran {{count}} command",
+      "Bash_other": "Ran {{count}} commands",
+      "Grep_one": "Searched {{count}} pattern",
+      "Grep_other": "Searched {{count}} patterns",
+      "Glob_one": "Listed {{count}} pattern",
+      "Glob_other": "Listed {{count}} patterns",
+      "WebFetch_one": "Fetched {{count}} page",
+      "WebFetch_other": "Fetched {{count}} pages",
+      "WebSearch_one": "Searched the web {{count}} query",
+      "WebSearch_other": "Searched the web {{count}} queries",
+      "Task_one": "Delegated {{count}} task",
+      "Task_other": "Delegated {{count}} tasks",
+      "Agent_one": "Delegated {{count}} task",
+      "Agent_other": "Delegated {{count}} tasks",
+      "Skill_one": "Used {{count}} skill",
+      "Skill_other": "Used {{count}} skills",
+      "TodoWrite_one": "Updated {{count}} plan",
+      "TodoWrite_other": "Updated {{count}} plans"
+    },
+    "calls_one": "{{name}} {{count}} call",
+    "calls_other": "{{name}} {{count}} calls",
+    "edited_one": "Edited {{count}} file",
+    "edited_other": "Edited {{count}} files",
+    "toolCalls_one": "{{count}} tool call",
+    "toolCalls_other": "{{count}} tool calls"
+  },
+  "turn": {
+    "about": "{{what}}: {{label}}",
+    "wokenByTask_one": "Woken by a task",
+    "wokenByTask_other": "Woken by {{count}} tasks",
+    "wokenByMessage_one": "Woken by a message",
+    "wokenByMessage_other": "Woken by {{count}} messages",
+    "subagentFinished": "Sub-agent finished: {{label}}",
+    "continued": "Continued on its own",
+    "stopped": "Stopped after {{duration}}",
+    "youStopped": "You stopped after {{duration}}",
+    "failed": "Failed after {{duration}}",
+    "worked": "Worked for {{duration}}"
+  },
+  "composer": {
+    "commands": {
+      "model": "Switch the model",
+      "compact": "Compact the context",
+      "clear": "Start a new context",
+      "skill": "Skill",
+      "cli": "{{cli}} command",
+      "anyCli": "CLI"
+    },
+    "notice": {
+      "clearFailed": "The thread could not be cleared",
+      "noAttachments": "{{agent}} takes no attachments",
+      "thisAgent": "This agent",
+      "rejected": "{{name}}: {{reason}}",
+      "thatFile": "That file",
+      "unreadable": "That file could not be read"
+    },
+    "placeholder": {
+      "disconnected": "Not connected to the machine",
+      "ready": "Ask anything, / for commands, @ for files, $ for skills"
+    },
+    "jumpToEnd": "Jump to the end",
+    "mentions": {
+      "here": "Files in this folder",
+      "noMatch": "No files match",
+      "empty": "No files here"
+    },
+    "queue": {
+      "attachments_one": "{{count}} attachment",
+      "attachments_other": "{{count}} attachments",
+      "sendNow": "Send now"
+    },
+    "removeAttachment": "Remove {{name}}",
+    "tooLong": "characters, too long to send",
+    "stop": "Stop, Shift-click to also stop its sub-agents",
+    "queueButton": "Queue",
+    "send": "Send",
+    "clear": {
+      "title": "Clear the thread?",
+      "description": "A turn is running. Stop it and clear the thread?",
+      "confirm": "Stop and clear"
+    },
+    "waitingBelow": "Waiting for your answer below"
+  },
+  "subagents": {
+    "stop": {
+      "task": "Stop this task",
+      "mark": "Mark as stopped. The CLI cannot stop one sub-agent, so it may keep working until the chat's process ends."
+    },
+    "title": "Sub-agents",
+    "backToMain": "Back to the main agent",
+    "empty": "This chat has no sub-agents to open.",
+    "active": "Active",
+    "done": "Done",
+    "loading": "Loading the conversation...",
+    "loadEarlier": "Load earlier",
+    "loadingEarlier": "Loading...",
+    "working": "Working...",
+    "unsupported": "This machine cannot open a sub-agent's conversation. Update Ruimte there to read it.",
+    "unreadable": "The conversation could not be read.",
+    "noAnswer": "The machine did not answer",
+    "stopFailed": "The sub-agent could not be stopped",
+    "status": {
+      "running": "running",
+      "done": "done",
+      "failed": "failed",
+      "cancelled": "cancelled"
+    }
+  },
+  "modes": {
+    "supervised": {
+      "label": "Supervised",
+      "hint": "Asks before commands and file changes"
+    },
+    "auto-accept-edits": {
+      "label": "Auto-accept edits",
+      "hint": "File edits go through, commands still ask"
+    },
+    "auto": {
+      "label": "Auto",
+      "hint": "The agent reviews routine actions itself"
+    },
+    "full-access": {
+      "label": "Full access",
+      "hint": "Never asks for approval"
+    }
+  },
+  "pickers": {
+    "model": {
+      "choose": "Choose model",
+      "search": "Search models",
+      "noProvider": "No chat provider installed",
+      "noMatch": "No models match",
+      "legacyGroup_one": "Legacy models ({{count}})",
+      "legacyGroup_other": "Legacy models ({{count}})",
+      "legacy": "Legacy"
+    },
+    "options": {
+      "label": "Options"
+    },
+    "stash": {
+      "title": "Stashed prompts",
+      "noText": "No text",
+      "files_one": "{{count}} file, not kept",
+      "files_other": "{{count}} files, not kept"
+    },
+    "mode": {
+      "label": "Permissions"
+    }
+  },
+  "scrubber": {
+    "strip": "Messages in this thread",
+    "tasks": "Tasks"
+  },
+  "image": {
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "reset": "Reset",
+    "gone": "That file is no longer there"
+  }
+}

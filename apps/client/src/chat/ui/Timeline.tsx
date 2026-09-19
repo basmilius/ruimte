@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import clsx from 'clsx';
@@ -31,23 +32,24 @@ const ESTIMATED_ROW_PX = 56;
  * and the folder it works in, so a first question can lean on all three.
  */
 function EmptyThread({ chatId }: { chatId: string }) {
+    const { t } = useTranslation('chat');
     const info = useChatRow(chatId, (row) => row?.info ?? null);
     const sources = useContextSources(chatId);
     return (
         <div className="flex grow items-center justify-center">
             <div className="flex max-w-sm flex-col items-center gap-3 px-6 py-8 text-center">
                 <EmptyState icon={info ? <AgentIcon kind={info.provider} /> : undefined} className="p-0">
-                    {info ? `${info.selection.model} is ready. Ask it anything.` : 'Ask anything.'}
+                    {info ? t('timeline.empty.ready', { model: info.selection.model }) : t('timeline.empty.ask')}
                 </EmptyState>
                 {sources.length > 0 && (
                     <div className="flex max-w-full flex-col items-center gap-1">
-                        <span className={SECTION_LABEL}>It can read</span>
+                        <span className={SECTION_LABEL}>{t('timeline.empty.canRead')}</span>
                         <span className="max-w-full text-xs text-text-muted">{sources.map((source) => source.title).join(', ')}</span>
                     </div>
                 )}
                 {info?.cwd && (
                     <div className="flex max-w-full flex-col items-center gap-1">
-                        <span className={SECTION_LABEL}>It works in</span>
+                        <span className={SECTION_LABEL}>{t('timeline.empty.worksIn')}</span>
                         <span className="max-w-full font-mono text-xs break-all text-text-muted">{info.cwd}</span>
                     </div>
                 )}
@@ -66,6 +68,7 @@ const BLOCK_KINDS = new Set<TimelineRow['kind']>(['assistant', 'report', 'thinki
 const isBlock = (row: TimelineRow): boolean => BLOCK_KINDS.has(row.kind);
 
 export function Timeline({ chatId, composer }: { chatId: string; composer?: ReactNode }) {
+    const { t } = useTranslation('chat');
     const order = useChatRow(chatId, (row) => row?.order);
     // The structure, not the items: a delta growing a reply must not derive every row again.
     const items = useChatRow(chatId, (row) => row?.structure);
@@ -355,7 +358,7 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                 </ContextMenu.Root>
                 {showsScrubber && (
                     <div className="absolute top-4" style={{ left: STRIP_INSET_PX, width: STRIP_WIDTH_PX, bottom: coveredHeight }}>
-                        <ErrorBoundary label="The message strip failed to render" resetKeys={[ticks.length]}>
+                        <ErrorBoundary label={t('timeline.stripFailed')} resetKeys={[ticks.length]}>
                             <Scrubber ticks={ticks} firstInView={inView?.first ?? null} lastInView={inView?.last ?? null} onPick={pick} chat={cardChat} />
                         </ErrorBoundary>
                     </div>

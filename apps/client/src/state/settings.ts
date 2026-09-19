@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { WorktreeMergeStrategySchema, type WorktreeMergeStrategy } from '@ruimte/contracts';
 import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
+import { FORMAT_LANGUAGE, formatRegionFrom } from '@/format/regions';
+import { LANGUAGE_SYSTEM, languageFrom } from '@/i18n/languages';
 import { isLiveVoice, isVoiceLanguage, type LiveVoice, type VoiceLanguage } from '@/voice/preferences';
 
 const STORAGE_KEY = 'ruimte.settings';
@@ -102,6 +104,14 @@ export interface Settings {
     /* The STUN servers a direct connection asks for this client's public address, separated by spaces.
        Empty offers the addresses of this machine's own interfaces only, which is enough on one network. */
     directStunServers: string;
+    /* Which language the interface is written in: `system` is whatever the operating system asks
+       for, and one of `APP_LANGUAGES` overrules it. */
+    language: string;
+    /* Which region writes the numbers, dates and times: `language` follows whatever the interface
+       is written in, `system` follows the operating system, and a tag from `FORMAT_REGIONS`
+       overrules both. The two are apart because a person can read one language in another country's
+       notation, which is what an English app on a Dutch Mac already was. */
+    formatRegion: string;
 }
 
 // The STUN answer of Ruimte's own coturn, so a direct connection across two networks asks no third party.
@@ -144,7 +154,9 @@ const DEFAULT_SETTINGS: Settings = {
     agentsTurnNotify: true,
     agentsTurnSound: false,
     browserSwipe: true,
-    directStunServers: DEFAULT_STUN_SERVER
+    directStunServers: DEFAULT_STUN_SERVER,
+    language: LANGUAGE_SYSTEM,
+    formatRegion: FORMAT_LANGUAGE
 };
 
 // Rounded as well as clamped: the stepper used to move in halves, so a browser can still hand back
@@ -191,7 +203,9 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     worktreeMergeStrategy: WORKTREE_MERGE_STRATEGIES.find((strategy) => strategy === stored.worktreeMergeStrategy) ?? DEFAULT_SETTINGS.worktreeMergeStrategy,
     // The key before it, `directStunServer`, held the previous default for nearly every client, since the field was hidden
     // and every save writes the whole blob; a new key leaves that value behind instead of recognizing it.
-    directStunServers: typeof stored.directStunServers === 'string' ? stored.directStunServers : DEFAULT_SETTINGS.directStunServers
+    directStunServers: typeof stored.directStunServers === 'string' ? stored.directStunServers : DEFAULT_SETTINGS.directStunServers,
+    language: languageFrom(stored.language),
+    formatRegion: formatRegionFrom(stored.formatRegion)
 });
 
 const read = (): Settings => {
@@ -265,7 +279,9 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 agentsTurnNotify,
                 agentsTurnSound,
                 browserSwipe,
-                directStunServers
+                directStunServers,
+                language,
+                formatRegion
             } = get();
             const next: Settings = {
                 accent,
@@ -293,6 +309,8 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 agentsTurnSound,
                 browserSwipe,
                 directStunServers,
+                language,
+                formatRegion,
                 ...patch
             };
             next.fontSize = clampSize(next.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize);

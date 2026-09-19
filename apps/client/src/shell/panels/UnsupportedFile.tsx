@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { CornerUpRight, FileQuestion } from 'lucide-react';
 import { FS_READ_MAX_TEXT_BYTES, type FsReadBinary, type FsReadTooLarge } from '@ruimte/contracts';
 import { formatBytes } from '@/shell/panels/file-size';
@@ -10,6 +11,7 @@ import { Icon } from '@/ui/Icon';
 
 /* What is left when there is nothing to draw: what the file is, how large, and the way to open it. */
 export function UnsupportedFile({ path, name, read }: { path: string; name: string; read: FsReadBinary | FsReadTooLarge }) {
+    const { t } = useTranslation('panels');
     const platform = useServer((s) => s.platform);
     const transport = useTransport();
     const reveal = (): void => {
@@ -25,13 +27,13 @@ export function UnsupportedFile({ path, name, read }: { path: string; name: stri
                 icon={<Icon icon={FileQuestion} size={20} />}
                 action={
                     <Button variant="secondary" size="sm" onClick={reveal}>
-                        <Icon icon={CornerUpRight} size={14} /> Reveal in {fileManagerName(platform)}
+                        <Icon icon={CornerUpRight} size={14} /> {t('file.revealIn', { app: fileManagerName(platform) })}
                     </Button>
                 }
             >
                 {read.kind === 'too-large'
-                    ? `${name} is ${formatBytes(read.size)}. Files over ${formatBytes(FS_READ_MAX_TEXT_BYTES)} do not open here.`
-                    : `${name} (${read.mime}, ${formatBytes(read.size)}) cannot be shown here.`}
+                    ? t('file.tooLarge', { name, size: formatBytes(read.size), limit: formatBytes(FS_READ_MAX_TEXT_BYTES) })
+                    : t('file.cannotShow', { name, mime: read.mime, size: formatBytes(read.size) })}
             </EmptyState>
         </div>
     );

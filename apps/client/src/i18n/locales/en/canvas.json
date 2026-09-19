@@ -1,0 +1,237 @@
+{
+  "accents": {
+    "red": "Red",
+    "orange": "Orange",
+    "amber": "Amber",
+    "yellow": "Yellow",
+    "lime": "Lime",
+    "green": "Green",
+    "emerald": "Emerald",
+    "teal": "Teal",
+    "cyan": "Cyan",
+    "sky": "Sky",
+    "blue": "Blue",
+    "indigo": "Indigo",
+    "violet": "Violet",
+    "purple": "Purple",
+    "fuchsia": "Fuchsia",
+    "pink": "Pink",
+    "rose": "Rose"
+  },
+  "noteColors": {
+    "yellow": "Yellow",
+    "green": "Green",
+    "blue": "Blue",
+    "pink": "Pink",
+    "gray": "Gray"
+  },
+  "locks": {
+    "pan": {
+      "label": "Pan",
+      "hint": "The canvas stays in place"
+    },
+    "zoom": {
+      "label": "Zoom",
+      "hint": "Wheel and pinch are ignored"
+    },
+    "move": {
+      "label": "Move nodes",
+      "hint": "Nodes stay where they are"
+    },
+    "resize": {
+      "label": "Resize nodes",
+      "hint": "Handles are hidden"
+    }
+  },
+  "status": {
+    "running": "Running",
+    "needs-you": "Needs you",
+    "idle": "Idle",
+    "error": "Error",
+    "exited": "Session ended"
+  },
+  "node": {
+    "failed": "This node failed to render",
+    "zoomTo": "Zoom to node",
+    "close": "Close node",
+    "context": {
+      "tooltip": "Linked context. The agent reads it with ruimte-context.",
+      "pill": "context"
+    }
+  },
+  "group": {
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "inside_one": "{{count}} inside",
+    "inside_other": "{{count}} inside",
+    "worktrees_one": "{{count}} worktree",
+    "worktrees_other": "{{count}} worktrees"
+  },
+  "menu": {
+    "doubleClick": "dbl-click",
+    "duplicate": "Duplicate",
+    "connect": "Connect to...",
+    "connectHint": "Then click a node",
+    "unbindWorktree": "Unbind worktree",
+    "unbindWorktreeHint": "Keeps the checkout",
+    "bindWorktree": "Bind to worktree",
+    "mergeWorktrees_one": "Merge worktree...",
+    "mergeWorktrees_other": "Merge worktrees...",
+    "removeWorktrees_one": "Remove worktree...",
+    "removeWorktrees_other": "Remove worktrees...",
+    "viewWorktree": "View worktree",
+    "openInChat": "Open in chat",
+    "openInTerminal": "Open in terminal",
+    "openAsView": "Open as view",
+    "openAsViewHint": "Keeps its session",
+    "reveal": "Reveal in {{app}}",
+    "startAgentFromNote": "Start agent from note",
+    "noteColor": "Note color",
+    "color": "Color",
+    "noAccent": "None"
+  },
+  "kinds": {
+    "terminal": "Terminal",
+    "chat": "Chat",
+    "browser": "Browser",
+    "group": "Group",
+    "note": "Note",
+    "file": "File",
+    "text": "Text"
+  },
+  "canvasMenu": {
+    "addHere": "Add here",
+    "file": "File...",
+    "groupSelection": "Group selection",
+    "zoomToFit": "Zoom to fit",
+    "settings": "Settings"
+  },
+  "empty": {
+    "sections": {
+      "agents": "Agents",
+      "place": "Add",
+      "project": "From this project"
+    },
+    "agent": {
+      "chat": "Chat",
+      "terminal": "In a terminal"
+    },
+    "connecting": {
+      "title": "Connecting",
+      "description": "Asking for agents"
+    },
+    "setup": {
+      "title": "Set up an agent",
+      "description": "No agent CLI on this machine"
+    },
+    "node": {
+      "chat": "Pick a model",
+      "terminal": "A shell",
+      "browser": "A web page",
+      "note": "Markdown",
+      "group": "A frame around nodes"
+    },
+    "file": "From the project folder",
+    "text": "Or double-click",
+    "layout": "Apply this layout",
+    "drawing": "Show the drawing here",
+    "diagram": "Show the diagram here",
+    "hint": "Drop files here, right-click for more, or press <palette/>."
+  },
+  "promptStack": {
+    "goToNode": "Go to node",
+    "previous": "Previous prompt",
+    "next": "Next prompt",
+    "position": "{{index}} of {{count}}",
+    "failed": "This prompt failed to render"
+  },
+  "approval": {
+    "wantsPermission": "{{tool}} wants permission",
+    "wantsToRun": "wants to run",
+    "more_one": "{{count}} more",
+    "more_other": "{{count}} more"
+  },
+  "text": {
+    "placeholder": "Type something",
+    "font": "Font",
+    "size": "Size",
+    "bold": "Bold",
+    "italic": "Italic",
+    "fonts": {
+      "sans": "Sans",
+      "hand": "Hand",
+      "mono": "Mono"
+    }
+  },
+  "delete": {
+    "nodes_one": "{{count}} node",
+    "nodes_other": "{{count}} nodes"
+  },
+  "drop": {
+    "noBridge": {
+      "title": "Files from {{app}} only drop in the desktop app",
+      "description": "Open the file from the Files panel instead."
+    },
+    "otherMachine": {
+      "title": "This project runs on {{machine}}",
+      "description": "That machine cannot read files from {{app}}. Open the file from the Files panel instead.",
+      "unknown": "another machine"
+    }
+  },
+  "edit": {
+    "cut": "Cut",
+    "paste": "Paste"
+  },
+  "note": {
+    "placeholder": "Write a note. Markdown works.",
+    "empty": "Click to write"
+  },
+  "drawing": {
+    "gone": "This drawing was removed from the project.",
+    "empty": "Nothing drawn yet. Double-click to draw."
+  },
+  "diagram": {
+    "gone": "This diagram was removed from the project.",
+    "empty": "Nothing in this diagram yet. An agent fills it with ruimte-context view diagram; double-click to open it.",
+    "label": "Diagram"
+  },
+  "file": {
+    "none": "No file"
+  },
+  "unknown": {
+    "needsNewer": "This node needs a newer version of Ruimte"
+  },
+  "notice": {
+    "connecting": "Connecting to the machine",
+    "reconnecting": "Reconnecting to the machine"
+  },
+  "terminal": {
+    "startFailed": "The session could not be started",
+    "sessionEnded": "[session ended]",
+    "exited": "[process exited with code {{code}}]",
+    "resume": "Resume",
+    "restart": "Restart"
+  },
+  "chat": {
+    "openFailed": "The chat could not be opened",
+    "retargetFailed": "The provider could not be changed",
+    "sendFailed": "The message could not be sent",
+    "subagentsFailed": "The sub-agents failed to render",
+    "conversationFailed": "This conversation failed to render"
+  },
+  "browser": {
+    "back": "Back",
+    "forward": "Forward",
+    "stop": "Stop loading",
+    "reloadHint": "{{shortcut}} skips the cache",
+    "address": "Address",
+    "addressPlaceholder": "Enter an address",
+    "loading": "Loading the page",
+    "streamDpi": "Browser stream DPI",
+    "openExternal": "Open in the system browser",
+    "inspect": "Inspect",
+    "error": {
+      "openExternal": "Open in system browser"
+    }
+  }
+}

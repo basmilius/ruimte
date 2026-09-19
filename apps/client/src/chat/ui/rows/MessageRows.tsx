@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { Bot, Brain, Check, ChevronDown, CircleAlert, Info, MessageCircleQuestionMark, Minimize2, Paperclip, TriangleAlert, X } from 'lucide-react';
 import type { ChatApprovalItem, ChatAttachment, ChatAssistantItem, ChatQuestionItem, ChatThinkingItem, ChatUserItem } from '@ruimte/contracts';
 import { formatBytes, isImageAttachment } from '@/chat/attachments';
@@ -50,13 +51,14 @@ function AttachmentLink({ chatId, endpointId, attachment }: { chatId: string; en
 }
 
 export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }) {
+    const { t } = useTranslation('chat');
     const [open, setOpen] = useState(false);
     const endpointId = useEndpointId();
     const long = item.text.split('\n').length > USER_FOLD_LINES || item.text.length > USER_FOLD_CHARS;
     const attachments = item.attachments ?? [];
     return (
         <div className="flex flex-col items-end">
-            <MessageHeading>You</MessageHeading>
+            <MessageHeading>{t('rows.user.heading')}</MessageHeading>
             {attachments.length > 0 && (
                 <div className="mb-1.5 flex max-w-[80%] flex-wrap justify-end gap-1.5">
                     {attachments.map((attachment) =>
@@ -82,7 +84,7 @@ export function UserRow({ chatId, item }: { chatId: string; item: ChatUserItem }
                     {long && (
                         <button className="mt-1 flex items-center gap-1 text-xs text-text-muted hover:text-text" onClick={() => setOpen((o) => !o)}>
                             <Icon icon={ChevronDown} size={12} className={clsx('transition-transform', open && 'rotate-180')} />{' '}
-                            {open ? 'Show less' : 'Show all'}
+                            {open ? t('rows.user.showLess') : t('rows.user.showAll')}
                         </button>
                     )}
                 </div>
@@ -112,11 +114,12 @@ function MessageHeading({ children }: { children: ReactNode }) {
 
 /* The report a subagent handed back, drawn as a reply under a label of its own. */
 export function ReportRow({ text }: { text: string }) {
+    const { t } = useTranslation('chat');
     return (
         <div className="-mx-1 px-1 pb-2">
-            <MessageHeading>Report</MessageHeading>
+            <MessageHeading>{t('rows.report.heading')}</MessageHeading>
             <div aria-hidden className="mb-1 text-xs font-medium text-text-faint select-none">
-                Report
+                {t('rows.report.heading')}
             </div>
             <ReplyMarkdown text={text} streaming={false} />
         </div>
@@ -125,12 +128,17 @@ export function ReportRow({ text }: { text: string }) {
 
 /* The heading of a reply, named after the agent the chat runs. */
 function ReplyHeading({ chatId }: { chatId: string }) {
+    const { t } = useTranslation('chat');
     const kind = useChatRow(chatId, (row) => row?.info.provider);
     const name = useProviders((s) => s.providers.find((provider) => provider.kind === kind)?.name);
-    return <MessageHeading>{name ?? 'Agent'}</MessageHeading>;
+    return <MessageHeading>{name ?? t('rows.reply.agent')}</MessageHeading>;
 }
 
-const WRITING = <span className="chat-live-text text-sm">Writing...</span>;
+/* The line that stands where the next words will land; a component, so the word is read at render and not at import. */
+function Writing() {
+    const { t } = useTranslation('chat');
+    return <span className="chat-live-text text-sm">{t('rows.reply.writing')}</span>;
+}
 
 /*
  * A reply. A word at a time, it follows the text as it arrives. A block at a time, the blocks that
@@ -151,7 +159,7 @@ export function AssistantRow({ chatId, item: derived }: { chatId: string; item: 
             <div className="-mx-1 px-1 pb-2">
                 <ReplyHeading chatId={chatId} />
                 {settled !== '' && <ReplyMarkdown text={settled} streaming={false} arriving={sawWriting} />}
-                {item.streaming && WRITING}
+                {item.streaming && <Writing />}
             </div>
         );
     }
@@ -159,7 +167,7 @@ export function AssistantRow({ chatId, item: derived }: { chatId: string; item: 
         return (
             <div className="-mx-1 px-1 pb-2">
                 <ReplyHeading chatId={chatId} />
-                {WRITING}
+                <Writing />
             </div>
         );
     }
@@ -177,6 +185,7 @@ export function AssistantRow({ chatId, item: derived }: { chatId: string; item: 
  * once the answer starts, because the thought is worth a glance and rarely worth reading twice.
  */
 export function ThinkingRow({ chatId, item: derived }: { chatId: string; item: ChatThinkingItem }) {
+    const { t } = useTranslation('chat');
     const item = useCurrentItem(chatId, derived);
     const mode = useSettings((s) => s.chatStreaming);
     const [open, setOpen] = useState(false);
@@ -193,10 +202,10 @@ export function ThinkingRow({ chatId, item: derived }: { chatId: string; item: C
                     <Icon icon={Brain} size={12} />
                 </span>
                 {item.streaming ? (
-                    <span className="chat-live-text">Thinking...</span>
+                    <span className="chat-live-text">{t('rows.thinking.live')}</span>
                 ) : (
                     <>
-                        <span>Thought for {formatDuration((item.endedAt ?? item.createdAt) - item.createdAt)}</span>
+                        <span>{t('rows.thinking.thoughtFor', { duration: formatDuration((item.endedAt ?? item.createdAt) - item.createdAt) })}</span>
                         <Icon icon={ChevronDown} size={12} className={clsx('transition-transform', open && 'rotate-180')} />
                     </>
                 )}
@@ -221,6 +230,7 @@ const NOTE_ICON = {
  * shows its first line and folds the rest open as markdown; one that came from a fork leads to it.
  */
 export function NoteRow({ level, text, from }: { level: 'info' | 'warning' | 'error'; text: string; from?: string }) {
+    const { t } = useTranslation('chat');
     const [open, setOpen] = useState(false);
     const breakAt = text.indexOf('\n');
     const head = breakAt === -1 ? text : text.slice(0, breakAt);
@@ -238,7 +248,7 @@ export function NoteRow({ level, text, from }: { level: 'info' | 'warning' | 'er
                     <span className="select-text">{head}</span>
                     {rest !== '' && (
                         <button className="text-text-muted hover:text-text" onClick={() => setOpen(!open)}>
-                            {open ? 'Hide' : 'Show'}
+                            {open ? t('rows.note.hide') : t('rows.note.show')}
                         </button>
                     )}
                     {from !== undefined && <OpenChatButton chatId={from} />}
@@ -255,13 +265,14 @@ export function NoteRow({ level, text, from }: { level: 'info' | 'warning' | 'er
 
 /* "Open fork" on a note a fork sent, while that fork is still in the project. */
 function OpenChatButton({ chatId }: { chatId: string }) {
+    const { t } = useTranslation('chat');
     const place = useChatPlace(chatId);
     if (place.title === null) {
         return null;
     }
     return (
         <button className="text-text-muted hover:text-text" onClick={place.go}>
-            Open fork
+            {t('rows.note.openFork')}
         </button>
     );
 }
@@ -295,33 +306,34 @@ export function AgentTurnRow({ label, onOpen }: { label: string; onOpen?: () => 
 const formatTokens = (count: number): string => (count >= 1000 ? `${Math.round(count / 1000)}k` : String(count));
 
 export function CompactionRow({ preTokens }: { preTokens: number | null }) {
+    const { t } = useTranslation('chat');
     return (
         <div className="flex items-center gap-3 pb-3 text-xs text-text-faint">
             <span className="h-px grow bg-border" />
             <Icon icon={Minimize2} size={12} />
-            <span>Context compacted{preTokens ? ` from ${formatTokens(preTokens)} tokens` : ''}</span>
+            <span>{preTokens ? t('rows.compaction.from', { tokens: formatTokens(preTokens) }) : t('rows.compaction.plain')}</span>
             <span className="h-px grow bg-border" />
         </div>
     );
 }
 
-const DECISION: Record<Exclude<ChatApprovalItem['decision'], 'pending'>, { label: string; icon: React.ReactNode }> = {
-    allow: { label: 'Allowed', icon: <Icon icon={Check} size={12} /> },
-    'allow-always': { label: 'Always allowed', icon: <Icon icon={Check} size={12} /> },
-    deny: { label: 'Declined', icon: <Icon icon={X} size={12} /> },
-    cancelled: { label: 'No longer needed', icon: <Icon icon={X} size={12} /> }
+const DECISION_ICON: Record<Exclude<ChatApprovalItem['decision'], 'pending'>, React.ReactNode> = {
+    allow: <Icon icon={Check} size={12} />,
+    'allow-always': <Icon icon={Check} size={12} />,
+    deny: <Icon icon={X} size={12} />,
+    cancelled: <Icon icon={X} size={12} />
 };
 
 /* The outcome of a permission request, one quiet line; the request itself lived on the composer. */
 export function ApprovalHistoryRow({ item }: { item: ChatApprovalItem }) {
+    const { t } = useTranslation('chat');
     if (item.decision === 'pending') {
         return null;
     }
-    const decision = DECISION[item.decision];
     return (
         <div className="-mx-1 mb-0.5 flex h-7 items-center gap-2 px-1 text-xs text-text-faint">
-            <span className={clsx(ROW_GUTTER, item.decision === 'deny' && 'text-status-error')}>{decision.icon}</span>
-            <span className={clsx(item.decision === 'deny' && 'text-status-error')}>{decision.label}</span>
+            <span className={clsx(ROW_GUTTER, item.decision === 'deny' && 'text-status-error')}>{DECISION_ICON[item.decision]}</span>
+            <span className={clsx(item.decision === 'deny' && 'text-status-error')}>{t(`rows.approval.${item.decision}`)}</span>
             <span className="text-text-muted">{item.toolName}</span>
             <span className="min-w-0 truncate font-mono">{toolSummary(item.toolName, item.input)}</span>
         </div>
@@ -329,6 +341,7 @@ export function ApprovalHistoryRow({ item }: { item: ChatApprovalItem }) {
 }
 
 export function QuestionHistoryRow({ item }: { item: ChatQuestionItem }) {
+    const { t } = useTranslation('chat');
     return (
         <div>
             {item.questions.map((question) => (
@@ -341,8 +354,8 @@ export function QuestionHistoryRow({ item }: { item: ChatQuestionItem }) {
                         {item.state === 'answered' && item.answers?.[question.id] !== undefined && (
                             <span className="ml-1.5 text-text">{item.answers[question.id]}</span>
                         )}
-                        {item.state === 'cancelled' && <span className="ml-1.5">(not answered)</span>}
-                        {item.state === 'dismissed' && <span className="ml-1.5">(dismissed)</span>}
+                        {item.state === 'cancelled' && <span className="ml-1.5">{t('rows.question.notAnswered')}</span>}
+                        {item.state === 'dismissed' && <span className="ml-1.5">{t('rows.question.dismissed')}</span>}
                     </span>
                 </div>
             ))}

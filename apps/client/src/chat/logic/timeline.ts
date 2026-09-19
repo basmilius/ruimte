@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type {
     ChatApprovalItem,
     ChatAssistantItem,
@@ -45,39 +46,40 @@ interface TimelineOptions {
     activeTurnId: string | null;
 }
 
-const TOOL_VERBS: Record<string, { verb: string; noun: string }> = {
-    Read: { verb: 'Read', noun: 'file' },
-    Edit: { verb: 'Edited', noun: 'file' },
-    Write: { verb: 'Wrote', noun: 'file' },
-    MultiEdit: { verb: 'Edited', noun: 'file' },
-    NotebookEdit: { verb: 'Edited', noun: 'notebook' },
-    ApplyPatch: { verb: 'Edited', noun: 'file' },
-    Bash: { verb: 'Ran', noun: 'command' },
-    Grep: { verb: 'Searched', noun: 'pattern' },
-    Glob: { verb: 'Listed', noun: 'pattern' },
-    WebFetch: { verb: 'Fetched', noun: 'page' },
-    WebSearch: { verb: 'Searched the web', noun: 'query' },
-    Task: { verb: 'Delegated', noun: 'task' },
-    Agent: { verb: 'Delegated', noun: 'task' },
-    Skill: { verb: 'Used', noun: 'skill' },
-    TodoWrite: { verb: 'Updated', noun: 'plan' }
-};
-
-const plural = (count: number, noun: string): string => `${count} ${noun}${count === 1 ? '' : 's'}`;
+/* The tools a run of calls is summarized in words of its own; every other name reads as calls of that name. */
+const NAMED_TOOLS = new Set([
+    'Read',
+    'Edit',
+    'Write',
+    'MultiEdit',
+    'NotebookEdit',
+    'ApplyPatch',
+    'Bash',
+    'Grep',
+    'Glob',
+    'WebFetch',
+    'WebSearch',
+    'Task',
+    'Agent',
+    'Skill',
+    'TodoWrite'
+]);
 
 /* "Read 4 files", "Ran 2 commands", or "12 tool calls" when the run mixes kinds. */
 export const summarizeGroup = (tools: ChatToolItem[]): string => {
     const names = new Set(tools.map((tool) => tool.name));
     if (names.size === 1) {
         const name = tools[0]!.name;
-        const verb = TOOL_VERBS[name];
-        return verb ? `${verb.verb} ${plural(tools.length, verb.noun)}` : `${name} ${plural(tools.length, 'call')}`;
+        return NAMED_TOOLS.has(name)
+            ? i18next.t(`chat:group.tools.${name}`, { count: tools.length })
+            : i18next.t('chat:group.calls', { name, count: tools.length });
     }
     const edits = tools.filter((tool) => isFileChange(tool.name)).length;
     if (edits === tools.length) {
-        return `Edited ${plural(new Set(tools.map((tool) => (tool.input as { file_path?: string })?.file_path ?? tool.id)).size, 'file')}`;
+        const paths = new Set(tools.map((tool) => (tool.input as { file_path?: string })?.file_path ?? tool.id));
+        return i18next.t('chat:group.edited', { count: paths.size });
     }
-    return plural(tools.length, 'tool call');
+    return i18next.t('chat:group.toolCalls', { count: tools.length });
 };
 
 export const formatDuration = (ms: number): string => {
@@ -95,17 +97,16 @@ export const formatDuration = (ms: number): string => {
  * and hands over its summary; without one all that is known is that the agent went on by itself.
  */
 export const agentTurnLabel = (turn: ChatTurnItem): string => {
+    const about = (what: string): string => (turn.label ? i18next.t('chat:turn.about', { what, label: turn.label }) : what);
     // A turn the machine opened with the results of tasks this chat gave; the label is their titles.
     if (turn.taskIds !== undefined && turn.taskIds.length > 0) {
-        const count = turn.taskIds.length;
-        return `Woken by ${count === 1 ? 'a task' : `${count} tasks`}${turn.label ? `: ${turn.label}` : ''}`;
+        return about(i18next.t('chat:turn.wokenByTask', { count: turn.taskIds.length }));
     }
     // A turn the machine opened over a message another node sent; the label names who sent it.
     if (turn.messageFrom !== undefined && turn.messageFrom.length > 0) {
-        const count = turn.messageFrom.length;
-        return `Woken by ${count === 1 ? 'a message' : `${count} messages`}${turn.label ? `: ${turn.label}` : ''}`;
+        return about(i18next.t('chat:turn.wokenByMessage', { count: turn.messageFrom.length }));
     }
-    return turn.label ? `Sub-agent finished: ${turn.label}` : 'Continued on its own';
+    return turn.label ? i18next.t('chat:turn.subagentFinished', { label: turn.label }) : i18next.t('chat:turn.continued');
 };
 
 /* The items of the turn tell a turn a person stopped from one the machine ended after a restart. */
@@ -113,11 +114,11 @@ export const turnLabel = (turn: ChatTurnItem, items: readonly ChatItem[] = []): 
     const duration = formatDuration((turn.endedAt ?? turn.createdAt) - turn.createdAt);
     switch (turn.state) {
         case 'aborted':
-            return abortedByMachine(turn, items) ? `Stopped after ${duration}` : `You stopped after ${duration}`;
+            return abortedByMachine(turn, items) ? i18next.t('chat:turn.stopped', { duration }) : i18next.t('chat:turn.youStopped', { duration });
         case 'error':
-            return `Failed after ${duration}`;
+            return i18next.t('chat:turn.failed', { duration });
         default:
-            return `Worked for ${duration}`;
+            return i18next.t('chat:turn.worked', { duration });
     }
 };
 

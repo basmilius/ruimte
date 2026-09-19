@@ -1,7 +1,5 @@
+import i18next from 'i18next';
 import { isCanvasView, type ProjectView } from '@ruimte/contracts';
-
-/* What a toast calls an agent whose node this client cannot find in the document it holds. */
-const SOMEONE = 'An agent';
 
 /*
  * What to call the caller, out of the document this client already has: the title of its node, or
@@ -37,12 +35,13 @@ export interface ShowViewNotice {
  * before anything moves, since offering a way back to where the person is standing reads as a bug.
  */
 export const showViewNotice = (input: { agent: string | null; view: string; follow: boolean; alreadyThere: boolean }): ShowViewNotice => {
-    const who = input.agent ?? SOMEONE;
+    // What a toast calls an agent whose node this client cannot find in the document it holds.
+    const agent = input.agent ?? i18next.t('project:showView.someone');
     if (input.alreadyThere) {
-        return { message: `${who} pointed at ${input.view}, which you were already looking at`, action: null };
+        return { message: i18next.t('project:showView.alreadyThere', { agent, view: input.view }), action: null };
     }
     if (input.follow) {
-        return { message: `${who} showed ${input.view} in the cell you were working in`, action: 'back' };
+        return { message: i18next.t('project:showView.follow', { agent, view: input.view }), action: 'back' };
     }
-    return { message: `${who} asked you to look at ${input.view}`, action: 'go' };
+    return { message: i18next.t('project:showView.go', { agent, view: input.view }), action: 'go' };
 };

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import { Eye, FolderX, GitBranch, GitMerge, LocateFixed, MoreHorizontal, Trash } from 'lucide-react';
 import type { Worktree } from '@ruimte/contracts';
@@ -38,6 +39,7 @@ interface WorktreeSectionProps {
  * team leaves behind once its canvas is cleaned up.
  */
 export function WorktreeSection({ folder, worktrees, nodes, current, busy, onView, onMerge, onRemove, onReveal }: WorktreeSectionProps) {
+    const { t } = useTranslation('panels');
     const endpointId = useEndpointId();
     const sessions = useSessions((s) => s.byKey);
     const chats = useChats((s) => s.byKey);
@@ -76,8 +78,8 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                 setSharing(false);
             })
             .catch((error: unknown) => {
-                const message = error instanceof Error ? error.message : 'That did not work.';
-                useToasts.getState().show({ title: 'Saving the shared paths failed', description: message, kind: 'error', output: message });
+                const message = error instanceof Error ? error.message : t('error.generic');
+                useToasts.getState().show({ title: t('worktree.share.saveFailed'), description: message, kind: 'error', output: message });
             });
     };
 
@@ -103,22 +105,22 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
     return (
         <section ref={sectionRef} className="flex max-h-48 shrink-0 flex-col border-t border-border">
             <div className="flex h-8 shrink-0 items-center gap-2 px-3">
-                <span className={SECTION_LABEL}>Worktrees</span>
+                <span className={SECTION_LABEL}>{t('worktree.section.title')}</span>
                 <span className="text-xs text-text-faint tabular-nums">{worktrees.length}</span>
                 <span className="grow" />
-                <Tooltip label="Paths of the project folder linked into every new worktree">
+                <Tooltip label={t('worktree.share.tooltip')}>
                     <button className="min-w-0 truncate text-xs text-text-faint hover:text-text" onClick={() => setSharing(true)}>
-                        {shared.length === 0 ? 'Share paths with new worktrees...' : `Shares ${shared.join(', ')}`}
+                        {shared.length === 0 ? t('worktree.share.none') : t('worktree.share.some', { paths: shared.join(', ') })}
                     </button>
                 </Tooltip>
             </div>
             <GitPrompt
                 open={sharing}
-                title="Share paths with new worktrees"
-                description="Each path is linked from the project folder into every worktree made from now on, such as node_modules. Git has to ignore it; a worktree that exists keeps what it has."
-                field={{ label: 'Paths, separated by commas', initial: shared.join(', '), placeholder: 'node_modules, .env' }}
+                title={t('worktree.share.title')}
+                description={t('worktree.share.description')}
+                field={{ label: t('worktree.share.field'), initial: shared.join(', '), placeholder: 'node_modules, .env' }}
                 allowEmpty
-                confirmLabel="Save"
+                confirmLabel={t('common:action.save')}
                 onConfirm={saveShare}
                 onClose={() => setSharing(false)}
             />
@@ -147,7 +149,7 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                             </Tooltip>
                             {agentWorking && <StatusDot status="running" />}
                             <span className="min-w-0 shrink-[2] truncate text-xs text-text-faint">
-                                {worktree.missing ? 'folder missing' : names === '' ? 'no node' : names}
+                                {worktree.missing ? t('worktree.section.folderMissing') : names === '' ? t('worktree.section.noNode') : names}
                                 {originLabel(worktree) !== null && `, ${originLabel(worktree)}`}
                             </span>
                             <span className="grow" />
@@ -157,7 +159,7 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                                 </Pill>
                             ))}
                             <Menu.Root>
-                                <Tooltip label="Worktree actions" name>
+                                <Tooltip label={t('worktree.section.actions')} name>
                                     <Menu.Trigger className="icon-btn h-7 w-7 shrink-0" disabled={busy}>
                                         <Icon icon={MoreHorizontal} size={14} />
                                     </Menu.Trigger>
@@ -168,21 +170,21 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                                             {!worktree.missing && (
                                                 <>
                                                     <Menu.Item className="menu-item" onClick={() => onView(worktree)}>
-                                                        <Icon icon={Eye} size={14} /> View
+                                                        <Icon icon={Eye} size={14} /> {t('worktree.section.view')}
                                                     </Menu.Item>
                                                     <Menu.Item className="menu-item" onClick={() => onMerge(worktree)}>
-                                                        <Icon icon={GitMerge} size={14} /> Merge...
+                                                        <Icon icon={GitMerge} size={14} /> {t('worktree.section.merge')}
                                                     </Menu.Item>
                                                 </>
                                             )}
                                             {reveal !== null && (
                                                 <Menu.Item className="menu-item" onClick={() => onReveal(reveal)}>
-                                                    <Icon icon={LocateFixed} size={14} /> Show on the canvas
+                                                    <Icon icon={LocateFixed} size={14} /> {t('file.menu.showOnCanvas')}
                                                 </Menu.Item>
                                             )}
                                             {(!worktree.missing || reveal !== null) && <Menu.Separator className={MENU_SEPARATOR} />}
                                             <Menu.Item className="menu-item text-status-error" onClick={() => onRemove(worktree)}>
-                                                <Icon icon={Trash} size={14} /> Remove...
+                                                <Icon icon={Trash} size={14} /> {t('worktree.section.remove')}
                                             </Menu.Item>
                                         </Menu.Popup>
                                     </Menu.Positioner>

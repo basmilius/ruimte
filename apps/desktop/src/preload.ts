@@ -1,10 +1,20 @@
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
 const { contextBridge, ipcRenderer, webUtils } = require('electron') as typeof import('electron');
 
+/* Where the main process puts the system's region and languages on the command line of this renderer. */
+const LOCALE_ARGUMENT = '--ruimte-system-locale=';
+const LANGUAGES_ARGUMENT = '--ruimte-system-languages=';
+
+const argument = (prefix: string): string | undefined => process.argv.find((arg) => arg.startsWith(prefix))?.slice(prefix.length) || undefined;
+
 /* What the client may ask the shell for. The shape is mirrored in `apps/client/src/desktop/bridge.ts`. */
 contextBridge.exposeInMainWorld('ruimteDesktop', {
     platform: process.platform,
     versions: { electron: process.versions.electron, chrome: process.versions.chrome, node: process.versions.node },
+    /* Handed down as an argument rather than fetched, because `app` is the main process alone and
+       the client needs both before it draws its first word or its first number. */
+    systemLocale: argument(LOCALE_ARGUMENT),
+    systemLanguages: argument(LANGUAGES_ARGUMENT)?.split(','),
     pickFolder: (initialPath?: string): Promise<string | null> => ipcRenderer.invoke('dialog:pick-folder', initialPath),
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
     /* Only this side can say where a dragged file came from: `File.path` was taken out of Electron

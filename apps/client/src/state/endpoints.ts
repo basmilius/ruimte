@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { create } from 'zustand';
 import type { Reachability } from '@ruimte/contracts';
 import { credentialFor } from '@/endpoint/credentials';
@@ -7,14 +8,15 @@ const STORAGE_KEY = 'ruimte.endpoints';
 const STORAGE_VERSION = 3;
 export const LOCAL_ENDPOINT_ID = 'local';
 /* What the row for this machine says when nothing better is known about it. */
-export const LOCAL_ENDPOINT_LABEL = 'This machine';
+export const localEndpointLabel = (): string => i18next.t('state:localMachine');
 
 /*
  * The same row once the daemon has said what it runs on: "This MacBook Pro", "This Raspberry Pi 4
  * Model B". A name someone typed wins over both, and a machine that keeps its model to itself
  * (a container, a board without SMBIOS, a platform nothing here can read) keeps the plain label.
  */
-export const localMachineLabel = (model: string | null): string => (model === null || model.trim() === '' ? LOCAL_ENDPOINT_LABEL : `This ${model.trim()}`);
+export const localMachineLabel = (model: string | null): string =>
+    model === null || model.trim() === '' ? localEndpointLabel() : i18next.t('state:localMachineWithModel', { model: model.trim() });
 
 export interface Endpoint {
     /* The daemon's own id from `endpoint.info`, or `local` for the daemon that served this page. */
@@ -92,7 +94,7 @@ const localEndpoint = (): Endpoint => {
     const origin = typeof location === 'undefined' ? 'http://127.0.0.1:4210' : location.origin;
     return {
         id: LOCAL_ENDPOINT_ID,
-        label: LOCAL_ENDPOINT_LABEL,
+        label: localEndpointLabel(),
         httpBaseUrl: origin,
         wsBaseUrl: origin.replace(/^http/, 'ws'),
         reachability: 'loopback',

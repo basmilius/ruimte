@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { z } from 'zod';
 import {
     APP_REDIRECT_LOOPBACK_PATH,
@@ -99,10 +100,10 @@ export const completeWebLogin = (
         pending = null;
     }
     if (!pending) {
-        throw new LoginError('This page did not start a sign-in. Sign in again.');
+        throw new LoginError(i18next.t('machines:signIn.notStarted'));
     }
     if (now - pending.startedAt > PENDING_LOGIN_LIFETIME_MS) {
-        throw new LoginError('The sign-in took too long. Sign in again.');
+        throw new LoginError(i18next.t('machines:signIn.tooLong'));
     }
     const code = codeFromCallback({ code: query.get('code'), state: query.get('state'), error: query.get('error') }, pending.state);
     return {
@@ -128,7 +129,7 @@ export const indexedDbSessionStore = (): SessionStore => {
             const request = indexedDB.open(DB_NAME, 1);
             request.onupgradeneeded = () => request.result.createObjectStore(STORE_NAME);
             request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error ?? new Error('IndexedDB would not open'));
+            request.onerror = () => reject(request.error ?? new Error(i18next.t('machines:storage.indexedDbClosed')));
         });
 
     const run = <T>(mode: IDBTransactionMode, act: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> =>
@@ -137,7 +138,7 @@ export const indexedDbSessionStore = (): SessionStore => {
                 new Promise<T>((resolve, reject) => {
                     const request = act(db.transaction(STORE_NAME, mode).objectStore(STORE_NAME));
                     request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error ?? new Error('IndexedDB refused the request'));
+                    request.onerror = () => reject(request.error ?? new Error(i18next.t('machines:storage.indexedDbRefused')));
                 })
         );
 

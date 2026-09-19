@@ -1,0 +1,538 @@
+{
+  "sidebar": {
+    "hide": "Hide sidebar",
+    "show": "Show sidebar",
+    "needsYou": "Needs you",
+    "processWarning": "Process warning, see the processes panel",
+    "unsentDraft": "Unsent draft",
+    "needsNewerRuimte": "This view needs a newer version of Ruimte",
+    "noViews": "This project has no views yet. Start with one of these.",
+    "duplicate": "Duplicate",
+    "usage": "Usage",
+    "openInAnotherCell": ", open in another cell"
+  },
+  "panel": {
+    "fallback": "Panel",
+    "close": "Close {{name}}",
+    "failed": "This panel failed to render",
+    "names": {
+      "files": "Files",
+      "git": "Git",
+      "devices": "Devices",
+      "processes": "Processes"
+    }
+  },
+  "layoutDialog": {
+    "title": "Save layout",
+    "description": "Saves where every node and text sits, so you can apply it later.",
+    "nameLabel": "Layout name",
+    "namePlaceholder": "Name"
+  },
+  "machineLost": {
+    "retrying": "Trying to reach the machine again...",
+    "silent": "This machine is not answering.",
+    "openAnother": "Open another project"
+  },
+  "signIn": {
+    "signInWith": "Sign in with {{provider}}",
+    "continueWith": "Continue with {{provider}}"
+  },
+  "connection": {
+    "connected": "Connected",
+    "relayed": "Connected via relay",
+    "noLink": "Not connected",
+    "connecting": "Connecting",
+    "disconnected": "Disconnected",
+    "reconnecting": "Reconnecting, attempt {{attempt}}",
+    "reconnectingIn": "{{attempt}}, next try in {{seconds}}s",
+    "lastSeen": "Last connected {{ago}}",
+    "thisMac": "This Mac",
+    "thisMachine": "This machine",
+    "version": "Version {{version}}",
+    "ping": "Ping {{latency}}",
+    "reachability": {
+      "loopback": "On this machine",
+      "lan": "On the local network",
+      "tunnel": "Through a tunnel",
+      "public": "On the public internet"
+    }
+  },
+  "machineUpdate": {
+    "title": "Ruimte was updated",
+    "description": "Restart this machine now? {{ends}}",
+    "endsUnknown": "This ends the terminals and agents running on it.",
+    "ends_one": "This ends {{count}} running terminal or agent.",
+    "ends_other": "This ends {{count}} running terminals and agents.",
+    "pendingLine": "Ruimte was updated, and this machine still runs the previous version. It restarts on its own once nothing runs on it.",
+    "restartNow": "Restart now",
+    "whenIdle": "When idle"
+  },
+  "approvals": {
+    "terminal": "Terminal",
+    "title": "{{where}} needs permission",
+    "onMachine": "{{name}} on {{machine}}",
+    "body": "{{what}} ({{expires}})",
+    "expiresInSeconds": "expires in {{seconds}}s",
+    "expiresInMinutes": "expires in {{minutes}}m"
+  },
+  "notifications": {
+    "finished": "Finished",
+    "needsYou": "Needs you"
+  },
+  "browse": {
+    "machineSilent": "That machine is not answering",
+    "connecting": "Connecting...",
+    "notReachable": "Not reachable: {{reason}}",
+    "throughAccount": "Connects through your account",
+    "notConnected": "Not connected",
+    "networkOnly": "On its own network only"
+  },
+  "findInFiles": {
+    "badSearch": "That search cannot be run"
+  },
+  "status": {
+    "nextNeedsYou": "Go to the next node that needs you, in any view",
+    "working": "Agents working",
+    "workingCount_one": "{{count}} agent working",
+    "workingCount_other": "{{count}} agents working",
+    "nextFinished": "Go to the next agent that finished while you were away"
+  },
+  "toasts": {
+    "copied": "Copied",
+    "copyOutput": "Copy output"
+  },
+  "projectName": {
+    "failed": "That did not work",
+    "label": "Project name",
+    "placeholder": "Name"
+  },
+  "viewIcon": {
+    "title": "View icon",
+    "separator": "Separator",
+    "pickedHere": "Picked here",
+    "defaultForKind": "Default for its kind",
+    "emoji": "Emoji",
+    "useEmoji": "Use emoji",
+    "icon": "Icon",
+    "useDefault": "Use the default"
+  },
+  "projectBanner": {
+    "stayHere": "Stay here",
+    "goThere": "Go there",
+    "back": "Back",
+    "takeTheirs": "Take the file",
+    "keepMine": "Keep mine",
+    "conflict": {
+      "canvas": "The canvas changed on disk while you had unsaved edits.",
+      "drawing": "The drawing changed on disk while you had unsaved edits.",
+      "diagram": "The diagram changed on disk while you had unsaved edits."
+    }
+  },
+  "viewDialogs": {
+    "rename": {
+      "title": "Rename view",
+      "description": "Everyone with the folder sees this name.",
+      "label": "View name",
+      "placeholder": "Name"
+    },
+    "newBrowser": {
+      "title": "New browser view",
+      "description": "An address without a scheme opens over https.",
+      "label": "Address"
+    },
+    "delete": {
+      "title": "Delete {{name}}?",
+      "description": "Removes the view and everything on it.",
+      "busy": "Something in this view is still running. Deleting it ends those sessions."
+    },
+    "promote": {
+      "title": "Open {{name}} as a view?",
+      "description": "The session keeps running. The lines to this node are lost.",
+      "confirm": "Open as view"
+    }
+  },
+  "viewHost": {
+    "failed": "This view failed to render"
+  },
+  "toolbar": {
+    "unsaved": "Unsaved changes",
+    "saved": "Everything saved",
+    "search": "Search",
+    "opening": "Opening the project",
+    "updateReady": "Version {{version}} is ready to install",
+    "updateOnTheWay": "An update is on the way"
+  },
+  "settingsDialog": {
+    "title": "Settings",
+    "section": "Settings section",
+    "close": "Close settings"
+  },
+  "worktreeDialog": {
+    "title": "Bind to a worktree",
+    "description": "Creates a checkout of this branch. Every terminal and chat you add to the group starts in it.",
+    "branchLabel": "Branch name",
+    "branchPlaceholder": "branch name",
+    "noFolder": "This project is not in a folder, so it has no repository.",
+    "creating": "Creating checkout...",
+    "bind": "Bind",
+    "failed": "Could not create the worktree"
+  },
+  "cellToolbar": {
+    "view": "View",
+    "drag": "{{name}}, drag to move it to another cell",
+    "moreActions": "More actions",
+    "closeCell": "Close this cell"
+  },
+  "preview": {
+    "closeAll": "Close all tabs",
+    "failed": "This preview failed to render"
+  },
+  "viewKinds": {
+    "canvas": "Canvas",
+    "drawing": "Drawing",
+    "diagram": "Diagram",
+    "terminal": "Terminal",
+    "browser": "Browser",
+    "file": "File",
+    "separator": "Separator"
+  },
+  "viewMenu": {
+    "filePick": "File...",
+    "splitRight": "Split to the right",
+    "splitDown": "Split downwards",
+    "views": "Views",
+    "newView": "View",
+    "putOnCanvas": "Put on canvas",
+    "showOnCanvas": "Show on the canvas",
+    "renameView": "Rename view",
+    "changeIcon": "Change icon…",
+    "deleteView": "Delete view"
+  },
+  "planPanel": {
+    "failed": "This plan failed to render",
+    "showChat": "Show this chat",
+    "chat": "Chat",
+    "planOf": "Plan {{number}} of {{total}}",
+    "actions": "Plan actions",
+    "show": "Show",
+    "filters": {
+      "all": "All",
+      "open": "Open",
+      "issues": "Issues"
+    },
+    "collapseDone": "Collapse done",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "copyMarkdown": "Copy as Markdown",
+    "sendResults": "Send results to chat",
+    "unlockAll": "Unlock all",
+    "close": "Close the plan"
+  },
+  "nodeKinds": {
+    "terminal": "Terminal",
+    "chat": "Chat",
+    "browser": "Browser",
+    "group": "Group",
+    "note": "Note",
+    "text": "Text",
+    "device": "Device",
+    "drawing": "Drawing",
+    "diagram": "Diagram",
+    "file": "File",
+    "unknown": "Unknown"
+  },
+  "dock": {
+    "add": "Add",
+    "doubleClick": "dbl-click",
+    "zoomOut": "Zoom out",
+    "zoomIn": "Zoom in",
+    "zoomPresets": "Zoom presets",
+    "zoomToFit": "Zoom to fit",
+    "zoomToSelection": "Zoom to selection",
+    "fitEverything": "Fit everything",
+    "lock": "Lock",
+    "refuseGestures": "Refuse gestures",
+    "unlockEverything": "Unlock everything",
+    "lockEverything": "Lock everything",
+    "lockHint": "Buttons and shortcuts still work while locked.",
+    "layouts": "Layouts",
+    "savedLayouts": "Saved layouts",
+    "noLayouts": "Nothing saved yet.",
+    "saveLayout": "Save current layout"
+  },
+  "projectMenu": {
+    "noFolder": "Not in a folder",
+    "folderGone": "That folder is gone",
+    "actionsFor": "Actions for {{name}}",
+    "openIn": "Open in {{app}}",
+    "projectSettings": "Project settings…",
+    "closeProject": "Close project",
+    "projects": "Projects",
+    "recent": "Recent projects",
+    "newProject": "New project",
+    "newProjectDescription": "Stored in the app, not in a folder. To share a project through git, open a folder instead.",
+    "create": "Create",
+    "untitled": "Untitled project",
+    "openFolder": "Open folder",
+    "closeTitle": "Close {{name}}?"
+  },
+  "projectSettings": {
+    "title": "Project settings",
+    "name": "Name",
+    "symbol": "Symbol",
+    "fromFile": "From {{file}}",
+    "firstLetter": "The first letter of the name",
+    "chooseImage": "Choose image…",
+    "useFolderIcon": "Use folder's icon",
+    "noFolderImage": "A project without a folder cannot use an image.",
+    "tooLarge": "That image is larger than 256 KB",
+    "unreadable": "That file could not be read"
+  },
+  "linkMachine": {
+    "title": "Link a machine with a code",
+    "description": "For a machine without the app: run `ruimte login` there, and enter the code it prints.",
+    "unavailable": "Approving a machine works in the desktop app and at station.ruimte.app.",
+    "signingIn": "Signing in...",
+    "signIn": "Sign in to the account the machine should join.",
+    "codeLabel": "Code from the terminal",
+    "badCode": "That is not a code. It is eight letters, like BCDF-GHJK, as the terminal printed it.",
+    "joinsAccount": "The machine joins the account of {{account}}.",
+    "checkFingerprint": "Check that the terminal printed this key fingerprint. Once added, every client signed in to this account can open this machine, and the machine can see who opens it.",
+    "theMachine": "The machine",
+    "approved": "Approved. {{machine}} joins your account as soon as its terminal finishes, which takes a few seconds.",
+    "denied": "Denied. The terminal says so and nothing was added.",
+    "continue": "Continue",
+    "deny": "Deny",
+    "approve": "Add to my account"
+  },
+  "switch": {
+    "connecting": "Connecting to {{machine}}...",
+    "opening": "Opening {{title}}...",
+    "returning": "Going back...",
+    "viaRelay": "via relay",
+    "goBack": "Go back"
+  },
+  "releaseNotes": {
+    "title": "Release notes",
+    "close": "Close release notes",
+    "failed": "The release notes failed to render",
+    "new": "New",
+    "compare": "Compare",
+    "noNotes": "No notes for this version.",
+    "viewOnGitHub": "View the release on GitHub",
+    "loadFailed": "The release notes could not be loaded: {{reason}}",
+    "openOnGitHub": "Open them on GitHub",
+    "loading": "Loading release notes",
+    "allReleases": "All releases on GitHub",
+    "dialogDescription": "What changed in each version of Ruimte."
+  },
+  "removeWorktree": {
+    "title": "Remove this worktree?",
+    "counting": "Counting what is in it...",
+    "alreadyGone": "This worktree is already gone.",
+    "unreadable": "Could not read the worktree.",
+    "removed": "Removed worktree {{branch}}",
+    "failed": "Removing the worktree failed",
+    "didNotWork": "That did not work.",
+    "mergeFirst": "Merge first..."
+  },
+  "fork": {
+    "title": "Fork this conversation",
+    "failedToRender": "The fork dialog failed to render",
+    "copyTitle": "{{title}} (fork)",
+    "turnGone": "This turn is no longer in the conversation.",
+    "theOriginal": "the original",
+    "itsCanvas": "its canvas",
+    "intoView": "A new chat view goes on from there, right after {{after}} in the sidebar. Nothing is sent until you write the first message.",
+    "intoNode": "A new chat node goes on from there, beside the original and with a line from it. Nothing is sent until you write the first message.",
+    "continueWith": "Continue with",
+    "handoffNote": "The new agent gets the last part of the conversation as text and can read the rest of the original itself.",
+    "titleLabel": "Title",
+    "into": "Fork into",
+    "shapes": {
+      "node": "A node beside it",
+      "view": "A new view"
+    },
+    "forking": "Forking...",
+    "fork": "Fork",
+    "failed": "The fork could not be made",
+    "lookingAtFolder": "Looking at the folder...",
+    "sharedNote": "The files stay as they are now; the agent is told the folder is newer than this turn.",
+    "noRepository": "This folder is not in a git repository; the fork works in the same folder.",
+    "useWorktree": "Work in a git worktree",
+    "branch": "Branch",
+    "takeFiles": "Take the uncommitted files along",
+    "undoAfterTurn": "Undo the work after this turn",
+    "filesGone": "The files of this turn are no longer in the repository, so the worktree starts from HEAD.",
+    "fromTurnFiles": "The worktree starts from the files as they were after this turn; the original keeps its own.",
+    "fromHead": "The worktree starts from HEAD, without uncommitted work."
+  },
+  "merge": {
+    "title": "Merge worktree",
+    "nothingLeft": "There is no worktree left to merge.",
+    "unreadable": "Could not read the worktrees.",
+    "holds": "It holds {{contents}}.",
+    "working_one": "{{names}} is still working. Merging stops it first{{ended}}.",
+    "working_other": "{{names}} are still working. Merging stops them first{{ended}}.",
+    "endedByIt_one": ", and the agent it opened",
+    "endedByIt_other": ", and the {{count}} agents it opened",
+    "endedByThem_one": ", and the agent they opened",
+    "endedByThem_other": ", and the {{count}} agents they opened",
+    "live_one": "{{names}} is still open in it and is stopped before the worktree goes.",
+    "live_other": "{{names}} are still open in it and are stopped before the worktree goes.",
+    "commitFirst": "Commit the uncommitted files first",
+    "commitFirstHint": "Without that commit the merge would leave half of the work behind.",
+    "commitMessage": "Commit message",
+    "strategy": "Strategy",
+    "removeAfterwards_one": "Remove the worktree and its branch afterwards",
+    "removeAfterwards_other": "Remove each worktree and its branch afterwards",
+    "removeAfterwardsShort": "Remove afterwards",
+    "stopAndMerge": "Stop and merge",
+    "merge": "Merge",
+    "merging": "Merging {{branch}}",
+    "mergingFailed": "Merging {{branch}} failed",
+    "mergeInto": "Merge into {{branch}}",
+    "othersStay_one": "The other worktree stays as it was.",
+    "othersStay_other": "The other {{count}} worktrees stay as they were.",
+    "resolveThese": "Resolve {{files}} in the git panel and commit, or abort.{{rest}}",
+    "resolve": "Commit it in the git panel, or abort.{{rest}}",
+    "abort": "Abort",
+    "tookBack": "Took the merge back",
+    "abortFailed": "Aborting failed",
+    "stashAndRetry": "Stash and retry",
+    "stashFailed": "Stashing failed",
+    "targetBranch": "The target branch",
+    "notCheckedOut": "{{branch}} is not checked out anywhere."
+  },
+  "start": {
+    "failed": "The start screen failed to render",
+    "start": "Start",
+    "recent": "Recent",
+    "machines": "Machines",
+    "noMachines": "No machine is on your account yet. Sign in to the desktop app on a machine that runs with a broker, and it joins your account on its own.",
+    "notConnected": "not connected",
+    "closed": "closed",
+    "anotherMachine": "Another machine",
+    "lastProject": "The last project",
+    "signIn": "Sign in",
+    "signInForMachines": "Sign in to open the machines on your account from this browser.",
+    "reachMachines": "Reach the machines on your account.",
+    "lookingUpMachines": "Looking up your machines...",
+    "waitsForMachines": "Everything else waits for your machines",
+    "openFolderFirst": "The folder of something you work on",
+    "onAMachine": "On a machine",
+    "projectIsAFolder": "A project is a folder with a .ruimte/project.json in it, which Ruimte writes the first time the folder opens.",
+    "withoutFolder": "Without a folder",
+    "openMachineFirst": "Open a machine first",
+    "connectMachine": "Connect machine",
+    "withALink": "With a link",
+    "withPairingLink": "With a pairing link",
+    "commandPalette": "Command palette",
+    "whatsNew": "What's new"
+  },
+  "palette": {
+    "newAgent": {
+      "chat": "New {{name}} chat",
+      "terminal": "New {{name}} terminal"
+    },
+    "newAgentView": {
+      "chat": "New {{name}} chat view",
+      "terminal": "New {{name}} terminal view"
+    },
+    "moveNodeTo": "Move node to {{view}}",
+    "applyLayout": "Apply layout: {{name}}",
+    "deleteLayout": "Delete layout: {{name}}",
+    "hints": {
+      "withoutCanvas": "Without a canvas",
+      "readOnly": "Read-only",
+      "selectFirst": "Select nodes first",
+      "rememberLayout": "Remember where everything sits",
+      "usage": "Cost, tokens and plan limits",
+      "remote": "Your machines, your account and pairing"
+    },
+    "commands": {
+      "openFolder": "Open a folder as a project",
+      "findInFiles": "Find in files",
+      "reveal": "Open project in {{app}}",
+      "newCanvasView": "New canvas view",
+      "newDrawingView": "New drawing view",
+      "newDiagramView": "New diagram view",
+      "newFileView": "New file view",
+      "newTerminalView": "New terminal view",
+      "newSeparator": "New separator",
+      "newTerminal": "New terminal",
+      "newChat": "New chat",
+      "newBrowser": "New browser",
+      "newGroup": "New group",
+      "newNote": "New note",
+      "newText": "New text",
+      "showFile": "Show a file on the canvas",
+      "groupSelection": "Group selection",
+      "saveLayoutAs": "Save layout as",
+      "zoomReset": "Zoom to 100%",
+      "diagramOpenJson": "Open the diagram as JSON",
+      "diagramOnCanvas": "Show the diagram on canvas",
+      "diagramCopyJson": "Copy the diagram as JSON",
+      "diagramCopyPng": "Copy the diagram as PNG",
+      "diagramSavePng": "Save the diagram as PNG",
+      "diagramCopySvg": "Copy the diagram as SVG",
+      "diagramSaveSvg": "Save the diagram as SVG",
+      "drawingOnCanvas": "Show the drawing on canvas",
+      "drawingCopyPng": "Copy the drawing as PNG",
+      "drawingSavePng": "Save the drawing as PNG",
+      "drawingCopySvg": "Copy the drawing as SVG",
+      "drawingSaveSvg": "Save the drawing as SVG",
+      "toggleSidebar": "Toggle sidebar",
+      "toggleFiles": "Toggle files panel",
+      "toggleGit": "Toggle git panel",
+      "toggleProcesses": "Toggle processes panel",
+      "toggleTheme": "Toggle light and dark",
+      "keyboardShortcuts": "Keyboard shortcuts",
+      "remote": "Remote"
+    },
+    "sections": {
+      "recent": "Recent",
+      "jump": "Jump to",
+      "files": "Files",
+      "views": "Views",
+      "projects": "Projects",
+      "actions": "Actions",
+      "folders": "Folders",
+      "machines": "Machines"
+    },
+    "kindInView": "{{kind}} in {{view}}",
+    "machineNotConnected": "{{machine}}, not connected",
+    "unreadablePath": "That path cannot be read",
+    "backToFolders": "Back to the folders",
+    "browseAnother": "Browse another machine",
+    "backToPalette": "Back to the palette",
+    "createAndOpen": "Create and open",
+    "searchFiles": "Search the files in this folder",
+    "pickFile": "Pick a file from this folder",
+    "searchMachines": "Search machines",
+    "inputLabel": "Jump to a node, run a command, or open a folder",
+    "placeholder": "Jump to a node, run a command, or type a path like ~/projects to open a folder",
+    "pathPlaceholder": "Enter a folder path, for example ~/projects/my-app",
+    "matchCase": "Match case",
+    "wholeWords": "Whole words",
+    "regex": "Regular expression",
+    "results": "Results",
+    "noMatch": "Nothing matches",
+    "noProjectFolder": "This project has no folder.",
+    "noFileMatch": "No file in this folder matches",
+    "noLineMatch": "No line in this folder matches",
+    "typeToSearch": "Type to search every file in this folder.",
+    "noMachineYet": "No machine yet. Sign in to open the machines on your account.",
+    "noMachineMatch": "No machine matches",
+    "connectingThroughAccount": "Connecting to {{machine}} through your account...",
+    "notReachable": "{{machine}} is not reachable",
+    "createHint": "Press Enter to create this folder and open it as a project",
+    "nothingYet": "Nothing yet",
+    "grepCount_one": "{{hits}} in {{count}} file",
+    "grepCount_other": "{{hits}} in {{count}} files",
+    "grepEnterHint": "opens the file,",
+    "grepBackHint": "on an empty search goes back",
+    "navigate": "Navigate",
+    "browseIn": "Browse in {{app}}"
+  }
+}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Check, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { ApprovalChoice } from '@ruimte/contracts';
 import { useSessionRow } from '@/state/sessions';
 import { useEndpointId } from '@/state/keys';
@@ -18,6 +19,7 @@ const variantOf = (kind: ApprovalChoice['kind']): 'primary' | 'ghost' => (kind =
  * when the person types into the terminal instead, or when another client is first.
  */
 export function ApprovalStrip({ id }: { id: string }) {
+    const { t } = useTranslation('canvas');
     const endpointId = useEndpointId();
     const request = useSessionRow(id, (row) => row?.approvals?.[0]);
     const more = useSessionRow(id, (row) => Math.max((row?.approvals?.length ?? 0) - 1, 0));
@@ -41,13 +43,13 @@ export function ApprovalStrip({ id }: { id: string }) {
         <div
             className="flex shrink-0 items-center gap-2 border-b border-border bg-surface-raised px-3 py-2 text-xs"
             role="group"
-            aria-label={`${request.toolName} wants permission`}
+            aria-label={t('approval.wantsPermission', { tool: request.toolName })}
             onPointerDown={(e) => e.stopPropagation()}
         >
             <span className="grid h-6 w-6 shrink-0 place-items-center text-status-needs-you">{toolIcon(request.toolName, DOCK_ICON_SIZE)}</span>
             <span className="shrink-0 text-sm font-medium text-text">{request.toolName}</span>
-            <span className="min-w-0 grow truncate font-mono text-text-muted">{request.summary || 'wants to run'}</span>
-            {more > 0 && <span className="shrink-0 tabular-nums text-text-faint">{more} more</span>}
+            <span className="min-w-0 grow truncate font-mono text-text-muted">{request.summary || t('approval.wantsToRun')}</span>
+            {more > 0 && <span className="shrink-0 tabular-nums text-text-faint">{t('approval.more', { count: more })}</span>}
             {request.choices.map((choice) => (
                 <Button key={choice.id} size="sm" variant={variantOf(choice.kind)} disabled={answering} className="shrink-0" onClick={() => answer(choice.id)}>
                     {choice.kind === 'allow' && <Icon icon={Check} size={12} />}

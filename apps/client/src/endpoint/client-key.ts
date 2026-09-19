@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 const DB_NAME = 'ruimte-auth';
 const STORE_NAME = 'keys';
 const RECORD_ID = 'client';
@@ -36,7 +38,7 @@ export const indexedDbKeyStore = (): KeyStore => {
             const request = indexedDB.open(DB_NAME, 1);
             request.onupgradeneeded = () => request.result.createObjectStore(STORE_NAME);
             request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error ?? new Error('IndexedDB would not open'));
+            request.onerror = () => reject(request.error ?? new Error(i18next.t('machines:storage.indexedDbClosed')));
         });
 
     const run = <T>(mode: IDBTransactionMode, act: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> =>
@@ -45,7 +47,7 @@ export const indexedDbKeyStore = (): KeyStore => {
                 new Promise<T>((resolve, reject) => {
                     const request = act(db.transaction(STORE_NAME, mode).objectStore(STORE_NAME));
                     request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error ?? new Error('IndexedDB refused the request'));
+                    request.onerror = () => reject(request.error ?? new Error(i18next.t('machines:storage.indexedDbRefused')));
                 })
         );
 

@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { useStore } from 'zustand';
 import { ensureMachine } from '@/endpoint/reach';
 import { dropClientLocal } from '@/project/client-local';
@@ -159,7 +160,7 @@ export const deleteProject = async (endpointId: string, projectId: string, remov
     }
     const machine = machineFor(endpointId);
     if (!machine) {
-        throw new Error('That machine is no longer in the list');
+        throw new Error(i18next.t('project:error.machineGone'));
     }
     await machine.transport.request('project.delete', { projectId, removeFiles });
     // After the close, which wrote this client's copy on its way out.
@@ -188,7 +189,7 @@ export const bootWindow = async (
         const outcome = await open(last.endpointId, last.projectId);
         if (outcome === 'failed') {
             const state = projectSwitch.state;
-            useWindow.getState().setBootFailure({ ...last, reason: state.kind === 'failed' ? state.reason : 'That project could not be opened' });
+            useWindow.getState().setBootFailure({ ...last, reason: state.kind === 'failed' ? state.reason : i18next.t('project:error.openFailed') });
         }
         return outcome;
     } finally {

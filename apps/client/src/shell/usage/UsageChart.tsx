@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import type { UsageProvider } from '@ruimte/contracts';
 import { FLOAT } from '@/ui/classes';
 import { PROVIDER_COLORS, PROVIDER_LABELS, slotAxisLabel, slotLabel } from '@/shell/usage/format';
@@ -40,6 +41,7 @@ const useWidth = (): [(node: HTMLDivElement | null) => void, number] => {
  * a day is the height of its bar, and the smaller provider never disappears under the larger one.
  */
 export function UsageChart({ slots, providers, format, labelEvery }: UsageChartProps) {
+    const { t } = useTranslation('usage');
     const [measure, width] = useWidth();
     const [hovered, setHovered] = useState<number | null>(null);
     const scale = niceScale(Math.max(...slots.map((slot) => slot.total), 0));
@@ -108,7 +110,7 @@ export function UsageChart({ slots, providers, format, labelEvery }: UsageChartP
                             </p>
                         ))}
                         <p className="mt-1 flex items-center gap-1.5 border-t border-border pt-1 font-medium">
-                            Total
+                            {t('chart.total')}
                             <span className="ml-auto tabular-nums">{format(active.total)}</span>
                         </p>
                     </div>

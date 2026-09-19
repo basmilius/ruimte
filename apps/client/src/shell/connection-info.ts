@@ -1,16 +1,16 @@
+import i18next from 'i18next';
 import type { Reachability } from '@ruimte/contracts';
 import type { Endpoint } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
 import type { ConnectionState } from '@/transport';
 import { relativeTime } from '@/shell/panels/commit-log';
 
-/* How far away a machine is, in the words a row's tooltip and the About pane show. */
-export const REACHABILITY_LABELS: Record<Reachability, string> = {
-    loopback: 'On this machine',
-    lan: 'On the local network',
-    tunnel: 'Through a tunnel',
-    public: 'On the public internet'
-};
+/*
+ * How far away a machine is, in the words a row's tooltip and the About pane show. Each word is read
+ * when a row draws it, because this module is imported before `initI18n()` has run: a string fixed
+ * here would stay English for the life of the window.
+ */
+export const reachabilityLabel = (reach: Reachability): string => i18next.t(`shell:connection.reachability.${reach}`);
 
 export interface MachineInfo {
     /* What this client calls the daemon it points at (`endpoints.ts`). */
@@ -25,26 +25,26 @@ export interface MachineInfo {
    `now` as null leaves the countdown off, which is what a screen reader wants to hear. */
 export const describeConnection = (connection: ConnectionState, now: number | null): string => {
     if (connection.status === 'open') {
-        return connection.relayed === true ? 'Connected via relay' : 'Connected';
+        return connection.relayed === true ? i18next.t('shell:connection.relayed') : i18next.t('shell:connection.connected');
     }
     if (connection.noLink === true) {
-        return 'Not connected';
+        return i18next.t('shell:connection.noLink');
     }
     if (connection.attempts === 0) {
-        return connection.status === 'connecting' ? 'Connecting' : 'Disconnected';
+        return connection.status === 'connecting' ? i18next.t('shell:connection.connecting') : i18next.t('shell:connection.disconnected');
     }
-    const attempt = `Reconnecting, attempt ${connection.attempts}`;
+    const attempt = i18next.t('shell:connection.reconnecting', { attempt: connection.attempts });
     if (connection.status === 'connecting') {
         return attempt;
     }
     if (connection.retryAt === null) {
-        return 'Disconnected';
+        return i18next.t('shell:connection.disconnected');
     }
     if (now === null) {
         return attempt;
     }
     const seconds = Math.max(0, Math.ceil((connection.retryAt - now) / 1000));
-    return `${attempt}, next try in ${seconds}s`;
+    return i18next.t('shell:connection.reconnectingIn', { attempt, seconds });
 };
 
 /*
@@ -56,14 +56,14 @@ export const tooltipMachines = <T extends Pick<Endpoint, 'id'>>(endpoints: reado
 
 /* When a machine without a link last had one here; null when this client never reached it. */
 export const describeLastSeen = (at: number | null, now: number): string | null =>
-    at === null ? null : `Last connected ${relativeTime(Math.floor(at / 1000), Math.floor(now / 1000))}`;
+    at === null ? null : i18next.t('shell:connection.lastSeen', { ago: relativeTime(Math.floor(at / 1000), Math.floor(now / 1000)) });
 
 /* The machine on the other end. A daemon on this machine is named after the machine itself,
    because "This machine · bas-mbp" says the same thing twice. */
 export const describeMachine = (info: MachineInfo): string => {
     if (info.reachability === 'loopback') {
         if (info.platform === 'darwin') {
-            return 'This Mac';
+            return i18next.t('shell:connection.thisMac');
         }
         return info.machineLabel ?? info.endpointLabel;
     }
@@ -73,6 +73,7 @@ export const describeMachine = (info: MachineInfo): string => {
     return `${info.endpointLabel} · ${info.machineLabel}`;
 };
 
-export const describeVersion = (version: string | null): string => `Version ${version ?? '-'}`;
+export const describeVersion = (version: string | null): string => i18next.t('shell:connection.version', { version: version ?? '-' });
 
-export const describePing = (latency: number | null): string => `Ping ${latency === null ? '-' : `${Math.round(latency)} ms`}`;
+export const describePing = (latency: number | null): string =>
+    i18next.t('shell:connection.ping', { latency: latency === null ? '-' : `${Math.round(latency)} ms` });

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ImageOff, Maximize, Scan } from 'lucide-react';
 import type { FsReadBinary } from '@ruimte/contracts';
 import { useEndpointId } from '@/state/keys';
@@ -14,6 +15,7 @@ type Zoom = 'fit' | 'full';
 /* An image from the daemon's own route, on a plain surface: a checkerboard would fight every icon
    drawn for a light background. */
 export function ImageFile({ path, name, read }: { path: string; name: string; read: FsReadBinary }) {
+    const { t } = useTranslation('panels');
     const [zoom, setZoom] = useState<Zoom>('fit');
     const [size, setSize] = useState<{ width: number; height: number } | null>(null);
     const [failed, setFailed] = useState(false);
@@ -24,14 +26,14 @@ export function ImageFile({ path, name, read }: { path: string; name: string; re
         <div className="flex min-h-0 min-w-0 grow flex-col">
             <FileToolbar>
                 <div className={BTN_GROUP}>
-                    <FileToolbarToggle icon={Maximize} label="Fit" active={zoom === 'fit'} onClick={() => setZoom('fit')} />
-                    <FileToolbarToggle icon={Scan} label="Actual size (1:1)" active={zoom === 'full'} onClick={() => setZoom('full')} />
+                    <FileToolbarToggle icon={Maximize} label={t('file.image.fit')} active={zoom === 'fit'} onClick={() => setZoom('fit')} />
+                    <FileToolbarToggle icon={Scan} label={t('file.image.actual')} active={zoom === 'full'} onClick={() => setZoom('full')} />
                 </div>
             </FileToolbar>
             <div className="grid min-h-0 grow place-items-center overflow-auto bg-surface-sunken p-4">
                 {failed || bytes.failure !== null ? (
                     <EmptyState icon={<Icon icon={ImageOff} size={20} />}>
-                        Could not show {name}. {bytes.failure ?? 'It may have changed while loading.'}
+                        {t('file.image.failed', { name, reason: bytes.failure ?? t('file.image.maybeChanged') })}
                     </EmptyState>
                 ) : (
                     bytes.url !== null && (

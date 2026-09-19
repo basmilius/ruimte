@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { ArrowDownToLine, Search } from 'lucide-react';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
@@ -28,6 +29,7 @@ import { useVoice } from '@/voice/state';
    padding follows the sidebar's width, which keeps the breadcrumb from jumping when the list
    slides away. */
 export function Toolbar() {
+    const { t } = useTranslation('shell');
     const projectDirty = useProject((s) => s.dirty);
     const drawingDirty = useDrawing((s) => s.dirty);
     const diagramDirty = useDiagram((s) => s.dirty);
@@ -71,7 +73,7 @@ export function Toolbar() {
                     passing over a dot it has no reason to visit. */}
                 <span role="status" aria-live="polite" className="flex shrink-0 items-center">
                     {dirty && <span className="h-1.5 w-1.5 rounded-full bg-text-faint" />}
-                    <span className="sr-only">{dirty ? 'Unsaved changes' : 'Everything saved'}</span>
+                    <span className="sr-only">{dirty ? t('toolbar.unsaved') : t('toolbar.saved')}</span>
                 </span>
             </div>
             {/* A view of its own has no node header, so what that header carried sits here, fenced
@@ -90,14 +92,14 @@ export function Toolbar() {
             <div className={clsx(BTN_GROUP, !panel.open && !previewOpen && !voiceOpen && hasOverlayControls() && 'toolbar-overlay-inset')}>
                 <UpdateButton />
                 <VoiceButton />
-                <Tooltip label="Search" kbd={APP_SHORTCUTS.palette} name>
+                <Tooltip label={t('toolbar.search')} kbd={APP_SHORTCUTS.palette} name>
                     <button className="icon-btn" onClick={() => useUi.getState().setPaletteOpen(true)}>
                         <Icon icon={Search} size={16} />
                     </button>
                 </Tooltip>
             </div>
             {/* Opening another project takes a round trip to the daemon; the line says the wait is the app's. */}
-            {switching && <div className="progress-line absolute inset-x-0 bottom-0" role="progressbar" aria-label="Opening the project" />}
+            {switching && <div className="progress-line absolute inset-x-0 bottom-0" role="progressbar" aria-label={t('toolbar.opening')} />}
         </header>
     );
 }
@@ -105,11 +107,12 @@ export function Toolbar() {
 /* Only there when there is something to do about a new version, and green because it is good news
    rather than a warning. It opens About, which says what the state is and acts on it. */
 function UpdateButton() {
+    const { t } = useTranslation('shell');
     const state = useUpdates();
     if (!hasUpdate(state)) {
         return null;
     }
-    const label = state.status === 'ready' ? `Version ${state.version ?? ''} is ready to install`.trim() : 'An update is on the way';
+    const label = state.status === 'ready' ? t('toolbar.updateReady', { version: state.version ?? '' }).trim() : t('toolbar.updateOnTheWay');
     return (
         <Tooltip label={label} name>
             <button className="icon-btn text-positive hover:text-positive" onClick={() => useUi.getState().setSettings({ open: true, section: 'about' })}>

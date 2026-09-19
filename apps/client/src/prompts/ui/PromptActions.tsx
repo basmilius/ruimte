@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArrowUp, CircleCheck } from 'lucide-react';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
@@ -37,11 +38,12 @@ export function ApprovalActions({
     locked: boolean;
     sending: boolean;
 }) {
+    const { t } = useTranslation('prompts');
     return (
         <>
             {onAddReason && (
                 <Button size="sm" className="rounded-full!" disabled={locked} onClick={onAddReason}>
-                    Add a reason
+                    {t('approval.addReason')}
                 </Button>
             )}
             <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
@@ -49,7 +51,7 @@ export function ApprovalActions({
                     button.primary ? (
                         <PromptPrimary key={button.id} disabled={locked} onClick={button.onPress}>
                             <Icon icon={CircleCheck} size={16} />
-                            {sending ? 'Sending…' : button.label}
+                            {sending ? t('sending') : button.label}
                         </PromptPrimary>
                     ) : (
                         <Button
@@ -91,21 +93,22 @@ export function QuestionActions({
     onDismiss(): void;
     onCommit(): void;
 }) {
+    const { t } = useTranslation(['prompts', 'common']);
     return (
         <>
             {index > 0 && (
                 <Button size="sm" className="rounded-full!" disabled={sending} onClick={onPrevious}>
-                    Previous
+                    {t('question.previous')}
                 </Button>
             )}
             {dismissable && index === 0 && (
                 <Button size="sm" className="rounded-full!" disabled={locked} onClick={onDismiss}>
-                    Dismiss
+                    {t('common:action.dismiss')}
                 </Button>
             )}
             <span className="grow" />
             <PromptPrimary disabled={locked || !ready} onClick={onCommit}>
-                {sending ? 'Sending…' : last ? 'Answer' : 'Next'}
+                {sending ? t('sending') : last ? t('question.answer') : t('question.next')}
                 <Icon icon={ArrowUp} size={16} />
             </PromptPrimary>
         </>

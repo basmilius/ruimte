@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { create } from 'zustand';
 import type { Task } from '@ruimte/contracts';
 import { useEndpointId } from '@/state/keys';
@@ -53,4 +54,4 @@ export const useChildTask = (childId: string): Task | null => {
 };
 
 /* The word a line carries while it stands for a task: "task" while it is open, and how it ended after. */
-export const TASK_EDGE_LABEL: Record<Task['status'], string> = { open: 'task', done: 'done', failed: 'failed', cancelled: 'cancelled' };
+export const taskEdgeLabel = (status: Task['status']): string => i18next.t(`state:taskEdge.${status}`);

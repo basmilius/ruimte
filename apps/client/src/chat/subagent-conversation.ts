@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { ChatItem, ChatSubagentResult } from '@ruimte/contracts';
 import { TransportError, type Transport } from '../transport/transport';
 
@@ -54,7 +55,7 @@ export const mergeNewest = (
     return { items, cursor: current.length === 0 ? pageCursor : currentCursor };
 };
 
-const messageOf = (error: unknown): string => (error instanceof Error ? error.message : 'The machine did not answer');
+const messageOf = (error: unknown): string => (error instanceof Error ? error.message : i18next.t('chat:subagents.noAnswer'));
 
 /*
  * One subagent's conversation as a panel follows it. Opening asks for the newest page and holds the

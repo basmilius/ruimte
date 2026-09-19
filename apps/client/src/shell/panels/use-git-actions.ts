@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import i18next from 'i18next';
 import type { GitActionPayload, GitActionResult } from '@ruimte/contracts';
 import { actionTitle, phaseLabel } from '@/shell/panels/git-actions';
 import { useToasts, type ToastAction } from '@/state/toasts';
@@ -48,7 +49,7 @@ export const useGitActions = (): ((payload: Omit<GitActionPayload, 'actionId'>, 
                 title: actionTitle(payload.kind),
                 kind: 'progress',
                 action: {
-                    label: 'Cancel',
+                    label: i18next.t('common:action.cancel'),
                     run: () => void transport.request('git.cancel', { actionId }).catch(() => undefined)
                 }
             });
@@ -64,10 +65,14 @@ export const useGitActions = (): ((payload: Omit<GitActionPayload, 'actionId'>, 
                 });
                 return { ok: true, result };
             } catch (error: unknown) {
-                const message = error instanceof Error ? error.message : 'That did not work.';
-                useToasts
-                    .getState()
-                    .show({ id: toastId, title: `${actionTitle(payload.kind)} failed`, description: message.split('\n')[0], kind: 'error', output: message });
+                const message = error instanceof Error ? error.message : i18next.t('panels:error.generic');
+                useToasts.getState().show({
+                    id: toastId,
+                    title: i18next.t('panels:git.actionFailed', { action: actionTitle(payload.kind) }),
+                    description: message.split('\n')[0],
+                    kind: 'error',
+                    output: message
+                });
                 return { ok: false, message };
             } finally {
                 toastByAction.current.delete(actionId);

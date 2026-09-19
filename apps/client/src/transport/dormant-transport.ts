@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { PooledTransport } from './pool';
 import { TransportError, type ConnectionState } from './transport';
 
@@ -13,7 +14,7 @@ export class DormantTransport implements PooledTransport {
     readonly connection = CLOSED;
 
     request(): Promise<never> {
-        return Promise.reject(new TransportError('no-machine', 'No machine is picked. Sign in and open one of your machines.'));
+        return Promise.reject(new TransportError('no-machine', i18next.t('machines:connection.noMachine')));
     }
 
     on(): () => void {

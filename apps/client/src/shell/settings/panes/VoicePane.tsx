@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import i18next from 'i18next';
 import { Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { desktop, type OpenAiCredentialStatus } from '@/desktop/bridge';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -15,21 +17,22 @@ import { closeVoicePanel } from '@/voice/controller';
 import { DEFAULT_MICROPHONE_ID, listMicrophones, type MicrophoneDevice } from '@/voice/microphone';
 import { LIVE_VOICES, VOICE_LANGUAGES } from '@/voice/preferences';
 
-const failureText = (error: unknown): string => (error instanceof Error ? error.message : 'The API key could not be saved.');
+const failureText = (error: unknown): string => (error instanceof Error ? error.message : i18next.t('settings:voice.key.saveFailure'));
 
 const titleCase = (value: string): string => value[0]!.toUpperCase() + value.slice(1);
 
 const descriptionFor = (status: OpenAiCredentialStatus): string => {
     if (status.configured && status.persistent) {
-        return "Encrypted with this computer's keychain. Ruimte never shows the saved value again.";
+        return i18next.t('settings:voice.key.persistent');
     }
     if (status.configured) {
-        return 'Encryption is unavailable, so this key is kept only until Ruimte quits.';
+        return i18next.t('settings:voice.key.session');
     }
-    return 'Required for GPT-Live. The key stays in the desktop shell and is never stored in a project.';
+    return i18next.t('settings:voice.key.missing');
 };
 
 export function VoicePane() {
+    const { t } = useTranslation('settings');
     const [status, setStatus] = useState<OpenAiCredentialStatus | null>(null);
     const [draft, setDraft] = useState('');
     const [busy, setBusy] = useState(false);
@@ -56,7 +59,8 @@ export function VoicePane() {
             })
             .catch((error: unknown) => {
                 if (current) {
-                    useToasts.getState().show({ kind: 'error', title: 'Could not read GPT-Live settings', description: failureText(error) });
+                    // Read off i18next rather than the hook's `t`, which would make the language a reason to ask again.
+                    useToasts.getState().show({ kind: 'error', title: i18next.t('settings:voice.toast.readFailed'), description: failureText(error) });
                 }
             });
         return () => {
@@ -105,10 +109,10 @@ export function VoicePane() {
     }, []);
 
     const microphoneItems = [
-        { value: DEFAULT_MICROPHONE_ID, label: 'System default', description: 'Follows the macOS input selection' },
+        { value: DEFAULT_MICROPHONE_ID, label: t('voice.microphone.systemDefault'), description: t('voice.microphone.systemDefaultHint') },
         ...microphones.map((device) => ({ value: device.id, label: device.label })),
         ...(microphoneId !== DEFAULT_MICROPHONE_ID && !microphones.some((device) => device.id === microphoneId)
-            ? [{ value: microphoneId, label: 'Unavailable microphone', description: 'Uses the system default until it returns', disabled: true }]
+            ? [{ value: microphoneId, label: t('voice.microphone.unavailable'), description: t('voice.microphone.unavailableHint'), disabled: true }]
             : [])
     ];
 
@@ -123,9 +127,9 @@ export function VoicePane() {
             setStatus(next);
             useVoice.getState().setCredential(next);
             setDraft('');
-            useToasts.getState().show({ kind: 'success', title: 'OpenAI API key saved' });
+            useToasts.getState().show({ kind: 'success', title: t('voice.toast.saved') });
         } catch (error) {
-            useToasts.getState().show({ kind: 'error', title: 'Could not save the API key', description: failureText(error) });
+            useToasts.getState().show({ kind: 'error', title: t('voice.toast.saveFailed'), description: failureText(error) });
         } finally {
             setBusy(false);
         }
@@ -142,9 +146,9 @@ export function VoicePane() {
             setStatus(next);
             useVoice.getState().setCredential(next);
             setDraft('');
-            useToasts.getState().show({ kind: 'success', title: 'Saved OpenAI API key removed' });
+            useToasts.getState().show({ kind: 'success', title: t('voice.toast.removed') });
         } catch (error) {
-            useToasts.getState().show({ kind: 'error', title: 'Could not remove the API key', description: failureText(error) });
+            useToasts.getState().show({ kind: 'error', title: t('voice.toast.removeFailed'), description: failureText(error) });
         } finally {
             setBusy(false);
         }
@@ -152,8 +156,8 @@ export function VoicePane() {
 
     if (!bridge) {
         return (
-            <SettingsSection title="OpenAI GPT-Live">
-                <SettingsRow muted label="API key" description="API keys can be configured in the Ruimte desktop app." />
+            <SettingsSection title={t('voice.key.title')}>
+                <SettingsRow muted label={t('voice.key.label')} description={t('voice.key.desktopOnly')} />
             </SettingsSection>
         );
     }
@@ -161,20 +165,22 @@ export function VoicePane() {
     return (
         <>
             <SettingsSection
-                title="OpenAI GPT-Live"
-                description="A separate project key is recommended for tracking and revocation."
+                title={t('voice.key.title')}
+                description={t('voice.key.sectionDescription')}
                 action={
                     <Button variant="secondary" size="sm" href="https://platform.openai.com/api-keys">
-                        Create API key
+                        {t('voice.key.create')}
                     </Button>
                 }
             >
                 <SettingsRow
-                    label="API key"
-                    description={displayStatus ? descriptionFor(displayStatus) : 'Checking the desktop keychain…'}
+                    label={t('voice.key.label')}
+                    description={displayStatus ? descriptionFor(displayStatus) : t('voice.key.checking')}
                     control={
                         displayStatus ? (
-                            <Badge tone={displayStatus.configured ? 'accent' : 'muted'}>{displayStatus.configured ? 'Configured' : 'Not configured'}</Badge>
+                            <Badge tone={displayStatus.configured ? 'accent' : 'muted'}>
+                                {displayStatus.configured ? t('voice.key.configured') : t('voice.key.notConfigured')}
+                            </Badge>
                         ) : (
                             <Skeleton className="w-20" />
                         )
@@ -182,14 +188,14 @@ export function VoicePane() {
                 >
                     <form className="flex min-w-0 flex-wrap items-center gap-2" onSubmit={(event) => void save(event)}>
                         <label className="sr-only" htmlFor="openai-api-key">
-                            OpenAI API key
+                            {t('voice.key.fieldLabel')}
                         </label>
                         <input
                             id="openai-api-key"
                             className="field min-w-0 flex-1 basis-64 font-mono"
                             type="password"
                             autoComplete="off"
-                            placeholder={displayStatus?.configured ? 'Enter a replacement key' : 'sk-…'}
+                            placeholder={displayStatus?.configured ? t('voice.key.replacePlaceholder') : 'sk-…'}
                             value={draft}
                             disabled={busy}
                             spellCheck={false}
@@ -197,10 +203,10 @@ export function VoicePane() {
                             onKeyDown={(event) => event.stopPropagation()}
                         />
                         <Button type="submit" disabled={busy || draft.trim() === ''}>
-                            Save
+                            {t('common:action.save')}
                         </Button>
                         {displayStatus?.configured && (
-                            <Tooltip label="Remove saved API key" name>
+                            <Tooltip label={t('voice.key.remove')} name>
                                 <button type="button" className="icon-btn h-8 w-8 shrink-0" disabled={busy} onClick={() => void remove()}>
                                     <Icon icon={Trash2} size={14} />
                                 </button>
@@ -209,22 +215,17 @@ export function VoicePane() {
                     </form>
                 </SettingsRow>
             </SettingsSection>
-            <SettingsSection
-                title="Conversation"
-                description="Changes apply when you start the next conversation. Only an active conversation sends microphone audio to OpenAI."
-            >
+            <SettingsSection title={t('voice.conversation.title')} description={t('voice.conversation.description')}>
                 <SettingsRow
-                    label="Microphone"
+                    label={t('voice.conversation.microphone.label')}
                     description={
-                        microphonesAvailable
-                            ? 'Input used for new conversations. Nearby iPhones appear when macOS makes them available.'
-                            : 'Microphones could not be listed. New conversations use the system default.'
+                        microphonesAvailable ? t('voice.conversation.microphone.description') : t('voice.conversation.microphone.unavailableDescription')
                     }
                     control={
                         <Select
                             value={microphoneId}
                             items={microphoneItems}
-                            label="Conversation microphone"
+                            label={t('voice.conversation.microphone.selectLabel')}
                             align="end"
                             className="max-w-72"
                             onValueChange={(voiceInputDeviceId) => updateSettings({ voiceInputDeviceId })}
@@ -232,42 +233,47 @@ export function VoicePane() {
                     }
                 />
                 <SettingsRow
-                    label="Language"
-                    description="The language Ruimte listens and replies in."
+                    label={t('voice.conversation.language.label')}
+                    description={t('voice.conversation.language.description')}
                     control={
                         <Select
                             value={language}
                             items={VOICE_LANGUAGES.map((item) => ({ value: item.id, label: item.label }))}
-                            label="Conversation language"
+                            label={t('voice.conversation.language.selectLabel')}
                             align="end"
                             onValueChange={(voiceLanguage) => updateSettings({ voiceLanguage })}
                         />
                     }
                 />
                 <SettingsRow
-                    label="Voice"
-                    description="OpenAI's built-in Live voices. Marin and Cedar are recommended."
+                    label={t('voice.conversation.voice.label')}
+                    description={t('voice.conversation.voice.description')}
                     control={
                         <Select
                             value={voice}
                             items={LIVE_VOICES.map((item) => ({
                                 value: item,
                                 label: titleCase(item),
-                                description: item === 'marin' ? 'Default · recommended' : item === 'cedar' ? 'Recommended' : undefined
+                                description:
+                                    item === 'marin'
+                                        ? t('voice.conversation.voice.default')
+                                        : item === 'cedar'
+                                          ? t('voice.conversation.voice.recommended')
+                                          : undefined
                             }))}
-                            label="Conversation voice"
+                            label={t('voice.conversation.voice.selectLabel')}
                             align="end"
                             onValueChange={(liveVoice) => updateSettings({ liveVoice })}
                         />
                     }
                 />
                 <SettingsRow
-                    label="Confirm deletions"
-                    description="Ask before Voice deletes views or nodes. When off, spoken deletion requests run immediately."
+                    label={t('voice.conversation.confirm.label')}
+                    description={t('voice.conversation.confirm.description')}
                     control={
                         <Toggle
                             checked={confirmDestructiveActions}
-                            label="Confirm Voice deletions"
+                            label={t('voice.conversation.confirm.toggle')}
                             onChange={(voiceConfirmDestructiveActions) => updateSettings({ voiceConfirmDestructiveActions })}
                         />
                     }

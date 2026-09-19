@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { StoreApi } from 'zustand';
 import { isCanvasView } from '@ruimte/contracts';
 import { askBeforeEndingAgents, type PendingEnd } from '@/agents/end-children';
@@ -26,7 +27,7 @@ export const deleteSelectionAsking = (
     });
     const sessions = going.filter((id) => nodes[id]?.kind === 'chat' || nodes[id]?.kind === 'terminal');
     const named = picked.filter((id) => nodes[id] !== undefined);
-    const what = named.length === 1 ? nodes[named[0]!]!.title : `${named.length} nodes`;
+    const what = named.length === 1 ? nodes[named[0]!]!.title : i18next.t('canvas:delete.nodes', { count: named.length });
     const goingIds = new Set(going);
     const leftBehind = async (): Promise<PendingEnd['worktrees']> => {
         if (transport === null || folder === null || sessions.length === 0) {

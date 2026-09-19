@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { ApprovalChoice, ApprovalRequest } from '@ruimte/contracts';
 import { isBlockingPrompt, type PendingPrompt, type PromptAction } from '@/prompts/logic/prompts';
 
@@ -81,8 +82,13 @@ export const approvalButtons = (subject: PromptSubject, reason: string): Approva
                   }
               ]
             : []),
-        { id: 'deny', label: 'Deny', primary: false, action: { kind: 'approve', decision: 'deny', ...(message ? { message } : {}) } },
-        { id: 'allow', label: 'Allow', primary: true, action: { kind: 'approve', decision: 'allow' } }
+        {
+            id: 'deny',
+            label: i18next.t('prompts:approval.deny'),
+            primary: false,
+            action: { kind: 'approve', decision: 'deny', ...(message ? { message } : {}) }
+        },
+        { id: 'allow', label: i18next.t('prompts:approval.allow'), primary: true, action: { kind: 'approve', decision: 'allow' } }
     ];
 };
 
@@ -91,7 +97,7 @@ export const answerPrompt = async (subject: PromptSubject, action: PromptAction,
     if (subject.kind === 'chat') {
         const { chat } = clients;
         if (chat === null) {
-            throw new Error('Not connected to the machine');
+            throw new Error(i18next.t('prompts:error.notConnected'));
         }
         const { item, nodeId } = subject;
         if (action.kind === 'approve') {
@@ -103,16 +109,16 @@ export const answerPrompt = async (subject: PromptSubject, action: PromptAction,
         if (action.kind === 'dismiss') {
             return chat.dismiss(nodeId, item.id);
         }
-        throw new Error('A chat request has no choices of its own');
+        throw new Error(i18next.t('prompts:error.noChoices'));
     }
     if (subject.kind === 'terminal-waiting' || action.kind !== 'choose') {
-        throw new Error('This prompt can only be answered in its terminal');
+        throw new Error(i18next.t('prompts:error.terminalOnly'));
     }
     const { sessions } = clients;
     if (sessions === null) {
-        throw new Error('Not connected to the machine');
+        throw new Error(i18next.t('prompts:error.notConnected'));
     }
     if (!(await sessions.answerApproval(subject.nodeId, subject.request.requestId, action.choiceId))) {
-        throw new Error('This request was already answered or has expired');
+        throw new Error(i18next.t('prompts:error.expired'));
     }
 };

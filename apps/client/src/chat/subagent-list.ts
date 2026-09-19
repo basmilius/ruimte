@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { CircleCheck, CircleSlash, CircleX, LoaderCircle, type LucideIcon } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem, Task } from '@ruimte/contracts';
 import { isHandbackNotice, lastHandbackReport } from '@/chat/logic/handback';
@@ -59,7 +60,7 @@ export const sectionSubagents = (items: readonly ChatSubagentItem[], work: Reado
     )
 });
 
-export const subagentTitle = (item: ChatSubagentItem): string => item.description || item.summary || item.subagentType || 'Sub-agent';
+export const subagentTitle = (item: ChatSubagentItem): string => item.description || item.summary || item.subagentType || i18next.t('chat:rows.subagent.label');
 
 /* The task a row stands for, whose id the daemon wrote into the row's own. */
 export const taskIdOf = (item: ChatSubagentItem): string | null => (item.origin === 'ruimte' && item.id.startsWith('task-') ? item.id.slice(5) : null);
@@ -98,7 +99,11 @@ export const previewOfItem = (item: ChatItem): SubagentPreview | null => {
             return text === '' ? null : { kind: 'text', text };
         }
         case 'subagent':
-            return { kind: 'tool', name: item.origin === 'ruimte' ? 'Task' : 'Agent', detail: oneLine(item.description) };
+            return {
+                kind: 'tool',
+                name: item.origin === 'ruimte' ? i18next.t('chat:rows.subagent.task') : i18next.t('chat:rows.reply.agent'),
+                detail: oneLine(item.description)
+            };
         default:
             return null;
     }
@@ -188,8 +193,7 @@ export const stopOf = (item: ChatSubagentItem, turnRunning: boolean): SubagentSt
     return turnRunning ? null : 'mark';
 };
 
-export const stopLabel = (stop: SubagentStop): string =>
-    stop === 'task' ? 'Stop this task' : "Mark as stopped. The CLI cannot stop one sub-agent, so it may keep working until the chat's process ends.";
+export const stopLabel = (stop: SubagentStop): string => (stop === 'task' ? i18next.t('chat:subagents.stop.task') : i18next.t('chat:subagents.stop.mark'));
 
 const HOUR_MS = 3_600_000;
 
@@ -231,4 +235,4 @@ export type ComposerStop = 'turn' | 'turn-and-subagents';
 
 export const composerStopOf = (shiftKey: boolean): ComposerStop => (shiftKey ? 'turn-and-subagents' : 'turn');
 
-export const COMPOSER_STOP_LABEL = 'Stop, Shift-click to also stop its sub-agents';
+export const composerStopLabel = (): string => i18next.t('chat:composer.stop');

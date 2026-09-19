@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { Square } from 'lucide-react';
 import type { ChatSubagentItem } from '@ruimte/contracts';
 import { askBeforeStoppingTask } from '@/agents/end-children';
@@ -12,6 +13,7 @@ import { Tooltip } from '@/ui/Tooltip';
 
 /* Stops one active sub-agent of a chat, or says nothing when stopping it is not on offer. */
 export function SubagentStopButton({ chatId, item, className }: { chatId: string; item: ChatSubagentItem; className?: string }) {
+    const { t } = useTranslation('chat');
     const endpointId = useEndpointId();
     const turnRunning = useChatRow(chatId, (row) => (row?.info.activeTurnId ?? null) !== null);
     const stop = stopOf(item, turnRunning);
@@ -22,8 +24,8 @@ export function SubagentStopButton({ chatId, item, className }: { chatId: string
         void machineTransport(endpointId)
             .request('chat.stopSubagent', { chatId, toolUseId: item.toolUseId })
             .catch((e: unknown) => {
-                const description = e instanceof Error ? e.message : 'The machine did not answer';
-                useToasts.getState().show({ kind: 'error', title: 'The sub-agent could not be stopped', description });
+                const description = e instanceof Error ? e.message : t('subagents.noAnswer');
+                useToasts.getState().show({ kind: 'error', title: t('subagents.stopFailed'), description });
             });
     };
     const run = (): void => {

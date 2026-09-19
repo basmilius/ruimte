@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { ApprovalRequest } from '@ruimte/contracts';
 import { endpointKey } from '@/state/keys';
 import type { SessionsByKey } from '@/state/sessions';
@@ -30,7 +31,8 @@ const SUMMARY_MAX = 96;
 const shorten = (text: string): string => (text.length <= SUMMARY_MAX ? text : `${text.slice(0, SUMMARY_MAX - 1)}…`);
 
 /* A terminal standing as a view of its own carries no name until somebody types one. */
-const nameOf = (node: ApprovalNode): string => (typeof node.title === 'string' && node.title.trim() !== '' ? node.title.trim() : 'Terminal');
+const nameOf = (node: ApprovalNode): string =>
+    typeof node.title === 'string' && node.title.trim() !== '' ? node.title.trim() : i18next.t('shell:approvals.terminal');
 
 /*
  * How long is left, in the coarsest unit that does not round the clock away. The hold is under two
@@ -39,13 +41,15 @@ const nameOf = (node: ApprovalNode): string => (typeof node.title === 'string' &
  */
 export const expiresIn = (ms: number): string => {
     const seconds = Math.max(Math.round(ms / 1000), 0);
-    return seconds < 120 ? `expires in ${seconds}s` : `expires in ${Math.floor(seconds / 60)}m`;
+    return seconds < 120
+        ? i18next.t('shell:approvals.expiresInSeconds', { seconds })
+        : i18next.t('shell:approvals.expiresInMinutes', { minutes: Math.floor(seconds / 60) });
 };
 
 /* The machine is named only when it is not the one this window runs on; naming it always is noise. */
 export const approvalTitle = (node: ApprovalNode, machine: string | null): string => {
-    const where = machine === null ? nameOf(node) : `${nameOf(node)} on ${machine}`;
-    return `${where} needs permission`;
+    const where = machine === null ? nameOf(node) : i18next.t('shell:approvals.onMachine', { name: nameOf(node), machine });
+    return i18next.t('shell:approvals.title', { where });
 };
 
 /*
@@ -56,7 +60,7 @@ export const approvalTitle = (node: ApprovalNode, machine: string | null): strin
 export const approvalBody = (request: ApprovalRequest, now: number): string => {
     const summary = request.summary.trim();
     const what = summary === '' ? request.toolName : `${request.toolName}: ${shorten(summary)}`;
-    return `${what} (${expiresIn(request.expiresAt - now)})`;
+    return i18next.t('shell:approvals.body', { what, expires: expiresIn(request.expiresAt - now) });
 };
 
 export interface NoticeOptions {

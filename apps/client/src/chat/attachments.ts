@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import {
     attachmentBytes,
     attachmentImageMime,
@@ -6,6 +7,7 @@ import {
     CHAT_ATTACHMENT_MAX_BYTES,
     type ChatAttachmentUpload
 } from '@ruimte/contracts';
+import { formatBytes as bytesOf } from '@/format/number';
 
 interface IncomingFile {
     name: string;
@@ -21,15 +23,8 @@ interface AttachmentCheck<T extends IncomingFile> {
 
 export const isImageAttachment = (mime: string): boolean => mime.startsWith('image/');
 
-export const formatBytes = (bytes: number): string => {
-    if (bytes < 1024) {
-        return `${bytes} B`;
-    }
-    if (bytes < 1024 * 1024) {
-        return `${Math.round(bytes / 1024)} KB`;
-    }
-    return `${(bytes / 1024 / 1024).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`;
-};
+/* Whole kilobytes, which is all a row under a file name has room for, and a decimal once it runs into megabytes. */
+export const formatBytes = (bytes: number): string => bytesOf(bytes, bytes < 1024 * 1024);
 
 /* Which of the incoming files fit next to what the composer already holds, and why the rest do not. */
 export const checkAttachmentLimits = <T extends IncomingFile>(current: number, incoming: T[], currentBytes = 0): AttachmentCheck<T> => {
@@ -38,13 +33,16 @@ export const checkAttachmentLimits = <T extends IncomingFile>(current: number, i
     let bytes = currentBytes;
     for (const file of incoming) {
         if (file.bytes === 0) {
-            rejected.push({ name: file.name, reason: 'The file is empty' });
+            rejected.push({ name: file.name, reason: i18next.t('chat:attachments.rejected.empty') });
         } else if (file.bytes > CHAT_ATTACHMENT_MAX_BYTES) {
-            rejected.push({ name: file.name, reason: `Larger than ${formatBytes(CHAT_ATTACHMENT_MAX_BYTES)}` });
+            rejected.push({ name: file.name, reason: i18next.t('chat:attachments.rejected.tooLarge', { size: formatBytes(CHAT_ATTACHMENT_MAX_BYTES) }) });
         } else if (current + accepted.length >= CHAT_ATTACHMENTS_MAX_COUNT) {
-            rejected.push({ name: file.name, reason: `At most ${CHAT_ATTACHMENTS_MAX_COUNT} files per message` });
+            rejected.push({ name: file.name, reason: i18next.t('chat:attachments.rejected.tooMany', { count: CHAT_ATTACHMENTS_MAX_COUNT }) });
         } else if (bytes + file.bytes > CHAT_ATTACHMENTS_MAX_BYTES) {
-            rejected.push({ name: file.name, reason: `Attachments must total at most ${formatBytes(CHAT_ATTACHMENTS_MAX_BYTES)} per message` });
+            rejected.push({
+                name: file.name,
+                reason: i18next.t('chat:attachments.rejected.tooHeavy', { size: formatBytes(CHAT_ATTACHMENTS_MAX_BYTES) })
+            });
         } else {
             accepted.push(file);
             bytes += file.bytes;
@@ -59,7 +57,7 @@ export const filesOf = (transfer: DataTransfer | null): File[] => (transfer ? [.
 const readAsBase64 = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onerror = () => reject(reader.error ?? new Error(`Could not read ${file.name}`));
+        reader.onerror = () => reject(reader.error ?? new Error(i18next.t('chat:attachments.unreadable', { name: file.name })));
         reader.onload = () => {
             const url = String(reader.result);
             resolve(url.slice(url.indexOf(',') + 1));

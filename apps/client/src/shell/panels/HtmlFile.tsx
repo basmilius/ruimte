@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Code, Eye, FileWarning } from 'lucide-react';
 import type { FsReadText } from '@ruimte/contracts';
 import { focusCellOfView, watchGuestFocus } from '@/browser/guest-focus';
@@ -68,6 +69,7 @@ const staticPreviewDocument = (html: string): string => {
 
 /* Native clients keep the full file-backed webview; other clients preview the text they already received in an inert iframe. */
 export function HtmlFile({ path, name, read }: { path: string; name: string; read: FsReadText }) {
+    const { t } = useTranslation('panels');
     const onThisMachine = useEndpoints((state) => state.endpoints.find((endpoint) => endpoint.id === state.activeId)?.reachability === 'loopback');
     const nativePreview = isDesktop() && onThisMachine;
     const [view, setView] = useState<HtmlView>('preview');
@@ -148,8 +150,8 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
 
     const controls = (
         <div className={BTN_GROUP}>
-            <FileToolbarToggle icon={Eye} label="Preview" active={view === 'preview'} onClick={() => setView('preview')} />
-            <FileToolbarToggle icon={Code} label="Source" active={view === 'source'} onClick={() => setView('source')} />
+            <FileToolbarToggle icon={Eye} label={t('file.view.preview')} active={view === 'preview'} onClick={() => setView('preview')} />
+            <FileToolbarToggle icon={Code} label={t('file.view.source')} active={view === 'source'} onClick={() => setView('source')} />
         </div>
     );
 
@@ -167,25 +169,25 @@ export function HtmlFile({ path, name, read }: { path: string; name: string; rea
             <div className={view === 'preview' ? 'relative flex min-h-0 grow flex-col bg-surface' : 'hidden'}>
                 {nativePreview ? (
                     <>
-                        {loading && <div className="progress-line absolute inset-x-0 top-0 z-10" role="progressbar" aria-label="Loading the page" />}
+                        {loading && <div className="progress-line absolute inset-x-0 top-0 z-10" role="progressbar" aria-label={t('file.html.loading')} />}
                         {error !== null && (
                             <EmptyState
                                 className="absolute inset-0 z-10 bg-surface"
                                 icon={<Icon icon={FileWarning} size={20} />}
                                 action={
                                     <Button variant="secondary" size="sm" onClick={retry}>
-                                        Try again
+                                        {t('common:action.retry')}
                                     </Button>
                                 }
                             >
-                                {name} did not load ({error})
+                                {t('file.html.failed', { name, error })}
                             </EmptyState>
                         )}
                         <div ref={host} className="flex min-h-0 grow" />
                     </>
                 ) : (
                     <iframe
-                        title={`${name} preview`}
+                        title={t('file.html.previewTitle', { name })}
                         className="file-preview-page min-h-0 grow bg-white"
                         sandbox=""
                         srcDoc={staticDocument}

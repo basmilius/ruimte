@@ -1,0 +1,68 @@
+{
+  "menu": {
+    "back": "Terug",
+    "forward": "Vooruit",
+    "link": {
+      "openInNode": "Link openen in nieuwe browser-node",
+      "openExternal": "Link openen in systeembrowser",
+      "copyAddress": "Linkadres kopiëren",
+      "copyText": "Linktekst kopiëren"
+    },
+    "image": {
+      "copy": "Afbeelding kopiëren",
+      "copyAddress": "Afbeeldingsadres kopiëren",
+      "save": "Afbeelding opslaan als..."
+    },
+    "selection": {
+      "search": "Zoek op het web naar \"{{text}}\""
+    },
+    "inspect": "Element inspecteren"
+  },
+  "error": {
+    "offline": {
+      "title": "Geen internetverbinding",
+      "hint": "Controleer de netwerkverbinding."
+    },
+    "dns": {
+      "title": "Dat adres heeft geen server",
+      "hint": "Controleer de spelling, of het adres op dit netwerk bestaat."
+    },
+    "refused": {
+      "title": "De server weigerde de verbinding",
+      "hint": "Er luistert niets op dat adres. Controleer of de server draait."
+    },
+    "certificate": {
+      "title": "De verbinding is niet veilig",
+      "hint": "Het certificaat is niet geldig, dus de pagina is niet geladen."
+    },
+    "timeout": {
+      "title": "De server deed er te lang over",
+      "hint": "Hij is misschien druk, of van hier niet bereikbaar."
+    },
+    "blocked": {
+      "title": "De pagina is geblokkeerd",
+      "hint": "Een beleidsregel, een extensie of de pagina zelf hield het verzoek tegen."
+    },
+    "address": {
+      "title": "Dat adres kan niet geopend worden",
+      "hint": "Controleer het schema en de spelling."
+    },
+    "other": {
+      "title": "De pagina is niet geladen"
+    }
+  },
+  "stream": {
+    "pageLabel": "Webpagina op afstand",
+    "starting": "Browser starten…",
+    "frameFailed": "Een frame kon niet getekend worden",
+    "startFailed": "De browser kon niet starten",
+    "notReady": "De browserstream is nog niet klaar",
+    "status": "De browserstream antwoordde met {{status}}",
+    "unknownFormat": "De machine gaf een onbekend streamformaat terug",
+    "stopped": "De browserstream is gestopt",
+    "failed": "De browser op afstand gaf een fout"
+  },
+  "node": {
+    "fallbackTitle": "Browser"
+  }
+}

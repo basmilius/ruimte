@@ -1,11 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "resolveJsonModule": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
     "lib": ["ES2023", "DOM"],
     "types": ["bun"],
     "jsx": "react-jsx",
     "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["src/**/*.test.ts"]
+  "include": ["src/**/*.test.ts", "test-preload.ts"]
 }

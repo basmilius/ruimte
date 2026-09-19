@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CornerUpRight, FileVideo } from 'lucide-react';
 import type { FsReadBinary } from '@ruimte/contracts';
 import { useEndpointId } from '@/state/keys';
@@ -20,6 +21,7 @@ const canPlay = (mime: string): boolean => typeof document !== 'undefined' && do
 
 /* A video from the daemon's own route, which serves it in ranges so the scrubber works. */
 export function VideoFile({ path, name, read }: { path: string; name: string; read: FsReadBinary }) {
+    const { t } = useTranslation('panels');
     const platform = useServer((s) => s.platform);
     const [size, setSize] = useState<{ width: number; height: number } | null>(null);
     const [failed, setFailed] = useState(!canPlay(read.mime));
@@ -41,11 +43,12 @@ export function VideoFile({ path, name, read }: { path: string; name: string; re
                         icon={<Icon icon={FileVideo} size={20} />}
                         action={
                             <Button variant="secondary" size="sm" onClick={reveal}>
-                                <Icon icon={CornerUpRight} size={14} /> Reveal in {fileManagerName(platform)}
+                                <Icon icon={CornerUpRight} size={14} /> {t('file.revealIn', { app: fileManagerName(platform) })}
                             </Button>
                         }
                     >
-                        {name} ({read.mime}, {formatBytes(read.size)}) cannot be played here.{bytes.failure !== null && ` ${bytes.failure}.`}
+                        {t('file.video.cannotPlay', { name, mime: read.mime, size: formatBytes(read.size) })}
+                        {bytes.failure !== null && ` ${bytes.failure}.`}
                     </EmptyState>
                 ) : (
                     bytes.url !== null && (

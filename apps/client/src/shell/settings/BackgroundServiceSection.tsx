@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Power } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { desktop, type BackgroundServiceState } from '@/desktop/bridge';
 import { pendingRestartLine } from '@/shell/machine-update';
 import { ConfirmDialog } from '@/shell/settings/ConfirmDialog';
@@ -17,6 +18,7 @@ type Confirming = 'stop' | 'linger' | 'restart' | null;
  * browser tab and the web client never see a switch they cannot honor.
  */
 export function BackgroundServiceSection() {
+    const { t } = useTranslation('settings');
     const bridge = desktop()?.backgroundService ?? null;
     const [state, setState] = useState<BackgroundServiceState | null>(null);
     const [busy, setBusy] = useState(false);
@@ -55,13 +57,10 @@ export function BackgroundServiceSection() {
     };
 
     return (
-        <SettingsSection title="When Ruimte quits">
+        <SettingsSection title={t('backgroundService.title')}>
             <SettingsRow
-                label="Keep this machine running when Ruimte quits"
-                description={
-                    row.unavailable ??
-                    'Sessions and agents keep working in the background, so this machine stays reachable from your other clients and the web.'
-                }
+                label={t('backgroundService.keepRunning.label')}
+                description={row.unavailable ?? t('backgroundService.keepRunning.description')}
                 muted={row.toggle === null}
                 control={
                     row.toggle && (
@@ -69,7 +68,7 @@ export function BackgroundServiceSection() {
                             checked={row.toggle.checked}
                             disabled={busy}
                             onChange={(checked) => void setKeepRunning(checked)}
-                            label="Keep this machine running when Ruimte quits"
+                            label={t('backgroundService.keepRunning.label')}
                         />
                     )
                 }
@@ -77,32 +76,28 @@ export function BackgroundServiceSection() {
             {row.pending && <p className="px-4 pb-3 text-xs break-words text-text-muted">{row.pending}</p>}
             {restartLine && bridge.restartNow && (
                 <SettingsRow
-                    label="Restart to finish the update"
+                    label={t('backgroundService.restart.label')}
                     description={restartLine}
                     control={
                         <Button variant="secondary" onClick={() => setConfirming('restart')}>
-                            Restart
+                            {t('backgroundService.restart.action')}
                         </Button>
                     }
                 />
             )}
             {row.failure && (
                 <p className="px-4 pb-3 text-xs break-words text-status-error" role="alert">
-                    The background service did not run this machine: {row.failure}
+                    {t('backgroundService.failure', { reason: row.failure })}
                 </p>
             )}
             {(row.offerLinger || row.lingerOn) && (
                 <SettingsRow
-                    label="Keep running after you log out"
-                    description={
-                        row.lingerOn
-                            ? 'Lingering is on, so this machine keeps running after you log out.'
-                            : 'Without it, this machine stops when you log out of your desktop session.'
-                    }
+                    label={t('backgroundService.linger.label')}
+                    description={row.lingerOn ? t('backgroundService.linger.on') : t('backgroundService.linger.off')}
                     control={
                         row.offerLinger && (
                             <Button variant="secondary" onClick={() => setConfirming('linger')}>
-                                Allow
+                                {t('backgroundService.linger.action')}
                             </Button>
                         )
                     }
@@ -110,11 +105,11 @@ export function BackgroundServiceSection() {
             )}
             {row.canStop && (
                 <SettingsRow
-                    label="Stop the machine"
-                    description="Ends every session here and quits Ruimte. The machine starts again the next time you open Ruimte."
+                    label={t('backgroundService.stop.label')}
+                    description={t('backgroundService.stop.description')}
                     control={
                         <Button variant="secondary" onClick={() => setConfirming('stop')}>
-                            <Icon icon={Power} size={12} /> Stop
+                            <Icon icon={Power} size={12} /> {t('backgroundService.stop.action')}
                         </Button>
                     }
                 />
@@ -122,17 +117,17 @@ export function BackgroundServiceSection() {
             <ConfirmDialog
                 open={confirming === 'stop'}
                 onOpenChange={(next) => setConfirming(next ? 'stop' : null)}
-                title="Stop this machine and quit Ruimte?"
-                description="Every terminal and agent on this machine ends, and no other client can reach it until you open Ruimte again."
-                confirmLabel="Stop and quit"
+                title={t('backgroundService.confirmStop.title')}
+                description={t('backgroundService.confirmStop.description')}
+                confirmLabel={t('backgroundService.confirmStop.action')}
                 onConfirm={async () => bridge.stopMachine()}
             />
             <ConfirmDialog
                 open={confirming === 'restart'}
                 onOpenChange={(next) => setConfirming(next ? 'restart' : null)}
-                title="Restart this machine now?"
-                description="Every terminal and agent on this machine ends, and it comes back on the updated version."
-                confirmLabel="Restart now"
+                title={t('backgroundService.confirmRestart.title')}
+                description={t('backgroundService.confirmRestart.description')}
+                confirmLabel={t('backgroundService.confirmRestart.action')}
                 onConfirm={async () => {
                     const next = await bridge.restartNow?.();
                     if (next) {
@@ -146,9 +141,9 @@ export function BackgroundServiceSection() {
             <ConfirmDialog
                 open={confirming === 'linger'}
                 onOpenChange={(next) => setConfirming(next ? 'linger' : null)}
-                title="Keep running after you log out?"
-                description="Ruimte runs loginctl enable-linger for your user, so your user services keep running without a session. Undo it with loginctl disable-linger."
-                confirmLabel="Allow"
+                title={t('backgroundService.confirmLinger.title')}
+                description={t('backgroundService.confirmLinger.description')}
+                confirmLabel={t('backgroundService.confirmLinger.action')}
                 onConfirm={async () => {
                     const next = await bridge.enableLinger();
                     setState(next);

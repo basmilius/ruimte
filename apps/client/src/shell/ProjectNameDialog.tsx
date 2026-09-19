@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Button } from '@/ui/Button';
 
@@ -19,6 +20,7 @@ interface ProjectNameDialogProps {
 /* The part that holds what was typed. It lives under the popup, which unmounts on close, so every
    look at the dialog starts at the name the project has now rather than at the last attempt. */
 function NameForm({ description, action, initial = '', fallback, onSubmit, onOpenChange }: ProjectNameDialogProps) {
+    const { t } = useTranslation(['shell', 'common']);
     const [value, setValue] = useState(initial);
     const [busy, setBusy] = useState(false);
     const [failure, setFailure] = useState<string | null>(null);
@@ -34,7 +36,7 @@ function NameForm({ description, action, initial = '', fallback, onSubmit, onOpe
             await onSubmit(name);
             onOpenChange(false);
         } catch (e) {
-            setFailure(e instanceof Error ? e.message : 'That did not work');
+            setFailure(e instanceof Error ? e.message : t('projectName.failed'));
         } finally {
             setBusy(false);
         }
@@ -46,8 +48,8 @@ function NameForm({ description, action, initial = '', fallback, onSubmit, onOpe
             <input
                 autoFocus
                 className="field mt-3"
-                aria-label="Project name"
-                placeholder={fallback ?? 'Name'}
+                aria-label={t('projectName.label')}
+                placeholder={fallback ?? t('projectName.placeholder')}
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 onKeyDown={(e) => {
@@ -59,7 +61,7 @@ function NameForm({ description, action, initial = '', fallback, onSubmit, onOpe
             />
             {failure && <p className="mt-2 text-sm text-status-error">{failure}</p>}
             <div className="mt-4 flex items-center justify-end gap-2">
-                <Button onClick={() => onOpenChange(false)}>Cancel</Button>
+                <Button onClick={() => onOpenChange(false)}>{t('common:action.cancel')}</Button>
                 <Button variant="primary" disabled={busy || name === ''} onClick={() => void submit()}>
                     {action}
                 </Button>

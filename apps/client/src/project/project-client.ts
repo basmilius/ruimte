@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { ProjectContent, ProjectDocument, ProjectIconChoice, ProjectLocal, ProjectSummary, ProjectView } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
@@ -483,7 +484,7 @@ export class ProjectClient {
                     return;
                 }
                 if (!isConnectionError(e)) {
-                    this.sink.setError(e instanceof Error ? e.message : 'The canvas could not be saved');
+                    this.sink.setError(e instanceof Error ? e.message : i18next.t('project:error.canvasNotSaved'));
                 }
             })
             .finally(() => {
@@ -594,7 +595,7 @@ export class ProjectClient {
             await this.refreshList();
         } catch (e) {
             if (!isConnectionError(e)) {
-                this.sink.setError(e instanceof Error ? e.message : 'The project could not be opened again');
+                this.sink.setError(e instanceof Error ? e.message : i18next.t('project:error.reopenFailed'));
             }
         }
     }

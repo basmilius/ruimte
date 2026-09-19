@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { ChatClient } from '@/chat/chat-client';
 import { BrowserClient } from '@/browser/browser-client';
 import { DeviceClient } from '@/devices/device-client';
@@ -233,7 +234,7 @@ const disposeConnection = (connection: Connection): void => {
 export const enterWorkspace = async (endpointId: string, request: OpenRequest): Promise<void> => {
     const endpoint = endpointById(endpointId);
     if (!endpoint || !isRealMachine(endpointId)) {
-        throw new Error('That machine is no longer in the list');
+        throw new Error(i18next.t('machines:link.notInList'));
     }
     const connection = connect(endpoint, (opened) => {
         useEndpoints.getState().setActive(opened.endpointId);

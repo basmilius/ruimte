@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { canSwipeBetweenPages } from '@/desktop/bridge';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
@@ -9,30 +10,33 @@ const MOD_HELD = shortcut('Mod');
 
 /* A section per kind of view. Only preferences: zoom, locks and layouts act on the canvas that is open, so they stay in the dock and the palette. */
 export function ViewsPane() {
+    const { t } = useTranslation('settings');
     const drawingSnap = useSettings((s) => s.drawingSnap);
     const browserSwipe = useSettings((s) => s.browserSwipe);
     const update = useSettings((s) => s.update);
 
     return (
         <>
-            <SettingsSection title="Drawing">
+            <SettingsSection title={t('views.drawing.title')}>
                 <SettingsRow
-                    label="Snap to the grid"
-                    description="Shapes land on the 8 unit grid when you draw, move or resize them. Freehand strokes never snap."
+                    label={t('views.drawing.snap.label')}
+                    description={t('views.drawing.snap.description')}
                     control={
                         <>
-                            <Keys shortcut={MOD_HELD} then="drag" />
-                            <Toggle checked={drawingSnap} onChange={(checked) => update({ drawingSnap: checked })} label="Snap to the grid" />
+                            <Keys shortcut={MOD_HELD} then={t('gesture.drag')} />
+                            <Toggle checked={drawingSnap} onChange={(checked) => update({ drawingSnap: checked })} label={t('views.drawing.snap.label')} />
                         </>
                     }
                 />
             </SettingsSection>
             {canSwipeBetweenPages() && (
-                <SettingsSection title="Browser">
+                <SettingsSection title={t('views.browser.title')}>
                     <SettingsRow
-                        label="Swipe between pages"
-                        description="Two fingers left or right on the trackpad go back or forward in a browser node or view. A page that scrolls sideways itself keeps the gesture."
-                        control={<Toggle checked={browserSwipe} onChange={(checked) => update({ browserSwipe: checked })} label="Swipe between pages" />}
+                        label={t('views.browser.swipe.label')}
+                        description={t('views.browser.swipe.description')}
+                        control={
+                            <Toggle checked={browserSwipe} onChange={(checked) => update({ browserSwipe: checked })} label={t('views.browser.swipe.label')} />
+                        }
                     />
                 </SettingsSection>
             )}

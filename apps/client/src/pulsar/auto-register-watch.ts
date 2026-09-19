@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { create } from 'zustand';
 import { useEndpoints } from '@/state/endpoints';
 import { serverInfoOf, useServers } from '@/state/server';
@@ -21,7 +22,7 @@ export const startAutoRegistration = (): (() => void) => {
         sign: async (endpointId, accountId) => {
             const link = transportFor(endpointId);
             if (!link) {
-                throw new Error('That machine is no longer in the list');
+                throw new Error(i18next.t('machines:link.notInList'));
             }
             return (await link.request('endpoint.signRegistration', { accountId })).registration;
         },

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import clsx from 'clsx';
 import { Ban } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { PROJECT_ICON_EMOJI_MAX, PROJECT_ICON_NAMES, type ProjectIconChoice } from '@ruimte/contracts';
 import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
 import { useServers } from '@/state/server';
@@ -27,6 +28,7 @@ interface MachineIdentityFormProps {
  * machine says, so a change from elsewhere starts it over.
  */
 export function MachineIdentityForm({ endpointId, label, disabledReason }: MachineIdentityFormProps) {
+    const { t } = useTranslation('settings');
     const info = useServers((s) => s.byEndpoint[endpointId]);
     const savedName = info?.nameSource === 'chosen' ? (info.label ?? '') : '';
     const savedIcon = info?.icon ?? null;
@@ -41,7 +43,7 @@ export function MachineIdentityForm({ endpointId, label, disabledReason }: Machi
     const save = async (): Promise<void> => {
         const link = transportFor(endpointId);
         if (!link) {
-            setFailure('That machine is no longer in the list');
+            setFailure(t('identity.gone'));
             return;
         }
         setBusy(true);
@@ -56,7 +58,7 @@ export function MachineIdentityForm({ endpointId, label, disabledReason }: Machi
             });
             adoptMachineName(endpointId, next.label, next.nameSource ?? null);
         } catch (e) {
-            setFailure(e instanceof Error ? e.message : 'The machine could not save the change');
+            setFailure(e instanceof Error ? e.message : t('identity.saveFailed'));
         } finally {
             setBusy(false);
         }
@@ -70,16 +72,16 @@ export function MachineIdentityForm({ endpointId, label, disabledReason }: Machi
 
     const saveButton = (
         <Button variant="primary" disabled={disabled || busy || !dirty} onClick={() => void save()}>
-            Save
+            {t('common:action.save')}
         </Button>
     );
 
     return (
         <div className="flex min-w-0 flex-col p-4">
-            <div className={`${SECTION_LABEL} mb-1.5`}>Name</div>
+            <div className={`${SECTION_LABEL} mb-1.5`}>{t('identity.name')}</div>
             <input
                 className="field"
-                aria-label="Machine name"
+                aria-label={t('identity.nameLabel')}
                 placeholder={label}
                 value={name}
                 disabled={disabled}
@@ -91,13 +93,13 @@ export function MachineIdentityForm({ endpointId, label, disabledReason }: Machi
                     }
                 }}
             />
-            <p className="mt-1.5 text-xs text-text-faint">Leave empty to use the default name.</p>
+            <p className="mt-1.5 text-xs text-text-faint">{t('identity.nameHint')}</p>
 
-            <div className={`${SECTION_LABEL} mt-4 mb-1.5`}>Emoji</div>
+            <div className={`${SECTION_LABEL} mt-4 mb-1.5`}>{t('identity.emoji')}</div>
             <div className="flex flex-wrap items-center gap-2">
                 <input
                     className="field w-24 text-center"
-                    aria-label="Emoji"
+                    aria-label={t('identity.emoji')}
                     placeholder="🖥️"
                     value={emoji}
                     disabled={disabled}
@@ -106,17 +108,17 @@ export function MachineIdentityForm({ endpointId, label, disabledReason }: Machi
                     onKeyDown={(e) => e.stopPropagation()}
                 />
                 <Button disabled={disabled || emoji.trim() === ''} onClick={useEmoji}>
-                    Use emoji
+                    {t('identity.useEmoji')}
                 </Button>
                 <span className="grow" />
-                <Tooltip label="No icon" name>
+                <Tooltip label={t('identity.noIcon')} name>
                     <button className="icon-btn h-7 w-7" disabled={disabled || icon === null} onClick={() => setIcon(null)}>
                         <Icon icon={Ban} size={16} />
                     </button>
                 </Tooltip>
             </div>
 
-            <div className={`${SECTION_LABEL} mt-4 mb-1.5`}>Icon</div>
+            <div className={`${SECTION_LABEL} mt-4 mb-1.5`}>{t('identity.icon')}</div>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(28px,1fr))] gap-1">
                 {PROJECT_ICON_NAMES.map((entry) => (
                     <Tooltip key={entry} label={entry} name>

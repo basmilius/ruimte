@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import { Bot, Braces, FileJson, MoreHorizontal, Pencil, RotateCcw, Sparkles } from 'lucide-react';
@@ -50,13 +51,14 @@ interface NodeDrag {
  * the cell it belongs to.
  */
 function DiagramControls({ viewId }: { viewId: string }) {
+    const { t } = useTranslation('drawing');
     const store = useDiagramStore();
     // A diagram nobody wrote has no file yet, so there is nothing to open.
     const written = useDiagram((s) => s.rev > 0);
     const hasFolder = useProject((s) => s.current?.folder != null);
     return (
         <Menu.Root>
-            <Tooltip label="More" name>
+            <Tooltip label={t('common:action.more')} name>
                 <Menu.Trigger className="icon-btn h-7 w-7">
                     <Icon icon={MoreHorizontal} size={14} />
                 </Menu.Trigger>
@@ -65,10 +67,10 @@ function DiagramControls({ viewId }: { viewId: string }) {
                 <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
                     <Menu.Popup className="menu-popup min-w-52">
                         <Menu.Item className="menu-item" disabled={!hasFolder || !written} onClick={() => openDiagramJson(viewId)}>
-                            <Icon icon={FileJson} size={14} /> Open the JSON file
+                            <Icon icon={FileJson} size={14} /> {t('diagram.openJson')}
                         </Menu.Item>
                         <Menu.Item className="menu-item" onClick={() => void copyDiagramJson(store)}>
-                            <Icon icon={Braces} size={14} /> Copy as JSON
+                            <Icon icon={Braces} size={14} /> {t('diagram.copyJson')}
                         </Menu.Item>
                     </Menu.Popup>
                 </Menu.Positioner>
@@ -79,6 +81,7 @@ function DiagramControls({ viewId }: { viewId: string }) {
 
 /* The label of one node, typed over the box it names; Enter or leaving the field keeps it, Escape does not. */
 function RenameField({ id, onDone }: { id: string; onDone: () => void }) {
+    const { t } = useTranslation('drawing');
     const store = useDiagramStore();
     const camera = useDiagram(useShallow((s) => s.camera));
     const box = useDiagram((s) => s.layout.nodes.find((candidate) => candidate.id === id) ?? null);
@@ -104,7 +107,7 @@ function RenameField({ id, onDone }: { id: string; onDone: () => void }) {
             data-diagram-chrome
             autoFocus
             defaultValue={label}
-            aria-label="Label"
+            aria-label={t('diagram.nodeLabel')}
             className="absolute h-7 rounded-md bg-surface-sunken px-1.5 text-center text-sm font-medium text-text outline-none ring-1 ring-accent"
             style={{
                 left: Math.round(camera.x + (box.x + box.w / 2) * camera.zoom - width / 2),
@@ -129,6 +132,7 @@ function RenameField({ id, onDone }: { id: string; onDone: () => void }) {
 
 /* What a right-click on a node offers: its label, its tone and the way back to where the layout puts it. */
 function NodeMenuPopup({ id, onRename }: { id: string; onRename: () => void }) {
+    const { t } = useTranslation('drawing');
     const store = useDiagramStore();
     const node = useDiagram((s) => s.content.nodes.find((candidate) => candidate.id === id) ?? null);
     if (node === null) {
@@ -139,14 +143,14 @@ function NodeMenuPopup({ id, onRename }: { id: string; onRename: () => void }) {
             <ContextMenu.Positioner className="z-(--z-popup)">
                 <ContextMenu.Popup className="menu-popup">
                     <ContextMenu.Item className="menu-item" onClick={onRename}>
-                        <Icon icon={Pencil} size={14} /> Rename
+                        <Icon icon={Pencil} size={14} /> {t('common:action.rename')}
                     </ContextMenu.Item>
                     <ContextMenu.Separator className={MENU_SEPARATOR} />
-                    <div className={MENU_LABEL}>Tone</div>
+                    <div className={MENU_LABEL}>{t('diagram.tone')}</div>
                     <Swatches value={node.tone ?? DEFAULT_NODE_TONE} onPick={(tone) => store.getState().setNodeTone(id, tone)} paper />
                     <ContextMenu.Separator className={MENU_SEPARATOR} />
                     <ContextMenu.Item className="menu-item" disabled={!node.pos} onClick={() => store.getState().resetPosition(id)}>
-                        <Icon icon={RotateCcw} size={14} /> Reset position
+                        <Icon icon={RotateCcw} size={14} /> {t('diagram.resetPosition')}
                     </ContextMenu.Item>
                 </ContextMenu.Popup>
             </ContextMenu.Positioner>
@@ -160,32 +164,33 @@ function NodeMenuPopup({ id, onRename }: { id: string; onRename: () => void }) {
  * tile is a click and not the start of a pan, and it goes the moment the diagram has a node.
  */
 function EmptyDiagram({ viewId }: { viewId: string }) {
+    const { t } = useTranslation('drawing');
     const store = useDiagramStore();
     const written = useDiagram((s) => s.rev > 0);
     const hasFolder = useProject((s) => s.current?.folder != null);
     return (
         <div className="pointer-events-none absolute inset-0 grid place-items-center px-6 pt-6 pb-20">
             <div data-diagram-chrome className="pointer-events-auto flex w-full max-w-md flex-col gap-2">
-                <p className="pb-2 text-center text-sm text-text-muted">This diagram is empty. An agent writes one from what you tell it.</p>
+                <p className="pb-2 text-center text-sm text-text-muted">{t('diagram.empty.description')}</p>
                 <Tile
                     icon={<Icon icon={Bot} size={16} />}
-                    title="Ask an agent"
-                    description="A chat beside it on the canvas"
+                    title={t('diagram.empty.agent.title')}
+                    description={t('diagram.empty.agent.description')}
                     primary
                     onClick={() => askAgentAboutDiagram(viewId)}
                 />
                 {hasFolder && written && (
                     <Tile
                         icon={<Icon icon={FileJson} size={16} />}
-                        title="Open JSON"
-                        description="Write the nodes and edges by hand"
+                        title={t('diagram.empty.json.title')}
+                        description={t('diagram.empty.json.description')}
                         onClick={() => openDiagramJson(viewId)}
                     />
                 )}
                 <Tile
                     icon={<Icon icon={Sparkles} size={16} />}
-                    title="Insert an example"
-                    description="A small flow to edit into your own"
+                    title={t('diagram.empty.example.title')}
+                    description={t('diagram.empty.example.description')}
                     onClick={() => store.getState().replaceContent(exampleDiagram(store.getState().content.meta.title))}
                 />
             </div>
@@ -200,6 +205,7 @@ function EmptyDiagram({ viewId }: { viewId: string }) {
  * in its file or by an agent.
  */
 export function DiagramView({ id }: { id: string }) {
+    const { t } = useTranslation('drawing');
     /* The editor of this cell, never the focused one: two diagrams can stand side by side. */
     const store = useDiagramStore();
     const rootRef = useRef<HTMLDivElement>(null);
@@ -342,7 +348,7 @@ export function DiagramView({ id }: { id: string }) {
                     <svg
                         className="h-full w-full select-none"
                         role="img"
-                        aria-label={content.meta.title || 'Diagram'}
+                        aria-label={content.meta.title || t('diagram.title')}
                         style={{ fontFamily: 'var(--font-sans)' }}
                     >
                         <g transform={`translate(${camera.x} ${camera.y}) scale(${camera.zoom})`}>

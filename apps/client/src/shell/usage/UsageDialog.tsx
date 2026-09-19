@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import clsx from 'clsx';
+import i18next from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { ChartNoAxesColumn, LoaderCircle, RefreshCw, TriangleAlert, Unplug, X } from 'lucide-react';
 import { Segmented, Skeleton } from '@/shell/settings/controls';
@@ -30,21 +32,17 @@ import { UsageLimits } from '@/shell/usage/UsageLimits';
 import { UsageSummary } from '@/shell/usage/UsageSummary';
 import { UsageTiles } from '@/shell/usage/UsageTiles';
 
-const METRICS: readonly { id: UsageMetric; label: string }[] = [
-    { id: 'cost', label: 'Cost' },
-    { id: 'tokens', label: 'Tokens' }
-];
+const METRICS: readonly UsageMetric[] = ['cost', 'tokens'];
 
 /* Over the whole popup rather than the body under the header, so an empty state stands in the middle of the dialog. */
 const DIALOG_CENTER = 'pointer-events-none absolute inset-0';
-
-const PERIOD_OPTIONS = USAGE_PERIODS.map((period) => ({ id: period.id, label: period.label }));
 
 /*
  * Which agent CLIs the machine has, under an empty usage page: no usage is what a machine without any
  * agent looks like too, and the way to fix that is the Agents settings.
  */
 function MachineAgents({ endpointId }: { endpointId: string }) {
+    const { t } = useTranslation('usage');
     const row = useProvidersStore((s) => s.byEndpoint[endpointId]);
     const installed = useMemo(() => (row?.providers ?? []).filter((provider) => provider.installed), [row]);
     if (!row?.loaded) {
@@ -53,12 +51,10 @@ function MachineAgents({ endpointId }: { endpointId: string }) {
     return (
         <div className="flex flex-col items-center gap-2">
             <p className="text-xs text-text-muted">
-                {installed.length === 0
-                    ? 'This machine has no agent CLI installed.'
-                    : `This machine has ${installed.map((provider) => provider.name).join(', ')}.`}
+                {installed.length === 0 ? t('agents.none') : t('agents.installed', { list: installed.map((provider) => provider.name).join(', ') })}
             </p>
             <Button size="sm" variant="secondary" onClick={() => useUi.getState().setSettings({ open: true, section: 'agents' })}>
-                Agents settings
+                {t('agents.settings')}
             </Button>
         </div>
     );
@@ -129,21 +125,23 @@ const useSummary = (endpointId: string, transport: Transport | null, period: Usa
 };
 
 function Provenance() {
+    const { t } = useTranslation('usage');
     const summary = useUsage((s) => s.summary);
     const currency = useUsage((s) => s.currency);
     const failed = useUsage((s) => s.failed);
     if (failed) {
-        return <p className="mt-auto text-center text-xs text-status-error">Could not read the transcripts. Showing the last successful scan.</p>;
+        return <p className="mt-auto text-center text-xs text-status-error">{t('provenance.failed')}</p>;
     }
     if (summary === null) {
         return null;
     }
-    const prices = summary.pricing.fetchedAt === null ? 'Prices from the bundled table' : `Prices from LiteLLM, ${formatDate(summary.pricing.fetchedAt)}`;
+    const prices =
+        summary.pricing.fetchedAt === null ? t('provenance.bundledPrices') : t('provenance.fetchedPrices', { date: formatDate(summary.pricing.fetchedAt) });
     // The rate is named only when it is being used, so a page in dollars says nothing about euros.
-    const rate = currency === 'USD' || summary.rate === null ? null : `${summary.rate.currency} at the ECB rate of ${summary.rate.date}`;
+    const rate = currency === 'USD' || summary.rate === null ? null : t('provenance.rate', { currency: summary.rate.currency, date: summary.rate.date });
     return (
         <p className="mt-auto text-center text-xs text-text-muted">
-            Scanned {formatClock(summary.scan.at)}, {formatCount(summary.scan.files)} files · {prices}
+            {t('provenance.scanned', { count: summary.scan.files, time: formatClock(summary.scan.at), files: formatCount(summary.scan.files) })} · {prices}
             {rate !== null && ` · ${rate}`}
         </p>
     );
@@ -174,13 +172,19 @@ function LoadingBody() {
  * fills: the numbers come from one daemon and a socket that is down is the whole story.
  */
 function MachineNote({ endpointId, stale }: { endpointId: string; stale: boolean }) {
-    const label = useEndpoints((s) => s.endpoints.find((entry) => entry.id === endpointId)?.label ?? 'This machine');
+    const { t } = useTranslation('usage');
+    const machine = useEndpoints((s) => s.endpoints.find((entry) => entry.id === endpointId)?.label) ?? t('machineNote.unnamed');
     const { status, noLink } = useEndpointConnection(endpointId);
     if (status === 'open') {
         return null;
     }
     const connecting = noLink !== true && status === 'connecting';
-    const line = noLink === true ? `${label} is not connected.` : connecting ? `Connecting to ${label}...` : `${label} is not answering.`;
+    const line =
+        noLink === true
+            ? t('machineNote.disconnected', { machine })
+            : connecting
+              ? t('machineNote.connecting', { machine })
+              : t('machineNote.silent', { machine });
     const icon = noLink === true ? Unplug : connecting ? LoaderCircle : TriangleAlert;
     return (
         <div role="status" className="flex items-center gap-2 rounded-lg border border-border bg-surface-raised px-3 py-2 text-xs text-text">
@@ -194,13 +198,14 @@ function MachineNote({ endpointId, stale }: { endpointId: string; stale: boolean
                     noLink === true && 'text-text-muted'
                 )}
             />
-            <span className="grow">{stale ? `${line} These are the numbers of the last scan that reached it.` : line}</span>
+            <span className="grow">{stale ? `${line} ${t('machineNote.stale')}` : line}</span>
         </div>
     );
 }
 
 /* One entry per machine this client knows, in the order of the list; with one machine there is nothing to pick. */
 function MachinePicker({ endpointId }: { endpointId: string }) {
+    const { t } = useTranslation('usage');
     const stored = useEndpoints((s) => s.endpoints);
     const servers = useServers((s) => s.byEndpoint);
     const endpoints = useMemo(() => listedEndpoints(stored), [stored]);
@@ -216,7 +221,7 @@ function MachinePicker({ endpointId }: { endpointId: string }) {
                 icon: <MachineGlyph icon={servers[endpoint.id]?.icon ?? null} size={14} />
             }))}
             onValueChange={(id) => useUsageStore.getState().choose(id)}
-            label="Machine"
+            label={t('dialog.machine')}
             align="end"
         />
     );
@@ -227,6 +232,7 @@ function MachinePicker({ endpointId }: { endpointId: string }) {
  * a view: a view lives in the project file, and none of this belongs to a project.
  */
 function Page({ endpointId }: { endpointId: string }) {
+    const { t } = useTranslation('usage');
     const period = useUsage((s) => s.period);
     const metric = useUsage((s) => s.metric);
     const summary = useUsage((s) => s.summary);
@@ -248,17 +254,27 @@ function Page({ endpointId }: { endpointId: string }) {
     return (
         <div className="flex min-h-0 grow flex-col">
             <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border py-3 pr-3 pl-6 max-[960px]:pl-4">
-                <Dialog.Title className="text-base font-semibold text-text">Usage</Dialog.Title>
+                <Dialog.Title className="text-base font-semibold text-text">{t('dialog.title')}</Dialog.Title>
                 <div className="ml-auto flex flex-wrap items-center gap-2">
                     <MachinePicker endpointId={endpointId} />
-                    <Segmented value={period} options={PERIOD_OPTIONS} onChange={(id) => useUsageStore.getState().setPeriod(id)} label="Period" />
-                    <Segmented value={metric} options={METRICS} onChange={(id) => useUsageStore.getState().setMetric(id)} label="Metric" />
-                    <Tooltip label="Scan again" name>
+                    <Segmented
+                        value={period}
+                        options={USAGE_PERIODS.map((entry) => ({ id: entry.id, label: t(`dialog.periods.${entry.id}`) }))}
+                        onChange={(id) => useUsageStore.getState().setPeriod(id)}
+                        label={t('dialog.period')}
+                    />
+                    <Segmented
+                        value={metric}
+                        options={METRICS.map((id) => ({ id, label: t(`dialog.metrics.${id}`) }))}
+                        onChange={(id) => useUsageStore.getState().setMetric(id)}
+                        label={t('dialog.metric')}
+                    />
+                    <Tooltip label={t('dialog.rescan')} name>
                         <button className="icon-btn" onClick={reload} disabled={loading || !answering}>
                             <Icon icon={RefreshCw} size={16} className={clsx(loading && 'animate-spin')} />
                         </button>
                     </Tooltip>
-                    <Dialog.Close className="icon-btn shrink-0" aria-label="Close usage">
+                    <Dialog.Close className="icon-btn shrink-0" aria-label={t('dialog.close')}>
                         <Icon icon={X} size={16} />
                     </Dialog.Close>
                 </div>
@@ -267,14 +283,14 @@ function Page({ endpointId }: { endpointId: string }) {
                 <MachineNote endpointId={endpointId} stale={shown !== null} />
                 {noRoots && (
                     <EmptyState className={DIALOG_CENTER} icon={<Icon icon={ChartNoAxesColumn} size={24} />} action={<MachineAgents endpointId={endpointId} />}>
-                        No Claude or Codex transcripts found. The machine reads ~/.claude/projects and ~/.codex/sessions.
+                        {t('empty.noTranscripts')}
                     </EmptyState>
                 )}
                 {/* The skeleton is the wait for an answer; without a socket there is no answer on the way. */}
                 {shown === null && answering && <LoadingBody />}
                 {shown === null && !answering && (
                     <EmptyState className={DIALOG_CENTER} icon={<Icon icon={ChartNoAxesColumn} size={24} />} action={<MachineAgents endpointId={endpointId} />}>
-                        No usage on this machine yet.
+                        {t('empty.noUsage')}
                     </EmptyState>
                 )}
                 {shown !== null && derived !== null && !noRoots && (
@@ -332,10 +348,10 @@ export function UsageDialog() {
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
                 <Dialog.Popup className="dialog-popup flex h-[min(820px,calc(100dvh-32px))] w-[1080px] flex-col">
-                    <ErrorBoundary label="Usage failed to render" className="grow">
+                    <ErrorBoundary label={i18next.t('usage:dialog.failed')} className="grow">
                         <Body />
                     </ErrorBoundary>
-                    <Dialog.Description className="sr-only">Cost, tokens and plan limits</Dialog.Description>
+                    <Dialog.Description className="sr-only">{i18next.t('usage:dialog.description')}</Dialog.Description>
                 </Dialog.Popup>
             </Dialog.Portal>
         </Dialog.Root>

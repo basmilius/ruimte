@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import clsx from 'clsx';
 import { Search } from 'lucide-react';
@@ -44,6 +45,7 @@ export function GitPrompt({
     onConfirm,
     onClose
 }: PromptProps) {
+    const { t } = useTranslation('panels');
     /* The dialog stays mounted between questions, so every opening starts from what it was handed.
        The token is what it was handed, so a new question resets the fields in the same render that
        shows it and not in a second one after. */
@@ -103,7 +105,7 @@ export function GitPrompt({
                         </label>
                     )}
                     <div className="mt-4 flex items-center justify-end gap-2">
-                        <Button onClick={onClose}>Cancel</Button>
+                        <Button onClick={onClose}>{t('common:action.cancel')}</Button>
                         {secondary !== undefined && (
                             <Button disabled={busy} onClick={secondary.onClick}>
                                 {secondary.label}
@@ -145,6 +147,7 @@ interface ChoiceProps {
 
 /* Picking one branch or one stash: the same list the branch menu draws, in a dialog. */
 export function GitChoice({ open, title, description, choices, filterFrom = 10, empty, onPick, onClose }: ChoiceProps) {
+    const { t } = useTranslation('panels');
     /* The filter belongs to one opening of the dialog; closing it is what empties the field. */
     const [filter, setFilter] = useState({ open, query: '' });
     if (filter.open !== open) {
@@ -169,7 +172,7 @@ export function GitChoice({ open, title, description, choices, filterFrom = 10, 
                             <input
                                 autoFocus
                                 className="h-8 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
-                                placeholder="Filter"
+                                placeholder={t('git.dialog.filter')}
                                 spellCheck={false}
                                 value={query}
                                 onChange={(event) => setQuery(event.target.value)}

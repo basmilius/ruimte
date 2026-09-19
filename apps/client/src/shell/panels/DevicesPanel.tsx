@@ -1,4 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import i18next from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import { Popover } from '@base-ui-components/react/popover';
 import {
@@ -39,9 +41,17 @@ const sameReference = (left: DeviceReference, right: DeviceReference): boolean =
 
 const stateText = (device: DeviceInfo): string => {
     if (device.kind === 'physical') {
-        return device.state === 'booted' ? 'Paired' : device.state === 'shutdown' ? 'Unavailable' : 'Connecting';
+        return device.state === 'booted'
+            ? i18next.t('panels:devices.state.paired')
+            : device.state === 'shutdown'
+              ? i18next.t('panels:devices.state.unavailable')
+              : i18next.t('panels:devices.state.connecting');
     }
-    return device.state === 'booted' ? 'Running' : device.state === 'shutdown' ? 'Stopped' : 'Changing state';
+    return device.state === 'booted'
+        ? i18next.t('panels:devices.state.running')
+        : device.state === 'shutdown'
+          ? i18next.t('panels:devices.state.stopped')
+          : i18next.t('panels:devices.state.changing');
 };
 
 interface DeviceGroup {
@@ -58,12 +68,12 @@ const displayRuntime = (device: Pick<DeviceInfo, 'platform' | 'runtime'>): strin
 
 const groupTitle = (device: DeviceInfo, active: boolean): string => {
     if (active) {
-        return device.platform === 'ios' ? 'Running iOS Simulators' : 'Running Android Emulators';
+        return device.platform === 'ios' ? i18next.t('panels:devices.group.runningIos') : i18next.t('panels:devices.group.runningAndroid');
     }
     if (device.kind === 'physical') {
-        return device.platform === 'ios' ? 'iOS Devices' : 'Android Devices';
+        return device.platform === 'ios' ? i18next.t('panels:devices.group.iosDevices') : i18next.t('panels:devices.group.androidDevices');
     }
-    return device.platform === 'ios' ? 'iOS Simulators' : 'Android Emulators';
+    return device.platform === 'ios' ? i18next.t('panels:devices.group.iosSimulators') : i18next.t('panels:devices.group.androidEmulators');
 };
 
 const groupDevices = (devices: DeviceInfo[]): DeviceGroup[] => {
@@ -107,6 +117,7 @@ const addDeviceToCanvas = (device: DeviceInfo): void => {
 };
 
 function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: DeviceInfo) => void }) {
+    const { t } = useTranslation('panels');
     const endpointId = useEndpointId();
     const [changing, setChanging] = useState<'boot' | 'shutdown' | null>(null);
     const canOpen = device.capabilities.stream;
@@ -131,14 +142,14 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
             </div>
             <div className={BTN_GROUP}>
                 {device.state === 'shutdown' && device.capabilities.boot && (
-                    <Tooltip label={changing === 'boot' ? 'Starting simulator' : 'Start simulator'} name>
+                    <Tooltip label={changing === 'boot' ? t('devices.starting') : t('devices.start')} name>
                         <button className="icon-btn h-7 w-7" disabled={changing !== null} onClick={() => control('boot')}>
                             <Icon icon={changing === 'boot' ? LoaderCircle : Power} size={14} className={changing === 'boot' ? 'animate-spin' : undefined} />
                         </button>
                     </Tooltip>
                 )}
                 {device.state === 'booted' && device.capabilities.shutdown && (
-                    <Tooltip label="Shut down simulator" name>
+                    <Tooltip label={t('devices.shutdown')} name>
                         <button className="icon-btn h-7 w-7" disabled={changing !== null} onClick={() => control('shutdown')}>
                             <Icon
                                 icon={changing === 'shutdown' ? LoaderCircle : PowerOff}
@@ -154,7 +165,7 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
                     </span>
                 )}
                 {canOpen && (
-                    <Tooltip label={device.kind === 'physical' ? 'Open read-only preview' : 'Open in device panel'} name>
+                    <Tooltip label={device.kind === 'physical' ? t('devices.openPreview') : t('devices.openInPanel')} name>
                         <button className="icon-btn h-7 w-7" disabled={changing !== null} onClick={() => onOpen(device)}>
                             <Icon icon={ChevronRight} size={14} />
                         </button>
@@ -192,11 +203,12 @@ function DeviceList({ devices, onOpen }: { devices: DeviceInfo[]; onOpen: (devic
 }
 
 function DeviceDetailHeader({ device, onClose }: { device: DeviceInfo; onClose: () => void }) {
+    const { t } = useTranslation('panels');
     return (
         <>
             <PanelHeaderTitleHidden />
             <PanelHeaderLeadingSlot>
-                <Tooltip label="Back to devices" name>
+                <Tooltip label={t('devices.back')} name>
                     <button className="icon-btn" onClick={onClose}>
                         <Icon icon={ArrowLeft} size={16} />
                     </button>
@@ -212,9 +224,10 @@ function DeviceDetailHeader({ device, onClose }: { device: DeviceInfo; onClose: 
 }
 
 function DevicePlacementMenu({ device }: { device: DeviceInfo }) {
+    const { t } = useTranslation('panels');
     return (
         <Menu.Root>
-            <Tooltip label="Open simulator elsewhere" name>
+            <Tooltip label={t('devices.openElsewhere')} name>
                 <Menu.Trigger className="icon-btn">
                     <Icon icon={PictureInPicture2} size={16} />
                 </Menu.Trigger>
@@ -222,12 +235,12 @@ function DevicePlacementMenu({ device }: { device: DeviceInfo }) {
             <Menu.Portal>
                 <Menu.Positioner className="z-(--z-popup)" sideOffset={6} align="end">
                     <Menu.Popup className="menu-popup">
-                        <div className={MENU_LABEL}>Open simulator</div>
+                        <div className={MENU_LABEL}>{t('devices.openSimulator')}</div>
                         <Menu.Item className="menu-item" onClick={() => openDeviceView(device)}>
-                            <Icon icon={ExternalLink} size={14} /> Open as view
+                            <Icon icon={ExternalLink} size={14} /> {t('devices.openAsView')}
                         </Menu.Item>
                         <Menu.Item className="menu-item" onClick={() => addDeviceToCanvas(device)}>
-                            <Icon icon={Frame} size={14} /> Add to canvas
+                            <Icon icon={Frame} size={14} /> {t('devices.addToCanvas')}
                         </Menu.Item>
                     </Menu.Popup>
                 </Menu.Positioner>
@@ -237,6 +250,7 @@ function DevicePlacementMenu({ device }: { device: DeviceInfo }) {
 }
 
 function DevicePanelToolbar({ device, onClose }: { device: DeviceInfo; onClose: () => void }) {
+    const { t } = useTranslation('panels');
     const endpointId = useEndpointId();
     const [shuttingDown, setShuttingDown] = useState(false);
     const shutDown = (): void => {
@@ -258,7 +272,7 @@ function DevicePanelToolbar({ device, onClose }: { device: DeviceInfo; onClose: 
                 <DeviceToolsFlyout device={device} />
                 <DevicePlacementMenu device={device} />
                 {device.state === 'booted' && device.capabilities.shutdown && (
-                    <Tooltip label="Shut down simulator" name>
+                    <Tooltip label={t('devices.shutdown')} name>
                         <button className="icon-btn" disabled={shuttingDown} onClick={shutDown}>
                             <Icon icon={shuttingDown ? LoaderCircle : Power} size={16} className={shuttingDown ? 'animate-spin' : undefined} />
                         </button>
@@ -270,10 +284,11 @@ function DevicePanelToolbar({ device, onClose }: { device: DeviceInfo; onClose: 
 }
 
 function DeviceToolsFlyout({ device }: { device: DeviceInfo }) {
+    const { t } = useTranslation('panels');
     const [open, setOpen] = useState(false);
     return (
         <Popover.Root open={open} onOpenChange={setOpen}>
-            <Tooltip label="Simulator tools" name>
+            <Tooltip label={t('devices.tools')} name>
                 <Popover.Trigger className="icon-btn" aria-pressed={open} disabled={device.kind !== 'simulator' || device.state !== 'booted'}>
                     <Icon icon={SlidersHorizontal} size={16} />
                 </Popover.Trigger>
@@ -299,11 +314,12 @@ function PanelEmpty({ header, icon, spin = false, children }: { header: ReactNod
 }
 
 export function DevicesPanel() {
+    const { t } = useTranslation('panels');
     const endpointId = useEndpointId();
     const connection = useEndpointConnection(endpointId);
     const platform = useServer((state) => state.platform);
     const streamingAllowed = useServer((state) => state.streamingAllowed);
-    const machineName = useEndpoints((state) => state.endpoints.find((entry) => entry.id === endpointId)?.label ?? 'This machine');
+    const machineName = useEndpoints((state) => state.endpoints.find((entry) => entry.id === endpointId)?.label ?? t('devices.thisMachine'));
     const row = useDevices((state) => state.byEndpoint[endpointId] ?? EMPTY_DEVICE_LIST);
     const [selection, setSelection] = useState<{ endpointId: string; device: DeviceReference } | null>(null);
     const selectedDevice =
@@ -318,7 +334,7 @@ export function DevicesPanel() {
         <PanelHeaderSlot>
             <span className="min-w-0 truncate text-xs text-text-muted">{machineName}</span>
             <span className="grow" />
-            <Tooltip label="Refresh devices" name>
+            <Tooltip label={t('devices.refresh')} name>
                 <button
                     className="icon-btn"
                     disabled={row.loading}
@@ -340,28 +356,28 @@ export function DevicesPanel() {
     if (platform !== 'darwin') {
         return (
             <PanelEmpty header={listHeader} icon={Smartphone}>
-                iOS simulators are available when this machine runs macOS.
+                {t('devices.macOnly')}
             </PanelEmpty>
         );
     }
     if (streamingAllowed === false) {
         return (
             <PanelEmpty header={listHeader} icon={CircleAlert}>
-                Browser and device streaming is disabled in this machine's settings.
+                {t('devices.streamingOff')}
             </PanelEmpty>
         );
     }
     if (connection.status !== 'open') {
         return (
             <PanelEmpty header={listHeader} icon={CircleAlert}>
-                This machine is not answering.
+                {t('machineNotAnswering')}
             </PanelEmpty>
         );
     }
     if (row.loading && row.devices.length === 0) {
         return (
             <PanelEmpty header={listHeader} icon={LoaderCircle} spin>
-                Finding simulators...
+                {t('devices.finding')}
             </PanelEmpty>
         );
     }
@@ -375,7 +391,7 @@ export function DevicesPanel() {
     if (row.devices.length === 0) {
         return (
             <PanelEmpty header={listHeader} icon={Smartphone}>
-                No iOS simulators are installed in Xcode.
+                {t('devices.none')}
             </PanelEmpty>
         );
     }

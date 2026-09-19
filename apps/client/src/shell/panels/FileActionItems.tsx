@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import { Columns2, Copy, CornerUpRight, Folder, Frame, Globe, RefreshCw } from 'lucide-react';
 import { newFileView, showFileOnCanvas } from '@/project/views';
@@ -32,6 +33,7 @@ interface FileActionItemsProps {
  * order and only the two that would point at themselves are left out.
  */
 export function FileActionItems({ path, on, onRefresh }: FileActionItemsProps) {
+    const { t } = useTranslation('panels');
     const platform = useServer((s) => s.platform);
     const folder = useProject((s) => s.current?.folder ?? null);
     const transport = useTransport();
@@ -49,7 +51,7 @@ export function FileActionItems({ path, on, onRefresh }: FileActionItemsProps) {
     return (
         <>
             <Menu.Item className="menu-item" disabled={!revealableInFiles(folder, path)} onClick={() => useFiles.getState().revealInFiles(path)}>
-                <Icon icon={Folder} size={14} /> Reveal in the Files panel
+                <Icon icon={Folder} size={14} /> {t('file.menu.revealInFiles')}
             </Menu.Item>
             <Menu.Item
                 className="menu-item"
@@ -57,36 +59,36 @@ export function FileActionItems({ path, on, onRefresh }: FileActionItemsProps) {
                     void transport.request('fs.reveal', { path }).catch(() => undefined);
                 }}
             >
-                <Icon icon={CornerUpRight} size={14} /> Reveal in {fileManagerName(platform)}
+                <Icon icon={CornerUpRight} size={14} /> {t('file.revealIn', { app: fileManagerName(platform) })}
             </Menu.Item>
             {isHtmlName(name) && (
                 <Menu.Item className="menu-item" onClick={openInBrowserNode}>
-                    <Icon icon={Globe} size={14} /> Open in a browser node
+                    <Icon icon={Globe} size={14} /> {t('file.menu.openInBrowser')}
                 </Menu.Item>
             )}
             <Menu.Separator className={MENU_SEPARATOR} />
             {on !== 'node' && (
                 <Menu.Item className="menu-item" onClick={() => showFileOnCanvas(path)}>
-                    <Icon icon={Frame} size={14} /> Show on the canvas
+                    <Icon icon={Frame} size={14} /> {t('file.menu.showOnCanvas')}
                 </Menu.Item>
             )}
             {on !== 'view' && (
                 <Menu.Item className="menu-item" onClick={() => newFileView(path)}>
-                    <Icon icon={Columns2} size={14} /> Open as a view
+                    <Icon icon={Columns2} size={14} /> {t('file.menu.openAsView')}
                 </Menu.Item>
             )}
             <Menu.Separator className={MENU_SEPARATOR} />
             <Menu.Item className="menu-item" onClick={() => copyText(path)}>
-                <Icon icon={Copy} size={14} /> Copy path
+                <Icon icon={Copy} size={14} /> {t('file.menu.copyPath')}
             </Menu.Item>
             <Menu.Item className="menu-item" disabled={folder === null} onClick={() => copyText(relativeTo(folder ?? '', path))}>
-                <Icon icon={Copy} size={14} /> Copy relative path
+                <Icon icon={Copy} size={14} /> {t('file.menu.copyRelativePath')}
             </Menu.Item>
             {onRefresh !== undefined && (
                 <>
                     <Menu.Separator className={MENU_SEPARATOR} />
                     <Menu.Item className="menu-item" onClick={onRefresh}>
-                        <Icon icon={RefreshCw} size={14} /> Refresh
+                        <Icon icon={RefreshCw} size={14} /> {t('file.menu.refresh')}
                     </Menu.Item>
                 </>
             )}

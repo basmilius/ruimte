@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { AuthChallengeResultSchema, AuthTicketResultSchema, clientAuthMessage, daemonChallengeMessage } from '@ruimte/contracts';
 import { desktop } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID, socketUrlFor, useEndpoints, type Endpoint } from '@/state/endpoints';
@@ -56,7 +57,7 @@ export const signIn = async (endpoint: Endpoint, key: ClientKey): Promise<string
     const identical = daemon.publicKey === pinned && (endpoint.daemonId === null || endpoint.daemonId === daemon.id);
     if (!identical || !(await verifyDaemon(pinned, daemonChallengeMessage(daemon.id, challenge.data.challenge), daemon.signature))) {
         reportImposter(endpoint);
-        throw new Error(`${endpoint.httpBaseUrl} does not hold the key this client paired with`);
+        throw new Error(i18next.t('machines:handshake.wrongKey', { address: endpoint.httpBaseUrl }));
     }
     // Signed against the pinned id, never the one that just answered, so a stranger cannot pick what gets signed.
     const signature = await key.sign(clientAuthMessage(endpoint.daemonId ?? daemon.id, challenge.data.challenge, key.publicKey));
@@ -81,8 +82,8 @@ const reportUnknownKey = (endpoint: Endpoint): void => {
     useToasts.getState().show({
         id: `endpoint-key-${endpoint.id}`,
         kind: 'error',
-        title: `${endpoint.label} does not know this client`,
-        description: 'Its access was revoked, or the machine lost the pairing. Pair again to connect.'
+        title: i18next.t('machines:handshake.unknownKey.title', { label: endpoint.label }),
+        description: i18next.t('machines:handshake.unknownKey.description')
     });
 };
 
@@ -90,8 +91,8 @@ const reportImposter = (endpoint: Endpoint): void => {
     useToasts.getState().show({
         id: `endpoint-key-${endpoint.id}`,
         kind: 'error',
-        title: `${endpoint.label} cannot prove its identity`,
-        description: `${endpoint.httpBaseUrl} answers with a different key than the one this client paired with. Pair again to connect.`
+        title: i18next.t('machines:handshake.imposter.title', { label: endpoint.label }),
+        description: i18next.t('machines:handshake.imposter.description', { address: endpoint.httpBaseUrl })
     });
 };
 
@@ -103,7 +104,7 @@ const reportImposter = (endpoint: Endpoint): void => {
 export const socketAddressFor = async (endpointId: string): Promise<string> => {
     const endpoint = useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId);
     if (!endpoint) {
-        throw new Error(`No endpoint ${endpointId} to connect to`);
+        throw new Error(i18next.t('machines:handshake.noEndpoint', { id: endpointId }));
     }
     if (endpointId === LOCAL_ENDPOINT_ID) {
         // Asked again on every attempt, so a daemon that started after the window, or on a fresh home, is still reached.

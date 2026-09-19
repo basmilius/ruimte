@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { leaveWorkspace, showStart } from '@/transport/connections';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { useProjectSwitch } from '@/project/open';
@@ -18,6 +19,7 @@ import { Button } from '@/ui/Button';
  * is back. Opening another project is a choice a person makes here, never something that happens.
  */
 export function MachineLostScreen() {
+    const { t } = useTranslation(['shell', 'common']);
     const endpointId = useEndpointId();
     const connection = useEndpointConnection(endpointId);
     const switching = useProjectSwitch((s) => s.kind !== 'idle');
@@ -38,7 +40,7 @@ export function MachineLostScreen() {
                 glyph={<MachineGlyph icon={icon} size={24} className="text-text-faint" />}
                 title={nameOf(entry)}
                 meta={seen && <span className="text-xs text-text-muted">{seen}</span>}
-                line={retrying ? 'Trying to reach the machine again...' : (connection.failure ?? 'This machine is not answering.')}
+                line={retrying ? t('machineLost.retrying') : (connection.failure ?? t('machineLost.silent'))}
                 failed={!retrying}
             >
                 <Button
@@ -48,10 +50,10 @@ export function MachineLostScreen() {
                         void leaveWorkspace().then(showStart);
                     }}
                 >
-                    Open another project
+                    {t('machineLost.openAnother')}
                 </Button>
                 <Button size="sm" variant="primary" disabled={retrying} onClick={() => pool.reconnect(endpointId)}>
-                    Try again
+                    {t('common:action.retry')}
                 </Button>
             </StatusCard>
         </div>

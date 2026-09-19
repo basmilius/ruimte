@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import { CircleAlert, Hand, House, LoaderCircle, Lock, Mic, RotateCcw, RotateCw, Smartphone } from 'lucide-react';
 import type { DeviceInfo, DeviceInput, DeviceReference } from '@ruimte/contracts';
@@ -13,8 +14,6 @@ import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 
-const stateLabel = (device: DeviceInfo): string => (device.state === 'booted' ? 'Running' : device.state === 'shutdown' ? 'Stopped' : 'Changing state');
-
 const useDeviceFor = (reference: DeviceReference | undefined): { device: DeviceInfo | null; loading: boolean; error: string | null } => {
     const endpointId = useEndpointId();
     const row = useDeviceList(endpointId);
@@ -24,6 +23,7 @@ const useDeviceFor = (reference: DeviceReference | undefined): { device: DeviceI
 };
 
 export function DeviceControls({ device }: { device: DeviceInfo }) {
+    const { t } = useTranslation('machines');
     const endpointId = useEndpointId();
     if (device.state !== 'booted' || !device.capabilities.input) {
         return null;
@@ -31,13 +31,13 @@ export function DeviceControls({ device }: { device: DeviceInfo }) {
     const send = (command: DeviceInput): void => deviceClientFor(endpointId)?.input(device, command);
     return (
         <div className={BTN_GROUP}>
-            <Tooltip label="Home" name>
+            <Tooltip label={t('device.controls.home')} name>
                 <button className="icon-btn" onClick={() => send({ kind: 'button', button: 'home' })}>
                     <Icon icon={House} size={16} />
                 </button>
             </Tooltip>
             <Menu.Root>
-                <Tooltip label="Device gestures" name>
+                <Tooltip label={t('device.controls.gestures')} name>
                     <Menu.Trigger className="icon-btn">
                         <Icon icon={Hand} size={16} />
                     </Menu.Trigger>
@@ -45,25 +45,25 @@ export function DeviceControls({ device }: { device: DeviceInfo }) {
                 <Menu.Portal>
                     <Menu.Positioner className="z-(--z-popup)" sideOffset={6} align="end">
                         <Menu.Popup className="menu-popup">
-                            <div className={MENU_LABEL}>Device gestures</div>
+                            <div className={MENU_LABEL}>{t('device.controls.gestures')}</div>
                             <Menu.Item className="menu-item" onClick={() => send({ kind: 'button', button: 'swipeHome' })}>
-                                <Icon icon={Hand} size={14} /> Swipe home
+                                <Icon icon={Hand} size={14} /> {t('device.controls.swipeHome')}
                             </Menu.Item>
                             <Menu.Item className="menu-item" onClick={() => send({ kind: 'button', button: 'appSwitcher' })}>
-                                <Icon icon={Smartphone} size={14} /> App switcher
+                                <Icon icon={Smartphone} size={14} /> {t('device.controls.appSwitcher')}
                             </Menu.Item>
                             <Menu.Item className="menu-item" onClick={() => send({ kind: 'button', button: 'lock' })}>
-                                <Icon icon={Lock} size={14} /> Lock
+                                <Icon icon={Lock} size={14} /> {t('device.controls.lock')}
                             </Menu.Item>
                             <Menu.Item className="menu-item" onClick={() => send({ kind: 'button', button: 'siri' })}>
-                                <Icon icon={Mic} size={14} /> Siri
+                                <Icon icon={Mic} size={14} /> {t('device.controls.siri')}
                             </Menu.Item>
                         </Menu.Popup>
                     </Menu.Positioner>
                 </Menu.Portal>
             </Menu.Root>
             <Menu.Root>
-                <Tooltip label="Rotate device" name>
+                <Tooltip label={t('device.controls.rotate')} name>
                     <Menu.Trigger className="icon-btn">
                         <Icon icon={RotateCw} size={16} />
                     </Menu.Trigger>
@@ -71,12 +71,12 @@ export function DeviceControls({ device }: { device: DeviceInfo }) {
                 <Menu.Portal>
                     <Menu.Positioner className="z-(--z-popup)" sideOffset={6} align="end">
                         <Menu.Popup className="menu-popup">
-                            <div className={MENU_LABEL}>Rotate device</div>
+                            <div className={MENU_LABEL}>{t('device.controls.rotate')}</div>
                             <Menu.Item className="menu-item" onClick={() => send({ kind: 'rotate', direction: 'left' })}>
-                                <Icon icon={RotateCcw} size={14} /> Left
+                                <Icon icon={RotateCcw} size={14} /> {t('device.controls.rotateLeft')}
                             </Menu.Item>
                             <Menu.Item className="menu-item" onClick={() => send({ kind: 'rotate', direction: 'right' })}>
-                                <Icon icon={RotateCw} size={14} /> Right
+                                <Icon icon={RotateCw} size={14} /> {t('device.controls.rotateRight')}
                             </Menu.Item>
                         </Menu.Popup>
                     </Menu.Positioner>
@@ -93,6 +93,7 @@ export function DeviceToolbar({ id }: { id: string }) {
 }
 
 export function DeviceSurface({ device }: { device: DeviceInfo }) {
+    const { t } = useTranslation('machines');
     const endpointId = useEndpointId();
     const [changing, setChanging] = useState(false);
     if (device.state !== 'booted') {
@@ -100,7 +101,7 @@ export function DeviceSurface({ device }: { device: DeviceInfo }) {
         return (
             <DeviceMessage
                 icon={Smartphone}
-                message={`${device.name} is ${stateLabel(device).toLowerCase()}.`}
+                message={t(`device.state.${device.state}`, { name: device.name })}
                 action={
                     canBoot ? (
                         <Button
@@ -114,7 +115,7 @@ export function DeviceSurface({ device }: { device: DeviceInfo }) {
                                     .finally(() => setChanging(false));
                             }}
                         >
-                            {changing && <Icon icon={LoaderCircle} size={12} className="animate-spin" />} Start simulator
+                            {changing && <Icon icon={LoaderCircle} size={12} className="animate-spin" />} {t('device.boot')}
                         </Button>
                     ) : undefined
                 }
@@ -122,25 +123,26 @@ export function DeviceSurface({ device }: { device: DeviceInfo }) {
         );
     }
     if (!device.capabilities.stream) {
-        return <DeviceMessage icon={CircleAlert} message="Screen streaming is not available in this build." />;
+        return <DeviceMessage icon={CircleAlert} message={t('device.noStream')} />;
     }
     return <DeviceStream key={`${device.backendId}:${device.deviceId}`} device={device} />;
 }
 
 export function DeviceBody({ id }: { id: string }) {
+    const { t } = useTranslation('machines');
     const reference = useNodeHost(id)?.device;
     const { device, loading, error } = useDeviceFor(reference);
     if (!reference) {
-        return <DeviceMessage icon={CircleAlert} message="This simulator has no device reference." />;
+        return <DeviceMessage icon={CircleAlert} message={t('device.noReference')} />;
     }
     if (!device) {
         if (loading) {
-            return <DeviceMessage icon={LoaderCircle} spin message={`Finding ${reference.name}...`} />;
+            return <DeviceMessage icon={LoaderCircle} spin message={t('device.finding', { name: reference.name })} />;
         }
         return (
             <DeviceMessage
                 icon={error ? CircleAlert : Smartphone}
-                message={error ?? `${reference.name} with ${reference.runtime} is not installed on this machine.`}
+                message={error ?? t('device.notInstalled', { name: reference.name, runtime: reference.runtime })}
             />
         );
     }
@@ -148,12 +150,13 @@ export function DeviceBody({ id }: { id: string }) {
 }
 
 export function DevicePlate({ id }: { id: string }) {
+    const { t } = useTranslation('machines');
     const reference = useNodeHost(id)?.device;
     return (
         <div className="grid h-full place-items-center bg-surface-sunken px-6 text-center">
             <div className="flex flex-col items-center gap-2 text-text-muted">
                 <Icon icon={Smartphone} size={28} className="text-text-faint" />
-                <span className="text-xs">{reference ? `${reference.name} · ${reference.runtime}` : 'Simulator'}</span>
+                <span className="text-xs">{reference ? `${reference.name} · ${reference.runtime}` : t('device.plate')}</span>
             </div>
         </div>
     );

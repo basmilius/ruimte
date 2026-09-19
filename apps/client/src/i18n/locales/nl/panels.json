@@ -1,0 +1,493 @@
+{
+  "devices": {
+    "addToCanvas": "Toevoegen aan canvas",
+    "back": "Terug naar apparaten",
+    "finding": "Simulators zoeken...",
+    "group": {
+      "androidDevices": "Android-apparaten",
+      "androidEmulators": "Android Emulators",
+      "iosDevices": "iOS-apparaten",
+      "iosSimulators": "iOS Simulators",
+      "runningAndroid": "Actieve Android Emulators",
+      "runningIos": "Actieve iOS Simulators"
+    },
+    "macOnly": "iOS-simulators zijn beschikbaar als deze machine macOS draait.",
+    "none": "Er zijn geen iOS-simulators geïnstalleerd in Xcode.",
+    "openAsView": "Openen als weergave",
+    "openElsewhere": "Simulator ergens anders openen",
+    "openInPanel": "Openen in het apparaatpaneel",
+    "openPreview": "Alleen-lezen voorbeeld openen",
+    "openSimulator": "Simulator openen",
+    "refresh": "Apparaten vernieuwen",
+    "shutdown": "Simulator afsluiten",
+    "start": "Simulator starten",
+    "starting": "Simulator wordt gestart",
+    "state": {
+      "changing": "Bezig met wisselen",
+      "connecting": "Verbinden",
+      "paired": "Gekoppeld",
+      "running": "Actief",
+      "stopped": "Gestopt",
+      "unavailable": "Niet beschikbaar"
+    },
+    "streamingOff": "Browser- en apparaatstreaming staat uit in de instellingen van deze machine.",
+    "thisMachine": "Deze machine",
+    "tools": "Simulatortools"
+  },
+  "diff": {
+    "commitFailed": "Kon de commit niet lezen.",
+    "layout": {
+      "split": "Naast elkaar",
+      "stacked": "Onder elkaar"
+    },
+    "loading": "Diff laden",
+    "moreFiles": "Er zijn meer bestanden veranderd dan in deze lijst passen.",
+    "noChange": "Er is niets veranderd in {{path}} in deze scope.",
+    "nothingSince": "Er is niets veranderd sinds {{base}}.",
+    "omitted": {
+      "binary": "Binaire bestanden hebben geen diff.",
+      "tooLarge": "Deze diff is te groot om te tonen."
+    },
+    "readAgain": "Opnieuw lezen",
+    "readFailed": "Kon de diff niet lezen.",
+    "reading": "De diff van {{path}} lezen...",
+    "readingChanges": "De wijzigingen lezen.",
+    "readingCommit": "De commit lezen.",
+    "scope": {
+      "base": "Tegen de base branch",
+      "worktree": "Tegen de working tree"
+    },
+    "since": "Sinds {{base}}",
+    "sinceSummary": "Commits, niet-gecommitte wijzigingen en nieuwe bestanden sinds {{base}}.",
+    "whitespace": {
+      "ignore": "Witruimtewijzigingen negeren",
+      "show": "Witruimtewijzigingen tonen"
+    }
+  },
+  "error": {
+    "generic": "Dat werkte niet."
+  },
+  "file": {
+    "cannotShow": "{{name}} ({{mime}}, {{size}}) kan hier niet getoond worden.",
+    "code": {
+      "plainReason": "Meer dan {{lines}} regels, dus syntax highlighting staat uit",
+      "plainText": "Platte tekst",
+      "unwrap": "Lange regels niet meer afbreken",
+      "wrap": "Lange regels afbreken"
+    },
+    "empty": {
+      "findInFiles": "Zoeken in bestanden",
+      "hint": "Hier opent een bestand vanuit het bestandenpaneel of via een link in een chat.",
+      "openFile": "Bestand openen",
+      "recent": "Net gesloten"
+    },
+    "html": {
+      "failed": "{{name}} is niet geladen ({{error}})",
+      "loading": "De pagina laden",
+      "previewTitle": "Voorbeeld van {{name}}"
+    },
+    "image": {
+      "actual": "Werkelijke grootte (1:1)",
+      "failed": "Kon {{name}} niet tonen. {{reason}}",
+      "fit": "Passend",
+      "maybeChanged": "Het bestand is misschien veranderd tijdens het laden."
+    },
+    "menu": {
+      "copyPath": "Pad kopiëren",
+      "copyRelativePath": "Relatief pad kopiëren",
+      "openAsView": "Openen als weergave",
+      "openInBrowser": "Openen in een browser node",
+      "refresh": "Vernieuwen",
+      "revealInFiles": "Tonen in het bestandenpaneel",
+      "showOnCanvas": "Op het canvas tonen"
+    },
+    "noFile": "Geen bestand om te tonen.",
+    "readFailed": "Kon het bestand niet lezen",
+    "reading": "{{name}} lezen...",
+    "revealIn": "Tonen in {{app}}",
+    "tab": {
+      "close": "Tab sluiten",
+      "closeAll": "Alle tabs sluiten",
+      "closeNamed": "{{name}} sluiten",
+      "closeOthers": "Andere tabs sluiten",
+      "copyCommit": "Commit hash kopiëren",
+      "openItself": "Het bestand zelf openen",
+      "pin": "Tab vastzetten",
+      "stage": "Dit bestand stagen",
+      "unpin": "Tab losmaken",
+      "unstage": "Dit bestand unstagen"
+    },
+    "tooLarge": "{{name}} is {{size}}. Bestanden boven {{limit}} openen hier niet.",
+    "toolbar": {
+      "wrapDisabled": "Lange regels afbreken (alleen in de broncodeweergave)"
+    },
+    "video": {
+      "cannotPlay": "{{name}} ({{mime}}, {{size}}) kan hier niet afgespeeld worden."
+    },
+    "view": {
+      "preview": "Voorbeeld",
+      "source": "Broncode"
+    }
+  },
+  "files": {
+    "copyName": "Naam kopiëren",
+    "empty": "Deze map is leeg.",
+    "filter": "Bestanden filteren",
+    "noMatch": "Geen bestanden die aan het filter voldoen.",
+    "onlyHidden": "In deze map staan alleen verborgen bestanden. Zet Verborgen bestanden tonen aan in het menu Meer.",
+    "reading": "{{name}} lezen.",
+    "remoteMachine": "Machine op afstand",
+    "showHidden": "Verborgen bestanden tonen"
+  },
+  "git": {
+    "action": {
+      "checkout": "Branch wisselen",
+      "commit": "Committen",
+      "commit-push": "Committen en pushen",
+      "create-branch": "Branch aanmaken",
+      "create-pr": "Pull request openen",
+      "delete-branch": "Branch verwijderen",
+      "fetch": "Fetchen",
+      "force-push": "Force pushen",
+      "merge": "Mergen",
+      "publish": "Branch publiceren",
+      "pull": "Pullen",
+      "push": "Pushen",
+      "rebase": "Rebasen",
+      "rename-branch": "Branch hernoemen",
+      "stash": "Stashen",
+      "stash-pop": "Stash poppen",
+      "sync": "Syncen",
+      "working": "Bezig"
+    },
+    "actionFailed": "{{action}} mislukt",
+    "actions": {
+      "deleteBranch": "Branch verwijderen...",
+      "fetch": "Fetch",
+      "forcePush": "Force push",
+      "merge": "Branch mergen...",
+      "more": "Meer git-acties",
+      "popStash": "Stash poppen",
+      "pull": "Pull",
+      "pullRequest": "Pull request aanmaken...",
+      "push": "Push",
+      "rebase": "Rebasen op...",
+      "renameBranch": "Branch hernoemen...",
+      "stash": "Wijzigingen stashen...",
+      "sync": "Sync",
+      "syncHint": "eerst pull, dan push"
+    },
+    "branchMenu": {
+      "branches": "Branches",
+      "checkout": "Checkout",
+      "create": "Branch aanmaken...",
+      "default": "standaard",
+      "detached": "detached",
+      "inWorktree": "in een andere worktree",
+      "loading": "De branches lezen.",
+      "noCheckouts": "Geen checkouts",
+      "noMatch": "Geen branch met die naam.",
+      "search": "Branches zoeken",
+      "tooltip": "De branch waar deze checkout op staat",
+      "tooltipWorktree": "{{branch}}, in de worktree {{worktree}}"
+    },
+    "commit": {
+      "commit": "Commit",
+      "commitAndPush": "Commit & Push",
+      "commitAndPushHint": "Committen en pushen",
+      "commitStagedHint": "Committen wat gestaged is",
+      "letWrite": "{{provider}} het bericht laten schrijven op basis van de gestagede wijzigingen",
+      "needsMessage": "Heeft een bericht en een wijziging nodig",
+      "placeholder": "Samenvatting, dan een lege regel en de details",
+      "stageAllAndCommit": "Alles stagen en committen",
+      "stageAllHint": "Alle wijzigingen stagen en committen",
+      "stopWriting": "Stoppen met het schrijven van het bericht",
+      "write": "Bericht schrijven",
+      "writeFailedBody": "Het bericht kon niet geschreven worden.",
+      "writeFailedTitle": "Kon het bericht niet schrijven",
+      "writing": "Schrijven"
+    },
+    "dialog": {
+      "createBranch": {
+        "confirm": "Branch aanmaken",
+        "description": "Begint bij de huidige commit en gaat er meteen naartoe.",
+        "title": "Een branch aanmaken"
+      },
+      "deleteBranch": {
+        "anyway": "Toch verwijderen",
+        "confirm": "Branch verwijderen",
+        "description": "Verwijdert de lokale branch. Een remote branch met dezelfde naam blijft staan.",
+        "fallback": "Deze branch verwijderen?",
+        "title": "{{branch}} verwijderen?",
+        "unmerged": "Deze branch heeft commits die geen andere branch heeft. Verwijderen betekent dat die verloren gaan."
+      },
+      "discard": {
+        "confirm": "Weggooien",
+        "description": "Zet het bestand terug naar HEAD. De wijzigingen worden eerst gestasht, dus \"git stash pop\" zet ze terug.",
+        "fallback": "Dit bestand weggooien?",
+        "title": "{{name}} weggooien?"
+      },
+      "filter": "Filteren",
+      "forcePush": {
+        "confirm": "Force push",
+        "description": "Overschrijft de remote branch met deze checkout. Het stopt als iemand anders sinds de laatste fetch gepusht heeft.",
+        "title": "Deze branch force pushen?"
+      },
+      "message": "Bericht",
+      "name": "Naam",
+      "optional": "Optioneel",
+      "pick": {
+        "delete": "Een branch verwijderen",
+        "empty": "Geen andere branches.",
+        "fallback": "Kies een branch",
+        "merge": "Een branch in deze mergen",
+        "rebase": "Deze branch rebasen op"
+      },
+      "popStash": {
+        "description": "Zet de stash terug in de working tree en verwijdert hem.",
+        "empty": "Geen stashes.",
+        "title": "Een stash poppen"
+      },
+      "pullRequest": {
+        "body": "Beschrijving",
+        "bodyPlaceholder": "Wat dit verandert en waarom.",
+        "confirm": "Pull request aanmaken",
+        "description": "Publiceert de branch eerst als dat nodig is. De pull request opent in je browser.",
+        "subject": "Titel",
+        "title": "Een pull request openen"
+      },
+      "renameBranch": {
+        "confirm": "Branch hernoemen",
+        "description": "De remote branch houdt de oude naam tot de volgende push.",
+        "title": "Deze branch hernoemen"
+      },
+      "stash": {
+        "confirm": "Wijzigingen stashen",
+        "description": "Stasht elke wijziging, ook untracked bestanden, en zet de working tree terug naar HEAD.",
+        "title": "De wijzigingen stashen"
+      },
+      "switch": {
+        "confirm": "Stashen en wisselen",
+        "description": "Deze checkout heeft niet-gecommitte wijzigingen. Stash ze eerst en zet ze later terug met \"git stash pop\".",
+        "fallback": "Van branch wisselen?",
+        "title": "Naar {{branch}} wisselen?"
+      }
+    },
+    "group": {
+      "conflicted": "Conflicten",
+      "staged": "Staged",
+      "unstaged": "Wijzigingen",
+      "untracked": "Untracked"
+    },
+    "list": {
+      "collapseFolder": "Deze map inklappen",
+      "discard": "Wijzigingen weggooien",
+      "expandFolder": "Deze map uitklappen",
+      "noChanges": "Geen wijzigingen.",
+      "noRepo": "Deze map is geen git repository.",
+      "openChanges": "Wijzigingen openen",
+      "stage": "Stage",
+      "stageGroup": "Alles in {{group}} stagen",
+      "stageHere": "Alles hier stagen",
+      "stageResolved": "Stagen als opgelost",
+      "unstage": "Unstage",
+      "unstageGroup": "Alles in {{group}} unstagen",
+      "unstageHere": "Alles hier unstagen"
+    },
+    "log": {
+      "copySubject": "Onderwerp kopiëren",
+      "empty": "Nog geen commits.",
+      "failed": "Kon de historie niet lezen.",
+      "loadMore": "Meer laden",
+      "open": "De commit openen",
+      "today": "Vandaag",
+      "yesterday": "Gisteren"
+    },
+    "panel": {
+      "collapseAll": "Alle mappen inklappen",
+      "discardFailed": "Weggooien mislukt",
+      "discardNothing": "{{path}} had niets om weg te gooien",
+      "discardRestore": "Zet {{stash}} terug met \"git stash pop\".",
+      "discardStashed": "{{path}} gestasht",
+      "expandAll": "Alle mappen uitklappen",
+      "noFolder": "Dit canvas heeft geen map.",
+      "statusFailed": "Kon de status niet lezen."
+    },
+    "phase": {
+      "branch": "Branch wisselen",
+      "commit": "Committen",
+      "done": "Klaar",
+      "failed": "Dat werkte niet",
+      "fetch": "Fetchen",
+      "merge": "Mergen",
+      "pr": "Pull request openen",
+      "pull": "Pullen",
+      "push": "Pushen",
+      "rebase": "Rebasen",
+      "stage": "Stagen",
+      "start": "Starten",
+      "stash": "Stashen"
+    },
+    "push": {
+      "detached": "Geen branch om te pushen op een detached HEAD",
+      "label": "Push",
+      "noRepo": "Geen repository",
+      "nothing": "Niets te pushen",
+      "publish": "Branch publiceren",
+      "publishReason": "{{branch}} naar origin pushen en volgen",
+      "reason_one": "{{count}} commit naar {{upstream}} pushen",
+      "reason_other": "{{count}} commits naar {{upstream}} pushen"
+    },
+    "stage": {
+      "failed": "Stagen mislukt",
+      "unstageFailed": "Unstagen mislukt"
+    },
+    "tab": {
+      "changes": "Wijzigingen",
+      "checkoutHint": "Alles wat {{name}} veranderde sinds {{base}}",
+      "commitHint": "De commit {{hash}}"
+    }
+  },
+  "machineNotAnswering": "Deze machine antwoordt niet.",
+  "processes": {
+    "anotherProject": "ander project",
+    "collapse": "{{name}} inklappen",
+    "column": {
+      "cpu": "CPU",
+      "disk": "Schijf",
+      "memory": "Geheugen",
+      "node": "Node"
+    },
+    "diskFree": "{{size}} vrij.",
+    "diskHeadline": "Lezen {{read}}, schrijven {{write}}",
+    "diskTooltip": "Totaal voor de processen die Ruimte kan lezen.",
+    "expand": "{{name}} uitklappen",
+    "force": {
+      "confirm": "Geforceerd stoppen",
+      "description": "SIGKILL stopt proces {{pid}} meteen. Het kan niet opslaan of opruimen, dus bestanden waarin het schreef kunnen half af blijven.",
+      "title": "{{name}} geforceerd stoppen?"
+    },
+    "interruptFailed": "Kon de turn niet onderbreken",
+    "legend": {
+      "machine": "Deze machine"
+    },
+    "measuring": "Processen meten...",
+    "memoryHeadline": "{{used}} van {{total}}",
+    "range": {
+      "coarse": "Laatste 24 uur",
+      "fine": "Laatste 10 minuten"
+    },
+    "resumeFailed": "Kon de agent niet hervatten",
+    "scope": {
+      "all": "Alles"
+    },
+    "scopeLabel": "Welke processen",
+    "signal": {
+      "forceQuit": "Geforceerd stoppen...",
+      "interrupt": "Onderbreken",
+      "terminate": "Beëindigen"
+    },
+    "signalFailed": "Kon geen signaal naar {{name}} sturen",
+    "sortBy": {
+      "cpu": "Sorteren op CPU",
+      "disk": "Sorteren op schijf",
+      "memory": "Sorteren op geheugen"
+    },
+    "theProcess": "Het proces",
+    "unsupported": "Processen bekijken kan nog niet op dit platform.",
+    "unsupportedWindows": "Processen bekijken kan nog niet op Windows."
+  },
+  "worktree": {
+    "baseBranch": "de base branch",
+    "counts": {
+      "changed": "{{count}} gewijzigd",
+      "commits_one": "{{count}} commit",
+      "commits_other": "{{count}} commits",
+      "halfway": "{{operation}} halverwege",
+      "new": "{{count}} nieuw"
+    },
+    "leftBehind": {
+      "clean": "Werkt in worktree {{branch}}, waarin geen werk staat.",
+      "holding": "Werkt in worktree {{branch}}, die {{work}} bevat. Hij blijft staan; merge of verwijder hem via het git-paneel."
+    },
+    "merge": {
+      "kept": "De worktree blijft staan: {{reason}}",
+      "nothing": "nog niets",
+      "one": "worktree",
+      "removed": "De worktree en de branch zijn verwijderd.",
+      "removedKeptBranch": "De worktree is verwijderd; de branch blijft staan.",
+      "several_one": "{{count}} worktree",
+      "several_other": "{{count}} worktrees",
+      "strategy": {
+        "merge": {
+          "label": "Merge",
+          "line": "Een merge commit; elke commit van de worktree blijft in de historie staan."
+        },
+        "rebase": {
+          "label": "Rebase",
+          "line": "De commits boven op de target branch, in een rechte lijn."
+        },
+        "squash": {
+          "label": "Squash",
+          "line": "Eén commit op de target branch, met het bericht hieronder."
+        }
+      },
+      "title": "{{what}} mergen",
+      "titleInto": "{{what}} mergen in {{into}}"
+    },
+    "origin": {
+      "behind_one": "van {{branch}}, {{count}} commit achter",
+      "behind_other": "van {{branch}}, {{count}} commits achter",
+      "from": "van {{branch}}"
+    },
+    "remove": {
+      "anyway": "Toch verwijderen",
+      "clean": "Er gaat niets verloren: er staan geen niet-gecommitte bestanden in, geen nieuwe bestanden en geen commits die {{target}} mist.",
+      "cleanMissing": "De map is al weg. Er gaat niets verloren: er staan geen niet-gecommitte bestanden in, geen nieuwe bestanden en geen commits die {{target}} mist.",
+      "holding": "Hij bevat {{work}}. Dat gaat verloren, en de branch ook.",
+      "holdingMissing": "De map is al weg, en de branch bevat {{work}}. Die commits gaan verloren met de branch.",
+      "ignoredNote": "Bestanden die git negeert, zoals .env of een lokale database, gaan mee en tellen hierboven niet mee.",
+      "title": "Worktree {{branch}} verwijderen?"
+    },
+    "removeAll": {
+      "clean": "Er gaat niets verloren: geen ervan bevat niet-gecommitte bestanden, nieuwe bestanden of commits die zijn branch mist.",
+      "holding": "{{lines}}. Dat gaat verloren, en hun branches ook.",
+      "ignoredNote": "Bestanden die git negeert, zoals .env of een lokale database, gaan mee en tellen hierboven niet mee.",
+      "line": "{{branch}} bevat {{work}}",
+      "title_one": "{{count}} worktree verwijderen?",
+      "title_other": "{{count}} worktrees verwijderen?"
+    },
+    "removed": {
+      "branchDeleted": "De branch is ook verwijderd. \"git branch {{branch}} {{commit}}\" brengt hem terug.",
+      "branchStays": "De branch {{branch}} blijft staan."
+    },
+    "section": {
+      "actions": "Worktree-acties",
+      "folderMissing": "map ontbreekt",
+      "merge": "Mergen...",
+      "noNode": "geen node",
+      "remove": "Verwijderen...",
+      "title": "Worktrees",
+      "view": "Bekijken"
+    },
+    "share": {
+      "description": "Elk pad wordt vanuit de projectmap in elke worktree gelinkt die vanaf nu gemaakt wordt, zoals node_modules. Git moet het negeren; een worktree die er al staat houdt wat hij heeft.",
+      "field": "Paden, gescheiden door komma's",
+      "none": "Paden delen met nieuwe worktrees...",
+      "saveFailed": "Gedeelde paden opslaan mislukt",
+      "some": "Deelt {{paths}}",
+      "title": "Paden delen met nieuwe worktrees",
+      "tooltip": "Paden van de projectmap die in elke nieuwe worktree gelinkt worden"
+    },
+    "work": {
+      "ahead_one": "{{count}} commit die {{target}} mist",
+      "ahead_other": "{{count}} commits die {{target}} mist",
+      "changed_one": "{{count}} niet-gecommit bestand",
+      "changed_other": "{{count}} niet-gecommitte bestanden",
+      "join": "{{head}} en {{tail}}",
+      "operation": "een {{operation}} die halverwege stopte",
+      "untracked_one": "{{count}} nieuw bestand",
+      "untracked_other": "{{count}} nieuwe bestanden"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "ending": {
+    "alsoEnds_one": "Also ends the agent it opened. Its node stays on the canvas with what it did so far.",
+    "alsoEnds_other": "Also ends the {{count}} agents it opened. Their nodes stay on the canvas with what they did so far.",
+    "stopsTask": "Ends the agent working on this task and cancels the task without waking the chat that gave it. Its node stays on the canvas.",
+    "stopsSubagents": "Stops the turn and marks the chat's own sub-agents as stopped."
+  },
+  "dialog": {
+    "stopTitle": "Stop {{what}}?",
+    "deleteTitle": "Delete {{what}}?",
+    "removeWorktree_one": "Also remove the worktree and its branch",
+    "removeWorktree_other": "Also remove the {{count}} worktrees without work and their branches",
+    "removeWorktreeToggle": "Also remove the worktree",
+    "stop": "Stop",
+    "delete": "Delete",
+    "worktreeRemoved": "Removed worktree {{branch}}",
+    "worktreeStays": "Worktree {{branch}} stays",
+    "worktreeFailed": "That did not work."
+  },
+  "menu": {
+    "none": "No agent CLI found",
+    "connecting": "Connecting"
+  },
+  "target": {
+    "chat": "Agent (Chat)",
+    "terminal": "Agent (Terminal)"
+  }
+}

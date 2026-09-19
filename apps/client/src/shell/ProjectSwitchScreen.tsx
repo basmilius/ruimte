@@ -1,4 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
+import i18next from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { CircleAlert, LoaderCircle } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { projectSwitch, useProjectSwitch } from '@/project/open';
@@ -40,11 +42,11 @@ const titleOf = (target: SwitchTarget, machine: string): string =>
 const lineOf = (state: Exclude<SwitchState, { kind: 'idle' }>, title: string, machine: string): string => {
     switch (state.kind) {
         case 'connecting':
-            return `Connecting to ${machine}...`;
+            return i18next.t('shell:switch.connecting', { machine });
         case 'opening':
-            return `Opening ${title}...`;
+            return i18next.t('shell:switch.opening', { title });
         case 'returning':
-            return 'Going back...';
+            return i18next.t('shell:switch.returning');
         case 'failed':
             return state.reason;
     }
@@ -83,6 +85,7 @@ export function StatusCard({ glyph, title, meta, line, failed, children }: Statu
 }
 
 function SwitchCard({ state }: { state: Exclude<SwitchState, { kind: 'idle' }> }) {
+    const { t } = useTranslation(['shell', 'common']);
     const { target } = state;
     const entry = useMachineEntry(target.endpointId);
     const machineIcon = useMachineIcon(entry);
@@ -115,7 +118,7 @@ function SwitchCard({ state }: { state: Exclude<SwitchState, { kind: 'idle' }> }
                         <MachineGlyph icon={machineIcon} size={12} />
                         <span className="truncate">{machine}</span>
                         {/* Known only once the link is open, which is exactly when the project step runs. */}
-                        {state.kind === 'opening' && connection.relayed && <span className="shrink-0 text-text-faint">via relay</span>}
+                        {state.kind === 'opening' && connection.relayed && <span className="shrink-0 text-text-faint">{t('switch.viaRelay')}</span>}
                     </span>
                 )
             }
@@ -124,16 +127,16 @@ function SwitchCard({ state }: { state: Exclude<SwitchState, { kind: 'idle' }> }
         >
             {(state.kind === 'connecting' || state.kind === 'opening') && (
                 <Button size="sm" variant="secondary" onClick={() => projectSwitch.cancel()}>
-                    Cancel
+                    {t('common:action.cancel')}
                 </Button>
             )}
             {failed && (
                 <>
                     <Button size="sm" variant="secondary" onClick={() => void projectSwitch.back()}>
-                        Go back
+                        {t('switch.goBack')}
                     </Button>
                     <Button size="sm" variant="primary" onClick={() => void projectSwitch.retry()}>
-                        Try again
+                        {t('common:action.retry')}
                     </Button>
                 </>
             )}

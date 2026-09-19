@@ -1,0 +1,30 @@
+{
+  "localMachine": "This machine",
+  "update": {
+    "unsupported": "Updates come from the desktop app",
+    "checking": "Checking for updates",
+    "available": "Version {{version}} is available",
+    "downloading": "Downloading {{version}}",
+    "ready": "Version {{version}} is ready",
+    "readyDetail": "Ruimte restarts to install it. Nothing you have open is lost.",
+    "failed": "The last check did not finish",
+    "failedDetail": "No reason given.",
+    "current": "Ruimte is up to date",
+    "unknownVersion": "unknown",
+    "theUpdate": "the update",
+    "noAnswer": "The shell did not answer."
+  },
+  "badge": {
+    "installed": "Installed",
+    "available": "Available",
+    "downloading": "Downloading",
+    "ready": "Ready to install"
+  },
+  "taskEdge": {
+    "open": "task",
+    "done": "done",
+    "failed": "failed",
+    "cancelled": "cancelled"
+  },
+  "localMachineWithModel": "This {{model}}"
+}

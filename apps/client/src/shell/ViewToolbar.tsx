@@ -1,5 +1,6 @@
+import type { RuntimeMode } from '@ruimte/contracts';
 import { isCanvasView, type ProjectView, type ProjectViewKind } from '@ruimte/contracts';
-import { RUNTIME_MODES } from '@/chat/runtime-modes';
+import { RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@/chat/runtime-modes';
 import { useHasSubagentControls, useSubagentTrail } from '@/chat/subagent-view';
 import { ForkPill } from '@/chat/ui/ForkPill';
 import { PlanPill } from '@/plan/PlanPill';
@@ -18,7 +19,7 @@ import { Tooltip } from '@/ui/Tooltip';
 /* The kinds that put something in the toolbar; the bar draws its separators around that part. */
 const KINDS_WITH_TOOLBAR = new Set<ProjectViewKind>(['browser', 'device', 'terminal', 'file', 'diagram', 'chat']);
 
-const modeOf = (host: NodeHost | null) => RUNTIME_MODES.find((entry) => entry.id === host?.runtimeMode);
+const modeOf = (host: NodeHost | null): RuntimeMode | undefined => RUNTIME_MODES.find((mode) => mode === host?.runtimeMode);
 
 /* Whether a view has content for the bar, which is what the separators around it wait for. A browser
    always brings its navigation, a file and a diagram their own controls, a terminal only the mode of an agent
@@ -106,8 +107,8 @@ export function ViewToolbar({
     }
     return (
         <div className="flex min-w-0 grow items-center gap-1.5">
-            <Tooltip label={mode.hint}>
-                <Pill>{mode.label}</Pill>
+            <Tooltip label={runtimeModeHint(mode)}>
+                <Pill>{runtimeModeLabel(mode)}</Pill>
             </Tooltip>
         </div>
     );

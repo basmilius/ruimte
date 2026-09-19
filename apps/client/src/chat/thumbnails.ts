@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { useEffect, useState } from 'react';
 import type { ChatAttachmentUpload } from '@ruimte/contracts';
 import { uploadPreviewUrl } from '@/chat/attachments';
@@ -37,7 +38,7 @@ const bytesOf = (base64: string): Uint8Array<ArrayBuffer> => {
 const dataUrlOf = (blob: Blob): Promise<string> =>
     new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onerror = () => reject(reader.error ?? new Error('Could not read the thumbnail'));
+        reader.onerror = () => reject(reader.error ?? new Error(i18next.t('chat:attachments.unreadableThumbnail')));
         reader.onload = () => resolve(String(reader.result));
         reader.readAsDataURL(blob);
     });

@@ -1,0 +1,493 @@
+{
+  "devices": {
+    "addToCanvas": "Add to canvas",
+    "back": "Back to devices",
+    "finding": "Finding simulators...",
+    "group": {
+      "androidDevices": "Android Devices",
+      "androidEmulators": "Android Emulators",
+      "iosDevices": "iOS Devices",
+      "iosSimulators": "iOS Simulators",
+      "runningAndroid": "Running Android Emulators",
+      "runningIos": "Running iOS Simulators"
+    },
+    "macOnly": "iOS simulators are available when this machine runs macOS.",
+    "none": "No iOS simulators are installed in Xcode.",
+    "openAsView": "Open as view",
+    "openElsewhere": "Open simulator elsewhere",
+    "openInPanel": "Open in device panel",
+    "openPreview": "Open read-only preview",
+    "openSimulator": "Open simulator",
+    "refresh": "Refresh devices",
+    "shutdown": "Shut down simulator",
+    "start": "Start simulator",
+    "starting": "Starting simulator",
+    "state": {
+      "changing": "Changing state",
+      "connecting": "Connecting",
+      "paired": "Paired",
+      "running": "Running",
+      "stopped": "Stopped",
+      "unavailable": "Unavailable"
+    },
+    "streamingOff": "Browser and device streaming is disabled in this machine's settings.",
+    "thisMachine": "This machine",
+    "tools": "Simulator tools"
+  },
+  "diff": {
+    "commitFailed": "Could not read the commit.",
+    "layout": {
+      "split": "Split",
+      "stacked": "Stacked"
+    },
+    "loading": "Loading diff",
+    "moreFiles": "More files changed than this list holds.",
+    "noChange": "Nothing changed in {{path}} in this scope.",
+    "nothingSince": "Nothing changed since {{base}}.",
+    "omitted": {
+      "binary": "Binary files have no diff.",
+      "tooLarge": "This diff is too large to show."
+    },
+    "readAgain": "Read again",
+    "readFailed": "Could not read the diff.",
+    "reading": "Reading the diff of {{path}}...",
+    "readingChanges": "Reading the changes.",
+    "readingCommit": "Reading the commit.",
+    "scope": {
+      "base": "Against the base branch",
+      "worktree": "Against the working tree"
+    },
+    "since": "Since {{base}}",
+    "sinceSummary": "Commits, uncommitted changes and new files since {{base}}.",
+    "whitespace": {
+      "ignore": "Ignore whitespace changes",
+      "show": "Show whitespace changes"
+    }
+  },
+  "error": {
+    "generic": "That did not work."
+  },
+  "file": {
+    "cannotShow": "{{name}} ({{mime}}, {{size}}) cannot be shown here.",
+    "code": {
+      "plainReason": "Over {{lines}} lines, so syntax highlighting is off",
+      "plainText": "Plain text",
+      "unwrap": "Stop wrapping long lines",
+      "wrap": "Wrap long lines"
+    },
+    "empty": {
+      "findInFiles": "Find in files",
+      "hint": "A file opens here from the Files panel or a link in a chat.",
+      "openFile": "Open file",
+      "recent": "Closed a moment ago"
+    },
+    "html": {
+      "failed": "{{name}} did not load ({{error}})",
+      "loading": "Loading the page",
+      "previewTitle": "{{name}} preview"
+    },
+    "image": {
+      "actual": "Actual size (1:1)",
+      "failed": "Could not show {{name}}. {{reason}}",
+      "fit": "Fit",
+      "maybeChanged": "It may have changed while loading."
+    },
+    "menu": {
+      "copyPath": "Copy path",
+      "copyRelativePath": "Copy relative path",
+      "openAsView": "Open as a view",
+      "openInBrowser": "Open in a browser node",
+      "refresh": "Refresh",
+      "revealInFiles": "Reveal in the Files panel",
+      "showOnCanvas": "Show on the canvas"
+    },
+    "noFile": "No file to show.",
+    "readFailed": "Could not read the file",
+    "reading": "Reading {{name}}...",
+    "revealIn": "Reveal in {{app}}",
+    "tab": {
+      "close": "Close tab",
+      "closeAll": "Close all tabs",
+      "closeNamed": "Close {{name}}",
+      "closeOthers": "Close other tabs",
+      "copyCommit": "Copy commit hash",
+      "openItself": "Open the file itself",
+      "pin": "Pin tab",
+      "stage": "Stage this file",
+      "unpin": "Unpin tab",
+      "unstage": "Unstage this file"
+    },
+    "tooLarge": "{{name}} is {{size}}. Files over {{limit}} do not open here.",
+    "toolbar": {
+      "wrapDisabled": "Wrap long lines (source view only)"
+    },
+    "video": {
+      "cannotPlay": "{{name}} ({{mime}}, {{size}}) cannot be played here."
+    },
+    "view": {
+      "preview": "Preview",
+      "source": "Source"
+    }
+  },
+  "files": {
+    "copyName": "Copy name",
+    "empty": "This folder is empty.",
+    "filter": "Filter files",
+    "noMatch": "No files match the filter.",
+    "onlyHidden": "This folder only has hidden files. Turn on Show hidden files in the More menu.",
+    "reading": "Reading {{name}}.",
+    "remoteMachine": "Remote machine",
+    "showHidden": "Show hidden files"
+  },
+  "git": {
+    "action": {
+      "checkout": "Switching branch",
+      "commit": "Committing",
+      "commit-push": "Committing and pushing",
+      "create-branch": "Creating the branch",
+      "create-pr": "Opening the pull request",
+      "delete-branch": "Deleting the branch",
+      "fetch": "Fetching",
+      "force-push": "Force pushing",
+      "merge": "Merging",
+      "publish": "Publishing the branch",
+      "pull": "Pulling",
+      "push": "Pushing",
+      "rebase": "Rebasing",
+      "rename-branch": "Renaming the branch",
+      "stash": "Stashing",
+      "stash-pop": "Popping the stash",
+      "sync": "Syncing",
+      "working": "Working"
+    },
+    "actionFailed": "{{action}} failed",
+    "actions": {
+      "deleteBranch": "Delete branch...",
+      "fetch": "Fetch",
+      "forcePush": "Force push",
+      "merge": "Merge branch...",
+      "more": "More git actions",
+      "popStash": "Pop stash",
+      "pull": "Pull",
+      "pullRequest": "Create pull request...",
+      "push": "Push",
+      "rebase": "Rebase onto...",
+      "renameBranch": "Rename branch...",
+      "stash": "Stash changes...",
+      "sync": "Sync",
+      "syncHint": "pull, then push"
+    },
+    "branchMenu": {
+      "branches": "Branches",
+      "checkout": "Checkout",
+      "create": "Create branch...",
+      "default": "default",
+      "detached": "detached",
+      "inWorktree": "in another worktree",
+      "loading": "Reading the branches.",
+      "noCheckouts": "No checkouts",
+      "noMatch": "No branch by that name.",
+      "search": "Search branches",
+      "tooltip": "The branch this checkout is on",
+      "tooltipWorktree": "{{branch}}, in the worktree {{worktree}}"
+    },
+    "commit": {
+      "commit": "Commit",
+      "commitAndPush": "Commit & Push",
+      "commitAndPushHint": "Commit and push",
+      "commitStagedHint": "Commit what is staged",
+      "letWrite": "Let {{provider}} write the message from the staged changes",
+      "needsMessage": "Needs a message and a change",
+      "placeholder": "Summary, then a blank line and the details",
+      "stageAllAndCommit": "Stage all and commit",
+      "stageAllHint": "Stage every change and commit it",
+      "stopWriting": "Stop writing the message",
+      "write": "Write message",
+      "writeFailedBody": "The message could not be written.",
+      "writeFailedTitle": "Could not write the message",
+      "writing": "Writing"
+    },
+    "dialog": {
+      "createBranch": {
+        "confirm": "Create branch",
+        "description": "Starts from the current commit and switches to it.",
+        "title": "Create a branch"
+      },
+      "deleteBranch": {
+        "anyway": "Delete anyway",
+        "confirm": "Delete branch",
+        "description": "Deletes the local branch. A remote branch with the same name stays.",
+        "fallback": "Delete this branch?",
+        "title": "Delete {{branch}}?",
+        "unmerged": "This branch has commits that no other branch has. Deleting it loses them."
+      },
+      "discard": {
+        "confirm": "Discard",
+        "description": "Reverts the file to HEAD. The changes are stashed first, so \"git stash pop\" restores them.",
+        "fallback": "Discard this file?",
+        "title": "Discard {{name}}?"
+      },
+      "filter": "Filter",
+      "forcePush": {
+        "confirm": "Force push",
+        "description": "Overwrites the remote branch with this checkout. It stops if someone else pushed since the last fetch.",
+        "title": "Force push this branch?"
+      },
+      "message": "Message",
+      "name": "Name",
+      "optional": "Optional",
+      "pick": {
+        "delete": "Delete a branch",
+        "empty": "No other branches.",
+        "fallback": "Pick a branch",
+        "merge": "Merge a branch into this one",
+        "rebase": "Rebase this branch onto"
+      },
+      "popStash": {
+        "description": "Applies the stash to the working tree and removes it.",
+        "empty": "No stashes.",
+        "title": "Pop a stash"
+      },
+      "pullRequest": {
+        "body": "Description",
+        "bodyPlaceholder": "What this changes and why.",
+        "confirm": "Create pull request",
+        "description": "Publishes the branch first if needed. The pull request opens in your browser.",
+        "subject": "Title",
+        "title": "Open a pull request"
+      },
+      "renameBranch": {
+        "confirm": "Rename branch",
+        "description": "The remote branch keeps the old name until the next push.",
+        "title": "Rename this branch"
+      },
+      "stash": {
+        "confirm": "Stash changes",
+        "description": "Stashes every change, including untracked files, and resets the working tree to HEAD.",
+        "title": "Stash the changes"
+      },
+      "switch": {
+        "confirm": "Stash and switch",
+        "description": "This checkout has uncommitted changes. Stash them first and restore them later with \"git stash pop\".",
+        "fallback": "Switch branch?",
+        "title": "Switch to {{branch}}?"
+      }
+    },
+    "group": {
+      "conflicted": "Conflicted",
+      "staged": "Staged",
+      "unstaged": "Changes",
+      "untracked": "Untracked"
+    },
+    "list": {
+      "collapseFolder": "Collapse this folder",
+      "discard": "Discard changes",
+      "expandFolder": "Expand this folder",
+      "noChanges": "No changes.",
+      "noRepo": "This folder is not a git repository.",
+      "openChanges": "Open changes",
+      "stage": "Stage",
+      "stageGroup": "Stage everything in {{group}}",
+      "stageHere": "Stage everything here",
+      "stageResolved": "Stage as resolved",
+      "unstage": "Unstage",
+      "unstageGroup": "Unstage everything in {{group}}",
+      "unstageHere": "Unstage everything here"
+    },
+    "log": {
+      "copySubject": "Copy subject",
+      "empty": "No commits yet.",
+      "failed": "Could not read the history.",
+      "loadMore": "Load more",
+      "open": "Open the commit",
+      "today": "Today",
+      "yesterday": "Yesterday"
+    },
+    "panel": {
+      "collapseAll": "Collapse all folders",
+      "discardFailed": "Discard failed",
+      "discardNothing": "{{path}} had nothing to discard",
+      "discardRestore": "Restore {{stash}} with \"git stash pop\".",
+      "discardStashed": "Stashed {{path}}",
+      "expandAll": "Expand all folders",
+      "noFolder": "This canvas has no folder.",
+      "statusFailed": "Could not read the status."
+    },
+    "phase": {
+      "branch": "Switching branch",
+      "commit": "Committing",
+      "done": "Done",
+      "failed": "That did not work",
+      "fetch": "Fetching",
+      "merge": "Merging",
+      "pr": "Opening the pull request",
+      "pull": "Pulling",
+      "push": "Pushing",
+      "rebase": "Rebasing",
+      "stage": "Staging",
+      "start": "Starting",
+      "stash": "Stashing"
+    },
+    "push": {
+      "detached": "No branch to push on a detached HEAD",
+      "label": "Push",
+      "noRepo": "No repository",
+      "nothing": "Nothing to push",
+      "publish": "Publish branch",
+      "publishReason": "Push {{branch}} to origin and track it",
+      "reason_one": "Push {{count}} commit to {{upstream}}",
+      "reason_other": "Push {{count}} commits to {{upstream}}"
+    },
+    "stage": {
+      "failed": "Staging failed",
+      "unstageFailed": "Unstaging failed"
+    },
+    "tab": {
+      "changes": "Changes",
+      "checkoutHint": "Everything {{name}} changed since {{base}}",
+      "commitHint": "The commit {{hash}}"
+    }
+  },
+  "machineNotAnswering": "This machine is not answering.",
+  "processes": {
+    "anotherProject": "another project",
+    "collapse": "Collapse {{name}}",
+    "column": {
+      "cpu": "CPU",
+      "disk": "Disk",
+      "memory": "Memory",
+      "node": "Node"
+    },
+    "diskFree": "{{size}} free.",
+    "diskHeadline": "Read {{read}}, write {{write}}",
+    "diskTooltip": "Total for the processes Ruimte can read.",
+    "expand": "Expand {{name}}",
+    "force": {
+      "confirm": "Force quit",
+      "description": "SIGKILL ends process {{pid}} immediately. It cannot save or clean up, so files it was writing may be left incomplete.",
+      "title": "Force quit {{name}}?"
+    },
+    "interruptFailed": "Could not interrupt the turn",
+    "legend": {
+      "machine": "This machine"
+    },
+    "measuring": "Measuring processes...",
+    "memoryHeadline": "{{used}} of {{total}}",
+    "range": {
+      "coarse": "Last 24 hours",
+      "fine": "Last 10 minutes"
+    },
+    "resumeFailed": "Could not resume the agent",
+    "scope": {
+      "all": "All"
+    },
+    "scopeLabel": "Which processes",
+    "signal": {
+      "forceQuit": "Force quit...",
+      "interrupt": "Interrupt",
+      "terminate": "Terminate"
+    },
+    "signalFailed": "Could not signal {{name}}",
+    "sortBy": {
+      "cpu": "Sort by CPU",
+      "disk": "Sort by disk",
+      "memory": "Sort by memory"
+    },
+    "theProcess": "The process",
+    "unsupported": "Process monitoring is not available on this platform yet.",
+    "unsupportedWindows": "Process monitoring is not available on Windows yet."
+  },
+  "worktree": {
+    "baseBranch": "the base branch",
+    "counts": {
+      "changed": "{{count}} changed",
+      "commits_one": "{{count}} commit",
+      "commits_other": "{{count}} commits",
+      "halfway": "{{operation}} halfway",
+      "new": "{{count}} new"
+    },
+    "leftBehind": {
+      "clean": "Works in worktree {{branch}}, which holds no work.",
+      "holding": "Works in worktree {{branch}}, which holds {{work}}. It stays; merge or remove it from the git panel."
+    },
+    "merge": {
+      "kept": "The worktree stays: {{reason}}",
+      "nothing": "nothing yet",
+      "one": "worktree",
+      "removed": "Removed the worktree and its branch.",
+      "removedKeptBranch": "Removed the worktree; its branch stays.",
+      "several_one": "{{count}} worktree",
+      "several_other": "{{count}} worktrees",
+      "strategy": {
+        "merge": {
+          "label": "Merge",
+          "line": "A merge commit; every commit of the worktree stays in the history."
+        },
+        "rebase": {
+          "label": "Rebase",
+          "line": "The commits on top of the target, in a straight line."
+        },
+        "squash": {
+          "label": "Squash",
+          "line": "One commit on the target with the message below."
+        }
+      },
+      "title": "Merge {{what}}",
+      "titleInto": "Merge {{what}} into {{into}}"
+    },
+    "origin": {
+      "behind_one": "from {{branch}}, {{count}} commit behind",
+      "behind_other": "from {{branch}}, {{count}} commits behind",
+      "from": "from {{branch}}"
+    },
+    "remove": {
+      "anyway": "Remove anyway",
+      "clean": "Nothing in it is lost: it holds no uncommitted files, no new files and no commits that {{target}} lacks.",
+      "cleanMissing": "Its folder is already gone. Nothing in it is lost: it holds no uncommitted files, no new files and no commits that {{target}} lacks.",
+      "holding": "It holds {{work}}. They are lost, and so is the branch.",
+      "holdingMissing": "Its folder is already gone, and the branch holds {{work}}. Those commits are lost with the branch.",
+      "ignoredNote": "Files git ignores in it, such as .env or a local database, go too and are not counted above.",
+      "title": "Remove worktree {{branch}}?"
+    },
+    "removeAll": {
+      "clean": "Nothing in them is lost: none holds uncommitted files, new files or commits its branch lacks.",
+      "holding": "{{lines}}. That is lost, and so are their branches.",
+      "ignoredNote": "Files git ignores in them, such as .env or a local database, go too and are not counted above.",
+      "line": "{{branch}} holds {{work}}",
+      "title_one": "Remove {{count}} worktree?",
+      "title_other": "Remove {{count}} worktrees?"
+    },
+    "removed": {
+      "branchDeleted": "Deleted the branch too. \"git branch {{branch}} {{commit}}\" brings it back.",
+      "branchStays": "The branch {{branch}} stays."
+    },
+    "section": {
+      "actions": "Worktree actions",
+      "folderMissing": "folder missing",
+      "merge": "Merge...",
+      "noNode": "no node",
+      "remove": "Remove...",
+      "title": "Worktrees",
+      "view": "View"
+    },
+    "share": {
+      "description": "Each path is linked from the project folder into every worktree made from now on, such as node_modules. Git has to ignore it; a worktree that exists keeps what it has.",
+      "field": "Paths, separated by commas",
+      "none": "Share paths with new worktrees...",
+      "saveFailed": "Saving the shared paths failed",
+      "some": "Shares {{paths}}",
+      "title": "Share paths with new worktrees",
+      "tooltip": "Paths of the project folder linked into every new worktree"
+    },
+    "work": {
+      "ahead_one": "{{count}} commit that {{target}} lacks",
+      "ahead_other": "{{count}} commits that {{target}} lacks",
+      "changed_one": "{{count}} uncommitted file",
+      "changed_other": "{{count}} uncommitted files",
+      "join": "{{head}} and {{tail}}",
+      "operation": "a {{operation}} that stopped halfway",
+      "untracked_one": "{{count}} new file",
+      "untracked_other": "{{count}} new files"
+    }
+  }
+}

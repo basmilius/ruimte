@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { create } from 'zustand';
 import { desktop, type Release, type ReleaseNotesState, type UpdateState } from '@/desktop/bridge';
 import { hasUpdate } from '@/state/updates';
@@ -48,7 +49,7 @@ export const loadReleaseNotes = (refresh: boolean): Promise<void> => {
                 notes: {
                     releases: previous?.releases ?? [],
                     fetchedAt: previous?.fetchedAt ?? null,
-                    error: e instanceof Error ? e.message : 'The shell did not answer.'
+                    error: e instanceof Error ? e.message : i18next.t('state:update.noAnswer')
                 }
             });
         } finally {
@@ -122,10 +123,17 @@ export interface NotesView {
     link: { label: string; version: string } | null;
 }
 
-const UPDATE_BADGES: Partial<Record<UpdateState['status'], string>> = {
-    available: 'Available',
-    downloading: 'Downloading',
-    ready: 'Ready to install'
+/* Read when a view is built rather than when this module loads, or the words would be the ones the
+   app started in and never the ones a person switched to. */
+const updateBadge = (status: UpdateState['status']): string | null => {
+    switch (status) {
+        case 'available':
+        case 'downloading':
+        case 'ready':
+            return i18next.t(`state:badge.${status}`);
+        default:
+            return null;
+    }
 };
 
 export const notesView = (releases: Release[], currentVersion: string, updateState: UpdateState, previousSeen: string | null): NotesView => {
@@ -135,9 +143,9 @@ export const notesView = (releases: Release[], currentVersion: string, updateSta
         const role: NoteRole = order > 0 ? 'upcoming' : order === 0 ? 'installed' : 'older';
         let badge: string | null = null;
         if (role === 'installed') {
-            badge = 'Installed';
+            badge = i18next.t('state:badge.installed');
         } else if (role === 'upcoming' && update !== null && compareVersions(release.version, update) <= 0) {
-            badge = UPDATE_BADGES[updateState.status] ?? null;
+            badge = updateBadge(updateState.status);
         }
         const isNew = previousSeen !== null && isVersion(previousSeen) && compareVersions(release.version, previousSeen) > 0 && order <= 0;
         return { release, role, badge, isNew };

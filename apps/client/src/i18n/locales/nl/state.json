@@ -1,0 +1,30 @@
+{
+  "localMachine": "Deze machine",
+  "update": {
+    "unsupported": "Updates komen uit de desktop-app",
+    "checking": "Zoeken naar updates",
+    "available": "Versie {{version}} is beschikbaar",
+    "downloading": "{{version}} downloaden",
+    "ready": "Versie {{version}} staat klaar",
+    "readyDetail": "Ruimte start opnieuw op om hem te installeren. Wat je open hebt staan blijft staan.",
+    "failed": "De laatste controle is niet afgerond",
+    "failedDetail": "Geen reden opgegeven.",
+    "current": "Ruimte is up-to-date",
+    "unknownVersion": "onbekend",
+    "theUpdate": "de update",
+    "noAnswer": "De shell antwoordde niet."
+  },
+  "badge": {
+    "installed": "Geïnstalleerd",
+    "available": "Beschikbaar",
+    "downloading": "Downloaden",
+    "ready": "Klaar om te installeren"
+  },
+  "taskEdge": {
+    "open": "taak",
+    "done": "klaar",
+    "failed": "mislukt",
+    "cancelled": "geannuleerd"
+  },
+  "localMachineWithModel": "Deze {{model}}"
+}
