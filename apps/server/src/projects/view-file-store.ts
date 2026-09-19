@@ -4,6 +4,7 @@ import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from '../fs/watc
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { viewFilePathIn, viewIdOfFile, type JsonDocumentRead } from './project-files.ts';
 import type { ProjectStore, ProjectViewFiles } from './project-store.ts';
+import { ClientSinks } from '../client-sinks.ts';
 
 // The same burst rule the project file follows: an editor or git writes more than once per save.
 const WATCH_SETTLE_MS = 150;
@@ -55,7 +56,7 @@ export interface ViewFileKind<TDocument extends TContent & { rev: number }, TCon
 export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: number }, TContent> implements ProjectViewFiles {
     protected readonly projects: ProjectStore;
     protected readonly kind: ViewFileKind<TDocument, TContent>;
-    private readonly sinks = new Map<string, SessionSink>();
+    private readonly sinks = new ClientSinks();
     private readonly states = new Map<string, OpenProjectFiles>();
     // One file operation at a time, so a client's save and an agent's write never interleave on a rev.
     private chain: Promise<unknown> = Promise.resolve();
@@ -69,12 +70,7 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
-        this.sinks.set(clientId, sink);
-        return () => {
-            if (this.sinks.get(clientId) === sink) {
-                this.sinks.delete(clientId);
-            }
-        };
+        return this.sinks.subscribe(clientId, sink);
     }
 
     /*
@@ -192,9 +188,7 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
     }
 
     protected emit(event: SessionEvent): void {
-        for (const sink of this.sinks.values()) {
-            sink(event);
-        }
+        this.sinks.emit(event);
     }
 
     /*

@@ -4,6 +4,7 @@ import type { DeviceAction, DeviceFrame, DeviceInfo, DeviceInput, DeviceOpenResu
 import type { SessionSink } from '../sessions/manager.ts';
 import { LiveStreamHub, type LiveFrameSource } from '../streams/live-stream.ts';
 import { CodedError } from '../coded-error.ts';
+import { ClientSinks } from '../client-sinks.ts';
 
 export interface DeviceSource extends LiveFrameSource {
     input(input: DeviceInput): void | Promise<void>;
@@ -69,7 +70,7 @@ export class DeviceManager {
     readonly streams: LiveStreamHub;
     private readonly backends: Map<string, DeviceBackend>;
     private readonly sessions = new Map<string, DeviceSession>();
-    private readonly sinks = new Map<string, SessionSink>();
+    private readonly sinks = new ClientSinks();
     private readonly frameSubscriptions = new Map<string, Map<string, FrameSubscription>>();
 
     constructor(backends: DeviceBackend[], streams = new LiveStreamHub()) {
@@ -78,13 +79,7 @@ export class DeviceManager {
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
-        this.sinks.set(clientId, sink);
-        // A client that subscribes again before it unsubscribes keeps its newer sink.
-        return () => {
-            if (this.sinks.get(clientId) === sink) {
-                this.sinks.delete(clientId);
-            }
-        };
+        return this.sinks.subscribe(clientId, sink);
     }
 
     async list(): Promise<DeviceInfo[]> {
@@ -223,7 +218,7 @@ export class DeviceManager {
         try {
             const release = await this.streams.subscribe(session.streamId, (frame) => {
                 if (!subscription.cancelled) {
-                    this.sinks.get(clientId)?.({ event: 'device.frame', payload: eventFrame(session.info, frame) });
+                    this.sinks.to(clientId, { event: 'device.frame', payload: eventFrame(session.info, frame) });
                 }
             });
             if (subscription.cancelled) {

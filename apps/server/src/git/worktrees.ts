@@ -8,6 +8,7 @@ import { checkpointIndexFile } from './checkpoints.ts';
 import { resolveBase } from './status.ts';
 import { GitError, git, gitOrThrow as run, runGit, toplevel } from './run.ts';
 import { WorktreeRegister, type WorktreeRecord } from './worktree-register.ts';
+import { ClientSinks } from '../client-sinks.ts';
 
 // Branch names carry slashes; the folder name must not.
 const safeName = (branch: string): string => branch.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'branch';
@@ -144,7 +145,7 @@ export class Worktrees {
     private readonly checkpointsRoot: string;
     private readonly now: () => number;
     private readonly log: (line: string) => void;
-    private readonly sinks = new Map<string, SessionSink>();
+    private readonly sinks = new ClientSinks();
     // One removal at a time per repository, so two clients never inspect the same worktree against each other's half-done work.
     private readonly locks = new Map<string, Promise<unknown>>();
 
@@ -156,12 +157,7 @@ export class Worktrees {
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
-        this.sinks.set(clientId, sink);
-        return () => {
-            if (this.sinks.get(clientId) === sink) {
-                this.sinks.delete(clientId);
-            }
-        };
+        return this.sinks.subscribe(clientId, sink);
     }
 
     /* The register of a repository, by its main checkout. */
@@ -555,9 +551,7 @@ export class Worktrees {
     }
 
     announce(main: string): void {
-        for (const sink of this.sinks.values()) {
-            sink({ event: 'git.worktrees', payload: { repo: main } });
-        }
+        this.sinks.emit({ event: 'git.worktrees', payload: { repo: main } });
     }
 }
 

@@ -5,6 +5,7 @@ import type { SessionSink } from '../sessions/manager.ts';
 import { ignoredPaths } from './ignore.ts';
 import { git } from './run.ts';
 import { readStatus, trackedFiles } from './status.ts';
+import { ClientSinks } from '../client-sinks.ts';
 
 // A save, a formatter and a checkout all touch the repository in a burst; one status per burst is enough.
 const SETTLE_MS = 300;
@@ -39,7 +40,7 @@ interface Watch {
  * or slow status runs degrade to `live: false`, letting the client refresh only when needed.
  */
 export class GitStatusWatcher {
-    private readonly sinks = new Map<string, SessionSink>();
+    private readonly sinks = new ClientSinks();
     private readonly byClient = new Map<string, Map<string, Watch>>();
     /* Repository roots that proved too expensive to watch; they stay that way for this run. */
     private readonly degraded = new Set<string>();
@@ -54,12 +55,7 @@ export class GitStatusWatcher {
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
-        this.sinks.set(clientId, sink);
-        return () => {
-            if (this.sinks.get(clientId) === sink) {
-                this.sinks.delete(clientId);
-            }
-        };
+        return this.sinks.subscribe(clientId, sink);
     }
 
     /* The status of a checkout, with the flag that says whether it keeps itself up to date. */
@@ -154,7 +150,7 @@ export class GitStatusWatcher {
             const fingerprint = JSON.stringify(status);
             if (fingerprint !== state.fingerprint) {
                 state.fingerprint = fingerprint;
-                this.sinks.get(clientId)?.({ event: 'git.status', payload: { cwd: state.cwd, status } });
+                this.sinks.to(clientId, { event: 'git.status', payload: { cwd: state.cwd, status } });
             }
         } finally {
             state.running = false;

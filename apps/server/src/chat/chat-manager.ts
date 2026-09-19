@@ -42,6 +42,7 @@ import { claudeProjectSlug } from './claude-transcript.ts';
 import { SubagentReader, type SubagentReaderOptions } from './subagent-reader.ts';
 import { errorText } from '../error-text.ts';
 import { usageRoots } from '../usage/roots.ts';
+import { ClientSinks } from '../client-sinks.ts';
 
 /* A turn that was running when the daemon went down, and the attempt that would take it up again. */
 export interface InterruptedRun {
@@ -129,7 +130,7 @@ export class ChatManager {
     private readonly spawn: SpawnChatProcess | null;
     private readonly chats = new Map<string, ChatSession>();
     private readonly creating = new Map<string, Promise<ChatInfo>>();
-    private readonly sinks = new Map<string, SessionSink>();
+    private readonly sinks = new ClientSinks((clientId) => this.composerPreferences.forget(clientId));
     private readonly attached = new Map<string, Set<string>>();
     private readonly coalescers = new Map<string, DeltaCoalescer>();
     private readonly logs = new Map<string, ChatLog>();
@@ -212,7 +213,7 @@ export class ChatManager {
                     : null;
             },
             codexProcess: (info) => this.codexProcess(info.cwd),
-            notify: (clientId, event) => this.sinks.get(clientId)?.({ event: 'chat.subagentChanged', payload: event })
+            notify: (clientId, event) => this.sinks.to(clientId, { event: 'chat.subagentChanged', payload: event })
         });
     }
 
@@ -287,13 +288,7 @@ export class ChatManager {
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
-        this.sinks.set(clientId, sink);
-        return () => {
-            if (this.sinks.get(clientId) === sink) {
-                this.sinks.delete(clientId);
-                this.composerPreferences.forget(clientId);
-            }
-        };
+        return this.sinks.subscribe(clientId, sink);
     }
 
     /* Registers a chat; nothing is spawned until the first message. An existing chat answers its current info. */
@@ -954,7 +949,7 @@ export class ChatManager {
             for (const hold of this.childHolds.values()) {
                 if (hold.childId === chatId) {
                     for (const clientId of hold.clients) {
-                        this.sinks.get(clientId)?.({ event: 'chat.subagentChanged', payload: { chatId: hold.parentId, toolUseId: hold.toolUseId } });
+                        this.sinks.to(clientId, { event: 'chat.subagentChanged', payload: { chatId: hold.parentId, toolUseId: hold.toolUseId } });
                     }
                 }
             }
@@ -964,7 +959,7 @@ export class ChatManager {
             return;
         }
         for (const clientId of clients) {
-            this.sinks.get(clientId)?.({ event: 'chat.event', payload });
+            this.sinks.to(clientId, { event: 'chat.event', payload });
         }
     }
 

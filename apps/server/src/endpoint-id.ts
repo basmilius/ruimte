@@ -9,6 +9,7 @@ import { generateKeyPair, signMessage } from './auth/keys.ts';
 import { isNotFound, writeAtomic } from './fs.ts';
 import type { SessionEvent, SessionSink } from './sessions/manager.ts';
 import { errorText } from './error-text.ts';
+import { ClientSinks } from './client-sinks.ts';
 
 /*
  * The key pair arrived after the id did, and the name and icon after the keys; the version stays at
@@ -84,7 +85,7 @@ export class EndpointIdentity {
     private readonly path: string;
     private readonly privateKey: string;
     private readonly defaultName: string;
-    private readonly sinks = new Map<string, SessionSink>();
+    private readonly sinks = new ClientSinks();
     private chosenName: string | null;
     private chosenIcon: ProjectIconChoice | null;
     private deleteAnyView: boolean;
@@ -152,12 +153,7 @@ export class EndpointIdentity {
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
-        this.sinks.set(clientId, sink);
-        return () => {
-            if (this.sinks.get(clientId) === sink) {
-                this.sinks.delete(clientId);
-            }
-        };
+        return this.sinks.subscribe(clientId, sink);
     }
 
     /*
@@ -190,9 +186,7 @@ export class EndpointIdentity {
                 ...this.brokerSwitch?.describe()
             }
         };
-        for (const sink of this.sinks.values()) {
-            sink(event);
-        }
+        this.sinks.emit(event);
     }
 
     /* Writes the file as this object stands; a fresh home is written the moment it is minted. */

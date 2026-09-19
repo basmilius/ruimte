@@ -5,6 +5,7 @@ import { applyPlanOps, createPlan, planProgress, randomItemId, refuse, type Plan
 import { z } from 'zod';
 import { isNotFound, writeAtomic } from '../fs.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
+import { ClientSinks } from '../client-sinks.ts';
 
 const SUFFIX = '.plans.json';
 
@@ -39,7 +40,7 @@ export class PlanStore {
     private readonly now: () => number;
     private readonly mintId: () => string;
     private readonly chains = new Map<string, Promise<unknown>>();
-    private readonly sinks = new Map<string, SessionSink>();
+    private readonly sinks = new ClientSinks();
 
     constructor(home: string, options: PlanStoreOptions = {}) {
         this.dir = join(home, 'chats');
@@ -49,12 +50,7 @@ export class PlanStore {
 
     /* Every connection hears every plan, since a chat's pill shows whether or not anyone attached the chat. */
     subscribe(clientId: string, sink: SessionSink): () => void {
-        this.sinks.set(clientId, sink);
-        return () => {
-            if (this.sinks.get(clientId) === sink) {
-                this.sinks.delete(clientId);
-            }
-        };
+        return this.sinks.subscribe(clientId, sink);
     }
 
     /* The plans of one chat, oldest first, after any write that is still on its way. */
@@ -230,9 +226,7 @@ export class PlanStore {
     }
 
     private broadcast(event: SessionEvent): void {
-        for (const sink of this.sinks.values()) {
-            sink(event);
-        }
+        this.sinks.emit(event);
     }
 }
 

@@ -12,6 +12,7 @@ import {
 import type { SessionSink } from '../sessions/manager.ts';
 import { LiveStreamHub, type LiveFrameSource } from '../streams/live-stream.ts';
 import { CodedError } from '../coded-error.ts';
+import { ClientSinks } from '../client-sinks.ts';
 
 interface NavigationHistory {
     currentIndex: number;
@@ -479,7 +480,7 @@ class BrowserSession implements LiveFrameSource {
 
 export class BrowserManager {
     private readonly sessions = new Map<string, BrowserSession>();
-    private readonly sinks = new Map<string, SessionSink>();
+    private readonly sinks = new ClientSinks();
     private readonly frameSubscriptions = new Map<string, Map<string, FrameSubscription>>();
     private readonly unregisterStreams = new Map<string, () => void>();
     readonly streams: LiveStreamHub;
@@ -506,13 +507,7 @@ export class BrowserManager {
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
-        this.sinks.set(clientId, sink);
-        // A client that subscribes again before it unsubscribes keeps its newer sink.
-        return () => {
-            if (this.sinks.get(clientId) === sink) {
-                this.sinks.delete(clientId);
-            }
-        };
+        return this.sinks.subscribe(clientId, sink);
     }
 
     async open(
@@ -624,7 +619,7 @@ export class BrowserManager {
 
     private broadcast(session: BrowserSession, info: BrowserInfo): void {
         for (const clientId of session.clients) {
-            this.sinks.get(clientId)?.({
+            this.sinks.to(clientId, {
                 event: 'browser.status',
                 payload: info
             });
@@ -644,7 +639,7 @@ export class BrowserManager {
         try {
             const release = await this.streams.subscribe(session.streamId, (frame) => {
                 if (!subscription.cancelled) {
-                    this.sinks.get(clientId)?.({
+                    this.sinks.to(clientId, {
                         event: 'browser.frame',
                         payload: eventFrame(browserId, frame)
                     });

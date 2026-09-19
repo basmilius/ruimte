@@ -2,6 +2,7 @@ import { dirname, join, resolve, sep } from 'node:path';
 import type { SessionSink } from '../sessions/manager.ts';
 import { forgetSearchCache } from './search.ts';
 import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from './watch-seam.ts';
+import { ClientSinks } from '../client-sinks.ts';
 
 // A save, a formatter and a build all touch the same folder in a burst; one event per burst is enough.
 const SETTLE_MS = 250;
@@ -29,7 +30,7 @@ interface Watch {
  * client, like a session attach: two windows on the same folder each get their own.
  */
 export class FolderWatcher {
-    private readonly sinks = new Map<string, SessionSink>();
+    private readonly sinks = new ClientSinks();
     private readonly byClient = new Map<string, Map<string, Watch>>();
     private readonly platform: NodeJS.Platform;
     private readonly seams: WatchSeams;
@@ -42,12 +43,7 @@ export class FolderWatcher {
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
-        this.sinks.set(clientId, sink);
-        return () => {
-            if (this.sinks.get(clientId) === sink) {
-                this.sinks.delete(clientId);
-            }
-        };
+        return this.sinks.subscribe(clientId, sink);
     }
 
     /* Starts watching at once; the promise settles when a write is sure to be reported. */
@@ -121,7 +117,7 @@ export class FolderWatcher {
         }
         // The `@` picker reads the same folder from a cache of its own; a write there is stale news.
         forgetSearchCache();
-        this.sinks.get(clientId)?.({ event: 'fs.changed', payload: { root: state.root, paths } });
+        this.sinks.to(clientId, { event: 'fs.changed', payload: { root: state.root, paths } });
     }
 
     private static stop(state: Watch): void {

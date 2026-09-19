@@ -28,6 +28,7 @@ import { StuckJudge, type ObservedGroup, type ObservedProcess, type Observation,
 import { groupsFor, indexTree, machineDisk, ruimteTotals, type TreeEntry, type TreeIndex } from './tree.ts';
 import { errorText } from '../error-text.ts';
 import { CodedError } from '../coded-error.ts';
+import { ClientSinks } from '../client-sinks.ts';
 
 export const FINE_INTERVAL_MS = 2000;
 export const COARSE_INTERVAL_MS = 5 * 60_000;
@@ -75,7 +76,7 @@ export class ProcessMonitor {
     private readonly daemonPid: number;
     private readonly uid: number;
     private readonly judge: StuckJudge;
-    private readonly sinks = new Map<string, SessionSink>();
+    private readonly sinks = new ClientSinks((clientId) => this.unfollow(clientId));
     private readonly followers = new Map<string, ProcessesSubscribePayload>();
     private readonly fine: ProcessPoint[] = [];
     private readonly coarse: ProcessPoint[] = [];
@@ -104,13 +105,7 @@ export class ProcessMonitor {
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
-        this.sinks.set(clientId, sink);
-        return () => {
-            if (this.sinks.get(clientId) === sink) {
-                this.sinks.delete(clientId);
-            }
-            this.unfollow(clientId);
-        };
+        return this.sinks.subscribe(clientId, sink);
     }
 
     start(): void {
@@ -345,7 +340,7 @@ export class ProcessMonitor {
                 event = this.sampleFor(latest, follower.scope, follower.sort, finePoint, coarsePoint, reset);
                 built.set(key, event);
             }
-            this.sinks.get(clientId)?.({ event: 'processes.sample', payload: event });
+            this.sinks.to(clientId, { event: 'processes.sample', payload: event });
         }
     }
 
@@ -404,9 +399,7 @@ export class ProcessMonitor {
             // A probe that hangs is a bug in Ruimte itself, so it belongs in the log as well as on screen.
             console.warn(`Process ${alert.pid} (${alert.name}) started by the daemon has run for ${Math.round((alert.value ?? 0) / 1000)} s`);
         }
-        for (const sink of this.sinks.values()) {
-            sink({ event: 'processes.alerts', payload: { alerts } });
-        }
+        this.sinks.emit({ event: 'processes.alerts', payload: { alerts } });
     }
 
     private schedule(): void {

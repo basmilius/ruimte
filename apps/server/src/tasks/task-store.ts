@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { TaskSchema, type Task, type TaskResult } from '@ruimte/contracts';
 import { isNotFound, writeAtomic } from '../fs.ts';
 import type { SessionSink } from '../sessions/manager.ts';
+import { ClientSinks } from '../client-sinks.ts';
 
 const fileName = (id: string): string => `${encodeURIComponent(id)}.json`;
 
@@ -19,7 +20,7 @@ export class TaskStore {
     readonly dir: string;
     private readonly tasks = new Map<string, Task>();
     private readonly listeners = new Set<TaskListener>();
-    private readonly sinks = new Map<string, SessionSink>();
+    private readonly sinks = new ClientSinks();
     // One write at a time per task, so an older record never lands after a newer one.
     private readonly writes = new Map<string, Promise<void>>();
 
@@ -68,12 +69,7 @@ export class TaskStore {
 
     /* Every socket hears every task: the edge and the header of a child are drawn from it. */
     subscribe(clientId: string, sink: SessionSink): () => void {
-        this.sinks.set(clientId, sink);
-        return () => {
-            if (this.sinks.get(clientId) === sink) {
-                this.sinks.delete(clientId);
-            }
-        };
+        return this.sinks.subscribe(clientId, sink);
     }
 
     async open(record: { projectId: string; parentId: string; childId: string; title: string; prompt: string; batchId?: string }, now: number): Promise<Task> {
@@ -225,9 +221,7 @@ export class TaskStore {
             for (const listener of this.listeners) {
                 listener(task);
             }
-            for (const sink of this.sinks.values()) {
-                sink({ event: 'task.changed', payload: { task } });
-            }
+            this.sinks.emit({ event: 'task.changed', payload: { task } });
         });
         this.writes.set(
             task.id,

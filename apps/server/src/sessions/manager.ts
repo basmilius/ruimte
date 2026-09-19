@@ -12,6 +12,7 @@ import { Session } from './session.ts';
 import type { SnapshotStore } from './snapshot-store.ts';
 import { errorText } from '../error-text.ts';
 import { CodedError } from '../coded-error.ts';
+import { ClientSinks } from '../client-sinks.ts';
 
 type SessionErrorCode = 'session-exists' | 'session-not-found' | 'session-exited' | 'spawn-failed' | 'agent-not-found' | 'agent-live' | 'agent-resuming';
 
@@ -99,7 +100,7 @@ export class SessionManager {
     private readonly env: Record<string, string | undefined>;
     private readonly sessions = new Map<string, Session>();
     private readonly creating = new Map<string, Promise<SessionInfo>>();
-    private readonly sinks = new Map<string, SessionSink>();
+    private readonly sinks = new ClientSinks((clientId) => this.withoutApprovals.delete(clientId));
     // The clients that said they never offer a permission request to a person, keyed like the sinks.
     private readonly withoutApprovals = new Set<string>();
     private readonly tokens = new Map<string, string>();
@@ -147,9 +148,7 @@ export class SessionManager {
             options.approvals === false
                 ? null
                 : new ApprovalStore((sessionId, approvals) => {
-                      for (const sink of [...this.sinks.values(), ...this.observers]) {
-                          sink({ event: 'session.approvals', payload: { sessionId, approvals } });
-                      }
+                      this.broadcast({ event: 'session.approvals', payload: { sessionId, approvals } });
                   }, options.approvalHoldMs);
     }
 
@@ -169,13 +168,7 @@ export class SessionManager {
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
-        this.sinks.set(clientId, sink);
-        return () => {
-            if (this.sinks.get(clientId) === sink) {
-                this.sinks.delete(clientId);
-                this.withoutApprovals.delete(clientId);
-            }
-        };
+        return this.sinks.subscribe(clientId, sink);
     }
 
     /*
@@ -193,7 +186,7 @@ export class SessionManager {
 
     /* Whether anybody attached would show a permission request. The question `holdApproval` asks. */
     wantsApprovals(): boolean {
-        return [...this.sinks.keys()].some((clientId) => !this.withoutApprovals.has(clientId));
+        return this.sinks.clientIds().some((clientId) => !this.withoutApprovals.has(clientId));
     }
 
     /*
@@ -566,9 +559,7 @@ export class SessionManager {
 
     private async setAgent(session: Session, agent: AgentInfo | null): Promise<void> {
         session.agent = agent;
-        for (const sink of [...this.sinks.values(), ...this.observers]) {
-            sink({ event: 'session.status', payload: { sessionId: session.id, agent } });
-        }
+        this.broadcast({ event: 'session.status', payload: { sessionId: session.id, agent } });
         try {
             if (agent) {
                 await this.agents?.write(session.id, agent);
@@ -696,12 +687,18 @@ export class SessionManager {
     }
 
     private emit(clientId: string, event: SessionEvent): void {
-        this.sinks.get(clientId)?.(event);
+        this.sinks.to(clientId, event);
     }
 
     private broadcastListChanged(): void {
-        for (const sink of [...this.sinks.values(), ...this.observers]) {
-            sink({ event: 'session.list-changed', payload: {} });
+        this.broadcast({ event: 'session.list-changed', payload: {} });
+    }
+
+    /* Every client watching sessions, and the parts of the daemon that observe them beside. */
+    private broadcast(event: SessionEvent): void {
+        this.sinks.emit(event);
+        for (const observer of this.observers) {
+            observer(event);
         }
     }
 }
