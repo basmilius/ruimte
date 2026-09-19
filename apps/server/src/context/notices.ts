@@ -1,9 +1,8 @@
-import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { RecordDirectory } from '../record-directory.ts';
 import { z } from 'zod';
 import type { AgentInfo } from '@ruimte/contracts';
 import { takesHookContext } from '../agents/hooks.ts';
-import { isNotFound, writeAtomic } from '../fs.ts';
 import { errorText } from '../error-text.ts';
 
 /*
@@ -42,10 +41,10 @@ const NoticeSchema = z.object({
 
 export type Notice = z.infer<typeof NoticeSchema>;
 
-const FileSchema = z.object({ notices: z.array(NoticeSchema) });
+/* A queue waits in the file of the node it is for, so the first message in it names that node. */
+const FileSchema = z.object({ notices: z.array(NoticeSchema).min(1) });
 
-// The id is a node id the client chose, so it is encoded before it becomes a file name.
-const fileName = (targetId: string): string => `${encodeURIComponent(targetId)}.json`;
+type NoticeFile = z.infer<typeof FileSchema>;
 
 /* What the receiving agent hears: the id to act on, the title to read, and the message itself. */
 export const renderNotice = (notice: Notice): string =>
@@ -66,55 +65,33 @@ export const noticeNote = (notice: Notice): string => `${notice.fromTitle === ''
  */
 export class NoticeStore {
     readonly dir: string;
-    private readonly queues = new Map<string, Notice[]>();
+    private readonly queues: RecordDirectory<NoticeFile>;
     private readonly now: () => number;
     private lastDrop: Promise<void> = Promise.resolve();
 
     constructor(home: string, now: () => number = Date.now) {
         this.dir = join(home, 'notices');
         this.now = now;
+        this.queues = new RecordDirectory({
+            dir: this.dir,
+            schema: FileSchema,
+            idOf: (file) => file.notices[0]!.targetId,
+            // What went stale while the daemon was down is not delivered; a queue of nothing else goes.
+            keep: (file) => {
+                const fresh = file.notices.filter((notice) => this.fresh(notice));
+                return fresh[0] === undefined ? null : { notices: fresh };
+            }
+        });
     }
 
-    /* Reads what an earlier run of the daemon was still holding. Call before anything can take one. */
-    async load(): Promise<void> {
-        let names: string[];
-        try {
-            names = await readdir(this.dir);
-        } catch (e) {
-            if (isNotFound(e)) {
-                return;
-            }
-            throw e;
-        }
-        for (const name of names) {
-            if (!name.endsWith('.json')) {
-                continue;
-            }
-            const raw = await readFile(join(this.dir, name), 'utf8').catch(() => null);
-            if (raw === null) {
-                continue;
-            }
-            let parsed: ReturnType<typeof FileSchema.safeParse>;
-            try {
-                parsed = FileSchema.safeParse(JSON.parse(raw));
-            } catch {
-                continue;
-            }
-            const fresh = parsed.success ? parsed.data.notices.filter((notice) => this.fresh(notice)) : [];
-            const targetId = fresh[0]?.targetId;
-            if (targetId === undefined) {
-                await rm(join(this.dir, name), { force: true });
-                continue;
-            }
-            this.queues.set(targetId, fresh);
-        }
+    load(): Promise<void> {
+        return this.queues.load();
     }
 
     /* Puts one message in a node's queue and answers how many now wait for it. */
     async put(notice: Omit<Notice, 'createdAt'>): Promise<number> {
         const queue = [...this.waiting(notice.targetId), { ...notice, createdAt: this.now() }].slice(-MAX_NOTICES);
-        this.queues.set(notice.targetId, queue);
-        await this.persist(notice.targetId);
+        await this.persist(notice.targetId, queue);
         return queue.length;
     }
 
@@ -129,8 +106,7 @@ export class NoticeStore {
         if (queue.length === 0) {
             return [];
         }
-        this.queues.delete(targetId);
-        this.lastDrop = this.persist(targetId).catch((e) => console.error(`Dropping the messages of ${targetId} failed:`, errorText(e)));
+        this.lastDrop = this.persist(targetId, []).catch((e) => console.error(`Dropping the messages of ${targetId} failed:`, errorText(e)));
         return queue;
     }
 
@@ -149,45 +125,38 @@ export class NoticeStore {
         if (unshown.length === 0) {
             return [];
         }
-        this.queues.set(
+        await this.persist(
             targetId,
             queue.map((notice) => ({ ...notice, shown: true }))
         );
-        await this.persist(targetId);
         return unshown;
     }
 
     /* What waits for a node, without taking it; the stale ones are already gone from the answer. */
     waiting(targetId: string): Notice[] {
-        const queue = this.queues.get(targetId);
-        if (queue === undefined) {
+        const file = this.queues.get(targetId);
+        if (file === undefined) {
             return [];
         }
-        return queue.filter((notice) => this.fresh(notice));
+        return file.notices.filter((notice) => this.fresh(notice));
     }
 
     /* Drops what a project was holding for ids it no longer has: the node was deleted before it read them. */
-    async prune(projectId: string, ids: ReadonlySet<string>): Promise<void> {
-        for (const [targetId, queue] of [...this.queues]) {
-            if (queue[0]?.projectId === projectId && !ids.has(targetId)) {
-                this.queues.delete(targetId);
-                await this.persist(targetId);
-            }
-        }
+    prune(projectId: string, ids: ReadonlySet<string>): Promise<void> {
+        return this.queues.prune((file) => file.notices[0]!.projectId === projectId && !ids.has(file.notices[0]!.targetId));
     }
 
     private fresh(notice: Notice): boolean {
         return this.now() - notice.createdAt < NOTICE_MAX_AGE_MS;
     }
 
-    private async persist(targetId: string): Promise<void> {
-        const queue = this.queues.get(targetId) ?? [];
+    /* The queue of one node, emptied here and on disk both; an empty one leaves no file behind. */
+    private async persist(targetId: string, queue: Notice[]): Promise<void> {
         if (queue.length === 0) {
-            await rm(join(this.dir, fileName(targetId)), { force: true });
+            await this.queues.remove(targetId);
             return;
         }
-        await mkdir(this.dir, { recursive: true, mode: 0o700 });
-        await writeAtomic(join(this.dir, fileName(targetId)), JSON.stringify({ notices: queue }));
+        await this.queues.write({ notices: queue });
     }
 }
 

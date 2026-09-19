@@ -1,7 +1,9 @@
-import { closeSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync, writeSync } from 'node:fs';
+import { closeSync, mkdirSync, openSync, rmSync, writeSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { ChatEventSchema, type ChatEvent } from '@ruimte/contracts';
 import { z } from 'zod';
+import { errorText } from '../error-text.ts';
+import { writeAtomicSync } from '../fs.ts';
 
 export interface ChatLogLine {
     seq: number;
@@ -105,7 +107,7 @@ export class ChatLog {
                 writeSync(this.fd, text);
             } catch (e) {
                 // The event still reaches every client; only a restart before the next snapshot loses it.
-                console.error(`Appending to ${this.path} failed:`, e instanceof Error ? e.message : String(e));
+                console.error(`Appending to ${this.path} failed:`, errorText(e));
             }
         }
         return line.seq;
@@ -146,11 +148,9 @@ export class ChatLog {
                 rmSync(this.path, { force: true });
                 return;
             }
-            const temp = `${this.path}.${process.pid}.tmp`;
-            writeFileSync(temp, text, { mode: 0o600 });
-            renameSync(temp, this.path);
+            writeAtomicSync(this.path, text);
         } catch (e) {
-            console.error(`Compacting ${this.path} failed:`, e instanceof Error ? e.message : String(e));
+            console.error(`Compacting ${this.path} failed:`, errorText(e));
         }
     }
 

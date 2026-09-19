@@ -1,16 +1,6 @@
-import { BrowserError, type BrowserManager } from '../browser/manager.ts';
-import { RequestError, type Dispatcher } from '../dispatcher.ts';
+import type { BrowserManager } from '../browser/manager.ts';
+import { translate, type Dispatcher } from '../dispatcher.ts';
 import { streamingGate } from './streaming.ts';
-
-const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
-    Promise.resolve()
-        .then(work)
-        .catch((error: unknown) => {
-            if (error instanceof BrowserError) {
-                throw new RequestError(error.code, error.message);
-            }
-            throw error;
-        });
 
 export const registerBrowserHandlers = (dispatcher: Dispatcher, browsers: BrowserManager, streamingAllowed: () => boolean): void => {
     const requireStreaming = streamingGate(streamingAllowed);

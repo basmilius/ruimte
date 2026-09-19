@@ -1,7 +1,8 @@
 import type { ContextSource, ProjectCanvasView } from '@ruimte/contracts';
+import { refusalRows } from '../refusal.ts';
 
 /* A refusal as `ruimte-context` writes one: the code and its sentence first, what to do under it. */
-const body = (code: string, message: string, ...lines: string[]): string => [`${code}\t${message}`, ...lines].join('\n');
+const body = (code: string, message: string, ...lines: string[]): string => refusalRows(code, message, lines);
 
 /* The line that draws what the read needs. It names both ends rather than the shorter --to, since
    the direction is the whole misunderstanding here and only --from spells it out. */

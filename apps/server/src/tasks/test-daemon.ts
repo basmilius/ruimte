@@ -7,13 +7,11 @@ import { AttachmentStore } from '../chat/attachment-store.ts';
 import { ChatManager } from '../chat/chat-manager.ts';
 import { ChatStore } from '../chat/chat-store.ts';
 import { chatForkDeps, forkChat, readForkInfo } from '../chat/fork.ts';
-import { wireSummaries } from '../chat/summary.ts';
 import { fakeClaude } from '../chat/fake-claude.ts';
 import { fakeCodex } from '../chat/fake-codex.ts';
 import { inProcess, type InProcessCli } from '../chat/fake-cli.ts';
-import { deliverMessageHandler, turnFromMessage } from '../context/deliver-message.ts';
+import { turnFromMessage } from '../context/deliver-message.ts';
 import { deliverNotice, NoticeStore, renderNotice, showNotices } from '../context/notices.ts';
-import { chatOpener } from '../chat/wake-chat.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { Checkpoints, type CheckpointService } from '../git/checkpoints.ts';
 import { worktreeAgents } from '../git/worktree-agents.ts';
@@ -24,19 +22,19 @@ import { registerChatHandlers } from '../handlers/chat.ts';
 import { registerSessionHandlers } from '../handlers/session.ts';
 import { registerPlanHandlers } from '../handlers/plan.ts';
 import { registerTaskHandlers } from '../handlers/tasks.ts';
-import { wireEndChildren, type EndChildrenWiring } from '../outbox/end-children.ts';
 import type { ManualClock } from '../outbox/manual-clock.ts';
 import { OutboxStore } from '../outbox/outbox.ts';
-import { OutboxWorker } from '../outbox/outbox-worker.ts';
+import type { OutboxWorker } from '../outbox/outbox-worker.ts';
+import type { EndChildrenWiring } from '../outbox/end-children.ts';
+import type { TaskWiring } from './wiring.ts';
 import { PlanStore } from '../plans/plan-store.ts';
-import { oweResume, resumeRunHandler, resumeRunParked } from '../outbox/resume-run.ts';
-import { nodeMode, startAgentHandler, startAgentWork } from '../outbox/start-agent.ts';
+import { nodeMode, startAgentWork } from '../outbox/start-agent.ts';
+import { OutboxLink, wireOutbox } from '../outbox/wiring.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { FakePtyAdapter } from '../pty/fake-pty.ts';
 import { SessionManager } from '../sessions/manager.ts';
 import { TaskStore } from './task-store.ts';
-import { wireTasks, type TaskWiring } from './wiring.ts';
 
 const providers = new ProviderRegistry({ detect: async () => ({ installed: true, version: '0.0.0' }) });
 
@@ -93,7 +91,13 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
     const codex = inProcess(fakeCodex);
     const sessions = new SessionManager({ adapter, env: { HOME: home, PATH: process.env.PATH }, firstPrompt: (id) => prompts.take(id) });
     const attachments = new AttachmentStore(home);
-    const box: { worker: OutboxWorker | null } = { worker: null };
+    const drops: Promise<void>[] = [];
+    const outboxLink = new OutboxLink({
+        outbox,
+        projectOf: (chatId) => store.index.locate(chatId)?.projectId ?? null,
+        // Owed after the entry is written, so a wait on the outbox looks again once it is there.
+        onEnqueued: () => recheck()
+    });
     const plans = new PlanStore(home, { now: () => clock.now() });
     const chats = new ChatManager({
         providers,
@@ -103,11 +107,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         spawn: (options) => (options.command[0]?.endsWith('codex') ? codex.spawn(options) : claude.spawn(options)),
         env: { PATH: process.env.PATH, HOME: home },
         firstPrompt: (id) => prompts.take(id),
-        onInterruptedRun: oweResume({
-            projectOf: (chatId) => store.index.locate(chatId)?.projectId ?? null,
-            entries: () => outbox.list(),
-            enqueue: (id, target, work) => box.worker!.enqueue(id, target, work)
-        }),
+        onInterruptedRun: outboxLink.onInterruptedRun,
         messages: (chatId) => notices.take(chatId).map(renderNotice),
         taskRows: (chatId) => tasks.ofParent(chatId),
         endedAt: (chatId) => lineage.endedAt(chatId),
@@ -126,97 +126,35 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         }
     };
     const alerts: string[] = [];
-    const wiring = wireTasks({
-        tasks,
-        chats,
-        placed: (nodeId) => store.index.locate(nodeId) !== null,
-        owedTurn: (taskId) => outbox.list().some((entry) => entry.kind === 'give-task' && entry.payload.taskId === taskId),
-        titleFor: (nodeId) => store.index.titleFor(nodeId),
-        madeBy: (nodeId) => lineage.madeBy(nodeId),
-        // Owed after the task is written, so a wait on the outbox looks again once the entry is there.
-        enqueue: async (id, target, work) => {
-            await box.worker!.enqueue(id, target, work);
-            recheck();
-        },
-        alert: (_target, nodeId, title, body) => alerts.push(`${nodeId}\t${title}\t${body}`),
-        wake: (chatId) => box.worker!.wake(chatId),
-        now: () => clock.now()
-    });
-    const endChildren = wireEndChildren({
-        lineage,
+    const outboxWiring = wireOutbox({
+        link: outboxLink,
         outbox,
+        projects: store,
+        lineage,
+        prompts,
+        notices,
         tasks,
         chats,
         sessions,
-        enqueue: async (id, target, work) => {
-            await box.worker!.enqueue(id, target, work);
-            recheck();
-        },
-        now: () => clock.now(),
-        log: () => undefined
-    });
-    endChildren.start();
-    const summaries = wireSummaries({
-        chats,
-        host: { locate: (id) => store.index.locate(id), mutate: (projectId, apply) => store.mutate(projectId, apply) },
-        titleFor: (id) => store.index.titleFor(id),
-        enqueue: async (id, target, work) => {
-            await box.worker!.enqueue(id, target, work);
-            recheck();
-        }
-    });
-    const worker = new OutboxWorker({
-        store: outbox,
+        alert: (_target, nodeId, title, body) => alerts.push(`${nodeId}\t${title}\t${body}`),
         clock,
-        handlers: {
-            'start-agent': startAgentHandler({
-                placed: (nodeId) => store.index.locate(nodeId) !== null,
-                hasChat: (chatId) => chats.get(chatId) !== undefined,
-                createChat: (payload) => chats.create(payload),
-                composerPreference: (provider) => chats.composerPreferences.for(provider),
-                killChat: (chatId) => chats.kill(chatId),
-                hasSession: (sessionId) => sessions.get(sessionId) !== undefined,
-                createSession: (options) => sessions.create(options),
-                killSession: (sessionId) => sessions.kill(sessionId),
-                onGaveUp: wiring.onStartGaveUp,
-                log: () => undefined
-            }),
-            'resume-run': resumeRunHandler(chats),
-            'wake-parent': wiring.wakeParent,
-            'give-task': wiring.giveTask,
-            'deliver-message': deliverMessageHandler({
-                notices,
-                chat: chatOpener({ chats, placed: (nodeId) => store.index.locate(nodeId) !== null }),
-                placed: (nodeId) => store.index.locate(nodeId) !== null
-            }),
-            'end-children': endChildren.handler,
-            'deliver-summary': summaries.handler
-        },
-        onParked: (entry, error) => {
-            summaries.onParked(entry, error);
-            resumeRunParked(chats)(entry, error);
-            wiring.onParked(entry, error);
-        }
+        now: () => clock.now(),
+        log: () => undefined,
+        onDropped: (drop) => drops.push(drop),
+        onFailed: () => undefined
     });
-    box.worker = worker;
+    const worker = outboxWiring.worker;
+    const wiring = outboxWiring.tasks;
+    const endChildren = outboxWiring.endChildren;
+    const summaries = outboxWiring.summaries;
+    endChildren.start();
     sessions.onProcessChange = (sessionId, phase) => {
         if (phase === 'changed' && sessions.get(sessionId)?.exited !== false) {
             wiring.coordinator.terminalEnded(sessionId);
         }
     };
     sessions.observe((event) => wiring.coordinator.sessionEvent(event));
-    const drops: Promise<void>[] = [];
-    store.index.onPlaces = (id, ids) => {
-        endChildren.places(id, ids);
-        void prompts.prune(id, ids);
-        for (const forkId of lineage.forksLeaving(id, ids)) {
-            drops.push(chats.dropUnspokenFork(forkId));
-        }
-        void lineage.prune(id, ids);
-        void notices.prune(id, ids);
-        void outbox.prune(id, ids);
-        void wiring.prune(id, ids);
-    };
+    store.index.onPlaces = outboxWiring.places;
 
     sessions.observe(recheck);
     chats.observe(recheck);
@@ -235,7 +173,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         worktreePaths: async (folder) => (worktrees ? (await worktrees.list(folder).catch(() => [])).map((worktree) => worktree.path) : []),
         installedAgents: async () => installed,
         holdPrompt: (id, nodeId, prompt) => prompts.put(id, nodeId, prompt),
-        startAgent: (start: AgentStart) => worker.enqueue(start.projectId, start.nodeId, startAgentWork(start, modes)),
+        startAgent: (start: AgentStart) => outboxLink.enqueue(start.projectId, start.nodeId, startAgentWork(start, modes)),
         modeOf: nodeMode(modes),
         terminalModePreference: () => chats.composerPreferences.terminalMode(),
         branchesOf: async (folder) => (worktrees ? worktrees.branches(folder).catch(() => null) : null),
@@ -292,8 +230,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
             );
             await showNotices(notices, { has: (id) => chats.hasStored(id), note: (id, text) => chats.addNote(id, 'info', text) }, notice.targetId);
             if (delivery.wake) {
-                await worker.enqueue(notice.projectId, notice.targetId, { kind: 'deliver-message', payload: { from: notice.from } });
-                recheck();
+                await outboxLink.enqueue(notice.projectId, notice.targetId, { kind: 'deliver-message', payload: { from: notice.from } });
             }
             return delivery;
         },

@@ -1,4 +1,5 @@
 import { escapeText } from '../canvas/text-escapes.ts';
+import { parseRefusalBody, refusalBody, type ParsedRefusal } from '../refusal.ts';
 
 // Exit codes distinguish daemon failures, stale sessions and command refusals for callers that script this CLI.
 export const runContext = async (args: string[], env: Environment = process.env, stdin: () => Promise<string> = () => Bun.stdin.text()): Promise<number> => {
@@ -191,18 +192,20 @@ const linkedLines = async (url: string, headers: Record<string, string>, env: En
  * it under that. A daemon that answers something else leaves the sentence this side has always
  * written, so an older one still refuses a read rather than printing a body nobody can read.
  */
-const readRefusal = (body: string, id: string): { code: string; message: string; lines: string[] } => {
-    const [first = '', ...lines] = body.split('\n').filter((line) => line.trim() !== '');
-    const [code, message] = first.split('\t');
-    if (!code || !message) {
-        return { code: 'unknown-source', message: `${id} is not linked to this session`, lines: [] };
+const readRefusal = (body: string, id: string): ParsedRefusal => {
+    const parsed = parseRefusalBody(body);
+    if (parsed) {
+        return parsed;
     }
-    return { code, message, lines };
+    // Whatever it did answer is the only reason there is; dropping it would leave a no without a why.
+    const said = body.trim();
+    const message = said === '' ? `${id} is not linked to this session` : `${id} could not be read: ${said}`;
+    return { code: 'unknown-source', message, lines: [] };
 };
 
 /* `list` and `read` are the CLI's own, so it writes the refusal the daemon would have written for a verb. */
 const refuse = (code: string, message: string, lines: string[]): number => {
-    process.stderr.write(`${[`refused\t${code}\t${message.replace(/[\t\r\n]+/g, ' ')}`, ...lines].join('\n')}\n`);
+    process.stderr.write(`${refusalBody(code, message, lines)}\n`);
     return 3;
 };
 

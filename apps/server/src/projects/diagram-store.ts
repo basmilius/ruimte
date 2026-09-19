@@ -4,18 +4,11 @@ import type { WatchSeams } from '../fs/watch-seam.ts';
 import { diagramsDirOf, parseDiagram, readDiagram, viewFilePathIn, writeDiagram } from './project-files.ts';
 import { ProjectError, type ProjectStore } from './project-store.ts';
 import { ProjectViewFileStore, type ViewFileKind } from './view-file-store.ts';
+import { CodedError } from '../coded-error.ts';
 
 type DiagramErrorCode = 'project-not-found' | 'diagram-not-found' | 'diagram-invalid' | 'rev-conflict';
 
-export class DiagramError extends Error {
-    readonly code: DiagramErrorCode;
-
-    constructor(code: DiagramErrorCode, message: string) {
-        super(message);
-        this.name = 'DiagramError';
-        this.code = code;
-    }
-}
+export class DiagramError extends CodedError<DiagramErrorCode> {}
 
 const DIAGRAM_FILES: ViewFileKind<DiagramDocument, DiagramContent> = {
     noun: 'diagram',

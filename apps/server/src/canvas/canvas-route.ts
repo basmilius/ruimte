@@ -3,6 +3,7 @@ import { ProjectError } from '../projects/project-store.ts';
 import { VerbRefusal, type CanvasHost } from './verb.ts';
 import { verbNamed, verbSummaryLines } from './verbs.ts';
 import { errorText } from '../error-text.ts';
+import { refusalBody } from '../refusal.ts';
 
 export const CANVAS_PATH = '/canvas';
 
@@ -13,7 +14,7 @@ const TEXT = { 'content-type': 'text/plain; charset=utf-8' };
 const text = (lines: string[], status = 200): Response => new Response(lines.length === 0 ? '' : `${lines.join('\n')}\n`, { status, headers: TEXT });
 
 const refusal = (code: string, message: string, lines: string[] = [], status = 422): Response =>
-    text([`refused\t${code}\t${message.replace(/[\t\r\n]+/g, ' ')}`, ...lines], status);
+    new Response(`${refusalBody(code, message, lines)}\n`, { status, headers: TEXT });
 
 /*
  * A name with a space in it is a caller that quoted the whole line ("help agent"), which otherwise
@@ -79,6 +80,6 @@ export const handleCanvasRequest = async (request: Request, pathname: string, de
             return refusal(e.code, e.message);
         }
         console.error(`Canvas verb ${name} failed:`, errorText(e));
-        return new Response(`The verb failed: ${e instanceof Error ? e.message : 'unknown error'}`, { status: 500, headers: TEXT });
+        return new Response(`The verb failed: ${errorText(e)}`, { status: 500, headers: TEXT });
     }
 };

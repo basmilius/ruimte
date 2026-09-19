@@ -1,27 +1,16 @@
-import { RequestError, sendEvent, type Dispatcher } from '../dispatcher.ts';
+import { RequestError, sendEvent, translate, type Dispatcher } from '../dispatcher.ts';
 import { GitActions } from '../git/actions.ts';
 import { readCapabilities } from '../git/capabilities.ts';
 import { diffCheckout, diffCommit, diffFile } from '../git/diff.ts';
 import { readLog } from '../git/log.ts';
 import { suggestMessage } from '../git/message.ts';
 import { listRefs } from '../git/refs.ts';
-import { GitError } from '../git/run.ts';
 import { discardPaths, stagePaths, unstagePaths } from '../git/stage.ts';
 import type { GitStatusWatcher } from '../git/status-watcher.ts';
 import { mergeBaseWith } from '../git/status.ts';
 import type { WorktreeMerge } from '../git/worktree-merge.ts';
 import type { Worktrees } from '../git/worktrees.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
-
-const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
-    Promise.resolve()
-        .then(work)
-        .catch((e: unknown) => {
-            if (e instanceof GitError) {
-                throw new RequestError(e.code, e.message);
-            }
-            throw e;
-        });
 
 export const registerGitHandlers = (
     dispatcher: Dispatcher,

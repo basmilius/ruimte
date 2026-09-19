@@ -1,4 +1,5 @@
 import { FS_GREP_CONTEXT_LINES, FS_GREP_MAX_RESULTS, type FsGrepMatch, type FsGrepResult } from '@ruimte/contracts';
+import { CodedError } from '../coded-error.ts';
 import { listSearchableFiles } from './search.ts';
 
 // A file larger than this is generated, minified or data; searching it costs more than it answers.
@@ -13,15 +14,9 @@ export interface GrepOptions {
     limit?: number;
 }
 
-export class GrepError extends Error {
-    readonly code: string;
+type GrepErrorCode = 'invalid-query';
 
-    constructor(code: string, message: string) {
-        super(message);
-        this.name = 'GrepError';
-        this.code = code;
-    }
-}
+export class GrepError extends CodedError<GrepErrorCode> {}
 
 const escapeLiteral = (query: string): string => query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 

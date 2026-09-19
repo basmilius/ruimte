@@ -1,10 +1,10 @@
 import { renderDiagram } from '../render/scenes.ts';
 import type { Dispatcher } from '../dispatcher.ts';
-import { DiagramError, type DiagramStore } from '../projects/diagram-store.ts';
+import type { DiagramStore } from '../projects/diagram-store.ts';
 import { viewFileHandlers } from './view-files.ts';
 
 export const registerDiagramHandlers = (dispatcher: Dispatcher, store: DiagramStore): void => {
-    const handlers = viewFileHandlers(store, (e) => (e instanceof DiagramError ? e : null));
+    const handlers = viewFileHandlers(store);
 
     dispatcher.register('diagram.layout', (payload) => handlers.scene(payload, renderDiagram));
     dispatcher.register('diagram.open', handlers.open);

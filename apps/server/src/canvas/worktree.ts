@@ -1,5 +1,6 @@
 import type { Worktree } from '@ruimte/contracts';
 import { VerbRefusal, type VerbCall } from './verb.ts';
+import { errorText } from '../error-text.ts';
 
 export const WORKTREE_LINES: readonly string[] = [
     "worktree\tEach agent gets a git worktree of its own under the machine's worktrees folder, on a new branch from HEAD, and starts in it; two agents editing the same file never overwrite each other",
@@ -66,7 +67,7 @@ export const makeWorktrees = async (
             }
         } catch (e) {
             await undo();
-            throw new VerbRefusal('worktree-failed', `The worktree for ${branch} could not be made: ${e instanceof Error ? e.message : String(e)}`);
+            throw new VerbRefusal('worktree-failed', `The worktree for ${branch} could not be made: ${errorText(e)}`);
         }
     }
     return { worktrees, undo };

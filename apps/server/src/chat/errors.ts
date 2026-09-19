@@ -1,3 +1,5 @@
+import { CodedError } from '../coded-error.ts';
+
 type ChatErrorCode =
     | 'history-expired'
     | 'chat-not-found'
@@ -23,12 +25,4 @@ type ChatErrorCode =
     | 'not-a-fork'
     | 'original-gone';
 
-export class ChatError extends Error {
-    readonly code: ChatErrorCode;
-
-    constructor(code: ChatErrorCode, message: string) {
-        super(message);
-        this.name = 'ChatError';
-        this.code = code;
-    }
-}
+export class ChatError extends CodedError<ChatErrorCode> {}

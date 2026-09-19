@@ -1,17 +1,10 @@
 import { stat } from 'node:fs/promises';
 import { BYTES_READ_MAX_BYTES, type BytesReadPayload, type BytesReadResult, type ByteResource, type ChatAttachment } from '@ruimte/contracts';
+import { CodedError } from '../coded-error.ts';
 
 type BytesErrorCode = 'not-found' | 'too-large' | 'bad-offset';
 
-export class BytesError extends Error {
-    readonly code: BytesErrorCode;
-
-    constructor(code: BytesErrorCode, message: string) {
-        super(message);
-        this.name = 'BytesError';
-        this.code = code;
-    }
-}
+export class BytesError extends CodedError<BytesErrorCode> {}
 
 /*
  * The lookups the HTTP routes make, and nothing more: an attachment only as a chat's thread names it,

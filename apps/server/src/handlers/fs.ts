@@ -1,21 +1,11 @@
-import { RequestError, type Dispatcher } from '../dispatcher.ts';
-import { BrowseError, browseDirectories } from '../fs/browse.ts';
-import { ListError, listDirectory } from '../fs/list.ts';
-import { ReadError, readFile } from '../fs/read.ts';
-import { RevealError, revealInFileManager } from '../fs/reveal.ts';
-import { GrepError, grepFiles } from '../fs/grep.ts';
+import { translate, type Dispatcher } from '../dispatcher.ts';
+import { browseDirectories } from '../fs/browse.ts';
+import { listDirectory } from '../fs/list.ts';
+import { readFile } from '../fs/read.ts';
+import { revealInFileManager } from '../fs/reveal.ts';
+import { grepFiles } from '../fs/grep.ts';
 import { searchFiles } from '../fs/search.ts';
 import type { FolderWatcher } from '../fs/watch.ts';
-
-const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
-    Promise.resolve()
-        .then(work)
-        .catch((e: unknown) => {
-            if (e instanceof BrowseError || e instanceof GrepError || e instanceof ListError || e instanceof ReadError || e instanceof RevealError) {
-                throw new RequestError(e.code, e.message);
-            }
-            throw e;
-        });
 
 export const registerFsHandlers = (dispatcher: Dispatcher, watcher: FolderWatcher): void => {
     dispatcher.register('fs.browse', (payload) => translate(() => browseDirectories(payload.partialPath, payload.cwd, { hidden: payload.hidden })));

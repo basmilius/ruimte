@@ -1,7 +1,6 @@
-import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { RecordDirectory } from '../record-directory.ts';
 import { z } from 'zod';
-import { isNotFound, writeAtomic } from '../fs.ts';
 
 /*
  * The longest first prompt a verb takes. A terminal agent is started by a line the daemon types
@@ -21,9 +20,6 @@ const PendingPromptSchema = z.object({
 
 type PendingPrompt = z.infer<typeof PendingPromptSchema>;
 
-// The id is a node id the client chose, so it is encoded before it becomes a file name.
-const fileName = (nodeId: string): string => `${encodeURIComponent(nodeId)}.json`;
-
 /*
  * The first prompt of an agent node, held against the node id until the session or the chat for it
  * comes into being. It does not belong in `project.json`: the prompt is not part of the canvas two
@@ -32,48 +28,20 @@ const fileName = (nodeId: string): string => `${encodeURIComponent(nodeId)}.json
  */
 export class PendingPromptStore {
     readonly dir: string;
-    private readonly pending = new Map<string, PendingPrompt>();
+    private readonly pending: RecordDirectory<PendingPrompt>;
 
     constructor(home: string) {
         this.dir = join(home, 'prompts');
+        this.pending = new RecordDirectory({ dir: this.dir, schema: PendingPromptSchema, idOf: (entry) => entry.nodeId });
     }
 
     /* Reads what an earlier run of the daemon was still holding. Call before anything can take one. */
-    async load(): Promise<void> {
-        let names: string[];
-        try {
-            names = await readdir(this.dir);
-        } catch (e) {
-            if (isNotFound(e)) {
-                return;
-            }
-            throw e;
-        }
-        for (const name of names) {
-            if (!name.endsWith('.json')) {
-                continue;
-            }
-            const raw = await readFile(join(this.dir, name), 'utf8').catch(() => null);
-            if (raw === null) {
-                continue;
-            }
-            let parsed: ReturnType<typeof PendingPromptSchema.safeParse>;
-            try {
-                parsed = PendingPromptSchema.safeParse(JSON.parse(raw));
-            } catch {
-                continue;
-            }
-            if (parsed.success) {
-                this.pending.set(parsed.data.nodeId, parsed.data);
-            }
-        }
+    load(): Promise<void> {
+        return this.pending.load();
     }
 
     async put(projectId: string, nodeId: string, prompt: string): Promise<void> {
-        const entry: PendingPrompt = { projectId, nodeId, prompt, createdAt: Date.now() };
-        await mkdir(this.dir, { recursive: true, mode: 0o700 });
-        await writeAtomic(join(this.dir, fileName(nodeId)), JSON.stringify(entry));
-        this.pending.set(nodeId, entry);
+        await this.pending.write({ projectId, nodeId, prompt, createdAt: Date.now() });
     }
 
     /*
@@ -86,8 +54,7 @@ export class PendingPromptStore {
         if (!entry) {
             return null;
         }
-        this.pending.delete(nodeId);
-        await rm(join(this.dir, fileName(nodeId)), { force: true });
+        await this.pending.remove(nodeId);
         return entry.prompt;
     }
 
@@ -96,12 +63,7 @@ export class PendingPromptStore {
     }
 
     /* Drops what this project was holding for ids it no longer has: the node was deleted before anyone ran it. */
-    async prune(projectId: string, ids: ReadonlySet<string>): Promise<void> {
-        for (const entry of [...this.pending.values()]) {
-            if (entry.projectId === projectId && !ids.has(entry.nodeId)) {
-                this.pending.delete(entry.nodeId);
-                await rm(join(this.dir, fileName(entry.nodeId)), { force: true });
-            }
-        }
+    prune(projectId: string, ids: ReadonlySet<string>): Promise<void> {
+        return this.pending.prune((entry) => entry.projectId === projectId && !ids.has(entry.nodeId));
     }
 }

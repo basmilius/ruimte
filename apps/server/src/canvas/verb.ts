@@ -16,20 +16,15 @@ import type { NoticeDelivery, Notice } from '../context/notices.ts';
 import type { PlanStore } from '../plans/plan-store.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
+import { CodedError } from '../coded-error.ts';
+import { field } from '../refusal.ts';
 import { parseArgv } from './argv.ts';
 
-/* A verb said no. The code is for a script, the message for the agent, the lines for what it can pick instead. */
-export class VerbRefusal extends Error {
-    readonly code: string;
-    readonly lines: string[];
+// The verbs reach the one sanitizer through the toolkit they already import.
+export { field } from '../refusal.ts';
 
-    constructor(code: string, message: string, lines: string[] = []) {
-        super(message);
-        this.name = 'VerbRefusal';
-        this.code = code;
-        this.lines = lines;
-    }
-}
+/* A verb said no. The code is for a script, the message for the agent, the lines for what it can pick instead. */
+export class VerbRefusal extends CodedError {}
 
 /* What a verb reaches the daemon through; an interface so a test can hand in a store of its own. */
 export interface CanvasHost {
@@ -318,9 +313,6 @@ export const placeOf = (call: VerbCall): IndexedPlace => {
     }
     return place;
 };
-
-/* A field that goes into a tab-separated line; a tab or a newline in a title would split the row. */
-export const field = (value: string): string => value.replace(/[\t\r\n]+/g, ' ');
 
 /*
  * What a name on the canvas fits in: a node title, the label of a group, the word on a line. Past

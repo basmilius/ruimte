@@ -1,8 +1,11 @@
 import { Buffer } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
 import type { DeviceAction, DeviceFrame, DeviceInfo, DeviceInput, DeviceOpenResult, DevicePlatform, DeviceSettings, LiveStreamFrame } from '@ruimte/contracts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { LiveStreamHub, type LiveFrameSource } from '../streams/live-stream.ts';
+import { CodedError } from '../coded-error.ts';
+import { FrameFanout, streamKeyOf } from '../streams/frame-fanout.ts';
+import { ClientSinks } from '../client-sinks.ts';
 
 export interface DeviceSource extends LiveFrameSource {
     input(input: DeviceInput): void | Promise<void>;
@@ -27,41 +30,53 @@ interface DeviceSession {
     unregister: () => void;
 }
 
-interface FrameSubscription {
-    cancelled: boolean;
-    release: (() => void) | null;
-}
+/* Every code a device failure reaches a client with, the helper's own among them. */
+const DEVICE_ERROR_CODES = [
+    'device-action-unavailable',
+    'device-capture-failed',
+    'device-capture-unavailable',
+    'device-input-unavailable',
+    'device-not-booted',
+    'device-not-found',
+    'device-not-open',
+    'device-tools-unavailable',
+    'platform-unavailable',
+    'invalid-devicectl-output',
+    'invalid-simctl-output',
+    'devicectl-failed',
+    'devicectl-unavailable',
+    'simctl-failed',
+    'simctl-unavailable',
+    'device-helper-exited',
+    'device-helper-failed',
+    'device-helper-native',
+    'device-helper-protocol',
+    'device-helper-running',
+    'device-helper-unavailable',
+    'device-not-streaming'
+] as const;
 
-export class DeviceError extends Error {
-    readonly code: string;
+export type DeviceErrorCode = (typeof DEVICE_ERROR_CODES)[number];
 
-    constructor(code: string, message: string) {
-        super(message);
-        this.name = 'DeviceError';
-        this.code = code;
-    }
-}
+const isDeviceErrorCode = (code: string): code is DeviceErrorCode => (DEVICE_ERROR_CODES as readonly string[]).includes(code);
+
+export class DeviceError extends CodedError<DeviceErrorCode> {}
 
 export class DeviceManager {
     readonly streams: LiveStreamHub;
     private readonly backends: Map<string, DeviceBackend>;
     private readonly sessions = new Map<string, DeviceSession>();
-    private readonly sinks = new Map<string, SessionSink>();
-    private readonly frameSubscriptions = new Map<string, Map<string, FrameSubscription>>();
+    private readonly sinks = new ClientSinks();
+    private readonly frames: FrameFanout;
 
     constructor(backends: DeviceBackend[], streams = new LiveStreamHub()) {
         this.backends = new Map(backends.map((backend) => [backend.id, backend]));
         this.streams = streams;
+        this.frames = new FrameFanout(streams, this.sinks);
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
-        this.sinks.set(clientId, sink);
-        // A client that subscribes again before it unsubscribes keeps its newer sink.
-        return () => {
-            if (this.sinks.get(clientId) === sink) {
-                this.sinks.delete(clientId);
-            }
-        };
+        return this.sinks.subscribe(clientId, sink);
     }
 
     async list(): Promise<DeviceInfo[]> {
@@ -138,7 +153,7 @@ export class DeviceManager {
             if (stream === 'events') {
                 await this.startFrameEvents(session, clientId);
             } else {
-                this.stopFrameEvents(key, clientId);
+                this.frames.stop(key, clientId);
             }
         } catch (error) {
             session.clients.delete(clientId);
@@ -150,13 +165,13 @@ export class DeviceManager {
     detach(backendId: string, deviceId: string, clientId: string): void {
         const key = sessionKey(backendId, deviceId);
         this.sessions.get(key)?.clients.delete(clientId);
-        this.stopFrameEvents(key, clientId);
+        this.frames.stop(key, clientId);
     }
 
     detachAll(clientId: string): void {
         for (const [key, session] of [...this.sessions]) {
             session.clients.delete(clientId);
-            this.stopFrameEvents(key, clientId);
+            this.frames.stop(key, clientId);
             // The source keeps producing frames while it is registered, so the last client leaving ends the session.
             if (session.clients.size === 0) {
                 this.destroy(key);
@@ -192,42 +207,11 @@ export class DeviceManager {
 
     private async startFrameEvents(session: DeviceSession, clientId: string): Promise<void> {
         const key = sessionKey(session.info.backendId, session.info.deviceId);
-        this.stopFrameEvents(key, clientId);
-        const subscription: FrameSubscription = { cancelled: false, release: null };
-        const byClient = this.frameSubscriptions.get(key) ?? new Map<string, FrameSubscription>();
-        byClient.set(clientId, subscription);
-        this.frameSubscriptions.set(key, byClient);
+        const events = (frame: LiveStreamFrame): SessionEvent => ({ event: 'device.frame', payload: eventFrame(session.info, frame) });
         try {
-            const release = await this.streams.subscribe(session.streamId, (frame) => {
-                if (!subscription.cancelled) {
-                    this.sinks.get(clientId)?.({ event: 'device.frame', payload: eventFrame(session.info, frame) });
-                }
-            });
-            if (subscription.cancelled) {
-                release();
-            } else {
-                subscription.release = release;
-            }
+            await this.frames.start(key, session.streamId, clientId, events);
         } catch (error) {
-            byClient.delete(clientId);
-            if (byClient.size === 0) {
-                this.frameSubscriptions.delete(key);
-            }
             throw this.sourceError(error);
-        }
-    }
-
-    private stopFrameEvents(key: string, clientId: string): void {
-        const byClient = this.frameSubscriptions.get(key);
-        const subscription = byClient?.get(clientId);
-        if (!byClient || !subscription) {
-            return;
-        }
-        subscription.cancelled = true;
-        subscription.release?.();
-        byClient.delete(clientId);
-        if (byClient.size === 0) {
-            this.frameSubscriptions.delete(key);
         }
     }
 
@@ -237,9 +221,7 @@ export class DeviceManager {
             return;
         }
         this.sessions.delete(key);
-        for (const clientId of [...session.clients]) {
-            this.stopFrameEvents(key, clientId);
-        }
+        this.frames.stopAll(key);
         session.unregister();
     }
 
@@ -247,14 +229,15 @@ export class DeviceManager {
         if (error instanceof DeviceError) {
             return error;
         }
-        if (error instanceof Error && 'code' in error && typeof error.code === 'string') {
+        // The capture helper names its own failures; a code from anywhere else is not one a client knows.
+        if (error instanceof Error && 'code' in error && typeof error.code === 'string' && isDeviceErrorCode(error.code)) {
             return new DeviceError(error.code, error.message);
         }
         return new DeviceError('device-helper-failed', error instanceof Error ? error.message : 'The device capture helper failed');
     }
 }
 
-const sessionKey = (backendId: string, deviceId: string): string => JSON.stringify([backendId, deviceId]);
+const sessionKey = (backendId: string, deviceId: string): string => streamKeyOf(backendId, deviceId);
 
 const eventFrame = (device: DeviceInfo, frame: LiveStreamFrame): DeviceFrame => ({
     deviceId: device.deviceId,

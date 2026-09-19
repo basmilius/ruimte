@@ -6,6 +6,7 @@ import type { ApprovalDecision, BackendEvent, BackendHost, BackendLaunch, ChatBa
 import { CodexProtocol } from './codex-protocol.ts';
 import { attachmentNote } from './input.ts';
 import { CodexTransport, type CodexFrame } from './codex-transport.ts';
+import { errorText } from '../error-text.ts';
 
 // After stdin closed, an app-server that is still around is not going to say more.
 const EXIT_GRACE_MS = 3000;
@@ -13,8 +14,6 @@ const EXIT_GRACE_MS = 3000;
 const CLIENT_INFO = { name: 'ruimte', title: 'Ruimte', version: '0.1.0' };
 
 const textInput = (text: string) => [{ type: 'text', text, text_elements: [] }];
-
-const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -102,7 +101,7 @@ export class CodexBackend implements ChatBackend {
                 this.contextPending = contextPrompt(this.launch.context);
             } catch (error) {
                 // The thread is gone from Codex's store; a fresh one keeps the chat usable.
-                this.emit({ type: 'note', level: 'warning', text: `Codex could not resume its thread (${reason(error)}). Started a new one.` });
+                this.emit({ type: 'note', level: 'warning', text: `Codex could not resume its thread (${errorText(error)}). Started a new one.` });
                 result = await transport.request('thread/start', { ...params, developerInstructions });
             }
         } else {
@@ -287,7 +286,7 @@ export class CodexBackend implements ChatBackend {
         }
         void transport.request(method, params).catch((error: unknown) => {
             if (this.transport === transport) {
-                this.emit({ type: 'failed', message: reason(error) });
+                this.emit({ type: 'failed', message: errorText(error) });
             }
         });
     }

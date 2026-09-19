@@ -1,4 +1,4 @@
-import { int, type UsageRecord } from '../record.ts';
+import { asObject, asString, int, type UsageRecord } from '../record.ts';
 
 /* A `token_count` line carries the counts; the other two carry the model and the directory they belong to. */
 export const codexMightCarryUsage = (line: string): boolean => line.includes('token_count') || line.includes('turn_context') || line.includes('session_meta');
@@ -46,10 +46,6 @@ export const createCodexState = (): CodexParserState => ({
 });
 
 export const cloneCodexState = (state: CodexParserState): CodexParserState => ({ ...state, total: state.total === null ? null : { ...state.total } });
-
-const asObject = (value: unknown): Record<string, unknown> | null => (typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null);
-
-const asString = (value: unknown): string => (typeof value === 'string' ? value : '');
 
 const countsOf = (usage: Record<string, unknown>): CodexCounts => ({
     input: int(usage.input_tokens),

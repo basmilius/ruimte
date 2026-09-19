@@ -5,6 +5,7 @@ import { mkdir } from 'node:fs/promises';
 import type { AgentKind } from '@ruimte/contracts';
 import { isNotFound, writeAtomic } from '../fs.ts';
 import { HOOK_EVENTS } from './hooks.ts';
+import { errorText } from '../error-text.ts';
 
 // The one string the installer recognizes its own hook by, across versions of the command.
 export const HOOK_MARKER = 'RUIMTE_HOOK_URL';
@@ -127,7 +128,7 @@ export const installHooks = async (path: string, kind: AgentKind): Promise<Insta
         existing = JSON.parse(await readFile(path, 'utf8'));
     } catch (e) {
         if (!isNotFound(e)) {
-            throw new Error(`Cannot read ${path}: ${e instanceof Error ? e.message : String(e)}`);
+            throw new Error(`Cannot read ${path}: ${errorText(e)}`);
         }
     }
     const { config, changed } = mergeHooks(existing, kind);
@@ -164,7 +165,7 @@ export const installCodexRules = async (path: string): Promise<InstallResult> =>
         }
     } catch (e) {
         if (!isNotFound(e)) {
-            throw new Error(`Cannot read ${path}: ${e instanceof Error ? e.message : String(e)}`);
+            throw new Error(`Cannot read ${path}: ${errorText(e)}`);
         }
     }
     await mkdir(dirname(path), { recursive: true });

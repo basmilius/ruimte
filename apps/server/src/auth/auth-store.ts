@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { isNotFound, writeAtomic } from '../fs.ts';
 import { isPublicKey } from '@ruimte/pulsar/verify-node';
 import { errorText } from '../error-text.ts';
+import { Serializer } from '../serializer.ts';
 
 // A pairing URL that nobody used in ten minutes is not going to be.
 export const PAIRING_TTL_MS = 10 * 60 * 1000;
@@ -88,7 +89,7 @@ export type StatementAdmission = { sessionId: string; created: boolean } | { ref
 export class AuthStore {
     readonly path: string;
     private state: State | null = null;
-    private writes: Promise<void> = Promise.resolve();
+    private readonly writes = new Serializer();
     private pairing: Pairing | null = null;
     private readonly now: () => number;
 
@@ -300,13 +301,9 @@ export class AuthStore {
     private async save(state: State): Promise<void> {
         this.state = state;
         const text = `${JSON.stringify(state, null, 2)}\n`;
-        const write = this.writes
-            .catch(() => undefined)
-            .then(async () => {
-                await mkdir(join(this.path, '..'), { recursive: true, mode: 0o700 });
-                await writeAtomic(this.path, text);
-            });
-        this.writes = write;
-        await write;
+        await this.writes.run(async () => {
+            await mkdir(join(this.path, '..'), { recursive: true, mode: 0o700 });
+            await writeAtomic(this.path, text);
+        });
     }
 }

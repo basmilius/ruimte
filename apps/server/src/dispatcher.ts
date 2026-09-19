@@ -10,6 +10,7 @@ import {
     type RequestType,
     type ServerFrame
 } from '@ruimte/contracts';
+import { CodedError } from './coded-error.ts';
 
 export interface ClientAccess {
     reachability: 'loopback' | 'lan' | 'tunnel' | 'public';
@@ -34,15 +35,21 @@ type Handler<T extends RequestType> = (
 ) => RequestMap[T]['result'] | Promise<RequestMap[T]['result']>;
 
 // Thrown by a handler to answer with a specific error code instead of a generic failure.
-export class RequestError extends Error {
-    readonly code: string;
+export class RequestError extends CodedError {}
 
-    constructor(code: string, message: string) {
-        super(message);
-        this.name = 'RequestError';
-        this.code = code;
-    }
-}
+/*
+ * What a handler runs its work through: a failure that carries a code answers under it, and anything
+ * else stays an internal error for the dispatcher to report.
+ */
+export const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
+    Promise.resolve()
+        .then(work)
+        .catch((e: unknown) => {
+            if (e instanceof CodedError) {
+                throw new RequestError(e.code, e.message);
+            }
+            throw e;
+        });
 
 const errorReply = (id: string | null, code: string, message: string): ReplyError => ({
     id,

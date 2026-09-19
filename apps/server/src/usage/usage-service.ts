@@ -7,6 +7,7 @@ import type { KnownProject } from './projects.ts';
 import { UsageScanner, type ScanReport } from './scanner.ts';
 import type { UsageRootPath } from './roots.ts';
 import { errorText } from '../error-text.ts';
+import { ClientSinks } from '../client-sinks.ts';
 
 /* A scan this fresh answers the question the page is asking, so nothing is opened for it. */
 const SCAN_TTL_MS = 60_000;
@@ -33,7 +34,7 @@ export class UsageService {
     private readonly prices: PriceBook;
     private readonly rates: ExchangeRates;
     private readonly knownProjects: UsageServiceOptions['knownProjects'];
-    private readonly sinks = new Map<string, SessionSink>();
+    private readonly sinks = new ClientSinks((clientId) => this.unfollow(clientId));
     private readonly followers = new Set<string>();
     private report: ScanReport = EMPTY_SCAN;
     private failed = false;
@@ -48,13 +49,7 @@ export class UsageService {
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
-        this.sinks.set(clientId, sink);
-        return () => {
-            if (this.sinks.get(clientId) === sink) {
-                this.sinks.delete(clientId);
-            }
-            this.unfollow(clientId);
-        };
+        return this.sinks.subscribe(clientId, sink);
     }
 
     /* The page is open here: keep the numbers moving until it closes or the socket does. */
@@ -138,8 +133,6 @@ export class UsageService {
     }
 
     private emit(event: SessionEvent): void {
-        for (const sink of this.sinks.values()) {
-            sink(event);
-        }
+        this.sinks.emit(event);
     }
 }

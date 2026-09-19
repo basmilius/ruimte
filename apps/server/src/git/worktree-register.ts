@@ -2,6 +2,7 @@ import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { isNotFound, writeAtomic } from '../fs.ts';
+import { Serializer } from '../serializer.ts';
 
 const RecordSchema = z.object({
     branch: z.string().min(1),
@@ -33,8 +34,7 @@ const FILE_NAME = 'worktrees.json';
 export class WorktreeRegister {
     readonly file: string;
     private readonly dir: string;
-    // One write at a time, so two changes in a row never read the same file and drop one of them.
-    private chain: Promise<unknown> = Promise.resolve();
+    private readonly writes = new Serializer();
 
     constructor(dir: string) {
         this.dir = dir;
@@ -84,7 +84,7 @@ export class WorktreeRegister {
     }
 
     async update(change: (records: Map<string, WorktreeRecord>) => void): Promise<void> {
-        const next = this.chain.then(async () => {
+        await this.writes.run(async () => {
             const records = await this.read();
             const before = JSON.stringify([...records]);
             change(records);
@@ -94,7 +94,5 @@ export class WorktreeRegister {
             await mkdir(this.dir, { recursive: true, mode: 0o700 });
             await writeAtomic(this.file, `${JSON.stringify({ version: 1, worktrees: Object.fromEntries(records) }, null, 2)}\n`);
         });
-        this.chain = next.catch(() => undefined);
-        await next;
     }
 }

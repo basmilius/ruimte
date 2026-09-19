@@ -24,6 +24,7 @@ import { ChatError } from './errors.ts';
 import { ThreadProjector } from './projector.ts';
 import type { SubagentSettlement } from './subagent-settlement.ts';
 import { ChatThread } from './thread.ts';
+import { errorText } from '../error-text.ts';
 
 interface ChatSessionOptions {
     info: ChatInfo;
@@ -72,8 +73,6 @@ export const RESUME_PROMPT = 'The machine restarted while you were working on th
 export const PLAN_RESUME_PREAMBLE = 'You keep a plan in this chat: ruimte-context plan read shows where you were.';
 
 const newId = (prefix: string): string => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
 /*
  * Provider-neutral chat state. Backends live between turns and resume by CLI session id after a
@@ -830,7 +829,7 @@ export class ChatSession {
                     work(started);
                 }
             })
-            .catch((error: unknown) => this.receive(this.generation, { type: 'failed', message: reason(error) }));
+            .catch((error: unknown) => this.receive(this.generation, { type: 'failed', message: errorText(error) }));
     }
 
     private ensureBackend(): Promise<ChatBackend> {

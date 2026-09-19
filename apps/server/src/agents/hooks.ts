@@ -42,7 +42,8 @@ const NOTIFICATION_STATUS: Record<string, AgentStatus> = {
     idle_prompt: 'idle'
 };
 
-const asString = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
+/* A field a CLI wrote in its hook payload; an empty one says as little as a missing one. */
+export const asString = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
 
 // Events to install a hook for; the receiver ignores anything else, so an extra event costs nothing but a POST.
 // A kind without an entry has no normalizer yet: it launches in a terminal and reports no agent status.

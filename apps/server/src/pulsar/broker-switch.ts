@@ -1,5 +1,6 @@
 import { effectiveBrokerUrl, type BrokerOverride, type BrokerSetting, type IceServer } from '@ruimte/pulsar';
 import type { Relay } from '../auth/relay.ts';
+import { Serializer } from '../serializer.ts';
 
 export interface BrokerSwitchOptions {
     /* What `--broker`, `--no-broker` or `RUIMTE_BROKER_URL` forced; null leaves it to the setting. */
@@ -30,7 +31,7 @@ export class BrokerSwitch implements Relay {
     private url: string | null = null;
     private local: { host: string; port: number } | null = null;
     private stopped = false;
-    private queue: Promise<void> = Promise.resolve();
+    private readonly queue = new Serializer();
 
     constructor(options: BrokerSwitchOptions) {
         this.options = options;
@@ -64,13 +65,12 @@ export class BrokerSwitch implements Relay {
 
     /* Brings the running relay in line with the effective URL; before `publish` there is nothing to start yet. */
     apply(): Promise<void> {
-        this.queue = this.queue.then(() => this.settle());
-        return this.queue;
+        return this.queue.run(() => this.settle());
     }
 
     async stop(): Promise<void> {
         this.stopped = true;
-        await this.queue;
+        await this.queue.idle();
         await this.relay?.stop();
         this.relay = null;
     }

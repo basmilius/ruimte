@@ -1,3 +1,5 @@
+import { CodedError } from '../coded-error.ts';
+
 export interface GitResult {
     code: number;
     stdout: string;
@@ -24,15 +26,7 @@ export type GitErrorCode =
     | 'agent-working'
     | 'merge-conflict';
 
-export class GitError extends Error {
-    readonly code: GitErrorCode;
-
-    constructor(code: GitErrorCode, message: string) {
-        super(message);
-        this.name = 'GitError';
-        this.code = code;
-    }
-}
+export class GitError extends CodedError<GitErrorCode> {}
 
 /* One git call in a directory, with its exit code kept: `check-ignore` answers 1 for "nothing
    matched", which is a result and not a failure. A git that cannot start reads as code 128, the

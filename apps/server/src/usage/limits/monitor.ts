@@ -3,6 +3,7 @@ import type { ProviderRegistry } from '../../providers/registry.ts';
 import type { SessionEvent, SessionSink } from '../../sessions/manager.ts';
 import { mergeWindows, type LimitsUpdate } from './normalize.ts';
 import { probeClaude, probeCodex, type ProbeResult } from './probe.ts';
+import { ClientSinks } from '../../client-sinks.ts';
 
 /* Often enough that a bar is never far behind, rarely enough that two CLIs are not started all day. */
 const PROBE_INTERVAL_MS = 5 * 60_000;
@@ -42,7 +43,7 @@ export interface UsageMonitorOptions {
 export class UsageMonitor {
     private readonly registry: ProviderRegistry;
     private readonly probe: NonNullable<UsageMonitorOptions['probe']>;
-    private readonly sinks = new Map<string, SessionSink>();
+    private readonly sinks = new ClientSinks();
     private readonly states = new Map<UsageProvider, ProviderState>();
     private inFlight: Promise<void> | null = null;
     private timer: ReturnType<typeof setInterval> | null = null;
@@ -56,12 +57,7 @@ export class UsageMonitor {
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
-        this.sinks.set(clientId, sink);
-        return () => {
-            if (this.sinks.get(clientId) === sink) {
-                this.sinks.delete(clientId);
-            }
-        };
+        return this.sinks.subscribe(clientId, sink);
     }
 
     snapshot(): UsageLimitsSnapshot {
@@ -145,8 +141,6 @@ export class UsageMonitor {
 
     private emit(): void {
         const event: SessionEvent = { event: 'usage.limitsChanged', payload: this.snapshot() };
-        for (const sink of this.sinks.values()) {
-            sink(event);
-        }
+        this.sinks.emit(event);
     }
 }

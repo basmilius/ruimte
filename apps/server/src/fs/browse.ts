@@ -3,18 +3,11 @@ import { homedir } from 'node:os';
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
 import type { FsBrowseResult } from '@ruimte/contracts';
 import { PROJECT_DIR, PROJECT_FILE } from '../projects/project-files.ts';
+import { CodedError } from '../coded-error.ts';
 
 type BrowseErrorCode = 'cwd-required' | 'windows-path';
 
-export class BrowseError extends Error {
-    readonly code: BrowseErrorCode;
-
-    constructor(code: BrowseErrorCode, message: string) {
-        super(message);
-        this.name = 'BrowseError';
-        this.code = code;
-    }
-}
+export class BrowseError extends CodedError<BrowseErrorCode> {}
 
 interface BrowseOptions {
     home?: string;

@@ -41,20 +41,15 @@ import {
     PROJECT_FILE
 } from './project-files.ts';
 import { ProjectIndex } from './project-index.ts';
-import { IdentityCache, readIdeaName, sniffMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
+import { IdentityCache, readIdeaName, sniffIconMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
 import { errorText } from '../error-text.ts';
+import { CodedError } from '../coded-error.ts';
+import { ClientSinks } from '../client-sinks.ts';
+import { Serializer } from '../serializer.ts';
 
 type ProjectErrorCode = 'project-not-found' | 'project-missing' | 'project-invalid' | 'rev-conflict' | 'folder-not-found' | 'folder-create-failed' | 'bad-icon';
 
-export class ProjectError extends Error {
-    readonly code: ProjectErrorCode;
-
-    constructor(code: ProjectErrorCode, message: string) {
-        super(message);
-        this.name = 'ProjectError';
-        this.code = code;
-    }
-}
+export class ProjectError extends CodedError<ProjectErrorCode> {}
 
 const RegistryEntrySchema = z.object({
     projectId: z.string().min(1),
@@ -139,7 +134,7 @@ export class ProjectStore {
     readonly home: string;
     /* Every known project's last document, which outlives `release`: the sessions of a project keep running after a client lets go of it. */
     readonly index = new ProjectIndex();
-    private readonly sinks = new Map<string, SessionSink>();
+    private readonly sinks = new ClientSinks((clientId) => this.viewers.delete(clientId));
     private readonly open = new Map<string, OpenProject>();
     /* Which client has which project on screen. `project.changed` goes to every socket, since a
        client that let go of a project may still hold its document, but showing a view is aimed at a
@@ -150,7 +145,7 @@ export class ProjectStore {
     private drawings: ProjectViewFiles | null = null;
     private diagrams: ProjectViewFiles | null = null;
     // Registry changes run one after the other; two clients opening at once must not lose an entry.
-    private chain: Promise<unknown> = Promise.resolve();
+    private readonly writes = new Serializer();
 
     private readonly seams: WatchSeams;
 
@@ -170,13 +165,7 @@ export class ProjectStore {
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
-        this.sinks.set(clientId, sink);
-        return () => {
-            if (this.sinks.get(clientId) === sink) {
-                this.sinks.delete(clientId);
-                this.viewers.delete(clientId);
-            }
-        };
+        return this.sinks.subscribe(clientId, sink);
     }
 
     /* This client put the project on screen, which is what makes it one `showView` reaches. */
@@ -443,9 +432,9 @@ export class ProjectStore {
      */
     showView(projectId: string, viewId: string, by: string): boolean {
         let told = 0;
-        for (const [clientId, sink] of this.sinks) {
+        for (const clientId of this.sinks.clientIds()) {
             if (this.viewers.get(clientId)?.has(projectId) === true) {
-                sink({ event: 'project.showView', payload: { projectId, viewId, by } });
+                this.sinks.to(clientId, { event: 'project.showView', payload: { projectId, viewId, by } });
                 told += 1;
             }
         }
@@ -540,7 +529,7 @@ export class ProjectStore {
             await removeIconFiles(entry.folder);
         } else {
             const bytes = decodeImage(payload.image.base64);
-            const mime = sniffMime(bytes);
+            const mime = sniffIconMime(bytes);
             const extension = mime ? ICON_EXTENSION_BY_MIME[mime] : undefined;
             if (!extension) {
                 throw new ProjectError('bad-icon', 'That file is not a PNG, JPEG, GIF, WebP or SVG image');
@@ -665,9 +654,7 @@ export class ProjectStore {
     }
 
     private locked<T>(work: () => Promise<T>): Promise<T> {
-        const run = this.chain.then(work, work);
-        this.chain = run.catch(() => undefined);
-        return run;
+        return this.writes.run(work);
     }
 
     /* Where the project file of an open project sits, which is where its drawings and diagrams sit beside it. */
@@ -773,9 +760,13 @@ export class ProjectStore {
     }
 
     private emit(event: SessionEvent, except: string | null = null): void {
-        for (const [clientId, sink] of this.sinks) {
+        if (except === null) {
+            this.sinks.emit(event);
+            return;
+        }
+        for (const clientId of this.sinks.clientIds()) {
             if (clientId !== except) {
-                sink(event);
+                this.sinks.to(clientId, event);
             }
         }
     }

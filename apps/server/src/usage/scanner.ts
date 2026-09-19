@@ -139,7 +139,7 @@ export class UsageScanner {
                     provider: root.provider,
                     path: root.path,
                     status: missing ? 'missing' : 'failed',
-                    message: missing ? null : e instanceof Error ? e.message : String(e)
+                    message: missing ? null : errorText(e)
                 });
                 continue;
             }
@@ -152,7 +152,7 @@ export class UsageScanner {
                     }
                 } catch (e) {
                     // One unreadable transcript is not the root failing; the count simply misses it.
-                    failure ??= e instanceof Error ? e.message : String(e);
+                    failure ??= errorText(e);
                 }
             }
             roots.push({ provider: root.provider, path: root.path, status: failure === null ? 'ok' : 'failed', message: failure });

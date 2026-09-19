@@ -9,8 +9,11 @@ import {
     type BrowserInput,
     type LiveStreamFrame
 } from '@ruimte/contracts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { LiveStreamHub, type LiveFrameSource } from '../streams/live-stream.ts';
+import { CodedError } from '../coded-error.ts';
+import { FrameFanout, streamKeyOf } from '../streams/frame-fanout.ts';
+import { ClientSinks } from '../client-sinks.ts';
 
 interface NavigationHistory {
     currentIndex: number;
@@ -47,20 +50,9 @@ export interface BrowserPage {
 
 export type BrowserPageFactory = (width: number, height: number) => BrowserPage;
 
-interface FrameSubscription {
-    cancelled: boolean;
-    release: (() => void) | null;
-}
+type BrowserErrorCode = 'bad-address' | 'browser-not-found' | 'browser-unavailable';
 
-export class BrowserError extends Error {
-    readonly code: string;
-
-    constructor(code: string, message: string) {
-        super(message);
-        this.name = 'BrowserError';
-        this.code = code;
-    }
-}
+export class BrowserError extends CodedError<BrowserErrorCode> {}
 
 const normalizeUrl = (input: string): string => {
     const trimmed = input.trim();
@@ -484,8 +476,8 @@ class BrowserSession implements LiveFrameSource {
 
 export class BrowserManager {
     private readonly sessions = new Map<string, BrowserSession>();
-    private readonly sinks = new Map<string, SessionSink>();
-    private readonly frameSubscriptions = new Map<string, Map<string, FrameSubscription>>();
+    private readonly sinks = new ClientSinks();
+    private readonly frames: FrameFanout;
     private readonly unregisterStreams = new Map<string, () => void>();
     readonly streams: LiveStreamHub;
     private readonly createPage: BrowserPageFactory;
@@ -493,6 +485,7 @@ export class BrowserManager {
     constructor(streams: LiveStreamHub, createPage: BrowserPageFactory) {
         this.streams = streams;
         this.createPage = createPage;
+        this.frames = new FrameFanout(streams, this.sinks);
     }
 
     static withBun(home: string, streams = new LiveStreamHub()): BrowserManager {
@@ -511,13 +504,7 @@ export class BrowserManager {
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
-        this.sinks.set(clientId, sink);
-        // A client that subscribes again before it unsubscribes keeps its newer sink.
-        return () => {
-            if (this.sinks.get(clientId) === sink) {
-                this.sinks.delete(clientId);
-            }
-        };
+        return this.sinks.subscribe(clientId, sink);
     }
 
     async open(
@@ -553,9 +540,10 @@ export class BrowserManager {
             await session.resize(width, height, deviceScaleFactor);
         }
         if (stream === 'events') {
-            await this.startFrameEvents(browserId, clientId);
+            const events = (frame: LiveStreamFrame): SessionEvent => ({ event: 'browser.frame', payload: eventFrame(browserId, frame) });
+            await this.frames.start(browserId, session.streamId, clientId, events);
         } else {
-            this.stopFrameEvents(browserId, clientId);
+            this.frames.stop(browserId, clientId);
         }
         return session.info();
     }
@@ -573,7 +561,7 @@ export class BrowserManager {
 
     detach(browserId: string, clientId: string): void {
         this.sessions.get(sessionKey(browserId, clientId))?.clients.delete(clientId);
-        this.stopFrameEvents(browserId, clientId);
+        this.frames.stop(browserId, clientId);
     }
 
     detachAll(clientId: string): void {
@@ -629,70 +617,23 @@ export class BrowserManager {
 
     private broadcast(session: BrowserSession, info: BrowserInfo): void {
         for (const clientId of session.clients) {
-            this.sinks.get(clientId)?.({
+            this.sinks.to(clientId, {
                 event: 'browser.status',
                 payload: info
             });
         }
     }
 
-    private async startFrameEvents(browserId: string, clientId: string): Promise<void> {
-        this.stopFrameEvents(browserId, clientId);
-        const session = this.require(browserId, clientId);
-        const subscription: FrameSubscription = {
-            cancelled: false,
-            release: null
-        };
-        const byClient = this.frameSubscriptions.get(browserId) ?? new Map<string, FrameSubscription>();
-        byClient.set(clientId, subscription);
-        this.frameSubscriptions.set(browserId, byClient);
-        try {
-            const release = await this.streams.subscribe(session.streamId, (frame) => {
-                if (!subscription.cancelled) {
-                    this.sinks.get(clientId)?.({
-                        event: 'browser.frame',
-                        payload: eventFrame(browserId, frame)
-                    });
-                }
-            });
-            if (subscription.cancelled) {
-                release();
-            } else {
-                subscription.release = release;
-            }
-        } catch (error) {
-            byClient.delete(clientId);
-            if (byClient.size === 0) {
-                this.frameSubscriptions.delete(browserId);
-            }
-            throw error;
-        }
-    }
-
-    private stopFrameEvents(browserId: string, clientId: string): void {
-        const byClient = this.frameSubscriptions.get(browserId);
-        const subscription = byClient?.get(clientId);
-        if (!byClient || !subscription) {
-            return;
-        }
-        subscription.cancelled = true;
-        subscription.release?.();
-        byClient.delete(clientId);
-        if (byClient.size === 0) {
-            this.frameSubscriptions.delete(browserId);
-        }
-    }
-
     private destroy(key: string, session: BrowserSession): void {
         this.sessions.delete(key);
-        this.stopFrameEvents(session.id, session.clientId);
+        this.frames.stop(session.id, session.clientId);
         this.unregisterStreams.get(key)?.();
         this.unregisterStreams.delete(key);
         session.close();
     }
 }
 
-const sessionKey = (browserId: string, clientId: string): string => JSON.stringify([clientId, browserId]);
+const sessionKey = (browserId: string, clientId: string): string => streamKeyOf(clientId, browserId);
 
 const eventFrame = (browserId: string, frame: LiveStreamFrame): BrowserFrame => ({
     browserId,

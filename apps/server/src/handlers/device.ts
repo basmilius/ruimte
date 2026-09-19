@@ -1,16 +1,6 @@
-import { DeviceError, type DeviceManager } from '../devices/manager.ts';
-import { RequestError, type Dispatcher } from '../dispatcher.ts';
+import type { DeviceManager } from '../devices/manager.ts';
+import { translate, type Dispatcher } from '../dispatcher.ts';
 import { streamingGate } from './streaming.ts';
-
-const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
-    Promise.resolve()
-        .then(work)
-        .catch((error: unknown) => {
-            if (error instanceof DeviceError) {
-                throw new RequestError(error.code, error.message);
-            }
-            throw error;
-        });
 
 export const registerDeviceHandlers = (dispatcher: Dispatcher, devices: DeviceManager, streamingAllowed: () => boolean): void => {
     const requireStreaming = streamingGate(streamingAllowed);

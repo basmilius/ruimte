@@ -1,16 +1,5 @@
-import { RequestError, type Dispatcher } from '../dispatcher.ts';
-import { SessionError, type SessionManager } from '../sessions/manager.ts';
-
-// Session failures carry their own codes; anything else stays an internal error for the dispatcher to report.
-const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
-    Promise.resolve()
-        .then(work)
-        .catch((e: unknown) => {
-            if (e instanceof SessionError) {
-                throw new RequestError(e.code, e.message);
-            }
-            throw e;
-        });
+import { translate, type Dispatcher } from '../dispatcher.ts';
+import type { SessionManager } from '../sessions/manager.ts';
 
 /* Owes ending the agents a session's node opened, before that session goes; a shell that already exited ends nothing, so a restart does not. */
 export type BeforeKill = (nodeId: string) => Promise<unknown>;
