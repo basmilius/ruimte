@@ -11,7 +11,7 @@ import WidgetKit
                 state: context.state, attributes: context.attributes, stale: context.isStale
             )
             .padding(.horizontal, 16).padding(.vertical, 12)
-            .activityBackgroundTint(Color(red: 0.105, green: 0.105, blue: 0.13))
+            .activityBackgroundTint(.activityTint)
             .activitySystemActionForegroundColor(.white)
             .widgetURL(activityURL(context.attributes))
         } dynamicIsland: { context in
@@ -29,7 +29,7 @@ import WidgetKit
                 if context.state.phase != .done && !context.isStale {
                     ActivityTimer(startedAt: context.state.startedAt)
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(context.state.phase == .needsYou ? Color.orange : .white)
+                        .foregroundStyle(context.state.phase == .needsYou ? Color.activityNeedsYou : .white)
                         .multilineTextAlignment(.trailing).minimumScaleFactor(0.85)
                         .frame(width: 44).padding(.trailing, 2)
                 }
@@ -107,7 +107,7 @@ private struct ActivityAgentRow: View {
     var body: some View {
         HStack(spacing: 10) {
             LucideIcon(agent.target == .chat ? .sparkles : .terminal, size: 19)
-                .foregroundStyle(needsYou ? Color.orange : .white.opacity(0.9))
+                .foregroundStyle(needsYou ? Color.activityNeedsYou : .white.opacity(0.9))
                 .frame(width: 22)
             VStack(alignment: .leading, spacing: 3) {
                 Text(agent.title).font(.system(size: 15, weight: .medium)).foregroundStyle(.white)
@@ -125,9 +125,9 @@ private struct ActivityAgentRow: View {
             if needsYou {
                 Text("Review").font(.system(size: 13, weight: .semibold)).foregroundStyle(.black)
                     .padding(.horizontal, 15).frame(height: 32)
-                    .background(Color.orange, in: Capsule())
+                    .background(Color.activityNeedsYou, in: Capsule())
             } else {
-                ActivityStatus(text: "Running", color: .activityBlue, size: 12)
+                ActivityStatus(text: "Running", color: .activityRunning, size: 12)
             }
         }
         .frame(minHeight: 35)
@@ -170,7 +170,11 @@ private struct ActivityPresentation {
         guard !stale, state.phase != .done, working + waiting == 1, state.agents?.count == 1 else { return nil }
         return state.agents?.first
     }
-    var color: Color { stale ? .gray : state.phase == .done ? .green : waiting > 0 ? .orange : .activityBlue }
+    var color: Color {
+        stale
+            ? .activityStale
+            : state.phase == .done ? .activityDone : waiting > 0 ? .activityNeedsYou : .activityRunning
+    }
     var statusIcon: LucideIconName {
         if state.phase == .done { return .check }
         return waiting > 0 ? .circleAlert : .loaderCircle
@@ -201,12 +205,18 @@ private struct ActivityGlyph: View {
 
     var body: some View {
         LucideIcon(phase == .done ? .check : phase == .needsYou ? .messageCircle : .loaderCircle, size: size)
-            .foregroundStyle(phase == .done ? Color.green : phase == .needsYou ? .orange : .white)
+            .foregroundStyle(phase == .done ? Color.activityDone : phase == .needsYou ? .activityNeedsYou : .white)
     }
 }
 
+/// A Live Activity is always drawn on its own dark tint, whatever the system appearance is, so each of these takes
+/// the dark value of its token. Plain white keeps its contrast against that tint and is no token of its own.
 extension Color {
-    fileprivate static let activityBlue = Color(red: 0.30, green: 0.53, blue: 1)
+    fileprivate static let activityTint = RuimteColors.activityTint.onDark
+    fileprivate static let activityRunning = RuimteColors.statusRunning.onDark
+    fileprivate static let activityNeedsYou = RuimteColors.statusNeedsYou.onDark
+    fileprivate static let activityDone = RuimteColors.statusIdle.onDark
+    fileprivate static let activityStale = RuimteColors.muted.onDark
 }
 
 private func activityURL(_ attributes: RuimteActivityAttributes, agent: PushActivityAgent? = nil) -> URL? {
