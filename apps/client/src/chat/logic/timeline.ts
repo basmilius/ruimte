@@ -60,16 +60,18 @@ export const isBlock = (row: TimelineRow): boolean => BLOCK_KINDS.has(row.kind);
 
 export const summarizeGroup = (tools: ChatToolItem[]): string => {
     const names = new Set(tools.map((tool) => tool.name));
-    if (names.size === 1) {
-        const name = tools[0]!.name;
-        return toolEntry(name)?.grouped === true
-            ? i18next.t(`chat:group.tools.${name}`, { count: tools.length })
-            : i18next.t('chat:group.calls', { name, count: tools.length });
+    const only = names.size === 1 ? tools[0]!.name : null;
+    if (only !== null && toolEntry(only)?.grouped === true) {
+        return i18next.t(`chat:group.tools.${only}`, { count: tools.length });
     }
-    const edits = tools.filter((tool) => isFileChange(tool.name)).length;
-    if (edits === tools.length) {
+    /* A run that only touches files says so once, whether it took one tool or three, and counts the
+       files rather than the calls: three edits to one file are one file edited. */
+    if (tools.every((tool) => isFileChange(tool.name))) {
         const paths = new Set(tools.map((tool) => (tool.input as { file_path?: string })?.file_path ?? tool.id));
         return i18next.t('chat:group.edited', { count: paths.size });
+    }
+    if (only !== null) {
+        return i18next.t('chat:group.calls', { name: only, count: tools.length });
     }
     return i18next.t('chat:group.toolCalls', { count: tools.length });
 };

@@ -15,7 +15,7 @@ import { Icon } from '@/ui/Icon';
 const CHILDREN_MAX_PX = 320;
 
 function StatusPill({ item }: { item: ChatSubagentItem }) {
-    const { t } = useTranslation('chat');
+    const { t } = useTranslation(['chat', 'common']);
     if (item.status === 'running') {
         return <RunningFor startedAt={item.startedAt} />;
     }
@@ -24,7 +24,7 @@ function StatusPill({ item }: { item: ChatSubagentItem }) {
     const outcome = failed ? 'failed' : 'done';
     return (
         <span className={clsx('shrink-0 text-xs tabular-nums', failed ? 'text-status-error' : 'text-text-faint')}>
-            {duration === null ? t(`rows.subagent.${outcome}`) : t(`rows.subagent.${outcome}In`, { duration })}
+            {duration === null ? t(`common:status.${outcome}`) : t(`rows.subagent.${outcome}In`, { duration })}
         </span>
     );
 }

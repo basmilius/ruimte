@@ -17,7 +17,6 @@ export const NAMESPACES = [
     'machines',
     'browser',
     'drawing',
-    'terminal',
     'prompts',
     'processes',
     'agents',

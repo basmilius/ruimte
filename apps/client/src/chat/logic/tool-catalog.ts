@@ -6,7 +6,8 @@ export interface ToolEntry {
     icon: LucideIcon;
     /* The input keys that hold the one line saying what the call is about, best first. */
     summary: readonly string[];
-    /* Whether a run of calls of this name reads as a sentence of its own (`chat:group.tools.<name>`). */
+    /* Whether a run of calls of this name reads as a sentence of its own (`chat:group.tools.<name>`).
+       One that changes files without a sentence falls to `chat:group.edited`, which counts files rather than calls. */
     grouped: boolean;
     /* Whether the call writes to a file, which is what a mixed run of calls is named after. */
     changesFiles: boolean;
@@ -33,12 +34,13 @@ export const TOOL_CATALOG: Record<string, ToolEntry> = {
     Read: entry(Eye, ['file_path'], { readsImage: true }),
     // Only `readImagePath` ever had this one, which is why it has no sentence of its own yet.
     NotebookRead: entry(Eye, ['file_path', 'notebook_path'], { grouped: false, readsImage: true }),
-    Edit: entry(SquarePen, ['file_path'], { changesFiles: true }),
+    // These three read as "Edited 3 files" through `changesFiles`, so they carry no copy of that sentence.
+    Edit: entry(SquarePen, ['file_path'], { grouped: false, changesFiles: true }),
     Write: entry(SquarePen, ['file_path'], { changesFiles: true }),
-    MultiEdit: entry(SquarePen, ['file_path'], { changesFiles: true }),
+    MultiEdit: entry(SquarePen, ['file_path'], { grouped: false, changesFiles: true }),
     NotebookEdit: entry(SquarePen, ['file_path', 'notebook_path']),
     // Codex reports a patch as the paths it touches; its own input carries no path of its own.
-    ApplyPatch: entry(SquarePen, ['summary'], { changesFiles: true }),
+    ApplyPatch: entry(SquarePen, ['summary'], { grouped: false, changesFiles: true }),
     Bash: entry(Terminal, ['description', 'command']),
     Grep: entry(Search, ['pattern']),
     Glob: entry(FolderSearch, ['pattern']),
