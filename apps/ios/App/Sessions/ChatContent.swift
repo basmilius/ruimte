@@ -167,7 +167,7 @@ struct ChatInlineImage: View {
                 Label("Image preview unavailable", lucideIcon: "image", iconSize: 14).font(.caption).foregroundStyle(
                     MobileStyle.muted)
             } else {
-                ProgressView().frame(width: 120, height: 80).accessibilityLabel("Loading image")
+                MobileLoadingRow("Loading image").frame(width: 120, height: 80)
             }
         }
         .task(id: resource) {

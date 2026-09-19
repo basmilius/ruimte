@@ -97,7 +97,7 @@ struct ChatForkSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     if busy {
-                        ProgressView().accessibilityLabel("Forking")
+                        MobileLoadingRow("Forking")
                     } else {
                         Button("Fork") { Task { await submit() } }
                             .disabled(!ready)

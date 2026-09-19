@@ -275,7 +275,7 @@ struct SubagentConversationPage: View {
         .overlay {
             switch conversation.status {
             case .loading:
-                ProgressView().accessibilityLabel("Loading conversation…").allowsHitTesting(false)
+                MobileLoadingRow("Loading conversation…").allowsHitTesting(false)
             case .failed where conversation.items.isEmpty:
                 ContentUnavailableView {
                     Label("Could not open", lucideIcon: "triangle-alert", iconSize: 48)

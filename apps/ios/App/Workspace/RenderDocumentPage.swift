@@ -33,7 +33,7 @@ struct RenderDocumentPage: View {
                 ContentUnavailableView(
                     "Could not load \(kind)", lucideIcon: "triangle-alert", description: Text(problem))
             } else {
-                ProgressView().accessibilityLabel("Loading \(kind)")
+                MobileLoadingRow("Loading \(kind)")
             }
         }
         .overlay(alignment: .bottom) {

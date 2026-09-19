@@ -53,7 +53,7 @@ struct MachineProjectsPage: View {
                         .modifier(MobileSidebarRow())
                 }
                 if loading {
-                    ProgressView().accessibilityLabel("Loading projects")
+                    MobileLoadingRow("Loading projects")
                 } else if session.connected && projects.isEmpty {
                     ContentUnavailableView(
                         "No projects yet", lucideIcon: "folder",

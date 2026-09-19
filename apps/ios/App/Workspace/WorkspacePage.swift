@@ -33,7 +33,7 @@ struct WorkspacePage: View {
                             Spacer()
                             Button("Try again") { workspace.session.reconnect() }
                         } else {
-                            ProgressView().accessibilityLabel("Reconnecting to your machine")
+                            MobileLoadingRow("Reconnecting to your machine")
                         }
                     }.frame(maxWidth: .infinity).padding(8).background(.thinMaterial)
                 }
@@ -145,7 +145,7 @@ struct WorkspacePage: View {
                 }
             }
         } else {
-            ProgressView().accessibilityLabel("Opening project")
+            MobileLoadingRow("Opening project")
         }
     }
 
@@ -367,7 +367,7 @@ struct ProjectItemPage: View {
                     Button("Retry") { Task { await prepare() } }
                 }
             } else if !ready {
-                ProgressView().accessibilityLabel("Opening")
+                MobileLoadingRow("Opening")
             } else {
                 switch current.text("kind") {
                 case "canvas": CanvasPage(workspace: workspace, viewID: current.stableID)

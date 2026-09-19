@@ -78,7 +78,7 @@ struct WelcomePage: View {
     private var signInOptions: some View {
         VStack(spacing: 12) {
             if runtime.loading || retrying {
-                ProgressView().accessibilityLabel("Loading sign-in options")
+                MobileLoadingRow("Loading sign-in options")
                     .frame(maxWidth: .infinity, minHeight: buttonHeight)
             } else {
                 if runtime.providers.contains(.apple) {

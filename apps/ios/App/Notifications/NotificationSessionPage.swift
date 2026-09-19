@@ -21,7 +21,7 @@ struct NotificationSessionPage: View {
                     ContentUnavailableView(
                         "Session unavailable", lucideIcon: "triangle-alert", description: Text(problem))
                 } else {
-                    ProgressView().accessibilityLabel("Finding session")
+                    MobileLoadingRow("Finding session")
                 }
             } else if let problem {
                 ContentUnavailableView(
@@ -35,7 +35,7 @@ struct NotificationSessionPage: View {
                     Button("Try again") { session.reconnect() }
                 }
             } else {
-                ProgressView().accessibilityLabel("Connecting to your machine")
+                MobileLoadingRow("Connecting to your machine")
             }
         }
         .modifier(MobilePageSurface())
