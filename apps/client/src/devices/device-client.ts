@@ -1,12 +1,13 @@
 import i18next from 'i18next';
 import type { DeviceAction, DeviceDetail, DeviceFrame, DeviceInfo, DeviceInput, LiveStreamFrame } from '@ruimte/contracts';
 import { useDevices } from '@/devices/state';
+import { HandlerTable } from '@/transport/handler-table';
+import { MountedRegistry, type MountedEntry } from '@/transport/mounted-registry';
 import { isConnectionError, type Transport, type TransportStatus } from '@/transport/transport';
 
-interface MountedDevice {
+interface MountedDevice extends MountedEntry {
     refs: number;
     device: DeviceTarget;
-    attached: boolean;
     stream: 'http' | 'events';
     streamId: string | null;
 }
@@ -18,12 +19,12 @@ const keyOf = (device: Pick<DeviceInfo, 'backendId' | 'deviceId'>): string => `$
 const targetOf = (device: DeviceTarget) => ({ backendId: device.backendId, platform: device.platform, deviceId: device.deviceId });
 
 export class DeviceClient {
-    private readonly frameHandlers = new Map<string, Set<(frame: LiveStreamFrame) => void>>();
+    private readonly frameHandlers = new HandlerTable<LiveStreamFrame>();
     private readonly latestFrames = new Map<string, LiveStreamFrame>();
-    private readonly mounted = new Map<string, MountedDevice>();
+    private readonly mounted = new MountedRegistry<MountedDevice>();
     private refreshInFlight: Promise<DeviceInfo[]> | null = null;
     private refreshTimer: ReturnType<typeof setInterval> | null = null;
-    private readonly streamHandlers = new Map<string, Set<(streamId: string) => void>>();
+    private readonly streamHandlers = new HandlerTable<string>();
     private readonly unsubscribe: Array<() => void>;
     private watchers = 0;
     readonly endpointId: string;
@@ -134,36 +135,23 @@ export class DeviceClient {
 
     onFrame(device: DeviceTarget, handler: (frame: LiveStreamFrame) => void): () => void {
         const key = keyOf(device);
-        const handlers = this.frameHandlers.get(key) ?? new Set<(frame: LiveStreamFrame) => void>();
-        handlers.add(handler);
-        this.frameHandlers.set(key, handlers);
+        const stop = this.frameHandlers.listen(key, handler);
+        // A view that mounts mid-stream draws the frame that is already in, rather than a blank canvas.
         const latest = this.latestFrames.get(key);
         if (latest) {
             handler(latest);
         }
-        return () => {
-            handlers.delete(handler);
-            if (handlers.size === 0) {
-                this.frameHandlers.delete(key);
-            }
-        };
+        return stop;
     }
 
     onStream(device: DeviceTarget, handler: (streamId: string) => void): () => void {
         const key = keyOf(device);
-        const handlers = this.streamHandlers.get(key) ?? new Set<(streamId: string) => void>();
-        handlers.add(handler);
-        this.streamHandlers.set(key, handlers);
+        const stop = this.streamHandlers.listen(key, handler);
         const streamId = this.mounted.get(key)?.streamId;
         if (streamId) {
             handler(streamId);
         }
-        return () => {
-            handlers.delete(handler);
-            if (handlers.size === 0) {
-                this.streamHandlers.delete(key);
-            }
-        };
+        return stop;
     }
 
     dispose(): void {
@@ -207,9 +195,7 @@ export class DeviceClient {
         mounted.streamId = opened.streamId;
         mounted.device = opened;
         useDevices.getState().patch(this.endpointId, opened);
-        for (const handler of this.streamHandlers.get(keyOf(opened)) ?? []) {
-            handler(opened.streamId);
-        }
+        this.streamHandlers.fanOut(keyOf(opened), opened.streamId);
         return opened.streamId;
     }
 
@@ -221,15 +207,13 @@ export class DeviceClient {
 
     private onStatus(status: TransportStatus): void {
         if (status !== 'open') {
-            for (const mounted of this.mounted.values()) {
-                mounted.attached = false;
-            }
+            this.mounted.detachAll();
             return;
         }
         void this.refresh().catch(() => undefined);
-        for (const mounted of this.mounted.values()) {
-            void this.attach(mounted).catch(() => undefined);
-        }
+        void this.mounted.reattachAll(async (_key, mounted) => {
+            await this.attach(mounted);
+        });
     }
 
     private receiveFrame(frame: DeviceFrame): void {
@@ -247,9 +231,7 @@ export class DeviceClient {
             data: Uint8Array.from(binary, (character) => character.charCodeAt(0))
         };
         this.latestFrames.set(key, decoded);
-        for (const handler of this.frameHandlers.get(key) ?? []) {
-            handler(decoded);
-        }
+        this.frameHandlers.fanOut(key, decoded);
     }
 }
 

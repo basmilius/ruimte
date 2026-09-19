@@ -2,22 +2,23 @@ import type { BrowserFrame, BrowserInfo, BrowserInput, LiveStreamFrame } from '@
 import i18next from 'i18next';
 import { endpointKey } from '@/state/keys';
 import { useBrowser } from './registry';
+import { HandlerTable } from '@/transport/handler-table';
+import { MountedRegistry, type MountedEntry } from '@/transport/mounted-registry';
 import { isConnectionError, type Transport, type TransportStatus } from '@/transport/transport';
 
-interface MountedBrowser {
+interface MountedBrowser extends MountedEntry {
     refs: number;
     url: string;
     width: number;
     height: number;
     deviceScaleFactor: number;
-    attached: boolean;
     stream: 'http' | 'events';
 }
 
 export class BrowserClient {
-    private readonly frameHandlers = new Map<string, Set<(frame: LiveStreamFrame) => void>>();
+    private readonly frameHandlers = new HandlerTable<LiveStreamFrame>();
     private readonly latestFrames = new Map<string, LiveStreamFrame>();
-    private readonly mounted = new Map<string, MountedBrowser>();
+    private readonly mounted = new MountedRegistry<MountedBrowser>();
     private readonly unsubscribe: Array<() => void>;
     readonly endpointId: string;
     private readonly transport: Transport;
@@ -139,19 +140,13 @@ export class BrowserClient {
     }
 
     onFrame(browserId: string, handler: (frame: LiveStreamFrame) => void): () => void {
-        const handlers = this.frameHandlers.get(browserId) ?? new Set<(frame: LiveStreamFrame) => void>();
-        handlers.add(handler);
-        this.frameHandlers.set(browserId, handlers);
+        const stop = this.frameHandlers.listen(browserId, handler);
+        // A node that mounts mid-stream draws the frame that is already in, rather than a blank canvas.
         const latest = this.latestFrames.get(browserId);
         if (latest) {
             handler(latest);
         }
-        return () => {
-            handlers.delete(handler);
-            if (handlers.size === 0) {
-                this.frameHandlers.delete(browserId);
-            }
-        };
+        return stop;
     }
 
     dispose(): void {
@@ -192,27 +187,25 @@ export class BrowserClient {
 
     private onStatus(status: TransportStatus): void {
         if (status !== 'open') {
-            for (const mounted of this.mounted.values()) {
-                mounted.attached = false;
-            }
+            this.mounted.detachAll();
             return;
         }
-        for (const [browserId, mounted] of this.mounted) {
-            void this.transport
-                .request('browser.open', this.openPayload(browserId, mounted))
-                .then((info) => {
-                    // The node may have left the canvas while the reopen was on the wire.
-                    if (!this.mounted.has(browserId)) {
-                        return;
-                    }
-                    mounted.attached = true;
-                    this.apply(info);
-                })
-                .catch((error) => {
-                    if (!isConnectionError(error)) {
-                        this.fail(browserId, error);
-                    }
-                });
+        void this.mounted.reattachAll((browserId, mounted) => this.reopen(browserId, mounted));
+    }
+
+    private async reopen(browserId: string, mounted: MountedBrowser): Promise<void> {
+        try {
+            const info = await this.transport.request('browser.open', this.openPayload(browserId, mounted));
+            // The node may have left the canvas while the reopen was on the wire.
+            if (this.mounted.get(browserId) !== mounted) {
+                return;
+            }
+            mounted.attached = true;
+            this.apply(info);
+        } catch (error) {
+            if (!isConnectionError(error)) {
+                this.fail(browserId, error);
+            }
         }
     }
 
@@ -241,8 +234,6 @@ export class BrowserClient {
             data
         };
         this.latestFrames.set(frame.browserId, decoded);
-        for (const handler of this.frameHandlers.get(frame.browserId) ?? []) {
-            handler(decoded);
-        }
+        this.frameHandlers.fanOut(frame.browserId, decoded);
     }
 }

@@ -1,5 +1,7 @@
 import type { AgentLaunch, SessionAttachResult, SessionInfo } from '@ruimte/contracts';
 import type { SessionSink } from '../state/sessions';
+import { HandlerTable } from '../transport/handler-table';
+import { MountedRegistry, type MountedEntry } from '../transport/mounted-registry';
 import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../transport/transport';
 
 type OutputHandler = (data: string) => void;
@@ -14,11 +16,9 @@ interface OpenOptions {
     agent?: AgentLaunch;
 }
 
-interface Mounted extends OpenOptions {
+interface Mounted extends OpenOptions, MountedEntry {
     cols: number;
     rows: number;
-    /* False between a lost connection (or a failed attach) and the next successful attach. */
-    attached: boolean;
 }
 
 /*
@@ -28,13 +28,13 @@ interface Mounted extends OpenOptions {
 export class SessionClient {
     private readonly transport: Transport;
     private readonly sink: SessionSink;
-    private readonly mounted = new Map<string, Mounted>();
+    private readonly mounted = new MountedRegistry<Mounted>();
     private readonly opens = new Map<string, OpenOptions>();
     // Cold resumes already typed this page life; a CLI that is not installed must not be retyped on every attach.
     private readonly resumed = new Set<string>();
-    private readonly outputHandlers = new Map<string, Set<OutputHandler>>();
-    private readonly exitHandlers = new Map<string, Set<ExitHandler>>();
-    private readonly screenHandlers = new Map<string, Set<ScreenHandler>>();
+    private readonly outputHandlers = new HandlerTable<string>();
+    private readonly exitHandlers = new HandlerTable<number>();
+    private readonly screenHandlers = new HandlerTable<Pick<SessionAttachResult, 'screen'>>();
     private readonly unsubscribe: Array<() => void> = [];
     // What this client last told the daemon about permission requests. A fresh socket is a fresh
     // client over there, which knows nothing about the one before it, so it is told again.
@@ -44,12 +44,12 @@ export class SessionClient {
         this.transport = transport;
         this.sink = sink;
         this.unsubscribe.push(
-            transport.on('session.output', ({ sessionId, data }) => this.fanOut(this.outputHandlers, sessionId, data)),
+            transport.on('session.output', ({ sessionId, data }) => this.outputHandlers.fanOut(sessionId, data)),
             // The daemon dropped output for a slow socket and sent the screen it owns instead; repaint from it.
-            transport.on('session.resync', ({ sessionId, screen }) => this.fanOut(this.screenHandlers, sessionId, { screen })),
+            transport.on('session.resync', ({ sessionId, screen }) => this.screenHandlers.fanOut(sessionId, { screen })),
             transport.on('session.exit', ({ sessionId, exitCode }) => {
                 this.sink.setExited(sessionId, exitCode);
-                this.fanOut(this.exitHandlers, sessionId, exitCode);
+                this.exitHandlers.fanOut(sessionId, exitCode);
             }),
             transport.on('session.status', ({ sessionId, agent }) => this.sink.setAgent(sessionId, agent)),
             // The whole pending list of that session, so a request another client answered disappears here too.
@@ -200,16 +200,16 @@ export class SessionClient {
     }
 
     onOutput(nodeId: string, handler: OutputHandler): () => void {
-        return this.listen(this.outputHandlers, nodeId, handler);
+        return this.outputHandlers.listen(nodeId, handler);
     }
 
     onExit(nodeId: string, handler: ExitHandler): () => void {
-        return this.listen(this.exitHandlers, nodeId, handler);
+        return this.exitHandlers.listen(nodeId, handler);
     }
 
     /* Fires after a reconnect re-attached the session; the screen replaces everything on the node. */
     onScreen(nodeId: string, handler: ScreenHandler): () => void {
-        return this.listen(this.screenHandlers, nodeId, handler);
+        return this.screenHandlers.listen(nodeId, handler);
     }
 
     isMounted(nodeId: string): boolean {
@@ -228,31 +228,6 @@ export class SessionClient {
         }
     }
 
-    private listen<T>(table: Map<string, Set<(value: T) => void>>, nodeId: string, handler: (value: T) => void): () => void {
-        let handlers = table.get(nodeId);
-        if (!handlers) {
-            handlers = new Set();
-            table.set(nodeId, handlers);
-        }
-        handlers.add(handler);
-        return () => {
-            handlers.delete(handler);
-            if (handlers.size === 0) {
-                table.delete(nodeId);
-            }
-        };
-    }
-
-    private fanOut<T>(table: Map<string, Set<(value: T) => void>>, nodeId: string, value: T): void {
-        const handlers = table.get(nodeId);
-        if (!handlers) {
-            return;
-        }
-        for (const handler of [...handlers]) {
-            handler(value);
-        }
-    }
-
     private sendApprovals(): void {
         void this.transport.request('agent.setApprovals', { enabled: this.approvals }).catch(() => undefined);
     }
@@ -260,31 +235,19 @@ export class SessionClient {
     private onStatus(status: TransportStatus): void {
         if (status === 'open') {
             this.sendApprovals();
-            void this.reattachAll();
+            void this.mounted.reattachAll((nodeId, entry) => this.reattach(nodeId, entry));
             return;
         }
-        for (const [nodeId, entry] of this.mounted) {
-            entry.attached = false;
-            this.sink.setAttached(nodeId, false);
-        }
+        this.mounted.detachAll((nodeId) => this.sink.setAttached(nodeId, false));
     }
 
-    private async reattachAll(): Promise<void> {
-        for (const [nodeId, entry] of [...this.mounted]) {
-            if (entry.attached) {
-                continue;
-            }
-            try {
-                await this.ensure(nodeId, { cwd: entry.cwd, command: entry.command, agent: entry.agent }, entry.cols, entry.rows);
-                if (!this.mounted.has(nodeId)) {
-                    continue;
-                }
-                const result = await this.attach(nodeId, entry.cols, entry.rows);
-                this.fanOut(this.screenHandlers, nodeId, result);
-            } catch {
-                // A socket that dropped again will trigger the next round; anything else surfaces on the next mount.
-            }
+    private async reattach(nodeId: string, entry: Mounted): Promise<void> {
+        await this.ensure(nodeId, { cwd: entry.cwd, command: entry.command, agent: entry.agent }, entry.cols, entry.rows);
+        // The node may have left the canvas while the create was on the wire.
+        if (!this.mounted.has(nodeId)) {
+            return;
         }
+        this.screenHandlers.fanOut(nodeId, await this.attach(nodeId, entry.cols, entry.rows));
     }
 
     // The attach reply says only that the shell ended; the exit code and the agent are on the list entry.

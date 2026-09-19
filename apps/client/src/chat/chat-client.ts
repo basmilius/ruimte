@@ -12,6 +12,7 @@ import type {
 } from '@ruimte/contracts';
 import type { ChatSink } from '../state/chats';
 import type { ProviderInfo } from '@ruimte/contracts';
+import { MountedRegistry, type MountedEntry } from '../transport/mounted-registry';
 import { isConnectionError, type Transport, type TransportStatus } from '../transport/transport';
 
 interface ChatOpenOptions {
@@ -33,8 +34,7 @@ export interface ChatSendExtras {
     attachments?: ChatAttachmentUpload[];
 }
 
-interface Mounted extends ChatOpenOptions {
-    attached: boolean;
+interface Mounted extends ChatOpenOptions, MountedEntry {
     // The last place in the chat's stream the store holds, so a reattach asks only for what came after.
     seq?: number;
 }
@@ -53,7 +53,7 @@ export class ChatClient {
     private readonly transport: Transport;
     private readonly sink: ChatSink;
     private readonly providers: ProviderSink | null;
-    private readonly mounted = new Map<string, Mounted>();
+    private readonly mounted = new MountedRegistry<Mounted>();
     private readonly unsubscribe: Array<() => void> = [];
     private preferences: ChatPreferencesPayload | null = null;
 
@@ -275,24 +275,9 @@ export class ChatClient {
         if (status === 'open') {
             this.sendPreferences();
             void this.loadProviders();
-            void this.reattachAll();
+            void this.mounted.reattachAll((chatId) => this.attach(chatId).then(() => undefined));
             return;
         }
-        for (const entry of this.mounted.values()) {
-            entry.attached = false;
-        }
-    }
-
-    private async reattachAll(): Promise<void> {
-        for (const [chatId, entry] of [...this.mounted]) {
-            if (entry.attached) {
-                continue;
-            }
-            try {
-                await this.attach(chatId);
-            } catch {
-                // A socket that dropped again will trigger the next round.
-            }
-        }
+        this.mounted.detachAll();
     }
 }
