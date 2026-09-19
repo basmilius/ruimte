@@ -507,10 +507,6 @@
     "name": "Name",
     "nameLabel": "Machine name",
     "nameHint": "Leave empty to use the default name.",
-    "emoji": "Emoji",
-    "useEmoji": "Use emoji",
-    "icon": "Icon",
-    "noIcon": "No icon",
     "gone": "That machine is no longer in the list",
     "saveFailed": "The machine could not save the change"
   },

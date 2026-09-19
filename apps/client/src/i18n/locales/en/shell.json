@@ -111,9 +111,6 @@
     "separator": "Separator",
     "pickedHere": "Picked here",
     "defaultForKind": "Default for its kind",
-    "emoji": "Emoji",
-    "useEmoji": "Use emoji",
-    "icon": "Icon",
     "useDefault": "Use the default"
   },
   "projectBanner": {

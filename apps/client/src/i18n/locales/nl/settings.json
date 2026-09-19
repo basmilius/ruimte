@@ -507,10 +507,6 @@
     "name": "Naam",
     "nameLabel": "Naam van de machine",
     "nameHint": "Laat leeg om de standaardnaam te gebruiken.",
-    "emoji": "Emoji",
-    "useEmoji": "Emoji gebruiken",
-    "icon": "Icoon",
-    "noIcon": "Geen icoon",
     "gone": "Die machine staat niet meer in de lijst",
     "saveFailed": "De machine kon de wijziging niet opslaan"
   },

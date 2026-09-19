@@ -32,5 +32,11 @@
     "yes": "Yes",
     "no": "No"
   },
+  "icon": {
+    "emoji": "Emoji",
+    "useEmoji": "Use emoji",
+    "label": "Icon",
+    "none": "No icon"
+  },
   "unseen": "Finished while you were away"
 }

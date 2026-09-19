@@ -1,16 +1,14 @@
 import { useRef, useState } from 'react';
-import clsx from 'clsx';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { FolderSearch, ImageUp } from 'lucide-react';
-import { PROJECT_ICON_NAMES, type ProjectIconChoice, type ProjectSummary } from '@ruimte/contracts';
-import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
+import { type ProjectIconChoice, type ProjectSummary } from '@ruimte/contracts';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { Button } from '@/ui/Button';
 import { SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { IconPicker } from '@/ui/IconPicker';
 
 // The daemon rejects larger files, so the picker catches them before sending the bytes.
 const MAX_BYTES = 256 * 1024;
@@ -54,7 +52,6 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
     const chosen = project.icon.kind === 'emoji' || project.icon.kind === 'lucide' ? project.icon : null;
     const fileRef = useRef<HTMLInputElement>(null);
     const [name, setName] = useState(project.name);
-    const [emoji, setEmoji] = useState('');
     const [busy, setBusy] = useState(false);
     const [failure, setFailure] = useState<string | null>(null);
     const trimmedName = name.trim();
@@ -126,40 +123,7 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
                 </div>
             </div>
 
-            <div className={`${SECTION_LABEL} mt-4 mb-1.5`}>{t('viewIcon.emoji')}</div>
-            <div className="flex items-center gap-2">
-                <input
-                    className="field w-24 text-center"
-                    aria-label={t('viewIcon.emoji')}
-                    placeholder="🚀"
-                    value={emoji}
-                    maxLength={16}
-                    onChange={(event) => setEmoji(event.target.value)}
-                    onKeyDown={(event) => event.stopPropagation()}
-                />
-                <Button disabled={busy || emoji.trim() === ''} onClick={() => void run(() => actions.setChosenIcon({ kind: 'emoji', value: emoji.trim() }))}>
-                    {t('viewIcon.useEmoji')}
-                </Button>
-            </div>
-
-            <div className={`${SECTION_LABEL} mt-4 mb-1.5`}>{t('projectSettings.symbol')}</div>
-            <div className="grid grid-cols-10 gap-1">
-                {PROJECT_ICON_NAMES.map((iconName) => (
-                    <Tooltip key={iconName} label={iconName} name>
-                        <button
-                            type="button"
-                            disabled={busy}
-                            className={clsx(
-                                'flex h-7 w-7 items-center justify-center rounded-md hover:bg-surface-hover',
-                                chosen?.kind === 'lucide' && chosen.value === iconName ? 'bg-surface-active text-text' : 'text-text-muted'
-                            )}
-                            onClick={() => void run(() => actions.setChosenIcon({ kind: 'lucide', value: iconName }))}
-                        >
-                            <Icon icon={PROJECT_ICON_GLYPHS[iconName]} size={16} />
-                        </button>
-                    </Tooltip>
-                ))}
-            </div>
+            <IconPicker value={chosen} disabled={busy} gridLabel={t('projectSettings.symbol')} onChange={(icon) => void run(() => actions.setChosenIcon(icon))} />
 
             {failure && (
                 <p className="mt-3 text-sm text-status-error" role="alert">

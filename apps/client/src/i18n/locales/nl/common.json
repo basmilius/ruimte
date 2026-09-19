@@ -32,5 +32,11 @@
     "yes": "Ja",
     "no": "Nee"
   },
+  "icon": {
+    "emoji": "Emoji",
+    "useEmoji": "Emoji gebruiken",
+    "label": "Icoon",
+    "none": "Geen icoon"
+  },
   "unseen": "Klaar terwijl je weg was"
 }
