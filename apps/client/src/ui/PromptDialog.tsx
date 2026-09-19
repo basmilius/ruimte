@@ -27,12 +27,16 @@ interface PromptDialogProps {
     /* A second, taller field under it, for the body of a pull request. */
     area?: { label: string; initial?: string; placeholder?: string };
     confirmLabel: string;
+    /* What the button says while the step runs, for one slow enough that a quiet button is not enough. */
+    confirmBusyLabel?: string;
     confirmIcon?: LucideIcon;
     danger?: boolean;
     /* The caller runs the step somewhere else and says when it is busy; a step this dialog awaits says so itself. */
     busy?: boolean;
     /* Lets the field be confirmed empty, for a list that may be cleared or a name with a default. */
     allowEmpty?: boolean;
+    /* A reason this question cannot be answered at all, beside the one an empty field is. */
+    confirmDisabled?: boolean;
     /* A second way out next to the confirm, such as merging before removing. */
     secondary?: { label: string; onClick(): void };
     /* Over another dialog, so what is under it is dimmed a second time. */
@@ -41,6 +45,8 @@ interface PromptDialogProps {
     children?: ReactNode;
     /* Told what was typed. A rejection stays on screen as the reason and leaves the dialog open. */
     onConfirm(value: string, body: string): void | Promise<unknown>;
+    /* What the failure line reads when the rejection carries no sentence of its own. */
+    fallbackMessage?: string;
     onClose(): void;
 }
 
@@ -58,14 +64,17 @@ export function PromptDialog({
     field,
     area,
     confirmLabel,
+    confirmBusyLabel,
     confirmIcon,
     danger = false,
     busy = false,
     allowEmpty = false,
+    confirmDisabled = false,
     secondary,
     nested = false,
     children,
     onConfirm,
+    fallbackMessage,
     onClose
 }: PromptDialogProps) {
     const { t } = useTranslation('common');
@@ -74,7 +83,7 @@ export function PromptDialog({
        shows it and not in a second one after. */
     const token = open ? `${field?.initial ?? ''}\u0000${area?.initial ?? ''}` : '';
     const [draft, setDraft] = useState({ token, value: field?.initial ?? '', body: area?.initial ?? '' });
-    const step = useAsyncAction();
+    const step = useAsyncAction(fallbackMessage);
     if (draft.token !== token) {
         setDraft({ token, value: field?.initial ?? '', body: area?.initial ?? '' });
         step.clear();
@@ -86,7 +95,7 @@ export function PromptDialog({
     const setBody = (next: string): void => setDraft({ ...draft, body: next });
 
     const submit = (): void => {
-        if (!working && (field === undefined || allowEmpty || value.trim() !== '')) {
+        if (!working && !confirmDisabled && (field === undefined || allowEmpty || value.trim() !== '')) {
             void step.run(async () => await onConfirm(value.trim(), body.trim()));
         }
     };
@@ -151,11 +160,11 @@ export function PromptDialog({
                         )}
                         <Button
                             variant={danger ? 'danger' : 'primary'}
-                            disabled={working || (field !== undefined && !allowEmpty && value.trim() === '')}
+                            disabled={working || confirmDisabled || (field !== undefined && !allowEmpty && value.trim() === '')}
                             onClick={submit}
                         >
                             {confirmIcon && <Icon icon={confirmIcon} size={12} />}
-                            {confirmLabel}
+                            {working && confirmBusyLabel !== undefined ? confirmBusyLabel : confirmLabel}
                         </Button>
                     </div>
                 </Dialog.Popup>
