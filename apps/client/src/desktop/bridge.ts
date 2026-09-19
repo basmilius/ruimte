@@ -1,5 +1,18 @@
+import type { AgentActivity, BackgroundServiceState, ReleaseNotesState, UpdateState } from '@ruimte/desktop-bridge';
 import type { SessionLoginCode } from '@ruimte/pulsar';
 import type { LiveVoice, VoiceLanguage } from '@/voice/preferences';
+
+/* The shapes the preload and the page both hold, passed on so the client reads the whole bridge here. */
+export type {
+    AgentActivity,
+    BackgroundServiceState,
+    DaemonOwner,
+    PendingRestart,
+    Release,
+    ReleaseNotesState,
+    ServiceSupport,
+    UpdateState
+} from '@ruimte/desktop-bridge';
 
 /*
  * What the shell forwards when a page asks for a context menu: Electron's own params, trimmed to
@@ -31,40 +44,6 @@ export interface BrowserContextAction {
     payload?: { url?: string; x?: number; y?: number };
 }
 
-/* Where updating stands. Mirrors the `UpdateState` the shell keeps in `apps/desktop/src/main.ts`. */
-export interface UpdateState {
-    /* `unsupported` is a checkout, which has no feed; `current` means a check found nothing newer. */
-    status: 'unsupported' | 'idle' | 'checking' | 'current' | 'available' | 'downloading' | 'ready' | 'error';
-    currentVersion: string;
-    /* The version on the other side, once a check has seen one. */
-    version?: string;
-    percent?: number;
-    error?: string | null;
-}
-
-/* One published release. Mirrors `apps/desktop/src/release-notes.ts`, which says what each field holds. */
-export interface Release {
-    version: string;
-    publishedAt: string;
-    body: string;
-    url: string;
-    compareUrl: string | null;
-}
-
-export interface ReleaseNotesState {
-    releases: Release[];
-    fetchedAt: string | null;
-    error: string | null;
-}
-
-/* What the agents of this window add up to, as the shell needs it. Mirrors `apps/desktop/src/main.ts`. */
-export interface AgentActivity {
-    /* Agents in the middle of a turn. What the quit dialog names, and never an attached shell. */
-    working: number;
-    /* Nodes waiting to be looked at: the ones that need you plus the ones that finished out of sight. */
-    attention: number;
-}
-
 /*
  * Signing in to the Pulsar address book, the part only the shell can do. Mirrors `pulsar` in
  * `apps/desktop/src/preload.ts`. The answers are unknown on purpose: they crossed a process boundary,
@@ -83,24 +62,6 @@ export interface PulsarBridge {
     refresh(): Promise<unknown>;
     restore(): Promise<unknown>;
     signOut(): Promise<void>;
-}
-
-/* Where the shell can run the daemon as a background service. Mirrors `apps/desktop/src/service/settings.ts`. */
-export type ServiceSupport = 'supported' | 'dev' | 'windows' | 'appimage';
-
-/* The background service of this machine. Mirrors `BackgroundServiceState` in `apps/desktop/src/service/controller.ts`. */
-export interface BackgroundServiceState {
-    support: ServiceSupport;
-    /* "Keep this machine running when Ruimte quits". Always false where the service is not supported. */
-    keepRunning: boolean;
-    /* Who runs the daemon now: the service, the app itself, or one the app found and does not manage. Null while starting. */
-    owner: 'service' | 'app' | 'external' | null;
-    /* Why the service did not take the daemon this time. */
-    failure: string | null;
-    /* Linux only: whether the person's services outlive their session. */
-    linger: boolean | null;
-    /* An older build still runs this machine because work was running on it: what a restart ends (null when unknown) and whether "When idle" was picked. Absent from an older shell. */
-    pendingRestart?: { work: number | null; answered: boolean } | null;
 }
 
 /* The switch and the stop button of This machine, which only the shell can carry out. */

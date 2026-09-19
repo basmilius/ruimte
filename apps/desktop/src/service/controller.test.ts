@@ -5,7 +5,8 @@ import { join } from 'node:path';
 import { createServiceController, type ServiceControllerDeps } from './controller';
 import type { BuildIdentity, MachineWork } from '@ruimte/contracts';
 import type { ServiceManager } from '@ruimte/service';
-import { keepRunningSetting, serviceSupport, type KeepRunningSetting, type ServiceSupport } from './settings';
+import type { ServiceSupport } from '@ruimte/desktop-bridge';
+import { keepRunningSetting, serviceSupport, type KeepRunningSetting } from './settings';
 
 const EXPECTED: BuildIdentity = { version: '0.1.0', build: 'new' };
 

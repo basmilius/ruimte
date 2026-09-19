@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import type { DesktopBridge, Release, ReleaseNotesState, UpdateState } from '@/desktop/bridge';
-import { compareVersions, ensureReleaseNotes, missingNotesNotice, notesView, openReleaseNotes, useReleaseNotes } from '@/state/release-notes';
+import { ensureReleaseNotes, missingNotesNotice, notesView, openReleaseNotes, useReleaseNotes } from '@/state/release-notes';
 
 const release = (version: string, body = '- Something changed.'): Release => ({
     version,
@@ -76,13 +76,6 @@ describe('missingNotesNotice', () => {
     test('says nothing for a listed version, even one without notes', () => {
         expect(missingNotesNotice(LIST, '0.0.3', false)).toBeNull();
         expect(missingNotesNotice(LIST, null, false)).toBeNull();
-    });
-});
-
-describe('compareVersions', () => {
-    test('compares each part as a number', () => {
-        expect(compareVersions('0.0.10', '0.0.9')).toBeGreaterThan(0);
-        expect(compareVersions('0.0.8', '0.0.8')).toBe(0);
     });
 });
 

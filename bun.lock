@@ -28,6 +28,7 @@
         "@pierre/trees": "1.0.0-beta.6",
         "@ruimte/actions": "workspace:*",
         "@ruimte/contracts": "workspace:*",
+        "@ruimte/desktop-bridge": "workspace:*",
         "@ruimte/diagram": "workspace:*",
         "@ruimte/drawing": "workspace:*",
         "@ruimte/plan": "workspace:*",
@@ -69,6 +70,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@ruimte/contracts": "workspace:*",
+        "@ruimte/desktop-bridge": "workspace:*",
         "@ruimte/pulsar": "workspace:*",
         "@ruimte/service": "workspace:*",
         "zod": "^4.5.4",
@@ -159,6 +161,14 @@
         "@ruimte/pulsar": "workspace:*",
         "zod": "^4.5.4",
       },
+      "devDependencies": {
+        "@types/bun": "^1.4.0",
+        "typescript": "~6.0.2",
+      },
+    },
+    "packages/desktop-bridge": {
+      "name": "@ruimte/desktop-bridge",
+      "version": "0.0.0",
       "devDependencies": {
         "@types/bun": "^1.4.0",
         "typescript": "~6.0.2",
@@ -598,6 +608,8 @@
     "@ruimte/contracts": ["@ruimte/contracts@workspace:packages/contracts"],
 
     "@ruimte/desktop": ["@ruimte/desktop@workspace:apps/desktop"],
+
+    "@ruimte/desktop-bridge": ["@ruimte/desktop-bridge@workspace:packages/desktop-bridge"],
 
     "@ruimte/diagram": ["@ruimte/diagram@workspace:packages/diagram"],
 

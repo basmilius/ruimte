@@ -1,50 +1,10 @@
 import { readFile, rename, writeFile } from 'node:fs/promises';
-
-/* One published release, as the client draws it. Mirrored in `apps/client/src/desktop/bridge.ts`. */
-export interface Release {
-    /* Without the `v` of the tag. */
-    version: string;
-    publishedAt: string;
-    /* Markdown, with the closing Full Changelog line taken off. Empty when the release has no notes. */
-    body: string;
-    url: string;
-    compareUrl: string | null;
-}
-
-export interface ReleaseNotesState {
-    releases: Release[];
-    /* When GitHub last answered, whether with a list or with "nothing changed". Null before the first answer. */
-    fetchedAt: string | null;
-    /* Why the last fetch failed. The releases of the fetch before it stay. */
-    error: string | null;
-}
+import { compareVersions, isVersion, type Release, type ReleaseNotesState } from '@ruimte/desktop-bridge';
 
 export const RELEASES_URL = 'https://api.github.com/repos/basmilius/ruimte/releases?per_page=20';
 
-const SEMVER = /^v?(\d+)\.(\d+)\.(\d+)$/;
-
 // The line GitHub's generated notes end with. It is a link, not a note, so it moves next to the date.
 const FULL_CHANGELOG = /\s*\*\*Full Changelog:?\*\*:?\s*(https?:\/\/\S+)\s*$/;
-
-const partsOf = (version: string): [number, number, number] | null => {
-    const match = SEMVER.exec(version);
-    return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
-};
-
-/* Negative when `a` is older than `b`. A version that is not semver sorts below every one that is. */
-export const compareVersions = (a: string, b: string): number => {
-    const left = partsOf(a);
-    const right = partsOf(b);
-    if (!left || !right) {
-        return (left ? 1 : 0) - (right ? 1 : 0);
-    }
-    for (let i = 0; i < 3; i++) {
-        if (left[i] !== right[i]) {
-            return left[i]! - right[i]!;
-        }
-    }
-    return 0;
-};
 
 const text = (value: unknown): string => (typeof value === 'string' ? value : '');
 
@@ -63,15 +23,16 @@ export const releasesFrom = (json: unknown): Release[] => {
             continue;
         }
         const record = entry as Record<string, unknown>;
-        const tag = text(record.tag_name);
-        if (record.draft === true || record.prerelease === true || !SEMVER.test(tag)) {
+        // The tag carries a `v` the version does not; everything after this point reads a bare version.
+        const version = text(record.tag_name).replace(/^v/, '');
+        if (record.draft === true || record.prerelease === true || !isVersion(version)) {
             continue;
         }
         // GitHub writes CRLF into a body edited in the browser.
         const raw = text(record.body).replace(/\r\n/g, '\n');
         const changelog = FULL_CHANGELOG.exec(raw);
         releases.push({
-            version: tag.replace(/^v/, ''),
+            version,
             publishedAt: text(record.published_at),
             body: (changelog ? raw.slice(0, changelog.index) : raw).trim(),
             url: text(record.html_url),

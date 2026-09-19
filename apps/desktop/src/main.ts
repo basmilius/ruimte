@@ -4,11 +4,12 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { homedir, userInfo } from 'node:os';
 import { join, resolve } from 'node:path';
 import { buildIdentityOf, machineWorkOf, MACHINE_HEALTH_PATH, MACHINE_WORK_PATH, type BuildIdentity, type MachineWork } from '@ruimte/contracts';
+import type { AgentActivity, BackgroundServiceState, UpdateState } from '@ruimte/desktop-bridge';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
 import { listenForLogin, type LoopbackLogin } from './pulsar-login';
 import { fileSessionKey, fileSessionStore } from './pulsar-store';
 import { createReleaseNotes } from './release-notes';
-import { createServiceController, type BackgroundServiceState } from './service/controller';
+import { createServiceController } from './service/controller';
 import {
     LAUNCH_AGENT_LABEL,
     diskFiles,
@@ -401,12 +402,6 @@ const setKeepAwake = (keep: boolean): void => {
 };
 
 ipcMain.on('power:keep-awake', (_event, keep: boolean) => setKeepAwake(keep));
-
-/* What the agents of the window add up to. Mirrors `AgentActivity` in `apps/client/src/desktop/bridge.ts`. */
-interface AgentActivity {
-    working: number;
-    attention: number;
-}
 
 /*
  * What the client last said about its agents. The shell counts nothing itself: which node holds an
@@ -865,17 +860,6 @@ ipcMain.handle('pulsar:sign-out', (event) => (fromAppWindow(event) ? pulsarSessi
 ipcMain.handle('window:is-fullscreen', () => mainWindow?.isFullScreen() ?? false);
 
 ipcMain.on('window:theme', (_event, theme: AppTheme) => applyTheme(theme));
-
-/* What the client knows about updating. Mirrored in `apps/client/src/desktop/bridge.ts`. */
-interface UpdateState {
-    /* `unsupported` is a checkout, which has no feed; `current` means a check found nothing newer. */
-    status: 'unsupported' | 'idle' | 'checking' | 'current' | 'available' | 'downloading' | 'ready' | 'error';
-    currentVersion: string;
-    /* The version on the other side, once a check has seen one. */
-    version?: string;
-    percent?: number;
-    error?: string | null;
-}
 
 /*
  * electron-updater puts the whole HTTP exchange in the message of a failed check: every response

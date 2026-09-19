@@ -1,13 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-
-/*
- * Where a background service can run. The dev app never gets one: it runs its own daemon on 4211
- * with ~/.ruimte-dev beside an installed Ruimte, and a service of its own would be a second daemon
- * that outlives every `bun dev`. An AppImage runs from a mount that is gone once the app quits, so a
- * service pointing into it would start nothing. Windows has no service yet.
- */
-export type ServiceSupport = 'supported' | 'dev' | 'windows' | 'appimage';
+import type { ServiceSupport } from '@ruimte/desktop-bridge';
 
 export interface SupportFacts {
     packaged: boolean;

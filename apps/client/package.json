@@ -25,6 +25,7 @@
     "@pierre/trees": "1.0.0-beta.6",
     "@ruimte/actions": "workspace:*",
     "@ruimte/contracts": "workspace:*",
+    "@ruimte/desktop-bridge": "workspace:*",
     "@ruimte/diagram": "workspace:*",
     "@ruimte/drawing": "workspace:*",
     "@ruimte/plan": "workspace:*",

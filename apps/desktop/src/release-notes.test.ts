@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { compareVersions, createReleaseNotes, releasesFrom } from './release-notes';
+import { createReleaseNotes, releasesFrom } from './release-notes';
 
 // The body of v0.0.8 as GitHub serves it.
 const BODY_0_0_8 = `## 🚀 Features
@@ -87,15 +87,6 @@ describe('releasesFrom', () => {
     test('answers an empty list for anything that is not a list', () => {
         expect(releasesFrom({ message: 'Not Found' })).toEqual([]);
         expect(releasesFrom(null)).toEqual([]);
-    });
-});
-
-describe('compareVersions', () => {
-    test('compares each part as a number', () => {
-        expect(compareVersions('0.0.10', '0.0.9')).toBeGreaterThan(0);
-        expect(compareVersions('1.0.0', '0.9.9')).toBeGreaterThan(0);
-        expect(compareVersions('0.0.8', '0.0.8')).toBe(0);
-        expect(compareVersions('0.0.7', '0.0.8')).toBeLessThan(0);
     });
 });
 

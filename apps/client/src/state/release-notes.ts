@@ -1,4 +1,5 @@
 import i18next from 'i18next';
+import { compareVersions, isVersion } from '@ruimte/desktop-bridge';
 import { create } from 'zustand';
 import { desktop, type Release, type ReleaseNotesState, type UpdateState } from '@/desktop/bridge';
 import { hasUpdate } from '@/state/updates';
@@ -84,26 +85,6 @@ export const closeReleaseNotes = (): void => {
 
 export const setPreviousSeenVersion = (version: string | null): void => {
     useReleaseNotes.setState({ previousSeen: version });
-};
-
-const SEMVER = /^(\d+)\.(\d+)\.(\d+)$/;
-
-export const isVersion = (version: string): boolean => SEMVER.test(version);
-
-/* Negative when `a` is older than `b`. The same order as the shell's, which sorted the list. */
-export const compareVersions = (a: string, b: string): number => {
-    const left = SEMVER.exec(a);
-    const right = SEMVER.exec(b);
-    if (!left || !right) {
-        return (left ? 1 : 0) - (right ? 1 : 0);
-    }
-    for (let i = 1; i <= 3; i++) {
-        const difference = Number(left[i]) - Number(right[i]);
-        if (difference !== 0) {
-            return difference;
-        }
-    }
-    return 0;
 };
 
 export type NoteRole = 'upcoming' | 'installed' | 'older';

@@ -1,28 +1,8 @@
 import type { BuildIdentity, MachineWork } from '@ruimte/contracts';
+import type { DaemonOwner, PendingRestart, ServiceSupport, ShellServiceState } from '@ruimte/desktop-bridge';
 import { decideRestart, decideStart, sameBuild } from './decide';
 import type { ServiceManager } from '@ruimte/service';
-import type { KeepRunningSetting, ServiceSupport } from './settings';
-
-/* Who runs the daemon the window talks to. `external` is one the app found answering and does not manage. */
-export type DaemonOwner = 'service' | 'app' | 'external';
-
-/* What the client draws in the machine dialog. Mirrored in `apps/client/src/desktop/bridge.ts`. */
-export interface BackgroundServiceState {
-    support: ServiceSupport;
-    keepRunning: boolean;
-    /* Null until the start has settled. */
-    owner: DaemonOwner | null;
-    /* Why the service did not take the daemon this time, when the app fell back to its own. */
-    failure: string | null;
-    /* Linux only: whether services outlive the session. Null elsewhere. */
-    linger: boolean | null;
-    /*
-     * The service runs an older build and work was running on it, so the app attached instead of
-     * restarting. `work` is what a restart ends (null when the daemon cannot say), `answered` whether
-     * the person already picked "When idle". Null once the new build runs.
-     */
-    pendingRestart: { work: number | null; answered: boolean } | null;
-}
+import type { KeepRunningSetting } from './settings';
 
 export interface ServiceControllerDeps {
     support: ServiceSupport;
@@ -43,22 +23,22 @@ export interface ServiceControllerDeps {
 }
 
 export interface ServiceController {
-    state(): BackgroundServiceState;
+    state(): ShellServiceState;
     /* Brings a daemon up behind the port: the service, or the app's own. Rejects when none comes up. */
     start(): Promise<void>;
     /* The switch. The daemon that runs keeps running; the other owner takes over when the app quits. */
-    setKeepRunning(keepRunning: boolean): BackgroundServiceState;
+    setKeepRunning(keepRunning: boolean): ShellServiceState;
     /* Whether the agents outlive this quit, for the question asked before it. */
     survivesQuit(stopMachine: boolean): boolean;
     /* What quitting does to the daemon. `stopMachine` ends the service too, until the next start. */
     quit(stopMachine: boolean): void;
-    enableLinger(): BackgroundServiceState;
+    enableLinger(): ShellServiceState;
     /* "Restart now": the service moves onto the binary in this bundle, ending what runs on it. */
-    restartNow(): Promise<BackgroundServiceState>;
+    restartNow(): Promise<ShellServiceState>;
     /* "When idle": the old daemon stays for this session and restarts itself once nothing runs. */
-    restartWhenIdle(): BackgroundServiceState;
+    restartWhenIdle(): ShellServiceState;
     /* Asks the port again, and drops a pending restart once the new build answers. */
-    refresh(): Promise<BackgroundServiceState>;
+    refresh(): Promise<ShellServiceState>;
 }
 
 const messageOf = (e: unknown): string => (e instanceof Error ? e.message : String(e));
@@ -66,11 +46,11 @@ const messageOf = (e: unknown): string => (e instanceof Error ? e.message : Stri
 export const createServiceController = (deps: ServiceControllerDeps): ServiceController => {
     let owner: DaemonOwner | null = null;
     let failure: string | null = null;
-    let pendingRestart: BackgroundServiceState['pendingRestart'] = null;
+    let pendingRestart: PendingRestart | null = null;
     const manager = deps.support === 'supported' ? deps.manager : null;
     const keepRunning = (): boolean => manager !== null && deps.setting.read();
 
-    const state = (): BackgroundServiceState => {
+    const state = (): ShellServiceState => {
         let linger: boolean | null = null;
         if (manager?.linger) {
             try {

@@ -2,7 +2,8 @@ import i18next from 'i18next';
 import { formatPercent } from '@/format/number';
 import { create } from 'zustand';
 import { desktop, type UpdateState } from '@/desktop/bridge';
-import { compareVersions, isVersion, openReleaseNotes, setPreviousSeenVersion } from '@/state/release-notes';
+import { compareVersions, isVersion } from '@ruimte/desktop-bridge';
+import { openReleaseNotes, setPreviousSeenVersion } from '@/state/release-notes';
 import { useToasts } from '@/state/toasts';
 
 interface UpdatesStore extends UpdateState {
