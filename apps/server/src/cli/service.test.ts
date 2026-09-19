@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { definitionRunsProgram, type ServiceFiles, type ServiceManager } from '@ruimte/service';
-import { runServiceAction, servicePath, servicePlan, type Health, type ServiceDeps, type ServiceFacts } from './service.ts';
+import type { BuildIdentity } from '@ruimte/contracts';
+import { runServiceAction, servicePath, servicePlan, type ServiceDeps, type ServiceFacts } from './service.ts';
 
 const MAC: ServiceFacts = {
     platform: 'darwin',
@@ -46,7 +47,7 @@ const fakeManager = (files: ServiceFiles, linger?: boolean): ServiceManager & { 
     };
 };
 
-const setup = (options: { existing?: string; linger?: boolean; health?: Health | null; build?: string | null } = {}) => {
+const setup = (options: { existing?: string; linger?: boolean; health?: BuildIdentity | null; build?: string | null } = {}) => {
     const disk = new Map<string, string>();
     const files: ServiceFiles = {
         read: (path) => disk.get(path) ?? null,

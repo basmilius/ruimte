@@ -1,4 +1,5 @@
 import { chmodSync, copyFileSync, mkdirSync, renameSync, rmSync } from 'node:fs';
+import { buildIdentityOf, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimte/contracts';
 import { homedir, userInfo } from 'node:os';
 import { dirname, join } from 'node:path';
 import {
@@ -87,18 +88,13 @@ export const servicePlan = (facts: ServiceFacts): ServicePlan | string => {
     return { kind, binDir, program, definition: kind === 'launchd' ? launchAgentPlist(spec) : systemdUnit(spec) };
 };
 
-export interface Health {
-    version: string;
-    build: string | null;
-}
-
 export interface ServiceDeps {
     manager: ServiceManager;
     files: ServiceFiles;
     /* Copies the binary files from the folder of the running one into the service's folder. */
     copyBinaries(from: string, to: string): void;
     removeBinaries(dir: string): void;
-    health(port: number): Promise<Health | null>;
+    health(port: number): Promise<BuildIdentity | null>;
     /* The build id beside the binary in a folder, null when there is none. */
     readBuild(dir: string): string | null;
     user: string;
@@ -242,11 +238,10 @@ const removeBinaries = (dir: string): void => {
     }
 };
 
-const health = async (port: number): Promise<Health | null> => {
+const health = async (port: number): Promise<BuildIdentity | null> => {
     try {
-        const response = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(2000) });
-        const body = (await response.json()) as { version?: unknown; build?: unknown };
-        return typeof body.version === 'string' ? { version: body.version, build: typeof body.build === 'string' ? body.build : null } : null;
+        const response = await fetch(`http://127.0.0.1:${port}${MACHINE_HEALTH_PATH}`, { signal: AbortSignal.timeout(2000) });
+        return buildIdentityOf(await response.json());
     } catch {
         return null;
     }

@@ -4,6 +4,9 @@ import { dirname, join, normalize, resolve } from 'node:path';
 import type { ServerWebSocket } from 'bun';
 import {
     AuthTicketPayloadSchema,
+    isIdle,
+    MACHINE_HEALTH_PATH,
+    MACHINE_WORK_PATH,
     PairPayloadSchema,
     PROTOCOL_PARAM,
     PROTOCOL_REFUSED_CLOSE_CODE,
@@ -11,7 +14,9 @@ import {
     acceptsOfferedProtocol,
     protocolRefusalReason,
     type AgentKind,
-    type DiagramContent
+    type DiagramContent,
+    type HealthResult,
+    type MachineWork
 } from '@ruimte/contracts';
 import { AgentStore } from './agents/agent-store.ts';
 import { ClaudeTitleReader } from './agents/claude-title.ts';
@@ -66,7 +71,7 @@ import type { ServerConfig } from './config.ts';
 import { Dispatcher, type ClientAccess } from './dispatcher.ts';
 import { readOrCreateEndpointIdentity } from './endpoint-id.ts';
 import { SelfUpdater, buildFileOf, readBuildFile } from './service/self-update.ts';
-import { childCounter, isIdle, workOf, type MachineWork } from './service/work.ts';
+import { childCounter, workOf } from './service/work.ts';
 import { BUILD, COMPILED as compiled, VERSION } from './version.ts';
 import { registerAuthHandlers } from './handlers/auth.ts';
 import { registerChatHandlers } from './handlers/chat.ts';
@@ -119,8 +124,6 @@ import { registerDeviceHandlers } from './handlers/device.ts';
 import { LiveStreamHub } from './streams/live-stream.ts';
 
 // A client on another origin pairs and signs in from its own page, so the auth routes answer preflights and open CORS.
-// What would end if this daemon restarted, as counts; `service/work.ts` says what counts.
-const MACHINE_WORK_PATH = '/machine/work';
 // What `ruimte login` has the machine sign; local secret only, like the work.
 const MACHINE_LINK_PATH = '/machine/link-request';
 const MACHINE_REGISTRATION_PATH = '/machine/registration';
@@ -664,11 +667,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
             const url = new URL(request.url);
             const remote = server.requestIP(request)?.address ?? '';
 
-            if (url.pathname === '/health') {
+            if (url.pathname === MACHINE_HEALTH_PATH) {
                 if (request.method !== 'GET') {
                     return new Response('Method not allowed', { status: 405 });
                 }
-                return Response.json({ ok: true, version: VERSION, build: BUILD, service: config.underService });
+                return Response.json({ ok: true, version: VERSION, build: BUILD, service: config.underService } satisfies HealthResult);
             }
 
             if (url.pathname === '/auth/pairing-token') {

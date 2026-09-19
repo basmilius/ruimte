@@ -1,15 +1,4 @@
-import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
-
-/*
- * What a restart of this daemon would cut short. Asked by the daemon before it updates itself and by
- * the desktop app before it restarts the service onto a new binary, so both mean the same by idle.
- */
-export interface MachineWork {
-    /* Shells with something running in them other than the shell, and no agent in a turn. */
-    terminals: number;
-    /* Terminal agents in a turn (or waiting on a person inside one) and chats with a turn in flight. */
-    agents: number;
-}
+import type { AgentInfo, AgentStatus, MachineWork } from '@ruimte/contracts';
 
 export interface WorkFacts {
     sessions: readonly { pid: number; exited: boolean; agent?: AgentInfo | null }[];
@@ -43,8 +32,6 @@ export const workOf = (facts: WorkFacts): MachineWork => {
     }
     return { terminals, agents };
 };
-
-export const isIdle = (work: MachineWork): boolean => work.terminals === 0 && work.agents === 0;
 
 /* A child count over one reading of the process table. */
 export const childCounter = (processes: readonly { pid: number; ppid: number }[]): ((pid: number) => number) => {

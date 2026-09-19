@@ -1,3 +1,4 @@
+import { COARSE_POINTS, FINE_POINTS } from '@ruimte/contracts';
 import type {
     AgentInfo,
     AgentKind,
@@ -30,9 +31,6 @@ import { errorText } from '../error-text.ts';
 
 export const FINE_INTERVAL_MS = 2000;
 export const COARSE_INTERVAL_MS = 5 * 60_000;
-/* Ten minutes at two seconds, a day at five minutes. */
-export const FINE_POINTS = 300;
-export const COARSE_POINTS = 288;
 /* Rows of the rest of the machine per sample in "All"; the other 1,500 stay on the daemon. */
 export const OTHER_LIMIT = 50;
 /* A moment for a killed tree to reparent or exit before the reading that is meant to see it. */

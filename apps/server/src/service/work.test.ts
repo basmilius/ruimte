@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { AgentInfo, AgentStatus } from '@ruimte/contracts';
-import { childCounter, isIdle, workOf } from './work.ts';
+import { isIdle } from '@ruimte/contracts';
+import { childCounter, workOf } from './work.ts';
 
 const agent = (status: AgentStatus, live = true): AgentInfo => ({
     kind: 'claude',
