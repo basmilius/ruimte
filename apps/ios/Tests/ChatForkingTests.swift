@@ -17,7 +17,7 @@ final class ChatForkingTests: XCTestCase {
         XCTAssertEqual(ChatForking.refusal(info: info, turn: nil), "This turn is not in the conversation")
         XCTAssertEqual(
             ChatForking.refusal(info: info.setting("provider", .string("gemini")), turn: turn),
-            "This CLI has no conversation to fork")
+            "This CLI has no conversation that can be forked")
         XCTAssertEqual(
             ChatForking.refusal(info: info.setting("agentSessionId", .null), turn: turn),
             "The CLI never started a conversation here")
