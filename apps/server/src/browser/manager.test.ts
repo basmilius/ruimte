@@ -132,6 +132,31 @@ describe('BrowserManager', () => {
         expect(statuses.some((status) => status.title === 'Example')).toBe(true);
     });
 
+    test('a client that subscribed again keeps its newer sink when the older one lets go', async () => {
+        const page = new FakePage();
+        const manager = new BrowserManager(new LiveStreamHub(), () => page);
+        const first: BrowserInfo[] = [];
+        const second: BrowserInfo[] = [];
+        const off = manager.subscribe('client-1', (event) => {
+            if (event.event === 'browser.status') {
+                first.push(event.payload);
+            }
+        });
+        manager.subscribe('client-1', (event) => {
+            if (event.event === 'browser.status') {
+                second.push(event.payload);
+            }
+        });
+        // A socket that reattaches subscribes before the old one lets go.
+        off();
+
+        await manager.open('node-1', 'client-1', 'https://example.com', 800, 600);
+        await Bun.sleep(10);
+
+        expect(first).toHaveLength(0);
+        expect(second.length).toBeGreaterThan(0);
+    });
+
     test('captures a high-density frame after a page follows a link', async () => {
         const page = new FakePage();
         const hub = new LiveStreamHub();

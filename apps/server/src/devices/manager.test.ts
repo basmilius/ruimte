@@ -125,6 +125,32 @@ describe('DeviceManager', () => {
         expect(backend.source.stops).toBe(1);
     });
 
+    test('a client that subscribed again keeps its newer sink when the older one lets go', async () => {
+        const backend = new FakeBackend();
+        backend.info = { ...phone, state: 'booted' };
+        const manager = new DeviceManager([backend]);
+        const first: DeviceFrame[] = [];
+        const second: DeviceFrame[] = [];
+        const off = manager.subscribe('client-1', (event) => {
+            if (event.event === 'device.frame') {
+                first.push(event.payload);
+            }
+        });
+        manager.subscribe('client-1', (event) => {
+            if (event.event === 'device.frame') {
+                second.push(event.payload);
+            }
+        });
+        // A socket that reattaches subscribes before the old one lets go.
+        off();
+
+        await manager.open('simctl', 'ios', 'phone-1', 'client-1', 'events');
+        backend.source.publish?.({ sequence: 1, width: 2, height: 3, data: new Uint8Array([1, 2, 3]) });
+
+        expect(first).toHaveLength(0);
+        expect(second).toHaveLength(1);
+    });
+
     test('ends the session when the last client disappears', async () => {
         const backend = new FakeBackend();
         backend.info = { ...phone, state: 'booted' };

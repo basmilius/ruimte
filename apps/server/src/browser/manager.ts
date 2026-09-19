@@ -512,7 +512,12 @@ export class BrowserManager {
 
     subscribe(clientId: string, sink: SessionSink): () => void {
         this.sinks.set(clientId, sink);
-        return () => this.sinks.delete(clientId);
+        // A client that subscribes again before it unsubscribes keeps its newer sink.
+        return () => {
+            if (this.sinks.get(clientId) === sink) {
+                this.sinks.delete(clientId);
+            }
+        };
     }
 
     async open(
@@ -641,18 +646,26 @@ export class BrowserManager {
         const byClient = this.frameSubscriptions.get(browserId) ?? new Map<string, FrameSubscription>();
         byClient.set(clientId, subscription);
         this.frameSubscriptions.set(browserId, byClient);
-        const release = await this.streams.subscribe(session.streamId, (frame) => {
-            if (!subscription.cancelled) {
-                this.sinks.get(clientId)?.({
-                    event: 'browser.frame',
-                    payload: eventFrame(browserId, frame)
-                });
+        try {
+            const release = await this.streams.subscribe(session.streamId, (frame) => {
+                if (!subscription.cancelled) {
+                    this.sinks.get(clientId)?.({
+                        event: 'browser.frame',
+                        payload: eventFrame(browserId, frame)
+                    });
+                }
+            });
+            if (subscription.cancelled) {
+                release();
+            } else {
+                subscription.release = release;
             }
-        });
-        if (subscription.cancelled) {
-            release();
-        } else {
-            subscription.release = release;
+        } catch (error) {
+            byClient.delete(clientId);
+            if (byClient.size === 0) {
+                this.frameSubscriptions.delete(browserId);
+            }
+            throw error;
         }
     }
 

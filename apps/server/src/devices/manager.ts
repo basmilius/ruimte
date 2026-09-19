@@ -56,7 +56,12 @@ export class DeviceManager {
 
     subscribe(clientId: string, sink: SessionSink): () => void {
         this.sinks.set(clientId, sink);
-        return () => this.sinks.delete(clientId);
+        // A client that subscribes again before it unsubscribes keeps its newer sink.
+        return () => {
+            if (this.sinks.get(clientId) === sink) {
+                this.sinks.delete(clientId);
+            }
+        };
     }
 
     async list(): Promise<DeviceInfo[]> {
