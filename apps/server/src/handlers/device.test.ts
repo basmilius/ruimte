@@ -31,6 +31,25 @@ describe('device handlers', () => {
         expect(listed).toBe(0);
     });
 
+    test('the machine policy refuses driving a device that was already open', async () => {
+        let inputs = 0;
+        const devices = {
+            input() {
+                inputs += 1;
+                return Promise.resolve();
+            }
+        } as unknown as DeviceManager;
+        const { dispatcher, frames, client } = setup(devices, () => false);
+
+        await dispatcher.handle(
+            client,
+            request('device.input', { backendId: 'simctl', platform: 'ios', deviceId: 'phone-1', input: { kind: 'pointer', phase: 'down', x: 0.5, y: 0.25 } })
+        );
+
+        expect(frames.at(-1)).toMatchObject({ ok: false, error: { code: 'streaming-disabled' } });
+        expect(inputs).toBe(0);
+    });
+
     test('translates backend failures into stable request errors', async () => {
         const devices = {
             boot() {

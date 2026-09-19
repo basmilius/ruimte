@@ -1,6 +1,7 @@
 import { HEVC_STREAM_CONTENT_TYPE, LIVE_STREAM_CONTENT_TYPE, LIVE_STREAM_MAGIC, encodeLiveStreamFrame } from '@ruimte/contracts';
 import type { AuthStore } from '../auth/auth-store.ts';
 import { decideAccess, originAllowed, type AccessOptions } from '../auth/access.ts';
+import { STREAMING_DISABLED_MESSAGE } from '../handlers/streaming.ts';
 import type { LiveStreamHub } from './live-stream.ts';
 
 export const LIVE_STREAM_PATH = '/live-stream';
@@ -35,7 +36,7 @@ export const handleLiveStreamRequest = async (
         return new Response(decision.reason, { status: decision.status, headers });
     }
     if (!streamingAllowed()) {
-        return new Response('Browser and device streaming is disabled on this machine', { status: 403, headers });
+        return new Response(STREAMING_DISABLED_MESSAGE, { status: 403, headers });
     }
     const encodedId = url.pathname.slice(LIVE_STREAM_PATH.length + 1);
     if (encodedId === '' || encodedId.includes('/')) {

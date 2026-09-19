@@ -1,5 +1,6 @@
 import { DeviceError, type DeviceManager } from '../devices/manager.ts';
 import { RequestError, type Dispatcher } from '../dispatcher.ts';
+import { streamingGate } from './streaming.ts';
 
 const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
     Promise.resolve()
@@ -12,11 +13,7 @@ const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
         });
 
 export const registerDeviceHandlers = (dispatcher: Dispatcher, devices: DeviceManager, streamingAllowed: () => boolean): void => {
-    const requireStreaming = (): void => {
-        if (!streamingAllowed()) {
-            throw new RequestError('streaming-disabled', 'Browser and device streaming is disabled on this machine');
-        }
-    };
+    const requireStreaming = streamingGate(streamingAllowed);
 
     dispatcher.register('device.list', () => {
         requireStreaming();
@@ -34,16 +31,18 @@ export const registerDeviceHandlers = (dispatcher: Dispatcher, devices: DeviceMa
         requireStreaming();
         return translate(() => devices.open(payload.backendId, payload.platform, payload.deviceId, client.id, payload.stream));
     });
+    // Detach lets a client clean up after the policy changed, so it stays open.
     dispatcher.register('device.detach', (payload, client) => {
         devices.detach(payload.backendId, payload.deviceId, client.id);
         return {};
     });
-    dispatcher.register('device.input', (payload, client) =>
-        translate(async () => {
+    dispatcher.register('device.input', (payload, client) => {
+        requireStreaming();
+        return translate(async () => {
             await devices.input(payload.backendId, payload.deviceId, client.id, payload.input);
             return {};
-        })
-    );
+        });
+    });
     dispatcher.register('device.detail', (payload) => {
         requireStreaming();
         return translate(async () => ({ ...payload, settings: await devices.detail(payload.backendId, payload.platform, payload.deviceId) }));

@@ -43,4 +43,49 @@ describe('browser handlers', () => {
         expect(frames.at(-1)).toMatchObject({ ok: true, result: { streamId: 'browser:view-1' } });
         expect(opened).toBe(1);
     });
+
+    test('the machine policy refuses driving a page that was already open', async () => {
+        const calls: string[] = [];
+        const browsers = {
+            navigate(...args: unknown[]) {
+                calls.push('navigate');
+                return Promise.resolve(args);
+            },
+            command() {
+                calls.push('command');
+                return Promise.resolve({});
+            },
+            resize() {
+                calls.push('resize');
+                return Promise.resolve();
+            },
+            input() {
+                calls.push('input');
+                return Promise.resolve();
+            }
+        } as unknown as BrowserManager;
+        const dispatcher = new Dispatcher();
+        registerBrowserHandlers(dispatcher, browsers, () => false);
+        const frames: ServerFrame[] = [];
+        const client: ClientConnection = { id: 'client-1', send: (frame) => frames.push(frame) };
+
+        const requests = [
+            { id: 'navigate', type: 'browser.navigate', payload: { browserId: 'view-1', url: 'https://example.com' } },
+            { id: 'command', type: 'browser.command', payload: { browserId: 'view-1', command: 'reload' } },
+            { id: 'resize', type: 'browser.resize', payload: { browserId: 'view-1', width: 800, height: 600 } },
+            { id: 'input', type: 'browser.input', payload: { browserId: 'view-1', input: { kind: 'text', text: 'hello' } } }
+        ];
+        for (const request of requests) {
+            await dispatcher.handle(client, JSON.stringify(request));
+        }
+
+        expect(frames.map((frame) => frame)).toEqual(
+            requests.map((request) => ({
+                id: request.id,
+                ok: false,
+                error: { code: 'streaming-disabled', message: 'Browser and device streaming is disabled on this machine' }
+            }))
+        );
+        expect(calls).toEqual([]);
+    });
 });
