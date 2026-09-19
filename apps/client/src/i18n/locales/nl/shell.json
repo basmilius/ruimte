@@ -204,9 +204,7 @@
     "newView": "Weergave",
     "putOnCanvas": "Op het canvas zetten",
     "showOnCanvas": "Op het canvas tonen",
-    "renameView": "Weergave hernoemen",
-    "changeIcon": "Icoon wijzigen…",
-    "deleteView": "Weergave verwijderen"
+    "changeIcon": "Icoon wijzigen…"
   },
   "planPanel": {
     "failed": "Dit plan kon niet worden getekend",

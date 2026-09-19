@@ -1,28 +1,15 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, ChevronDown, FileText, Frame, Globe, Minus, PanelBottom, PanelRight, Pencil, PenTool, Workflow, Smile, Terminal, Trash, X } from 'lucide-react';
-import { isDiagramView, isDrawingView, isFileView, isOpenableView, isSessionView, viewIconOf, type ProjectView } from '@ruimte/contracts';
+import { Check, ChevronDown, FileText, Frame, Globe, Minus, PanelBottom, PanelRight, PenTool, Workflow, Terminal, X } from 'lucide-react';
+import { isOpenableView, viewIconOf, type ProjectView } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentView } from '@/agents/nodes';
-import {
-    askDeleteView,
-    askRenameView,
-    askViewIcon,
-    newCanvasView,
-    newDiagramView,
-    newDrawingView,
-    newSeparatorView,
-    freeViewFor,
-    newTerminalView,
-    putOnCanvas,
-    splitFocusedCell,
-    showView,
-    showViewOnCanvas
-} from '@/project/views';
+import { newCanvasView, newDiagramView, newDrawingView, newSeparatorView, freeViewFor, newTerminalView, splitFocusedCell, showView } from '@/project/views';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { canSplit, cellCount, type SplitDirection } from '@/shell/split';
+import { ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useProviders } from '@/state/providers';
@@ -208,25 +195,7 @@ export function ViewMenu() {
                         <Menu.Separator className={MENU_SEPARATOR} />
                         <SplitItems />
                         <Menu.Separator className={MENU_SEPARATOR} />
-                        {isSessionView(active) && (
-                            <Menu.Item className="menu-item" onClick={() => putOnCanvas(active.id)}>
-                                <Icon icon={Frame} size={14} /> {t('viewMenu.putOnCanvas')}
-                            </Menu.Item>
-                        )}
-                        {(isDrawingView(active) || isDiagramView(active) || isFileView(active)) && (
-                            <Menu.Item className="menu-item" onClick={() => showViewOnCanvas(active.id)}>
-                                <Icon icon={Frame} size={14} /> {t('viewMenu.showOnCanvas')}
-                            </Menu.Item>
-                        )}
-                        <Menu.Item className="menu-item" onClick={() => askRenameView(active.id)}>
-                            <Icon icon={Pencil} size={14} /> {t('viewMenu.renameView')}
-                        </Menu.Item>
-                        <Menu.Item className="menu-item" onClick={() => askViewIcon(active.id)}>
-                            <Icon icon={Smile} size={14} /> {t('viewMenu.changeIcon')}
-                        </Menu.Item>
-                        <Menu.Item className="menu-item text-status-error" onClick={() => askDeleteView(active.id)}>
-                            <Icon icon={Trash} size={14} /> {t('viewMenu.deleteView')}
-                        </Menu.Item>
+                        <ViewMenuItems viewId={active.id} kind={active.kind} />
                     </Menu.Popup>
                 </Menu.Positioner>
             </Menu.Portal>

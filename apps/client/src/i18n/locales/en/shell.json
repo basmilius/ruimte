@@ -204,9 +204,7 @@
     "newView": "View",
     "putOnCanvas": "Put on canvas",
     "showOnCanvas": "Show on the canvas",
-    "renameView": "Rename view",
-    "changeIcon": "Change icon…",
-    "deleteView": "Delete view"
+    "changeIcon": "Change icon…"
   },
   "planPanel": {
     "failed": "This plan failed to render",
