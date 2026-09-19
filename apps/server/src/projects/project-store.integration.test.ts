@@ -2,7 +2,6 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ProjectDocument } from '@ruimte/contracts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { documentPathInFolder } from './project-files.ts';
 import { ProjectStore } from './project-store.ts';
@@ -42,7 +41,7 @@ test(
     async () => {
         const opened = await store.openProject({ folder });
         const path = documentPathInFolder(folder);
-        const pulled: ProjectDocument = { ...(JSON.parse(await readFile(path, 'utf8')) as ProjectDocument), rev: 7, name: 'from git' };
+        const pulled = { ...(JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>), name: 'from git' };
         await writeFile(`${path}.incoming`, JSON.stringify(pulled, null, 2));
         await rename(`${path}.incoming`, path);
 
@@ -53,7 +52,8 @@ test(
             }
             await Bun.sleep(25);
         }
-        expect(changed[0]).toMatchObject({ payload: { projectId: opened.summary.projectId, document: { rev: 7, name: 'from git' } } });
+        // The rev is this machine's own: the shared file carries none, so a pull moves it one on.
+        expect(changed[0]).toMatchObject({ payload: { projectId: opened.summary.projectId, document: { rev: 1, name: 'from git' } } });
     },
     DEADLINE_MS + 5_000
 );
