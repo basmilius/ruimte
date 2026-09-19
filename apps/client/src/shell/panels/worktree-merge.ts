@@ -20,7 +20,7 @@ export const mergeContents = (worktrees: readonly Worktree[]): string => {
         loose += (worktree.work?.changed ?? 0) + (worktree.work?.untracked ?? 0);
     }
     const parts = [
-        ...(commits > 0 ? [i18next.t('panels:worktree.counts.commits', { count: commits })] : []),
+        ...(commits > 0 ? [i18next.t('panels:worktree.merge.commits', { count: commits })] : []),
         ...(loose > 0 ? [i18next.t('panels:worktree.work.changed', { count: loose })] : [])
     ];
     if (parts.length === 0) {

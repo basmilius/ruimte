@@ -12,9 +12,13 @@ import { copyText } from '@/ui/clipboard';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
+import { Tooltip } from '@/ui/Tooltip';
 
 // One screen of rows at a time; the button at the end asks for the next.
 const PAGE = 30;
+
+/* A commit on two branches names both; beyond that the names cost the subject more than they tell. */
+const REFS_SHOWN = 2;
 
 /* A commit row is its own open button: the row's states with the columns of a row that opens. */
 const LOG_ROW =
@@ -117,11 +121,18 @@ export function CommitLog({ cwd, revision, reading, onOpen }: CommitLogProps) {
                                 onClick={() => onOpen(commit)}
                             >
                                 <span className="truncate text-text">{commit.subject}</span>
-                                {commit.refs.map((ref) => (
-                                    <Pill key={ref} mono className="shrink-0 py-0">
-                                        {ref}
-                                    </Pill>
+                                {commit.refs.slice(0, REFS_SHOWN).map((ref) => (
+                                    <Tooltip key={ref} label={ref}>
+                                        <Pill mono className="max-w-32 shrink-0 py-0">
+                                            <span className="min-w-0 truncate">{ref}</span>
+                                        </Pill>
+                                    </Tooltip>
                                 ))}
+                                {commit.refs.length > REFS_SHOWN && (
+                                    <Tooltip label={commit.refs.slice(REFS_SHOWN).join(', ')}>
+                                        <Pill className="shrink-0 py-0 tabular-nums">{t('git.log.moreRefs', { count: commit.refs.length - REFS_SHOWN })}</Pill>
+                                    </Tooltip>
+                                )}
                                 <span className="grow" />
                                 <span className="truncate text-text-faint">{commit.author}</span>
                                 <span className="shrink-0 text-text-faint">{relativeTime(commit.at, now)}</span>

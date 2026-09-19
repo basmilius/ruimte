@@ -299,6 +299,7 @@
       "empty": "No commits yet.",
       "failed": "Could not read the history.",
       "loadMore": "Load more",
+      "moreRefs": "+{{count}}",
       "open": "Open the commit",
       "today": "Today",
       "yesterday": "Yesterday"
@@ -399,18 +400,13 @@
   },
   "worktree": {
     "baseBranch": "the base branch",
-    "counts": {
-      "changed": "{{count}} changed",
-      "commits_one": "{{count}} commit",
-      "commits_other": "{{count}} commits",
-      "halfway": "{{operation}} halfway",
-      "new": "{{count}} new"
-    },
     "leftBehind": {
       "clean": "Works in worktree {{branch}}, which holds no work.",
       "holding": "Works in worktree {{branch}}, which holds {{work}}. It stays; merge or remove it from the git panel."
     },
     "merge": {
+      "commits_one": "{{count}} commit",
+      "commits_other": "{{count}} commits",
       "kept": "The worktree stays: {{reason}}",
       "nothing": "nothing yet",
       "one": "worktree",
@@ -436,8 +432,6 @@
       "titleInto": "Merge {{what}} into {{into}}"
     },
     "origin": {
-      "behind_one": "from {{branch}}, {{count}} commit behind",
-      "behind_other": "from {{branch}}, {{count}} commits behind",
       "from": "from {{branch}}"
     },
     "remove": {
@@ -464,6 +458,7 @@
     "section": {
       "actions": "Worktree actions",
       "folderMissing": "folder missing",
+      "locked": "Locked",
       "merge": "Merge...",
       "noNode": "no node",
       "remove": "Remove...",
@@ -482,6 +477,8 @@
     "work": {
       "ahead_one": "{{count}} commit that {{target}} lacks",
       "ahead_other": "{{count}} commits that {{target}} lacks",
+      "behind_one": "{{count}} commit behind {{target}}",
+      "behind_other": "{{count}} commits behind {{target}}",
       "changed_one": "{{count}} uncommitted file",
       "changed_other": "{{count}} uncommitted files",
       "join": "{{head}} and {{tail}}",

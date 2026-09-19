@@ -9,7 +9,8 @@ import {
     removedToast,
     removeQuestion,
     sharePathsOf,
-    workCounts,
+    workBadges,
+    workBadgesLabel,
     worktreeDiffTab,
     worktreeOfPath,
     worktreesLeftBy,
@@ -74,8 +75,23 @@ describe('removedToast', () => {
 });
 
 describe('rows', () => {
-    test('the counts leave out what is zero', () => {
-        expect(workCounts({ changed: 3, untracked: 0, ahead: 1 })).toEqual(['3 changed', '1 commit']);
+    test('the badges leave out what is zero, and being behind is one of them', () => {
+        expect(workBadges({ changed: 3, untracked: 0, ahead: 1 })).toEqual([
+            { kind: 'changed', text: '3' },
+            { kind: 'ahead', text: '1' }
+        ]);
+        expect(workBadges({ changed: 0, untracked: 2, ahead: 0, behind: 4, operation: 'rebase' })).toEqual([
+            { kind: 'operation', text: 'rebase' },
+            { kind: 'untracked', text: '2' },
+            { kind: 'behind', text: '4' }
+        ]);
+        expect(workBadges({ changed: 0, untracked: 0, ahead: 0 })).toEqual([]);
+    });
+
+    test('the words behind the badges say what the marks leave out, being behind included', () => {
+        expect(workBadgesLabel(lexer, { changed: 3, untracked: 0, ahead: 1 })).toBe('3 uncommitted files and 1 commit that main lacks');
+        expect(workBadgesLabel(lexer, { changed: 0, untracked: 0, ahead: 0, behind: 4 })).toBe('4 commits behind main');
+        expect(workBadgesLabel(lexer, { changed: 2, untracked: 0, ahead: 0, behind: 1 })).toBe('2 uncommitted files and 1 commit behind main');
     });
 
     test('a folder is in the worktree it equals or sits under, and never in one whose folder is gone', () => {
@@ -113,10 +129,9 @@ describe('viewing a worktree against where it came from', () => {
         expect(worktreeDiffTab({ path: '/x', branch: 'x' }).view.base).toBeUndefined();
     });
 
-    test('the row says how far the branch it came from moved on', () => {
+    test('the row says where the worktree came from; how far it is behind is a badge of its own', () => {
         expect(originLabel(lexer)).toBe('from main');
-        expect(originLabel({ ...lexer, work: { changed: 0, untracked: 0, ahead: 0, behind: 4 } })).toBe('from main, 4 commits behind');
-        expect(originLabel({ ...lexer, work: { changed: 0, untracked: 0, ahead: 0, behind: 1 } })).toBe('from main, 1 commit behind');
+        expect(originLabel({ ...lexer, work: { changed: 0, untracked: 0, ahead: 0, behind: 4 } })).toBe('from main');
         expect(originLabel({ path: '/x', branch: 'x' })).toBeNull();
     });
 });

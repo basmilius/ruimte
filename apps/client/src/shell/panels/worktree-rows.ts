@@ -1,23 +1,29 @@
 import i18next from 'i18next';
 import type { ProjectFileTabView, Worktree, WorktreeRemoveResult, WorktreeWork } from '@ruimte/contracts';
+import { formatNumber } from '@/format/number';
 import { isUnderFolder } from '@/state/fs-watch';
 
 /* The branch the commits are counted against, in words; a worktree the register does not know was measured against the base. */
 const targetOf = (worktree: Worktree): string => worktree.from?.branch ?? i18next.t('panels:worktree.baseBranch');
 
-/* "3 uncommitted files, 2 new files and 1 commit that main lacks", leaving out what is zero; empty for a clean worktree. */
-export const workSentence = (worktree: Worktree, work: WorktreeWork): string => {
-    const parts = [
-        ...(work.changed > 0 ? [i18next.t('panels:worktree.work.changed', { count: work.changed })] : []),
-        ...(work.untracked > 0 ? [i18next.t('panels:worktree.work.untracked', { count: work.untracked })] : []),
-        ...(work.ahead > 0 ? [i18next.t('panels:worktree.work.ahead', { count: work.ahead, target: targetOf(worktree) })] : []),
-        ...(work.operation !== undefined ? [i18next.t('panels:worktree.work.operation', { operation: work.operation })] : [])
-    ];
+/* Clauses into one sentence, with "and" before the last one. */
+const joinClauses = (parts: readonly string[]): string => {
     if (parts.length <= 1) {
         return parts[0] ?? '';
     }
     return i18next.t('panels:worktree.work.join', { head: parts.slice(0, -1).join(', '), tail: parts[parts.length - 1] });
 };
+
+/* The clauses for what a worktree holds. Being behind is not one of them: nothing is lost by removing it. */
+const heldClauses = (worktree: Worktree, work: WorktreeWork): string[] => [
+    ...(work.changed > 0 ? [i18next.t('panels:worktree.work.changed', { count: work.changed })] : []),
+    ...(work.untracked > 0 ? [i18next.t('panels:worktree.work.untracked', { count: work.untracked })] : []),
+    ...(work.ahead > 0 ? [i18next.t('panels:worktree.work.ahead', { count: work.ahead, target: targetOf(worktree) })] : []),
+    ...(work.operation !== undefined ? [i18next.t('panels:worktree.work.operation', { operation: work.operation })] : [])
+];
+
+/* "3 uncommitted files, 2 new files and 1 commit that main lacks", leaving out what is zero; empty for a clean worktree. */
+export const workSentence = (worktree: Worktree, work: WorktreeWork): string => joinClauses(heldClauses(worktree, work));
 
 export const hasWork = (work: WorktreeWork | undefined): boolean =>
     work !== undefined && (work.changed + work.untracked + work.ahead > 0 || work.operation !== undefined);
@@ -100,13 +106,37 @@ export const removedToast = (branch: string, result: WorktreeRemoveResult): { de
     return null;
 };
 
-/* The short counts a row shows: "3 changed", "2 new", "1 commit". */
-export const workCounts = (work: WorktreeWork): string[] => [
-    ...(work.operation !== undefined ? [i18next.t('panels:worktree.counts.halfway', { operation: work.operation })] : []),
-    ...(work.changed > 0 ? [i18next.t('panels:worktree.counts.changed', { count: work.changed })] : []),
-    ...(work.untracked > 0 ? [i18next.t('panels:worktree.counts.new', { count: work.untracked })] : []),
-    ...(work.ahead > 0 ? [i18next.t('panels:worktree.counts.commits', { count: work.ahead })] : [])
-];
+/* What a badge on a row counts; the row draws its own mark per kind. */
+export type WorkBadgeKind = 'operation' | 'changed' | 'untracked' | 'ahead' | 'behind';
+
+export interface WorkBadge {
+    kind: WorkBadgeKind;
+    /* What stands beside the mark: the count, or git's own word for an operation that stopped halfway. */
+    text: string;
+}
+
+/*
+ * The numbers a row shows, leaving out what is zero. They are marks and figures rather than words,
+ * so the branch and the node keep the room they need to tell two worktrees apart; `workBadgesLabel`
+ * is the sentence behind them.
+ */
+export const workBadges = (work: WorktreeWork): WorkBadge[] => {
+    const behind = work.behind ?? 0;
+    return [
+        ...(work.operation !== undefined ? [{ kind: 'operation' as const, text: work.operation }] : []),
+        ...(work.changed > 0 ? [{ kind: 'changed' as const, text: formatNumber(work.changed) }] : []),
+        ...(work.untracked > 0 ? [{ kind: 'untracked' as const, text: formatNumber(work.untracked) }] : []),
+        ...(work.ahead > 0 ? [{ kind: 'ahead' as const, text: formatNumber(work.ahead) }] : []),
+        ...(behind > 0 ? [{ kind: 'behind' as const, text: formatNumber(behind) }] : [])
+    ];
+};
+
+/* What the marks say in words, for the tooltip and the accessible name of the badges together. */
+export const workBadgesLabel = (worktree: Worktree, work: WorktreeWork): string => {
+    const behind = work.behind ?? 0;
+    const lagging = behind > 0 ? [i18next.t('panels:worktree.work.behind', { count: behind, target: targetOf(worktree) })] : [];
+    return joinClauses([...heldClauses(worktree, work), ...lagging]);
+};
 
 /* The worktree a folder sits in, if any: the node's own cwd is the worktree or somewhere under it. */
 export const worktreeOfPath = (worktrees: readonly Worktree[], path: string | undefined | null): Worktree | null => {
@@ -144,14 +174,10 @@ export const worktreeDiffTab = (worktree: Worktree): { path: string; view: Proje
     return { path: worktree.path, view: { kind: 'diff', cwd: worktree.path, scope: 'base', staged: false, ...(base === undefined ? {} : { base }) } };
 };
 
-/* "from main, 4 commits behind": where a worktree came from, and how far that branch moved on since. */
+/* "from main": where a worktree came from. How far that branch moved on since is a badge of its own. */
 export const originLabel = (worktree: Worktree): string | null => {
     const branch = worktree.from?.branch;
-    if (branch === undefined) {
-        return null;
-    }
-    const behind = worktree.work?.behind ?? 0;
-    return behind > 0 ? i18next.t('panels:worktree.origin.behind', { branch, count: behind }) : i18next.t('panels:worktree.origin.from', { branch });
+    return branch === undefined ? null : i18next.t('panels:worktree.origin.from', { branch });
 };
 
 /* The shared paths a person typed, split on commas and new lines, without empty entries or repeats. */

@@ -299,6 +299,7 @@
       "empty": "Nog geen commits.",
       "failed": "Kon de historie niet lezen.",
       "loadMore": "Meer laden",
+      "moreRefs": "+{{count}}",
       "open": "De commit openen",
       "today": "Vandaag",
       "yesterday": "Gisteren"
@@ -399,18 +400,13 @@
   },
   "worktree": {
     "baseBranch": "de base branch",
-    "counts": {
-      "changed": "{{count}} gewijzigd",
-      "commits_one": "{{count}} commit",
-      "commits_other": "{{count}} commits",
-      "halfway": "{{operation}} halverwege",
-      "new": "{{count}} nieuw"
-    },
     "leftBehind": {
       "clean": "Werkt in worktree {{branch}}, waarin geen werk staat.",
       "holding": "Werkt in worktree {{branch}}, die {{work}} bevat. Hij blijft staan; merge of verwijder hem via het git-paneel."
     },
     "merge": {
+      "commits_one": "{{count}} commit",
+      "commits_other": "{{count}} commits",
       "kept": "De worktree blijft staan: {{reason}}",
       "nothing": "nog niets",
       "one": "worktree",
@@ -436,8 +432,6 @@
       "titleInto": "{{what}} mergen in {{into}}"
     },
     "origin": {
-      "behind_one": "van {{branch}}, {{count}} commit achter",
-      "behind_other": "van {{branch}}, {{count}} commits achter",
       "from": "van {{branch}}"
     },
     "remove": {
@@ -464,6 +458,7 @@
     "section": {
       "actions": "Worktree-acties",
       "folderMissing": "map ontbreekt",
+      "locked": "Vergrendeld",
       "merge": "Mergen...",
       "noNode": "geen node",
       "remove": "Verwijderen...",
@@ -482,6 +477,8 @@
     "work": {
       "ahead_one": "{{count}} commit die {{target}} mist",
       "ahead_other": "{{count}} commits die {{target}} mist",
+      "behind_one": "{{count}} commit achter op {{target}}",
+      "behind_other": "{{count}} commits achter op {{target}}",
       "changed_one": "{{count}} niet-gecommit bestand",
       "changed_other": "{{count}} niet-gecommitte bestanden",
       "join": "{{head}} en {{tail}}",

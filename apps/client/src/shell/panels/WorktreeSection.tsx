@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
-import { Eye, FolderX, GitBranch, GitMerge, LocateFixed, MoreHorizontal, Trash } from 'lucide-react';
+import { ArrowDown, ArrowUp, CircleAlert, Eye, FilePen, FilePlus, FolderX, GitBranch, GitMerge, LocateFixed, Lock, MoreHorizontal, Trash } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { Worktree } from '@ruimte/contracts';
 import { StatusDot } from '@/canvas/NodeFrame';
 import { GitPrompt } from '@/shell/panels/GitDialogs';
-import { nodesInWorktree, originLabel, sharePathsOf, workCounts } from '@/shell/panels/worktree-rows';
+import { nodesInWorktree, originLabel, sharePathsOf, workBadges, workBadgesLabel, type WorkBadgeKind } from '@/shell/panels/worktree-rows';
 import { nodeWorking } from '@/state/agent-work';
 import { useChats } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
@@ -16,8 +18,16 @@ import { useToasts } from '@/state/toasts';
 import { useTransport } from '@/transport/context';
 import { MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
-import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
+
+/* The mark per kind of work. The number beside it carries the amount; the tooltip carries the words. */
+const BADGE_MARKS: Record<WorkBadgeKind, LucideIcon> = {
+    operation: CircleAlert,
+    changed: FilePen,
+    untracked: FilePlus,
+    ahead: ArrowUp,
+    behind: ArrowDown
+};
 
 interface WorktreeSectionProps {
     /* The project folder the list is held for. */
@@ -130,7 +140,9 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                     const working = nodesInWorktree(nodes, worktree);
                     const names = working.map((node) => node.title || node.kind).join(', ');
                     const agentWorking = working.some((node) => nodeWorking(node, sessions, chats, endpointId));
-                    const counts = worktree.work ? workCounts(worktree.work) : [];
+                    const work = worktree.work;
+                    const badges = work === undefined ? [] : workBadges(work);
+                    const badgeLabel = work === undefined ? '' : workBadgesLabel(worktree, work);
                     const reveal = working[0]?.id ?? null;
                     return (
                         <ContextMenu.Root key={worktree.path}>
@@ -149,17 +161,42 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                                         {worktree.branch}
                                     </button>
                                 </Tooltip>
+                                {worktree.locked === true && (
+                                    <Tooltip label={t('worktree.section.locked')}>
+                                        <span className="shrink-0">
+                                            <Icon icon={Lock} size={12} className="text-text-muted" />
+                                        </span>
+                                    </Tooltip>
+                                )}
                                 {agentWorking && <StatusDot status="running" />}
-                                <span className="min-w-0 shrink-[2] truncate text-xs text-text-faint">
+                                {/* Gives way three times as fast as the branch: two worktrees are told
+                                    apart by their branch, and half a branch name tells them apart no more. */}
+                                <span className="min-w-0 shrink-[3] truncate text-xs text-text-faint">
                                     {worktree.missing ? t('worktree.section.folderMissing') : names === '' ? t('worktree.section.noNode') : names}
                                     {originLabel(worktree) !== null && `, ${originLabel(worktree)}`}
                                 </span>
                                 <span className="grow" />
-                                {counts.map((label) => (
-                                    <Pill key={label} className="tabular-nums">
-                                        {label}
-                                    </Pill>
-                                ))}
+                                {badges.length > 0 && (
+                                    <Tooltip label={badgeLabel}>
+                                        {/* One picture with a text alternative: the marks and figures
+                                            are read out as the sentence the tooltip shows. */}
+                                        <span
+                                            role="img"
+                                            aria-label={badgeLabel}
+                                            className="flex shrink-0 items-center gap-2 text-xs text-text-muted tabular-nums"
+                                        >
+                                            {badges.map((badge) => (
+                                                <span
+                                                    key={badge.kind}
+                                                    className={clsx('flex items-center gap-1', badge.kind === 'operation' && 'text-status-needs-you')}
+                                                >
+                                                    <Icon icon={BADGE_MARKS[badge.kind]} size={12} />
+                                                    {badge.text}
+                                                </span>
+                                            ))}
+                                        </span>
+                                    </Tooltip>
+                                )}
                                 <Menu.Root>
                                     <Tooltip label={t('worktree.section.actions')} name>
                                         <Menu.Trigger className="icon-btn h-7 w-7 shrink-0" disabled={busy}>
