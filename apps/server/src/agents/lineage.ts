@@ -1,7 +1,6 @@
-import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { RecordDirectory } from '../record-directory.ts';
 import { z } from 'zod';
-import { isNotFound, writeAtomic } from '../fs.ts';
 
 const LineageSchema = z.object({
     projectId: z.string().min(1),
@@ -24,54 +23,26 @@ type Lineage = z.infer<typeof LineageSchema>;
 /* Opened by the agent it names, which is what every rule about children is about; a fork lives on its own. */
 const openedByAgent = (entry: Lineage): boolean => entry.agent && entry.relation !== 'fork';
 
-// The id is a node id the client chose, so it is encoded before it becomes a file name.
-const fileName = (nodeId: string): string => `${encodeURIComponent(nodeId)}.json`;
-
 /*
  * Lineage lives under `$RUIMTE_HOME`, outside the agent-writable project, so agents cannot reset
  * their own depth. Persisting it also prevents a daemon restart from resetting recursion limits.
  */
 export class AgentLineageStore {
     readonly dir: string;
-    private readonly opened = new Map<string, Lineage>();
+    private readonly opened: RecordDirectory<Lineage>;
 
     constructor(home: string) {
         this.dir = join(home, 'lineage');
+        this.opened = new RecordDirectory({ dir: this.dir, schema: LineageSchema, idOf: (entry) => entry.nodeId });
     }
 
     /* Reads what an earlier run of the daemon wrote down. Call before any verb can ask. */
-    async load(): Promise<void> {
-        let names: string[];
-        try {
-            names = await readdir(this.dir);
-        } catch (e) {
-            if (isNotFound(e)) {
-                return;
-            }
-            throw e;
-        }
-        for (const name of names) {
-            if (!name.endsWith('.json')) {
-                continue;
-            }
-            const raw = await readFile(join(this.dir, name), 'utf8').catch(() => null);
-            if (raw === null) {
-                continue;
-            }
-            let parsed: ReturnType<typeof LineageSchema.safeParse>;
-            try {
-                parsed = LineageSchema.safeParse(JSON.parse(raw));
-            } catch {
-                continue;
-            }
-            if (parsed.success) {
-                this.opened.set(parsed.data.nodeId, parsed.data);
-            }
-        }
+    load(): Promise<void> {
+        return this.opened.load();
     }
 
     async put(record: Omit<Lineage, 'createdAt' | 'endedAt'>): Promise<void> {
-        await this.write({ ...record, createdAt: Date.now() });
+        await this.opened.write({ ...record, createdAt: Date.now() });
     }
 
     /*
@@ -83,7 +54,7 @@ export class AgentLineageStore {
         const seen = new Set([nodeId]);
         for (let i = -1; i < found.length; i++) {
             const parent = i === -1 ? nodeId : found[i]!;
-            for (const entry of this.opened.values()) {
+            for (const entry of this.opened.all()) {
                 if (entry.openedBy === parent && openedByAgent(entry) && entry.endedAt === undefined && !seen.has(entry.nodeId)) {
                     seen.add(entry.nodeId);
                     found.push(entry.nodeId);
@@ -106,25 +77,19 @@ export class AgentLineageStore {
         for (const nodeId of nodeIds) {
             const entry = this.opened.get(nodeId);
             if (entry && entry.endedAt === undefined) {
-                await this.write({ ...entry, endedAt: at });
+                await this.opened.write({ ...entry, endedAt: at });
             }
         }
     }
 
     /* The nodes of this project whose opener it no longer places, and that no cascade ended yet. */
     orphans(projectId: string, ids: ReadonlySet<string>): Array<{ nodeId: string; openedBy: string }> {
-        return [...this.opened.values()]
+        return [...this.opened.all()]
             .filter(
                 (entry) =>
                     entry.projectId === projectId && openedByAgent(entry) && entry.endedAt === undefined && ids.has(entry.nodeId) && !ids.has(entry.openedBy)
             )
             .map((entry) => ({ nodeId: entry.nodeId, openedBy: entry.openedBy }));
-    }
-
-    private async write(entry: Lineage): Promise<void> {
-        await mkdir(this.dir, { recursive: true, mode: 0o700 });
-        await writeAtomic(join(this.dir, fileName(entry.nodeId)), JSON.stringify(entry));
-        this.opened.set(entry.nodeId, entry);
     }
 
     /* How deep a node sits. A node nobody wrote down is one a person made, which is where a chain starts. */
@@ -138,7 +103,7 @@ export class AgentLineageStore {
      */
     openedCount(callerId: string): number {
         let count = 0;
-        for (const entry of this.opened.values()) {
+        for (const entry of this.opened.all()) {
             if (entry.openedBy === callerId && openedByAgent(entry)) {
                 count += 1;
             }
@@ -160,23 +125,18 @@ export class AgentLineageStore {
 
     /* The forks made from a chat. */
     forksOf(nodeId: string): string[] {
-        return [...this.opened.values()].filter((entry) => entry.relation === 'fork' && entry.openedBy === nodeId).map((entry) => entry.nodeId);
+        return [...this.opened.all()].filter((entry) => entry.relation === 'fork' && entry.openedBy === nodeId).map((entry) => entry.nodeId);
     }
 
     /* The forks of this project whose node is gone, read before `prune` forgets them. */
     forksLeaving(projectId: string, ids: ReadonlySet<string>): string[] {
-        return [...this.opened.values()]
+        return [...this.opened.all()]
             .filter((entry) => entry.projectId === projectId && entry.relation === 'fork' && !ids.has(entry.nodeId))
             .map((entry) => entry.nodeId);
     }
 
     /* Drops what this project wrote down for ids it no longer has: the node was deleted. */
-    async prune(projectId: string, ids: ReadonlySet<string>): Promise<void> {
-        for (const entry of [...this.opened.values()]) {
-            if (entry.projectId === projectId && !ids.has(entry.nodeId)) {
-                this.opened.delete(entry.nodeId);
-                await rm(join(this.dir, fileName(entry.nodeId)), { force: true });
-            }
-        }
+    prune(projectId: string, ids: ReadonlySet<string>): Promise<void> {
+        return this.opened.prune((entry) => entry.projectId === projectId && !ids.has(entry.nodeId));
     }
 }

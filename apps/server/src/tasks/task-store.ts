@@ -1,12 +1,9 @@
 import { randomBytes } from 'node:crypto';
-import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { TaskSchema, type Task, type TaskResult } from '@ruimte/contracts';
-import { isNotFound, writeAtomic } from '../fs.ts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { ClientSinks } from '../client-sinks.ts';
-
-const fileName = (id: string): string => `${encodeURIComponent(id)}.json`;
+import { RecordDirectory } from '../record-directory.ts';
 
 export type TaskListener = (task: Task) => void;
 
@@ -18,45 +15,18 @@ export type TaskListener = (task: Task) => void;
  */
 export class TaskStore {
     readonly dir: string;
-    private readonly tasks = new Map<string, Task>();
+    private readonly tasks: RecordDirectory<Task>;
     private readonly listeners = new Set<TaskListener>();
     private readonly sinks = new ClientSinks();
-    // One write at a time per task, so an older record never lands after a newer one.
-    private readonly writes = new Map<string, Promise<void>>();
 
     constructor(home: string) {
         this.dir = join(home, 'tasks');
+        this.tasks = new RecordDirectory({ dir: this.dir, schema: TaskSchema, idOf: (task) => task.id });
     }
 
     /* Reads what an earlier run of the daemon wrote down. Call before any verb or observer can ask. */
-    async load(): Promise<void> {
-        let names: string[];
-        try {
-            names = await readdir(this.dir);
-        } catch (e) {
-            if (isNotFound(e)) {
-                return;
-            }
-            throw e;
-        }
-        for (const name of names) {
-            if (!name.endsWith('.json')) {
-                continue;
-            }
-            const raw = await readFile(join(this.dir, name), 'utf8').catch(() => null);
-            if (raw === null) {
-                continue;
-            }
-            let parsed: ReturnType<typeof TaskSchema.safeParse>;
-            try {
-                parsed = TaskSchema.safeParse(JSON.parse(raw));
-            } catch {
-                continue;
-            }
-            if (parsed.success) {
-                this.tasks.set(parsed.data.id, parsed.data);
-            }
-        }
+    load(): Promise<void> {
+        return this.tasks.load();
     }
 
     /* Told about every task that is written, after it is on disk. */
@@ -92,7 +62,7 @@ export class TaskStore {
 
     /* The task a node is working on; a node has at most one, the one it was opened with. */
     openFor(childId: string): Task | undefined {
-        return [...this.tasks.values()].find((task) => task.childId === childId && task.status === 'open');
+        return this.tasks.all().find((task) => task.childId === childId && task.status === 'open');
     }
 
     /* Every task this node gave or was given, oldest first. */
@@ -185,8 +155,7 @@ export class TaskStore {
                 continue;
             }
             if (!ids.has(task.parentId)) {
-                this.tasks.delete(task.id);
-                await rm(join(this.dir, fileName(task.id)), { force: true });
+                await this.tasks.remove(task.id);
                 continue;
             }
             if (!ids.has(task.childId) && task.status === 'open') {
@@ -201,32 +170,17 @@ export class TaskStore {
 
     private sorted(): Task[] {
         // A stable sort: tasks made in the same millisecond keep the order they were made in.
-        return [...this.tasks.values()].sort((a, b) => a.createdAt - b.createdAt);
+        return this.tasks.all().sort((a, b) => a.createdAt - b.createdAt);
     }
 
-    private write(task: Task): Promise<void> {
-        // In memory at once, so the next question in the same tick already sees it settled.
-        this.tasks.set(task.id, task);
-        const next = (this.writes.get(task.id) ?? Promise.resolve()).then(async () => {
-            if (this.tasks.get(task.id) !== task) {
-                return;
-            }
-            await mkdir(this.dir, { recursive: true, mode: 0o700 });
-            await writeAtomic(join(this.dir, fileName(task.id)), JSON.stringify(task));
-            // Pruned while the file was being written: the rename must not bring it back.
-            if (!this.tasks.has(task.id)) {
-                await rm(join(this.dir, fileName(task.id)), { force: true });
-                return;
-            }
-            for (const listener of this.listeners) {
-                listener(task);
-            }
-            this.sinks.emit({ event: 'task.changed', payload: { task } });
-        });
-        this.writes.set(
-            task.id,
-            next.catch(() => undefined)
-        );
-        return next;
+    private async write(task: Task): Promise<void> {
+        // Only the write that is still the latest tells anyone: an older record never lands after it.
+        if (!(await this.tasks.write(task))) {
+            return;
+        }
+        for (const listener of this.listeners) {
+            listener(task);
+        }
+        this.sinks.emit({ event: 'task.changed', payload: { task } });
     }
 }

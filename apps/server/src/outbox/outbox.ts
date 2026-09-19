@@ -1,9 +1,8 @@
 import { randomBytes } from 'node:crypto';
-import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { RecordDirectory } from '../record-directory.ts';
 import { AgentKindSchema, RuntimeModeSchema } from '@ruimte/contracts';
 import { z } from 'zod';
-import { isNotFound, writeAtomic } from '../fs.ts';
 
 const StartAgentSchema = z.object({
     kind: z.literal('start-agent'),
@@ -91,8 +90,6 @@ export type DeliverSummaryEntry = Extract<OutboxEntry, { kind: 'deliver-summary'
 /* The nodes an entry is about: work on any of them waits while it runs. Ending children holds their lanes too, so no start or resume of one runs beside it. */
 export const lanesOf = (entry: OutboxEntry): string[] => (entry.kind === 'end-children' ? [entry.target, ...entry.payload.nodeIds] : [entry.target]);
 
-const fileName = (id: string): string => `${encodeURIComponent(id)}.json`;
-
 /*
  * Work the daemon still owes, one file per entry under `$RUIMTE_HOME/outbox`, removed once it is
  * done. On disk because the owing outlives the process: a node written a moment before a restart
@@ -100,41 +97,16 @@ const fileName = (id: string): string => `${encodeURIComponent(id)}.json`;
  */
 export class OutboxStore {
     readonly dir: string;
-    private readonly entries = new Map<string, OutboxEntry>();
+    private readonly entries: RecordDirectory<OutboxEntry>;
 
     constructor(home: string) {
         this.dir = join(home, 'outbox');
+        this.entries = new RecordDirectory({ dir: this.dir, schema: OutboxEntrySchema, idOf: (entry) => entry.id });
     }
 
     /* Reads what an earlier run of the daemon still owed. Call before the worker starts. */
-    async load(): Promise<void> {
-        let names: string[];
-        try {
-            names = await readdir(this.dir);
-        } catch (e) {
-            if (isNotFound(e)) {
-                return;
-            }
-            throw e;
-        }
-        for (const name of names) {
-            if (!name.endsWith('.json')) {
-                continue;
-            }
-            const raw = await readFile(join(this.dir, name), 'utf8').catch(() => null);
-            if (raw === null) {
-                continue;
-            }
-            let parsed: ReturnType<typeof OutboxEntrySchema.safeParse>;
-            try {
-                parsed = OutboxEntrySchema.safeParse(JSON.parse(raw));
-            } catch {
-                continue;
-            }
-            if (parsed.success) {
-                this.entries.set(parsed.data.id, parsed.data);
-            }
-        }
+    load(): Promise<void> {
+        return this.entries.load();
     }
 
     async put(projectId: string, target: string, work: OutboxWork, now: number): Promise<OutboxEntry> {
@@ -147,8 +119,7 @@ export class OutboxStore {
             attempts: 0,
             notBefore: now
         };
-        this.entries.set(entry.id, entry);
-        await this.write(entry);
+        await this.entries.write(entry);
         return entry;
     }
 
@@ -157,18 +128,16 @@ export class OutboxStore {
         if (!this.entries.has(entry.id)) {
             return;
         }
-        this.entries.set(entry.id, entry);
-        await this.write(entry);
+        await this.entries.write(entry);
     }
 
-    async remove(id: string): Promise<void> {
-        this.entries.delete(id);
-        await rm(join(this.dir, fileName(id)), { force: true });
+    remove(id: string): Promise<void> {
+        return this.entries.remove(id);
     }
 
     /* Oldest first, which is the order the work was owed in. */
     list(): OutboxEntry[] {
-        return [...this.entries.values()].sort((a, b) => a.createdAt - b.createdAt);
+        return this.entries.all().sort((a, b) => a.createdAt - b.createdAt);
     }
 
     has(id: string): boolean {
@@ -179,20 +148,7 @@ export class OutboxStore {
      * Drops what this project owed for ids it no longer has: nothing is started for a node that was
      * deleted. Ending the children of a deleted node is owed exactly because it is gone, so that stays.
      */
-    async prune(projectId: string, ids: ReadonlySet<string>): Promise<void> {
-        for (const entry of [...this.entries.values()]) {
-            if (entry.projectId === projectId && entry.kind !== 'end-children' && !ids.has(entry.target)) {
-                await this.remove(entry.id);
-            }
-        }
-    }
-
-    private async write(entry: OutboxEntry): Promise<void> {
-        await mkdir(this.dir, { recursive: true, mode: 0o700 });
-        await writeAtomic(join(this.dir, fileName(entry.id)), JSON.stringify(entry));
-        // Removed while the file was being written: the rename must not bring it back.
-        if (!this.entries.has(entry.id)) {
-            await rm(join(this.dir, fileName(entry.id)), { force: true });
-        }
+    prune(projectId: string, ids: ReadonlySet<string>): Promise<void> {
+        return this.entries.prune((entry) => entry.projectId === projectId && entry.kind !== 'end-children' && !ids.has(entry.target));
     }
 }

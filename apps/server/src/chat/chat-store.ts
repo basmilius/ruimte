@@ -8,6 +8,7 @@ import { isPlanFileName } from '../plans/plan-store.ts';
 import { migrateInlineAttachments, type AttachmentStore } from './attachment-store.ts';
 import { parseLog, type ChatLogLine } from './chat-log.ts';
 import { ChatThread } from './thread.ts';
+import { recordFileName } from '../record-directory.ts';
 
 // zod strips what it does not know, so a file written by an older build (with `interactionMode`,
 // say) still parses and loses only the dropped field. A record without `seq` predates the log.
@@ -37,7 +38,6 @@ export interface ChatSeq {
     resetSeq: number;
 }
 
-const fileName = (chatId: string): string => `${encodeURIComponent(chatId)}.json`;
 const logName = (chatId: string): string => `${encodeURIComponent(chatId)}.log`;
 
 const recordBody = (info: ChatInfo, items: ChatItem[], at: ChatSeq, preambles: readonly string[]): string =>
@@ -94,7 +94,7 @@ export class ChatStore {
     async write(chatId: string, info: ChatInfo, items: ChatItem[], at: ChatSeq = { seq: 0, resetSeq: 0 }, preambles: readonly string[] = []): Promise<number> {
         const body = recordBody(info, items, at, preambles);
         await mkdir(this.dir, { recursive: true, mode: 0o700 });
-        await writeAtomic(join(this.dir, fileName(chatId)), body);
+        await writeAtomic(join(this.dir, recordFileName(chatId)), body);
         return body.length;
     }
 
@@ -103,7 +103,7 @@ export class ChatStore {
      * before an awaited write comes back, so a shutdown has to put the threads down synchronously.
      */
     writeSync(chatId: string, info: ChatInfo, items: ChatItem[], at: ChatSeq = { seq: 0, resetSeq: 0 }, preambles: readonly string[] = []): void {
-        const target = join(this.dir, fileName(chatId));
+        const target = join(this.dir, recordFileName(chatId));
         const temp = `${target}.${process.pid}.tmp`;
         mkdirSync(this.dir, { recursive: true, mode: 0o700 });
         writeFileSync(temp, recordBody(info, items, at, preambles), { mode: 0o600 });
@@ -133,7 +133,7 @@ export class ChatStore {
     }
 
     private async readSnapshot(chatId: string): Promise<z.infer<typeof RecordSchema> | null> {
-        const raw = await readOrNull(join(this.dir, fileName(chatId)));
+        const raw = await readOrNull(join(this.dir, recordFileName(chatId)));
         if (raw === null) {
             return null;
         }
@@ -148,7 +148,7 @@ export class ChatStore {
             const migrated = await migrateInlineAttachments(chatId, record, this.attachments).catch(() => null);
             if (migrated !== null) {
                 record = migrated;
-                await writeAtomic(join(this.dir, fileName(chatId)), JSON.stringify(migrated));
+                await writeAtomic(join(this.dir, recordFileName(chatId)), JSON.stringify(migrated));
             }
         }
         const parsed = RecordSchema.safeParse(record);
@@ -156,7 +156,7 @@ export class ChatStore {
     }
 
     async delete(chatId: string): Promise<void> {
-        await Promise.all([rm(join(this.dir, fileName(chatId)), { force: true }), rm(this.logPath(chatId), { force: true })]);
+        await Promise.all([rm(join(this.dir, recordFileName(chatId)), { force: true }), rm(this.logPath(chatId), { force: true })]);
     }
 }
 
