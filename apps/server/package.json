@@ -19,6 +19,7 @@
   "dependencies": {
     "@ruimte/actions": "workspace:*",
     "@ruimte/contracts": "workspace:*",
+    "@ruimte/csp": "workspace:*",
     "@ruimte/diagram": "workspace:*",
     "@ruimte/drawing": "workspace:*",
     "@ruimte/plan": "workspace:*",

@@ -1,23 +1,19 @@
+import { cspString } from '@ruimte/csp';
+
 /*
- * The public web client forbids inline scripts and framing. Shiki needs WebAssembly, UI libraries
- * inject styles, and remote machines require arbitrary secure WebSocket and HTTPS endpoints.
+ * The client's policy, tightened for a page on the public web. A daemon serves a paired host that
+ * can be any address, which is why it allows plain `http:` and `ws:` and lets a page be framed;
+ * nothing reaches the station over anything but TLS, and nothing may frame it or post out of it.
  */
-export const CONTENT_SECURITY_POLICY = [
-    "default-src 'self'",
-    "base-uri 'none'",
-    "object-src 'none'",
-    "frame-src 'none'",
-    "frame-ancestors 'none'",
-    "form-action 'none'",
-    "script-src 'self' 'wasm-unsafe-eval'",
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https:",
-    "media-src 'self' data: blob: https:",
-    "font-src 'self' data:",
-    "connect-src 'self' https://pulsar.ruimte.app wss: https:",
-    "worker-src 'self' blob:",
-    "manifest-src 'self'"
-].join('; ');
+export const CONTENT_SECURITY_POLICY = cspString({
+    'base-uri': ["'none'"],
+    'frame-ancestors': ["'none'"],
+    'form-action': ["'none'"],
+    'img-src': ["'self'", 'data:', 'blob:', 'https:'],
+    'media-src': ["'self'", 'data:', 'blob:', 'https:'],
+    'connect-src': ["'self'", 'https://pulsar.ruimte.app', 'wss:', 'https:'],
+    'manifest-src': ["'self'"]
+});
 
 export const SECURITY_HEADERS: Readonly<Record<string, string>> = {
     'content-security-policy': CONTENT_SECURITY_POLICY,

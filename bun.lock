@@ -116,6 +116,7 @@
       "dependencies": {
         "@ruimte/actions": "workspace:*",
         "@ruimte/contracts": "workspace:*",
+        "@ruimte/csp": "workspace:*",
         "@ruimte/diagram": "workspace:*",
         "@ruimte/drawing": "workspace:*",
         "@ruimte/plan": "workspace:*",
@@ -136,6 +137,9 @@
     "apps/station": {
       "name": "@ruimte/station",
       "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/csp": "workspace:*",
+      },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20260914.1",
         "@types/bun": "^1.4.0",
@@ -162,6 +166,14 @@
         "@ruimte/pulsar": "workspace:*",
         "zod": "^4.5.4",
       },
+      "devDependencies": {
+        "@types/bun": "^1.4.0",
+        "typescript": "~6.0.2",
+      },
+    },
+    "packages/csp": {
+      "name": "@ruimte/csp",
+      "version": "0.0.0",
       "devDependencies": {
         "@types/bun": "^1.4.0",
         "typescript": "~6.0.2",
@@ -610,6 +622,8 @@
     "@ruimte/client": ["@ruimte/client@workspace:apps/client"],
 
     "@ruimte/contracts": ["@ruimte/contracts@workspace:packages/contracts"],
+
+    "@ruimte/csp": ["@ruimte/csp@workspace:packages/csp"],
 
     "@ruimte/desktop": ["@ruimte/desktop@workspace:apps/desktop"],
 

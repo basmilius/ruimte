@@ -1,6 +1,7 @@
 import { PushService } from './push/service.ts';
 import { registerPushHandlers } from './handlers/push.ts';
 import { dirname, join, normalize, resolve } from 'node:path';
+import { cspString } from '@ruimte/csp';
 import type { ServerWebSocket } from 'bun';
 import {
     AuthTicketPayloadSchema,
@@ -133,16 +134,8 @@ const AUTH_CORS = { 'access-control-allow-origin': '*', 'access-control-allow-me
 
 // Inside a `bun build --compile` binary the sources live on a virtual file system, so paths next to the source mean nothing.
 
-/*
- * The policy the served client runs under, the twin of the `<meta http-equiv>` in
- * `apps/client/index.html` (which is what covers the Vite dev server). Without it an Electron
- * window has no policy at all, so `eval` and an inline script are free. `connect-src`, `img-src`
- * and `media-src` are wide because a paired endpoint is any host the person adds and its socket,
- * images, attachments and file bytes all come from there.
- */
-const CLIENT_CSP =
-    "default-src 'self'; base-uri 'self'; object-src 'none'; frame-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
-    "img-src 'self' data: blob: http: https:; media-src 'self' data: blob: http: https:; font-src 'self' data:; connect-src 'self' ws: wss: http: https:; worker-src 'self' blob:";
+/* The policy the served client runs under, the same one the client's own `<meta http-equiv>` carries. */
+const CLIENT_CSP = cspString();
 
 /* Runs the daemon until a signal ends the process. */
 export const startDaemon = async (config: ServerConfig): Promise<void> => {
