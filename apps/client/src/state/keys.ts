@@ -20,6 +20,16 @@ export const splitKey = (key: string): { endpointId: string; id: string } => {
 
 export const isOfEndpoint = (key: string, endpointId: string): boolean => key.startsWith(`${endpointId}:`);
 
+/*
+ * One row patched in place, over the empty row for a key nothing was ever written to. A row arrives
+ * a field at a time (it is loading, then it has content, then it is gone), and the empty row is what
+ * says which fields the ones that have not arrived yet hold.
+ */
+export const patchIn = <T extends object>(rows: Record<string, T>, key: string, empty: T, patch: Partial<T>): Record<string, T> => ({
+    ...rows,
+    [key]: { ...empty, ...rows[key], ...patch }
+});
+
 /* Every row of one machine out of a store; what a forgotten machine and a project switch leave behind. */
 export const dropEndpoint = <T>(rows: Record<string, T>, endpointId: string): Record<string, T> => {
     const next: Record<string, T> = {};

@@ -31,7 +31,7 @@ export function DiagramNode({ id }: { id: string }) {
     const { t } = useTranslation('canvas');
     const viewId = useCanvas((s) => s.nodes[id]?.viewId ?? null);
     const mirror = useDiagramMirror(viewId);
-    const content = mirror?.content ?? null;
+    const content = mirror?.snapshot ?? null;
     const layout = useMemo(() => (content === null ? null : layoutOf(content)), [content]);
     const drawn = content !== null && layout !== null && content.nodes.length > 0;
     const box = layout?.bounds;

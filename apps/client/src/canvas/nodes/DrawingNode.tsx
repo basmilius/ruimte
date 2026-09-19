@@ -28,7 +28,7 @@ export function DrawingNode({ id }: { id: string }) {
     const [size, setSize] = useState({ w: 0, h: 0 });
     const [fontReady, setFontReady] = useState(false);
     const theme = useTheme((s) => s.resolved);
-    const elements = mirror?.elements ?? [];
+    const elements = mirror?.snapshot ?? [];
 
     useEffect(() => {
         let alive = true;
