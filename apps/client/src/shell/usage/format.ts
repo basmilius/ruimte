@@ -1,4 +1,4 @@
-import type { UsageProvider, UsageRate, UsageTotals } from '@ruimte/contracts';
+import type { UsageProvider, UsageRate } from '@ruimte/contracts';
 import { formatDay, formatHour, formatWeekdayDay } from '@/format/datetime';
 import { formatMoney, formatNumber, formatTokens } from '@/format/number';
 
@@ -33,23 +33,6 @@ export const formatUsd = moneyFormat('USD', null);
 export const PROVIDER_LABELS: Record<UsageProvider, string> = { claude: 'Claude Code', codex: 'Codex' };
 
 export const PROVIDER_COLORS: Record<UsageProvider, string> = { claude: 'var(--chart-claude)', codex: 'var(--chart-codex)' };
-
-export const USAGE_PROVIDERS: readonly UsageProvider[] = ['claude', 'codex'];
-
-/* Reasoning is a part of the output, so adding it would count those tokens twice. */
-export const totalTokensOf = (totals: UsageTotals): number => totals.input + totals.cacheRead + totals.cacheWrite + totals.output;
-
-export const addTotals = (into: UsageTotals, from: UsageTotals): UsageTotals => ({
-    calls: into.calls + from.calls,
-    input: into.input + from.input,
-    cacheRead: into.cacheRead + from.cacheRead,
-    cacheWrite: into.cacheWrite + from.cacheWrite,
-    cacheWrite1h: into.cacheWrite1h + from.cacheWrite1h,
-    output: into.output + from.output,
-    reasoning: into.reasoning + from.reasoning
-});
-
-export const EMPTY_TOTALS: UsageTotals = { calls: 0, input: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, output: 0, reasoning: 0 };
 
 /* A slot is `2026-09-10` or `2026-09-10T14`, already in the viewer's own zone, so it is read as
    plain wall clock and never handed to a parser that would shift it back. */

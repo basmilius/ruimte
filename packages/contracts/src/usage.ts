@@ -3,6 +3,7 @@ import { z } from 'zod';
 /* The CLIs whose transcripts the daemon reads. A subset of `AgentKindSchema`: it grows with the readers. */
 export const UsageProviderSchema = z.enum(['claude', 'codex']);
 export type UsageProvider = z.infer<typeof UsageProviderSchema>;
+export const USAGE_PROVIDERS = UsageProviderSchema.options;
 
 export const UsageResolutionSchema = z.enum(['hour', 'day']);
 export type UsageResolution = z.infer<typeof UsageResolutionSchema>;
@@ -20,6 +21,21 @@ export const UsageTotalsSchema = z.object({
     reasoning: z.number().int().nonnegative()
 });
 export type UsageTotals = z.infer<typeof UsageTotalsSchema>;
+
+export const EMPTY_TOTALS: UsageTotals = { calls: 0, input: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, output: 0, reasoning: 0 };
+
+export const totalTokensOf = (totals: UsageTotals): number => totals.input + totals.cacheRead + totals.cacheWrite + totals.output;
+
+/* A sum of two rather than a change to either, so a total a client holds stays the one it drew. */
+export const addTotals = (first: UsageTotals, second: UsageTotals): UsageTotals => ({
+    calls: first.calls + second.calls,
+    input: first.input + second.input,
+    cacheRead: first.cacheRead + second.cacheRead,
+    cacheWrite: first.cacheWrite + second.cacheWrite,
+    cacheWrite1h: first.cacheWrite1h + second.cacheWrite1h,
+    output: first.output + second.output,
+    reasoning: first.reasoning + second.reasoning
+});
 
 export const UsageBucketSchema = z.object({
     /* `YYYY-MM-DD` for a day, an ISO hour start for an hour, both in the time zone of the request. */

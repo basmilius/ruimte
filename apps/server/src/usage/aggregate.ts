@@ -1,3 +1,4 @@
+import { addTotals, EMPTY_TOTALS, totalTokensOf } from '@ruimte/contracts';
 import type {
     UsageBucket,
     UsageModel,
@@ -10,7 +11,7 @@ import type {
 } from '@ruimte/contracts';
 import { cacheSavingsOf, costOf, type PriceBook } from './pricing.ts';
 import { ProjectResolver, type KnownProject } from './projects.ts';
-import { addTotals, EMPTY_TOTALS, totalTokensOf, type UsageRecord } from './record.ts';
+import type { UsageRecord } from './record.ts';
 
 export interface Aggregation {
     buckets: UsageBucket[];
@@ -120,7 +121,7 @@ export const aggregate = async (
             };
             buckets.set(bucketKey, bucket);
         }
-        addTotals(bucket.totals, record.totals);
+        bucket.totals = addTotals(bucket.totals, record.totals);
         bucket.costUsd += cost;
         bucket.priced ||= price !== null;
         bucket.cacheSavingsUsd += price === null ? 0 : cacheSavingsOf(record.totals, price);
@@ -136,7 +137,7 @@ export const aggregate = async (
             models.set(modelKey, model);
             modelBasis.set(modelKey, { basis, pricedAs });
         }
-        addTotals(model.totals, record.totals);
+        model.totals = addTotals(model.totals, record.totals);
         model.costUsd += cost;
         model.priced ||= price !== null;
 
@@ -150,7 +151,7 @@ export const aggregate = async (
             }
         }
         const project = projects.get(folder)!;
-        addTotals(project.totals, record.totals);
+        project.totals = addTotals(project.totals, record.totals);
         project.costUsd += cost;
         const share = project.byProvider.get(record.provider) ?? { costUsd: 0, tokens: 0 };
         share.costUsd += cost;

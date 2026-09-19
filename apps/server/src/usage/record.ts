@@ -13,20 +13,8 @@ export interface UsageRecord {
     dedupeKey: string | null;
 }
 
-export const EMPTY_TOTALS: UsageTotals = { calls: 0, input: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, output: 0, reasoning: 0 };
-
 /* A count on the wire is a whole non-negative number, whatever a transcript put in the field. */
 export const int = (value: unknown): number => (typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.trunc(value) : 0);
-
-export const addTotals = (into: UsageTotals, from: UsageTotals): void => {
-    into.calls += from.calls;
-    into.input += from.input;
-    into.cacheRead += from.cacheRead;
-    into.cacheWrite += from.cacheWrite;
-    into.cacheWrite1h += from.cacheWrite1h;
-    into.output += from.output;
-    into.reasoning += from.reasoning;
-};
 
 const maxTotals = (into: UsageTotals, from: UsageTotals): void => {
     into.calls = Math.max(into.calls, from.calls);
@@ -37,8 +25,6 @@ const maxTotals = (into: UsageTotals, from: UsageTotals): void => {
     into.output = Math.max(into.output, from.output);
     into.reasoning = Math.max(into.reasoning, from.reasoning);
 };
-
-export const totalTokensOf = (totals: UsageTotals): number => totals.input + totals.cacheRead + totals.cacheWrite + totals.output;
 
 // Claude repeats growing usage per message and across resumed transcripts; keep each field's maximum.
 export const foldByKey = (records: readonly UsageRecord[]): UsageRecord[] => {

@@ -1,6 +1,6 @@
 import type { UsageProvider, UsageSummaryResult, UsageTotals } from '@ruimte/contracts';
 import type { UsageMetric } from '@/state/usage';
-import { addTotals, EMPTY_TOTALS, totalTokensOf, USAGE_PROVIDERS } from '@/shell/usage/format';
+import { EMPTY_TOTALS, USAGE_PROVIDERS, addTotals, totalTokensOf } from '@ruimte/contracts';
 
 /* One bar of the chart: what each provider put in this slot, and the height of the stack. */
 export interface ChartSlot {

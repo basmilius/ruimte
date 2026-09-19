@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next';
 import type { UsageTotals } from '@ruimte/contracts';
 import type { UsageMetric } from '@/state/usage';
 import { ProviderLogo } from '@/ui/ProviderLogo';
-import { formatCount, formatTokens, PROVIDER_COLORS, PROVIDER_LABELS, totalTokensOf } from '@/shell/usage/format';
+import { totalTokensOf } from '@ruimte/contracts';
+import { formatCount, formatTokens, PROVIDER_COLORS, PROVIDER_LABELS } from '@/shell/usage/format';
 import { useMoney } from '@/shell/usage/money';
 import type { ProviderTotal } from '@/shell/usage/summary';
 

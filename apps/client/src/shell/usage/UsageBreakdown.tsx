@@ -12,17 +12,8 @@ import { SECTION_LABEL } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
 import { ProviderLogo } from '@/ui/ProviderLogo';
-import {
-    displayModel,
-    formatCount,
-    formatTokens,
-    PROVIDER_COLORS,
-    PROVIDER_LABELS,
-    shortPath,
-    slotLabel,
-    totalTokensOf,
-    USAGE_PROVIDERS
-} from '@/shell/usage/format';
+import { USAGE_PROVIDERS, totalTokensOf } from '@ruimte/contracts';
+import { displayModel, formatCount, formatTokens, PROVIDER_COLORS, PROVIDER_LABELS, shortPath, slotLabel } from '@/shell/usage/format';
 import { useMoney } from '@/shell/usage/money';
 import { deriveDays } from '@/shell/usage/summary';
 
