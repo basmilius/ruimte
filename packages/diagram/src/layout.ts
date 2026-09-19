@@ -1,4 +1,5 @@
 import type { DiagramDocument, DiagramEdge, DiagramNode, DiagramShape } from '@ruimte/contracts';
+import { centerOf, intersects, roundPoint, type Point, type Rect } from '@ruimte/drawing';
 import { placeAcross } from './across.ts';
 import { DUMMY_MARGIN, NODE_MARGIN, bandCode, type Band, type Hop, type Unit } from './graph.ts';
 import { orderLayers } from './order.ts';
@@ -7,17 +8,7 @@ import { LABEL_LINE, LABEL_SIZE, SUB_LINE, SUB_SIZE, estimateTextWidth, widestLi
 
 export { LABEL_LINE, LABEL_SIZE, SUB_LINE, SUB_SIZE, estimateTextWidth, wrapText } from './text.ts';
 
-export interface Point {
-    x: number;
-    y: number;
-}
-
-export interface Rect {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-}
+export type { Point, Rect } from '@ruimte/drawing';
 
 export interface NodeBox extends Rect {
     id: string;
@@ -209,10 +200,8 @@ const flip = <T extends Rect>(box: T): T => ({ ...box, x: box.y, y: box.x, w: bo
 
 const flipPoint = (point: Point): Point => ({ x: point.y, y: point.x });
 
-const center = (box: Rect): Point => ({ x: Math.round(box.x + box.w / 2), y: Math.round(box.y + box.h / 2) });
-
-const overlapsRect = (left: Rect, right: Rect): boolean =>
-    left.x < right.x + right.w && right.x < left.x + left.w && left.y < right.y + right.h && right.y < left.y + left.h;
+/* Rounded, because a diagram lays its boxes and its lines out on a whole-pixel grid. */
+const center = (box: Rect): Point => roundPoint(centerOf(box));
 
 const unionOf = (rects: readonly Rect[]): Rect => {
     if (rects.length === 0) {
@@ -767,8 +756,8 @@ export const layoutOf = (document: Pick<DiagramDocument, 'meta' | 'nodes' | 'gro
             continue;
         }
         const taken = (): boolean =>
-            [...nodes, ...groups.map((group) => group.labelBox)].some((box) => overlapsRect(box, label)) ||
-            settled.some((other) => overlapsRect({ x: other.x - 4, y: other.y - 4, w: other.w + 8, h: other.h + 8 }, label));
+            [...nodes, ...groups.map((group) => group.labelBox)].some((box) => intersects(box, label)) ||
+            settled.some((other) => intersects({ x: other.x - 4, y: other.y - 4, w: other.w + 8, h: other.h + 8 }, label));
         for (let step = 0; step < 1000 && taken(); step++) {
             label.y += 4;
         }

@@ -1,4 +1,5 @@
 import type { NodeSide } from '@ruimte/contracts';
+import { centerOf } from '@ruimte/drawing';
 import type { Point, Rect } from '@/canvas/math';
 
 /* The edge of a node a connector leaves from or lands on. */
@@ -81,8 +82,6 @@ export const SIDE_NORMAL: Record<Side, Point> = {
 };
 
 const isVertical = (side: Side): boolean => side === 'top' || side === 'bottom';
-
-const centerOf = (rect: Rect): Point => ({ x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 });
 
 const push = (point: Point, side: Side, distance: number): Point => ({
     x: point.x + SIDE_NORMAL[side].x * distance,

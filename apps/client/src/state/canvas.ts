@@ -11,7 +11,7 @@ import {
     isMeasured,
     snapToGrid,
     snapZoom,
-    unionRect,
+    unionOf,
     viewCameraOf,
     zoomAround,
     type Camera,
@@ -381,7 +381,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         fitAll() {
             const { nodes, texts, viewport } = get();
             const rects: Rect[] = [...Object.values(nodes), ...Object.values(texts).map((t) => ({ x: t.x, y: t.y, w: t.size * 12, h: t.size * 1.4 }))];
-            const bounds = unionRect(rects);
+            const bounds = unionOf(rects);
             // An empty canvas has nothing to fit, so the wait ends rather than standing forever.
             if (!bounds) {
                 set({ pendingCamera: null });
@@ -399,7 +399,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 const t = texts[id];
                 return t ? [{ x: t.x, y: t.y, w: t.size * 12, h: t.size * 1.4 }] : [];
             });
-            const bounds = unionRect(rects);
+            const bounds = unionOf(rects);
             const camera = bounds === null ? null : cameraToFit(bounds, viewport, 96, 1.5);
             // A shortcut on a canvas nobody can see yet is worth nothing later, so this one does not wait.
             if (camera !== null) {

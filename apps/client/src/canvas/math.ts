@@ -1,22 +1,17 @@
 import { CANVAS_GRID, type ViewCamera } from '@ruimte/contracts';
-import { unionOf } from '@ruimte/drawing';
+
+import { intersects, unionOf, type Point, type Rect } from '@ruimte/drawing';
+
+/*
+ * This module is what a camera does with the world it looks at. The world itself is one geometry,
+ * in `@ruimte/drawing`, and passes through here so a reader on the canvas has one import for both.
+ */
+export { intersects, unionOf, type Point, type Rect };
 
 export interface Camera {
     x: number;
     y: number;
     zoom: number;
-}
-
-export interface Rect {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-}
-
-export interface Point {
-    x: number;
-    y: number;
 }
 
 const ZOOM_MIN = 0.1;
@@ -45,11 +40,6 @@ export const zoomAround = (camera: Camera, nextZoom: number, anchor: Point): Cam
         y: anchor.y - (anchor.y - camera.y) * ratio
     };
 };
-
-/* One union for the whole client: the package's reckons with a rect drawn to the left or upwards, which has a negative size. */
-export const unionRect = (rects: readonly Rect[]): Rect | null => unionOf(rects);
-
-export const intersects = (a: Rect, b: Rect): boolean => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 
 /*
  * What the camera has in front of it, in world coordinates. The margin is screen pixels around the

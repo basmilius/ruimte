@@ -19,6 +19,9 @@ export const boundsOf = (element: Pick<DrawingElement, 'x' | 'y' | 'w' | 'h'>): 
 
 export const centerOf = (rect: Rect): Point => ({ x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 });
 
+/* A point on the whole pixel, for a layout that lines its boxes and its lines up on a pixel grid. */
+export const roundPoint = (point: Point): Point => ({ x: Math.round(point.x), y: Math.round(point.y) });
+
 export const rotatePoint = (point: Point, around: Point, angle: number): Point => {
     if (angle === 0) {
         return point;
