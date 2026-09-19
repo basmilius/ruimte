@@ -70,6 +70,7 @@ import { Tooltip } from '@/ui/Tooltip';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { Kbd } from '@/ui/Kbd';
 import { PanelEmpty } from '@/ui/PanelEmpty';
+import { MenuPopup } from '@/ui/MenuPopup';
 
 const SEARCH_DEBOUNCE_MS = 150;
 const SEARCH_LIMIT = 200;
@@ -483,9 +484,7 @@ export function FilesPanel() {
                             <Icon icon={MoreHorizontal} size={14} />
                         </Menu.Trigger>
                     </Tooltip>
-                    <Menu.Portal>
-                        <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
-                            <Menu.Popup className="menu-popup">
+                    <MenuPopup align="end">
                                 <Menu.Item className="menu-item" onClick={() => useUi.getState().openFindInFiles()}>
                                     <Icon icon={FileSearch} size={14} /> {t('file.empty.findInFiles')} <Kbd shortcut={APP_SHORTCUTS.findInFiles} />
                                 </Menu.Item>
@@ -514,9 +513,7 @@ export function FilesPanel() {
                                 <Menu.Item className="menu-item" onClick={refresh}>
                                     <Icon icon={RefreshCw} size={14} /> {t('file.menu.refresh')}
                                 </Menu.Item>
-                            </Menu.Popup>
-                        </Menu.Positioner>
-                    </Menu.Portal>
+                            </MenuPopup>
                 </Menu.Root>
             </div>
             {reachability !== null && reachability !== 'loopback' && (

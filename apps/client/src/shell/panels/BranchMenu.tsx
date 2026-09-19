@@ -9,6 +9,7 @@ import type { GitTarget } from '@/state/git-target';
 import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
+import { MenuPopup } from '@/ui/MenuPopup';
 
 // Under this many branches a field on top of the list costs more than it finds.
 const FILTER_FROM = 10;
@@ -71,9 +72,7 @@ export function BranchMenu({ target, targets, branch, detached, refs, loading, o
                     <Icon icon={ChevronDown} size={12} className="shrink-0" />
                 </Menu.Trigger>
             </Tooltip>
-            <Menu.Portal>
-                <Menu.Positioner className="z-(--z-popup)" side="bottom" align="start" sideOffset={6}>
-                    <Menu.Popup className="menu-popup max-h-96 w-80 overflow-y-auto">
+            <MenuPopup className="max-h-96 w-80 overflow-y-auto">
                         <div className={MENU_LABEL}>{t('git.branchMenu.checkout')}</div>
                         <Menu.RadioGroup
                             value={target.cwd ?? ''}
@@ -157,9 +156,7 @@ export function BranchMenu({ target, targets, branch, detached, refs, loading, o
                                 </Menu.RadioItem>
                             ))}
                         </Menu.RadioGroup>
-                    </Menu.Popup>
-                </Menu.Positioner>
-            </Menu.Portal>
+                    </MenuPopup>
         </Menu.Root>
     );
 }

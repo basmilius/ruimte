@@ -19,6 +19,7 @@ import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { CANVAS_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
 import { Kbd } from '@/ui/Kbd';
+import { MenuPopup } from '@/ui/MenuPopup';
 import { useBrowserDisplayTitle } from '@/browser/title';
 
 function ViewName({ view, className }: { view: ProjectView; className: string }) {
@@ -164,9 +165,7 @@ export function ViewMenu() {
                 <ViewName view={active} className="truncate text-sm text-text" />
                 <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
             </Menu.Trigger>
-            <Menu.Portal>
-                <Menu.Positioner className="z-(--z-popup)" side="bottom" sideOffset={6} align="start">
-                    <Menu.Popup className="menu-popup min-w-52">
+            <MenuPopup className="min-w-52">
                         <div className={MENU_LABEL}>{t('viewMenu.views')}</div>
                         {views.filter(isOpenableView).map((view, index) => (
                             <Menu.Item key={view.id} className="menu-item" onClick={() => showView(view.id)}>
@@ -196,9 +195,7 @@ export function ViewMenu() {
                         <SplitItems />
                         <Menu.Separator className={MENU_SEPARATOR} />
                         <ViewMenuItems viewId={active.id} kind={active.kind} />
-                    </Menu.Popup>
-                </Menu.Positioner>
-            </Menu.Portal>
+                    </MenuPopup>
         </Menu.Root>
     );
 }

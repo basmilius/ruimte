@@ -50,6 +50,7 @@ import { Pill } from '@/ui/Pill';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
 import { PanelEmpty } from '@/ui/PanelEmpty';
+import { MenuPopup } from '@/ui/MenuPopup';
 
 // Under this the header has no room for the counts, and the chips need what there is.
 const PILLS_FROM_WIDTH = 320;
@@ -659,9 +660,7 @@ function ActionsMenu({ busy, canPullRequest, stashes, onOpen, onAction, onDialog
                     <Icon icon={MoreHorizontal} size={14} />
                 </Menu.Trigger>
             </Tooltip>
-            <Menu.Portal>
-                <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
-                    <Menu.Popup className="menu-popup">
+            <MenuPopup align="end">
                         <Menu.Item className="menu-item" onClick={() => onAction('pull')}>
                             {t('git.actions.pull')}
                         </Menu.Item>
@@ -713,9 +712,7 @@ function ActionsMenu({ busy, canPullRequest, stashes, onOpen, onAction, onDialog
                                 </Menu.Item>
                             </>
                         )}
-                    </Menu.Popup>
-                </Menu.Positioner>
-            </Menu.Portal>
+                    </MenuPopup>
         </Menu.Root>
     );
 }

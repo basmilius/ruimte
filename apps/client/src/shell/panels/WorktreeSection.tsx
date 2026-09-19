@@ -19,6 +19,7 @@ import { useTransport } from '@/transport/context';
 import { MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
+import { MenuPopup } from '@/ui/MenuPopup';
 
 /* The mark per kind of work. The number beside it carries the amount; the tooltip carries the words. */
 const BADGE_MARKS: Record<WorkBadgeKind, LucideIcon> = {
@@ -203,9 +204,7 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                                             <Icon icon={MoreHorizontal} size={14} />
                                         </Menu.Trigger>
                                     </Tooltip>
-                                    <Menu.Portal>
-                                        <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
-                                            <Menu.Popup className="menu-popup">
+                                    <MenuPopup align="end">
                                                 <WorktreeMenuItems
                                                     worktree={worktree}
                                                     reveal={reveal}
@@ -214,9 +213,7 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                                                     onRemove={onRemove}
                                                     onReveal={onReveal}
                                                 />
-                                            </Menu.Popup>
-                                        </Menu.Positioner>
-                                    </Menu.Portal>
+                                            </MenuPopup>
                                 </Menu.Root>
                             </ContextMenu.Trigger>
                             <ContextMenu.Portal>

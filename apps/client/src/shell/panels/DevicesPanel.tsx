@@ -34,6 +34,7 @@ import { Icon } from '@/ui/Icon';
 import { SignInMark } from '@/ui/SignInMark';
 import { Tooltip } from '@/ui/Tooltip';
 import { PanelEmpty } from '@/ui/PanelEmpty';
+import { MenuPopup } from '@/ui/MenuPopup';
 
 const referenceOf = (device: DeviceInfo): DeviceReference => ({ platform: device.platform, kind: device.kind, name: device.name, runtime: device.runtime });
 
@@ -292,14 +293,10 @@ function DevicePlacementMenu({ device }: { device: DeviceInfo }) {
                     <Icon icon={PictureInPicture2} size={16} />
                 </Menu.Trigger>
             </Tooltip>
-            <Menu.Portal>
-                <Menu.Positioner className="z-(--z-popup)" sideOffset={6} align="end">
-                    <Menu.Popup className="menu-popup">
+            <MenuPopup align="end">
                         <div className={MENU_LABEL}>{t('devices.openSimulator')}</div>
                         <DeviceMenuItems device={device} />
-                    </Menu.Popup>
-                </Menu.Positioner>
-            </Menu.Portal>
+                    </MenuPopup>
         </Menu.Root>
     );
 }

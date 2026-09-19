@@ -25,6 +25,7 @@ import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 import { PromptDialog } from '@/ui/PromptDialog';
+import { MenuPopup } from '@/ui/MenuPopup';
 
 interface ProjectRowProps {
     row: ProjectMenuRow;
@@ -240,9 +241,7 @@ export function ProjectMenu() {
                     <span className="truncate text-sm font-medium text-text">{current?.name}</span>
                     <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
                 </Menu.Trigger>
-                <Menu.Portal>
-                    <Menu.Positioner className="z-(--z-popup)" side="bottom" sideOffset={6} align="start">
-                        <Menu.Popup className="menu-popup min-w-60">
+                <MenuPopup className="min-w-60">
                             {open.length > 0 && <div className={MENU_LABEL}>{t('projectMenu.projects')}</div>}
                             {open.map((row) => (
                                 <ProjectRow
@@ -283,9 +282,7 @@ export function ProjectMenu() {
                             <Menu.Item className="menu-item" onClick={() => useUi.getState().openFolderBrowser()}>
                                 <Icon icon={FolderOpen} size={14} /> {t('projectMenu.openFolder')}
                             </Menu.Item>
-                        </Menu.Popup>
-                    </Menu.Positioner>
-                </Menu.Portal>
+                        </MenuPopup>
             </Menu.Root>
 
             <ProjectNameDialog

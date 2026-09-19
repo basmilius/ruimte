@@ -11,6 +11,7 @@ import { FileMenuItems } from '@/shell/panels/FileMenuItems';
 import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
+import { MenuPopup } from '@/ui/MenuPopup';
 
 /*
  * The bar above every file renderer: the controls that change how the file is drawn, at its right.
@@ -100,17 +101,13 @@ function FileMenu() {
                     <Icon icon={MoreHorizontal} size={14} />
                 </Menu.Trigger>
             </Tooltip>
-            <Menu.Portal>
-                <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
-                    <Menu.Popup className="menu-popup">
-                        {actions.tabKey === undefined ? (
-                            <FileActionItems path={actions.path} on={actions.on} onRefresh={actions.refresh} />
-                        ) : (
-                            <FileMenuItems tabKey={actions.tabKey} onRefresh={actions.refresh} />
-                        )}
-                    </Menu.Popup>
-                </Menu.Positioner>
-            </Menu.Portal>
+            <MenuPopup align="end">
+                {actions.tabKey === undefined ? (
+                    <FileActionItems path={actions.path} on={actions.on} onRefresh={actions.refresh} />
+                ) : (
+                    <FileMenuItems tabKey={actions.tabKey} onRefresh={actions.refresh} />
+                )}
+            </MenuPopup>
         </Menu.Root>
     );
 }

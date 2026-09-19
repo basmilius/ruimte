@@ -22,6 +22,7 @@ import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
+import { MenuPopup } from '@/ui/MenuPopup';
 
 // The grid beside the panel keeps at least this much, the same floor the preview keeps.
 const MIN_GRID_WIDTH = 360;
@@ -111,9 +112,7 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
                         {t('planPanel.planOf', { number: plans.length - index, total: plans.length })}
                         <Icon icon={ChevronDown} size={12} />
                     </Menu.Trigger>
-                    <Menu.Portal>
-                        <Menu.Positioner className="z-(--z-popup)" side="bottom" sideOffset={6} align="start">
-                            <Menu.Popup className="menu-popup min-w-56">
+                    <MenuPopup className="min-w-56">
                                 {plans.map((entry) => (
                                     <Menu.Item key={entry.id} className="menu-item" onClick={() => pickPlan(entry.id)}>
                                         <span className="grid h-4 w-4 shrink-0 place-items-center">
@@ -122,9 +121,7 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
                                         <span className="min-w-0 truncate">{entry.meta.title}</span>
                                     </Menu.Item>
                                 ))}
-                            </Menu.Popup>
-                        </Menu.Positioner>
-                    </Menu.Portal>
+                            </MenuPopup>
                 </Menu.Root>
             )}
             <div className={clsx(BTN_GROUP, 'ml-auto shrink-0')}>
@@ -135,9 +132,7 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
                             <Icon icon={MoreHorizontal} size={16} />
                         </Menu.Trigger>
                     </Tooltip>
-                    <Menu.Portal>
-                        <Menu.Positioner className="z-(--z-popup)" side="bottom" sideOffset={6} align="end">
-                            <Menu.Popup className="menu-popup min-w-56">
+                    <MenuPopup align="end" className="min-w-56">
                                 <div className={MENU_LABEL}>{t('planPanel.show')}</div>
                                 <Menu.RadioGroup value={filter} onValueChange={(value: PlanFilter) => usePlanViewPrefs.getState().setFilter(value)}>
                                     {FILTERS.map((id) => (
@@ -185,9 +180,7 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
                                 >
                                     <Icon icon={LockOpen} size={14} /> {t('planPanel.unlockAll')}
                                 </Menu.Item>
-                            </Menu.Popup>
-                        </Menu.Positioner>
-                    </Menu.Portal>
+                            </MenuPopup>
                 </Menu.Root>
                 <Tooltip label={t('planPanel.close')} name>
                     <button type="button" className="icon-btn" onClick={closePlanPanel}>
