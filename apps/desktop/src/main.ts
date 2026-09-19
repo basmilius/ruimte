@@ -3,12 +3,12 @@ import { existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'no
 import { readFile, writeFile } from 'node:fs/promises';
 import { homedir, userInfo } from 'node:os';
 import { join, resolve } from 'node:path';
+import { buildIdentityOf, machineWorkOf, MACHINE_HEALTH_PATH, MACHINE_WORK_PATH, type BuildIdentity, type MachineWork } from '@ruimte/contracts';
 import { AddressBookClient, ADDRESS_BOOK_URL, SessionLoginCodeSchema, SessionVault } from '@ruimte/pulsar';
 import { listenForLogin, type LoopbackLogin } from './pulsar-login';
 import { fileSessionKey, fileSessionStore } from './pulsar-store';
 import { createReleaseNotes } from './release-notes';
 import { createServiceController, type BackgroundServiceState } from './service/controller';
-import { healthFrom, workFrom, type BuildIdentity, type MachineWork } from './service/decide';
 import {
     LAUNCH_AGENT_LABEL,
     diskFiles,
@@ -143,8 +143,8 @@ const spawnDaemon = (): void => {
 /* One ask of the port, bounded, so a daemon that hangs is no answer rather than a start that never ends. */
 const probeDaemon = async (): Promise<BuildIdentity | null> => {
     try {
-        const response = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(1000) });
-        return response.ok ? healthFrom(await response.json()) : null;
+        const response = await fetch(`http://127.0.0.1:${port}${MACHINE_HEALTH_PATH}`, { signal: AbortSignal.timeout(1000) });
+        return response.ok ? buildIdentityOf(await response.json()) : null;
     } catch {
         return null;
     }
@@ -154,11 +154,11 @@ const probeDaemon = async (): Promise<BuildIdentity | null> => {
 const probeWork = async (): Promise<MachineWork | null> => {
     try {
         const secret = (await readFile(join(ruimteHome, 'local.key'), 'utf8')).trim();
-        const response = await fetch(`http://127.0.0.1:${port}/machine/work`, {
+        const response = await fetch(`http://127.0.0.1:${port}${MACHINE_WORK_PATH}`, {
             headers: { authorization: `Bearer ${secret}` },
             signal: AbortSignal.timeout(2000)
         });
-        return response.ok ? workFrom(await response.json()) : null;
+        return response.ok ? machineWorkOf(await response.json()) : null;
     } catch {
         return null;
     }

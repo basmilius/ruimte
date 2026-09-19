@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createServiceController, type ServiceControllerDeps } from './controller';
-import type { BuildIdentity, MachineWork } from './decide';
+import type { BuildIdentity, MachineWork } from '@ruimte/contracts';
 import type { ServiceManager } from '@ruimte/service';
 import { keepRunningSetting, serviceSupport, type KeepRunningSetting, type ServiceSupport } from './settings';
 

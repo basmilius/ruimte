@@ -1,4 +1,5 @@
-import { decideRestart, decideStart, sameBuild, type BuildIdentity, type MachineWork } from './decide';
+import type { BuildIdentity, MachineWork } from '@ruimte/contracts';
+import { decideRestart, decideStart, sameBuild } from './decide';
 import type { ServiceManager } from '@ruimte/service';
 import type { KeepRunningSetting, ServiceSupport } from './settings';
 

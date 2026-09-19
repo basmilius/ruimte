@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { decideRestart, decideStart, healthFrom, sameBuild, workFrom } from './decide';
+import { decideRestart, decideStart, sameBuild } from './decide';
 
 const EXPECTED = { version: '0.1.0', build: '0.1.0-new' };
 
@@ -15,14 +15,6 @@ describe('decideRestart', () => {
 
     test('a daemon that cannot say what runs is asked about', () => {
         expect(decideRestart(null)).toBe('ask');
-    });
-});
-
-describe('workFrom', () => {
-    test('reads the counts and nothing else', () => {
-        expect(workFrom({ terminals: 1, agents: 2 })).toEqual({ terminals: 1, agents: 2 });
-        expect(workFrom({ terminals: -1, agents: 2 })).toBeNull();
-        expect(workFrom('Not found')).toBeNull();
     });
 });
 
@@ -62,18 +54,5 @@ describe('sameBuild', () => {
     test('without an expected id the version decides', () => {
         expect(sameBuild({ version: '0.1.0', build: 'x' }, { version: '0.1.0', build: null })).toBe(true);
         expect(sameBuild({ version: '0.1.0', build: null }, { version: '0.1.1', build: null })).toBe(false);
-    });
-});
-
-describe('healthFrom', () => {
-    test('reads the version and the build', () => {
-        expect(healthFrom({ ok: true, version: '0.1.0', build: 'b' })).toEqual({ version: '0.1.0', build: 'b' });
-        expect(healthFrom({ ok: true, version: '0.1.0' })).toEqual({ version: '0.1.0', build: null });
-    });
-
-    test('anything else is no answer', () => {
-        expect(healthFrom(null)).toBeNull();
-        expect(healthFrom({ ok: false, version: '0.1.0' })).toBeNull();
-        expect(healthFrom({ ok: true })).toBeNull();
     });
 });
