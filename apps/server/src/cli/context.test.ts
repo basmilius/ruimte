@@ -177,9 +177,10 @@ describe('runContext', () => {
         }
     });
 
+    // The daemon here answers a plain 404, the way an older one does; what it said is the only reason there is.
     test('a source that is not linked is a refusal that names the ones that are', async () => {
         expect(await runContext(['read', 'nonsense'], env)).toBe(3);
-        expect(stderr).toBe(['refused\tunknown-source\tnonsense is not linked to this session', 'n1\ttext\tPlan'].join('\n') + '\n');
+        expect(stderr).toBe(['refused\tunknown-source\tnonsense could not be read: Not found', 'n1\ttext\tPlan'].join('\n') + '\n');
         expect(stdout).toBe('');
     });
 
@@ -198,7 +199,7 @@ describe('runContext', () => {
     test('a refusal with nothing linked says so instead of listing nothing', async () => {
         sources = [];
         expect(await runContext(['read', 'nonsense'], env)).toBe(3);
-        expect(stderr).toBe(['refused\tunknown-source\tnonsense is not linked to this session', 'note\tNothing is linked to this session'].join('\n') + '\n');
+        expect(stderr).toBe(['refused\tunknown-source\tnonsense could not be read: Not found', 'note\tNothing is linked to this session'].join('\n') + '\n');
     });
 
     test('a token the daemon does not know is no session, for list, read and a verb alike', async () => {
