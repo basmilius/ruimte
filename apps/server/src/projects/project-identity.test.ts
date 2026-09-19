@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { deriveIdentity, faviconHref, readIdeaName, sniffMime, IdentityCache, ICON_MAX_BYTES } from './project-identity.ts';
+import { deriveIdentity, faviconHref, readIdeaName, sniffIconMime, IdentityCache, ICON_MAX_BYTES } from './project-identity.ts';
 
 let root: string;
 let folder: string;
@@ -31,17 +31,17 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-describe('sniffMime', () => {
+describe('sniffIconMime', () => {
     test('reads the type from the bytes, not from the name', () => {
-        expect(sniffMime(PNG)).toBe('image/png');
-        expect(sniffMime(SVG)).toBe('image/svg+xml');
-        expect(sniffMime(GIF)).toBe('image/gif');
-        expect(sniffMime(Buffer.from([0xff, 0xd8, 0xff, 0xe0]))).toBe('image/jpeg');
-        expect(sniffMime(Buffer.from('RIFF____WEBPVP8 '))).toBe('image/webp');
-        expect(sniffMime(Buffer.from([0x00, 0x00, 0x01, 0x00, 0x01, 0x00]))).toBe('image/vnd.microsoft.icon');
+        expect(sniffIconMime(PNG)).toBe('image/png');
+        expect(sniffIconMime(SVG)).toBe('image/svg+xml');
+        expect(sniffIconMime(GIF)).toBe('image/gif');
+        expect(sniffIconMime(Buffer.from([0xff, 0xd8, 0xff, 0xe0]))).toBe('image/jpeg');
+        expect(sniffIconMime(Buffer.from('RIFF____WEBPVP8 '))).toBe('image/webp');
+        expect(sniffIconMime(Buffer.from([0x00, 0x00, 0x01, 0x00, 0x01, 0x00]))).toBe('image/vnd.microsoft.icon');
         // An .ico header with image type 2 is a cursor.
-        expect(sniffMime(Buffer.from([0x00, 0x00, 0x02, 0x00, 0x01, 0x00]))).toBeNull();
-        expect(sniffMime(Buffer.from('#!/bin/sh\necho hi\n'))).toBeNull();
+        expect(sniffIconMime(Buffer.from([0x00, 0x00, 0x02, 0x00, 0x01, 0x00]))).toBeNull();
+        expect(sniffIconMime(Buffer.from('#!/bin/sh\necho hi\n'))).toBeNull();
     });
 });
 

@@ -3,7 +3,8 @@ import { mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FS_READ_MAX_TEXT_BYTES } from '@ruimte/contracts';
-import { ReadError, languageOf, looksBinary, looksLikeSvg, readFile, sniffMime } from './read.ts';
+import { ReadError, languageOf, looksBinary, readFile } from './read.ts';
+import { looksLikeSvg, sniffMime } from './sniff.ts';
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]);
 const WEBP = Buffer.concat([Buffer.from('RIFF'), Buffer.from([0x20, 0x00, 0x00, 0x00]), Buffer.from('WEBPVP8 ')]);

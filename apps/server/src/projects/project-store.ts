@@ -41,7 +41,7 @@ import {
     PROJECT_FILE
 } from './project-files.ts';
 import { ProjectIndex } from './project-index.ts';
-import { IdentityCache, readIdeaName, sniffMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
+import { IdentityCache, readIdeaName, sniffIconMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
 import { errorText } from '../error-text.ts';
 import { CodedError } from '../coded-error.ts';
 import { ClientSinks } from '../client-sinks.ts';
@@ -529,7 +529,7 @@ export class ProjectStore {
             await removeIconFiles(entry.folder);
         } else {
             const bytes = decodeImage(payload.image.base64);
-            const mime = sniffMime(bytes);
+            const mime = sniffIconMime(bytes);
             const extension = mime ? ICON_EXTENSION_BY_MIME[mime] : undefined;
             if (!extension) {
                 throw new ProjectError('bad-icon', 'That file is not a PNG, JPEG, GIF, WebP or SVG image');

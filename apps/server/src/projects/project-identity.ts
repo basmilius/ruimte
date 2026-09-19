@@ -1,5 +1,7 @@
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { extname, isAbsolute, relative, resolve, sep } from 'node:path';
+import { isImageMime } from '@ruimte/contracts';
+import { looksLikeSvg, sniffMime } from '../fs/sniff.ts';
 import { PROJECT_DIR } from './project-files.ts';
 
 // A logo is a few kilobytes; anything past this is a photo that happens to be called icon.png.
@@ -76,39 +78,18 @@ export interface DerivedIdentity {
 
 const EMPTY: DerivedIdentity = { icon: null, unresolved: false };
 
-const startsWith = (bytes: Uint8Array, signature: number[], offset = 0): boolean => signature.every((byte, index) => bytes[offset + index] === byte);
-
 /*
- * The MIME of an image from its first bytes. The extension is what a person typed; these are what
- * the file is, which is what a browser will act on.
+ * What a folder may declare as its icon. The general sniff knows the image formats a browser paints;
+ * the icon format below is only trusted here, on a file a folder pointed at by name, since its
+ * signature is four bytes and two of them are zero.
  */
-export const sniffMime = (bytes: Uint8Array): string | null => {
-    if (startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) {
-        return 'image/png';
-    }
-    if (startsWith(bytes, [0xff, 0xd8, 0xff])) {
-        return 'image/jpeg';
-    }
-    if (startsWith(bytes, [0x47, 0x49, 0x46, 0x38])) {
-        return 'image/gif';
-    }
-    if (startsWith(bytes, [0x52, 0x49, 0x46, 0x46]) && startsWith(bytes, [0x57, 0x45, 0x42, 0x50], 8)) {
-        return 'image/webp';
-    }
+export const sniffIconMime = (bytes: Uint8Array): string | null => {
     // An .ico with image type 1; type 2 is a cursor, which is not an icon we want to serve.
-    if (startsWith(bytes, [0x00, 0x00, 0x01, 0x00])) {
+    if (bytes[0] === 0x00 && bytes[1] === 0x00 && bytes[2] === 0x01 && bytes[3] === 0x00) {
         return 'image/vnd.microsoft.icon';
     }
-    if (looksLikeSvg(bytes)) {
-        return 'image/svg+xml';
-    }
-    return null;
-};
-
-const looksLikeSvg = (bytes: Uint8Array): boolean => {
-    // A BOM, a declaration or a comment may come first, so the tag is looked for in the head.
-    const head = new TextDecoder('utf-8', { fatal: false }).decode(bytes.subarray(0, 1024)).toLowerCase();
-    return head.includes('<svg');
+    const mime = sniffMime(bytes) ?? (looksLikeSvg(bytes) ? 'image/svg+xml' : null);
+    return mime !== null && isImageMime(mime) ? mime : null;
 };
 
 /* True while `path` stays inside `folder`, symlinks resolved. */
@@ -167,7 +148,7 @@ const readImage = async (folder: string, candidate: string): Promise<{ path: str
     } catch {
         return null;
     }
-    const mime = sniffMime(bytes);
+    const mime = sniffIconMime(bytes);
     if (!mime) {
         return null;
     }
