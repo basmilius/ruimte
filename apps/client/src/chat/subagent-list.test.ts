@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { CircleCheck, CircleSlash, CircleX, LoaderCircle } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem, ChatToolItem, Task } from '@ruimte/contracts';
-import { formatClock, formatDate } from '@/shell/usage/format';
+import { formatClock, formatDayClock } from '@/format/datetime';
 import {
     composerStopLabel,
     composerStopOf,
@@ -259,7 +259,7 @@ describe('the time on the right of an entry', () => {
         const ended = new Date(2026, 8, 16, 11, 2).getTime();
         expect(entryTimeOf(subagent('a', { status: 'done', finishedAt: ended }), null, noon)).toBe(formatClock(ended));
         const yesterday = new Date(2026, 8, 15, 23, 40).getTime();
-        expect(entryTimeOf(subagent('a', { status: 'failed', finishedAt: yesterday }), null, noon)).toBe(`${formatDate(yesterday)} ${formatClock(yesterday)}`);
+        expect(entryTimeOf(subagent('a', { status: 'failed', finishedAt: yesterday }), null, noon)).toBe(formatDayClock(yesterday));
         expect(entryTimeOf(subagent('a', { status: 'done', finishedAt: null }), null, noon)).toBeNull();
     });
 

@@ -5,8 +5,8 @@ import { isHandbackNotice, lastHandbackReport } from '@/chat/logic/handback';
 import { stripMarkdown } from '@/chat/logic/timeline-copy';
 import { toolSummary } from '@/chat/logic/tools';
 import { canOpenSubagent } from '@/chat/subagent-view';
+import { formatMoment } from '@/format/datetime';
 import { formatElapsedShort } from '@/format/duration';
-import { formatClock, formatDate } from '@/shell/usage/format';
 
 /* The latest thing a sub-agent did, as its entry in the list says it: a tool call, or text it wrote. */
 export type SubagentPreview = { kind: 'tool'; name: string; detail: string } | { kind: 'text'; text: string };
@@ -195,12 +195,6 @@ export const stopOf = (item: ChatSubagentItem, turnRunning: boolean): SubagentSt
 
 export const stopLabel = (stop: SubagentStop): string => (stop === 'task' ? i18next.t('chat:subagents.stop.task') : i18next.t('chat:subagents.stop.mark'));
 
-const sameDay = (a: number, b: number): boolean => {
-    const left = new Date(a);
-    const right = new Date(b);
-    return left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth() && left.getDate() === right.getDate();
-};
-
 /* The time on the right of an entry: how long it has run so far, or when it ended, with the date once that was not today. */
 export const entryTimeOf = (item: ChatSubagentItem, task: Task | null, now: number): string | null => {
     // A task's own record says when it was given and settled; the row copies those, but may lag behind it.
@@ -212,7 +206,7 @@ export const entryTimeOf = (item: ChatSubagentItem, task: Task | null, now: numb
     if (finishedAt === null || finishedAt <= 0) {
         return null;
     }
-    return sameDay(finishedAt, now) ? formatClock(finishedAt) : `${formatDate(finishedAt)} ${formatClock(finishedAt)}`;
+    return formatMoment(finishedAt, now);
 };
 
 /*
