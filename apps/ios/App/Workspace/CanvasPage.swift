@@ -510,7 +510,8 @@ private final class CanvasSurface: UIView {
             if needingYou.contains(id) || statuses[id] == "running" || unseen.contains(id) {
                 let color: UIColor =
                     needingYou.contains(id)
-                    ? .systemOrange : statuses[id] == "running" ? .systemGreen : MobileStyle.accentColor
+                    ? MobileStyle.statusNeedsYouColor
+                    : statuses[id] == "running" ? MobileStyle.statusRunningColor : MobileStyle.accentColor
                 color.setFill()
                 UIBezierPath(ovalIn: CGRect(x: frame.maxX - 28, y: frame.minY + 20, width: 10, height: 10)).fill()
             }

@@ -202,9 +202,10 @@ struct AttentionMark: View {
     let id: String
     var body: some View {
         if store.needsYou(id) {
-            Image(lucide: "hand").foregroundStyle(.orange).accessibilityLabel("Needs you")
+            Image(lucide: "hand").foregroundStyle(MobileStyle.statusNeedsYou).accessibilityLabel("Needs you")
         } else if store.statuses[id] == "running" {
-            Circle().frame(width: 8, height: 8).foregroundStyle(.green).accessibilityLabel("Running")
+            Circle().frame(width: 8, height: 8).foregroundStyle(MobileStyle.statusRunning).accessibilityLabel(
+                "Running")
         } else if store.unseen.contains(id) {
             Circle().frame(width: 8, height: 8).foregroundStyle(MobileStyle.accent).accessibilityLabel(
                 "New activity")

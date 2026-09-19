@@ -93,21 +93,14 @@ enum AgentWorkLook {
         }
     }
 
-    var color: Color {
-        switch self {
-        case .running: .blue
-        case .done: .green
-        case .failed: .red
-        case .stopped: MobileStyle.faint
-        }
-    }
+    var color: Color { Color(uiColor: uiColor) }
 
     var uiColor: UIColor {
         switch self {
-        case .running: .systemBlue
-        case .done: .systemGreen
-        case .failed: .systemRed
-        case .stopped: .tertiaryLabel
+        case .running: MobileStyle.statusRunningColor
+        case .done: MobileStyle.statusIdleColor
+        case .failed: MobileStyle.statusErrorColor
+        case .stopped: MobileStyle.faintColor
         }
     }
 }

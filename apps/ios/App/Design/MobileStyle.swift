@@ -21,11 +21,17 @@ enum MobileStyle {
     static let border = Color(uiColor: adaptive(light: 0xe2e2e6, dark: 0x1f1f24))
     static let text = Color(uiColor: textColor)
     static let muted = Color(uiColor: mutedColor)
-    static let faint = Color(uiColor: adaptive(light: 0xa1a1aa, dark: 0x5f5f6b))
+    static let faintColor = adaptive(light: 0xa1a1aa, dark: 0x5f5f6b)
+    static let faint = Color(uiColor: faintColor)
     static let positive = Color(uiColor: adaptive(light: 0x15803d, dark: 0x4ade80))
-    static let statusRunning = Color(uiColor: adaptive(light: 0x2563eb, dark: 0x60a5fa))
-    static let statusError = Color(uiColor: adaptive(light: 0xdc2626, dark: 0xef4444))
-    static let statusNeedsYou = Color(uiColor: adaptive(light: 0xd97706, dark: 0xfbbf24))
+    static let statusRunningColor = adaptive(light: 0x2563eb, dark: 0x60a5fa)
+    static let statusErrorColor = adaptive(light: 0xdc2626, dark: 0xef4444)
+    static let statusNeedsYouColor = adaptive(light: 0xd97706, dark: 0xfbbf24)
+    static let statusIdleColor = adaptive(light: 0x16a34a, dark: 0x4ade80)
+    static let statusRunning = Color(uiColor: statusRunningColor)
+    static let statusError = Color(uiColor: statusErrorColor)
+    static let statusNeedsYou = Color(uiColor: statusNeedsYouColor)
+    static let statusIdle = Color(uiColor: statusIdleColor)
 
     private static func adaptive(light: UInt32, dark: UInt32) -> UIColor {
         UIColor { traits in
