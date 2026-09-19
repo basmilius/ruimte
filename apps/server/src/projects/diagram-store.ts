@@ -1,7 +1,15 @@
 import { readFile } from 'node:fs/promises';
-import { EMPTY_DIAGRAM, diagramProblemIn, isDiagramView, type DiagramContent, type DiagramDocument, type ProjectView } from '@ruimte/contracts';
+import {
+    DIAGRAM_VERSION,
+    EMPTY_DIAGRAM,
+    diagramProblemIn,
+    isDiagramView,
+    type DiagramContent,
+    type DiagramDocument,
+    type ProjectView
+} from '@ruimte/contracts';
 import type { WatchSeams } from '../fs/watch-seam.ts';
-import { diagramsDirOf, parseDiagram, readDiagram, viewFilePathIn, writeDiagram } from './project-files.ts';
+import { diagramsDirOf, parseDiagram, readDiagram, tooNewMessage, viewFilePathIn, writeDiagram } from './project-files.ts';
 import { ProjectError, type ProjectStore } from './project-store.ts';
 import { ProjectViewFileStore, type ViewFileKind } from './view-file-store.ts';
 import { CodedError } from '../coded-error.ts';
@@ -12,10 +20,11 @@ export class DiagramError extends CodedError<DiagramErrorCode> {}
 
 const DIAGRAM_FILES: ViewFileKind<DiagramDocument, DiagramContent> = {
     noun: 'diagram',
+    version: DIAGRAM_VERSION,
     dirOf: diagramsDirOf,
     read: readDiagram,
     write: writeDiagram,
-    documentOf: (content, rev) => ({ version: 1, rev, meta: content.meta, nodes: content.nodes, groups: content.groups, edges: content.edges }),
+    documentOf: (content, rev) => ({ version: DIAGRAM_VERSION, rev, meta: content.meta, nodes: content.nodes, groups: content.groups, edges: content.edges }),
     empty: EMPTY_DIAGRAM,
     isViewOf: (projects, projectId, viewId) => projects.isDiagramView(projectId, viewId),
     problemIn: diagramProblemIn,
@@ -65,6 +74,9 @@ export class DiagramStore extends ProjectViewFileStore<DiagramDocument, DiagramC
             const outcome = await readDiagram(path);
             if (outcome.kind === 'invalid') {
                 throw new DiagramError('diagram-invalid', `The file of ${viewId} is not a diagram Ruimte will write over: ${outcome.message}`);
+            }
+            if (outcome.kind === 'too-new') {
+                throw new DiagramError('diagram-invalid', tooNewMessage('diagram', outcome.version, DIAGRAM_VERSION));
             }
             const document = DIAGRAM_FILES.documentOf(content, (outcome.kind === 'ok' ? outcome.document.rev : 0) + 1);
             const text = await writeDiagram(path, document);

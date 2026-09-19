@@ -37,6 +37,20 @@ export const migrateDocument = (value: unknown): ProjectDocument | null => {
     };
 };
 
+/*
+ * The version a file claims when this Ruimte is too old to know it. Such a file is not broken and
+ * must never be set aside or written over: the release that understands it reads it back, and until
+ * then it is someone's work. Null for anything this version can read, including a file with no
+ * version at all, which the migrations answer for.
+ */
+export const newerVersionIn = (value: unknown, known: number): number | null => {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        return null;
+    }
+    const version = (value as { version?: unknown }).version;
+    return typeof version === 'number' && Number.isInteger(version) && version > known ? version : null;
+};
+
 /* The machine-local file, on the same two versions. Anything unreadable starts from nothing. */
 export const migrateLocal = (value: unknown): ProjectLocal => {
     const current = ProjectLocalSchema.safeParse(value);

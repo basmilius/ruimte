@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import type { ProjectCanvasView, ProjectContent, ProjectDocument } from '@ruimte/contracts';
+import { PROJECT_VERSION, type ProjectCanvasView, type ProjectContent, type ProjectDocument } from '@ruimte/contracts';
 import { FakeWatch } from '../fs/watch-test-helpers.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { DiagramStore } from './diagram-store.ts';
@@ -153,6 +153,24 @@ describe('ProjectStore', () => {
         const files = await readdir(join(folder, '.ruimte'));
         expect(files.some((name) => name.startsWith('project.json.corrupt-'))).toBe(true);
         expect(files).toContain('project.json');
+    });
+
+    test('a file from a newer Ruimte keeps the project shut and is left exactly as it was', async () => {
+        await mkdir(join(folder, '.ruimte'));
+        const written = JSON.stringify({ version: PROJECT_VERSION + 1, rev: 4, name: 'later', color: '#000', views: [] });
+        await writeFile(documentPathInFolder(folder), written);
+        await expect(store.openProject({ folder })).rejects.toMatchObject({ code: 'project-too-new' });
+        expect(await readFile(documentPathInFolder(folder), 'utf8')).toBe(written);
+        expect(await readdir(join(folder, '.ruimte'))).toEqual(['project.json']);
+    });
+
+    test('a newer file refuses a verb too, so nothing an agent does writes over it', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        store.release(projectId);
+        await writeFile(documentPathInFolder(folder), JSON.stringify({ version: PROJECT_VERSION + 1, rev: 9, name: 'later', color: '#000', views: [] }));
+        await expect(store.read(projectId)).rejects.toMatchObject({ code: 'project-too-new' });
+        await expect(store.mutate(projectId, (content) => ({ content, result: null }))).rejects.toMatchObject({ code: 'project-too-new' });
     });
 
     test('a canvas without a folder lives under the app data dir, and local state stays out of the shared file', async () => {

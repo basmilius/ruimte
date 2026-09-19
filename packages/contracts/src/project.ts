@@ -497,8 +497,11 @@ export const ProjectContentSchema = z.object({
 });
 export type ProjectContent = z.infer<typeof ProjectContentSchema>;
 
+/* The version this Ruimte writes. A file that says a higher number is not broken, only newer. */
+export const PROJECT_VERSION = 2;
+
 export const ProjectDocumentSchema = ProjectContentSchema.extend({
-    version: z.literal(2),
+    version: z.literal(PROJECT_VERSION),
     // Goes up by one on every write; a save that names an older rev is a conflict.
     rev: z.number().int().nonnegative()
 });

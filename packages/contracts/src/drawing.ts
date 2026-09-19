@@ -91,6 +91,8 @@ export const DrawingElementSchema = z.discriminatedUnion('kind', [
 export type DrawingElement = z.infer<typeof DrawingElementSchema>;
 export type DrawingElementKind = DrawingElement['kind'];
 
+export const DRAWING_VERSION = 1;
+
 // What the person edits; the daemon wraps it with the version and the rev, as it does for a project.
 export const DrawingContentSchema = z.object({
     // In stacking order, back to front.
@@ -99,7 +101,7 @@ export const DrawingContentSchema = z.object({
 export type DrawingContent = z.infer<typeof DrawingContentSchema>;
 
 export const DrawingDocumentSchema = DrawingContentSchema.extend({
-    version: z.literal(1),
+    version: z.literal(DRAWING_VERSION),
     // Goes up by one on every write; a save that names an older rev is a conflict.
     rev: z.number().int().nonnegative()
 });

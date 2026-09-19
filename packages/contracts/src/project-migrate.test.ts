@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { ProjectDocumentSchema, ProjectLocalSchema, ProjectSaveLocalPayloadSchema, type ProjectCanvasView } from './project.ts';
-import { duplicateIdIn, migrateDocument, migrateLocal, withoutCrossViewEdges } from './project-migrate.ts';
+import { duplicateIdIn, migrateDocument, migrateLocal, newerVersionIn, withoutCrossViewEdges } from './project-migrate.ts';
 
 /* A copy of `.ruimte/project.json` of this repository, the way version 1 wrote it. */
 const V1_FILE = {
@@ -55,6 +55,20 @@ describe('migrateDocument', () => {
         expect(migrateDocument({ version: 3, rev: 0 })).toBeNull();
         expect(migrateDocument({ ...V1_FILE, nodes: [{ id: 'n1', kind: 'note' }] })).toBeNull();
         expect(migrateDocument('nonsense')).toBeNull();
+    });
+});
+
+describe('newerVersionIn', () => {
+    test('only an integer above the one this version writes counts as newer', () => {
+        expect(newerVersionIn({ version: 3 }, 2)).toBe(3);
+        expect(newerVersionIn({ version: 2 }, 2)).toBeNull();
+        expect(newerVersionIn({ version: 1 }, 2)).toBeNull();
+        // A file with no version of its own is what the migrations answer for, not this.
+        expect(newerVersionIn({ rev: 0 }, 2)).toBeNull();
+        expect(newerVersionIn({ version: '3' }, 2)).toBeNull();
+        expect(newerVersionIn({ version: 2.5 }, 2)).toBeNull();
+        expect(newerVersionIn(null, 2)).toBeNull();
+        expect(newerVersionIn([{ version: 3 }], 2)).toBeNull();
     });
 });
 

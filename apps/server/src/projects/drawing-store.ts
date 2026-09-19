@@ -1,4 +1,4 @@
-import { EMPTY_DRAWING, type DrawingContent, type DrawingDocument, type DrawingElement } from '@ruimte/contracts';
+import { DRAWING_VERSION, EMPTY_DRAWING, type DrawingContent, type DrawingDocument, type DrawingElement } from '@ruimte/contracts';
 import type { WatchSeams } from '../fs/watch-seam.ts';
 import { drawingsDirOf, readDrawing, viewFilePathIn, writeDrawing } from './project-files.ts';
 import type { ProjectStore } from './project-store.ts';
@@ -11,10 +11,11 @@ export class DrawingError extends CodedError<DrawingErrorCode> {}
 
 const DRAWING_FILES: ViewFileKind<DrawingDocument, DrawingContent> = {
     noun: 'drawing',
+    version: DRAWING_VERSION,
     dirOf: drawingsDirOf,
     read: readDrawing,
     write: writeDrawing,
-    documentOf: (content, rev) => ({ version: 1, rev, elements: content.elements }),
+    documentOf: (content, rev) => ({ version: DRAWING_VERSION, rev, elements: content.elements }),
     empty: EMPTY_DRAWING,
     isViewOf: (projects, projectId, viewId) => projects.isDrawingView(projectId, viewId),
     // A drawing has no rule a save could break: an element is whatever the schema let through.

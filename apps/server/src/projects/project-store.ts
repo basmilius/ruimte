@@ -4,6 +4,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import {
     EMPTY_LOCAL,
     MAIN_VIEW_ID,
+    PROJECT_VERSION,
     MAIN_VIEW_NAME,
     ProjectDocumentSchema,
     ProjectIconChoiceSchema,
@@ -35,6 +36,7 @@ import {
     readDocument,
     removeIconFiles,
     toPortable,
+    tooNewMessage,
     writeDocument,
     writeIconFile,
     ICON_EXTENSION_BY_MIME,
@@ -47,7 +49,16 @@ import { CodedError } from '../coded-error.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { Serializer } from '../serializer.ts';
 
-type ProjectErrorCode = 'project-not-found' | 'project-missing' | 'project-invalid' | 'rev-conflict' | 'folder-not-found' | 'folder-create-failed' | 'bad-icon';
+type ProjectErrorCode =
+    | 'project-not-found'
+    | 'project-missing'
+    | 'project-invalid'
+    // The file is ahead of this daemon. Nothing is written, nothing is moved: only a newer Ruimte may touch it.
+    | 'project-too-new'
+    | 'rev-conflict'
+    | 'folder-not-found'
+    | 'folder-create-failed'
+    | 'bad-icon';
 
 export class ProjectError extends CodedError<ProjectErrorCode> {}
 
@@ -272,6 +283,9 @@ export class ProjectStore {
         if (outcome.kind === 'invalid') {
             throw new ProjectError('project-invalid', outcome.message);
         }
+        if (outcome.kind === 'too-new') {
+            throw new ProjectError('project-too-new', tooNewMessage('project', outcome.version, PROJECT_VERSION));
+        }
         if (outcome.kind === 'corrupt') {
             console.warn(`Set aside a canvas that would not parse: ${outcome.setAside}`);
             outcome = { kind: 'missing' };
@@ -471,6 +485,9 @@ export class ProjectStore {
         const parsed = parseDocument(text);
         if (parsed.kind === 'invalid') {
             throw new ProjectError('project-invalid', parsed.message);
+        }
+        if (parsed.kind === 'too-new') {
+            throw new ProjectError('project-too-new', tooNewMessage('project', parsed.version, PROJECT_VERSION));
         }
         if (parsed.kind !== 'ok') {
             throw new ProjectError('project-invalid', `${path} does not parse as a canvas`);

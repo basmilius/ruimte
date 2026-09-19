@@ -2,7 +2,7 @@ import { mkdir, readdir, rm } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { settled, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '../fs/watch-seam.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
-import { viewFilePathIn, viewIdOfFile, type JsonDocumentRead } from './project-files.ts';
+import { tooNewMessage, viewFilePathIn, viewIdOfFile, type JsonDocumentRead } from './project-files.ts';
 import type { ProjectStore, ProjectViewFiles } from './project-store.ts';
 import { ClientSinks } from '../client-sinks.ts';
 import { Serializer } from '../serializer.ts';
@@ -31,6 +31,8 @@ interface OpenProjectFiles {
 export interface ViewFileKind<TDocument extends TContent & { rev: number }, TContent> {
     /* The word a log line uses, which is what a person reading the console sees. */
     noun: string;
+    /* The version this Ruimte writes, so a file that says a higher one can be named in the refusal. */
+    version: number;
     dirOf(documentPath: string): string;
     read(path: string): Promise<JsonDocumentRead<TDocument>>;
     write(path: string, document: TDocument): Promise<string>;
@@ -84,6 +86,11 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
             const outcome = await this.kind.read(viewFilePathIn(state.dir, viewId));
             if (outcome.kind === 'invalid') {
                 throw this.kind.invalid(outcome.message);
+            }
+            /* Refused rather than opened empty: an empty document here would be written over the
+               newer file by the first save, and that file is someone's work. */
+            if (outcome.kind === 'too-new') {
+                throw this.kind.invalid(tooNewMessage(this.kind.noun, outcome.version, this.kind.version));
             }
             if (outcome.kind === 'corrupt') {
                 console.warn(`Set aside a ${this.kind.noun} that would not parse: ${outcome.setAside}`);
@@ -254,8 +261,9 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
             return;
         }
         const outcome = await this.kind.read(viewFilePathIn(state.dir, viewId));
-        if (outcome.kind === 'invalid') {
-            console.warn(`An outside edit to the ${this.kind.noun} ${viewId} was ignored: ${outcome.message}`);
+        if (outcome.kind === 'invalid' || outcome.kind === 'too-new') {
+            const why = outcome.kind === 'invalid' ? outcome.message : tooNewMessage(this.kind.noun, outcome.version, this.kind.version);
+            console.warn(`An outside edit to the ${this.kind.noun} ${viewId} was ignored: ${why}`);
             return;
         }
         if (outcome.kind !== 'ok') {

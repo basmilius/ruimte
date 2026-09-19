@@ -55,6 +55,8 @@ export const DiagramMetaSchema = z.object({
 });
 export type DiagramMeta = z.infer<typeof DiagramMetaSchema>;
 
+export const DIAGRAM_VERSION = 1;
+
 // What gets written; the daemon wraps it with the version and the rev, as it does for a drawing.
 export const DiagramContentSchema = z.object({
     meta: DiagramMetaSchema,
@@ -66,7 +68,7 @@ export const DiagramContentSchema = z.object({
 export type DiagramContent = z.infer<typeof DiagramContentSchema>;
 
 export const DiagramDocumentSchema = DiagramContentSchema.extend({
-    version: z.literal(1),
+    version: z.literal(DIAGRAM_VERSION),
     // Goes up by one on every write; a save that names an older rev is a conflict.
     rev: z.number().int().nonnegative()
 });

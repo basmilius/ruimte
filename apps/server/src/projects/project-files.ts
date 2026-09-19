@@ -1,6 +1,9 @@
 import { mkdir, readFile, rename, rm } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import {
+    DIAGRAM_VERSION,
+    DRAWING_VERSION,
+    PROJECT_VERSION,
     diagramProblemIn,
     duplicateElementIdIn,
     duplicateIdIn,
@@ -8,6 +11,7 @@ import {
     migrateDiagram,
     migrateDocument,
     migrateDrawing,
+    newerVersionIn,
     storedContentOf,
     withoutCrossViewEdges,
     type DiagramDocument,
@@ -29,21 +33,28 @@ export const DIAGRAMS_DIR = 'diagrams';
 
 /*
  * `unreadable` is broken JSON or a shape no version of ours ever wrote; `invalid` is a file that
- * parses but breaks a rule of the project, which is worth a message rather than a fresh canvas.
+ * parses but breaks a rule of the project, which is worth a message rather than a fresh canvas;
+ * `too-new` is a file from a Ruimte that is ahead of this one, which is neither.
  */
-export type JsonDocumentParse<T> = { kind: 'ok'; document: T } | { kind: 'unreadable' } | { kind: 'invalid'; message: string };
+export type JsonDocumentParse<T> =
+    | { kind: 'ok'; document: T }
+    | { kind: 'unreadable' }
+    | { kind: 'invalid'; message: string }
+    | { kind: 'too-new'; version: number };
 
 export type JsonDocumentRead<T> =
     | { kind: 'ok'; document: T; text: string }
     | { kind: 'missing' }
     | { kind: 'corrupt'; setAside: string }
-    | { kind: 'invalid'; message: string };
+    | { kind: 'invalid'; message: string }
+    | { kind: 'too-new'; version: number };
 
 /*
  * How the project file, a drawing and a diagram are all read. A file that is not one of ours at all
  * is moved next to itself with a timestamp, so a bad merge or a crash never costs the person their
  * work and never gets written over by a fresh file. One that parses but breaks an invariant stays
- * where it is: only a person can decide which of the two things sharing an id was meant.
+ * where it is: only a person can decide which of the two things sharing an id was meant. One from a
+ * newer Ruimte stays too, and untouched: a file a later release reads is not a file to move aside.
  */
 export const readJsonDocument = async <T>(path: string, parse: (text: string) => JsonDocumentParse<T>): Promise<JsonDocumentRead<T>> => {
     let text: string;
@@ -59,7 +70,7 @@ export const readJsonDocument = async <T>(path: string, parse: (text: string) =>
     if (parsed.kind === 'ok') {
         return { kind: 'ok', document: parsed.document, text };
     }
-    if (parsed.kind === 'invalid') {
+    if (parsed.kind === 'invalid' || parsed.kind === 'too-new') {
         return parsed;
     }
     const setAside = `${path}.corrupt-${new Date().toISOString().replace(/[:.]/g, '-')}`;
@@ -75,6 +86,10 @@ export const writeJsonDocument = async <T>(path: string, document: T, serialize:
     return text;
 };
 
+/* What a file from a later release is refused with, in the one sentence a person can act on. */
+export const tooNewMessage = (noun: string, version: number, known: number): string =>
+    `This ${noun} was written by a newer Ruimte (file version ${version}, this one reads ${known}). Update Ruimte to open it.`;
+
 export type DocumentParse = JsonDocumentParse<ProjectDocument>;
 
 /* Reads a canvas file, version 1 or 2. */
@@ -86,6 +101,10 @@ export const parseDocument = (text: string): DocumentParse => {
         value = JSON.parse(text);
     } catch {
         return { kind: 'unreadable' };
+    }
+    const newer = newerVersionIn(value, PROJECT_VERSION);
+    if (newer !== null) {
+        return { kind: 'too-new', version: newer };
     }
     const document = migrateDocument(value);
     if (!document) {
@@ -189,6 +208,10 @@ export const parseDrawing = (text: string): DrawingParse => {
     } catch {
         return { kind: 'unreadable' };
     }
+    const newer = newerVersionIn(value, DRAWING_VERSION);
+    if (newer !== null) {
+        return { kind: 'too-new', version: newer };
+    }
     const document = migrateDrawing(value);
     if (!document) {
         // JSON that is not a drawing at all: a person's file under our name, so it stays where it is.
@@ -227,6 +250,10 @@ export const parseDiagram = (text: string): DiagramParse => {
         value = JSON.parse(text);
     } catch {
         return { kind: 'unreadable' };
+    }
+    const newer = newerVersionIn(value, DIAGRAM_VERSION);
+    if (newer !== null) {
+        return { kind: 'too-new', version: newer };
     }
     const document = migrateDiagram(value);
     if (!document) {
