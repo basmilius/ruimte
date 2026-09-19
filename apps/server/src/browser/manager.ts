@@ -11,6 +11,7 @@ import {
 } from '@ruimte/contracts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { LiveStreamHub, type LiveFrameSource } from '../streams/live-stream.ts';
+import { CodedError } from '../coded-error.ts';
 
 interface NavigationHistory {
     currentIndex: number;
@@ -52,15 +53,9 @@ interface FrameSubscription {
     release: (() => void) | null;
 }
 
-export class BrowserError extends Error {
-    readonly code: string;
+type BrowserErrorCode = 'bad-address' | 'browser-not-found' | 'browser-unavailable';
 
-    constructor(code: string, message: string) {
-        super(message);
-        this.name = 'BrowserError';
-        this.code = code;
-    }
-}
+export class BrowserError extends CodedError<BrowserErrorCode> {}
 
 const normalizeUrl = (input: string): string => {
     const trimmed = input.trim();

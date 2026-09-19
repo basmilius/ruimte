@@ -16,20 +16,11 @@ import type { NoticeDelivery, Notice } from '../context/notices.ts';
 import type { PlanStore } from '../plans/plan-store.ts';
 import type { IndexedPlace } from '../projects/project-index.ts';
 import type { ProjectMutation } from '../projects/project-store.ts';
+import { CodedError } from '../coded-error.ts';
 import { parseArgv } from './argv.ts';
 
 /* A verb said no. The code is for a script, the message for the agent, the lines for what it can pick instead. */
-export class VerbRefusal extends Error {
-    readonly code: string;
-    readonly lines: string[];
-
-    constructor(code: string, message: string, lines: string[] = []) {
-        super(message);
-        this.name = 'VerbRefusal';
-        this.code = code;
-        this.lines = lines;
-    }
-}
+export class VerbRefusal extends CodedError {}
 
 /* What a verb reaches the daemon through; an interface so a test can hand in a store of its own. */
 export interface CanvasHost {

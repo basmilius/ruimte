@@ -27,6 +27,7 @@ import {
 import { StuckJudge, type ObservedGroup, type ObservedProcess, type Observation, type StuckThresholds } from './stuck.ts';
 import { groupsFor, indexTree, machineDisk, ruimteTotals, type TreeEntry, type TreeIndex } from './tree.ts';
 import { errorText } from '../error-text.ts';
+import { CodedError } from '../coded-error.ts';
 
 export const FINE_INTERVAL_MS = 2000;
 export const COARSE_INTERVAL_MS = 5 * 60_000;
@@ -40,15 +41,7 @@ const NUDGE_DELAY_MS = 300;
 
 type ProcessErrorCode = 'processes-unsupported' | 'process-gone' | 'process-foreign' | 'process-refused';
 
-export class ProcessError extends Error {
-    readonly code: ProcessErrorCode;
-
-    constructor(code: ProcessErrorCode, message: string) {
-        super(message);
-        this.name = 'ProcessError';
-        this.code = code;
-    }
-}
+export class ProcessError extends CodedError<ProcessErrorCode> {}
 
 export interface ProcessMonitorOptions {
     sampler: ProcessSampler | null;

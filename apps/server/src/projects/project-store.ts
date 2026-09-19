@@ -43,18 +43,11 @@ import {
 import { ProjectIndex } from './project-index.ts';
 import { IdentityCache, readIdeaName, sniffMime, ICON_MAX_BYTES, type DerivedIcon } from './project-identity.ts';
 import { errorText } from '../error-text.ts';
+import { CodedError } from '../coded-error.ts';
 
 type ProjectErrorCode = 'project-not-found' | 'project-missing' | 'project-invalid' | 'rev-conflict' | 'folder-not-found' | 'folder-create-failed' | 'bad-icon';
 
-export class ProjectError extends Error {
-    readonly code: ProjectErrorCode;
-
-    constructor(code: ProjectErrorCode, message: string) {
-        super(message);
-        this.name = 'ProjectError';
-        this.code = code;
-    }
-}
+export class ProjectError extends CodedError<ProjectErrorCode> {}
 
 const RegistryEntrySchema = z.object({
     projectId: z.string().min(1),

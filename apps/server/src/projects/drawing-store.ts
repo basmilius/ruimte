@@ -3,18 +3,11 @@ import type { WatchSeams } from '../fs/watch-seam.ts';
 import { drawingsDirOf, readDrawing, viewFilePathIn, writeDrawing } from './project-files.ts';
 import type { ProjectStore } from './project-store.ts';
 import { ProjectViewFileStore, type ViewFileKind } from './view-file-store.ts';
+import { CodedError } from '../coded-error.ts';
 
 type DrawingErrorCode = 'project-not-found' | 'drawing-not-found' | 'drawing-invalid' | 'rev-conflict';
 
-export class DrawingError extends Error {
-    readonly code: DrawingErrorCode;
-
-    constructor(code: DrawingErrorCode, message: string) {
-        super(message);
-        this.name = 'DrawingError';
-        this.code = code;
-    }
-}
+export class DrawingError extends CodedError<DrawingErrorCode> {}
 
 const DRAWING_FILES: ViewFileKind<DrawingDocument, DrawingContent> = {
     noun: 'drawing',

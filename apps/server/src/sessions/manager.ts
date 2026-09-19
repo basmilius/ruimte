@@ -11,6 +11,7 @@ import { defaultShell, defaultShellArgs, type PtyAdapter } from '../pty/pty.ts';
 import { Session } from './session.ts';
 import type { SnapshotStore } from './snapshot-store.ts';
 import { errorText } from '../error-text.ts';
+import { CodedError } from '../coded-error.ts';
 
 type SessionErrorCode = 'session-exists' | 'session-not-found' | 'session-exited' | 'spawn-failed' | 'agent-not-found' | 'agent-live' | 'agent-resuming';
 
@@ -27,15 +28,7 @@ const motdOf = (hint: string | null, notices: readonly string[]): string | undef
     return lines.length === 0 ? undefined : lines.join('\n');
 };
 
-export class SessionError extends Error {
-    readonly code: SessionErrorCode;
-
-    constructor(code: SessionErrorCode, message: string) {
-        super(message);
-        this.name = 'SessionError';
-        this.code = code;
-    }
-}
+export class SessionError extends CodedError<SessionErrorCode> {}
 
 export type SessionEvent = { [E in EventType]: { event: E; payload: EventMap[E] } }[EventType];
 

@@ -2,18 +2,11 @@ import { lstat, readdir, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { FS_LIST_MAX_ENTRIES, type FsEntry, type FsEntryKind, type FsListResult } from '@ruimte/contracts';
 import { ignoredPaths } from '../git/ignore.ts';
+import { CodedError } from '../coded-error.ts';
 
 type ListErrorCode = 'not-found' | 'not-a-directory';
 
-export class ListError extends Error {
-    readonly code: ListErrorCode;
-
-    constructor(code: ListErrorCode, message: string) {
-        super(message);
-        this.name = 'ListError';
-        this.code = code;
-    }
-}
+export class ListError extends CodedError<ListErrorCode> {}
 
 export interface ListOptions {
     depth?: number;

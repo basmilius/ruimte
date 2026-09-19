@@ -1,17 +1,10 @@
 import { stat } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { CodedError } from '../coded-error.ts';
 
 type RevealErrorCode = 'path-not-found' | 'reveal-failed';
 
-export class RevealError extends Error {
-    readonly code: RevealErrorCode;
-
-    constructor(code: RevealErrorCode, message: string) {
-        super(message);
-        this.name = 'RevealError';
-        this.code = code;
-    }
-}
+export class RevealError extends CodedError<RevealErrorCode> {}
 
 /* The file manager's command line per platform: a folder opens, a file is selected inside its folder. */
 export const revealCommand = (path: string, isDirectory: boolean, platform: NodeJS.Platform = process.platform): string[] => {

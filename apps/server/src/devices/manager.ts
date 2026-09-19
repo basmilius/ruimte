@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { DeviceAction, DeviceFrame, DeviceInfo, DeviceInput, DeviceOpenResult, DevicePlatform, DeviceSettings, LiveStreamFrame } from '@ruimte/contracts';
 import type { SessionSink } from '../sessions/manager.ts';
 import { LiveStreamHub, type LiveFrameSource } from '../streams/live-stream.ts';
+import { CodedError } from '../coded-error.ts';
 
 export interface DeviceSource extends LiveFrameSource {
     input(input: DeviceInput): void | Promise<void>;
@@ -32,15 +33,37 @@ interface FrameSubscription {
     release: (() => void) | null;
 }
 
-export class DeviceError extends Error {
-    readonly code: string;
+/* Every code a device failure reaches a client with, the helper's own among them. */
+const DEVICE_ERROR_CODES = [
+    'device-action-unavailable',
+    'device-capture-failed',
+    'device-capture-unavailable',
+    'device-input-unavailable',
+    'device-not-booted',
+    'device-not-found',
+    'device-not-open',
+    'device-tools-unavailable',
+    'platform-unavailable',
+    'invalid-devicectl-output',
+    'invalid-simctl-output',
+    'devicectl-failed',
+    'devicectl-unavailable',
+    'simctl-failed',
+    'simctl-unavailable',
+    'device-helper-exited',
+    'device-helper-failed',
+    'device-helper-native',
+    'device-helper-protocol',
+    'device-helper-running',
+    'device-helper-unavailable',
+    'device-not-streaming'
+] as const;
 
-    constructor(code: string, message: string) {
-        super(message);
-        this.name = 'DeviceError';
-        this.code = code;
-    }
-}
+export type DeviceErrorCode = (typeof DEVICE_ERROR_CODES)[number];
+
+const isDeviceErrorCode = (code: string): code is DeviceErrorCode => (DEVICE_ERROR_CODES as readonly string[]).includes(code);
+
+export class DeviceError extends CodedError<DeviceErrorCode> {}
 
 export class DeviceManager {
     readonly streams: LiveStreamHub;
@@ -247,7 +270,8 @@ export class DeviceManager {
         if (error instanceof DeviceError) {
             return error;
         }
-        if (error instanceof Error && 'code' in error && typeof error.code === 'string') {
+        // The capture helper names its own failures; a code from anywhere else is not one a client knows.
+        if (error instanceof Error && 'code' in error && typeof error.code === 'string' && isDeviceErrorCode(error.code)) {
             return new DeviceError(error.code, error.message);
         }
         return new DeviceError('device-helper-failed', error instanceof Error ? error.message : 'The device capture helper failed');

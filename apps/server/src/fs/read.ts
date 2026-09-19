@@ -1,18 +1,11 @@
 import { lstat } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
 import { FS_READ_MAX_TEXT_BYTES, isImageMime, isVideoMime, type FsReadResult } from '@ruimte/contracts';
+import { CodedError } from '../coded-error.ts';
 
 type ReadErrorCode = 'not-found' | 'not-a-file' | 'bad-path';
 
-export class ReadError extends Error {
-    readonly code: ReadErrorCode;
-
-    constructor(code: ReadErrorCode, message: string) {
-        super(message);
-        this.name = 'ReadError';
-        this.code = code;
-    }
-}
+export class ReadError extends CodedError<ReadErrorCode> {}
 
 // The sniff only ever looks at the head of a file; a megabyte of prose says nothing more than its first page.
 export const SNIFF_BYTES = 8 * 1024;

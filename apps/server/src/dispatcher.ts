@@ -10,6 +10,7 @@ import {
     type RequestType,
     type ServerFrame
 } from '@ruimte/contracts';
+import { CodedError } from './coded-error.ts';
 
 export interface ClientAccess {
     reachability: 'loopback' | 'lan' | 'tunnel' | 'public';
@@ -34,15 +35,7 @@ type Handler<T extends RequestType> = (
 ) => RequestMap[T]['result'] | Promise<RequestMap[T]['result']>;
 
 // Thrown by a handler to answer with a specific error code instead of a generic failure.
-export class RequestError extends Error {
-    readonly code: string;
-
-    constructor(code: string, message: string) {
-        super(message);
-        this.name = 'RequestError';
-        this.code = code;
-    }
-}
+export class RequestError extends CodedError {}
 
 const errorReply = (id: string | null, code: string, message: string): ReplyError => ({
     id,
