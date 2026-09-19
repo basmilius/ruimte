@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Button } from '@/ui/Button';
+import { useAsyncAction } from '@/ui/useAsyncAction';
 
 interface ProjectNameDialogProps {
     open: boolean;
@@ -22,23 +23,15 @@ interface ProjectNameDialogProps {
 function NameForm({ description, action, initial = '', fallback, onSubmit, onOpenChange }: ProjectNameDialogProps) {
     const { t } = useTranslation(['shell', 'common']);
     const [value, setValue] = useState(initial);
-    const [busy, setBusy] = useState(false);
-    const [failure, setFailure] = useState<string | null>(null);
+    const { busy, failure, run } = useAsyncAction(t('projectName.failed'));
     const name = value.trim() === '' ? (fallback ?? '') : value.trim();
 
     const submit = async (): Promise<void> => {
         if (name === '') {
             return;
         }
-        setBusy(true);
-        setFailure(null);
-        try {
-            await onSubmit(name);
+        if (await run(() => onSubmit(name))) {
             onOpenChange(false);
-        } catch (e) {
-            setFailure(e instanceof Error ? e.message : t('projectName.failed'));
-        } finally {
-            setBusy(false);
         }
     };
 

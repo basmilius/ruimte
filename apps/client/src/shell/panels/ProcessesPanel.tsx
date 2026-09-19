@@ -33,6 +33,7 @@ import {
     groupTitle,
     type AlertAction
 } from '@/processes/format';
+import { messageOf } from '@/pulsar/account';
 import { projectNodes, revealNode } from '@/project/views';
 import { Segmented } from '@/shell/settings/controls';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
@@ -265,7 +266,7 @@ export function ProcessesPanel() {
     }
 
     const fail = (title: string, e: unknown): void => {
-        useToasts.getState().show({ title, description: e instanceof Error ? e.message : String(e), kind: 'error' });
+        useToasts.getState().show({ title, description: messageOf(e), kind: 'error' });
     };
     const signal = (target: Target, kind: ProcessSignal): void => {
         transport

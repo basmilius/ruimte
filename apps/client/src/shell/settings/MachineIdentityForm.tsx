@@ -7,6 +7,7 @@ import { adoptMachineName } from '@/transport/server-info';
 import { Button } from '@/ui/Button';
 import { SECTION_LABEL } from '@/ui/classes';
 import { IconPicker } from '@/ui/IconPicker';
+import { useAsyncAction } from '@/ui/useAsyncAction';
 import { Tooltip } from '@/ui/Tooltip';
 
 interface MachineIdentityFormProps {
@@ -31,20 +32,17 @@ export function MachineIdentityForm({ endpointId, label, disabledReason }: Machi
     const savedIcon = info?.icon ?? null;
     const [name, setName] = useState(savedName);
     const [icon, setIcon] = useState<ProjectIconChoice | null>(savedIcon);
-    const [busy, setBusy] = useState(false);
-    const [failure, setFailure] = useState<string | null>(null);
+    const { busy, failure, run, fail } = useAsyncAction(t('identity.saveFailed'));
     const disabled = disabledReason !== null;
     const dirty = name.trim() !== savedName || JSON.stringify(icon) !== JSON.stringify(savedIcon);
 
     const save = async (): Promise<void> => {
         const link = transportFor(endpointId);
         if (!link) {
-            setFailure(t('identity.gone'));
+            fail(t('identity.gone'));
             return;
         }
-        setBusy(true);
-        setFailure(null);
-        try {
+        await run(async () => {
             const next = await link.request('endpoint.setIdentity', { name: name.trim() === '' ? null : name.trim(), icon });
             useServers.getState().setIdentity(endpointId, {
                 label: next.label,
@@ -53,11 +51,7 @@ export function MachineIdentityForm({ endpointId, label, disabledReason }: Machi
                 agentsDeleteAnyView: next.agentsDeleteAnyView === true
             });
             adoptMachineName(endpointId, next.label, next.nameSource ?? null);
-        } catch (e) {
-            setFailure(e instanceof Error ? e.message : t('identity.saveFailed'));
-        } finally {
-            setBusy(false);
-        }
+        });
     };
 
     const saveButton = (

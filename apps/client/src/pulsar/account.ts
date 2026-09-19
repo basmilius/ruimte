@@ -57,9 +57,10 @@ let platform: PulsarPlatform | null = null;
 let tokens: AccessTokens | null = null;
 let book: Promise<AddressBookClient> | null = null;
 
-/* An error from across the bridge carries Electron's own prefix, which says nothing to a person. */
-export const messageOf = (e: unknown): string =>
-    (e instanceof Error ? e.message : String(e)).replace(/^Error invoking remote method '[^']+': (?:[A-Za-z]*Error: )?/, '');
+/* An error from across the bridge carries Electron's own prefix, which says nothing to a person. A
+   throw that is not an Error has no sentence in it, so a caller that knows the step names it. */
+export const messageOf = (e: unknown, fallback?: string): string =>
+    (e instanceof Error ? e.message : (fallback ?? String(e))).replace(/^Error invoking remote method '[^']+': (?:[A-Za-z]*Error: )?/, '');
 
 /* The Remote pane, where the account section says how a sign-in it started went, even when the dialog was closed meanwhile. */
 const openAccountSection = (): void => {

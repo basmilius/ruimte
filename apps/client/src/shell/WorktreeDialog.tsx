@@ -8,6 +8,7 @@ import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
+import { useAsyncAction } from '@/ui/useAsyncAction';
 
 // A group's title, as a branch name git accepts.
 const branchFromTitle = (title: string): string =>
@@ -25,8 +26,7 @@ export function WorktreeDialog() {
     const folder = useProject((s) => s.current?.folder ?? null);
     const projectId = useProject((s) => s.current?.projectId ?? null);
     const [branch, setBranch] = useState<string | null>(null);
-    const [busy, setBusy] = useState(false);
-    const [failure, setFailure] = useState<string | null>(null);
+    const { busy, failure, run } = useAsyncAction(t('worktreeDialog.failed'));
     const transport = useTransport();
 
     const value = branch ?? (group ? branchFromTitle(group.title) : '');
@@ -35,18 +35,12 @@ export function WorktreeDialog() {
         if (!groupId || !folder || !value.trim()) {
             return;
         }
-        setBusy(true);
-        setFailure(null);
-        try {
+        await run(async () => {
             const result = await transport.request('git.worktree-add', { repo: folder, branch: value.trim(), ...(projectId === null ? {} : { projectId }) });
             focusedCanvas().getState().setGroupWorktree(groupId, result.worktree);
             setBranch(null);
             close(null);
-        } catch (e) {
-            setFailure(e instanceof Error ? e.message : t('worktreeDialog.failed'));
-        } finally {
-            setBusy(false);
-        }
+        });
     };
 
     return (

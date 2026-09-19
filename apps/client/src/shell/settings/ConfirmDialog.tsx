@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { useTranslation } from 'react-i18next';
-import { messageOf } from '@/pulsar/account';
 import { Button } from '@/ui/Button';
+import { useAsyncAction } from '@/ui/useAsyncAction';
 
 interface ConfirmDialogProps {
     open: boolean;
@@ -17,19 +16,11 @@ interface ConfirmDialogProps {
 /* One destructive step, asked before it happens, over whichever dialog it was opened from. */
 export function ConfirmDialog({ open, onOpenChange, title, description, confirmLabel, onConfirm }: ConfirmDialogProps) {
     const { t } = useTranslation('common');
-    const [busy, setBusy] = useState(false);
-    const [failure, setFailure] = useState<string | null>(null);
+    const { busy, failure, run, clear } = useAsyncAction();
 
     const confirm = async (): Promise<void> => {
-        setBusy(true);
-        setFailure(null);
-        try {
-            await onConfirm();
+        if (await run(onConfirm)) {
             onOpenChange(false);
-        } catch (e) {
-            setFailure(messageOf(e));
-        } finally {
-            setBusy(false);
         }
     };
 
@@ -37,7 +28,7 @@ export function ConfirmDialog({ open, onOpenChange, title, description, confirmL
         <Dialog.Root
             open={open}
             onOpenChange={(next) => {
-                setFailure(null);
+                clear();
                 onOpenChange(next);
             }}
         >

@@ -460,7 +460,9 @@
       "missing": "Required for GPT-Live. The key stays in the desktop shell and is never stored in a project.",
       "replacePlaceholder": "Enter a replacement key",
       "remove": "Remove saved API key",
-      "saveFailure": "The API key could not be saved."
+      "saveFailure": "The API key could not be saved.",
+      "readFailure": "The settings could not be read.",
+      "removeFailure": "The API key could not be removed."
     },
     "toast": {
       "readFailed": "Could not read GPT-Live settings",

@@ -9,6 +9,7 @@ import { Button } from '@/ui/Button';
 import { SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { IconPicker } from '@/ui/IconPicker';
+import { useAsyncAction } from '@/ui/useAsyncAction';
 
 // The daemon rejects larger files, so the picker catches them before sending the bytes.
 const MAX_BYTES = 256 * 1024;
@@ -52,30 +53,15 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
     const chosen = project.icon.kind === 'emoji' || project.icon.kind === 'lucide' ? project.icon : null;
     const fileRef = useRef<HTMLInputElement>(null);
     const [name, setName] = useState(project.name);
-    const [busy, setBusy] = useState(false);
-    const [failure, setFailure] = useState<string | null>(null);
+    const { busy, failure, run, fail } = useAsyncAction(t('projectName.failed'));
     const trimmedName = name.trim();
-
-    const run = async (work: () => Promise<void>): Promise<boolean> => {
-        setBusy(true);
-        setFailure(null);
-        try {
-            await work();
-            return true;
-        } catch (e) {
-            setFailure(e instanceof Error ? e.message : t('projectName.failed'));
-            return false;
-        } finally {
-            setBusy(false);
-        }
-    };
 
     const pickFile = async (file: File | undefined): Promise<void> => {
         if (!file) {
             return;
         }
         if (file.size > MAX_BYTES) {
-            setFailure(t('projectSettings.tooLarge'));
+            fail(t('projectSettings.tooLarge'));
             return;
         }
         await run(async () => actions.uploadIcon(file.type, await readAsBase64(file)));
