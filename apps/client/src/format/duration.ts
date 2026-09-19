@@ -34,6 +34,35 @@ export const formatCountdown = (ms: number): string => {
     return `${formatNumber(Math.max(1, Math.round(left / MINUTE)))}m`;
 };
 
+/*
+ * How long something has been running, to two units and no space to spare: `12s`, `2m 5s`, `3h 20m`.
+ * A call that took a fraction of a second still took some, so anything above zero reads as at least
+ * `1s`; only a clock that runs ahead of the start comes out as `0s`.
+ */
+export const formatElapsedShort = (ms: number): string => {
+    const seconds = ms <= 0 ? 0 : Math.max(1, Math.round(ms / SECOND));
+    if (seconds < 60) {
+        return `${formatNumber(seconds)}s`;
+    }
+    if (seconds < 3600) {
+        const rest = seconds % 60;
+        const minutes = Math.floor(seconds / 60);
+        return rest === 0 ? `${formatNumber(minutes)}m` : `${formatNumber(minutes)}m ${formatNumber(rest)}s`;
+    }
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return minutes === 0 ? `${formatNumber(hours)}h` : `${formatNumber(hours)}h ${formatNumber(minutes)}m`;
+};
+
+/* A stopwatch that is watched while it runs: `00:14`, and `1:02:03` once it passes an hour. */
+export const formatClockDuration = (ms: number): string => {
+    const seconds = Math.max(0, Math.floor(ms / SECOND));
+    const pad = (value: number): string => String(value).padStart(2, '0');
+    const clock = `${pad(Math.floor((seconds % 3600) / 60))}:${pad(seconds % 60)}`;
+    const hours = Math.floor(seconds / 3600);
+    return hours > 0 ? `${formatNumber(hours)}:${clock}` : clock;
+};
+
 /* How long ago something was, short enough for the right edge of a row. */
 export const formatAgo = (ms: number): string => {
     const past = Math.max(0, ms);

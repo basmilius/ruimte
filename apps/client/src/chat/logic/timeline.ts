@@ -12,6 +12,7 @@ import type {
     ChatUserItem
 } from '@ruimte/contracts';
 import { abortedByMachine } from '@ruimte/contracts';
+import { formatElapsedShort } from '@/format/duration';
 import { handbackReportOf } from './handback';
 import { hasFileChanges, isFileChange } from './tools';
 
@@ -91,16 +92,6 @@ export const summarizeGroup = (tools: ChatToolItem[]): string => {
     return i18next.t('chat:group.toolCalls', { count: tools.length });
 };
 
-export const formatDuration = (ms: number): string => {
-    const seconds = Math.max(1, Math.round(ms / 1000));
-    if (seconds < 60) {
-        return `${seconds}s`;
-    }
-    const minutes = Math.floor(seconds / 60);
-    const rest = seconds % 60;
-    return rest === 0 ? `${minutes}m` : `${minutes}m ${rest}s`;
-};
-
 /*
  * What a turn nobody asked for is about. The CLI wakes the agent when a background subagent settles
  * and hands over its summary; without one all that is known is that the agent went on by itself.
@@ -120,7 +111,7 @@ export const agentTurnLabel = (turn: ChatTurnItem): string => {
 
 /* The items of the turn tell a turn a person stopped from one the machine ended after a restart. */
 export const turnLabel = (turn: ChatTurnItem, items: readonly ChatItem[] = []): string => {
-    const duration = formatDuration((turn.endedAt ?? turn.createdAt) - turn.createdAt);
+    const duration = formatElapsedShort((turn.endedAt ?? turn.createdAt) - turn.createdAt);
     switch (turn.state) {
         case 'aborted':
             return abortedByMachine(turn, items) ? i18next.t('chat:turn.stopped', { duration }) : i18next.t('chat:turn.youStopped', { duration });

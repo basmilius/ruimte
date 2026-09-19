@@ -6,7 +6,6 @@ import {
     composerStopLabel,
     composerStopOf,
     entryTimeOf,
-    formatRunningFor,
     latestPreview,
     needsTail,
     previewFor,
@@ -252,7 +251,7 @@ describe('the time on the right of an entry', () => {
         expect(entryTimeOf(subagent('a', { startedAt: noon - 12_000 }), null, noon)).toBe('12s');
         expect(entryTimeOf(subagent('a', { startedAt: noon - 134_000 }), null, noon)).toBe('2m 14s');
         expect(entryTimeOf(subagent('a', { startedAt: noon - 3_780_000 }), null, noon)).toBe('1h 3m');
-        expect(formatRunningFor(7_200_000)).toBe('2h');
+        expect(entryTimeOf(subagent('a', { startedAt: noon - 7_200_000 }), null, noon)).toBe('2h');
         expect(entryTimeOf(subagent('a', { startedAt: 0 }), null, noon)).toBeNull();
     });
 

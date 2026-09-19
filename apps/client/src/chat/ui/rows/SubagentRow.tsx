@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Bot, ChevronDown } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem } from '@ruimte/contracts';
-import { formatDuration } from '@/chat/logic/timeline';
+import { formatElapsedShort } from '@/format/duration';
 import { Markdown } from '@/chat/ui/Markdown';
 import { RunningFor, ToggleLine, WorkLiveRow, WorkRow } from '@/chat/ui/rows/WorkRows';
 import { useSubagentSupport } from '@/chat/subagent-support';
@@ -20,7 +20,7 @@ function StatusPill({ item }: { item: ChatSubagentItem }) {
         return <RunningFor startedAt={item.startedAt} />;
     }
     const failed = item.status === 'failed';
-    const duration = item.finishedAt === null ? null : formatDuration(item.finishedAt - item.startedAt);
+    const duration = item.finishedAt === null ? null : formatElapsedShort(item.finishedAt - item.startedAt);
     const outcome = failed ? 'failed' : 'done';
     return (
         <span className={clsx('shrink-0 text-xs tabular-nums', failed ? 'text-status-error' : 'text-text-faint')}>

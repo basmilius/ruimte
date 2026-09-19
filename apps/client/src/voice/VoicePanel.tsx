@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { FadingWords } from '@/chat/ui/FadingWords';
 import { hasOverlayControls } from '@/desktop/bridge';
+import { formatClockDuration } from '@/format/duration';
 import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
@@ -41,11 +42,6 @@ const actionIcons: Record<VoiceActionKind, LucideIcon> = {
     node: Plus,
     view: LayoutGrid,
     delete: Trash2
-};
-
-const durationLabel = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    return `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 };
 
 const waveformHeight = (value: number): string => `${Math.max(2, value * 26).toFixed(2)}px`;
@@ -111,7 +107,9 @@ function VoiceStatus({ elapsed, phase }: { elapsed: number; phase: VoicePhase })
             <span
                 className={clsx('h-1.5 w-1.5 rounded-full', phase === 'listening' ? 'bg-positive' : phase === 'error' ? 'bg-status-error' : 'bg-text-faint')}
             />
-            <span className="tabular-nums">{phase === 'listening' ? t('phase.live', { elapsed: durationLabel(elapsed) }) : t(`phase.${phase}`)}</span>
+            <span className="tabular-nums">
+                {phase === 'listening' ? t('phase.live', { elapsed: formatClockDuration(elapsed * 1000) }) : t(`phase.${phase}`)}
+            </span>
         </div>
     );
 }
@@ -308,7 +306,7 @@ function TranscriptEntry({ streaming, utterance }: { streaming: boolean; utteran
                     utterance.speaker === 'assistant' ? 'text-accent' : 'text-text-muted'
                 )}
             >
-                {utterance.speaker === 'assistant' ? t('speaker.assistant') : t('speaker.person')} · {durationLabel(Math.floor(utterance.startMs / 1_000))}
+                {utterance.speaker === 'assistant' ? t('speaker.assistant') : t('speaker.person')} · {formatClockDuration(utterance.startMs)}
             </div>
             <p className="text-sm leading-6 text-text whitespace-pre-wrap [text-wrap:pretty]">
                 {streaming ? <FadingWords text={utterance.text} /> : utterance.text}

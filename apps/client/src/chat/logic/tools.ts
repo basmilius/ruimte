@@ -110,13 +110,3 @@ export const liveOutput = (tool: ChatToolItem): string | null => {
     const lines = output.replace(/\n$/, '').split('\n');
     return lines.slice(-LIVE_OUTPUT_LINES).join('\n');
 };
-
-/* "12s", "2m 5s": how long a call has been running, for the live row. */
-export const formatElapsed = (ms: number): string => {
-    const seconds = Math.max(0, Math.floor(ms / 1000));
-    if (seconds < 60) {
-        return `${seconds}s`;
-    }
-    const rest = seconds % 60;
-    return rest === 0 ? `${Math.floor(seconds / 60)}m` : `${Math.floor(seconds / 60)}m ${rest}s`;
-};

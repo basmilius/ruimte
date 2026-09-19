@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { formatAgo, formatCountdown, formatDuration } from '@/format/duration';
+import { formatAgo, formatClockDuration, formatCountdown, formatDuration, formatElapsedShort } from '@/format/duration';
 import { FORMAT_SYSTEM } from '@/format/regions';
 import { useSettings } from '@/state/settings';
 
@@ -26,6 +26,36 @@ describe('how long something took', () => {
     test('writes its decimal the way the region does', () => {
         inRegion('nl-NL');
         expect(formatDuration(90 * MINUTE)).toBe('1,5 h');
+    });
+});
+
+describe('how long something has been running', () => {
+    test('climbs from seconds to minutes to hours, two units at a time', () => {
+        expect(formatElapsedShort(12_400)).toBe('12s');
+        expect(formatElapsedShort(120_000)).toBe('2m');
+        expect(formatElapsedShort(125_000)).toBe('2m 5s');
+        expect(formatElapsedShort(3_780_000)).toBe('1h 3m');
+        expect(formatElapsedShort(2 * HOUR)).toBe('2h');
+    });
+
+    // The live row counts a call that took a fraction of a second, and only a clock ahead of the start reads as nothing.
+    test('rounds a fraction of a second up and a clock that runs ahead down to zero', () => {
+        expect(formatElapsedShort(400)).toBe('1s');
+        expect(formatElapsedShort(0)).toBe('0s');
+        expect(formatElapsedShort(-5)).toBe('0s');
+    });
+});
+
+describe('a stopwatch that is watched while it runs', () => {
+    test('is minutes and seconds until it passes an hour', () => {
+        expect(formatClockDuration(14_000)).toBe('00:14');
+        expect(formatClockDuration(HOUR + 2 * MINUTE + 3_000)).toBe('1:02:03');
+    });
+
+    // A stopwatch floors: 14.9 seconds in, nothing has happened at 15 yet.
+    test('floors its seconds and never runs backwards', () => {
+        expect(formatClockDuration(14_900)).toBe('00:14');
+        expect(formatClockDuration(-1_000)).toBe('00:00');
     });
 });
 

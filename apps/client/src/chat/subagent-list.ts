@@ -2,10 +2,10 @@ import i18next from 'i18next';
 import { CircleCheck, CircleSlash, CircleX, LoaderCircle, type LucideIcon } from 'lucide-react';
 import type { ChatItem, ChatSubagentItem, Task } from '@ruimte/contracts';
 import { isHandbackNotice, lastHandbackReport } from '@/chat/logic/handback';
-import { formatElapsed } from '@/chat/logic/tools';
 import { stripMarkdown } from '@/chat/logic/timeline-copy';
 import { toolSummary } from '@/chat/logic/tools';
 import { canOpenSubagent } from '@/chat/subagent-view';
+import { formatElapsedShort } from '@/format/duration';
 import { formatClock, formatDate } from '@/shell/usage/format';
 
 /* The latest thing a sub-agent did, as its entry in the list says it: a tool call, or text it wrote. */
@@ -195,18 +195,6 @@ export const stopOf = (item: ChatSubagentItem, turnRunning: boolean): SubagentSt
 
 export const stopLabel = (stop: SubagentStop): string => (stop === 'task' ? i18next.t('chat:subagents.stop.task') : i18next.t('chat:subagents.stop.mark'));
 
-const HOUR_MS = 3_600_000;
-
-/* How long an entry has run: the same seconds and minutes a running tool call shows, and hours past one. */
-export const formatRunningFor = (ms: number): string => {
-    if (ms < HOUR_MS) {
-        return formatElapsed(ms);
-    }
-    const hours = Math.floor(ms / HOUR_MS);
-    const minutes = Math.floor((ms % HOUR_MS) / 60_000);
-    return minutes === 0 ? `${hours}h` : `${hours}h ${minutes}m`;
-};
-
 const sameDay = (a: number, b: number): boolean => {
     const left = new Date(a);
     const right = new Date(b);
@@ -219,7 +207,7 @@ export const entryTimeOf = (item: ChatSubagentItem, task: Task | null, now: numb
     const startedAt = task?.createdAt ?? item.startedAt;
     const finishedAt = task === null ? item.finishedAt : (task.settledAt ?? item.finishedAt);
     if (item.status === 'running') {
-        return startedAt > 0 ? formatRunningFor(now - startedAt) : null;
+        return startedAt > 0 ? formatElapsedShort(now - startedAt) : null;
     }
     if (finishedAt === null || finishedAt <= 0) {
         return null;

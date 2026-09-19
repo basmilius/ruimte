@@ -15,7 +15,7 @@ import { FadingWords } from '@/chat/ui/FadingWords';
 import { settledBlocksText } from '@/chat/ui/markdown-blocks';
 import { WHOLE_FADE_CLASS } from '@/chat/ui/rehype-fade';
 import { useRevealedText } from '@/chat/ui/reveal';
-import { formatDuration } from '@/chat/logic/timeline';
+import { formatElapsedShort } from '@/format/duration';
 import { toolSummary } from '@/chat/logic/tools';
 import { ROW_GUTTER } from '@/chat/ui/icons';
 import { useChatPlace } from '@/chat/ui/use-chat-place';
@@ -205,7 +205,7 @@ export function ThinkingRow({ chatId, item: derived }: { chatId: string; item: C
                     <span className="chat-live-text">{t('rows.thinking.live')}</span>
                 ) : (
                     <>
-                        <span>{t('rows.thinking.thoughtFor', { duration: formatDuration((item.endedAt ?? item.createdAt) - item.createdAt) })}</span>
+                        <span>{t('rows.thinking.thoughtFor', { duration: formatElapsedShort((item.endedAt ?? item.createdAt) - item.createdAt) })}</span>
                         <Icon icon={ChevronDown} size={12} className={clsx('transition-transform', open && 'rotate-180')} />
                     </>
                 )}

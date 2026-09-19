@@ -9,8 +9,9 @@ import { forksAfter } from '@/chat/logic/fork';
 import { useChats, type ChatsById } from '@/state/chats';
 import { splitKey, useEndpointId } from '@/state/keys';
 import { Tooltip } from '@/ui/Tooltip';
-import { fileChanges, formatElapsed, liveOutput, readImagePath, toolStartedAt, toolSummary, unifiedChanges, type FileChange } from '@/chat/logic/tools';
+import { fileChanges, liveOutput, readImagePath, toolStartedAt, toolSummary, unifiedChanges, type FileChange } from '@/chat/logic/tools';
 import { ReadImage } from '@/chat/ui/ImageView';
+import { formatClockDuration, formatElapsedShort } from '@/format/duration';
 import { ROW_GUTTER, toolIcon } from '@/chat/ui/icons';
 import { Icon } from '@/ui/Icon';
 
@@ -130,7 +131,7 @@ export function RunningFor({ startedAt }: { startedAt: number }) {
     useEffect(() => {
         const tick = (): void => {
             if (ref.current) {
-                ref.current.textContent = t('work.runningFor', { elapsed: formatElapsed(Date.now() - startedAt) });
+                ref.current.textContent = t('work.runningFor', { elapsed: formatElapsedShort(Date.now() - startedAt) });
             }
         };
         tick();
@@ -392,19 +393,14 @@ function ProviderChangedFiles({
     );
 }
 
-const pad = (n: number): string => String(n).padStart(2, '0');
-
 /* "Working for 00:14": the timer writes the text itself, so a tick never re-renders the thread. */
 export function WorkingRow({ startedAt }: { startedAt: number }) {
     const { t } = useTranslation('chat');
     const ref = useRef<HTMLSpanElement>(null);
     useEffect(() => {
         const tick = (): void => {
-            const seconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
             if (ref.current) {
-                ref.current.textContent = hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds % 60)}` : `${pad(minutes)}:${pad(seconds % 60)}`;
+                ref.current.textContent = formatClockDuration(Date.now() - startedAt);
             }
         };
         tick();
