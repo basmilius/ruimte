@@ -1,7 +1,7 @@
 import type { ChatForkInfoPayload, ChatForkInfoResult, ChatForkPayload, ChatForkResult, ChatSummarizeResult } from '@ruimte/contracts';
-import { RequestError, type Dispatcher } from '../dispatcher.ts';
-import type { ChatManager } from '../chat/chat-manager.ts';
+import { translate, type Dispatcher } from '../dispatcher.ts';
 import { ChatError } from '../chat/errors.ts';
+import type { ChatManager } from '../chat/chat-manager.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { BeforeKill } from './session.ts';
 
@@ -11,16 +11,6 @@ export interface ChatForkHandlers {
     info(payload: ChatForkInfoPayload): Promise<ChatForkInfoResult>;
     summarize(chatId: string): Promise<ChatSummarizeResult>;
 }
-
-const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
-    Promise.resolve()
-        .then(work)
-        .catch((e: unknown) => {
-            if (e instanceof ChatError) {
-                throw new RequestError(e.code, e.message);
-            }
-            throw e;
-        });
 
 export const registerChatHandlers = (
     dispatcher: Dispatcher,

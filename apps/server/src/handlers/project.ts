@@ -1,16 +1,6 @@
-import { RequestError, type Dispatcher } from '../dispatcher.ts';
+import { RequestError, translate, type Dispatcher } from '../dispatcher.ts';
 import { readProjectSettings, sharedPathOf, updateProjectSettings } from '../projects/project-settings.ts';
-import { ProjectError, type ProjectStore } from '../projects/project-store.ts';
-
-const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
-    Promise.resolve()
-        .then(work)
-        .catch((e: unknown) => {
-            if (e instanceof ProjectError) {
-                throw new RequestError(e.code, e.message);
-            }
-            throw e;
-        });
+import type { ProjectStore } from '../projects/project-store.ts';
 
 export const registerProjectHandlers = (dispatcher: Dispatcher, store: ProjectStore): void => {
     dispatcher.register('project.list', () => translate(async () => ({ projects: await store.list() })));

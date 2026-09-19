@@ -1,4 +1,4 @@
-import { RequestError } from '../dispatcher.ts';
+import { translate } from '../dispatcher.ts';
 
 /* The part of a view file store a request reaches; the store has more, and none of it is on the wire. */
 interface ViewFileRequests<TDocument, TContent> {
@@ -18,22 +18,7 @@ interface ViewRef {
  * The names stay with the caller: `REQUEST_SCHEMAS` types every payload and every result on its own,
  * and a handler that took the name as an argument could only satisfy that table by casting past it.
  */
-export const viewFileHandlers = <TDocument, TContent>(
-    store: ViewFileRequests<TDocument, TContent>,
-    /* A refusal the store threw, which answers under its own code instead of a generic failure. */
-    refusal: (e: unknown) => { code: string; message: string } | null
-) => {
-    const translate = <T>(work: () => T | Promise<T>): Promise<T> =>
-        Promise.resolve()
-            .then(work)
-            .catch((e: unknown) => {
-                const refused = refusal(e);
-                if (refused) {
-                    throw new RequestError(refused.code, refused.message);
-                }
-                throw e;
-            });
-
+export const viewFileHandlers = <TDocument, TContent>(store: ViewFileRequests<TDocument, TContent>) => {
     return {
         /* The document drawn for a client that paints it itself, rather than the document. */
         scene: <TScene>(payload: ViewRef, render: (document: TDocument) => TScene): Promise<TScene> =>

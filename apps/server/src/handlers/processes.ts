@@ -1,5 +1,5 @@
-import { RequestError, type Dispatcher } from '../dispatcher.ts';
-import { ProcessError, type ProcessMonitor } from '../processes/monitor.ts';
+import { translate, type Dispatcher } from '../dispatcher.ts';
+import type { ProcessMonitor } from '../processes/monitor.ts';
 
 export const registerProcessHandlers = (dispatcher: Dispatcher, monitor: ProcessMonitor): void => {
     // The panel is open on this client: the tempo goes up for as long as it stays open or the socket does.
@@ -10,17 +10,12 @@ export const registerProcessHandlers = (dispatcher: Dispatcher, monitor: Process
         return {};
     });
 
-    dispatcher.register('processes.signal', (payload) => {
-        try {
+    dispatcher.register('processes.signal', (payload) =>
+        translate(() => {
             monitor.signal(payload);
-        } catch (e) {
-            if (e instanceof ProcessError) {
-                throw new RequestError(e.code, e.message);
-            }
-            throw e;
-        }
-        return {};
-    });
+            return {};
+        })
+    );
 
     dispatcher.register('processes.listAlerts', () => ({ alerts: monitor.alerts() }));
 
