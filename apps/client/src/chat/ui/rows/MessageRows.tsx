@@ -16,6 +16,7 @@ import { settledBlocksText } from '@/chat/ui/markdown-blocks';
 import { WHOLE_FADE_CLASS } from '@/chat/ui/rehype-fade';
 import { useRevealedText } from '@/chat/ui/reveal';
 import { formatElapsedShort } from '@/format/duration';
+import { formatTokens } from '@/format/number';
 import { toolSummary } from '@/chat/logic/tools';
 import { ROW_GUTTER } from '@/chat/ui/icons';
 import { useChatPlace } from '@/chat/ui/use-chat-place';
@@ -302,8 +303,6 @@ export function AgentTurnRow({ label, onOpen }: { label: string; onOpen?: () => 
         </button>
     );
 }
-
-const formatTokens = (count: number): string => (count >= 1000 ? `${Math.round(count / 1000)}k` : String(count));
 
 export function CompactionRow({ preTokens }: { preTokens: number | null }) {
     const { t } = useTranslation('chat');

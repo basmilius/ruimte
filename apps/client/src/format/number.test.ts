@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { formatBytes, formatDecimal, formatMoney, formatNumber, formatPercent } from '@/format/number';
+import { formatBytes, formatDecimal, formatMoney, formatNumber, formatPercent, formatTokens } from '@/format/number';
 import { FORMAT_SYSTEM } from '@/format/regions';
 import { useSettings } from '@/state/settings';
 
@@ -25,6 +25,21 @@ describe('a number', () => {
         inRegion('nl-NL');
         expect(formatPercent(8.5)).toBe('8,5%');
         expect(formatPercent(42.4)).toBe('42%');
+    });
+});
+
+describe('a token count', () => {
+    test('is read as a size, to one decimal until the decimal stops saying anything', () => {
+        inRegion('en-US');
+        expect(formatTokens(640)).toBe('640');
+        expect(formatTokens(412_000)).toBe('412K');
+        expect(formatTokens(1_240_000)).toBe('1.2M');
+        expect(formatTokens(11_900_000)).toBe('12M');
+    });
+
+    test('writes its decimal the way the region does', () => {
+        inRegion('nl-NL');
+        expect(formatTokens(1_240_000)).toBe('1,2M');
     });
 });
 
