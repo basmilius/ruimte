@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import { Popover } from '@base-ui-components/react/popover';
 import {
@@ -28,7 +29,7 @@ import { useServer } from '@/state/server';
 import { deviceClientFor } from '@/transport/connections';
 import { useEndpointConnection } from '@/transport/status';
 import { EMPTY_DEVICE_LIST, useDevices } from '@/devices/state';
-import { BTN_GROUP, MENU_LABEL } from '@/ui/classes';
+import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { SignInMark } from '@/ui/SignInMark';
@@ -116,6 +117,52 @@ const addDeviceToCanvas = (device: DeviceInfo): void => {
     document.putOnCanvas(id, target.id);
 };
 
+/*
+ * What a device row can be asked, shared by the right click on the row and the placement menu in
+ * the panel's toolbar; `ContextMenu` draws a `Menu.Item` as its own.
+ */
+function DeviceMenuItems({ device, onOpen }: { device: DeviceInfo; onOpen?: (device: DeviceInfo) => void }) {
+    const { t } = useTranslation('panels');
+    const endpointId = useEndpointId();
+    const control = (action: 'boot' | 'shutdown'): void => {
+        void deviceClientFor(endpointId)?.[action](device);
+    };
+    return (
+        <>
+            {onOpen !== undefined && device.capabilities.stream && (
+                <>
+                    <Menu.Item className="menu-item" onClick={() => onOpen(device)}>
+                        <Icon icon={ChevronRight} size={14} /> {device.kind === 'physical' ? t('devices.openPreview') : t('devices.openInPanel')}
+                    </Menu.Item>
+                    <Menu.Separator className={MENU_SEPARATOR} />
+                </>
+            )}
+            <Menu.Item className="menu-item" onClick={() => openDeviceView(device)}>
+                <Icon icon={ExternalLink} size={14} /> {t('devices.openAsView')}
+            </Menu.Item>
+            <Menu.Item className="menu-item" onClick={() => addDeviceToCanvas(device)}>
+                <Icon icon={Frame} size={14} /> {t('devices.addToCanvas')}
+            </Menu.Item>
+            {device.state === 'shutdown' && device.capabilities.boot && (
+                <>
+                    <Menu.Separator className={MENU_SEPARATOR} />
+                    <Menu.Item className="menu-item" onClick={() => control('boot')}>
+                        <Icon icon={Power} size={14} /> {t('devices.start')}
+                    </Menu.Item>
+                </>
+            )}
+            {device.state === 'booted' && device.capabilities.shutdown && (
+                <>
+                    <Menu.Separator className={MENU_SEPARATOR} />
+                    <Menu.Item className="menu-item" onClick={() => control('shutdown')}>
+                        <Icon icon={PowerOff} size={14} /> {t('devices.shutdown')}
+                    </Menu.Item>
+                </>
+            )}
+        </>
+    );
+}
+
 function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: DeviceInfo) => void }) {
     const { t } = useTranslation('panels');
     const endpointId = useEndpointId();
@@ -130,49 +177,62 @@ function DeviceRow({ device, onOpen }: { device: DeviceInfo; onOpen: (device: De
         void client[action](device).finally(() => setChanging(null));
     };
     return (
-        <article className="flex min-w-0 items-center gap-3 px-3 py-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-lg border border-border bg-surface-raised text-text-muted">
-                <Icon icon={Smartphone} size={18} />
-            </span>
-            <div className="min-w-0 grow">
-                <h3 className="truncate text-sm font-medium text-text">{device.name}</h3>
-                <p className="mt-0.5 truncate text-xs text-text-muted">
-                    {displayRuntime(device)} · {stateText(device)}
-                </p>
-            </div>
-            <div className={BTN_GROUP}>
-                {device.state === 'shutdown' && device.capabilities.boot && (
-                    <Tooltip label={changing === 'boot' ? t('devices.starting') : t('devices.start')} name>
-                        <button className="icon-btn h-7 w-7" disabled={changing !== null} onClick={() => control('boot')}>
-                            <Icon icon={changing === 'boot' ? LoaderCircle : Power} size={14} className={changing === 'boot' ? 'animate-spin' : undefined} />
-                        </button>
-                    </Tooltip>
-                )}
-                {device.state === 'booted' && device.capabilities.shutdown && (
-                    <Tooltip label={t('devices.shutdown')} name>
-                        <button className="icon-btn h-7 w-7" disabled={changing !== null} onClick={() => control('shutdown')}>
-                            <Icon
-                                icon={changing === 'shutdown' ? LoaderCircle : PowerOff}
-                                size={14}
-                                className={changing === 'shutdown' ? 'animate-spin' : undefined}
-                            />
-                        </button>
-                    </Tooltip>
-                )}
-                {device.state === 'transitioning' && (
-                    <span className="grid size-7 place-items-center text-text-muted">
-                        <Icon icon={LoaderCircle} size={14} className="animate-spin" />
-                    </span>
-                )}
-                {canOpen && (
-                    <Tooltip label={device.kind === 'physical' ? t('devices.openPreview') : t('devices.openInPanel')} name>
-                        <button className="icon-btn h-7 w-7" disabled={changing !== null} onClick={() => onOpen(device)}>
-                            <Icon icon={ChevronRight} size={14} />
-                        </button>
-                    </Tooltip>
-                )}
-            </div>
-        </article>
+        <ContextMenu.Root>
+            <ContextMenu.Trigger render={<article />} className="flex min-w-0 items-center gap-3 px-3 py-3">
+                <span className="grid size-10 shrink-0 place-items-center rounded-lg border border-border bg-surface-raised text-text-muted">
+                    <Icon icon={Smartphone} size={18} />
+                </span>
+                <div className="min-w-0 grow">
+                    <h3 className="truncate text-sm font-medium text-text">{device.name}</h3>
+                    <p className="mt-0.5 truncate text-xs text-text-muted">
+                        {displayRuntime(device)} · {stateText(device)}
+                    </p>
+                </div>
+                <div className={BTN_GROUP}>
+                    {device.state === 'shutdown' && device.capabilities.boot && (
+                        <Tooltip label={changing === 'boot' ? t('devices.starting') : t('devices.start')} name>
+                            <button className="icon-btn h-7 w-7" disabled={changing !== null} onClick={() => control('boot')}>
+                                <Icon
+                                    icon={changing === 'boot' ? LoaderCircle : Power}
+                                    size={14}
+                                    className={changing === 'boot' ? 'animate-spin' : undefined}
+                                />
+                            </button>
+                        </Tooltip>
+                    )}
+                    {device.state === 'booted' && device.capabilities.shutdown && (
+                        <Tooltip label={t('devices.shutdown')} name>
+                            <button className="icon-btn h-7 w-7" disabled={changing !== null} onClick={() => control('shutdown')}>
+                                <Icon
+                                    icon={changing === 'shutdown' ? LoaderCircle : PowerOff}
+                                    size={14}
+                                    className={changing === 'shutdown' ? 'animate-spin' : undefined}
+                                />
+                            </button>
+                        </Tooltip>
+                    )}
+                    {device.state === 'transitioning' && (
+                        <span className="grid size-7 place-items-center text-text-muted">
+                            <Icon icon={LoaderCircle} size={14} className="animate-spin" />
+                        </span>
+                    )}
+                    {canOpen && (
+                        <Tooltip label={device.kind === 'physical' ? t('devices.openPreview') : t('devices.openInPanel')} name>
+                            <button className="icon-btn h-7 w-7" disabled={changing !== null} onClick={() => onOpen(device)}>
+                                <Icon icon={ChevronRight} size={14} />
+                            </button>
+                        </Tooltip>
+                    )}
+                </div>
+            </ContextMenu.Trigger>
+            <ContextMenu.Portal>
+                <ContextMenu.Positioner className="z-(--z-popup)">
+                    <ContextMenu.Popup className="menu-popup">
+                        <DeviceMenuItems device={device} onOpen={onOpen} />
+                    </ContextMenu.Popup>
+                </ContextMenu.Positioner>
+            </ContextMenu.Portal>
+        </ContextMenu.Root>
     );
 }
 
@@ -236,12 +296,7 @@ function DevicePlacementMenu({ device }: { device: DeviceInfo }) {
                 <Menu.Positioner className="z-(--z-popup)" sideOffset={6} align="end">
                     <Menu.Popup className="menu-popup">
                         <div className={MENU_LABEL}>{t('devices.openSimulator')}</div>
-                        <Menu.Item className="menu-item" onClick={() => openDeviceView(device)}>
-                            <Icon icon={ExternalLink} size={14} /> {t('devices.openAsView')}
-                        </Menu.Item>
-                        <Menu.Item className="menu-item" onClick={() => addDeviceToCanvas(device)}>
-                            <Icon icon={Frame} size={14} /> {t('devices.addToCanvas')}
-                        </Menu.Item>
+                        <DeviceMenuItems device={device} />
                     </Menu.Popup>
                 </Menu.Positioner>
             </Menu.Portal>

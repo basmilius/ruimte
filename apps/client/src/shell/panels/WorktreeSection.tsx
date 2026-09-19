@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import { Eye, FolderX, GitBranch, GitMerge, LocateFixed, MoreHorizontal, Trash } from 'lucide-react';
 import type { Worktree } from '@ruimte/contracts';
@@ -132,68 +133,110 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                     const counts = worktree.work ? workCounts(worktree.work) : [];
                     const reveal = working[0]?.id ?? null;
                     return (
-                        <li
-                            key={worktree.path}
-                            className="group flex h-8 items-center gap-2 pr-1 pl-3 hover:bg-surface-hover"
-                            aria-current={worktree.path === current ? 'true' : undefined}
-                        >
-                            <Icon icon={worktree.missing ? FolderX : GitBranch} size={14} className="shrink-0 text-text-muted" />
-                            <Tooltip label={worktree.path}>
-                                <button
-                                    className="min-w-0 shrink truncate text-left font-mono text-sm text-text hover:underline disabled:no-underline"
-                                    disabled={worktree.missing === true}
-                                    onClick={() => onView(worktree)}
-                                >
-                                    {worktree.branch}
-                                </button>
-                            </Tooltip>
-                            {agentWorking && <StatusDot status="running" />}
-                            <span className="min-w-0 shrink-[2] truncate text-xs text-text-faint">
-                                {worktree.missing ? t('worktree.section.folderMissing') : names === '' ? t('worktree.section.noNode') : names}
-                                {originLabel(worktree) !== null && `, ${originLabel(worktree)}`}
-                            </span>
-                            <span className="grow" />
-                            {counts.map((label) => (
-                                <Pill key={label} className="tabular-nums">
-                                    {label}
-                                </Pill>
-                            ))}
-                            <Menu.Root>
-                                <Tooltip label={t('worktree.section.actions')} name>
-                                    <Menu.Trigger className="icon-btn h-7 w-7 shrink-0" disabled={busy}>
-                                        <Icon icon={MoreHorizontal} size={14} />
-                                    </Menu.Trigger>
+                        <ContextMenu.Root key={worktree.path}>
+                            <ContextMenu.Trigger
+                                render={<li />}
+                                className="group flex h-8 items-center gap-2 pr-1 pl-3 hover:bg-surface-hover"
+                                aria-current={worktree.path === current ? 'true' : undefined}
+                            >
+                                <Icon icon={worktree.missing ? FolderX : GitBranch} size={14} className="shrink-0 text-text-muted" />
+                                <Tooltip label={worktree.path}>
+                                    <button
+                                        className="min-w-0 shrink truncate text-left font-mono text-sm text-text hover:underline disabled:no-underline"
+                                        disabled={worktree.missing === true}
+                                        onClick={() => onView(worktree)}
+                                    >
+                                        {worktree.branch}
+                                    </button>
                                 </Tooltip>
-                                <Menu.Portal>
-                                    <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
-                                        <Menu.Popup className="menu-popup">
-                                            {!worktree.missing && (
-                                                <>
-                                                    <Menu.Item className="menu-item" onClick={() => onView(worktree)}>
-                                                        <Icon icon={Eye} size={14} /> {t('worktree.section.view')}
-                                                    </Menu.Item>
-                                                    <Menu.Item className="menu-item" onClick={() => onMerge(worktree)}>
-                                                        <Icon icon={GitMerge} size={14} /> {t('worktree.section.merge')}
-                                                    </Menu.Item>
-                                                </>
-                                            )}
-                                            {reveal !== null && (
-                                                <Menu.Item className="menu-item" onClick={() => onReveal(reveal)}>
-                                                    <Icon icon={LocateFixed} size={14} /> {t('file.menu.showOnCanvas')}
-                                                </Menu.Item>
-                                            )}
-                                            {(!worktree.missing || reveal !== null) && <Menu.Separator className={MENU_SEPARATOR} />}
-                                            <Menu.Item className="menu-item text-status-error" onClick={() => onRemove(worktree)}>
-                                                <Icon icon={Trash} size={14} /> {t('worktree.section.remove')}
-                                            </Menu.Item>
-                                        </Menu.Popup>
-                                    </Menu.Positioner>
-                                </Menu.Portal>
-                            </Menu.Root>
-                        </li>
+                                {agentWorking && <StatusDot status="running" />}
+                                <span className="min-w-0 shrink-[2] truncate text-xs text-text-faint">
+                                    {worktree.missing ? t('worktree.section.folderMissing') : names === '' ? t('worktree.section.noNode') : names}
+                                    {originLabel(worktree) !== null && `, ${originLabel(worktree)}`}
+                                </span>
+                                <span className="grow" />
+                                {counts.map((label) => (
+                                    <Pill key={label} className="tabular-nums">
+                                        {label}
+                                    </Pill>
+                                ))}
+                                <Menu.Root>
+                                    <Tooltip label={t('worktree.section.actions')} name>
+                                        <Menu.Trigger className="icon-btn h-7 w-7 shrink-0" disabled={busy}>
+                                            <Icon icon={MoreHorizontal} size={14} />
+                                        </Menu.Trigger>
+                                    </Tooltip>
+                                    <Menu.Portal>
+                                        <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
+                                            <Menu.Popup className="menu-popup">
+                                                <WorktreeMenuItems
+                                                    worktree={worktree}
+                                                    reveal={reveal}
+                                                    onView={onView}
+                                                    onMerge={onMerge}
+                                                    onRemove={onRemove}
+                                                    onReveal={onReveal}
+                                                />
+                                            </Menu.Popup>
+                                        </Menu.Positioner>
+                                    </Menu.Portal>
+                                </Menu.Root>
+                            </ContextMenu.Trigger>
+                            <ContextMenu.Portal>
+                                <ContextMenu.Positioner className="z-(--z-popup)">
+                                    <ContextMenu.Popup className="menu-popup">
+                                        <WorktreeMenuItems
+                                            worktree={worktree}
+                                            reveal={reveal}
+                                            onView={onView}
+                                            onMerge={onMerge}
+                                            onRemove={onRemove}
+                                            onReveal={onReveal}
+                                        />
+                                    </ContextMenu.Popup>
+                                </ContextMenu.Positioner>
+                            </ContextMenu.Portal>
+                        </ContextMenu.Root>
                     );
                 })}
             </ul>
         </section>
+    );
+}
+
+interface WorktreeMenuProps extends Pick<WorktreeSectionProps, 'onView' | 'onMerge' | 'onRemove' | 'onReveal'> {
+    worktree: Worktree;
+    /* The node working in this worktree, which is what "show on canvas" points at. */
+    reveal: string | null;
+}
+
+/*
+ * What a worktree row can be asked. The overflow button and the right click on the row offer the
+ * same list in the same order; `ContextMenu` draws a `Menu.Item` as its own.
+ */
+function WorktreeMenuItems({ worktree, reveal, onView, onMerge, onRemove, onReveal }: WorktreeMenuProps) {
+    const { t } = useTranslation('panels');
+    return (
+        <>
+            {!worktree.missing && (
+                <>
+                    <Menu.Item className="menu-item" onClick={() => onView(worktree)}>
+                        <Icon icon={Eye} size={14} /> {t('worktree.section.view')}
+                    </Menu.Item>
+                    <Menu.Item className="menu-item" onClick={() => onMerge(worktree)}>
+                        <Icon icon={GitMerge} size={14} /> {t('worktree.section.merge')}
+                    </Menu.Item>
+                </>
+            )}
+            {reveal !== null && (
+                <Menu.Item className="menu-item" onClick={() => onReveal(reveal)}>
+                    <Icon icon={LocateFixed} size={14} /> {t('file.menu.showOnCanvas')}
+                </Menu.Item>
+            )}
+            {(!worktree.missing || reveal !== null) && <Menu.Separator className={MENU_SEPARATOR} />}
+            <Menu.Item className="menu-item text-status-error" onClick={() => onRemove(worktree)}>
+                <Icon icon={Trash} size={14} /> {t('worktree.section.remove')}
+            </Menu.Item>
+        </>
     );
 }

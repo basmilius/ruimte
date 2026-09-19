@@ -1,13 +1,16 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useTranslation } from 'react-i18next';
 import { Bot } from 'lucide-react';
 import type { ChatSubagentItem } from '@ruimte/contracts';
 import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
 import { INITIAL_CONVERSATION, SubagentConversation, type SubagentConversationState } from '@/chat/subagent-conversation';
 import { useSubagentSupport } from '@/chat/subagent-support';
+import { EMPTY_TARGET, readTimelineTarget, type TimelineTarget } from '@/chat/logic/timeline-target';
 import { crumbOf, openBelow, useSubagentTrail } from '@/chat/subagent-view';
 import { Row } from '@/chat/ui/rows/Rows';
+import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
 import { FileLinkContext } from '@/shell/panels/file-links';
 import { useChatRow } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
@@ -47,6 +50,8 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
     const [expandedSubagents, setExpandedSubagents] = useState<Set<string>>(() => new Set());
     const controller = useRef<SubagentConversation | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const threadRef = useRef<HTMLDivElement>(null);
+    const [target, setTarget] = useState<TimelineTarget>(EMPTY_TARGET);
     const followRef = useRef(true);
     // The height before older rows went in above, so the rows being read stay where they were.
     const heightBefore = useRef<number | null>(null);
@@ -118,35 +123,45 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
                     followRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < FOLLOW_THRESHOLD_PX;
                 }}
             >
-                <div className="chat-column-content">
-                    {state.cursor !== null && (
-                        <div className="flex justify-center pb-2">
-                            <Button size="sm" disabled={state.loadingEarlier} onClick={loadEarlier}>
-                                {state.loadingEarlier ? t('subagents.loadingEarlier') : t('subagents.loadEarlier')}
-                            </Button>
-                        </div>
-                    )}
-                    {rows.length === 0 && !state.live && <div className="text-xs text-text-faint">{t('rows.subagent.nothingYet')}</div>}
-                    {rows.map((row, index) => {
-                        const previous = index > 0 ? rows[index - 1]! : null;
-                        const question = row.kind === 'user';
-                        const seam = !question && previous !== null && previous.kind !== 'user' && BLOCK_KINDS.has(row.kind) !== BLOCK_KINDS.has(previous.kind);
-                        return (
-                            <div key={row.id} className={clsx(question && 'pb-(--chat-answer-gap)', seam && 'pt-(--chat-block-gap)')}>
-                                <Row
-                                    row={row}
-                                    chatId={chatId}
-                                    toggleGroup={(id) => setExpandedGroups((current) => toggled(current, id))}
-                                    toggleTurn={() => undefined}
-                                    toggleSubagent={(id) => setExpandedSubagents((current) => toggled(current, id))}
-                                    openSubagent={() => undefined}
-                                    openConversation={openChild}
-                                />
+                {/* The same menu the chat's own thread has; this transcript is read-only, so the chat
+                    it belongs to is not passed on and the fork item stays out. */}
+                <ContextMenu.Root>
+                    <ContextMenu.Trigger
+                        ref={threadRef}
+                        className="chat-column-content"
+                        onContextMenu={(event) => setTarget(readTimelineTarget(event.target as HTMLElement, threadRef.current, rows))}
+                    >
+                        {state.cursor !== null && (
+                            <div className="flex justify-center pb-2">
+                                <Button size="sm" disabled={state.loadingEarlier} onClick={loadEarlier}>
+                                    {state.loadingEarlier ? t('subagents.loadingEarlier') : t('subagents.loadEarlier')}
+                                </Button>
                             </div>
-                        );
-                    })}
-                    {state.live && <div className="chat-live-text pt-1 text-xs">{t('subagents.working')}</div>}
-                </div>
+                        )}
+                        {rows.length === 0 && !state.live && <div className="text-xs text-text-faint">{t('rows.subagent.nothingYet')}</div>}
+                        {rows.map((row, index) => {
+                            const previous = index > 0 ? rows[index - 1]! : null;
+                            const question = row.kind === 'user';
+                            const seam =
+                                !question && previous !== null && previous.kind !== 'user' && BLOCK_KINDS.has(row.kind) !== BLOCK_KINDS.has(previous.kind);
+                            return (
+                                <div key={row.id} data-item-id={row.id} className={clsx(question && 'pb-(--chat-answer-gap)', seam && 'pt-(--chat-block-gap)')}>
+                                    <Row
+                                        row={row}
+                                        chatId={chatId}
+                                        toggleGroup={(id) => setExpandedGroups((current) => toggled(current, id))}
+                                        toggleTurn={() => undefined}
+                                        toggleSubagent={(id) => setExpandedSubagents((current) => toggled(current, id))}
+                                        openSubagent={() => undefined}
+                                        openConversation={openChild}
+                                    />
+                                </div>
+                            );
+                        })}
+                        {state.live && <div className="chat-live-text pt-1 text-xs">{t('subagents.working')}</div>}
+                    </ContextMenu.Trigger>
+                    <TimelineMenuPopup target={target} thread={threadRef} />
+                </ContextMenu.Root>
             </div>
         </FileLinkContext.Provider>
     );

@@ -1,9 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useShallow } from 'zustand/react/shallow';
 import type { DrawingElement } from '@ruimte/contracts';
 import { boundsOfElements, elementAt, rectFromPoints, resizeRect, scaleElement, type Point, type Rect, type ResizeHandle } from '@ruimte/drawing';
 import { GRID, toWorld } from '@/canvas/math';
 import { DrawingDock } from '@/drawing/DrawingDock';
+import { DrawingMenuPopup } from '@/drawing/DrawingMenu';
 import { DrawingOverlay } from '@/drawing/DrawingOverlay';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
 import { loadDrawingFont } from '@/drawing/fonts';
@@ -262,6 +264,28 @@ export function DrawingView({ id }: { id: string }) {
 
     /* The setting says whether a drawing snaps; Cmd (Ctrl off macOS) turns it around for as long as it is held. */
     const snapping = (e: { metaKey: boolean; ctrlKey: boolean }): boolean => snapSetting !== isModHeld(e, isApplePlatform());
+
+    /* A right-click acts on what it lands on, the way a press does: an element nobody picked yet
+       becomes the selection, and the paper clears it, so the menu above always speaks about what
+       is under the pointer. */
+    const onContextMenu = (e: React.MouseEvent): void => {
+        const state = drawingStore.getState();
+        // A text being typed keeps the keys and the menu its own field offers; the drawing's menu
+        // would act on the element behind it, which is not what the press was about.
+        if (isChrome(e.target) || state.editingTextId !== null) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+        const hit = elementAt(state.elements, worldPoint(e), HIT_TOLERANCE / state.camera.zoom);
+        if (hit === undefined) {
+            state.clearSelection();
+            return;
+        }
+        if (!state.selection.includes(hit.id)) {
+            state.select([hit.id]);
+        }
+    };
 
     const start = (next: Gesture, e: React.PointerEvent): void => {
         gesture.current = next;
@@ -552,9 +576,14 @@ export function DrawingView({ id }: { id: string }) {
             onPointerCancel={onPointerUp}
             onDoubleClick={onDoubleClick}
         >
-            <canvas ref={sceneRef} className="absolute inset-0 h-full w-full" />
-            <canvas ref={draftRef} className="absolute inset-0 h-full w-full" />
-            <DrawingOverlay marquee={marquee} />
+            <ContextMenu.Root>
+                <ContextMenu.Trigger className="absolute inset-0" onContextMenu={onContextMenu}>
+                    <canvas ref={sceneRef} className="absolute inset-0 h-full w-full" />
+                    <canvas ref={draftRef} className="absolute inset-0 h-full w-full" />
+                    <DrawingOverlay marquee={marquee} />
+                </ContextMenu.Trigger>
+                <DrawingMenuPopup />
+            </ContextMenu.Root>
             <EmptyDrawing id={id} />
             <DrawingDock />
         </div>

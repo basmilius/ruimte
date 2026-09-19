@@ -120,5 +120,14 @@
     "diagramCopy": "The diagram could not be copied",
     "diagramOpen": "The diagram could not be opened",
     "diagramSave": "The diagram could not be saved"
+  },
+  "menu": {
+    "cut": "Cut",
+    "paste": "Paste",
+    "duplicate": "Duplicate",
+    "bringToFront": "Bring to front",
+    "sendToBack": "Send to back",
+    "lock": "Lock",
+    "unlock": "Unlock"
   }
 }

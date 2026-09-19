@@ -428,7 +428,8 @@
     "withALink": "Met een link",
     "withPairingLink": "Met een pairing-link",
     "commandPalette": "Commandopalet",
-    "whatsNew": "Wat is er nieuw"
+    "whatsNew": "Wat is er nieuw",
+    "copyFolder": "Mappad kopiëren"
   },
   "palette": {
     "newAgent": {

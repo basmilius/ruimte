@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { indentLess, indentMore, insertNewline } from '@codemirror/commands';
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import clsx from 'clsx';
-import { ArrowUp, ChevronDown, Clock, FastForward, Paperclip, Square, SquareSlash, X, Zap } from 'lucide-react';
+import { ArrowUp, ChevronDown, Clock, Copy, FastForward, Paperclip, Square, SquareSlash, X, Zap } from 'lucide-react';
 import type { AgentKind, ChatApprovalItem, ChatInfo, ChatQuestionItem, ChatSkill, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import { askBeforeStoppingSubagents } from '@/agents/end-children';
 import { chatClient, type ChatSendExtras } from '@/chat';
@@ -44,7 +45,8 @@ import { useProviders } from '@/state/providers';
 import { isShellShortcut } from '@/terminal/keymap';
 import { TransportError, transportFor } from '@/transport';
 import { Button } from '@/ui/Button';
-import { BTN_GROUP, FLOAT, MENU_LABEL } from '@/ui/classes';
+import { BTN_GROUP, FLOAT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
+import { copyText } from '@/ui/clipboard';
 import { Tooltip } from '@/ui/Tooltip';
 import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
@@ -797,32 +799,54 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                     )}
                     {queue.length > 0 && (
                         <div className="flex flex-col gap-1 border-b border-border px-2 py-1.5">
-                            {queue.map((message) => (
-                                <div key={message.id} className="group/queued flex items-center gap-2 rounded-md px-1.5 py-1 text-xs text-text-muted">
-                                    <Icon icon={Clock} size={12} className="shrink-0 text-text-faint" />
-                                    <span className="min-w-0 grow truncate">
-                                        {message.text || t('composer.queue.attachments', { count: message.attachments?.length ?? 0 })}
-                                    </span>
-                                    <span className={`${BTN_GROUP} opacity-0 transition-opacity group-hover/queued:opacity-100 focus-within:opacity-100`}>
-                                        <Tooltip label={t('composer.queue.sendNow')} name>
-                                            <button
-                                                className="icon-btn h-5 w-5 rounded"
-                                                onClick={() => void chatClient.sendNow(chatId, message.id).catch(() => undefined)}
+                            {queue.map((message) => {
+                                const sendNow = (): void => void chatClient.sendNow(chatId, message.id).catch(() => undefined);
+                                const unqueue = (): void => void chatClient.unqueue(chatId, message.id).catch(() => undefined);
+                                return (
+                                    <ContextMenu.Root key={message.id}>
+                                        <ContextMenu.Trigger className="group/queued flex items-center gap-2 rounded-md px-1.5 py-1 text-xs text-text-muted">
+                                            <Icon icon={Clock} size={12} className="shrink-0 text-text-faint" />
+                                            <span className="min-w-0 grow truncate">
+                                                {message.text || t('composer.queue.attachments', { count: message.attachments?.length ?? 0 })}
+                                            </span>
+                                            <span
+                                                className={`${BTN_GROUP} opacity-0 transition-opacity group-hover/queued:opacity-100 focus-within:opacity-100`}
                                             >
-                                                <Icon icon={FastForward} size={12} />
-                                            </button>
-                                        </Tooltip>
-                                        <Tooltip label={t('common:action.remove')} name>
-                                            <button
-                                                className="icon-btn h-5 w-5 rounded"
-                                                onClick={() => void chatClient.unqueue(chatId, message.id).catch(() => undefined)}
-                                            >
-                                                <Icon icon={X} size={12} />
-                                            </button>
-                                        </Tooltip>
-                                    </span>
-                                </div>
-                            ))}
+                                                <Tooltip label={t('composer.queue.sendNow')} name>
+                                                    <button className="icon-btn h-5 w-5 rounded" onClick={sendNow}>
+                                                        <Icon icon={FastForward} size={12} />
+                                                    </button>
+                                                </Tooltip>
+                                                <Tooltip label={t('common:action.remove')} name>
+                                                    <button className="icon-btn h-5 w-5 rounded" onClick={unqueue}>
+                                                        <Icon icon={X} size={12} />
+                                                    </button>
+                                                </Tooltip>
+                                            </span>
+                                        </ContextMenu.Trigger>
+                                        <ContextMenu.Portal>
+                                            <ContextMenu.Positioner className="z-(--z-popup)">
+                                                <ContextMenu.Popup className="menu-popup">
+                                                    <ContextMenu.Item className="menu-item" onClick={sendNow}>
+                                                        <Icon icon={FastForward} size={14} /> {t('composer.queue.sendNow')}
+                                                    </ContextMenu.Item>
+                                                    <ContextMenu.Item
+                                                        className="menu-item"
+                                                        disabled={message.text === ''}
+                                                        onClick={() => copyText(message.text)}
+                                                    >
+                                                        <Icon icon={Copy} size={14} /> {t('common:action.copy')}
+                                                    </ContextMenu.Item>
+                                                    <ContextMenu.Separator className={MENU_SEPARATOR} />
+                                                    <ContextMenu.Item className="menu-item text-status-error" onClick={unqueue}>
+                                                        <Icon icon={X} size={14} /> {t('common:action.remove')}
+                                                    </ContextMenu.Item>
+                                                </ContextMenu.Popup>
+                                            </ContextMenu.Positioner>
+                                        </ContextMenu.Portal>
+                                    </ContextMenu.Root>
+                                );
+                            })}
                         </div>
                     )}
                     {draft.attachments.length > 0 && (

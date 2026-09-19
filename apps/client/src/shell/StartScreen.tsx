@@ -1,8 +1,9 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { isRecentProject } from '@ruimte/contracts';
-import { FolderOpen, LogIn, MonitorSmartphone, Plus, RotateCw } from 'lucide-react';
+import { Copy, ExternalLink, FolderOpen, LogIn, MonitorSmartphone, Plus, RotateCw } from 'lucide-react';
 import { isDesktop } from '@/desktop/bridge';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
@@ -23,6 +24,8 @@ import { useMachineIcon } from '@/shell/settings/machine-icon';
 import { mergeMachines, nameOf, type MachineEntry } from '@/shell/settings/machine-list';
 import { stationBoot } from '@/station';
 import { useEndpoints } from '@/state/endpoints';
+import { fileManagerName, useServers } from '@/state/server';
+import { transportFor } from '@/transport';
 import { hasLocalMachine, isRealMachine } from '@/state/local-machine';
 import { useProjectList } from '@/state/project-list';
 import { canShowReleaseNotes, openReleaseNotes } from '@/state/release-notes';
@@ -32,7 +35,8 @@ import { useWindow, type BootFailure } from '@/state/window';
 import { useEndpointConnection, useOpenEndpoints } from '@/transport/status';
 import { BrandIntro } from '@/ui/Brand';
 import { Button } from '@/ui/Button';
-import { SECTION_LABEL, TOOLTIP_KBD } from '@/ui/classes';
+import { MENU_SEPARATOR, SECTION_LABEL, TOOLTIP_KBD } from '@/ui/classes';
+import { copyText } from '@/ui/clipboard';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Icon } from '@/ui/Icon';
 import { Kbd } from '@/ui/Kbd';
@@ -56,6 +60,8 @@ function MachineRow({ entry }: { entry: MachineEntry }) {
     const icon = useMachineIcon(entry);
     const link = machineLink(entry, connection, null);
     const hint = linkHint(link);
+    /* No menu of its own: browsing its folders is the only thing this row does, and the click
+       already does that. */
     return (
         <button className={ROW} onClick={() => useUi.getState().openFolderBrowser(endpointId)}>
             <MachineGlyph icon={icon} size={16} className="shrink-0 text-text-muted" />
@@ -76,13 +82,57 @@ function RecentRow({ row }: { row: ProjectMenuRow }) {
         .filter((part) => part !== null)
         .join(' · ');
     return (
-        <button className={ROW} onClick={() => void openProject(row.endpointId, summary.projectId)}>
-            <ProjectGlyph projectId={summary.projectId} endpointId={row.endpointId} icon={summary.icon} color={summary.color} size={16} />
-            <span className="flex min-w-0 grow flex-col">
-                <span className={clsx('truncate text-sm', row.connected ? 'text-text' : 'text-text-muted')}>{summary.name}</span>
-                <span className="truncate text-xs text-text-faint">{where}</span>
-            </span>
-        </button>
+        <ContextMenu.Root>
+            <ContextMenu.Trigger render={<button />} className={ROW} onClick={() => void openProject(row.endpointId, summary.projectId)}>
+                <ProjectGlyph projectId={summary.projectId} endpointId={row.endpointId} icon={summary.icon} color={summary.color} size={16} />
+                <span className="flex min-w-0 grow flex-col">
+                    <span className={clsx('truncate text-sm', row.connected ? 'text-text' : 'text-text-muted')}>{summary.name}</span>
+                    <span className="truncate text-xs text-text-faint">{where}</span>
+                </span>
+            </ContextMenu.Trigger>
+            <RecentRowMenu row={row} />
+        </ContextMenu.Root>
+    );
+}
+
+/*
+ * What a recent project offers beside opening it. Its settings live behind the project itself, so
+ * this list stays with the folder: reveal it on its machine, or take the path along.
+ */
+function RecentRowMenu({ row }: { row: ProjectMenuRow }) {
+    const { t } = useTranslation('shell');
+    const { summary } = row;
+    const platform = useServers((s) => s.byEndpoint[row.endpointId]?.platform ?? null);
+    const folder = summary.folder ?? null;
+    const reveal = (): void => {
+        if (folder === null) {
+            return;
+        }
+        void transportFor(row.endpointId)
+            ?.request('fs.reveal', { path: folder })
+            .catch(() => undefined);
+    };
+    return (
+        <ContextMenu.Portal>
+            <ContextMenu.Positioner className="z-(--z-popup)">
+                <ContextMenu.Popup className="menu-popup">
+                    <ContextMenu.Item className="menu-item" onClick={() => void openProject(row.endpointId, summary.projectId)}>
+                        <Icon icon={FolderOpen} size={14} /> {t('common:action.open')}
+                    </ContextMenu.Item>
+                    {folder !== null && (
+                        <>
+                            <ContextMenu.Separator className={MENU_SEPARATOR} />
+                            <ContextMenu.Item className="menu-item" disabled={!row.connected} onClick={reveal}>
+                                <Icon icon={ExternalLink} size={14} /> {t('projectMenu.openIn', { app: fileManagerName(platform) })}
+                            </ContextMenu.Item>
+                            <ContextMenu.Item className="menu-item" onClick={() => copyText(folder)}>
+                                <Icon icon={Copy} size={14} /> {t('start.copyFolder')}
+                            </ContextMenu.Item>
+                        </>
+                    )}
+                </ContextMenu.Popup>
+            </ContextMenu.Positioner>
+        </ContextMenu.Portal>
     );
 }
 

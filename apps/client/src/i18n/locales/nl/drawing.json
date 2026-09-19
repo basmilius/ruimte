@@ -120,5 +120,14 @@
     "diagramCopy": "Het diagram kon niet worden gekopieerd",
     "diagramOpen": "Het diagram kon niet worden geopend",
     "diagramSave": "Het diagram kon niet worden opgeslagen"
+  },
+  "menu": {
+    "cut": "Knippen",
+    "paste": "Plakken",
+    "duplicate": "Dupliceren",
+    "bringToFront": "Naar voren",
+    "sendToBack": "Naar achteren",
+    "lock": "Vergrendelen",
+    "unlock": "Ontgrendelen"
   }
 }

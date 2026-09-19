@@ -5,17 +5,13 @@ import {
     ChartNoAxesColumn,
     ChevronRight,
     CircleQuestionMark,
-    Copy,
     FileText,
-    Frame,
     Globe,
     LayoutGrid,
     MessageSquare,
-    Pencil,
     PenTool,
     Plus,
     Settings,
-    Smile,
     StickyNote,
     Smartphone,
     Terminal,
@@ -28,17 +24,17 @@ import { useTranslation } from 'react-i18next';
 import { isCanvasView, isSessionView, type AgentKind, type CanvasNodeKind, viewIconOf } from '@ruimte/contracts';
 import { useShallow } from 'zustand/react/shallow';
 import { renameViewAction } from '@/actions/client-actions';
-import { ForkMenuItem } from '@/chat/ui/ForkMenuItem';
 import { useDrafts } from '@/chat/drafts';
 import { isUnseen, useAttention } from '@/state/attention';
 import { useProcessWarnings } from '@/state/processes';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
-import { askDeleteView, askViewIcon, duplicateViewOf, newFileView, putOnCanvas, revealNode, showView, showViewOnCanvas } from '@/project/views';
+import { askDeleteView, newFileView, revealNode, showView } from '@/project/views';
 import { focusedCanvas, useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
+import { ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useUi } from '@/state/ui';
 import { useEndpointId } from '@/state/keys';
 import {
@@ -350,7 +346,7 @@ function UnknownViewRow({ row, tabbable, onFocus, onArrow, onDelete }: Omit<View
     );
 }
 
-function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }: ViewRowProps) {
+function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowProps) {
     const { t } = useTranslation(['shell', 'common']);
     const { view } = row;
     const title = useBrowserDisplayTitle(view.id, view.name, view.titleSource);
@@ -453,31 +449,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDelete, onDrag }
             <ContextMenu.Portal>
                 <ContextMenu.Positioner className="z-(--z-popup)">
                     <ContextMenu.Popup className="menu-popup">
-                        <ContextMenu.Item className="menu-item" onClick={() => setRenaming(true)}>
-                            <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <kbd>F2</kbd>
-                        </ContextMenu.Item>
-                        <ContextMenu.Item className="menu-item" onClick={() => askViewIcon(view.id)}>
-                            <Icon icon={Smile} size={14} /> {t('viewMenu.changeIcon')}
-                        </ContextMenu.Item>
-                        {(view.kind === 'canvas' || view.kind === 'drawing' || view.kind === 'diagram') && (
-                            <ContextMenu.Item className="menu-item" onClick={() => duplicateViewOf(view.id)}>
-                                <Icon icon={Copy} size={14} /> {t('sidebar.duplicate')}
-                            </ContextMenu.Item>
-                        )}
-                        {view.kind !== 'canvas' && view.kind !== 'drawing' && view.kind !== 'diagram' && view.kind !== 'file' && (
-                            <ContextMenu.Item className="menu-item" onClick={() => putOnCanvas(view.id)}>
-                                <Icon icon={Frame} size={14} /> {t('viewMenu.putOnCanvas')}
-                            </ContextMenu.Item>
-                        )}
-                        {view.kind === 'chat' && <ForkMenuItem chatId={view.id} />}
-                        {(view.kind === 'drawing' || view.kind === 'diagram' || view.kind === 'file') && (
-                            <ContextMenu.Item className="menu-item" onClick={() => showViewOnCanvas(view.id)}>
-                                <Icon icon={Frame} size={14} /> {t('viewMenu.showOnCanvas')}
-                            </ContextMenu.Item>
-                        )}
-                        <ContextMenu.Item className="menu-item text-status-error" onClick={onDelete}>
-                            <Icon icon={Trash} size={14} /> {t('common:action.delete')}
-                        </ContextMenu.Item>
+                        <ViewMenuItems viewId={view.id} kind={view.kind} onRename={() => setRenaming(true)} />
                     </ContextMenu.Popup>
                 </ContextMenu.Positioner>
             </ContextMenu.Portal>

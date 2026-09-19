@@ -428,7 +428,8 @@
     "withALink": "With a link",
     "withPairingLink": "With a pairing link",
     "commandPalette": "Command palette",
-    "whatsNew": "What's new"
+    "whatsNew": "What's new",
+    "copyFolder": "Copy folder path"
   },
   "palette": {
     "newAgent": {
