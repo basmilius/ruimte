@@ -74,28 +74,28 @@ final class AttentionStoreTests: XCTestCase {
 
 final class SessionReadingTests: XCTestCase {
     func testALiveAgentSaysWhatTheSessionIsDoing() {
-        XCTAssertEqual(reading(agent: agent("running", live: true)).status, "running")
-        XCTAssertEqual(reading(agent: agent("needs-you", live: true)).status, "needs-you")
+        XCTAssertEqual(reading(agent: agent("running", live: true)).status, .running)
+        XCTAssertEqual(reading(agent: agent("needs-you", live: true)).status, .needsYou)
     }
 
     func testARecordLeftBehindByARestartedDaemonIsNotRunning() {
         XCTAssertNil(reading(agent: agent("running", live: false)).status)
-        XCTAssertEqual(reading(agent: agent("exited", live: false)).status, "exited")
-        XCTAssertEqual(reading(agent: agent("running", live: false), shellExited: true).status, "error")
+        XCTAssertEqual(reading(agent: agent("exited", live: false)).status, .exited)
+        XCTAssertEqual(reading(agent: agent("running", live: false), shellExited: true).status, .error)
     }
 
     func testAShellWithoutAnAgentReadsFromItself() {
         XCTAssertNil(reading().status)
-        XCTAssertEqual(reading(attached: true).status, "running")
-        XCTAssertEqual(reading(shellExited: true).status, "error")
+        XCTAssertEqual(reading(attached: true).status, .running)
+        XCTAssertEqual(reading(shellExited: true).status, .error)
     }
 
     @MainActor func testTheStoreStopsCallingADeadAgentRunning() {
         let store = AttentionStore(client: AttentionMachine(snapshot: .object([:])))
         store.read("terminal") { $0.agent = agent("running", live: true) }
-        XCTAssertEqual(store.statuses["terminal"], "running")
+        XCTAssertEqual(store.statuses["terminal"], .running)
         store.read("terminal") { $0.agent = agent("running", live: false) }
-        XCTAssertEqual(store.statuses["terminal"], "idle")
+        XCTAssertEqual(store.statuses["terminal"], .idle)
     }
 
     private func reading(agent: JSONValue? = nil, shellExited: Bool = false, attached: Bool = false) -> SessionReading {

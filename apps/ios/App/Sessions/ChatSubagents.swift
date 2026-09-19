@@ -21,9 +21,19 @@ struct SubagentListRoute: Hashable, Identifiable {
     var id: String { chatID }
 }
 
-/// The state a sub-agent's entry shows in front of its title.
-enum SubagentStatusWord: String {
+/// The state a sub-agent's entry shows in front of its title: the words of the wire, plus the cancelled that only a
+/// task's own record still tells apart from a failure.
+enum SubagentStatusWord: String, CaseIterable {
     case running, done, failed, cancelled
+
+    /// Every word the wire has, so a status added to `ChatSubagentStatusSchema` stops compiling here.
+    init(_ status: ChatSubagentStatus) {
+        switch status {
+        case .running: self = .running
+        case .done: self = .done
+        case .failed: self = .failed
+        }
+    }
 
     var look: AgentWorkLook {
         switch self {
@@ -72,13 +82,12 @@ enum ChatSubagents {
         return item.text("origin") == "ruimte" && id.hasPrefix("task-") ? String(id.dropFirst(5)) : nil
     }
 
-    /// A cancelled task is a failed row on the wire, and only the task itself still says which it was.
-    static func statusWord(_ item: JSONValue, task: JSONValue?) -> SubagentStatusWord {
-        switch item.text("status") {
-        case "running": .running
-        case "done": .done
-        default: task?.text("status") == "cancelled" ? .cancelled : .failed
-        }
+    /// A cancelled task is a failed row on the wire, and only the task itself still says which it was. Nil for a word
+    /// this app does not know: the desktop client passes such a word through rather than calling it a failure.
+    static func statusWord(_ item: JSONValue, task: JSONValue?) -> SubagentStatusWord? {
+        guard let status = ChatSubagentStatus(rawValue: item.text("status")) else { return nil }
+        if status == .failed, TaskStatus(rawValue: task?.text("status") ?? "") == .cancelled { return .cancelled }
+        return SubagentStatusWord(status)
     }
 
     /// What of every sub-agent's own work the parent's thread kept, by the call that opened it, in thread order.

@@ -4359,6 +4359,122 @@
       "collapseId"
     ]
   },
+  "AgentKindSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "claude",
+      "codex",
+      "gemini",
+      "copilot"
+    ]
+  },
+  "AgentStatusSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "running",
+      "needs-you",
+      "idle",
+      "error",
+      "exited"
+    ]
+  },
+  "TaskStatusSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "open",
+      "done",
+      "failed",
+      "cancelled"
+    ]
+  },
+  "PlanActorSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "person",
+      "agent"
+    ]
+  },
+  "PlanChecksSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "anyone",
+      "agent",
+      "person"
+    ]
+  },
+  "PlanKindSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "steps",
+      "test"
+    ]
+  },
+  "PlanStepStateSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "open",
+      "active",
+      "done",
+      "failed",
+      "skipped",
+      "blocked",
+      "warning",
+      "info"
+    ]
+  },
+  "ChatApprovalDecisionSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "pending",
+      "allow",
+      "allow-always",
+      "deny",
+      "cancelled"
+    ]
+  },
+  "ChatSkillSourceSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "user",
+      "project",
+      "plugin"
+    ]
+  },
+  "ChatSubagentSourceSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "claude-transcript",
+      "codex-thread"
+    ]
+  },
+  "ChatSubagentStatusSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "running",
+      "done",
+      "failed"
+    ]
+  },
+  "ChatToolStateSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "string",
+    "enum": [
+      "running",
+      "done",
+      "error"
+    ]
+  },
   "PairPayloadSchema": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

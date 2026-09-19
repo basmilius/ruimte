@@ -14,25 +14,31 @@ struct SessionReading: Equatable {
     /// here; counting the attachments of other clients would call a shell someone opened on the desktop running.
     var attached = false
 
-    var status: String? {
+    var status: AgentStatus? {
         // A live agent knows better than the shell what is going on.
         if let agent, agent["live"]?.boolValue == true {
-            return agent.text("status", fallback: "idle")
+            return AgentStatus.of(agent)
         }
         // The daemon marks the record when the CLI went down with the shell, and it outlives the shell.
-        if agent?.text("status") == "exited" {
-            return "exited"
+        if AgentStatus.of(agent) == .exited {
+            return .exited
         }
         if shellExited {
-            return "error"
+            return .error
         }
-        return attached ? "running" : nil
+        return attached ? .running : nil
     }
+}
+
+extension AgentStatus {
+    /// The status of an agent record, or idle: a record without one, and a word a newer machine knows and this app
+    /// does not, both mean nothing is waiting here.
+    static func of(_ record: JSONValue?) -> AgentStatus { AgentStatus(rawValue: record?.text("status") ?? "") ?? .idle }
 }
 
 @MainActor @Observable
 final class AttentionStore {
-    private(set) var statuses: [String: String] = [:]
+    private(set) var statuses: [String: AgentStatus] = [:]
     private(set) var unseen = Set<String>()
     private(set) var approvalCounts: [String: Int] = [:]
     private var pushEntries: [String: JSONValue] = [:]
@@ -68,7 +74,7 @@ final class AttentionStore {
         subscriptions.append(
             client.subscribe("chat.event") { [weak self] payload in
                 guard let event = payload["event"], let info = event["info"] else { return }
-                self?.update(payload.text("chatId"), status: info.text("status", fallback: "idle"))
+                self?.update(payload.text("chatId"), status: AgentStatus.of(info))
             })
         subscriptions.append(
             client.observeConnection { [weak self] connected in
@@ -100,7 +106,7 @@ final class AttentionStore {
         markSeen(id)
     }
     func blur(_ id: String) { focused[id] = max(0, focused[id, default: 0] - 1) }
-    func needsYou(_ id: String) -> Bool { statuses[id] == "needs-you" || approvalCounts[id, default: 0] > 0 }
+    func needsYou(_ id: String) -> Bool { statuses[id] == .needsYou || approvalCounts[id, default: 0] > 0 }
 
     /// Folds one field of a session's reading in and writes the word that reading now derives. A session the client
     /// knows nothing about reads as idle, which is the mark the desktop draws for no status at all: none.
@@ -109,14 +115,14 @@ final class AttentionStore {
         var reading = readings[id] ?? SessionReading()
         change(&reading)
         readings[id] = reading
-        update(id, status: reading.status ?? "idle")
+        update(id, status: reading.status ?? .idle)
     }
 
-    func update(_ id: String, status: String) {
+    func update(_ id: String, status: AgentStatus) {
         guard !id.isEmpty else { return }
         let previous = statuses[id]
         statuses[id] = status
-        if previous == "running", status != "running", focused[id, default: 0] == 0 { unseen.insert(id) }
+        if previous == .running, status != .running, focused[id, default: 0] == 0 { unseen.insert(id) }
     }
 
     func markSeen(_ id: String) {
@@ -187,7 +193,7 @@ final class AttentionStore {
             let ids = Set(
                 sessions.list("sessions").map { $0.text("sessionId") } + chats.list("chats").map { $0.text("chatId") })
             for chat in chats.list("chats") {
-                update(chat.text("chatId"), status: chat.text("status", fallback: "idle"))
+                update(chat.text("chatId"), status: AgentStatus.of(chat))
             }
             statuses = statuses.filter { ids.contains($0.key) }
             readings = readings.filter { ids.contains($0.key) }
@@ -203,7 +209,7 @@ struct AttentionMark: View {
     var body: some View {
         if store.needsYou(id) {
             Image(lucide: "hand").foregroundStyle(MobileStyle.statusNeedsYou).accessibilityLabel("Needs you")
-        } else if store.statuses[id] == "running" {
+        } else if store.statuses[id] == .running {
             Circle().frame(width: 8, height: 8).foregroundStyle(MobileStyle.statusRunning).accessibilityLabel(
                 "Running")
         } else if store.unseen.contains(id) {

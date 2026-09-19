@@ -268,7 +268,7 @@ final class SessionVisualTests: XCTestCase {
         ])
         canvas.update(document, camera: nil, fit: 0)
         canvas.setAttention(
-            statuses: ["chat": "running", "terminal": "needs-you"], unseen: [], needingYou: ["terminal"])
+            statuses: ["chat": .running, "terminal": .needsYou], unseen: [], needingYou: ["terminal"])
         canvas.layoutIfNeeded()
         await displayFrame()
         capture(window, name: "canvas-ipad")

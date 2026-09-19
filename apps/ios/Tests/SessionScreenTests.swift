@@ -106,16 +106,16 @@ final class SessionScreenTests: XCTestCase {
 
     @MainActor func testAttentionMarksOnlyUnseenCompletionsAndClearsOnFocus() {
         let store = AttentionStore(client: SessionClientFake())
-        store.update("terminal", status: "idle")
+        store.update("terminal", status: .idle)
         XCTAssertFalse(store.unseen.contains("terminal"))
-        store.update("terminal", status: "running")
-        store.update("terminal", status: "needs-you")
+        store.update("terminal", status: .running)
+        store.update("terminal", status: .needsYou)
         XCTAssertTrue(store.needsYou("terminal"))
         XCTAssertTrue(store.unseen.contains("terminal"))
         store.focus("terminal")
         XCTAssertFalse(store.unseen.contains("terminal"))
-        store.update("terminal", status: "running")
-        store.update("terminal", status: "idle")
+        store.update("terminal", status: .running)
+        store.update("terminal", status: .idle)
         XCTAssertFalse(store.unseen.contains("terminal"))
         store.blur("terminal")
     }
