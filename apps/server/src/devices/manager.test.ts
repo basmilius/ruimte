@@ -125,6 +125,30 @@ describe('DeviceManager', () => {
         expect(backend.source.stops).toBe(1);
     });
 
+    test('ends the session when the last client disappears', async () => {
+        const backend = new FakeBackend();
+        backend.info = { ...phone, state: 'booted' };
+        const manager = new DeviceManager([backend]);
+        manager.subscribe('client-1', () => undefined);
+        manager.subscribe('client-2', () => undefined);
+
+        const opened = await manager.open('simctl', 'ios', 'phone-1', 'client-1', 'events');
+        await manager.open('simctl', 'ios', 'phone-1', 'client-2', 'events');
+
+        manager.detachAll('client-1');
+        expect(manager.streams.has(opened.streamId)).toBe(true);
+        expect(backend.source.stops).toBe(0);
+
+        manager.detachAll('client-2');
+        await Bun.sleep(0);
+
+        expect(manager.streams.has(opened.streamId)).toBe(false);
+        expect(backend.source.stops).toBe(1);
+        await expect(manager.input('simctl', 'phone-1', 'client-2', { kind: 'button', button: 'home' })).rejects.toEqual(
+            new DeviceError('device-not-open', 'Open the device before sending input')
+        );
+    });
+
     test('keeps capture optional until the native helper is installed', async () => {
         const backend: DeviceBackend = {
             id: 'simctl',

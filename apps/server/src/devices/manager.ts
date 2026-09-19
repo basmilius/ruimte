@@ -149,9 +149,13 @@ export class DeviceManager {
     }
 
     detachAll(clientId: string): void {
-        for (const [key, session] of this.sessions) {
+        for (const [key, session] of [...this.sessions]) {
             session.clients.delete(clientId);
             this.stopFrameEvents(key, clientId);
+            // The source keeps producing frames while it is registered, so the last client leaving ends the session.
+            if (session.clients.size === 0) {
+                this.destroy(key);
+            }
         }
     }
 
