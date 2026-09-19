@@ -78,8 +78,3 @@ struct RemotePageStatus: View {
         }
     }
 }
-
-func mobileByteCount(_ value: Double?) -> String {
-    guard let value, value.isFinite, value >= 0, value < Double(Int64.max) else { return "Unavailable" }
-    return ByteCountFormatter.string(fromByteCount: Int64(value), countStyle: .file)
-}

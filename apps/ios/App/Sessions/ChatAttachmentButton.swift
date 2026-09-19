@@ -35,7 +35,7 @@ struct ChatAttachmentButton: View {
                         Text(attachment["name"]?.stringValue ?? "Attachment")
                             .font(.caption.weight(.medium)).lineLimit(1).truncationMode(.middle)
                         if let size = attachment["size"]?.numberValue {
-                            Text(ByteCountFormatter.string(fromByteCount: Int64(size), countStyle: .file))
+                            Text(mobileAttachmentSize(size))
                                 .font(.caption2).foregroundStyle(MobileStyle.muted).monospacedDigit()
                         }
                     }
