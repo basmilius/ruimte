@@ -1,6 +1,6 @@
 import i18next from 'i18next';
 import type { AgentKind, Plan, PlanItem, PlanSection, PlanStep, PlanStepState, PlanText } from '@ruimte/contracts';
-import { allItems, allSteps, isParentStep, planProgress, stepState, type PlanProgress } from '@ruimte/plan';
+import { allItems, isParentStep, leafSteps, planProgress, stepState, type PlanProgress } from '@ruimte/plan';
 
 /* Which steps the panel lists; local to this client, never part of the plan. */
 export type PlanFilter = 'all' | 'open' | 'issues';
@@ -33,13 +33,11 @@ const LEAF_MATCHES: Record<Exclude<PlanFilter, 'all'>, ReadonlySet<PlanStepState
     issues: new Set(['failed', 'blocked', 'warning'])
 };
 
-const leavesOf = (items: readonly PlanItem[]): PlanStep[] => allSteps(items).filter((step) => !isParentStep(step));
-
 const matches = (items: readonly PlanItem[], filter: PlanFilter): boolean =>
-    filter === 'all' || leavesOf(items).some((step) => LEAF_MATCHES[filter].has(step.state ?? 'open'));
+    filter === 'all' || leafSteps(items).some((step) => LEAF_MATCHES[filter].has(step.state ?? 'open'));
 
 const allDone = (items: readonly PlanItem[]): boolean => {
-    const leaves = leavesOf(items);
+    const leaves = leafSteps(items);
     return leaves.length > 0 && leaves.every((step) => step.state === 'done' || step.state === 'skipped');
 };
 
@@ -62,7 +60,7 @@ export const planRows = (plan: Pick<Plan, 'items'>, options: PlanViewOptions): P
             state: stepState(item),
             progress: parent ? planProgress(item.steps!) : null,
             collapsed,
-            activeBelow: parent && leavesOf(item.steps!).some((leaf) => leaf.state === 'active')
+            activeBelow: parent && leafSteps(item.steps!).some((leaf) => leaf.state === 'active')
         });
         if (parent && !collapsed) {
             for (const child of item.steps!) {
@@ -108,7 +106,7 @@ export const planCounter = (plan: Pick<Plan, 'items'>): string => {
     return `${progress.finished}/${progress.total}`;
 };
 
-export const hasFailedStep = (plan: Pick<Plan, 'items'>): boolean => leavesOf(plan.items).some((step) => step.state === 'failed');
+export const hasFailedStep = (plan: Pick<Plan, 'items'>): boolean => leafSteps(plan.items).some((step) => step.state === 'failed');
 
 export interface ActiveStep {
     id: string;
@@ -117,7 +115,7 @@ export interface ActiveStep {
 
 /* The steps an agent is on, in document order. */
 export const activeSteps = (plan: Pick<Plan, 'items'>): ActiveStep[] =>
-    leavesOf(plan.items)
+    leafSteps(plan.items)
         .filter((step) => step.state === 'active')
         .map((step) => ({ id: step.id, title: step.title }));
 
@@ -225,7 +223,7 @@ export const stepSetBy = (step: Pick<PlanStep, 'by'>, state: PlanStepState, agen
  */
 export const resultsText = (plan: Plan): string | null => {
     const lines = (state: PlanStepState): string[] =>
-        leavesOf(plan.items)
+        leafSteps(plan.items)
             .filter((step) => step.state === state)
             .map((step) => `- ${step.title}${step.note ? `: ${step.note.replace(/\s*\n\s*/g, ' ')}` : ''}`);
     const groups = (['failed', 'blocked', 'warning', 'info'] as const)

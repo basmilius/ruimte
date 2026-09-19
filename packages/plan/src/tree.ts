@@ -115,10 +115,7 @@ export interface PlanProgress {
 
 export const planProgress = (items: readonly PlanItem[]): PlanProgress => {
     const progress: PlanProgress = { total: 0, open: 0, active: 0, done: 0, failed: 0, skipped: 0, blocked: 0, warning: 0, info: 0, finished: 0 };
-    for (const step of allSteps(items)) {
-        if (isParentStep(step)) {
-            continue;
-        }
+    for (const step of leafSteps(items)) {
         const state = step.state ?? 'open';
         progress.total++;
         progress[state]++;
@@ -129,9 +126,15 @@ export const planProgress = (items: readonly PlanItem[]): PlanProgress => {
     return progress;
 };
 
+/*
+ * The steps that carry a state, in document order. A step with steps under it has no state of its
+ * own: it is a heading, and what it says about progress is whatever its leaves say.
+ */
+export const leafSteps = (items: readonly PlanItem[]): PlanStep[] => allSteps(items).filter((step) => !isParentStep(step));
+
 export const activeStepIds = (plan: Pick<Plan, 'items'>): string[] =>
-    allSteps(plan.items)
-        .filter((step) => !isParentStep(step) && step.state === 'active')
+    leafSteps(plan.items)
+        .filter((step) => step.state === 'active')
         .map((step) => step.id);
 
 /* True when the item, or any step under it, carries a state a person set. */
