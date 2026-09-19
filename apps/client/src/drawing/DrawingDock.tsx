@@ -8,14 +8,11 @@ import {
     Hand,
     Lock,
     LockOpen,
-    Maximize,
     Minus,
     MousePointer2,
     MoveUpRight,
     Palette,
     Pencil,
-    Plus,
-    Scan,
     Square,
     StickyNote,
     Type,
@@ -27,7 +24,6 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { DRAWING_COLORS, type DrawingColor } from '@ruimte/contracts';
-import { activeZoomPreset, ZOOM_PRESETS } from '@/canvas/math';
 import { copyDrawingPng, copyDrawingSvg, saveDrawingPng, saveDrawingSvg } from '@/drawing/export';
 import { useDrawing, useDrawingStore, type DrawingStyle, type DrawingTool } from '@/state/drawing';
 import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
@@ -36,7 +32,7 @@ import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
 import { DRAWING_SHORTCUTS } from '@/drawing/shortcuts';
-import { Kbd } from '@/ui/Kbd';
+import { ZoomControls } from '@/ui/ZoomControls';
 
 interface ToolRow {
     tool: DrawingTool;
@@ -121,7 +117,6 @@ export function DrawingDock() {
         }))
     );
     const set = (patch: Partial<DrawingStyle>): void => drawingStore.getState().setStyle(patch);
-    const preset = activeZoomPreset(zoom);
 
     return (
         <DockShell data-drawing-chrome className="px-4" barClassName="flex-wrap justify-center">
@@ -237,62 +232,25 @@ export function DrawingDock() {
 
             <Separator />
 
-            <div className={BTN_GROUP}>
-                <Tooltip label={t('zoom.out')} name>
-                    <button className="icon-btn" onClick={() => drawingStore.getState().zoomTo(Math.round(zoom * 100 - 10) / 100)}>
-                        <Icon icon={Minus} size={16} />
-                    </button>
-                </Tooltip>
-                <Menu.Root>
-                    <Tooltip label={t('zoom.presets')}>
-                        <Menu.Trigger className="h-8 min-w-14 rounded-lg px-1 text-xs tabular-nums text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active data-[popup-open]:text-text">
-                            {Math.round(zoom * 100)}%
-                        </Menu.Trigger>
-                    </Tooltip>
-                    <Menu.Portal>
-                        <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="center">
-                            <Menu.Popup className="menu-popup min-w-44">
-                                <Menu.RadioGroup value={preset} onValueChange={(value: number) => drawingStore.getState().zoomTo(value / 100)}>
-                                    {ZOOM_PRESETS.map((pct) => (
-                                        <Menu.RadioItem key={pct} value={pct} className="menu-item">
-                                            <span className="grid h-4 w-4 place-items-center">
-                                                <Menu.RadioItemIndicator>
-                                                    <Icon icon={Check} size={14} />
-                                                </Menu.RadioItemIndicator>
-                                            </span>
-                                            <span className="tabular-nums">{pct}%</span>
-                                            {pct === 100 && <Kbd shortcut={DRAWING_SHORTCUTS.zoomReset} />}
-                                        </Menu.RadioItem>
-                                    ))}
-                                </Menu.RadioGroup>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <Menu.Item className="menu-item" onClick={() => drawingStore.getState().fitAll()}>
-                                    <span className="grid h-4 w-4 place-items-center">
-                                        <Icon icon={Maximize} size={14} />
-                                    </span>
-                                    {t('zoom.fit')} <Kbd shortcut={DRAWING_SHORTCUTS.fitAll} />
-                                </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={!hasSelection} onClick={() => drawingStore.getState().zoomToSelection()}>
-                                    <span className="grid h-4 w-4 place-items-center">
-                                        <Icon icon={Scan} size={14} />
-                                    </span>
-                                    {t('zoom.selection')} <Kbd shortcut={DRAWING_SHORTCUTS.zoomSelection} />
-                                </Menu.Item>
-                            </Menu.Popup>
-                        </Menu.Positioner>
-                    </Menu.Portal>
-                </Menu.Root>
-                <Tooltip label={t('zoom.in')} name>
-                    <button className="icon-btn" onClick={() => drawingStore.getState().zoomTo(Math.round(zoom * 100 + 10) / 100)}>
-                        <Icon icon={Plus} size={16} />
-                    </button>
-                </Tooltip>
-                <Tooltip label={t('zoom.fitEverything')} kbd={DRAWING_SHORTCUTS.fitAll} name>
-                    <button className="icon-btn" onClick={() => drawingStore.getState().fitAll()}>
-                        <Icon icon={Maximize} size={16} />
-                    </button>
-                </Tooltip>
-            </div>
+            <ZoomControls
+                zoom={zoom}
+                labels={{
+                    out: t('zoom.out'),
+                    in: t('zoom.in'),
+                    presets: t('zoom.presets'),
+                    fit: t('zoom.fit'),
+                    fitEverything: t('zoom.fitEverything')
+                }}
+                shortcuts={DRAWING_SHORTCUTS}
+                onZoomTo={(next) => drawingStore.getState().zoomTo(next)}
+                onFitAll={() => drawingStore.getState().fitAll()}
+                selection={{
+                    label: t('zoom.selection'),
+                    shortcut: DRAWING_SHORTCUTS.zoomSelection,
+                    enabled: hasSelection,
+                    onZoom: () => drawingStore.getState().zoomToSelection()
+                }}
+            />
 
             <Separator />
 

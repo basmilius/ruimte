@@ -1,28 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
-import {
-    Check,
-    Globe,
-    LayoutGrid,
-    LayoutTemplate,
-    Lock,
-    LockOpen,
-    Maximize,
-    MessageSquare,
-    Minus,
-    Plus,
-    Save,
-    Scan,
-    StickyNote,
-    Terminal,
-    Type,
-    X
-} from 'lucide-react';
+import { Check, Globe, LayoutGrid, LayoutTemplate, Lock, LockOpen, MessageSquare, Plus, Save, StickyNote, Terminal, Type, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 import { isCanvasView } from '@ruimte/contracts';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentNode } from '@/agents/nodes';
-import { activeZoomPreset, toWorld, ZOOM_PRESETS } from '@/canvas/math';
+import { toWorld } from '@/canvas/math';
 import { LOCK_KEYS, lockHint, lockLabel } from '@/canvas/locks';
 import type { StoreApi } from 'zustand';
 import { useCanvas, useCanvasStore, type CanvasState, type NodeKind } from '@/state/canvas';
@@ -36,6 +19,7 @@ import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { Kbd } from '@/ui/Kbd';
+import { ZoomControls } from '@/ui/ZoomControls';
 
 const centerWorld = (store: StoreApi<CanvasState>) => {
     const s = store.getState();
@@ -67,8 +51,6 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
     );
     const anyLocked = Object.values(locks).some(Boolean);
     const allLocked = Object.values(locks).every(Boolean);
-    const zoomPct = Math.round(zoom * 100);
-    const preset = activeZoomPreset(zoom);
 
     const add = (kind: NodeKind) => {
         canvasStore.getState().addNode(kind, centerWorld(canvasStore));
@@ -116,63 +98,26 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
             </Menu.Root>
 
             <Separator />
-            <div className={BTN_GROUP}>
-                <Tooltip label={t('dock.zoomOut')} name>
-                    <button className="icon-btn" onClick={() => canvasStore.getState().zoomTo(Math.round(zoom * 100 - 10) / 100)}>
-                        <Icon icon={Minus} size={16} />
-                    </button>
-                </Tooltip>
-                <Menu.Root>
-                    <Tooltip label={t('dock.zoomPresets')}>
-                        <Menu.Trigger className="h-8 min-w-14 rounded-lg px-1 text-xs tabular-nums text-text-muted hover:bg-surface-hover hover:text-text data-[popup-open]:bg-surface-active data-[popup-open]:text-text">
-                            {zoomPct}%
-                        </Menu.Trigger>
-                    </Tooltip>
-                    <Menu.Portal>
-                        <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={10} align="center">
-                            <Menu.Popup className="menu-popup min-w-44">
-                                <Menu.RadioGroup value={preset} onValueChange={(value: number) => canvasStore.getState().zoomTo(value / 100)}>
-                                    {ZOOM_PRESETS.map((pct) => (
-                                        <Menu.RadioItem key={pct} value={pct} className="menu-item">
-                                            <span className="grid h-4 w-4 place-items-center">
-                                                <Menu.RadioItemIndicator>
-                                                    <Icon icon={Check} size={14} />
-                                                </Menu.RadioItemIndicator>
-                                            </span>
-                                            <span className="tabular-nums">{pct}%</span>
-                                            {pct === 100 && <Kbd shortcut={CANVAS_SHORTCUTS.zoomReset} />}
-                                        </Menu.RadioItem>
-                                    ))}
-                                </Menu.RadioGroup>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <Menu.Item className="menu-item" onClick={() => canvasStore.getState().fitAll()}>
-                                    <span className="grid h-4 w-4 place-items-center">
-                                        <Icon icon={Maximize} size={14} />
-                                    </span>{' '}
-                                    {t('dock.zoomToFit')} <Kbd shortcut={CANVAS_SHORTCUTS.fitAll} />
-                                </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={!hasSelection} onClick={() => canvasStore.getState().zoomToSelection()}>
-                                    <span className="grid h-4 w-4 place-items-center">
-                                        <Icon icon={Scan} size={14} />
-                                    </span>{' '}
-                                    {t('dock.zoomToSelection')} <Kbd shortcut={CANVAS_SHORTCUTS.zoomSelection} />
-                                </Menu.Item>
-                            </Menu.Popup>
-                        </Menu.Positioner>
-                    </Menu.Portal>
-                </Menu.Root>
 
-                <Tooltip label={t('dock.zoomIn')} name>
-                    <button className="icon-btn" onClick={() => canvasStore.getState().zoomTo(Math.round(zoom * 100 + 10) / 100)}>
-                        <Icon icon={Plus} size={16} />
-                    </button>
-                </Tooltip>
-                <Tooltip label={t('dock.fitEverything')} kbd={CANVAS_SHORTCUTS.fitAll} name>
-                    <button className="icon-btn" onClick={() => canvasStore.getState().fitAll()}>
-                        <Icon icon={Maximize} size={16} />
-                    </button>
-                </Tooltip>
-            </div>
+            <ZoomControls
+                zoom={zoom}
+                labels={{
+                    out: t('dock.zoomOut'),
+                    in: t('dock.zoomIn'),
+                    presets: t('dock.zoomPresets'),
+                    fit: t('dock.zoomToFit'),
+                    fitEverything: t('dock.fitEverything')
+                }}
+                shortcuts={CANVAS_SHORTCUTS}
+                onZoomTo={(next) => canvasStore.getState().zoomTo(next)}
+                onFitAll={() => canvasStore.getState().fitAll()}
+                selection={{
+                    label: t('dock.zoomToSelection'),
+                    shortcut: CANVAS_SHORTCUTS.zoomSelection,
+                    enabled: hasSelection,
+                    onZoom: () => canvasStore.getState().zoomToSelection()
+                }}
+            />
             <Separator />
 
             <div className={BTN_GROUP}>
