@@ -16,20 +16,34 @@ import SwiftUI
     /// An action a person started; what it came from stays disabled until it settles.
     var busy = false
 
+    /// Counts reads, so a read that a newer one overtook writes nothing at all: not the value, not the spinner and
+    /// not the reason it failed. Actions are serialized by `busy` instead and stay out of this.
+    @ObservationIgnored private var reads = 0
+
     func load(_ operation: () async throws -> JSONValue) async {
-        await read {
+        await read { stillTheLatest in
             let result = try await operation()
-            try Task.checkCancellation()
+            try stillTheLatest()
             self.value = result
         }
     }
 
     /// One read by a surface that keeps the value itself. `loaded` says whether there is already something on screen,
-    /// since only a first read shows a spinner.
-    func read(loaded: Bool? = nil, _ operation: () async throws -> Void) async {
+    /// since only a first read shows a spinner. The closure is handed the check to make before it writes anything:
+    /// it throws once a newer read has started, which counts as a cancellation.
+    func read(
+        loaded: Bool? = nil, _ operation: (_ stillTheLatest: @MainActor () throws -> Void) async throws -> Void
+    ) async {
+        reads += 1
+        let attempt = reads
         loading = !(loaded ?? (value != nil))
-        defer { loading = false }
-        await settle(operation)
+        defer { if attempt == reads { loading = false } }
+        await settle(attempt: attempt) {
+            try await operation {
+                try Task.checkCancellation()
+                guard attempt == self.reads else { throw CancellationError() }
+            }
+        }
     }
 
     /// One action, refused while another is still running.
@@ -37,17 +51,19 @@ import SwiftUI
         guard !busy else { return }
         busy = true
         defer { busy = false }
-        await settle(operation)
+        await settle(attempt: nil, operation)
     }
 
-    private func settle(_ operation: () async throws -> Void) async {
+    private func settle(attempt: Int?, _ operation: () async throws -> Void) async {
         do {
             try await operation()
             try Task.checkCancellation()
+            guard attempt == nil || attempt == reads else { return }
             problem = nil
         } catch is CancellationError {
         } catch let error as URLError where error.code == .cancelled {
         } catch {
+            guard attempt == nil || attempt == reads else { return }
             problem = error.localizedDescription
         }
     }

@@ -135,11 +135,10 @@ struct ChatChangedFilesRow: View {
     let tools: [ChatItemState]
     let client: any MachineRequesting
     let chatID: String
-    @State private var fetched: JSONValue?
-    @State private var failure: String?
-    @State private var loading = false
+    @State private var work = RemotePageState()
     @State private var fetchedOnce = false
     private var stored: JSONValue? { turn.value["checkpointDiff"] }
+    private var fetched: JSONValue? { work.value }
     private var files: [ChatFileChange] {
         if let diff = stored ?? fetched {
             return ChatFileChanges.grouped(diff.list("files").map(ChatFileChanges.fromJSON))
@@ -148,7 +147,7 @@ struct ChatChangedFilesRow: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if !files.isEmpty || loading || failure != nil {
+            if !files.isEmpty || work.loading || work.problem != nil {
                 VStack(alignment: .leading, spacing: 8) {
                     Label(
                         "\(files.count) changed file\(files.count == 1 ? "" : "s")", lucideIcon: "file-diff",
@@ -163,9 +162,9 @@ struct ChatChangedFilesRow: View {
                         Divider()
                         ChatFileChangeView(change: change)
                     }
-                    if loading { ProgressView("Loading changes...").font(.caption) }
-                    if let failure {
-                        Text(failure).font(.caption).foregroundStyle(MobileStyle.muted)
+                    if work.loading { ProgressView("Loading changes...").font(.caption) }
+                    if let problem = work.problem {
+                        Text(problem).font(.caption).foregroundStyle(MobileStyle.muted)
                         Button("Retry") { Task { await load() } }.frame(minHeight: 44)
                     }
                 }
@@ -177,17 +176,15 @@ struct ChatChangedFilesRow: View {
     }
 
     private func load() async {
-        guard stored == nil, !fetchedOnce, turn.value["checkpoint"]?.stringValue != nil, !loading else { return }
-        loading = true
-        defer { loading = false }
-        do {
+        guard stored == nil, !fetchedOnce, turn.value["checkpoint"]?.stringValue != nil, !work.loading else { return }
+        await work.read { stillTheLatest in
             let result = try await client.request(
                 "chat.turnDiff",
                 payload: .object(["chatId": .string(chatID), "turnId": turn.value["turnId"] ?? .string(turn.id)]))
-            try Task.checkCancellation()
-            fetched = result["diff"] == .null ? nil : result["diff"]
+            try stillTheLatest()
+            // A turn whose diff is empty still counts as read: a second attempt would answer the same.
+            work.value = result["diff"] == .null ? nil : result["diff"]
             fetchedOnce = true
-            failure = nil
-        } catch is CancellationError {} catch { failure = error.localizedDescription }
+        }
     }
 }
