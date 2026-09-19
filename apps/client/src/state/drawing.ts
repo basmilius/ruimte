@@ -1,6 +1,7 @@
 import { createStore, type StoreApi } from 'zustand';
 import { editorBindings } from '@/state/editor-bindings';
 import { createEditorRegistry } from '@/state/editors';
+import { mergeSelection } from '@/state/selection';
 import type {
     DrawingColor,
     DrawingContent,
@@ -92,9 +93,11 @@ export interface DrawingState extends CameraSlice {
     unload(): void;
     exportContent(): DrawingContent;
 
+    /* `additive` is shift: what is already selected stays, and something clicked again drops out. */
     select(ids: string[], additive?: boolean): void;
     selectAll(): void;
     clearSelection(): void;
+    /* A box only ever adds, since dragging one across what is selected must not clear it. */
     selectInRect(rect: Rect, additive?: boolean): void;
 
     setTool(tool: DrawingTool): void;
@@ -285,20 +288,7 @@ export const createDrawingStore = (): StoreApi<DrawingState> =>
         },
 
         select(ids, additive = false) {
-            const { selection } = get();
-            if (!additive) {
-                set({ selection: ids });
-                return;
-            }
-            const next = new Set(selection);
-            for (const id of ids) {
-                if (next.has(id)) {
-                    next.delete(id);
-                } else {
-                    next.add(id);
-                }
-            }
-            set({ selection: [...next] });
+            set((state) => ({ selection: mergeSelection(state.selection, ids, additive ? 'toggle' : 'replace') }));
         },
         selectAll() {
             set((state) => ({ selection: state.elements.filter((element) => !element.locked).map((element) => element.id) }));
@@ -310,7 +300,7 @@ export const createDrawingStore = (): StoreApi<DrawingState> =>
             const hit = get()
                 .elements.filter((element) => !element.locked && intersects(element, rect))
                 .map((element) => element.id);
-            set((state) => ({ selection: additive ? [...new Set([...state.selection, ...hit])] : hit }));
+            set((state) => ({ selection: mergeSelection(state.selection, hit, additive ? 'add' : 'replace') }));
         },
 
         setTool(tool) {

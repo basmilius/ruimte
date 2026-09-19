@@ -279,6 +279,23 @@ describe('the node the keyboard is in', () => {
         });
     };
 
+    test('shift-clicking a node that is already selected takes it out again', () => {
+        two();
+        canvas().select(['a']);
+        canvas().select(['b'], true);
+        expect(canvas().selection).toEqual(['a', 'b']);
+
+        canvas().select(['a'], true);
+        expect(canvas().selection).toEqual(['b']);
+    });
+
+    test('a box drawn with shift only ever adds, so dragging over the selection never clears it', () => {
+        two();
+        canvas().select(['a']);
+        canvas().selectInRect({ x: -1000, y: -1000, w: 4000, h: 4000 }, true);
+        expect(canvas().selection).toEqual(['a', 'b']);
+    });
+
     test('activateNode selects a node, puts it on top and hands it the keyboard', () => {
         two();
         canvas().activateNode('a');

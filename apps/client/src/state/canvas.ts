@@ -1,6 +1,7 @@
 import { createStore, type StoreApi } from 'zustand';
 import { canLink } from '@/canvas/edge-lines';
 import { editorBindings } from '@/state/editor-bindings';
+import { mergeSelection } from '@/state/selection';
 import { createEditorRegistry } from '@/state/editors';
 import { cameraCenteredOn, cameraOfView, intersects, snapToGrid, unionOf, type Point, type Rect } from '@/canvas/math';
 import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
@@ -143,8 +144,10 @@ export interface CanvasState extends CameraSlice {
     /* Brings the camera to one node and selects it; the only camera move a canvas has of its own. */
     goToNode(id: string): void;
 
+    /* `additive` is shift: what is already selected stays, and something clicked again drops out. */
     select(ids: string[], additive?: boolean): void;
     clearSelection(): void;
+    /* A box only ever adds, since dragging one across what is selected must not clear it. */
     selectInRect(rect: Rect, additive?: boolean): void;
     /* Puts a node on top, selects it and hands its content the keyboard: what a click in a body does. */
     activateNode(id: string): void;
@@ -329,14 +332,13 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
             });
         },
         select(ids, additive = false) {
-            const current = get().selection;
-            set({ selection: additive ? Array.from(new Set([...current, ...ids])) : ids });
+            set((state) => ({ selection: mergeSelection(state.selection, ids, additive ? 'toggle' : 'replace') }));
         },
         clearSelection() {
             set({ selection: [] });
         },
         selectInRect(rect, additive = false) {
-            const { nodes, texts, hidden } = get();
+            const { nodes, texts, selection, hidden } = get();
             // A node inside a collapsed group is not drawn, so a box drawn over it cannot take it along.
             const hits = [
                 ...Object.values(nodes)
@@ -346,7 +348,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                     .filter((text) => !hidden.has(text.id) && intersects({ x: text.x, y: text.y, w: text.size * 8, h: text.size * 1.4 }, rect))
                     .map((text) => text.id)
             ];
-            set((state) => ({ selection: additive ? [...new Set([...state.selection, ...hits])] : hits }));
+            set({ selection: mergeSelection(selection, hits, additive ? 'add' : 'replace') });
         },
         activateNode(id) {
             get().bringToFront(id);
