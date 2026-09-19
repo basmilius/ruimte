@@ -1,15 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject, type WheelEvent as ReactWheelEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { CircleAlert, LoaderCircle } from 'lucide-react';
-import {
-    HEVC_STREAM_CONTENT_TYPE,
-    LiveStreamDecoder,
-    LIVE_STREAM_CONTENT_TYPE,
-    type DeviceInfo,
-    type DeviceInput,
-    type LiveStreamFrame
-} from '@ruimte/contracts';
+import { HEVC_STREAM_CONTENT_TYPE, LiveStreamDecoder, LIVE_STREAM_CONTENT_TYPE, type DeviceInfo, type DeviceInput } from '@ruimte/contracts';
 import { credentialFor } from '@/endpoint/credentials';
 import {
     approachGestureTotal,
@@ -20,10 +13,11 @@ import {
     positionInContainedFrame,
     trackpadGesturePoint
 } from '@/devices/device-layout';
-import { HevcDecoderGate } from '@/devices/hevc-decoder';
+import { hevcFrameDecoder } from '@/devices/hevc-decoder';
 import { useEndpoints } from '@/state/endpoints';
 import { useEndpointId } from '@/state/keys';
 import { deviceClientFor } from '@/transport/connections';
+import { FramePainter, wait } from '@/transport/live-stream';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 
@@ -41,123 +35,6 @@ interface TrackedPointer {
     x: number;
     y: number;
     edge?: 'bottom';
-}
-
-const wait = (ms: number, signal: AbortSignal): Promise<void> =>
-    new Promise((resolve) => {
-        const timer = window.setTimeout(resolve, ms);
-        signal.addEventListener(
-            'abort',
-            () => {
-                window.clearTimeout(timer);
-                resolve();
-            },
-            { once: true }
-        );
-    });
-
-class FramePainter {
-    private readonly canvas: RefObject<HTMLCanvasElement | null>;
-    private drawing = false;
-    private readonly failed: (message: string) => void;
-    private readonly painted: () => void;
-    private pending: LiveStreamFrame | null = null;
-    private videoDecoder: VideoDecoder | null = null;
-    private readonly videoGate = new HevcDecoderGate();
-
-    constructor(canvas: RefObject<HTMLCanvasElement | null>, painted: () => void, failed: (message: string) => void) {
-        this.canvas = canvas;
-        this.painted = painted;
-        this.failed = failed;
-    }
-
-    push(frame: LiveStreamFrame): void {
-        if (frame.format === 'hevc') {
-            this.decodeVideo(frame);
-            return;
-        }
-        this.pending = frame;
-        if (!this.drawing) {
-            void this.draw();
-        }
-    }
-
-    close(): void {
-        this.pending = null;
-        this.videoDecoder?.close();
-        this.videoDecoder = null;
-        this.videoGate.reset();
-    }
-
-    private decodeVideo(frame: LiveStreamFrame): void {
-        if (!('VideoDecoder' in window)) {
-            this.failed(i18next.t('machines:device.stream.noDecoder'));
-            return;
-        }
-        const chunkType = this.videoGate.accept(frame.data, this.videoDecoder?.decodeQueueSize ?? 0);
-        if (!chunkType) {
-            return;
-        }
-        try {
-            if (!this.videoDecoder || this.videoDecoder.state === 'closed') {
-                const decoder = new VideoDecoder({
-                    output: (videoFrame) => {
-                        const canvas = this.canvas.current;
-                        if (canvas) {
-                            canvas.width = videoFrame.displayWidth;
-                            canvas.height = videoFrame.displayHeight;
-                            canvas.getContext('2d', { alpha: false })?.drawImage(videoFrame, 0, 0, canvas.width, canvas.height);
-                            this.painted();
-                        }
-                        videoFrame.close();
-                    },
-                    error: (error) => {
-                        if (this.videoDecoder === decoder) {
-                            this.videoDecoder = null;
-                            this.videoGate.reset();
-                        }
-                        this.failed(error.message);
-                    }
-                });
-                this.videoDecoder = decoder;
-                decoder.configure({ codec: 'hev1.1.6.L93.B0', hardwareAcceleration: 'prefer-hardware', optimizeForLatency: true });
-            }
-            this.videoDecoder.decode(new EncodedVideoChunk({ type: chunkType, timestamp: frame.sequence * 16_667, data: frame.data.slice().buffer }));
-        } catch (error) {
-            if (this.videoDecoder?.state !== 'closed') {
-                this.videoDecoder?.close();
-            }
-            this.videoGate.reset();
-            this.videoDecoder = null;
-            this.failed(error instanceof Error ? error.message : i18next.t('machines:device.stream.undecodable'));
-        }
-    }
-
-    private async draw(): Promise<void> {
-        this.drawing = true;
-        try {
-            while (this.pending) {
-                const frame = this.pending;
-                this.pending = null;
-                const bitmap = await createImageBitmap(new Blob([frame.data.slice().buffer], { type: 'image/jpeg' }));
-                const canvas = this.canvas.current;
-                if (canvas) {
-                    canvas.width = frame.width;
-                    canvas.height = frame.height;
-                    canvas.getContext('2d', { alpha: false })?.drawImage(bitmap, 0, 0, frame.width, frame.height);
-                    this.painted();
-                }
-                bitmap.close();
-            }
-        } catch (error) {
-            this.failed(error instanceof Error ? error.message : i18next.t('machines:device.stream.frameFailed'));
-        } finally {
-            this.drawing = false;
-            if (this.pending) {
-                void this.draw();
-            }
-        }
-    }
 }
 
 export function DeviceStream({ device }: { device: DeviceInfo }) {
@@ -193,12 +70,16 @@ export function DeviceStream({ device }: { device: DeviceInfo }) {
     const [framePainter] = useState(
         () =>
             new FramePainter(
-                canvas,
-                () => {
-                    setImageReady(true);
-                    setStreamError(null);
+                {
+                    canvas,
+                    painted: () => {
+                        setImageReady(true);
+                        setStreamError(null);
+                    },
+                    failed: setStreamError,
+                    undrawable: () => i18next.t('machines:device.stream.frameFailed')
                 },
-                setStreamError
+                hevcFrameDecoder
             )
     );
 

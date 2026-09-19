@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
-import { LiveStreamDecoder, LIVE_STREAM_CONTENT_TYPE, type BrowserInput, type LiveStreamFrame } from '@ruimte/contracts';
+import { useEffect, useRef, useState } from 'react';
+import { LiveStreamDecoder, LIVE_STREAM_CONTENT_TYPE, type BrowserInput } from '@ruimte/contracts';
 import i18next from 'i18next';
 import { CircleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { browserClientFor } from '@/transport/connections';
+import { FramePainter, wait } from '@/transport/live-stream';
 import { credentialFor } from '@/endpoint/credentials';
 import { useEndpointId } from '@/state/keys';
 import { useEndpoints } from '@/state/endpoints';
@@ -20,66 +21,6 @@ const modifiersOf = (event: { altKey: boolean; ctrlKey: boolean; metaKey: boolea
 const buttonOf = (button: number): 'left' | 'middle' | 'right' => (button === 1 ? 'middle' : button === 2 ? 'right' : 'left');
 
 const buttonsOf = (buttons: number): number => (buttons & 1 ? 1 : 0) | (buttons & 2 ? 4 : 0) | (buttons & 4 ? 2 : 0);
-
-const wait = (ms: number, signal: AbortSignal): Promise<void> =>
-    new Promise((resolve) => {
-        const timer = window.setTimeout(resolve, ms);
-        signal.addEventListener(
-            'abort',
-            () => {
-                window.clearTimeout(timer);
-                resolve();
-            },
-            { once: true }
-        );
-    });
-
-class FramePainter {
-    private readonly canvas: RefObject<HTMLCanvasElement | null>;
-    private drawing = false;
-    private readonly failed: (message: string) => void;
-    private readonly painted: () => void;
-    private pending: LiveStreamFrame | null = null;
-
-    constructor(canvas: RefObject<HTMLCanvasElement | null>, painted: () => void, failed: (message: string) => void) {
-        this.canvas = canvas;
-        this.painted = painted;
-        this.failed = failed;
-    }
-
-    push(frame: LiveStreamFrame): void {
-        this.pending = frame;
-        if (!this.drawing) {
-            void this.draw();
-        }
-    }
-
-    private async draw(): Promise<void> {
-        this.drawing = true;
-        try {
-            while (this.pending) {
-                const frame = this.pending;
-                this.pending = null;
-                const bitmap = await createImageBitmap(new Blob([frame.data.slice().buffer], { type: 'image/jpeg' }));
-                const canvas = this.canvas.current;
-                if (canvas) {
-                    canvas.width = frame.width;
-                    canvas.height = frame.height;
-                    canvas.getContext('2d', { alpha: false })?.drawImage(bitmap, 0, 0, frame.width, frame.height);
-                    this.painted();
-                }
-                bitmap.close();
-            }
-        } catch (error) {
-            this.failed(error instanceof Error ? error.message : i18next.t('browser:stream.frameFailed'));
-        } finally {
-            this.drawing = false;
-            if (this.pending) {
-                void this.draw();
-            }
-        }
-    }
-}
 
 export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: string; initialUrl: string; className?: string }) {
     const { t } = useTranslation('browser');
@@ -103,14 +44,15 @@ export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: str
     const streamId = row?.streamId ?? `browser:${id}`;
     const [framePainter] = useState(
         () =>
-            new FramePainter(
+            new FramePainter({
                 canvas,
-                () => {
+                painted: () => {
                     setImageReady(true);
                     setStreamError(null);
                 },
-                setStreamError
-            )
+                failed: setStreamError,
+                undrawable: () => i18next.t('browser:stream.frameFailed')
+            })
     );
 
     useEffect(
