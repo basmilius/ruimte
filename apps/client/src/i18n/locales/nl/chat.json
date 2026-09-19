@@ -250,13 +250,7 @@
     "unsupported": "Deze machine kan het gesprek van een sub-agent niet openen. Werk Ruimte daar bij om het te lezen.",
     "unreadable": "Het gesprek kon niet worden gelezen.",
     "noAnswer": "De machine antwoordde niet",
-    "stopFailed": "De sub-agent kon niet worden gestopt",
-    "status": {
-      "running": "bezig",
-      "done": "klaar",
-      "failed": "mislukt",
-      "cancelled": "geannuleerd"
-    }
+    "stopFailed": "De sub-agent kon niet worden gestopt"
   },
   "modes": {
     "supervised": {
