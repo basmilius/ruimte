@@ -4,7 +4,7 @@ import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import clsx from 'clsx';
 import type { ChatSubagentItem } from '@ruimte/contracts';
-import { deriveTimelineRows, isBlock } from '@/chat/logic/timeline';
+import { deriveTimelineRows } from '@/chat/logic/timeline';
 import { crumbOf, openFromMain, useSubagentTrail } from '@/chat/subagent-view';
 import { registerMessageStepper, registerTimeline, setTimelineAtEnd } from '@/chat/timeline-scroll';
 import { SCRUBBER_MIN_TICKS, STRIP_INSET_PX, STRIP_WIDTH_PX, messagesInView, stepMessage, threadPaddingLeft, ticksOf } from '@/chat/logic/scrubber';
@@ -12,6 +12,8 @@ import { EMPTY_TARGET, readTimelineTarget, withCurrentText, type TimelineTarget 
 import { forkRefusal } from '@/chat/logic/fork';
 import { Scrubber, type CardChat } from '@/chat/ui/Scrubber';
 import { TimelineMenuPopup } from '@/chat/ui/TimelineMenu';
+import { FOLLOW_THRESHOLD_PX, rowRhythm } from '@/chat/ui/rows/row-rhythm';
+import { useToggleSet } from '@/chat/ui/useToggleSet';
 import { Row } from '@/chat/ui/rows/Rows';
 import { useChatRow, useChats } from '@/state/chats';
 import { endpointKey, useEndpointId } from '@/state/keys';
@@ -23,8 +25,6 @@ import { SECTION_LABEL } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 
-/* Below this distance from the bottom the thread follows new content; above it the reader scrolled back on purpose. */
-const FOLLOW_THRESHOLD_PX = 40;
 const ESTIMATED_ROW_PX = 56;
 
 /*
@@ -68,12 +68,15 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
     const endpointId = useEndpointId();
     // Read when the menu opens rather than subscribed to, for the same reason the rows use the structure.
     const fullItems = () => useChats.getState().byKey[endpointKey(endpointId, chatId)]?.items;
-    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
-    const [expandedTurns, setExpandedTurns] = useState<Set<string>>(() => new Set());
-    const [expandedSubagents, setExpandedSubagents] = useState<Set<string>>(() => new Set());
     const scrollRef = useRef<HTMLDivElement>(null);
     const threadRef = useRef<HTMLDivElement>(null);
     const followRef = useRef(true);
+    const stopFollowing = useCallback(() => {
+        followRef.current = false;
+    }, []);
+    const groups = useToggleSet(stopFollowing);
+    const turns = useToggleSet(stopFollowing);
+    const subagents = useToggleSet(stopFollowing);
     const scrollGeometry = useRef({ top: 0, height: 0, viewport: 0 });
     const [target, setTarget] = useState<TimelineTarget>(EMPTY_TARGET);
     const { trail, show } = useSubagentTrail(chatId);
@@ -88,9 +91,9 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
         }
         return deriveTimelineRows(
             order.map((id) => items[id]!),
-            { expandedGroups, expandedTurns, expandedSubagents, activeTurnId }
+            { expandedGroups: groups.ids, expandedTurns: turns.ids, expandedSubagents: subagents.ids, activeTurnId }
         );
-    }, [order, items, expandedGroups, expandedTurns, expandedSubagents, activeTurnId]);
+    }, [order, items, groups.ids, turns.ids, subagents.ids, activeTurnId]);
 
     const empty = rows.length === 0;
     const ticks = useMemo(() => ticksOf(rows), [rows]);
@@ -231,20 +234,6 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
     };
     useEffect(() => registerMessageStepper(endpointKey(endpointId, chatId), (direction) => stepRef.current(direction)), [endpointId, chatId]);
 
-    const toggle = (set: (update: (current: Set<string>) => Set<string>) => void, id: string): void => {
-        set((current) => {
-            const next = new Set(current);
-            if (next.has(id)) {
-                next.delete(id);
-            } else {
-                next.add(id);
-            }
-            return next;
-        });
-        // Opening or closing a fold is a deliberate look back, not a reason to jump to the end.
-        followRef.current = false;
-    };
-
     /* The whole of what a sub-agent did, in the thread's place: its row only keeps the beginning. */
     const openConversation = (item: ChatSubagentItem): void => {
         show(openFromMain(crumbOf(item)));
@@ -257,7 +246,7 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
         if (!row) {
             return;
         }
-        setExpandedSubagents((current) => new Set(current).add(row.id));
+        subagents.add(row.id);
         followRef.current = false;
         virtualizer.scrollToIndex(index, { align: 'start' });
     };
@@ -305,8 +294,6 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                                             // Put turn gaps inside the measured row so the virtualizer includes them.
                                             const question = row.kind === 'user';
                                             const previous = virtualRow.index > 0 ? rows[virtualRow.index - 1]! : null;
-                                            // A question already carries the turn gap, and the row after one the answer gap.
-                                            const seam = !question && previous !== null && previous.kind !== 'user' && isBlock(row) !== isBlock(previous);
                                             return (
                                                 <div
                                                     key={row.id}
@@ -315,18 +302,17 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
                                                     ref={virtualizer.measureElement}
                                                     className={clsx(
                                                         'absolute left-0 top-0 w-full',
-                                                        question && 'pb-(--chat-answer-gap)',
-                                                        question && virtualRow.index > 0 && 'pt-(--chat-turn-gap)',
-                                                        seam && 'pt-(--chat-block-gap)'
+                                                        rowRhythm(row, previous),
+                                                        question && virtualRow.index > 0 && 'pt-(--chat-turn-gap)'
                                                     )}
                                                     style={{ transform: `translateY(${virtualRow.start}px)` }}
                                                 >
                                                     <Row
                                                         row={row}
                                                         chatId={chatId}
-                                                        toggleGroup={(id) => toggle(setExpandedGroups, id)}
-                                                        toggleTurn={(id) => toggle(setExpandedTurns, id)}
-                                                        toggleSubagent={(id) => toggle(setExpandedSubagents, id)}
+                                                        toggleGroup={groups.toggle}
+                                                        toggleTurn={turns.toggle}
+                                                        toggleSubagent={subagents.toggle}
                                                         openSubagent={openSubagent}
                                                         openConversation={openConversation}
                                                     />
