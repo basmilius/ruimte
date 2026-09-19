@@ -3,8 +3,8 @@ import { EMPTY_DIAGRAM, type DiagramContent, type DiagramDocument, type DiagramN
 import { layoutOf, type DiagramLayout } from '@ruimte/diagram';
 import { cameraOfView } from '@/canvas/math';
 import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
+import { editorBindings } from '@/state/editor-bindings';
 import { createEditorRegistry } from '@/state/editors';
-import { editorHook, focusedEditor, useEditorStoreOf } from '@/state/workspace-stores';
 
 export interface DiagramState extends CameraSlice {
     /* The diagram view this store holds, or null while none is on screen. */
@@ -243,18 +243,10 @@ export const defaultDiagramStore = createDiagramStore();
 /* The diagram editors of the window; its blank editor is the store this module made. */
 export const defaultDiagrams = createEditorRegistry(createDiagramStore, defaultDiagramStore);
 
-/* What a component reads while it renders: the diagram of the cell it is drawn in. */
-export const useDiagram = editorHook(defaultDiagrams);
-
-/* The diagram store of the cell a component is drawn in, for everything that writes or subscribes. */
-export const useDiagramStore = (): StoreApi<DiagramState> => useEditorStoreOf(defaultDiagrams);
-
-/* The diagram of the cell that has the focus, for a palette row with no cell of its own. */
-export const focusedDiagram = (): StoreApi<DiagramState> => focusedEditor(defaultDiagrams);
-
-/* What a diagram view holds right now, which is fresher than anything the daemon has been told. */
-export const liveDiagram = (viewId: string): DiagramState | null => defaultDiagrams.peek(viewId)?.getState() ?? null;
-
-/* Every change in every diagram on screen, named by the view it happened in. */
-export const subscribeDiagrams = (listener: (viewId: string, state: DiagramState, previous: DiagramState) => void): (() => void) =>
-    defaultDiagrams.subscribe(listener);
+export const {
+    use: useDiagram,
+    useStore: useDiagramStore,
+    focused: focusedDiagram,
+    live: liveDiagram,
+    subscribe: subscribeDiagrams
+} = editorBindings(defaultDiagrams);

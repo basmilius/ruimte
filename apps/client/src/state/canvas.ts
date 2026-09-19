@@ -1,7 +1,7 @@
 import { createStore, type StoreApi } from 'zustand';
 import { canLink } from '@/canvas/edge-lines';
+import { editorBindings } from '@/state/editor-bindings';
 import { createEditorRegistry } from '@/state/editors';
-import { editorHook, focusedEditor, useEditorStoreOf } from '@/state/workspace-stores';
 import { cameraCenteredOn, cameraOfView, intersects, snapToGrid, unionOf, type Point, type Rect } from '@/canvas/math';
 import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
 
@@ -772,22 +772,18 @@ export const defaultCanvasStore = createCanvasStore();
 /* The canvas editors of the window; its blank editor is the store this module made. */
 export const defaultCanvases = createEditorRegistry(createCanvasStore, defaultCanvasStore);
 
-/* What a component reads while it renders: the canvas of the cell it is drawn in. */
-export const useCanvas = editorHook(defaultCanvases);
-
 /*
- * The canvas store of the cell a component is drawn in, as the store itself. A component that
- * subscribes or writes rather than reads needs this: the hook above has no `getState`, because a
- * component holding one that answers for the cell beside it is the bug this is here to make hard.
+ * `useCanvas` reads, `useCanvasStore` writes and subscribes, and `focusedCanvas` is "the canvas in
+ * front of me", which is what a shortcut, a window menu or a palette row means. Inside a cell that
+ * last one is the wrong store as often as not.
  */
-export const useCanvasStore = (): StoreApi<CanvasState> => useEditorStoreOf(defaultCanvases);
-
-/*
- * The canvas of the cell that has the focus. This is "the canvas in front of me", which is what a
- * shortcut, a window menu, a palette row or anything else with no cell of its own means. Inside a cell
- * it is the wrong store as often as not: use `useCanvasStore`.
- */
-export const focusedCanvas = (): StoreApi<CanvasState> => focusedEditor(defaultCanvases);
+export const {
+    use: useCanvas,
+    useStore: useCanvasStore,
+    focused: focusedCanvas,
+    live: liveCanvas,
+    subscribe: subscribeCanvases
+} = editorBindings(defaultCanvases);
 
 /*
  * The editor of the view a node stands on, out of every canvas on screen. What arrives for one node
@@ -796,12 +792,6 @@ export const focusedCanvas = (): StoreApi<CanvasState> => focusedEditor(defaultC
  */
 export const canvasOfNode = (nodeId: string): StoreApi<CanvasState> | null =>
     defaultCanvases.live().find(([, store]) => store.getState().nodes[nodeId] !== undefined)?.[1] ?? null;
-
-/*
- * What a view holds right now. A view on screen is held by its editor, which is fresher than the
- * copy the document keeps of it, so anything asking what a project has must prefer this.
- */
-export const liveCanvas = (viewId: string): CanvasState | null => defaultCanvases.peek(viewId)?.getState() ?? null;
 
 /*
  * Selects a node and brings the camera to it once it is on its canvas, for a node the machine writes
@@ -827,13 +817,6 @@ export const revealWhenItLands = (viewId: string, nodeId: string): void => {
 
 /* Every canvas on screen, which is what a watcher about the whole project walks over. */
 export const liveCanvases = (): [string, CanvasState][] => defaultCanvases.live().map(([viewId, store]) => [viewId, store.getState()]);
-
-/*
- * Every change in every canvas on screen, and one opening or closing. A watcher that is about the
- * project subscribes here rather than to `useCanvas`, which is one cell and stops being that cell
- * the moment another view takes it.
- */
-export const subscribeCanvases = (listener: () => void): (() => void) => defaultCanvases.subscribe(listener);
 
 /* A node's content has the keyboard, which is what a page, a terminal and the wheel all read. */
 export const isNodeActive = (bodyFocusId: string | null, id: string): boolean => bodyFocusId === id;
