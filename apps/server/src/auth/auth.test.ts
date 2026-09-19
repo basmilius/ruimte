@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { decideAccess, mayInvite, originAllowed, reachabilityOf } from './access.ts';
 import { AuthStore, PAIRING_TTL_MS } from './auth-store.ts';
-import { generateKeyPair, signMessage, verifySignature } from './keys.ts';
+import { verifySignature } from '@ruimte/pulsar/verify-node';
+import { generateKeyPair, signMessage } from './keys.ts';
 
 let home: string;
 let clock: number;

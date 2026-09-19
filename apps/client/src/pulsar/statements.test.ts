@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { accessRequestMessage, type AccessRequestPayload } from '@ruimte/pulsar';
 import { createClientKeyLoader, type KeyStore } from '@/endpoint/client-key';
-import { verifyDaemon } from '@/endpoint/handshake';
+import { verifySignature } from '@ruimte/pulsar/verify-web';
 import { requestSignalAccess } from './statements';
 
 const memoryStore = (): KeyStore => {
@@ -30,7 +30,7 @@ describe('requestSignalAccess', () => {
         expect(first).toEqual({ statement: expect.objectContaining({ machineId: 'machine-1', clientPublicKey: key.publicKey }), label: 'Ruimte on macOS' });
         expect(asked[0]!.nonce).toMatch(/^[A-Za-z0-9_-]{24}$/);
         expect(asked[1]!.nonce).not.toBe(asked[0]!.nonce);
-        expect(await verifyDaemon(key.publicKey, accessRequestMessage('machine-1', key.publicKey, asked[0]!.nonce), asked[0]!.signature)).toBe(true);
+        expect(await verifySignature(key.publicKey, accessRequestMessage('machine-1', key.publicKey, asked[0]!.nonce), asked[0]!.signature)).toBe(true);
     });
 
     test('a statement for another machine, key or nonce than the one asked for is not carried', async () => {

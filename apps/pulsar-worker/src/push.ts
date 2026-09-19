@@ -13,7 +13,7 @@ import {
     type PushEnvelope
 } from '@ruimte/pulsar';
 import { apnsConfigured, invalidApnsToken, deliverApns, type ApnsResult } from './apns.ts';
-import { verifyEd25519 } from './crypto.ts';
+import { verifySignature } from '@ruimte/pulsar/verify-web';
 import type { Env } from './env.ts';
 import { clientIp, failure, json, noContent, readBody } from './http.ts';
 import { overLimit } from './rate-limit.ts';
@@ -271,7 +271,7 @@ export const sendPush = async (request: Request, env: Env, seams: PushDeliverySe
     if (!device) {
         return failure('unauthorized', 'The machine and active device must belong to the same account');
     }
-    if (!(await verifyEd25519(device.public_key, pushMessage(push), push.signature))) {
+    if (!(await verifySignature(device.public_key, pushMessage(push), push.signature))) {
         return failure('bad-signature', 'The machine did not sign this notification');
     }
     for (const [bucket, limit] of [

@@ -14,7 +14,8 @@ import {
 import type { SignalAccess, SignalEnvelope } from '@ruimte/pulsar';
 import { randomBytes } from 'node:crypto';
 import { RTCPeerConnection, type RTCDataChannel } from 'werift';
-import { signMessage, verifySignature } from '../auth/keys.ts';
+import { verifySignature } from '@ruimte/pulsar/verify-node';
+import { signMessage } from '../auth/keys.ts';
 import { localSecretProof } from './channel-auth.ts';
 import { AUTHENTICATED_FRAME_CHARS, directChannel, fromWerift, UNAUTHENTICATED_FRAME_CHARS, type DirectChannel } from './data-channel.ts';
 

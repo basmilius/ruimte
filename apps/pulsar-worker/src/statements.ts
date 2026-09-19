@@ -6,7 +6,8 @@ import {
     toBase64Url,
     type AccessStatement
 } from '@ruimte/pulsar';
-import { signEd25519, statementKeyOf, verifyEd25519 } from './crypto.ts';
+import { verifySignature } from '@ruimte/pulsar/verify-web';
+import { signEd25519, statementKeyOf } from './crypto.ts';
 import type { Env } from './env.ts';
 import { clientIp, failure, json, readBody } from './http.ts';
 import { LIMITS, overAnyLimit } from './rate-limit.ts';
@@ -34,7 +35,7 @@ export const issueStatement = async (request: Request, env: Env): Promise<Respon
         return body.response;
     }
     const { machineId, clientPublicKey, nonce, signature } = body.value;
-    if (!(await verifyEd25519(clientPublicKey, accessRequestMessage(machineId, clientPublicKey, nonce), signature))) {
+    if (!(await verifySignature(clientPublicKey, accessRequestMessage(machineId, clientPublicKey, nonce), signature))) {
         return failure('bad-signature', 'The request is not signed by the key it names');
     }
     // A machine on another account answers the same as one that does not exist, so ids cannot be probed.

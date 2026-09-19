@@ -1,5 +1,5 @@
 import { PULSAR_STATEMENT_PUBLIC_KEYS, accessStatementMessage, type AccessStatement, type SignalAccess } from '@ruimte/pulsar';
-import { isPublicKey, verifySignature } from '../auth/keys.ts';
+import { isPublicKey, verifySignature } from '@ruimte/pulsar/verify-node';
 
 /*
  * How far the address book's clock and this machine's may disagree. A statement lives two minutes, so

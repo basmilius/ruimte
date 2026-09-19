@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { PushSubscribePayloadSchema, type AuthSession, type PairingOrigin, type PushSubscribePayload } from '@ruimte/contracts';
 import { z } from 'zod';
 import { isNotFound, writeAtomic } from '../fs.ts';
-import { isPublicKey } from './keys.ts';
+import { isPublicKey } from '@ruimte/pulsar/verify-node';
 import { errorText } from '../error-text.ts';
 
 // A pairing URL that nobody used in ten minutes is not going to be.

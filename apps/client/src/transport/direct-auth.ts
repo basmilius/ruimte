@@ -1,5 +1,6 @@
 import i18next from 'i18next';
 import { toBase64Url } from '@ruimte/pulsar';
+import { verifySignature } from '@ruimte/pulsar/verify-web';
 import {
     clientChannelMessage,
     daemonChannelMessage,
@@ -10,7 +11,6 @@ import {
 } from '@ruimte/contracts';
 import { clientKey, type ClientKey } from '@/endpoint/client-key';
 import { localSecretOf } from '@/endpoint/credentials';
-import { verifyDaemon } from '@/endpoint/handshake';
 import { endpointById } from '@/state/endpoints';
 
 export interface ProofCredentials {
@@ -38,7 +38,7 @@ export const proveChallenge = async (credentials: ProofCredentials, challenge: D
     const { pinned } = credentials;
     if (pinned !== null) {
         const identical = daemon.publicKey === pinned.publicKey && (pinned.daemonId === null || pinned.daemonId === daemon.id);
-        if (!identical || !(await verifyDaemon(pinned.publicKey, daemonChannelMessage(daemon.id, challenge.challenge, binding), daemon.signature))) {
+        if (!identical || !(await verifySignature(pinned.publicKey, daemonChannelMessage(daemon.id, challenge.challenge, binding), daemon.signature))) {
             throw new Error(i18next.t('machines:direct.notProven', { label: credentials.label }));
         }
         if (credentials.key === null) {

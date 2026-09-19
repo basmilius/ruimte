@@ -14,7 +14,8 @@ import {
     type SignalCloseReason,
     type SignalEnvelope
 } from '@ruimte/pulsar';
-import { generateKeyPair, signMessage, verifySignature } from '../auth/keys.ts';
+import { verifySignature } from '@ruimte/pulsar/verify-node';
+import { generateKeyPair, signMessage } from '../auth/keys.ts';
 import { readLocalSecret } from '../auth/local-secret.ts';
 import { DirectClient, type DirectCredential } from '../pulsar/direct-client.ts';
 import {

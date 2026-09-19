@@ -23,7 +23,7 @@ import {
     type MachineIcon,
     type ProviderId
 } from '@ruimte/pulsar';
-import { verifyEd25519 } from './crypto.ts';
+import { verifySignature } from '@ruimte/pulsar/verify-web';
 import type { Env } from './env.ts';
 import { clientIp, failure, json, noContent, readBody } from './http.ts';
 import { storeMachine } from './machines.ts';
@@ -80,7 +80,7 @@ export const startDeviceLink = async (request: Request, env: Env): Promise<Respo
     if (Math.abs(now - payload.issuedAt) > MACHINE_REGISTRATION_MAX_SKEW_MS) {
         return failure('bad-request', 'The request was signed too long ago, or the machine clock is off');
     }
-    if (!(await verifyEd25519(payload.publicKey, deviceLinkStartMessage(payload.id, payload.publicKey, payload.name, payload.issuedAt), payload.signature))) {
+    if (!(await verifySignature(payload.publicKey, deviceLinkStartMessage(payload.id, payload.publicKey, payload.name, payload.issuedAt), payload.signature))) {
         return failure('bad-signature', 'The machine did not sign this request');
     }
     const deviceCode = randomToken();
@@ -253,7 +253,7 @@ export const completeDeviceLink = async (request: Request, env: Env): Promise<Re
         return failure('bad-request', 'The registration was signed too long ago, or the machine clock is off');
     }
     const message = machineRegistrationMessage(row.account_id, row.machine_id, row.public_key, row.name, payload.issuedAt);
-    if (!(await verifyEd25519(row.public_key, message, payload.signature))) {
+    if (!(await verifySignature(row.public_key, message, payload.signature))) {
         return failure('bad-signature', 'The machine did not sign this registration for the account that approved it');
     }
     const spent = await env.DB.prepare(`UPDATE device_link SET status = 'done' WHERE device_code_hash = ?1 AND status = 'approved' RETURNING 1 AS spent`)

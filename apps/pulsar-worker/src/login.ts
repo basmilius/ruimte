@@ -8,7 +8,7 @@ import {
     sha256,
     type ProviderId
 } from '@ruimte/pulsar';
-import { verifyEd25519 } from './crypto.ts';
+import { verifySignature } from '@ruimte/pulsar/verify-web';
 import type { Env } from './env.ts';
 import { clientIp, failure, json, noContent, readBody } from './http.ts';
 import { resolveAccount, spendLinkToken, storeLinkCode } from './identities.ts';
@@ -235,7 +235,7 @@ export const exchangeLoginCode = async (request: Request, env: Env): Promise<Res
         return failure('unauthorized', 'The login code belongs to another login');
     }
     // After the code is spent, so a key that does not sign costs the login rather than leaving the code for another try.
-    if (!(await verifyEd25519(sessionKey, sessionKeyMessage(code, sessionKey), sessionKeySignature))) {
+    if (!(await verifySignature(sessionKey, sessionKeyMessage(code, sessionKey), sessionKeySignature))) {
         return failure('bad-signature', 'The session key did not sign this login');
     }
     const account: AccountRow = { id: row.account_id, provider: row.provider, login: row.login };

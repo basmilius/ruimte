@@ -1,34 +1,11 @@
 import i18next from 'i18next';
 import { AuthChallengeResultSchema, AuthTicketResultSchema, clientAuthMessage, daemonChallengeMessage } from '@ruimte/contracts';
+import { verifySignature } from '@ruimte/pulsar/verify-web';
 import { desktop } from '@/desktop/bridge';
 import { LOCAL_ENDPOINT_ID, socketUrlFor, useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useToasts } from '@/state/toasts';
 import { clientKey, type ClientKey } from './client-key';
 import { forgetTicket, rememberLocalSecret, rememberTicket } from './credentials';
-
-/*
- * Verifying a daemon's signature needs no private key, so this side of ed25519 is enough of a
- * reason not to reach for a library: what a browser without it loses is the pinning, not the
- * connection, and the client falls back to the session token it already had.
- */
-export const verifyDaemon = async (publicKey: string, message: string, signature: string): Promise<boolean> => {
-    try {
-        const key = await crypto.subtle.importKey('raw', bytesOf(publicKey), { name: 'Ed25519' }, false, ['verify']);
-        return await crypto.subtle.verify({ name: 'Ed25519' }, key, bytesOf(signature), new TextEncoder().encode(message));
-    } catch {
-        return false;
-    }
-};
-
-const bytesOf = (base64url: string): ArrayBuffer => {
-    const binary = atob(base64url.replaceAll('-', '+').replaceAll('_', '/'));
-    const buffer = new ArrayBuffer(binary.length);
-    const bytes = new Uint8Array(buffer);
-    for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-    }
-    return buffer;
-};
 
 const post = async (httpBaseUrl: string, path: string, body: unknown): Promise<unknown | null> => {
     const response = await fetch(`${httpBaseUrl}${path}`, {
@@ -55,7 +32,7 @@ export const signIn = async (endpoint: Endpoint, key: ClientKey): Promise<string
     }
     const { daemon } = challenge.data;
     const identical = daemon.publicKey === pinned && (endpoint.daemonId === null || endpoint.daemonId === daemon.id);
-    if (!identical || !(await verifyDaemon(pinned, daemonChallengeMessage(daemon.id, challenge.data.challenge), daemon.signature))) {
+    if (!identical || !(await verifySignature(pinned, daemonChallengeMessage(daemon.id, challenge.data.challenge), daemon.signature))) {
         reportImposter(endpoint);
         throw new Error(i18next.t('machines:handshake.wrongKey', { address: endpoint.httpBaseUrl }));
     }

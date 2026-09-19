@@ -1,6 +1,7 @@
 import { clientKey, type ClientKey } from '@/endpoint/client-key';
 import { rememberTicket } from '@/endpoint/credentials';
-import { socketAddressFor, verifyDaemon } from '@/endpoint/handshake';
+import { verifySignature } from '@ruimte/pulsar/verify-web';
+import { socketAddressFor } from '@/endpoint/handshake';
 import { machineAccess } from '@/pulsar/statements';
 import { hasLocalMachine } from '@/state/local-machine';
 import { LOCAL_ENDPOINT_ID, brokerRouteOf, endpointById, useEndpoints, type Endpoint } from '@/state/endpoints';
@@ -39,7 +40,7 @@ const linkFor =
             ...(route
                 ? {
                       signaling: () =>
-                          brokerSignaling({ brokerUrl: route.brokerUrl, machineKey: route.machineKey, key: clientKey, verify: verifyDaemon, ...access })
+                          brokerSignaling({ brokerUrl: route.brokerUrl, machineKey: route.machineKey, key: clientKey, verify: verifySignature, ...access })
                   }
                 : {}),
             iceServers: iceServersFrom(useSettings.getState().directStunServers),

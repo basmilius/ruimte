@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
 import { BrokerPeerFrameSchema, brokerHelloMessage, signalMessage, type BrokerPeerFrame, type SignalAccess, type SignalEnvelope } from '@ruimte/pulsar';
-import { generateKeyPair, signMessage, verifySignature } from '../auth/keys.ts';
+import { verifySignature } from '@ruimte/pulsar/verify-node';
+import { generateKeyPair, signMessage } from '../auth/keys.ts';
 import { BrokerRelay, weriftIceServers } from './broker-relay.ts';
 
 const BROKER_URL = 'ws://broker.test:4400';

@@ -7,7 +7,7 @@ import {
     type SessionRefreshPayload,
     type SessionResult
 } from '@ruimte/pulsar';
-import { verifyEd25519 } from './crypto.ts';
+import { verifySignature } from '@ruimte/pulsar/verify-web';
 
 // Short enough that a leaked access token is worth little; the refresh token is what a device keeps.
 export const ACCESS_LIFETIME_MS = 15 * 60_000;
@@ -75,7 +75,7 @@ export const rotateSession = async (db: D1Database, payload: SessionRefreshPaylo
     if (!session?.session_key) {
         return null;
     }
-    if (!(await verifyEd25519(session.session_key, sessionRefreshMessage(payload.refreshToken, payload.issuedAt), payload.signature))) {
+    if (!(await verifySignature(session.session_key, sessionRefreshMessage(payload.refreshToken, payload.issuedAt), payload.signature))) {
         return null;
     }
     if (session.current !== 1) {

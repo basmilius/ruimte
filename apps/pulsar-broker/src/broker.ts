@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { BrokerPeerFrameSchema, brokerHelloMessage, type BrokerRole, type BrokerServerFrame } from '@ruimte/pulsar';
 import type { BrokerLimits } from './config.ts';
-import { verifySignature } from './keys.ts';
+import { verifySignature } from '@ruimte/pulsar/verify-node';
 import { RateLimiter } from './rate-limit.ts';
 import { noTurn, type TurnProvider } from './turn.ts';
 

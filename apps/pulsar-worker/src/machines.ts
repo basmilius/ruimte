@@ -6,7 +6,7 @@ import {
     type Machine,
     type MachineIcon
 } from '@ruimte/pulsar';
-import { verifyEd25519 } from './crypto.ts';
+import { verifySignature } from '@ruimte/pulsar/verify-web';
 import type { Env } from './env.ts';
 import { clientIp, failure, json, noContent, readBody } from './http.ts';
 import { LIMITS, overAnyLimit } from './rate-limit.ts';
@@ -73,7 +73,7 @@ export const registerMachine = async (request: Request, env: Env): Promise<Respo
         return failure('bad-request', 'The registration was signed too long ago, or the machine clock is off');
     }
     const message = machineRegistrationMessage(session.account.id, payload.id, payload.publicKey, payload.name, payload.issuedAt);
-    if (!(await verifyEd25519(payload.publicKey, message, payload.signature))) {
+    if (!(await verifySignature(payload.publicKey, message, payload.signature))) {
         return failure('bad-signature', 'The machine did not sign this registration for this account');
     }
     if (payload.automatic === true) {

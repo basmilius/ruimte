@@ -8,7 +8,7 @@ import {
     type SignalAccess,
     type SignalEnvelope
 } from '@ruimte/pulsar';
-import { verifySignature } from '../auth/keys.ts';
+import { verifySignature } from '@ruimte/pulsar/verify-node';
 import type { Relay } from '../auth/relay.ts';
 
 // The first retry after a lost broker, doubling up to the second; a broker that is down is not hammered.

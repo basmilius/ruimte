@@ -5,7 +5,8 @@ import { join } from 'node:path';
 import { clientAuthMessage, clientChannelMessage, daemonChallengeMessage, daemonChannelMessage } from '@ruimte/contracts';
 import { AuthStore } from './auth-store.ts';
 import { CHALLENGE_TTL_MS, Handshake, TICKET_TTL_MS } from './handshake.ts';
-import { generateKeyPair, signMessage, verifySignature } from './keys.ts';
+import { verifySignature } from '@ruimte/pulsar/verify-node';
+import { generateKeyPair, signMessage } from './keys.ts';
 
 let home: string;
 let clock: number;

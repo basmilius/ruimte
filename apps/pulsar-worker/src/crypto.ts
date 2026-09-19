@@ -2,16 +2,6 @@ import { fromBase64Url } from '@ruimte/pulsar';
 
 const encoder = new TextEncoder();
 
-// False for a key or signature that does not even import, so a caller has one answer to handle.
-export const verifyEd25519 = async (publicKey: string, message: string, signature: string): Promise<boolean> => {
-    try {
-        const key = await crypto.subtle.importKey('raw', fromBase64Url(publicKey), { name: 'Ed25519' }, false, ['verify']);
-        return await crypto.subtle.verify('Ed25519', key, fromBase64Url(signature), encoder.encode(message));
-    } catch {
-        return false;
-    }
-};
-
 export interface StatementKey {
     privateKey: CryptoKey;
     // Raw base64url, what `/health` reports so a deploy can be checked against the pinned key.
