@@ -1,6 +1,12 @@
-import { ACCESS_STATEMENT_LIFETIME_MS, AccessRequestPayloadSchema, accessRequestMessage, accessStatementMessage, type AccessStatement } from '@ruimte/pulsar';
+import {
+    ACCESS_STATEMENT_LIFETIME_MS,
+    AccessRequestPayloadSchema,
+    accessRequestMessage,
+    accessStatementMessage,
+    toBase64Url,
+    type AccessStatement
+} from '@ruimte/pulsar';
 import { signEd25519, statementKeyOf, verifyEd25519 } from './crypto.ts';
-import { toBase64Url } from './encoding.ts';
 import type { Env } from './env.ts';
 import { clientIp, failure, json, readBody } from './http.ts';
 import { LIMITS, overAnyLimit } from './rate-limit.ts';

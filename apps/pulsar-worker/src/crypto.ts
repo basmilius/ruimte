@@ -1,4 +1,4 @@
-import { fromBase64Url } from './encoding.ts';
+import { fromBase64Url } from '@ruimte/pulsar';
 
 const encoder = new TextEncoder();
 

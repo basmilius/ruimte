@@ -1,4 +1,8 @@
-// Without `nodejs_compat` there is no Buffer, and every key, token and hash here travels as base64url.
+/*
+ * base64url in WebCrypto alone, which is what a browser, a phone, Bun and a Worker all have and
+ * `Buffer` is not. The client mints a PKCE verifier and the address book checks it, so the two have
+ * to spell a token the same way down to the padding that is left off.
+ */
 
 export const toBase64Url = (bytes: ArrayBuffer | Uint8Array): string => {
     const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
@@ -19,7 +23,7 @@ export const fromBase64Url = (text: string): Uint8Array<ArrayBuffer> => {
     return bytes;
 };
 
-// 32 random bytes, the size of every token, state and code the address book hands out.
-export const randomToken = (): string => toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
+/* Random bytes in base64url; 32 make a verifier of 43 characters, the shortest RFC 7636 allows. */
+export const randomToken = (bytes = 32): string => toBase64Url(crypto.getRandomValues(new Uint8Array(bytes)));
 
 export const sha256 = async (text: string): Promise<string> => toBase64Url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)));

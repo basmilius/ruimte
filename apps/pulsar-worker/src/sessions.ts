@@ -1,6 +1,13 @@
-import { SESSION_REFRESH_MAX_SKEW_MS, sessionRefreshMessage, type ProviderId, type SessionRefreshPayload, type SessionResult } from '@ruimte/pulsar';
+import {
+    SESSION_REFRESH_MAX_SKEW_MS,
+    randomToken,
+    sessionRefreshMessage,
+    sha256,
+    type ProviderId,
+    type SessionRefreshPayload,
+    type SessionResult
+} from '@ruimte/pulsar';
 import { verifyEd25519 } from './crypto.ts';
-import { randomToken, sha256 } from './encoding.ts';
 
 // Short enough that a leaked access token is worth little; the refresh token is what a device keeps.
 export const ACCESS_LIFETIME_MS = 15 * 60_000;

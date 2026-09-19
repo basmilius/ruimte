@@ -1,22 +1,11 @@
 import i18next from 'i18next';
-import type { ProviderId } from '@ruimte/pulsar';
+import { randomToken, sha256, type ProviderId } from '@ruimte/pulsar';
 
 /*
  * The pure half of signing in: a PKCE pair, the state, the start URL and what the redirect came back
  * with. Only WebCrypto and `URL`, which a browser, Bun and a phone's JavaScript all have, so the mobile
  * app runs the same login as the desktop app does.
  */
-
-const base64url = (bytes: Uint8Array): string => {
-    let binary = '';
-    for (const byte of bytes) {
-        binary += String.fromCharCode(byte);
-    }
-    return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
-};
-
-/* Random bytes in base64url; 32 make a verifier of 43 characters, the shortest RFC 7636 allows. */
-export const randomToken = (bytes = 32): string => base64url(crypto.getRandomValues(new Uint8Array(bytes)));
 
 export interface Pkce {
     verifier: string;
@@ -25,8 +14,8 @@ export interface Pkce {
 
 export const createPkce = async (): Promise<Pkce> => {
     const verifier = randomToken(32);
-    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
-    return { verifier, challenge: base64url(new Uint8Array(digest)) };
+    // The very hash the address book takes the verifier through when it checks the trade.
+    return { verifier, challenge: await sha256(verifier) };
 };
 
 // 24 bytes, well past the 12 the address book asks for, so a state is never worth guessing.

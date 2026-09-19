@@ -3,11 +3,12 @@ import {
     IdentityLinkStartPayloadSchema,
     PROVIDER_NAMES,
     ProviderIdSchema,
+    randomToken,
+    sha256,
     type AccountResult,
     type Identity,
     type ProviderId
 } from '@ruimte/pulsar';
-import { randomToken, sha256 } from './encoding.ts';
 import type { Env } from './env.ts';
 import { clientIp, failure, json, readBody } from './http.ts';
 import { PROVIDERS, type ProviderIdentity } from './providers.ts';

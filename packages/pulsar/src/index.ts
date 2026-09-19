@@ -1,4 +1,5 @@
 export * from './address-book.ts';
+export * from './base64url.ts';
 export * from './address-book-client.ts';
 export * from './broker.ts';
 export * from './broker-url.ts';

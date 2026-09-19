@@ -1,5 +1,4 @@
-import { APPLE_NATIVE_CLIENT_ID } from '@ruimte/pulsar';
-import { sha256 } from './encoding.ts';
+import { APPLE_NATIVE_CLIENT_ID, sha256 } from '@ruimte/pulsar';
 import type { Env } from './env.ts';
 import { decodeJwt, signEs256Jwt, verifyRs256 } from './jwt.ts';
 import type { OAuthProvider } from './providers.ts';

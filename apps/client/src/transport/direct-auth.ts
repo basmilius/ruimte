@@ -1,4 +1,5 @@
 import i18next from 'i18next';
+import { toBase64Url } from '@ruimte/pulsar';
 import {
     clientChannelMessage,
     daemonChannelMessage,
@@ -20,18 +21,10 @@ export interface ProofCredentials {
     label: string;
 }
 
-const base64url = (bytes: ArrayBuffer): string => {
-    let binary = '';
-    for (const byte of new Uint8Array(bytes)) {
-        binary += String.fromCharCode(byte);
-    }
-    return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
-};
-
 const hmac = async (secret: string, message: string): Promise<string> => {
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    return base64url(await crypto.subtle.sign('HMAC', key, encoder.encode(message)));
+    return toBase64Url(await crypto.subtle.sign('HMAC', key, encoder.encode(message)));
 };
 
 /*

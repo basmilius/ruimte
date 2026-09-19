@@ -1,6 +1,5 @@
-import { APP_REDIRECT_SCHEME_URI, NativeAppleCompletePayloadSchema, NativeAppleStartPayloadSchema } from '@ruimte/pulsar';
+import { APP_REDIRECT_SCHEME_URI, NativeAppleCompletePayloadSchema, NativeAppleStartPayloadSchema, randomToken, sha256 } from '@ruimte/pulsar';
 import { identifyNativeApple, nativeAppleConfigured } from './apple.ts';
-import { randomToken, sha256 } from './encoding.ts';
 import type { Env } from './env.ts';
 import { clientIp, failure, json, readBody } from './http.ts';
 import { resolveAccount } from './identities.ts';

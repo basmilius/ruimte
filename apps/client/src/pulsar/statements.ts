@@ -1,9 +1,8 @@
 import i18next from 'i18next';
-import { accessRequestMessage, type AccessRequestPayload, type AccessStatement, type SignalAccess } from '@ruimte/pulsar';
+import { accessRequestMessage, randomToken, type AccessRequestPayload, type AccessStatement, type SignalAccess } from '@ruimte/pulsar';
 import type { ClientKey } from '@/endpoint/client-key';
 import { currentClientLabel } from '@/endpoint/client-label';
 import { withAccessToken } from './account';
-import { randomToken } from './pkce';
 
 /*
  * A statement for one offer to one machine. The nonce is new for every attempt and the machine spends

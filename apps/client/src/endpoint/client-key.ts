@@ -1,4 +1,5 @@
 import i18next from 'i18next';
+import { toBase64Url } from '@ruimte/pulsar';
 
 const DB_NAME = 'ruimte-auth';
 const STORE_NAME = 'keys';
@@ -16,14 +17,6 @@ export interface KeyStore {
     read(): Promise<CryptoKeyPair | null>;
     write(pair: CryptoKeyPair): Promise<void>;
 }
-
-const base64url = (bytes: ArrayBuffer): string => {
-    let binary = '';
-    for (const byte of new Uint8Array(bytes)) {
-        binary += String.fromCharCode(byte);
-    }
-    return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
-};
 
 /*
  * IndexedDB, because a `CryptoKey` survives a structured clone and `localStorage` only holds
@@ -58,8 +51,8 @@ export const indexedDbKeyStore = (): KeyStore => {
 };
 
 const toClientKey = async (pair: CryptoKeyPair): Promise<ClientKey> => ({
-    publicKey: base64url(await crypto.subtle.exportKey('raw', pair.publicKey)),
-    sign: async (message) => base64url(await crypto.subtle.sign({ name: 'Ed25519' }, pair.privateKey, new TextEncoder().encode(message)))
+    publicKey: toBase64Url(await crypto.subtle.exportKey('raw', pair.publicKey)),
+    sign: async (message) => toBase64Url(await crypto.subtle.sign({ name: 'Ed25519' }, pair.privateKey, new TextEncoder().encode(message)))
 });
 
 /*

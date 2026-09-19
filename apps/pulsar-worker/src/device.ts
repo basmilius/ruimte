@@ -13,6 +13,8 @@ import {
     generateUserCode,
     machineRegistrationMessage,
     normalizeUserCode,
+    randomToken,
+    sha256,
     type Account,
     type DeviceLinkLookupResult,
     type DeviceLinkPollResult,
@@ -22,7 +24,6 @@ import {
     type ProviderId
 } from '@ruimte/pulsar';
 import { verifyEd25519 } from './crypto.ts';
-import { randomToken, sha256 } from './encoding.ts';
 import type { Env } from './env.ts';
 import { clientIp, failure, json, noContent, readBody } from './http.ts';
 import { storeMachine } from './machines.ts';
