@@ -9,3 +9,4 @@
 export * from './service.ts';
 export * from './update.ts';
 export * from './versions.ts';
+export * from './voice.ts';

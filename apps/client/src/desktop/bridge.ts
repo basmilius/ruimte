@@ -1,12 +1,12 @@
-import type { AgentActivity, BackgroundServiceState, ReleaseNotesState, UpdateState } from '@ruimte/desktop-bridge';
+import type { AgentActivity, BackgroundServiceState, OpenAiLivePreferences, ReleaseNotesState, UpdateState } from '@ruimte/desktop-bridge';
 import type { SessionLoginCode } from '@ruimte/pulsar';
-import type { LiveVoice, VoiceLanguage } from '@/voice/preferences';
 
 /* The shapes the preload and the page both hold, passed on so the client reads the whole bridge here. */
 export type {
     AgentActivity,
     BackgroundServiceState,
     DaemonOwner,
+    OpenAiLivePreferences,
     PendingRestart,
     Release,
     ReleaseNotesState,
@@ -82,11 +82,6 @@ export interface BackgroundServiceBridge {
 export interface OpenAiCredentialStatus {
     configured: boolean;
     persistent: boolean;
-}
-
-export interface OpenAiLivePreferences {
-    language: VoiceLanguage;
-    voice: LiveVoice;
 }
 
 export interface OpenAiBridge {

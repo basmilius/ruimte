@@ -1,3 +1,4 @@
+import { LIVE_VOICES, VOICE_LANGUAGES } from '@ruimte/contracts';
 import { useEffect, useState, type FormEvent } from 'react';
 import i18next from 'i18next';
 import { Trash2 } from 'lucide-react';
@@ -17,7 +18,6 @@ import { Tooltip } from '@/ui/Tooltip';
 import { useVoice } from '@/voice/state';
 import { closeVoicePanel } from '@/voice/controller';
 import { DEFAULT_MICROPHONE_ID, listMicrophones, type MicrophoneDevice } from '@/voice/microphone';
-import { LIVE_VOICES, VOICE_LANGUAGES } from '@/voice/preferences';
 
 const titleCase = (value: string): string => value[0]!.toUpperCase() + value.slice(1);
 

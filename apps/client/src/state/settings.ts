@@ -1,9 +1,8 @@
 import { create } from 'zustand';
-import { WorktreeMergeStrategySchema, type WorktreeMergeStrategy } from '@ruimte/contracts';
+import { isLiveVoice, isVoiceLanguage, WorktreeMergeStrategySchema, type LiveVoice, type VoiceLanguage, type WorktreeMergeStrategy } from '@ruimte/contracts';
 import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
 import { FORMAT_LANGUAGE, formatRegionFrom } from '@/format/regions';
 import { LANGUAGE_SYSTEM, languageFrom } from '@/i18n/languages';
-import { isLiveVoice, isVoiceLanguage, type LiveVoice, type VoiceLanguage } from '@/voice/preferences';
 
 const STORAGE_KEY = 'ruimte.settings';
 

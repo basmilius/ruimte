@@ -1,50 +1,9 @@
-import { VOICE_TOOL_DEFINITIONS } from '@ruimte/contracts';
+import { isLiveVoice, isVoiceLanguage, VOICE_LANGUAGES, VOICE_TOOL_DEFINITIONS, type VoiceLanguage } from '@ruimte/contracts';
+import type { OpenAiLivePreferences } from '@ruimte/desktop-bridge';
 
 export interface LiveSessionAnswer {
     session: { id: string };
     transport: { type: 'webrtc'; sdp: string };
-}
-
-const LANGUAGE_NAMES = {
-    ar: 'Arabic',
-    ca: 'Catalan',
-    zh: 'Chinese',
-    cs: 'Czech',
-    da: 'Danish',
-    nl: 'Dutch',
-    en: 'English',
-    fi: 'Finnish',
-    fr: 'French',
-    de: 'German',
-    el: 'Greek',
-    he: 'Hebrew',
-    hi: 'Hindi',
-    hu: 'Hungarian',
-    id: 'Indonesian',
-    it: 'Italian',
-    ja: 'Japanese',
-    ko: 'Korean',
-    no: 'Norwegian',
-    pl: 'Polish',
-    pt: 'Portuguese',
-    ro: 'Romanian',
-    ru: 'Russian',
-    es: 'Spanish',
-    sv: 'Swedish',
-    th: 'Thai',
-    tr: 'Turkish',
-    uk: 'Ukrainian',
-    vi: 'Vietnamese'
-} as const;
-
-const LIVE_VOICES = ['marin', 'cedar'] as const;
-
-type VoiceLanguage = keyof typeof LANGUAGE_NAMES;
-type LiveVoice = (typeof LIVE_VOICES)[number];
-
-export interface OpenAiLivePreferences {
-    language: VoiceLanguage;
-    voice: LiveVoice;
 }
 
 type Fetch = (input: string, init: RequestInit) => Promise<Response>;
@@ -64,7 +23,7 @@ Deletion may return a confirmation request, depending on the user's Voice settin
 For reminder-like note requests, create a note whose content is the useful reminder itself. Do not claim that a notification or alarm was scheduled.`;
 
 const languageInstruction = (language: VoiceLanguage): string => {
-    const name = LANGUAGE_NAMES[language];
+    const name = VOICE_LANGUAGES.find((entry) => entry.id === language)!.english;
     return `Conduct the entire conversation in ${name}. Understand ${name} speech and always reply in natural ${name} unless the user explicitly asks for another language. Speak with the pronunciation, rhythm and standard accent of a native ${name} speaker; do not carry an English accent into ${name}.`;
 };
 
@@ -73,9 +32,10 @@ export const parseOpenAiLivePreferences = (value: unknown): OpenAiLivePreference
         return null;
     }
     const candidate = value as { language?: unknown; voice?: unknown };
-    const language = typeof candidate.language === 'string' && candidate.language in LANGUAGE_NAMES ? (candidate.language as VoiceLanguage) : null;
-    const voice = LIVE_VOICES.find((item) => item === candidate.voice) ?? null;
-    return language && voice ? { language, voice } : null;
+    if (!isVoiceLanguage(candidate.language) || !isLiveVoice(candidate.voice)) {
+        return null;
+    }
+    return { language: candidate.language, voice: candidate.voice };
 };
 
 const isAnswer = (value: unknown): value is LiveSessionAnswer => {
