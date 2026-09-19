@@ -1,7 +1,8 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
-import { readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { WorktreeMergePayload } from '@ruimte/contracts';
+import { documentPathInFolder } from '../projects/project-files.ts';
 import { forgetBase } from './status.ts';
 import { gitIn, initRepo, repoTemplate, type RepoTemplate } from './test-repo.ts';
 import { WorktreeMerge, type WorktreeAgent, type WorktreeAgents } from './worktree-merge.ts';
@@ -219,6 +220,24 @@ describe('WorktreeMerge', () => {
 
         expect((await gitIn(repo, ['rev-parse', 'HEAD'])).trim()).toBe(head);
         expect(await readFile(join(repo, 'shared.txt'), 'utf8')).toBe('uncommitted by the person\n');
+    });
+
+    test('an agent merges into a target whose only change is the project file, and stops at anything else', async () => {
+        await writeFile(join(repo, 'note.txt'), 'one\n');
+        await mkdir(join(repo, '.ruimte'), { recursive: true });
+        await writeFile(documentPathInFolder(repo), '{ "version": 2, "rev": 1 }\n');
+        await gitIn(repo, ['add', '.']);
+        await gitIn(repo, ['commit', '--quiet', '--message', 'canvas']);
+
+        // What a person moving a node leaves behind all day, and what a merge is never about.
+        await writeFile(documentPathInFolder(repo), '{ "version": 2, "rev": 2 }\n');
+        await merges.merge(payload(await lexer(), {}), () => undefined, { cleanTarget: true });
+        expect(await readFile(join(repo, 'lexer.txt'), 'utf8')).toBe('lexer\n');
+
+        await writeFile(join(repo, 'note.txt'), 'two\n');
+        await expect(merges.merge(payload(await lexer('other.txt'), {}), () => undefined, { cleanTarget: true })).rejects.toMatchObject({
+            code: 'target-dirty'
+        });
     });
 
     test('two merges of one worktree run one after the other, and the second finds it gone', async () => {

@@ -5,6 +5,7 @@ import type { ProgressSink } from './actions.ts';
 import { resolveBase } from './status.ts';
 import { GitError, git, runGit, streamGit } from './run.ts';
 import type { Worktrees } from './worktrees.ts';
+import { PROJECT_DIR } from '../projects/project-files.ts';
 import { errorText } from '../error-text.ts';
 
 /* One agent whose folder is inside a worktree. */
@@ -190,8 +191,13 @@ export class WorktreeMerge {
         if (busy !== null) {
             throw new GitError('target-busy', `A ${busy} waits halfway in ${target.path}. Finish or abort it there first.`);
         }
-        // Untracked files do not count: git refuses a merge that would overwrite one, and the project's own .ruimte folder is often one.
-        if (limits.cleanTarget === true && (await git(['status', '--porcelain', '--untracked-files=no'], target.path))?.trim() !== '') {
+        /* Untracked files do not count: git refuses a merge that would overwrite one. Neither does
+           `.ruimte`, tracked or not: a person moving a node dirties it all day, and what it holds is
+           never what a merge is about. */
+        if (
+            limits.cleanTarget === true &&
+            (await git(['status', '--porcelain', '--untracked-files=no', '--', '.', `:(exclude)${PROJECT_DIR}`], target.path))?.trim() !== ''
+        ) {
             throw new GitError('target-dirty', `${target.path} has uncommitted changes of its own; a person merges into a checkout like that, not an agent.`);
         }
 
