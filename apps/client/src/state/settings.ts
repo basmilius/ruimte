@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { isLiveVoice, isVoiceLanguage, WorktreeMergeStrategySchema, type LiveVoice, type VoiceLanguage, type WorktreeMergeStrategy } from '@ruimte/contracts';
+import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
 import { accentColor, NODE_ACCENTS, type AccentId } from '@/canvas/accents';
 import { FORMAT_LANGUAGE, formatRegionFrom } from '@/format/regions';
 import { LANGUAGE_SYSTEM, languageFrom } from '@/i18n/languages';
@@ -112,9 +113,6 @@ export interface Settings {
        notation, which is what an English app on a Dutch Mac already was. */
     formatRegion: string;
 }
-
-// The STUN answer of Ruimte's own coturn, so a direct connection across two networks asks no third party.
-export const DEFAULT_STUN_SERVER = 'stun:turn.ruimte.app:3478';
 
 /* What `RTCPeerConnection` takes for the servers in the setting; none for an empty field. */
 export const iceServersFrom = (value: string): RTCIceServer[] => {

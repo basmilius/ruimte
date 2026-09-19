@@ -4,6 +4,10 @@ import { z } from 'zod';
    so the broker can move to another host through DNS alone. */
 export const DEFAULT_BROKER_URL = 'wss://broker.ruimte.app';
 
+/* Ruimte's own coturn answers STUN without credentials, so a machine behind NAT learns the address a
+   direct connection can reach it on without asking a third party, with or without a broker. */
+export const DEFAULT_STUN_SERVER = 'stun:turn.ruimte.app:3478';
+
 const BROKER_URL_MAX = 512;
 
 const isPrivateIpv4 = (host: string): boolean => {

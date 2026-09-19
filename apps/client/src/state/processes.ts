@@ -1,11 +1,16 @@
-import type { ProcessAlert, ProcessPoint, ProcessScope, ProcessSort, ProcessesSampleEvent, ProcessesSubscribeResult } from '@ruimte/contracts';
+import {
+    COARSE_POINTS,
+    FINE_POINTS,
+    type ProcessAlert,
+    type ProcessPoint,
+    type ProcessScope,
+    type ProcessSort,
+    type ProcessesSampleEvent,
+    type ProcessesSubscribeResult
+} from '@ruimte/contracts';
 import { create } from 'zustand';
 
 const STORAGE_KEY = 'ruimte.processes';
-
-/* The daemon keeps the same caps; a client that stays subscribed for a day must not grow past them. */
-export const FINE_POINTS = 300;
-export const COARSE_POINTS = 288;
 
 interface Preferences {
     scope: ProcessScope;

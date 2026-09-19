@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { DEFAULT_STUN_SERVER, iceServersFrom, settingsFrom } from './settings';
+import { DEFAULT_STUN_SERVER } from '@ruimte/pulsar';
+import { iceServersFrom, settingsFrom } from './settings';
 
 describe('a view an agent asks for', () => {
     test('is not followed until a person says so', () => {
