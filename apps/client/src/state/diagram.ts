@@ -1,29 +1,14 @@
 import { createStore, type StoreApi } from 'zustand';
-import {
-    EMPTY_DIAGRAM,
-    type DiagramContent,
-    type DiagramDocument,
-    type DiagramNode,
-    type DrawingColor,
-    type ProjectViewLocal,
-    type ViewCamera
-} from '@ruimte/contracts';
+import { EMPTY_DIAGRAM, type DiagramContent, type DiagramDocument, type DiagramNode, type DrawingColor, type ProjectViewLocal } from '@ruimte/contracts';
 import { layoutOf, type DiagramLayout } from '@ruimte/diagram';
-import { cameraOfView, cameraToFit, clampZoom, isMeasured, snapZoom, viewCameraOf, zoomAround, type Camera, type Point } from '@/canvas/math';
-import type { CameraRequest } from '@/state/canvas';
+import { cameraOfView } from '@/canvas/math';
+import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
 import { createEditorRegistry } from '@/state/editors';
 import { editorHook, focusedEditor, useEditorStoreOf } from '@/state/workspace-stores';
 
-interface Viewport {
-    w: number;
-    h: number;
-}
-
-export interface DiagramState {
+export interface DiagramState extends CameraSlice {
     /* The diagram view this store holds, or null while none is on screen. */
     viewId: string | null;
-    camera: Camera;
-    viewport: Viewport;
     content: DiagramContent;
     /* Computed from `content` whenever it changes, so a render never lays the graph out itself. */
     layout: DiagramLayout;
@@ -35,8 +20,6 @@ export interface DiagramState {
     past: DiagramContent[];
     future: DiagramContent[];
     loading: boolean;
-    /* Where the camera goes the moment the diagram has a size. */
-    pendingCamera: Extract<CameraRequest, { kind: 'fit' | 'view' }> | null;
     conflict: DiagramDocument | null;
     error: string | null;
 
@@ -54,17 +37,6 @@ export interface DiagramState {
     resetPosition(id: string): void;
     undo(): void;
     redo(): void;
-
-    setViewport(viewport: Viewport): void;
-    setCamera(camera: Camera): void;
-    panBy(dx: number, dy: number): void;
-    zoomAt(factor: number, anchor: Point): void;
-    settleZoom(anchor: Point): void;
-    zoomTo(zoom: number, anchor?: Point): void;
-    fitAll(): void;
-    /* A diagram has no selection, so the palette's "zoom to selection" fits the whole of it. */
-    zoomToSelection(): void;
-    viewCamera(): ViewCamera | null;
 
     setRev(rev: number): void;
     setDirty(dirty: boolean): void;
@@ -113,9 +85,13 @@ const withNode = (content: DiagramContent, id: string, rewrite: (node: DiagramNo
  */
 export const createDiagramStore = (): StoreApi<DiagramState> =>
     createStore<DiagramState>((set, get) => ({
+        // A diagram lays itself out and nothing in it is selected, so the whole of it is all there is to fit.
+        ...createCameraSlice<DiagramState>(set, get, {
+            boundsOfAll: (state) => (state.layout.nodes.length === 0 ? null : state.layout.bounds),
+            boundsOfSelection: () => null
+        }),
+
         viewId: null,
-        camera: { x: 0, y: 0, zoom: 1 },
-        viewport: { w: 0, h: 0 },
         content: EMPTY_CONTENT,
         layout: layoutOf(EMPTY_CONTENT),
         rev: 0,
@@ -124,7 +100,6 @@ export const createDiagramStore = (): StoreApi<DiagramState> =>
         past: [],
         future: [],
         loading: false,
-        pendingCamera: null,
         conflict: null,
         error: null,
 
@@ -238,53 +213,9 @@ export const createDiagramStore = (): StoreApi<DiagramState> =>
             set({ content: next, layout: layoutOf(next), past: [...state.past, state.content], future: state.future.slice(1), edits: state.edits + 1 });
         },
 
-        setViewport(viewport) {
-            const waiting = isMeasured(viewport) ? get().pendingCamera : null;
-            set({ viewport });
-            if (waiting?.kind === 'fit') {
-                get().fitAll();
-            } else if (waiting?.kind === 'view') {
-                set({ camera: cameraOfView(waiting.view, viewport)!, pendingCamera: null });
-            }
-        },
-        setCamera(camera) {
-            set({ camera });
-        },
-        panBy(dx, dy) {
-            const { camera } = get();
-            set({ camera: { ...camera, x: camera.x + dx, y: camera.y + dy } });
-        },
-        zoomAt(factor, anchor) {
-            const { camera } = get();
-            set({ camera: zoomAround(camera, camera.zoom * factor, anchor) });
-        },
-        settleZoom(anchor) {
-            const { camera } = get();
-            const target = snapZoom(camera.zoom);
-            if (target !== camera.zoom) {
-                set({ camera: zoomAround(camera, target, anchor) });
-            }
-        },
-        zoomTo(zoom, anchor) {
-            const { camera, viewport } = get();
-            set({ camera: zoomAround(camera, clampZoom(zoom), anchor ?? { x: viewport.w / 2, y: viewport.h / 2 }) });
-        },
-        fitAll() {
-            const { layout, viewport } = get();
-            // An empty diagram has nothing to fit, so the wait ends rather than standing forever.
-            if (layout.nodes.length === 0) {
-                set({ pendingCamera: null });
-                return;
-            }
-            const camera = cameraToFit(layout.bounds, viewport);
-            set(camera === null ? { pendingCamera: { kind: 'fit' } } : { camera, pendingCamera: null });
-        },
+        /* A diagram has no selection, so the palette's "zoom to selection" fits the whole of it. */
         zoomToSelection() {
             get().fitAll();
-        },
-        viewCamera() {
-            const { camera, viewport, pendingCamera } = get();
-            return pendingCamera?.kind === 'view' ? pendingCamera.view : viewCameraOf(camera, viewport);
         },
 
         setRev(rev) {

@@ -12,25 +12,13 @@ import type {
     DrawingRoughness,
     DrawingStrokeStyle,
     DrawingStrokeWidth,
-    ProjectViewLocal,
-    ViewCamera
+    ProjectViewLocal
 } from '@ruimte/contracts';
-import {
-    cameraOfView,
-    cameraToFit,
-    clampZoom,
-    intersects,
-    isMeasured,
-    snapZoom,
-    viewCameraOf,
-    zoomAround,
-    type Camera,
-    type Point,
-    type Rect
-} from '@/canvas/math';
+import { cameraOfView, intersects, type Rect } from '@/canvas/math';
+import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
 import { boundsOfElements } from '@ruimte/drawing';
 import { fitTextBox } from '@/drawing/paint';
-import { nextId, type CameraRequest } from '@/state/canvas';
+import { nextId } from '@/state/canvas';
 
 /* Every tool in the dock, in the order the dock lists them. */
 export type DrawingTool = 'select' | 'hand' | 'rect' | 'diamond' | 'ellipse' | 'arrow' | 'line' | 'freehand' | 'text' | 'note' | 'eraser';
@@ -72,16 +60,9 @@ export const HISTORY_LIMIT = 100;
 /* Where a duplicate lands, and how far an arrow key moves a selection. */
 export const DUPLICATE_OFFSET = 16;
 
-interface Viewport {
-    w: number;
-    h: number;
-}
-
-export interface DrawingState {
+export interface DrawingState extends CameraSlice {
     /* The drawing view this store holds, or null while none is on screen. */
     viewId: string | null;
-    camera: Camera;
-    viewport: Viewport;
     /* In stacking order, back to front, the way the file lists them. */
     elements: DrawingElement[];
     selection: string[];
@@ -99,8 +80,6 @@ export interface DrawingState {
     /* Counts changes to the elements, which is what the client saves on. */
     edits: number;
     loading: boolean;
-    /* Where the camera goes the moment the drawing has a size, the way the canvas waits for one. */
-    pendingCamera: Extract<CameraRequest, { kind: 'fit' | 'view' }> | null;
     conflict: DrawingDocument | null;
     error: string | null;
     past: DrawingElement[][];
@@ -112,17 +91,6 @@ export interface DrawingState {
     /* Takes the drawing off screen without saving; the client flushes before it calls this. */
     unload(): void;
     exportContent(): DrawingContent;
-
-    setViewport(viewport: Viewport): void;
-    setCamera(camera: Camera): void;
-    panBy(dx: number, dy: number): void;
-    zoomAt(factor: number, anchor: Point): void;
-    settleZoom(anchor: Point): void;
-    zoomTo(zoom: number, anchor?: Point): void;
-    fitAll(): void;
-    zoomToSelection(): void;
-    /* The camera the way it is stored. A drawing still waiting for its size hands back the one it was given. */
-    viewCamera(): ViewCamera | null;
 
     select(ids: string[], additive?: boolean): void;
     selectAll(): void;
@@ -241,9 +209,12 @@ const withStyle = (element: DrawingElement, patch: Partial<DrawingStyle>): Drawi
  */
 export const createDrawingStore = (): StoreApi<DrawingState> =>
     createStore<DrawingState>((set, get) => ({
+        ...createCameraSlice<DrawingState>(set, get, {
+            boundsOfAll: (state) => boundsOf(state.elements),
+            boundsOfSelection: (state) => boundsOf(state.elements.filter((element) => state.selection.includes(element.id)))
+        }),
+
         viewId: null,
-        camera: { x: 0, y: 0, zoom: 1 },
-        viewport: { w: 0, h: 0 },
         elements: [],
         selection: [],
         tool: 'select',
@@ -256,7 +227,6 @@ export const createDrawingStore = (): StoreApi<DrawingState> =>
         dirty: false,
         edits: 0,
         loading: false,
-        pendingCamera: null,
         conflict: null,
         error: null,
         past: [],
@@ -312,65 +282,6 @@ export const createDrawingStore = (): StoreApi<DrawingState> =>
 
         exportContent() {
             return { elements: get().elements };
-        },
-
-        setViewport(viewport) {
-            const waiting = isMeasured(viewport) ? get().pendingCamera : null;
-            set({ viewport });
-            if (waiting?.kind === 'fit') {
-                get().fitAll();
-            } else if (waiting?.kind === 'view') {
-                set({ camera: cameraOfView(waiting.view, viewport)!, pendingCamera: null });
-            }
-        },
-        setCamera(camera) {
-            set({ camera });
-        },
-        panBy(dx, dy) {
-            const { camera } = get();
-            set({ camera: { ...camera, x: camera.x + dx, y: camera.y + dy } });
-        },
-        zoomAt(factor, anchor) {
-            const { camera } = get();
-            set({ camera: zoomAround(camera, camera.zoom * factor, anchor) });
-        },
-        settleZoom(anchor) {
-            const { camera } = get();
-            const target = snapZoom(camera.zoom);
-            if (target !== camera.zoom) {
-                set({ camera: zoomAround(camera, target, anchor) });
-            }
-        },
-        zoomTo(zoom, anchor) {
-            const { camera, viewport } = get();
-            set({ camera: zoomAround(camera, clampZoom(zoom), anchor ?? { x: viewport.w / 2, y: viewport.h / 2 }) });
-        },
-        fitAll() {
-            const { elements, viewport } = get();
-            const bounds = boundsOf(elements);
-            // An empty drawing has nothing to fit, so the wait ends rather than standing forever.
-            if (bounds === null) {
-                set({ pendingCamera: null });
-                return;
-            }
-            const camera = cameraToFit(bounds, viewport);
-            set(camera === null ? { pendingCamera: { kind: 'fit' } } : { camera, pendingCamera: null });
-        },
-        zoomToSelection() {
-            const { elements, selection, viewport } = get();
-            const bounds = boundsOf(elements.filter((element) => selection.includes(element.id)));
-            if (bounds === null) {
-                return;
-            }
-            const camera = cameraToFit(bounds, viewport, 96, 1.5);
-            // A shortcut on a drawing nobody can see yet is worth nothing later, so this one does not wait.
-            if (camera !== null) {
-                set({ camera, pendingCamera: null });
-            }
-        },
-        viewCamera() {
-            const { camera, viewport, pendingCamera } = get();
-            return pendingCamera?.kind === 'view' ? pendingCamera.view : viewCameraOf(camera, viewport);
         },
 
         select(ids, additive = false) {

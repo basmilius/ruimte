@@ -2,22 +2,8 @@ import { createStore, type StoreApi } from 'zustand';
 import { canLink } from '@/canvas/edge-lines';
 import { createEditorRegistry } from '@/state/editors';
 import { editorHook, focusedEditor, useEditorStoreOf } from '@/state/workspace-stores';
-import {
-    cameraCenteredOn,
-    cameraOfView,
-    cameraToFit,
-    clampZoom,
-    intersects,
-    isMeasured,
-    snapToGrid,
-    snapZoom,
-    unionOf,
-    viewCameraOf,
-    zoomAround,
-    type Camera,
-    type Point,
-    type Rect
-} from '@/canvas/math';
+import { cameraCenteredOn, cameraOfView, intersects, snapToGrid, unionOf, type Point, type Rect } from '@/canvas/math';
+import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
 
 import type { CanvasPatch } from '@/project/merge';
 import type {
@@ -33,8 +19,7 @@ import type {
     ProjectNode,
     ProjectText,
     ProjectViewLocal,
-    RuntimeMode,
-    ViewCamera
+    RuntimeMode
 } from '@ruimte/contracts';
 import { DEFAULT_TITLES, NODE_SIZE, groupFrame, isAgentKind, isUnknownNode } from '@ruimte/contracts';
 
@@ -67,6 +52,9 @@ export interface AddNodeOptions {
 
 /* A label on the canvas. Style belongs to the whole element; the text itself holds no runs. */
 export type TextElement = ProjectText;
+
+/* The box a label takes up, guessed from its size: a text is measured by the browser, never here. */
+const textRect = (text: TextElement): Rect => ({ x: text.x, y: text.y, w: text.size * 12, h: text.size * 1.4 });
 
 /* A line as the project file holds it, extra fields and all: a shape of its own here would drop
    whatever a newer Ruimte wrote on an edge the moment this store handed the canvas back. */
@@ -117,31 +105,15 @@ interface Snapshot {
 
 const HISTORY_LIMIT = 100;
 
-interface Viewport {
-    w: number;
-    h: number;
-}
+export type { CameraRequest, Viewport } from '@/canvas/camera-slice';
 
-/* A camera move that needs a size to be worked out: everything the canvas has, one node of it, or a stored middle. */
-export type CameraRequest = { kind: 'fit' } | { kind: 'node'; id: string } | { kind: 'view'; view: ViewCamera };
-
-export interface CanvasState {
+export interface CanvasState extends CameraSlice {
     /*
      * The view whose content this store is holding. The document store flips `activeViewId` before
      * it hands the canvas the next view, so pairing on that id makes the canvas stand in for a view
      * it does not hold yet; anything asking which nodes the project has must pair on this instead.
      */
     viewId: string | null;
-    camera: Camera;
-    viewport: Viewport;
-    /*
-     * Where the camera has to go the moment this editor has a size. Every view on screen has an
-     * editor of its own, made when the view goes into a cell, and the element that holds it is
-     * measured a frame later: a fit or a jump to a node asked for in between has no viewport to be
-     * about. It waits here instead of being worked out against nothing, which would park the camera
-     * at the origin and leave what it was aimed at in the top left corner.
-     */
-    pendingCamera: CameraRequest | null;
     nodes: Record<string, CanvasNode>;
     order: string[];
     texts: Record<string, TextElement>;
@@ -168,17 +140,8 @@ export interface CanvasState {
     past: Snapshot[];
     future: Snapshot[];
 
-    setViewport(viewport: Viewport): void;
-    setCamera(camera: Camera): void;
-    panBy(dx: number, dy: number): void;
-    zoomAt(factor: number, anchor: Point): void;
-    settleZoom(anchor: Point): void;
-    zoomTo(zoom: number, anchor?: Point): void;
-    fitAll(): void;
-    zoomToSelection(): void;
+    /* Brings the camera to one node and selects it; the only camera move a canvas has of its own. */
     goToNode(id: string): void;
-    /* The camera the way it is stored. An editor still waiting for its size hands back the one it was given. */
-    viewCamera(): ViewCamera | null;
 
     select(ids: string[], additive?: boolean): void;
     clearSelection(): void;
@@ -322,10 +285,18 @@ const remember = (s: CanvasState): Pick<CanvasState, 'past' | 'future'> => ({ pa
 /* One canvas editor, for one view on screen. */
 export const createCanvasStore = (): StoreApi<CanvasState> =>
     createStore<CanvasState>((set, get) => ({
+        ...createCameraSlice<CanvasState>(set, get, {
+            boundsOfAll: (state) => unionOf([...Object.values(state.nodes), ...Object.values(state.texts).map(textRect)]),
+            boundsOfSelection: (state) =>
+                unionOf(state.selection.flatMap((id) => (state.nodes[id] ? [state.nodes[id]] : state.texts[id] ? [textRect(state.texts[id])] : []))),
+            resume: (state, request) => {
+                if (request.kind === 'node') {
+                    state.goToNode(request.id);
+                }
+            }
+        }),
+
         viewId: null,
-        camera: { x: 0, y: 0, zoom: 1 },
-        viewport: { w: 0, h: 0 },
-        pendingCamera: null,
         nodes: {},
         order: [],
         texts: {},
@@ -343,69 +314,6 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         past: [],
         future: [],
 
-        setViewport(viewport) {
-            // The size is the answer to whatever was waiting for one, so the wait ends here.
-            const waiting = isMeasured(viewport) ? get().pendingCamera : null;
-            set({ viewport });
-            if (waiting?.kind === 'fit') {
-                get().fitAll();
-            } else if (waiting?.kind === 'node') {
-                get().goToNode(waiting.id);
-            } else if (waiting?.kind === 'view') {
-                set({ camera: cameraOfView(waiting.view, viewport)!, pendingCamera: null });
-            }
-        },
-        setCamera(camera) {
-            set({ camera });
-        },
-        panBy(dx, dy) {
-            const { camera } = get();
-            set({ camera: { ...camera, x: camera.x + dx, y: camera.y + dy } });
-        },
-        zoomAt(factor, anchor) {
-            const { camera } = get();
-            set({ camera: zoomAround(camera, camera.zoom * factor, anchor) });
-        },
-        settleZoom(anchor) {
-            const { camera } = get();
-            const target = snapZoom(camera.zoom);
-            if (target !== camera.zoom) {
-                set({ camera: zoomAround(camera, target, anchor) });
-            }
-        },
-        zoomTo(zoom, anchor) {
-            const { camera, viewport } = get();
-            const point = anchor ?? { x: viewport.w / 2, y: viewport.h / 2 };
-            set({ camera: zoomAround(camera, clampZoom(zoom), point) });
-        },
-        fitAll() {
-            const { nodes, texts, viewport } = get();
-            const rects: Rect[] = [...Object.values(nodes), ...Object.values(texts).map((t) => ({ x: t.x, y: t.y, w: t.size * 12, h: t.size * 1.4 }))];
-            const bounds = unionOf(rects);
-            // An empty canvas has nothing to fit, so the wait ends rather than standing forever.
-            if (!bounds) {
-                set({ pendingCamera: null });
-                return;
-            }
-            const camera = cameraToFit(bounds, viewport);
-            set(camera === null ? { pendingCamera: { kind: 'fit' } } : { camera, pendingCamera: null });
-        },
-        zoomToSelection() {
-            const { nodes, texts, selection, viewport } = get();
-            const rects: Rect[] = selection.flatMap((id) => {
-                if (nodes[id]) {
-                    return [nodes[id]];
-                }
-                const t = texts[id];
-                return t ? [{ x: t.x, y: t.y, w: t.size * 12, h: t.size * 1.4 }] : [];
-            });
-            const bounds = unionOf(rects);
-            const camera = bounds === null ? null : cameraToFit(bounds, viewport, 96, 1.5);
-            // A shortcut on a canvas nobody can see yet is worth nothing later, so this one does not wait.
-            if (camera !== null) {
-                set({ camera, pendingCamera: null });
-            }
-        },
         goToNode(id) {
             const { nodes, viewport, camera } = get();
             const node = nodes[id];
@@ -420,11 +328,6 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 selection: [id]
             });
         },
-        viewCamera() {
-            const { camera, viewport, pendingCamera } = get();
-            return pendingCamera?.kind === 'view' ? pendingCamera.view : viewCameraOf(camera, viewport);
-        },
-
         select(ids, additive = false) {
             const current = get().selection;
             set({ selection: additive ? Array.from(new Set([...current, ...ids])) : ids });
