@@ -1,28 +1,14 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, ChevronDown, FileText, Frame, Globe, Minus, PanelBottom, PanelRight, Pencil, PenTool, Workflow, Smile, Terminal, Trash, X } from 'lucide-react';
-import { isDiagramView, isDrawingView, isFileView, isOpenableView, isSessionView, viewIconOf, type ProjectView } from '@ruimte/contracts';
+import { Check, ChevronDown, FileText, Frame, Globe, Minus, PenTool, Workflow, Terminal } from 'lucide-react';
+import { isOpenableView, viewIconOf, type ProjectView } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentView } from '@/agents/nodes';
-import {
-    askDeleteView,
-    askRenameView,
-    askViewIcon,
-    newCanvasView,
-    newDiagramView,
-    newDrawingView,
-    newSeparatorView,
-    freeViewFor,
-    newTerminalView,
-    putOnCanvas,
-    splitFocusedCell,
-    showView,
-    showViewOnCanvas
-} from '@/project/views';
+import { newCanvasView, newDiagramView, newDrawingView, newSeparatorView, newTerminalView, showView } from '@/project/views';
 import { ViewGlyph } from '@/project/ViewGlyph';
-import { canSplit, cellCount, type SplitDirection } from '@/shell/split';
+import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useProviders } from '@/state/providers';
@@ -32,6 +18,7 @@ import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { CANVAS_SHORTCUTS, viewShortcut } from '@/canvas/shortcuts';
 import { Kbd } from '@/ui/Kbd';
+import { MenuPopup } from '@/ui/MenuPopup';
 import { useBrowserDisplayTitle } from '@/browser/title';
 
 function ViewName({ view, className }: { view: ProjectView; className: string }) {
@@ -120,41 +107,6 @@ export function NewViewItems() {
     );
 }
 
-/*
- * Putting a view beside the one on screen. Which view lands there is the same question the shortcut
- * answers (`freeViewFor`): the first one that is not standing anywhere yet, since a view is in at
- * most one cell. With every view already up, or with the grid full, the row is not offered.
- */
-function SplitItems() {
-    const { t } = useTranslation('shell');
-    const layout = useDocument((s) => s.layout);
-    const free = useDocument(freeViewFor);
-    const closable = layout !== null && cellCount(layout) > 1;
-    const room = (direction: SplitDirection): boolean => layout !== null && free !== null && canSplit(layout, layout.focus, direction, free);
-    if (!room('right') && !room('down') && !closable) {
-        return null;
-    }
-    return (
-        <>
-            {room('right') && (
-                <Menu.Item className="menu-item" onClick={() => splitFocusedCell('right')}>
-                    <Icon icon={PanelRight} size={14} /> {t('viewMenu.splitRight')} <Kbd shortcut={CANVAS_SHORTCUTS.splitRight} />
-                </Menu.Item>
-            )}
-            {room('down') && (
-                <Menu.Item className="menu-item" onClick={() => splitFocusedCell('down')}>
-                    <Icon icon={PanelBottom} size={14} /> {t('viewMenu.splitDown')} <Kbd shortcut={CANVAS_SHORTCUTS.splitDown} />
-                </Menu.Item>
-            )}
-            {closable && (
-                <Menu.Item className="menu-item" onClick={() => useDocument.getState().closeCellAt(layout.focus)}>
-                    <Icon icon={X} size={14} /> {t('cellToolbar.closeCell')} <Kbd shortcut={CANVAS_SHORTCUTS.closeCell} />
-                </Menu.Item>
-            )}
-        </>
-    );
-}
-
 /* The view segment of the toolbar's breadcrumb: every view of this project, and the ways to change the list. */
 export function ViewMenu() {
     const { t } = useTranslation('shell');
@@ -177,59 +129,37 @@ export function ViewMenu() {
                 <ViewName view={active} className="truncate text-sm text-text" />
                 <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
             </Menu.Trigger>
-            <Menu.Portal>
-                <Menu.Positioner className="z-(--z-popup)" side="bottom" sideOffset={6} align="start">
-                    <Menu.Popup className="menu-popup min-w-52">
-                        <div className={MENU_LABEL}>{t('viewMenu.views')}</div>
-                        {views.filter(isOpenableView).map((view, index) => (
-                            <Menu.Item key={view.id} className="menu-item" onClick={() => showView(view.id)}>
-                                <ViewGlyph
-                                    id={view.id}
-                                    kind={view.kind}
-                                    icon={viewIconOf(view)}
-                                    provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
-                                    path={view.kind === 'file' ? view.path : null}
-                                />
-                                <ViewName view={view} className="truncate" />
-                                {view.id === activeViewId && (
-                                    <span className="ml-auto flex shrink-0 items-center">
-                                        <Icon icon={Check} size={14} />
-                                    </span>
-                                )}
-                                {/* The first nine have a shortcut of their own; the rest are one click away. */}
-                                {index < 9 && view.id !== activeViewId && <Kbd shortcut={viewShortcut(index)!} />}
-                            </Menu.Item>
-                        ))}
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        {/* Here the items follow the list of views, so they say what they are; under
+            <MenuPopup className="min-w-52">
+                <div className={MENU_LABEL}>{t('viewMenu.views')}</div>
+                {views.filter(isOpenableView).map((view, index) => (
+                    <Menu.Item key={view.id} className="menu-item" onClick={() => showView(view.id)}>
+                        <ViewGlyph
+                            id={view.id}
+                            kind={view.kind}
+                            icon={viewIconOf(view)}
+                            provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
+                            path={view.kind === 'file' ? view.path : null}
+                        />
+                        <ViewName view={view} className="truncate" />
+                        {view.id === activeViewId && (
+                            <span className="ml-auto flex shrink-0 items-center">
+                                <Icon icon={Check} size={14} />
+                            </span>
+                        )}
+                        {/* The first nine have a shortcut of their own; the rest are one click away. */}
+                        {index < 9 && view.id !== activeViewId && <Kbd shortcut={viewShortcut(index)!} />}
+                    </Menu.Item>
+                ))}
+                <Menu.Separator className={MENU_SEPARATOR} />
+                {/* Here the items follow the list of views, so they say what they are; under
                             the sidebar's plus they would repeat what the plus already says. */}
-                        <div className={MENU_LABEL}>{t('viewMenu.newView')}</div>
-                        <NewViewItems />
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        <SplitItems />
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        {isSessionView(active) && (
-                            <Menu.Item className="menu-item" onClick={() => putOnCanvas(active.id)}>
-                                <Icon icon={Frame} size={14} /> {t('viewMenu.putOnCanvas')}
-                            </Menu.Item>
-                        )}
-                        {(isDrawingView(active) || isDiagramView(active) || isFileView(active)) && (
-                            <Menu.Item className="menu-item" onClick={() => showViewOnCanvas(active.id)}>
-                                <Icon icon={Frame} size={14} /> {t('viewMenu.showOnCanvas')}
-                            </Menu.Item>
-                        )}
-                        <Menu.Item className="menu-item" onClick={() => askRenameView(active.id)}>
-                            <Icon icon={Pencil} size={14} /> {t('viewMenu.renameView')}
-                        </Menu.Item>
-                        <Menu.Item className="menu-item" onClick={() => askViewIcon(active.id)}>
-                            <Icon icon={Smile} size={14} /> {t('viewMenu.changeIcon')}
-                        </Menu.Item>
-                        <Menu.Item className="menu-item text-status-error" onClick={() => askDeleteView(active.id)}>
-                            <Icon icon={Trash} size={14} /> {t('viewMenu.deleteView')}
-                        </Menu.Item>
-                    </Menu.Popup>
-                </Menu.Positioner>
-            </Menu.Portal>
+                <div className={MENU_LABEL}>{t('viewMenu.newView')}</div>
+                <NewViewItems />
+                <Menu.Separator className={MENU_SEPARATOR} />
+                <SplitItems />
+                <Menu.Separator className={MENU_SEPARATOR} />
+                <ViewMenuItems viewId={active.id} kind={active.kind} />
+            </MenuPopup>
         </Menu.Root>
     );
 }

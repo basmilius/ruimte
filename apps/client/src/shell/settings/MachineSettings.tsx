@@ -4,6 +4,7 @@ import { Check, Copy, Link2, Trash } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { brokerHostOf, brokerUrlProblem, type BrokerSetting } from '@ruimte/pulsar';
 import type { AuthSession } from '@ruimte/contracts';
+import { messageOf } from '@/pulsar/account';
 import { forgetEndpoint } from '@/endpoint';
 import { formatNumericDate } from '@/format/datetime';
 import { formatAgo } from '@/format/duration';
@@ -20,8 +21,6 @@ import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Select } from '@/ui/Select';
 import { Tooltip } from '@/ui/Tooltip';
-
-const failureText = (e: unknown, fallback: string): string => (e instanceof Error ? e.message : fallback);
 
 /* A disabled control does not take the pointer, so the reason sits on a wrapper around it. */
 export function WithReason({ reason, children }: { reason: string | null; children: ReactElement }) {
@@ -71,7 +70,7 @@ const saveMachineSetting = async (
             id: `endpoint-setting-${endpoint.id}`,
             kind: 'error',
             title: i18next.t('settings:machine.toast.saveFailed', { machine: endpoint.label }),
-            description: failureText(e, i18next.t('settings:machine.toast.unchanged'))
+            description: messageOf(e, i18next.t('settings:machine.toast.unchanged'))
         });
     }
 };
@@ -315,7 +314,7 @@ export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
                 setSessions(answer.sessions);
                 setFailure(null);
             })
-            .catch((e: unknown) => setFailure(failureText(e, t('machine.access.listFailed'))));
+            .catch((e: unknown) => setFailure(messageOf(e, t('machine.access.listFailed'))));
     };
 
     // The list belongs to the machine behind the socket, so it loads again on every reconnect.
@@ -351,7 +350,7 @@ export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
             setLink((await transport.request('auth.pairingToken', {})).url);
             setCopied(false);
         } catch (e) {
-            setFailure(failureText(e, t('machine.access.linkFailed')));
+            setFailure(messageOf(e, t('machine.access.linkFailed')));
         } finally {
             setBusy(false);
         }

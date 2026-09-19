@@ -460,7 +460,9 @@
       "missing": "Nodig voor GPT-Live. De key blijft in de desktop-shell en wordt nooit in een project bewaard.",
       "replacePlaceholder": "Voer een vervangende key in",
       "remove": "Opgeslagen API key verwijderen",
-      "saveFailure": "De API key kon niet worden opgeslagen."
+      "saveFailure": "De API key kon niet worden opgeslagen.",
+      "readFailure": "De instellingen konden niet worden gelezen.",
+      "removeFailure": "De API-sleutel kon niet worden verwijderd."
     },
     "toast": {
       "readFailed": "Kon de instellingen van GPT-Live niet lezen",
@@ -507,10 +509,6 @@
     "name": "Naam",
     "nameLabel": "Naam van de machine",
     "nameHint": "Laat leeg om de standaardnaam te gebruiken.",
-    "emoji": "Emoji",
-    "useEmoji": "Emoji gebruiken",
-    "icon": "Icoon",
-    "noIcon": "Geen icoon",
     "gone": "Die machine staat niet meer in de lijst",
     "saveFailed": "De machine kon de wijziging niet opslaan"
   },

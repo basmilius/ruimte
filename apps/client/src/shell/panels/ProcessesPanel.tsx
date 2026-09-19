@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
-import { Dialog } from '@base-ui-components/react/dialog';
 import {
     Activity,
     AppWindow,
@@ -33,6 +32,7 @@ import {
     groupTitle,
     type AlertAction
 } from '@/processes/format';
+import { messageOf } from '@/pulsar/account';
 import { projectNodes, revealNode } from '@/project/views';
 import { Segmented } from '@/shell/settings/controls';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
@@ -49,9 +49,10 @@ import { useTransport } from '@/transport/context';
 import { useEndpointConnection } from '@/transport/status';
 import { Button } from '@/ui/Button';
 import { MENU_HINT, MENU_LABEL, SECTION_LABEL } from '@/ui/classes';
-import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
+import { PanelEmpty } from '@/ui/PanelEmpty';
+import { PromptDialog } from '@/ui/PromptDialog';
 
 /* The two scopes and the three sortable columns as ids; their words come from `panels:processes`. */
 const SCOPES = ['ruimte', 'all'] as const;
@@ -216,29 +217,24 @@ export function ProcessesPanel() {
 
     if (platform === 'win32' || row.supported === false) {
         return (
-            <div className="grid grow place-items-center">
-                {header}
-                <EmptyState icon={<Icon icon={Activity} size={20} />}>
-                    {platform === 'win32' ? t('processes.unsupportedWindows') : t('processes.unsupported')}
-                </EmptyState>
-            </div>
+            <PanelEmpty header={header} icon={Activity}>
+                {platform === 'win32' ? t('processes.unsupportedWindows') : t('processes.unsupported')}
+            </PanelEmpty>
         );
     }
     if (connection.status !== 'open') {
         return (
-            <div className="grid grow place-items-center">
-                {header}
-                <EmptyState icon={<Icon icon={Activity} size={20} />}>{t('machineNotAnswering')}</EmptyState>
-            </div>
+            <PanelEmpty header={header} icon={Activity}>
+                {t('machineNotAnswering')}
+            </PanelEmpty>
         );
     }
     const sample = row.sample;
     if (sample === null) {
         return (
-            <div className="grid grow place-items-center">
-                {header}
-                <EmptyState icon={<Icon icon={Activity} size={20} />}>{t('processes.measuring')}</EmptyState>
-            </div>
+            <PanelEmpty header={header} icon={Activity}>
+                {t('processes.measuring')}
+            </PanelEmpty>
         );
     }
 
@@ -270,7 +266,7 @@ export function ProcessesPanel() {
     }
 
     const fail = (title: string, e: unknown): void => {
-        useToasts.getState().show({ title, description: e instanceof Error ? e.message : String(e), kind: 'error' });
+        useToasts.getState().show({ title, description: messageOf(e), kind: 'error' });
     };
     const signal = (target: Target, kind: ProcessSignal): void => {
         transport
@@ -469,29 +465,21 @@ export function ProcessesPanel() {
                 })}
             </div>
 
-            <Dialog.Root open={forcing !== null} onOpenChange={(next) => !next && setForcing(null)}>
-                <Dialog.Portal>
-                    <Dialog.Backdrop className="dialog-backdrop" />
-                    <Dialog.Popup className="dialog-popup w-[420px] p-5">
-                        <Dialog.Title className="text-base font-semibold text-text">{t('processes.force.title', { name: forcing?.name })}</Dialog.Title>
-                        <p className="mt-1 text-xs text-text-muted">{t('processes.force.description', { pid: forcing?.pid })}</p>
-                        <div className="mt-4 flex items-center justify-end gap-2">
-                            <Button onClick={() => setForcing(null)}>{t('common:action.cancel')}</Button>
-                            <Button
-                                variant="danger"
-                                onClick={() => {
-                                    if (forcing !== null) {
-                                        signal(forcing, 'SIGKILL');
-                                    }
-                                    setForcing(null);
-                                }}
-                            >
-                                <Icon icon={OctagonX} size={12} /> {t('processes.force.confirm')}
-                            </Button>
-                        </div>
-                    </Dialog.Popup>
-                </Dialog.Portal>
-            </Dialog.Root>
+            <PromptDialog
+                open={forcing !== null}
+                title={t('processes.force.title', { name: forcing?.name })}
+                description={t('processes.force.description', { pid: forcing?.pid })}
+                confirmLabel={t('processes.force.confirm')}
+                confirmIcon={OctagonX}
+                danger
+                onConfirm={() => {
+                    if (forcing !== null) {
+                        signal(forcing, 'SIGKILL');
+                    }
+                    setForcing(null);
+                }}
+                onClose={() => setForcing(null)}
+            />
         </div>
     );
 }

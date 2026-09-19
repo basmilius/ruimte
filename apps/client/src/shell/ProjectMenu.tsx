@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@base-ui-components/react/dialog';
 import { Menu } from '@base-ui-components/react/menu';
 import { ChevronDown, ChevronRight, ExternalLink, FolderOpen, History, MoreHorizontal, Plus, Settings2, X } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
@@ -23,9 +22,10 @@ import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 import { useMachineHold, useOpenEndpoints } from '@/transport/status';
 import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
-import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
+import { PromptDialog } from '@/ui/PromptDialog';
+import { MenuPopup } from '@/ui/MenuPopup';
 
 interface ProjectRowProps {
     row: ProjectMenuRow;
@@ -241,52 +241,48 @@ export function ProjectMenu() {
                     <span className="truncate text-sm font-medium text-text">{current?.name}</span>
                     <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
                 </Menu.Trigger>
-                <Menu.Portal>
-                    <Menu.Positioner className="z-(--z-popup)" side="bottom" sideOffset={6} align="start">
-                        <Menu.Popup className="menu-popup min-w-60">
-                            {open.length > 0 && <div className={MENU_LABEL}>{t('projectMenu.projects')}</div>}
-                            {open.map((row) => (
-                                <ProjectRow
-                                    key={`${row.endpointId}:${row.summary.projectId}`}
-                                    row={row}
-                                    showMachine={showMachine}
-                                    actions={{
-                                        platform: servers[row.endpointId]?.platform ?? null,
-                                        onSettings: () => openSettings(row),
-                                        onClose: () => void askClose(row)
-                                    }}
-                                />
-                            ))}
-                            {recent.length > 0 && (
-                                <>
-                                    {open.length > 0 && <Menu.Separator className={MENU_SEPARATOR} />}
-                                    <Menu.SubmenuRoot>
-                                        <Menu.SubmenuTrigger className="menu-item">
-                                            <Icon icon={History} size={14} /> {t('projectMenu.recent')}
-                                            <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
-                                        </Menu.SubmenuTrigger>
-                                        <Menu.Portal>
-                                            <Menu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
-                                                <Menu.Popup className="menu-popup min-w-60">
-                                                    {recent.map((row) => (
-                                                        <ProjectRow key={`${row.endpointId}:${row.summary.projectId}`} row={row} showMachine={showMachine} />
-                                                    ))}
-                                                </Menu.Popup>
-                                            </Menu.Positioner>
-                                        </Menu.Portal>
-                                    </Menu.SubmenuRoot>
-                                </>
-                            )}
-                            {(open.length > 0 || recent.length > 0) && <Menu.Separator className={MENU_SEPARATOR} />}
-                            <Menu.Item className="menu-item" onClick={() => setNewOpen(true)}>
-                                <Icon icon={Plus} size={14} /> {t('projectMenu.newProject')}
-                            </Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => useUi.getState().openFolderBrowser()}>
-                                <Icon icon={FolderOpen} size={14} /> {t('projectMenu.openFolder')}
-                            </Menu.Item>
-                        </Menu.Popup>
-                    </Menu.Positioner>
-                </Menu.Portal>
+                <MenuPopup className="min-w-60">
+                    {open.length > 0 && <div className={MENU_LABEL}>{t('projectMenu.projects')}</div>}
+                    {open.map((row) => (
+                        <ProjectRow
+                            key={`${row.endpointId}:${row.summary.projectId}`}
+                            row={row}
+                            showMachine={showMachine}
+                            actions={{
+                                platform: servers[row.endpointId]?.platform ?? null,
+                                onSettings: () => openSettings(row),
+                                onClose: () => void askClose(row)
+                            }}
+                        />
+                    ))}
+                    {recent.length > 0 && (
+                        <>
+                            {open.length > 0 && <Menu.Separator className={MENU_SEPARATOR} />}
+                            <Menu.SubmenuRoot>
+                                <Menu.SubmenuTrigger className="menu-item">
+                                    <Icon icon={History} size={14} /> {t('projectMenu.recent')}
+                                    <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
+                                </Menu.SubmenuTrigger>
+                                <Menu.Portal>
+                                    <Menu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
+                                        <Menu.Popup className="menu-popup min-w-60">
+                                            {recent.map((row) => (
+                                                <ProjectRow key={`${row.endpointId}:${row.summary.projectId}`} row={row} showMachine={showMachine} />
+                                            ))}
+                                        </Menu.Popup>
+                                    </Menu.Positioner>
+                                </Menu.Portal>
+                            </Menu.SubmenuRoot>
+                        </>
+                    )}
+                    {(open.length > 0 || recent.length > 0) && <Menu.Separator className={MENU_SEPARATOR} />}
+                    <Menu.Item className="menu-item" onClick={() => setNewOpen(true)}>
+                        <Icon icon={Plus} size={14} /> {t('projectMenu.newProject')}
+                    </Menu.Item>
+                    <Menu.Item className="menu-item" onClick={() => useUi.getState().openFolderBrowser()}>
+                        <Icon icon={FolderOpen} size={14} /> {t('projectMenu.openFolder')}
+                    </Menu.Item>
+                </MenuPopup>
             </Menu.Root>
 
             <ProjectNameDialog
@@ -308,21 +304,16 @@ export function ProjectMenu() {
                 onOpenChangeComplete={(open) => !open && setSettingsTarget(null)}
             />
 
-            <Dialog.Root open={closing !== null} onOpenChange={(next) => !next && setClosing(null)}>
-                <Dialog.Portal>
-                    <Dialog.Backdrop className="dialog-backdrop" />
-                    <Dialog.Popup className="dialog-popup w-[420px] p-5">
-                        <Dialog.Title className="text-base font-semibold text-text">{t('projectMenu.closeTitle', { name: closing?.name ?? '' })}</Dialog.Title>
-                        <p className="mt-1 text-xs text-text-muted">{closeWarning(closing?.sessions ?? 0)}</p>
-                        <div className="mt-4 flex items-center justify-end gap-2">
-                            <Button onClick={() => setClosing(null)}>{t('common:action.cancel')}</Button>
-                            <Button variant={closing?.sessions === 0 ? 'primary' : 'danger'} onClick={() => void close()}>
-                                <Icon icon={X} size={12} /> {t('common:action.close')}
-                            </Button>
-                        </div>
-                    </Dialog.Popup>
-                </Dialog.Portal>
-            </Dialog.Root>
+            <PromptDialog
+                open={closing !== null}
+                title={t('projectMenu.closeTitle', { name: closing?.name ?? '' })}
+                description={closeWarning(closing?.sessions ?? 0)}
+                confirmLabel={t('common:action.close')}
+                confirmIcon={X}
+                danger={closing !== null && closing.sessions > 0}
+                onConfirm={() => void close()}
+                onClose={() => setClosing(null)}
+            />
         </>
     );
 }

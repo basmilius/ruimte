@@ -18,6 +18,7 @@ import { ACCENT_SWATCH } from '@/ui/classes';
 import { Select } from '@/ui/Select';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
+import { MenuPopup } from '@/ui/MenuPopup';
 
 /* A date with a weekday, a month and a clock, so every part a region writes differently is in it. */
 const EXAMPLE_MOMENT = new Date(2026, 8, 19, 14, 30);
@@ -64,25 +65,21 @@ function AccentSwatches() {
                         <Icon icon={hidden ? Check : Ellipsis} size={12} />
                     </Menu.Trigger>
                 </Tooltip>
-                <Menu.Portal>
-                    <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
-                        <Menu.Popup className="menu-popup max-h-96 overflow-y-auto">
-                            <Menu.RadioGroup value={accent} onValueChange={(value: AccentId) => pick(value)}>
-                                {rest.map((entry) => (
-                                    <Menu.RadioItem key={entry.id} value={entry.id} className="menu-item">
-                                        <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: entry.color }} aria-hidden />
-                                        <span className="grow">{accentLabel(entry.id)}</span>
-                                        <span className="grid h-5 w-4 shrink-0 place-items-center">
-                                            <Menu.RadioItemIndicator>
-                                                <Icon icon={Check} size={14} />
-                                            </Menu.RadioItemIndicator>
-                                        </span>
-                                    </Menu.RadioItem>
-                                ))}
-                            </Menu.RadioGroup>
-                        </Menu.Popup>
-                    </Menu.Positioner>
-                </Menu.Portal>
+                <MenuPopup align="end" className="max-h-96 overflow-y-auto">
+                    <Menu.RadioGroup value={accent} onValueChange={(value: AccentId) => pick(value)}>
+                        {rest.map((entry) => (
+                            <Menu.RadioItem key={entry.id} value={entry.id} className="menu-item">
+                                <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: entry.color }} aria-hidden />
+                                <span className="grow">{accentLabel(entry.id)}</span>
+                                <span className="grid h-5 w-4 shrink-0 place-items-center">
+                                    <Menu.RadioItemIndicator>
+                                        <Icon icon={Check} size={14} />
+                                    </Menu.RadioItemIndicator>
+                                </span>
+                            </Menu.RadioItem>
+                        ))}
+                    </Menu.RadioGroup>
+                </MenuPopup>
             </Menu.Root>
         </div>
     );

@@ -927,11 +927,11 @@ export function CommandPalette() {
                             <Tooltip label={submitLabel} kbd={submitShortcut}>
                                 <Button size="sm" variant="secondary" disabled={query.trim() === ''} onClick={() => submitPath(query)}>
                                     {submitLabel}
-                                    <Kbd shortcut={submitShortcut} className={TOOLTIP_KBD} />
+                                    <Kbd shortcut={submitShortcut} variant="inline" />
                                 </Button>
                             </Tooltip>
                         )}
-                        {!browsing && <Kbd shortcut={KEY_SHORTCUTS.escape} className={TOOLTIP_KBD} />}
+                        {!browsing && <Kbd shortcut={KEY_SHORTCUTS.escape} variant="inline" />}
                     </div>
                     <div id={LIST_ID} className="max-h-[50vh] overflow-auto p-1.5" role="listbox" aria-label={t('palette.results')}>
                         <div aria-live="polite">
@@ -972,7 +972,7 @@ export function CommandPalette() {
                                             </span>
                                             <Button size="sm" variant="secondary" onClick={retry}>
                                                 {t('common:action.retry')}
-                                                <Kbd shortcut={KEY_SHORTCUTS.enter} className={TOOLTIP_KBD} />
+                                                <Kbd shortcut={KEY_SHORTCUTS.enter} variant="inline" />
                                             </Button>
                                         </>
                                     )}
@@ -1012,7 +1012,7 @@ export function CommandPalette() {
                                         {entry.hint && <span className="text-xs text-text-faint">{entry.hint}</span>}
                                         <span className="grow" />
                                         {entry.trailing}
-                                        {entry.shortcut && <Kbd shortcut={entry.shortcut} className={TOOLTIP_KBD} />}
+                                        {entry.shortcut && <Kbd shortcut={entry.shortcut} variant="inline" />}
                                     </button>
                                 </div>
                             );
@@ -1035,8 +1035,8 @@ export function CommandPalette() {
                             )}
                             <span className="grow" />
                             <span>
-                                <Kbd shortcut={KEY_SHORTCUTS.enter} className={TOOLTIP_KBD} /> {t('palette.grepEnterHint')}{' '}
-                                <Kbd shortcut={KEY_SHORTCUTS.backspace} className={TOOLTIP_KBD} /> {t('palette.grepBackHint')}
+                                <Kbd shortcut={KEY_SHORTCUTS.enter} variant="inline" /> {t('palette.grepEnterHint')}{' '}
+                                <Kbd shortcut={KEY_SHORTCUTS.backspace} variant="inline" /> {t('palette.grepBackHint')}
                             </span>
                         </div>
                     )}
@@ -1050,14 +1050,14 @@ export function CommandPalette() {
                                 the button in the field is already saying so. */}
                             {linkWait === null && (active !== undefined || query.trim() === '') && (
                                 <span className="flex shrink-0 items-center gap-1.5">
-                                    <Kbd shortcut={KEY_SHORTCUTS.enter} className={TOOLTIP_KBD} /> {t('common:action.select')}
+                                    <Kbd shortcut={KEY_SHORTCUTS.enter} variant="inline" /> {t('common:action.select')}
                                 </span>
                             )}
                             <span className="flex shrink-0 items-center gap-1.5">
-                                <Kbd shortcut={KEY_SHORTCUTS.backspace} className={TOOLTIP_KBD} /> {t('projectBanner.back')}
+                                <Kbd shortcut={KEY_SHORTCUTS.backspace} variant="inline" /> {t('projectBanner.back')}
                             </span>
                             <span className="flex shrink-0 items-center gap-1.5">
-                                <Kbd shortcut={KEY_SHORTCUTS.escape} className={TOOLTIP_KBD} /> {t('common:action.close')}
+                                <Kbd shortcut={KEY_SHORTCUTS.escape} variant="inline" /> {t('common:action.close')}
                             </span>
                             <span className="grow" />
                             {failure && (

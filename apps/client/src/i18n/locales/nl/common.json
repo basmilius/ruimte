@@ -32,12 +32,18 @@
     "yes": "Ja",
     "no": "Nee"
   },
-  "unseen": "Klaar terwijl je weg was",
+  "icon": {
+    "emoji": "Emoji",
+    "useEmoji": "Emoji gebruiken",
+    "label": "Icoon",
+    "none": "Geen icoon"
+  },
   "status": {
     "running": "bezig",
     "done": "klaar",
     "failed": "mislukt",
     "cancelled": "geannuleerd"
   },
-  "taskMark": "Taak: {{title}} ({{status}})"
+  "taskMark": "Taak: {{title}} ({{status}})",
+  "unseen": "Klaar terwijl je weg was"
 }

@@ -20,7 +20,7 @@ import {
 import { FadingWords } from '@/chat/ui/FadingWords';
 import { hasOverlayControls } from '@/desktop/bridge';
 import { formatClockDuration } from '@/format/duration';
-import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
+import { clampColumnSize, useColumnResize } from '@/shell/useColumnResize';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
@@ -314,13 +314,13 @@ export function VoicePanel() {
     const elapsedMs = sessionStartedAt === null ? 0 : Math.max(0, now - sessionStartedAt);
     const bottom = useRef<HTMLDivElement>(null);
     const panel = useRef<HTMLElement>(null);
-    const width = clampColumnWidth({ min: MIN_WIDTH, max: () => window.innerWidth - MIN_WORKSPACE_WIDTH }, storedWidth ?? DEFAULT_WIDTH);
+    const width = clampColumnSize({ min: MIN_WIDTH, max: () => window.innerWidth - MIN_WORKSPACE_WIDTH }, storedWidth ?? DEFAULT_WIDTH);
     const { startResize } = useColumnResize(panel, {
         min: MIN_WIDTH,
         max: () => window.innerWidth - MIN_WORKSPACE_WIDTH,
-        width,
+        size: width,
         from: 'right',
-        onWidth: (next) => useVoice.getState().setWidth(next)
+        onSize: (next: number) => useVoice.getState().setWidth(next)
     });
     const active = phase === 'connecting' || phase === 'listening' || phase === 'closing';
     const timeline = voiceTimeline(transcript, actions);

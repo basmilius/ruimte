@@ -111,9 +111,6 @@
     "separator": "Separator",
     "pickedHere": "Picked here",
     "defaultForKind": "Default for its kind",
-    "emoji": "Emoji",
-    "useEmoji": "Use emoji",
-    "icon": "Icon",
     "useDefault": "Use the default"
   },
   "projectBanner": {
@@ -204,9 +201,7 @@
     "newView": "View",
     "putOnCanvas": "Put on canvas",
     "showOnCanvas": "Show on the canvas",
-    "renameView": "Rename view",
-    "changeIcon": "Change icon…",
-    "deleteView": "Delete view"
+    "changeIcon": "Change icon…"
   },
   "planPanel": {
     "failed": "This plan failed to render",

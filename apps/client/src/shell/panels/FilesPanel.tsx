@@ -69,6 +69,8 @@ import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { Kbd } from '@/ui/Kbd';
+import { PanelEmpty } from '@/ui/PanelEmpty';
+import { MenuPopup } from '@/ui/MenuPopup';
 
 const SEARCH_DEBOUNCE_MS = 150;
 const SEARCH_LIMIT = 200;
@@ -429,11 +431,7 @@ export function FilesPanel() {
     };
 
     if (!folder) {
-        return (
-            <div className="grid grow place-items-center">
-                <EmptyState icon={<Icon icon={Folder} size={20} />}>{t('git.panel.noFolder')}</EmptyState>
-            </div>
-        );
+        return <PanelEmpty icon={Folder}>{t('git.panel.noFolder')}</PanelEmpty>;
     }
 
     /* What stands where the tree would be while it holds no rows: the first listing still on its
@@ -486,40 +484,36 @@ export function FilesPanel() {
                             <Icon icon={MoreHorizontal} size={14} />
                         </Menu.Trigger>
                     </Tooltip>
-                    <Menu.Portal>
-                        <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
-                            <Menu.Popup className="menu-popup">
-                                <Menu.Item className="menu-item" onClick={() => useUi.getState().openFindInFiles()}>
-                                    <Icon icon={FileSearch} size={14} /> {t('file.empty.findInFiles')} <Kbd shortcut={APP_SHORTCUTS.findInFiles} />
-                                </Menu.Item>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <Menu.CheckboxItem
-                                    className="menu-item"
-                                    checked={showHidden}
-                                    onCheckedChange={(checked) => useSettings.getState().update({ filesShowHidden: checked })}
-                                    closeOnClick={false}
-                                >
-                                    <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
-                                        <Menu.CheckboxItemIndicator>
-                                            <Icon icon={Check} size={12} />
-                                        </Menu.CheckboxItemIndicator>
-                                    </span>
-                                    {t('files.showHidden')}
-                                </Menu.CheckboxItem>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <Menu.Item className="menu-item" onClick={expandAll}>
-                                    <Icon icon={ChevronsUpDown} size={14} /> {t('git.panel.expandAll')}
-                                </Menu.Item>
-                                <Menu.Item className="menu-item" onClick={collapseAll}>
-                                    <Icon icon={ChevronsDownUp} size={14} /> {t('git.panel.collapseAll')}
-                                </Menu.Item>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <Menu.Item className="menu-item" onClick={refresh}>
-                                    <Icon icon={RefreshCw} size={14} /> {t('file.menu.refresh')}
-                                </Menu.Item>
-                            </Menu.Popup>
-                        </Menu.Positioner>
-                    </Menu.Portal>
+                    <MenuPopup align="end">
+                        <Menu.Item className="menu-item" onClick={() => useUi.getState().openFindInFiles()}>
+                            <Icon icon={FileSearch} size={14} /> {t('file.empty.findInFiles')} <Kbd shortcut={APP_SHORTCUTS.findInFiles} />
+                        </Menu.Item>
+                        <Menu.Separator className={MENU_SEPARATOR} />
+                        <Menu.CheckboxItem
+                            className="menu-item"
+                            checked={showHidden}
+                            onCheckedChange={(checked) => useSettings.getState().update({ filesShowHidden: checked })}
+                            closeOnClick={false}
+                        >
+                            <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
+                                <Menu.CheckboxItemIndicator>
+                                    <Icon icon={Check} size={12} />
+                                </Menu.CheckboxItemIndicator>
+                            </span>
+                            {t('files.showHidden')}
+                        </Menu.CheckboxItem>
+                        <Menu.Separator className={MENU_SEPARATOR} />
+                        <Menu.Item className="menu-item" onClick={expandAll}>
+                            <Icon icon={ChevronsUpDown} size={14} /> {t('git.panel.expandAll')}
+                        </Menu.Item>
+                        <Menu.Item className="menu-item" onClick={collapseAll}>
+                            <Icon icon={ChevronsDownUp} size={14} /> {t('git.panel.collapseAll')}
+                        </Menu.Item>
+                        <Menu.Separator className={MENU_SEPARATOR} />
+                        <Menu.Item className="menu-item" onClick={refresh}>
+                            <Icon icon={RefreshCw} size={14} /> {t('file.menu.refresh')}
+                        </Menu.Item>
+                    </MenuPopup>
                 </Menu.Root>
             </div>
             {reachability !== null && reachability !== 'loopback' && (

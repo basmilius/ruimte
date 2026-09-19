@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Menu } from '@base-ui-components/react/menu';
 import {
@@ -69,6 +69,7 @@ import { UsageLimitsCard } from '@/shell/usage/UsageLimitsCard';
 import { ConnectionDot } from '@/shell/ConnectionDot';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { Icon } from '@/ui/Icon';
+import { MenuPopup } from '@/ui/MenuPopup';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 
 /* How wide the list is when it is open. The inner column keeps this width while the wrapper
@@ -216,10 +217,7 @@ function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarN
                 onClick={() => revealNode(node.id)}
                 onDoubleClick={() => setRenaming(true)}
                 onKeyDown={(e) => {
-                    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                        e.preventDefault();
-                        onArrow(e.key === 'ArrowDown' ? 1 : -1);
-                    }
+                    arrowStep(e, onArrow);
                     if (e.key === 'F2') {
                         e.preventDefault();
                         setRenaming(true);
@@ -256,6 +254,30 @@ interface ViewRowProps extends RowProps {
     onDrag(id: string | null, transfer?: DataTransfer): void;
 }
 
+/* Up and down walk the list, from whichever row has the keyboard. */
+const arrowStep = (event: ReactKeyboardEvent<HTMLElement>, onArrow: (delta: 1 | -1) => void): void => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        onArrow(event.key === 'ArrowDown' ? 1 : -1);
+    }
+};
+
+/* All a row with nothing to open offers: a separator, and a view this version cannot draw. */
+function DeleteRowMenu({ onDelete }: { onDelete(): void }) {
+    const { t } = useTranslation('common');
+    return (
+        <ContextMenu.Portal>
+            <ContextMenu.Positioner className="z-(--z-popup)">
+                <ContextMenu.Popup className="menu-popup">
+                    <ContextMenu.Item className="menu-item text-status-error" onClick={onDelete}>
+                        <Icon icon={Trash} size={14} /> {t('action.delete')}
+                    </ContextMenu.Item>
+                </ContextMenu.Popup>
+            </ContextMenu.Positioner>
+        </ContextMenu.Portal>
+    );
+}
+
 /*
  * A separator is a line, not a place: it has no body, never opens and says nothing. It drags and
  * reorders like any other row, because it earns its keep by where it sits between them.
@@ -277,24 +299,11 @@ function SeparatorRow({ row, tabbable, onFocus, onArrow, onDelete, onDrag }: Omi
                 onFocus={onFocus}
                 onDragStart={(event) => onDrag(view.id, event.dataTransfer)}
                 onDragEnd={() => onDrag(null)}
-                onKeyDown={(e) => {
-                    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                        e.preventDefault();
-                        onArrow(e.key === 'ArrowDown' ? 1 : -1);
-                    }
-                }}
+                onKeyDown={(e) => arrowStep(e, onArrow)}
             >
                 <span className="h-px grow bg-border" />
             </ContextMenu.Trigger>
-            <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-(--z-popup)">
-                    <ContextMenu.Popup className="menu-popup">
-                        <ContextMenu.Item className="menu-item text-status-error" onClick={onDelete}>
-                            <Icon icon={Trash} size={14} /> {t('common:action.delete')}
-                        </ContextMenu.Item>
-                    </ContextMenu.Popup>
-                </ContextMenu.Positioner>
-            </ContextMenu.Portal>
+            <DeleteRowMenu onDelete={onDelete} />
         </ContextMenu.Root>
     );
 }
@@ -317,12 +326,7 @@ function UnknownViewRow({ row, tabbable, onFocus, onArrow, onDelete }: Omit<View
                 tabIndex={tabbable ? 0 : -1}
                 className={clsx(ROW, 'cursor-default font-medium text-text-faint outline-none focus-visible:ring-1 focus-visible:ring-accent')}
                 onFocus={onFocus}
-                onKeyDown={(e) => {
-                    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                        e.preventDefault();
-                        onArrow(e.key === 'ArrowDown' ? 1 : -1);
-                    }
-                }}
+                onKeyDown={(e) => arrowStep(e, onArrow)}
             >
                 <Tooltip label={t('sidebar.needsNewerRuimte')}>
                     <span className="flex min-w-0 grow items-center gap-2">
@@ -333,15 +337,7 @@ function UnknownViewRow({ row, tabbable, onFocus, onArrow, onDelete }: Omit<View
                     </span>
                 </Tooltip>
             </ContextMenu.Trigger>
-            <ContextMenu.Portal>
-                <ContextMenu.Positioner className="z-(--z-popup)">
-                    <ContextMenu.Popup className="menu-popup">
-                        <ContextMenu.Item className="menu-item text-status-error" onClick={onDelete}>
-                            <Icon icon={Trash} size={14} /> {t('common:action.delete')}
-                        </ContextMenu.Item>
-                    </ContextMenu.Popup>
-                </ContextMenu.Positioner>
-            </ContextMenu.Portal>
+            <DeleteRowMenu onDelete={onDelete} />
         </ContextMenu.Root>
     );
 }
@@ -388,10 +384,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
                 onDragStart={(event) => onDrag(view.id, event.dataTransfer)}
                 onDragEnd={() => onDrag(null)}
                 onKeyDown={(e) => {
-                    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                        e.preventDefault();
-                        onArrow(e.key === 'ArrowDown' ? 1 : -1);
-                    }
+                    arrowStep(e, onArrow);
                     if (e.key === 'F2') {
                         e.preventDefault();
                         setRenaming(true);
@@ -726,13 +719,9 @@ export function Sidebar() {
                         <Menu.Trigger className="flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-50 disabled:hover:bg-transparent data-[popup-open]:bg-surface-active">
                             <Icon icon={Plus} size={14} /> {t('viewMenu.newView')}
                         </Menu.Trigger>
-                        <Menu.Portal>
-                            <Menu.Positioner className="z-(--z-popup)" side="top" sideOffset={6} align="start">
-                                <Menu.Popup className="menu-popup min-w-52">
-                                    <NewViewItems />
-                                </Menu.Popup>
-                            </Menu.Positioner>
-                        </Menu.Portal>
+                        <MenuPopup side="top" className="min-w-52">
+                            <NewViewItems />
+                        </MenuPopup>
                     </Menu.Root>
                     <ConnectionDot />
                     <UsageLimitsCard>

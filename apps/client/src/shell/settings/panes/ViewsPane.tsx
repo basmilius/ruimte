@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { canSwipeBetweenPages } from '@/desktop/bridge';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Keys, Toggle } from '@/shell/settings/controls';
+import { Toggle } from '@/shell/settings/controls';
+import { Keys } from '@/ui/Kbd';
 import { useSettings } from '@/state/settings';
 import { shortcut } from '@/ui/shortcut';
 

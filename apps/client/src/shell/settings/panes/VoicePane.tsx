@@ -2,10 +2,12 @@ import { useEffect, useState, type FormEvent } from 'react';
 import i18next from 'i18next';
 import { Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { messageOf } from '@/pulsar/account';
 import { desktop, type OpenAiCredentialStatus } from '@/desktop/bridge';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Badge, Skeleton, Toggle } from '@/shell/settings/controls';
+import { Skeleton, Toggle } from '@/shell/settings/controls';
+import { Pill } from '@/ui/Pill';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { Button } from '@/ui/Button';
@@ -16,8 +18,6 @@ import { useVoice } from '@/voice/state';
 import { closeVoicePanel } from '@/voice/controller';
 import { DEFAULT_MICROPHONE_ID, listMicrophones, type MicrophoneDevice } from '@/voice/microphone';
 import { LIVE_VOICES, VOICE_LANGUAGES } from '@/voice/preferences';
-
-const failureText = (error: unknown): string => (error instanceof Error ? error.message : i18next.t('settings:voice.key.saveFailure'));
 
 const titleCase = (value: string): string => value[0]!.toUpperCase() + value.slice(1);
 
@@ -60,7 +60,11 @@ export function VoicePane() {
             .catch((error: unknown) => {
                 if (current) {
                     // Read off i18next rather than the hook's `t`, which would make the language a reason to ask again.
-                    useToasts.getState().show({ kind: 'error', title: i18next.t('settings:voice.toast.readFailed'), description: failureText(error) });
+                    useToasts.getState().show({
+                        kind: 'error',
+                        title: i18next.t('settings:voice.toast.readFailed'),
+                        description: messageOf(error, i18next.t('settings:voice.key.readFailure'))
+                    });
                 }
             });
         return () => {
@@ -129,7 +133,7 @@ export function VoicePane() {
             setDraft('');
             useToasts.getState().show({ kind: 'success', title: t('voice.toast.saved') });
         } catch (error) {
-            useToasts.getState().show({ kind: 'error', title: t('voice.toast.saveFailed'), description: failureText(error) });
+            useToasts.getState().show({ kind: 'error', title: t('voice.toast.saveFailed'), description: messageOf(error, t('voice.key.saveFailure')) });
         } finally {
             setBusy(false);
         }
@@ -148,7 +152,7 @@ export function VoicePane() {
             setDraft('');
             useToasts.getState().show({ kind: 'success', title: t('voice.toast.removed') });
         } catch (error) {
-            useToasts.getState().show({ kind: 'error', title: t('voice.toast.removeFailed'), description: failureText(error) });
+            useToasts.getState().show({ kind: 'error', title: t('voice.toast.removeFailed'), description: messageOf(error, t('voice.key.removeFailure')) });
         } finally {
             setBusy(false);
         }
@@ -178,9 +182,9 @@ export function VoicePane() {
                     description={displayStatus ? descriptionFor(displayStatus) : t('voice.key.checking')}
                     control={
                         displayStatus ? (
-                            <Badge tone={displayStatus.configured ? 'accent' : 'muted'}>
+                            <Pill shape="tag" tone={displayStatus.configured ? 'accent' : 'muted'}>
                                 {displayStatus.configured ? t('voice.key.configured') : t('voice.key.notConfigured')}
-                            </Badge>
+                            </Pill>
                         ) : (
                             <Skeleton className="w-20" />
                         )

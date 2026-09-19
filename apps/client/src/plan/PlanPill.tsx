@@ -43,7 +43,7 @@ export function PlanPill({ chatId }: { chatId: string }) {
     return (
         <Tooltip label={label}>
             <Pill
-                raised
+                tone="raised"
                 className="tabular-nums"
                 icon={<Icon icon={busy ? LoaderCircle : CheckCheck} size={12} className={clsx(busy && 'animate-spin text-accent')} />}
                 onClick={() => openPlanFromPill(chatId, plan.id)}

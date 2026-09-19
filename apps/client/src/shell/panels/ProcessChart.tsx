@@ -1,26 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { ProcessPoint } from '@ruimte/contracts';
 import { formatClock } from '@/shell/usage/format';
 import { SECTION_LABEL } from '@/ui/classes';
+import { useMeasuredWidth } from '@/ui/useMeasuredWidth';
 
 const HEIGHT = 44;
-
-/* The plot draws in real pixels rather than a stretched view box, so a line lands on whole ones. */
-const useWidth = (): [(node: HTMLDivElement | null) => void, number] => {
-    const [width, setWidth] = useState(0);
-    const observer = useRef<ResizeObserver | null>(null);
-    useEffect(() => () => observer.current?.disconnect(), []);
-    const measure = (node: HTMLDivElement | null): void => {
-        observer.current?.disconnect();
-        if (node === null) {
-            return;
-        }
-        setWidth(node.clientWidth);
-        observer.current = new ResizeObserver(([entry]) => setWidth(Math.round(entry!.contentRect.width)));
-        observer.current.observe(node);
-    };
-    return [measure, width];
-};
 
 /* Runs of points with a value, so a stretch that could not be measured is a gap and not a line to zero. */
 const runs = (points: readonly ProcessPoint[], read: (point: ProcessPoint) => number | null): ProcessPoint[][] => {
@@ -61,7 +45,7 @@ interface ProcessChartProps {
  * so a glance says whether Ruimte is what makes the machine slow or something else is.
  */
 export function ProcessChart({ label, headline, points, windowMs, end, max, machine, ruimte, format }: ProcessChartProps) {
-    const [measure, width] = useWidth();
+    const [measure, width] = useMeasuredWidth();
     const [hovered, setHovered] = useState<ProcessPoint | null>(null);
     const start = end - windowMs;
     const visible = points.filter((point) => point.at >= start);

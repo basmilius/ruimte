@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Worktree } from '@ruimte/contracts';
-import { GitPrompt } from '@/shell/panels/GitDialogs';
+import { PromptDialog } from '@/ui/PromptDialog';
 import { removeAllQuestion, removedToast } from '@/shell/panels/worktree-rows';
 import { useEndpointId } from '@/state/keys';
 import { useToasts } from '@/state/toasts';
@@ -98,7 +98,7 @@ export function RemoveWorktreeDialog() {
     };
 
     return (
-        <GitPrompt
+        <PromptDialog
             open={removal !== null}
             title={question?.title ?? t('removeWorktree.title')}
             description={

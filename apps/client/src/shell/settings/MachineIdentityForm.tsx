@@ -1,15 +1,13 @@
 import { useState } from 'react';
-import clsx from 'clsx';
-import { Ban } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { PROJECT_ICON_EMOJI_MAX, PROJECT_ICON_NAMES, type ProjectIconChoice } from '@ruimte/contracts';
-import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
+import { type ProjectIconChoice } from '@ruimte/contracts';
 import { useServers } from '@/state/server';
 import { transportFor } from '@/transport';
 import { adoptMachineName } from '@/transport/server-info';
 import { Button } from '@/ui/Button';
 import { SECTION_LABEL } from '@/ui/classes';
-import { Icon } from '@/ui/Icon';
+import { IconPicker } from '@/ui/IconPicker';
+import { useAsyncAction } from '@/ui/useAsyncAction';
 import { Tooltip } from '@/ui/Tooltip';
 
 interface MachineIdentityFormProps {
@@ -34,21 +32,17 @@ export function MachineIdentityForm({ endpointId, label, disabledReason }: Machi
     const savedIcon = info?.icon ?? null;
     const [name, setName] = useState(savedName);
     const [icon, setIcon] = useState<ProjectIconChoice | null>(savedIcon);
-    const [emoji, setEmoji] = useState('');
-    const [busy, setBusy] = useState(false);
-    const [failure, setFailure] = useState<string | null>(null);
+    const { busy, failure, run, fail } = useAsyncAction(t('identity.saveFailed'));
     const disabled = disabledReason !== null;
     const dirty = name.trim() !== savedName || JSON.stringify(icon) !== JSON.stringify(savedIcon);
 
     const save = async (): Promise<void> => {
         const link = transportFor(endpointId);
         if (!link) {
-            setFailure(t('identity.gone'));
+            fail(t('identity.gone'));
             return;
         }
-        setBusy(true);
-        setFailure(null);
-        try {
+        await run(async () => {
             const next = await link.request('endpoint.setIdentity', { name: name.trim() === '' ? null : name.trim(), icon });
             useServers.getState().setIdentity(endpointId, {
                 label: next.label,
@@ -57,17 +51,7 @@ export function MachineIdentityForm({ endpointId, label, disabledReason }: Machi
                 agentsDeleteAnyView: next.agentsDeleteAnyView === true
             });
             adoptMachineName(endpointId, next.label, next.nameSource ?? null);
-        } catch (e) {
-            setFailure(e instanceof Error ? e.message : t('identity.saveFailed'));
-        } finally {
-            setBusy(false);
-        }
-    };
-
-    const useEmoji = (): void => {
-        if (emoji.trim() !== '') {
-            setIcon({ kind: 'emoji', value: emoji.trim() });
-        }
+        });
     };
 
     const saveButton = (
@@ -95,47 +79,7 @@ export function MachineIdentityForm({ endpointId, label, disabledReason }: Machi
             />
             <p className="mt-1.5 text-xs text-text-faint">{t('identity.nameHint')}</p>
 
-            <div className={`${SECTION_LABEL} mt-4 mb-1.5`}>{t('identity.emoji')}</div>
-            <div className="flex flex-wrap items-center gap-2">
-                <input
-                    className="field w-24 text-center"
-                    aria-label={t('identity.emoji')}
-                    placeholder="🖥️"
-                    value={emoji}
-                    disabled={disabled}
-                    maxLength={PROJECT_ICON_EMOJI_MAX}
-                    onChange={(e) => setEmoji(e.target.value)}
-                    onKeyDown={(e) => e.stopPropagation()}
-                />
-                <Button disabled={disabled || emoji.trim() === ''} onClick={useEmoji}>
-                    {t('identity.useEmoji')}
-                </Button>
-                <span className="grow" />
-                <Tooltip label={t('identity.noIcon')} name>
-                    <button className="icon-btn h-7 w-7" disabled={disabled || icon === null} onClick={() => setIcon(null)}>
-                        <Icon icon={Ban} size={16} />
-                    </button>
-                </Tooltip>
-            </div>
-
-            <div className={`${SECTION_LABEL} mt-4 mb-1.5`}>{t('identity.icon')}</div>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(28px,1fr))] gap-1">
-                {PROJECT_ICON_NAMES.map((entry) => (
-                    <Tooltip key={entry} label={entry} name>
-                        <button
-                            type="button"
-                            disabled={disabled}
-                            className={clsx(
-                                'flex h-7 items-center justify-center rounded-md hover:bg-surface-hover disabled:opacity-50',
-                                icon?.kind === 'lucide' && icon.value === entry ? 'bg-surface-active text-text' : 'text-text-muted'
-                            )}
-                            onClick={() => setIcon({ kind: 'lucide', value: entry })}
-                        >
-                            <Icon icon={PROJECT_ICON_GLYPHS[entry]} size={16} />
-                        </button>
-                    </Tooltip>
-                ))}
-            </div>
+            <IconPicker value={icon} disabled={disabled} emojiPlaceholder="🖥️" onChange={setIcon} onClear={() => setIcon(null)} />
 
             {failure && (
                 <p className="mt-3 text-xs break-words text-status-error" role="alert">

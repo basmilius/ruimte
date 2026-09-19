@@ -3,23 +3,19 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { Popover } from '@base-ui-components/react/popover';
-import { MoreHorizontal, PanelBottom, PanelRight, X } from 'lucide-react';
+import { MoreHorizontal, X } from 'lucide-react';
 import { viewIconOf, type ProjectView } from '@ruimte/contracts';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { SubagentTitleCrumb } from '@/chat/ui/SubagentControls';
-import { ViewMenuItems } from '@/shell/ViewMenuItems';
+import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useHasViewToolbar, useShowsSubagents, ViewToolbar } from '@/shell/ViewToolbar';
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
-import { freeViewFor, splitFocusedCell } from '@/project/views';
 import { useDocument } from '@/state/document';
-import { canSplit, cellCount, type CellAt, type SplitDirection } from '@/shell/split';
+import { type CellAt } from '@/shell/split';
 import { Icon } from '@/ui/Icon';
-import { MENU_SEPARATOR } from '@/ui/classes';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
-import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { Kbd } from '@/ui/Kbd';
 import { useBrowserDisplayTitle } from '@/browser/title';
 
 /* What the bar holds that is not the bar: a press on one of these is not the start of a drag. */
@@ -183,7 +179,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                 <ContextMenu.Portal>
                     <ContextMenu.Positioner className="z-(--z-popup)">
                         <ContextMenu.Popup className="menu-popup">
-                            <CellSplitItems at={at} />
+                            <SplitItems at={at} />
                             <ViewMenuItems viewId={view.id} kind={view.kind} />
                         </ContextMenu.Popup>
                     </ContextMenu.Positioner>
@@ -191,45 +187,5 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
             </ContextMenu.Root>
             {children}
         </FileToolbarSlotProvider>
-    );
-}
-
-/*
- * Splitting and closing, from the bar of the cell that was clicked rather than the focused one. A
- * split always lands beside the focus, so the bar takes the focus first; the view menu offers the
- * same three rows for whatever cell already has it.
- */
-function CellSplitItems({ at }: { at: CellAt }) {
-    const { t } = useTranslation('shell');
-    const layout = useDocument((s) => s.layout);
-    const free = useDocument(freeViewFor);
-    const closable = layout !== null && cellCount(layout) > 1;
-    const room = (direction: SplitDirection): boolean => layout !== null && free !== null && canSplit(layout, at, direction, free);
-    if (!room('right') && !room('down') && !closable) {
-        return null;
-    }
-    const split = (direction: SplitDirection): void => {
-        useDocument.getState().focusCellAt(at);
-        splitFocusedCell(direction);
-    };
-    return (
-        <>
-            {room('right') && (
-                <ContextMenu.Item className="menu-item" onClick={() => split('right')}>
-                    <Icon icon={PanelRight} size={14} /> {t('viewMenu.splitRight')} <Kbd shortcut={CANVAS_SHORTCUTS.splitRight} />
-                </ContextMenu.Item>
-            )}
-            {room('down') && (
-                <ContextMenu.Item className="menu-item" onClick={() => split('down')}>
-                    <Icon icon={PanelBottom} size={14} /> {t('viewMenu.splitDown')} <Kbd shortcut={CANVAS_SHORTCUTS.splitDown} />
-                </ContextMenu.Item>
-            )}
-            {closable && (
-                <ContextMenu.Item className="menu-item" onClick={() => useDocument.getState().closeCellAt(at)}>
-                    <Icon icon={X} size={14} /> {t('cellToolbar.closeCell')} <Kbd shortcut={CANVAS_SHORTCUTS.closeCell} />
-                </ContextMenu.Item>
-            )}
-            <ContextMenu.Separator className={MENU_SEPARATOR} />
-        </>
     );
 }

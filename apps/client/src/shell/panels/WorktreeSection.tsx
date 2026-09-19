@@ -7,7 +7,7 @@ import { ArrowDown, ArrowUp, CircleAlert, Eye, FilePen, FilePlus, FolderX, GitBr
 import type { LucideIcon } from 'lucide-react';
 import type { Worktree } from '@ruimte/contracts';
 import { StatusDot } from '@/canvas/NodeFrame';
-import { GitPrompt } from '@/shell/panels/GitDialogs';
+import { PromptDialog } from '@/ui/PromptDialog';
 import { nodesInWorktree, originLabel, sharePathsOf, workBadges, workBadgesLabel, type WorkBadgeKind } from '@/shell/panels/worktree-rows';
 import { nodeWorking } from '@/state/agent-work';
 import { useChats } from '@/state/chats';
@@ -19,6 +19,7 @@ import { useTransport } from '@/transport/context';
 import { MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
+import { MenuPopup } from '@/ui/MenuPopup';
 
 /* The mark per kind of work. The number beside it carries the amount; the tooltip carries the words. */
 const BADGE_MARKS: Record<WorkBadgeKind, LucideIcon> = {
@@ -125,11 +126,11 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                     </button>
                 </Tooltip>
             </div>
-            <GitPrompt
+            <PromptDialog
                 open={sharing}
                 title={t('worktree.share.title')}
                 description={t('worktree.share.description')}
-                field={{ label: t('worktree.share.field'), initial: shared.join(', '), placeholder: 'node_modules, .env' }}
+                field={{ mono: true, label: t('worktree.share.field'), initial: shared.join(', '), placeholder: 'node_modules, .env' }}
                 allowEmpty
                 confirmLabel={t('common:action.save')}
                 onConfirm={saveShare}
@@ -203,20 +204,16 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                                             <Icon icon={MoreHorizontal} size={14} />
                                         </Menu.Trigger>
                                     </Tooltip>
-                                    <Menu.Portal>
-                                        <Menu.Positioner className="z-(--z-popup)" side="bottom" align="end" sideOffset={6}>
-                                            <Menu.Popup className="menu-popup">
-                                                <WorktreeMenuItems
-                                                    worktree={worktree}
-                                                    reveal={reveal}
-                                                    onView={onView}
-                                                    onMerge={onMerge}
-                                                    onRemove={onRemove}
-                                                    onReveal={onReveal}
-                                                />
-                                            </Menu.Popup>
-                                        </Menu.Positioner>
-                                    </Menu.Portal>
+                                    <MenuPopup align="end">
+                                        <WorktreeMenuItems
+                                            worktree={worktree}
+                                            reveal={reveal}
+                                            onView={onView}
+                                            onMerge={onMerge}
+                                            onRemove={onRemove}
+                                            onReveal={onReveal}
+                                        />
+                                    </MenuPopup>
                                 </Menu.Root>
                             </ContextMenu.Trigger>
                             <ContextMenu.Portal>

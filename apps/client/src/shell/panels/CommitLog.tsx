@@ -9,9 +9,9 @@ import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
-import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
+import { PanelEmpty } from '@/ui/PanelEmpty';
 import { Tooltip } from '@/ui/Tooltip';
 
 // One screen of rows at a time; the button at the end asks for the next.
@@ -90,18 +90,10 @@ export function CommitLog({ cwd, revision, reading, onOpen }: CommitLogProps) {
     const loadingMore = page !== null;
 
     if (state === 'error') {
-        return (
-            <div className="grid min-h-0 grow place-items-center">
-                <EmptyState icon={<Icon icon={GitCommitHorizontal} size={20} />}>{t('git.log.failed')}</EmptyState>
-            </div>
-        );
+        return <PanelEmpty icon={GitCommitHorizontal}>{t('git.log.failed')}</PanelEmpty>;
     }
     if (state === 'ready' && commits.length === 0) {
-        return (
-            <div className="grid min-h-0 grow place-items-center">
-                <EmptyState icon={<Icon icon={GitCommitHorizontal} size={20} />}>{t('git.log.empty')}</EmptyState>
-            </div>
-        );
+        return <PanelEmpty icon={GitCommitHorizontal}>{t('git.log.empty')}</PanelEmpty>;
     }
 
     return (

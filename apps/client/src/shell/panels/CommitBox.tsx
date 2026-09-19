@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LoaderCircle, Sparkles } from 'lucide-react';
 import type { GitCapabilitiesResult, GitStatus } from '@ruimte/contracts';
-import { COMMIT_MESSAGE } from '@/shell/panels/classes';
+import { COMMIT_MESSAGE } from '@/ui/classes';
 import { splitMessage } from '@/shell/panels/git-actions';
 import { nextActionId } from '@/shell/panels/use-git-actions';
 import { useGit } from '@/state/git';

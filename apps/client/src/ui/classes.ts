@@ -33,3 +33,8 @@ export const ACCENT_SWATCH = 'grid h-6 w-6 place-items-center rounded-full text-
 
 /* The same swatch, picked, inside a popup rather than on the surface behind it. */
 export const ACCENT_SWATCH_PICKED = 'ring-2 ring-accent ring-offset-1 ring-offset-surface-raised';
+
+/* The message of the commit to come. The one multiline field in the app, so it carries the field's
+   border and focus ring without its fixed height. */
+export const COMMIT_MESSAGE =
+    'min-h-16 w-full resize-none rounded-lg border border-border bg-surface px-2 py-1.5 text-xs text-text outline-none placeholder:text-text-faint focus-visible:-outline-offset-1 focus-visible:outline-2 focus-visible:outline-accent';

@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
-import { CircleAlert, Hand, House, LoaderCircle, Lock, Mic, RotateCcw, RotateCw, Smartphone } from 'lucide-react';
+import { CircleAlert, Hand, House, LoaderCircle, Lock, Mic, RotateCcw, RotateCw, Smartphone, type LucideIcon } from 'lucide-react';
 import type { DeviceInfo, DeviceInput, DeviceReference } from '@ruimte/contracts';
 import { useNodeHost } from '@/nodes/node-host';
 import { useDeviceList, useResolvedDevice } from '@/devices/state';
@@ -10,9 +10,9 @@ import { useEndpointId } from '@/state/keys';
 import { deviceClientFor } from '@/transport/connections';
 import { BTN_GROUP, MENU_LABEL } from '@/ui/classes';
 import { Button } from '@/ui/Button';
-import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
+import { PanelEmpty } from '@/ui/PanelEmpty';
 
 const useDeviceFor = (reference: DeviceReference | undefined): { device: DeviceInfo | null; loading: boolean; error: string | null } => {
     const endpointId = useEndpointId();
@@ -162,12 +162,10 @@ export function DevicePlate({ id }: { id: string }) {
     );
 }
 
-function DeviceMessage({ icon, spin = false, message, action }: { icon: typeof Smartphone; spin?: boolean; message: string; action?: ReactNode }) {
+function DeviceMessage({ icon, spin = false, message, action }: { icon: LucideIcon; spin?: boolean; message: string; action?: ReactNode }) {
     return (
-        <div className="grid h-full place-items-center bg-surface-sunken">
-            <EmptyState icon={<Icon icon={icon} size={24} className={spin ? 'animate-spin' : undefined} />} action={action}>
-                {message}
-            </EmptyState>
-        </div>
+        <PanelEmpty icon={icon} iconSize={24} spin={spin} action={action} sunken fill="full">
+            {message}
+        </PanelEmpty>
     );
 }

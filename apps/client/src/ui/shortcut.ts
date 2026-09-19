@@ -162,7 +162,8 @@ export const KEY_SHORTCUTS = {
     modEnter: shortcut('Mod+Enter'),
     backspace: shortcut('Backspace'),
     escape: shortcut('Escape'),
-    shift: shortcut('Shift')
+    shift: shortcut('Shift'),
+    rename: shortcut('F2')
 } as const;
 
 /* Whether the platform's own modifier is down during a pointer gesture: Cmd on macOS, Ctrl elsewhere. */

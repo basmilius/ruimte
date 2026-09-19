@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import clsx from 'clsx';
 import { Switch } from '@base-ui-components/react/switch';
 import { useTranslation } from 'react-i18next';
@@ -6,8 +5,6 @@ import { Minus, Plus } from 'lucide-react';
 import { BTN_GROUP } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { Icon } from '@/ui/Icon';
-import { isApplePlatform } from '@/desktop/bridge';
-import { shortcutParts, type Shortcut } from '@/ui/shortcut';
 
 /* The shared controls of the settings panes; each one is small enough to read at a glance. */
 
@@ -113,38 +110,7 @@ export function Stepper({ value, min, max, step, unit, label, onChange }: Steppe
     );
 }
 
-function KeyCap({ children }: { children: ReactNode }) {
-    return <kbd className="rounded-md border border-border bg-surface-sunken px-1.5 py-0.5 font-sans text-xs text-text-muted">{children}</kbd>;
-}
-
-/* A shortcut as one cap per key, `⌘` and `K`, plus the pointer gesture it goes with ("drag"). */
-export function Keys({ shortcut, then }: { shortcut: Shortcut; then?: string }) {
-    const parts = [...shortcutParts(shortcut, isApplePlatform()), ...(then ? [then] : [])];
-    return (
-        <span className="flex items-center gap-1">
-            {parts.map((part, index) => (
-                <KeyCap key={`${part}-${index}`}>{part}</KeyCap>
-            ))}
-        </span>
-    );
-}
-
 /* A bar where a value will be, while the daemon has not answered yet. */
 export function Skeleton({ className }: { className?: string }) {
     return <span className={clsx('block h-4 animate-pulse rounded bg-surface-sunken', className)} aria-hidden />;
-}
-
-export function Badge({ tone, children }: { tone: 'idle' | 'muted' | 'accent'; children: ReactNode }) {
-    return (
-        <span
-            className={clsx(
-                'rounded-md px-1.5 py-0.5 text-xs font-medium',
-                tone === 'idle' && 'bg-status-idle/15 text-status-idle',
-                tone === 'accent' && 'bg-accent-soft text-accent',
-                tone === 'muted' && 'bg-surface-sunken text-text-muted'
-            )}
-        >
-            {children}
-        </span>
-    );
 }

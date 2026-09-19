@@ -7,12 +7,13 @@ import { Check, KeyRound, X } from 'lucide-react';
 import { ProjectIconChoiceSchema } from '@ruimte/contracts';
 import { keyFingerprint, normalizeUserCode, type DeviceLinkLookupResult } from '@ruimte/pulsar';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
-import { messageOf, usePulsarAccount, withAccessToken } from '@/pulsar/account';
+import { usePulsarAccount, withAccessToken } from '@/pulsar/account';
 import { accountName } from '@/pulsar/account-name';
 import { linkStep, typedCode } from '@/pulsar/link-request';
 import { refreshAccountMachines } from '@/pulsar/machines';
 import { SignInButtons } from '@/shell/SignInButtons';
 import { Button } from '@/ui/Button';
+import { useAsyncAction } from '@/ui/useAsyncAction';
 import { Icon } from '@/ui/Icon';
 
 interface LinkMachineDialogProps {
@@ -37,15 +38,14 @@ export function LinkMachineDialog({ open, onOpenChange, initialCode, nested = fa
     const [code, setCode] = useState(initialCode ?? '');
     const [lookup, setLookup] = useState<DeviceLinkLookupResult | null>(null);
     const [outcome, setOutcome] = useState<'added' | 'denied' | null>(null);
-    const [busy, setBusy] = useState(false);
-    const [failure, setFailure] = useState<string | null>(null);
+    const { busy, failure, run, clear } = useAsyncAction();
     const step = linkStep({ accountStatus, lookedUp: lookup !== null, outcome });
 
     const reset = (next: string): void => {
         setCode(next);
         setLookup(null);
         setOutcome(null);
-        setFailure(null);
+        clear();
     };
 
     // A dialog opened again starts over, on the code it was opened with.
@@ -55,20 +55,8 @@ export function LinkMachineDialog({ open, onOpenChange, initialCode, nested = fa
         }
     }, [open, initialCode]);
 
-    const run = async (action: () => Promise<void>): Promise<void> => {
-        setBusy(true);
-        setFailure(null);
-        try {
-            await action();
-        } catch (e) {
-            setFailure(messageOf(e));
-        } finally {
-            setBusy(false);
-        }
-    };
-
     // Takes the code rather than reading the state, since the lookup on open runs before the state holds it.
-    const find = (typed: string = code): Promise<void> =>
+    const find = (typed: string = code): Promise<boolean> =>
         run(async () => {
             const userCode = normalizeUserCode(typed);
             if (userCode === null) {
@@ -86,7 +74,7 @@ export function LinkMachineDialog({ open, onOpenChange, initialCode, nested = fa
         // oxlint-disable-next-line react-hooks/exhaustive-deps
     }, [open, accountStatus, initialCode]);
 
-    const decide = (approve: boolean): Promise<void> =>
+    const decide = (approve: boolean): Promise<boolean> =>
         run(async () => {
             const userCode = normalizeUserCode(code) ?? '';
             if (approve) {

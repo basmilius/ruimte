@@ -35,7 +35,7 @@ import { useWindow, type BootFailure } from '@/state/window';
 import { useEndpointConnection, useOpenEndpoints } from '@/transport/status';
 import { BrandIntro } from '@/ui/Brand';
 import { Button } from '@/ui/Button';
-import { MENU_SEPARATOR, SECTION_LABEL, TOOLTIP_KBD } from '@/ui/classes';
+import { MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { Icon } from '@/ui/Icon';
@@ -191,10 +191,10 @@ function Footer() {
     return (
         <footer className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 bg-linear-to-t from-bg from-40% to-transparent px-8 pt-10 pb-4 text-xs text-text-faint *:pointer-events-auto">
             <button className={FOOTER_BUTTON} onClick={() => runAppShortcut('palette')}>
-                <Kbd shortcut={APP_SHORTCUTS.palette} className={TOOLTIP_KBD} /> {t('start.commandPalette')}
+                <Kbd shortcut={APP_SHORTCUTS.palette} variant="inline" /> {t('start.commandPalette')}
             </button>
             <button className={FOOTER_BUTTON} onClick={() => runAppShortcut('settings')}>
-                <Kbd shortcut={APP_SHORTCUTS.settings} className={TOOLTIP_KBD} /> {t('settingsDialog.title')}
+                <Kbd shortcut={APP_SHORTCUTS.settings} variant="inline" /> {t('settingsDialog.title')}
             </button>
             {version && <span>{t('connection.version', { version })}</span>}
             {version && canShowReleaseNotes() && (

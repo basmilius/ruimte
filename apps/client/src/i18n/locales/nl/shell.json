@@ -111,9 +111,6 @@
     "separator": "Scheiding",
     "pickedHere": "Hier gekozen",
     "defaultForKind": "Standaard voor dit soort",
-    "emoji": "Emoji",
-    "useEmoji": "Emoji gebruiken",
-    "icon": "Icoon",
     "useDefault": "Standaard gebruiken"
   },
   "projectBanner": {
@@ -204,9 +201,7 @@
     "newView": "Weergave",
     "putOnCanvas": "Op het canvas zetten",
     "showOnCanvas": "Op het canvas tonen",
-    "renameView": "Weergave hernoemen",
-    "changeIcon": "Icoon wijzigen…",
-    "deleteView": "Weergave verwijderen"
+    "changeIcon": "Icoon wijzigen…"
   },
   "planPanel": {
     "failed": "Dit plan kon niet worden getekend",

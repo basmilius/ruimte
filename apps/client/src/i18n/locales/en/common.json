@@ -32,12 +32,18 @@
     "yes": "Yes",
     "no": "No"
   },
-  "unseen": "Finished while you were away",
+  "icon": {
+    "emoji": "Emoji",
+    "useEmoji": "Use emoji",
+    "label": "Icon",
+    "none": "No icon"
+  },
   "status": {
     "running": "running",
     "done": "done",
     "failed": "failed",
     "cancelled": "cancelled"
   },
-  "taskMark": "Task: {{title}} ({{status}})"
+  "taskMark": "Task: {{title}} ({{status}})",
+  "unseen": "Finished while you were away"
 }

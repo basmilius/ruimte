@@ -1,21 +1,16 @@
-import { useState } from 'react';
-import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { RotateCcw } from 'lucide-react';
-import { PROJECT_ICON_NAMES, type ProjectIconChoice, type ProjectView, viewIconOf } from '@ruimte/contracts';
-import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
+import { type ProjectIconChoice, type ProjectView, viewIconOf } from '@ruimte/contracts';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { useDocument } from '@/state/document';
 import { Button } from '@/ui/Button';
-import { SECTION_LABEL } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
-import { Tooltip } from '@/ui/Tooltip';
+import { IconPicker } from '@/ui/IconPicker';
 
 /* Picks the mark one view wears: an emoji, one of the Lucide icons, or whatever its kind gives it. */
 export function ViewIconDialog({ view, onClose }: { view: ProjectView; onClose(): void }) {
     const { t } = useTranslation(['shell', 'common']);
-    const [emoji, setEmoji] = useState('');
     const chosen = viewIconOf(view);
     const provider = view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null;
 
@@ -32,39 +27,7 @@ export function ViewIconDialog({ view, onClose }: { view: ProjectView; onClose()
                 </div>
             </div>
 
-            <div className={`${SECTION_LABEL} mt-4 mb-1.5`}>{t('viewIcon.emoji')}</div>
-            <div className="flex items-center gap-2">
-                <input
-                    className="field w-24 text-center"
-                    aria-label={t('viewIcon.emoji')}
-                    placeholder="🚀"
-                    value={emoji}
-                    maxLength={16}
-                    onChange={(e) => setEmoji(e.target.value)}
-                    onKeyDown={(e) => e.stopPropagation()}
-                />
-                <Button disabled={emoji.trim() === ''} onClick={() => pick({ kind: 'emoji', value: emoji.trim() })}>
-                    {t('viewIcon.useEmoji')}
-                </Button>
-            </div>
-
-            <div className={`${SECTION_LABEL} mt-4 mb-1.5`}>{t('viewIcon.icon')}</div>
-            <div className="grid grid-cols-10 gap-1">
-                {PROJECT_ICON_NAMES.map((name) => (
-                    <Tooltip key={name} label={name} name>
-                        <button
-                            type="button"
-                            className={clsx(
-                                'flex h-7 w-7 items-center justify-center rounded-md hover:bg-surface-hover',
-                                chosen?.kind === 'lucide' && chosen.value === name ? 'bg-surface-active text-text' : 'text-text-muted'
-                            )}
-                            onClick={() => pick({ kind: 'lucide', value: name })}
-                        >
-                            <Icon icon={PROJECT_ICON_GLYPHS[name]} size={16} />
-                        </button>
-                    </Tooltip>
-                ))}
-            </div>
+            <IconPicker value={chosen} onChange={pick} />
 
             <div className="mt-4 flex items-center gap-2">
                 <Button disabled={!chosen} onClick={() => pick(null)}>
