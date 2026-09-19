@@ -5,6 +5,7 @@ import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { viewFilePathIn, viewIdOfFile, type JsonDocumentRead } from './project-files.ts';
 import type { ProjectStore, ProjectViewFiles } from './project-store.ts';
 import { ClientSinks } from '../client-sinks.ts';
+import { Serializer } from '../serializer.ts';
 
 // The same burst rule the project file follows: an editor or git writes more than once per save.
 const WATCH_SETTLE_MS = 150;
@@ -59,7 +60,7 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
     private readonly sinks = new ClientSinks();
     private readonly states = new Map<string, OpenProjectFiles>();
     // One file operation at a time, so a client's save and an agent's write never interleave on a rev.
-    private chain: Promise<unknown> = Promise.resolve();
+    private readonly writes = new Serializer();
 
     private readonly seams: WatchSeams;
 
@@ -174,9 +175,7 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
     }
 
     protected locked<T>(work: () => Promise<T>): Promise<T> {
-        const run = this.chain.then(work, work);
-        this.chain = run.catch(() => undefined);
-        return run;
+        return this.writes.run(work);
     }
 
     /* A view that is open here saves against this rev from now on, and its watcher stays quiet. */

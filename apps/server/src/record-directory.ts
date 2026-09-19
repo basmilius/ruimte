@@ -2,6 +2,7 @@ import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { z } from 'zod';
 import { isNotFound, writeAtomic } from './fs.ts';
+import { KeyedSerializer } from './serializer.ts';
 
 // The id is a node id or a chat id a client chose, so it is encoded before it becomes a file name.
 export const recordFileName = (id: string): string => `${encodeURIComponent(id)}.json`;
@@ -29,7 +30,7 @@ export class RecordDirectory<T> {
     private readonly keep: ((record: T) => T | null) | null;
     private readonly records = new Map<string, T>();
     // One write at a time per record, so an older one never lands after a newer one.
-    private readonly writes = new Map<string, Promise<void>>();
+    private readonly writes = new KeyedSerializer();
 
     constructor(options: RecordDirectoryOptions<T>) {
         this.dir = options.dir;
@@ -95,7 +96,7 @@ export class RecordDirectory<T> {
     write(record: T): Promise<boolean> {
         const id = this.idOf(record);
         this.records.set(id, record);
-        const next = (this.writes.get(id) ?? Promise.resolve()).then(async () => {
+        return this.writes.run(id, async () => {
             if (this.records.get(id) !== record) {
                 return false;
             }
@@ -107,14 +108,6 @@ export class RecordDirectory<T> {
             }
             return true;
         });
-        this.writes.set(
-            id,
-            next.then(
-                () => undefined,
-                () => undefined
-            )
-        );
-        return next;
     }
 
     /* Forgets a record here and now; its file follows. */

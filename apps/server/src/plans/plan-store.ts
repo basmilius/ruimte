@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { isNotFound, writeAtomic } from '../fs.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { ClientSinks } from '../client-sinks.ts';
+import { KeyedSerializer } from '../serializer.ts';
 
 const SUFFIX = '.plans.json';
 
@@ -39,7 +40,8 @@ export class PlanStore {
     readonly dir: string;
     private readonly now: () => number;
     private readonly mintId: () => string;
-    private readonly chains = new Map<string, Promise<unknown>>();
+    // One write at a time per chat; the plans of two chats never wait on each other.
+    private readonly writes = new KeyedSerializer();
     private readonly sinks = new ClientSinks();
 
     constructor(home: string, options: PlanStoreOptions = {}) {
@@ -209,16 +211,7 @@ export class PlanStore {
     }
 
     private inChain<T>(chatId: string, work: () => Promise<T>): Promise<T> {
-        const previous = this.chains.get(chatId) ?? Promise.resolve();
-        const next = previous.then(work, work);
-        const settled = next.catch(() => undefined);
-        this.chains.set(chatId, settled);
-        void settled.then(() => {
-            if (this.chains.get(chatId) === settled) {
-                this.chains.delete(chatId);
-            }
-        });
-        return next;
+        return this.writes.run(chatId, work);
     }
 
     private isoNow(): string {

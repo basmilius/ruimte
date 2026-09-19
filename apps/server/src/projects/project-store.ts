@@ -45,6 +45,7 @@ import { IdentityCache, readIdeaName, sniffMime, ICON_MAX_BYTES, type DerivedIco
 import { errorText } from '../error-text.ts';
 import { CodedError } from '../coded-error.ts';
 import { ClientSinks } from '../client-sinks.ts';
+import { Serializer } from '../serializer.ts';
 
 type ProjectErrorCode = 'project-not-found' | 'project-missing' | 'project-invalid' | 'rev-conflict' | 'folder-not-found' | 'folder-create-failed' | 'bad-icon';
 
@@ -144,7 +145,7 @@ export class ProjectStore {
     private drawings: ProjectViewFiles | null = null;
     private diagrams: ProjectViewFiles | null = null;
     // Registry changes run one after the other; two clients opening at once must not lose an entry.
-    private chain: Promise<unknown> = Promise.resolve();
+    private readonly writes = new Serializer();
 
     private readonly seams: WatchSeams;
 
@@ -653,9 +654,7 @@ export class ProjectStore {
     }
 
     private locked<T>(work: () => Promise<T>): Promise<T> {
-        const run = this.chain.then(work, work);
-        this.chain = run.catch(() => undefined);
-        return run;
+        return this.writes.run(work);
     }
 
     /* Where the project file of an open project sits, which is where its drawings and diagrams sit beside it. */
