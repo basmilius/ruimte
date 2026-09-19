@@ -1,3 +1,4 @@
+import { withTimeout } from '../../async.ts';
 import type { UsageLimitsProvider } from '@ruimte/contracts';
 import { CodexTransport } from '../../chat/codex-transport.ts';
 import { readClaudeUsage, readCodexLimits, type ProviderReading } from './normalize.ts';
@@ -12,8 +13,7 @@ const failure = (message: string): ProbeResult => ({ unavailable: { reason: 'fai
 
 const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
-const withTimeout = <T>(work: Promise<T>, ms: number, what: string): Promise<T> =>
-    Promise.race([work, new Promise<never>((_resolve, reject) => setTimeout(() => reject(new Error(`${what} did not answer in time`)), ms))]);
+const timeoutOf = <T>(work: Promise<T>, ms: number, what: string): Promise<T> => withTimeout(work, ms, `${what} did not answer in time`);
 
 /*
  * Asks Claude Code what is left of the plan, without a turn and without a token of our own. A
@@ -69,7 +69,7 @@ export const probeClaude = async (command: readonly string[]): Promise<ProbeResu
     };
 
     try {
-        return await withTimeout(read(), PROBE_TIMEOUT_MS, 'Claude Code');
+        return await timeoutOf(read(), PROBE_TIMEOUT_MS, 'Claude Code');
     } catch (error) {
         return failure(reason(error));
     } finally {
@@ -89,13 +89,13 @@ export const probeCodex = async (command: readonly string[]): Promise<ProbeResul
             onExit: () => undefined
         });
         const open = transport;
-        await withTimeout(
+        await timeoutOf(
             open.request('initialize', { clientInfo: { name: 'ruimte', title: 'Ruimte', version: '0.1.0' }, capabilities: { experimentalApi: true } }),
             PROBE_TIMEOUT_MS,
             'Codex'
         );
         open.notify('initialized', {});
-        const answer = await withTimeout(open.request('account/rateLimits/read', undefined), CODEX_READ_TIMEOUT_MS, 'Codex');
+        const answer = await timeoutOf(open.request('account/rateLimits/read', undefined), CODEX_READ_TIMEOUT_MS, 'Codex');
         const snapshot = typeof answer === 'object' && answer !== null ? (answer as { rateLimits?: unknown }).rateLimits : null;
         const reading = readCodexLimits(snapshot);
         // An account on an API key has no plan windows; Codex answers, with nothing in it.

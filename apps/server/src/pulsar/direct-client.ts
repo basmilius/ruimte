@@ -1,3 +1,4 @@
+import { wait, withTimeout } from '../async.ts';
 import {
     ChannelLiveness,
     channelBinding,
@@ -286,21 +287,6 @@ const waitFor = async (ready: () => boolean, timeoutMs: number): Promise<void> =
         if (Date.now() > deadline) {
             throw new Error('Timed out');
         }
-        await new Promise((resolve) => setTimeout(resolve, 10));
+        await wait(10);
     }
 };
-
-const withTimeout = <T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> =>
-    new Promise((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error(message)), timeoutMs);
-        promise.then(
-            (value) => {
-                clearTimeout(timer);
-                resolve(value);
-            },
-            (e: unknown) => {
-                clearTimeout(timer);
-                reject(e instanceof Error ? e : new Error(String(e)));
-            }
-        );
-    });

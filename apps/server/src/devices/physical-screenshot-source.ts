@@ -1,3 +1,4 @@
+import { wait } from '../async.ts';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -75,19 +76,6 @@ export const capturePhysicalFrame: PhysicalFrameCapture = async (deviceId, seque
     const data = new Uint8Array(await Bun.file(jpeg).arrayBuffer());
     return { sequence, width: dimensions.result.width, height: dimensions.result.height, data };
 };
-
-const wait = (ms: number, signal: AbortSignal): Promise<void> =>
-    new Promise((resolve) => {
-        const timer = setTimeout(resolve, ms);
-        signal.addEventListener(
-            'abort',
-            () => {
-                clearTimeout(timer);
-                resolve();
-            },
-            { once: true }
-        );
-    });
 
 export class PhysicalScreenshotSource implements DeviceSource {
     private readonly capture: PhysicalFrameCapture;
