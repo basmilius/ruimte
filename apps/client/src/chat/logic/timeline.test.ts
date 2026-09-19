@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatItem, ChatToolItem, ChatTurnItem } from '@ruimte/contracts';
 import { notResumedNote } from '@ruimte/contracts';
-import { agentTurnLabel, deriveTimelineRows, summarizeGroup, turnLabel } from './timeline';
+import { agentTurnLabel, deriveTimelineRows, isBlock, summarizeGroup, turnLabel } from './timeline';
 
 const tool = (id: string, name: string, input: unknown, state: ChatToolItem['state'] = 'done', turnId = 't1'): ChatToolItem => ({
     id,
@@ -26,6 +26,14 @@ const thread: ChatItem[] = [
 ];
 
 const options = { expandedGroups: new Set<string>(), expandedTurns: new Set<string>(), expandedSubagents: new Set<string>(), activeTurnId: null };
+
+describe('isBlock', () => {
+    test('a changed files card is a block, so both threads set it apart from the tool lines above it', () => {
+        const rows = deriveTimelineRows(thread, { ...options, expandedTurns: new Set(['t1']) });
+        const kinds = rows.filter(isBlock).map((row) => row.kind);
+        expect(kinds).toEqual(['changed-files', 'assistant']);
+    });
+});
 
 describe('deriveTimelineRows', () => {
     test('a settled turn folds its work behind a label and keeps the final answer and changed files', () => {

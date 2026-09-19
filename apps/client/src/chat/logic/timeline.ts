@@ -66,6 +66,15 @@ const NAMED_TOOLS = new Set([
 ]);
 
 /* "Read 4 files", "Ran 2 commands", or "12 tool calls" when the run mixes kinds. */
+/*
+ * A turn runs in two rhythms. The tool lines are a list and read as one when they sit tight
+ * against each other; prose and cards are blocks and need room around them. Where the two meet,
+ * the block gap marks the seam, so an answer never looks glued to the call above it.
+ */
+const BLOCK_KINDS = new Set<TimelineRow['kind']>(['assistant', 'report', 'thinking', 'changed-files', 'compaction']);
+
+export const isBlock = (row: TimelineRow): boolean => BLOCK_KINDS.has(row.kind);
+
 export const summarizeGroup = (tools: ChatToolItem[]): string => {
     const names = new Set(tools.map((tool) => tool.name));
     if (names.size === 1) {

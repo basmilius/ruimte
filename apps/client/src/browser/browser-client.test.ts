@@ -22,13 +22,28 @@ class FakeTransport implements Transport {
     private readonly eventHandlers = new Map<EventType, Set<(payload: unknown) => void>>();
     private readonly statusHandlers = new Set<(status: TransportStatus) => void>();
 
+    /* Set to keep the next replies on the wire, the way a slow machine does. */
+    hold = false;
+    private readonly held: Array<() => void> = [];
+
     async request<T extends RequestType>(type: T, payload: RequestMap[T]['payload']): Promise<RequestMap[T]['result']> {
         this.calls.push({ type, payload });
+        if (this.hold) {
+            await new Promise<void>((resolve) => this.held.push(resolve));
+        }
         if (type === 'browser.open' || type === 'browser.navigate' || type === 'browser.command') {
             const target = payload as { browserId: string; url?: string };
             return info(target.browserId, target.url) as RequestMap[T]['result'];
         }
         return {} as RequestMap[T]['result'];
+    }
+
+    /* Lets everything that was held answer. */
+    release(): void {
+        this.hold = false;
+        for (const resolve of this.held.splice(0)) {
+            resolve();
+        }
     }
 
     on<E extends EventType>(event: E, handler: (payload: EventMap[E]) => void): () => void {
@@ -82,6 +97,26 @@ describe('BrowserClient', () => {
         expect(transport.calls.at(-1)?.type).toBe('browser.resize');
         await client.detach('node-1');
         expect(transport.calls.at(-1)?.type).toBe('browser.detach');
+        client.dispose();
+    });
+
+    test('a page taken off the canvas while the socket comes back is not written back', async () => {
+        const transport = new FakeTransport();
+        const client = new BrowserClient('machine-1', transport);
+        const key = endpointKey('machine-1', 'node-1');
+        await client.open('node-1', 'https://example.com', 800, 600);
+
+        transport.hold = true;
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        // The node leaves the canvas while the reopen still stands on the wire.
+        await client.detach('node-1');
+        useBrowser.setState({ byKey: {} });
+        transport.release();
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(useBrowser.getState().byKey[key]).toBeUndefined();
         client.dispose();
     });
 

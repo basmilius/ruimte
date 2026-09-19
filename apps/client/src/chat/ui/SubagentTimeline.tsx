@@ -4,7 +4,7 @@ import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useTranslation } from 'react-i18next';
 import { Bot } from 'lucide-react';
 import type { ChatSubagentItem } from '@ruimte/contracts';
-import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
+import { deriveTimelineRows, isBlock } from '@/chat/logic/timeline';
 import { INITIAL_CONVERSATION, SubagentConversation, type SubagentConversationState } from '@/chat/subagent-conversation';
 import { useSubagentSupport } from '@/chat/subagent-support';
 import { EMPTY_TARGET, readTimelineTarget, type TimelineTarget } from '@/chat/logic/timeline-target';
@@ -22,20 +22,7 @@ import { Icon } from '@/ui/Icon';
 // Below this distance from the bottom the thread follows what the agent writes; above it the reader scrolled back.
 const FOLLOW_THRESHOLD_PX = 40;
 
-// The same rhythm the thread has: a block of prose next to a run of tool lines gets air between them.
-const BLOCK_KINDS = new Set<TimelineRow['kind']>(['assistant', 'report', 'thinking', 'compaction']);
-
 const NO_TURNS = new Set<string>();
-
-const toggled = (current: Set<string>, id: string): Set<string> => {
-    const next = new Set(current);
-    if (next.has(id)) {
-        next.delete(id);
-    } else {
-        next.add(id);
-    }
-    return next;
-};
 
 /*
  * A sub-agent's whole conversation, read back from the machine and grown while it is on screen. It
@@ -104,6 +91,20 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
         );
     }
 
+    const toggle = (set: (update: (current: Set<string>) => Set<string>) => void, id: string): void => {
+        set((current) => {
+            const next = new Set(current);
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
+            return next;
+        });
+        // Opening or closing a fold is a deliberate look back, not a reason to jump to the end.
+        followRef.current = false;
+    };
+
     const openChild = (item: ChatSubagentItem): void => {
         show(openBelow(trail, crumbOf(item)));
     };
@@ -142,16 +143,15 @@ export function SubagentTimeline({ chatId, toolUseId }: { chatId: string; toolUs
                         {rows.map((row, index) => {
                             const previous = index > 0 ? rows[index - 1]! : null;
                             const question = row.kind === 'user';
-                            const seam =
-                                !question && previous !== null && previous.kind !== 'user' && BLOCK_KINDS.has(row.kind) !== BLOCK_KINDS.has(previous.kind);
+                            const seam = !question && previous !== null && previous.kind !== 'user' && isBlock(row) !== isBlock(previous);
                             return (
                                 <div key={row.id} data-item-id={row.id} className={clsx(question && 'pb-(--chat-answer-gap)', seam && 'pt-(--chat-block-gap)')}>
                                     <Row
                                         row={row}
                                         chatId={chatId}
-                                        toggleGroup={(id) => setExpandedGroups((current) => toggled(current, id))}
+                                        toggleGroup={(id) => toggle(setExpandedGroups, id)}
                                         toggleTurn={() => undefined}
-                                        toggleSubagent={(id) => setExpandedSubagents((current) => toggled(current, id))}
+                                        toggleSubagent={(id) => toggle(setExpandedSubagents, id)}
                                         openSubagent={() => undefined}
                                         openConversation={openChild}
                                     />

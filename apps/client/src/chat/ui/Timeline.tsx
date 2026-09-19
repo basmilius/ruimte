@@ -4,7 +4,7 @@ import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import clsx from 'clsx';
 import type { ChatSubagentItem } from '@ruimte/contracts';
-import { deriveTimelineRows, type TimelineRow } from '@/chat/logic/timeline';
+import { deriveTimelineRows, isBlock } from '@/chat/logic/timeline';
 import { crumbOf, openFromMain, useSubagentTrail } from '@/chat/subagent-view';
 import { registerMessageStepper, registerTimeline, setTimelineAtEnd } from '@/chat/timeline-scroll';
 import { SCRUBBER_MIN_TICKS, STRIP_INSET_PX, STRIP_WIDTH_PX, messagesInView, stepMessage, threadPaddingLeft, ticksOf } from '@/chat/logic/scrubber';
@@ -57,15 +57,6 @@ function EmptyThread({ chatId }: { chatId: string }) {
         </div>
     );
 }
-
-/*
- * A turn runs in two rhythms. The tool lines are a list and read as one when they sit tight
- * against each other; prose and cards are blocks and need room around them. Where the two meet,
- * the block gap marks the seam, so an answer never looks glued to the call above it.
- */
-const BLOCK_KINDS = new Set<TimelineRow['kind']>(['assistant', 'report', 'thinking', 'changed-files', 'compaction']);
-
-const isBlock = (row: TimelineRow): boolean => BLOCK_KINDS.has(row.kind);
 
 export function Timeline({ chatId, composer }: { chatId: string; composer?: ReactNode }) {
     const { t } = useTranslation('chat');

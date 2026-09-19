@@ -203,6 +203,10 @@ export class BrowserClient {
             void this.transport
                 .request('browser.open', this.openPayload(browserId, mounted))
                 .then((info) => {
+                    // The node may have left the canvas while the reopen was on the wire.
+                    if (!this.mounted.has(browserId)) {
+                        return;
+                    }
                     mounted.attached = true;
                     this.apply(info);
                 })
