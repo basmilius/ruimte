@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
@@ -30,10 +30,10 @@ import { deviceClientFor } from '@/transport/connections';
 import { useEndpointConnection } from '@/transport/status';
 import { EMPTY_DEVICE_LIST, useDevices } from '@/devices/state';
 import { BTN_GROUP, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
-import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { SignInMark } from '@/ui/SignInMark';
 import { Tooltip } from '@/ui/Tooltip';
+import { PanelEmpty } from '@/ui/PanelEmpty';
 
 const referenceOf = (device: DeviceInfo): DeviceReference => ({ platform: device.platform, kind: device.kind, name: device.name, runtime: device.runtime });
 
@@ -356,15 +356,6 @@ function DeviceToolsFlyout({ device }: { device: DeviceInfo }) {
                 </Popover.Positioner>
             </Popover.Portal>
         </Popover.Root>
-    );
-}
-
-function PanelEmpty({ header, icon, spin = false, children }: { header: ReactNode; icon: typeof Smartphone; spin?: boolean; children: string }) {
-    return (
-        <div className="grid min-h-0 grow place-items-center">
-            {header}
-            <EmptyState icon={<Icon icon={icon} size={20} className={spin ? 'animate-spin' : undefined} />}>{children}</EmptyState>
-        </div>
     );
 }
 

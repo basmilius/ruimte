@@ -69,6 +69,7 @@ import { Pill } from '@/ui/Pill';
 import { Tooltip } from '@/ui/Tooltip';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { Kbd } from '@/ui/Kbd';
+import { PanelEmpty } from '@/ui/PanelEmpty';
 
 const SEARCH_DEBOUNCE_MS = 150;
 const SEARCH_LIMIT = 200;
@@ -429,11 +430,7 @@ export function FilesPanel() {
     };
 
     if (!folder) {
-        return (
-            <div className="grid grow place-items-center">
-                <EmptyState icon={<Icon icon={Folder} size={20} />}>{t('git.panel.noFolder')}</EmptyState>
-            </div>
-        );
+        return <PanelEmpty icon={Folder}>{t('git.panel.noFolder')}</PanelEmpty>;
     }
 
     /* What stands where the tree would be while it holds no rows: the first listing still on its

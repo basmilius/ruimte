@@ -49,9 +49,9 @@ import { useTransport } from '@/transport/context';
 import { useEndpointConnection } from '@/transport/status';
 import { Button } from '@/ui/Button';
 import { MENU_HINT, MENU_LABEL, SECTION_LABEL } from '@/ui/classes';
-import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
+import { PanelEmpty } from '@/ui/PanelEmpty';
 
 /* The two scopes and the three sortable columns as ids; their words come from `panels:processes`. */
 const SCOPES = ['ruimte', 'all'] as const;
@@ -216,29 +216,24 @@ export function ProcessesPanel() {
 
     if (platform === 'win32' || row.supported === false) {
         return (
-            <div className="grid grow place-items-center">
-                {header}
-                <EmptyState icon={<Icon icon={Activity} size={20} />}>
-                    {platform === 'win32' ? t('processes.unsupportedWindows') : t('processes.unsupported')}
-                </EmptyState>
-            </div>
+            <PanelEmpty header={header} icon={Activity}>
+                {platform === 'win32' ? t('processes.unsupportedWindows') : t('processes.unsupported')}
+            </PanelEmpty>
         );
     }
     if (connection.status !== 'open') {
         return (
-            <div className="grid grow place-items-center">
-                {header}
-                <EmptyState icon={<Icon icon={Activity} size={20} />}>{t('machineNotAnswering')}</EmptyState>
-            </div>
+            <PanelEmpty header={header} icon={Activity}>
+                {t('machineNotAnswering')}
+            </PanelEmpty>
         );
     }
     const sample = row.sample;
     if (sample === null) {
         return (
-            <div className="grid grow place-items-center">
-                {header}
-                <EmptyState icon={<Icon icon={Activity} size={20} />}>{t('processes.measuring')}</EmptyState>
-            </div>
+            <PanelEmpty header={header} icon={Activity}>
+                {t('processes.measuring')}
+            </PanelEmpty>
         );
     }
 

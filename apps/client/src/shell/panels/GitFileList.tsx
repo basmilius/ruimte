@@ -16,10 +16,10 @@ import { fileManagerName, useServer } from '@/state/server';
 import { useTransport } from '@/transport/context';
 import { MENU_SEPARATOR, SECTION_LABEL } from '@/ui/classes';
 import { copyText } from '@/ui/clipboard';
-import { EmptyState } from '@/ui/EmptyState';
 import { FILE_TREE_ICONS } from '@/ui/file-icon';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
+import { PanelEmpty } from '@/ui/PanelEmpty';
 
 /* The groups in the order a person acts on them; each one reads its heading out of `git.group`. */
 const GROUPS: readonly GitFileState[] = ['conflicted', 'staged', 'unstaged', 'untracked'];
@@ -107,21 +107,13 @@ export function GitFileList({ status, collapsed, reading, busy, onOpen, onOpenFi
     const folder = useProject((s) => s.current?.folder ?? null);
 
     if (status === null) {
-        return <div className="grid grow place-items-center" />;
+        return <div className="grid min-h-0 grow place-items-center" />;
     }
     if (!status.repo) {
-        return (
-            <div className="grid grow place-items-center">
-                <EmptyState icon={<Icon icon={GitBranch} size={20} />}>{t('git.list.noRepo')}</EmptyState>
-            </div>
-        );
+        return <PanelEmpty icon={GitBranch}>{t('git.list.noRepo')}</PanelEmpty>;
     }
     if (status.files.length === 0) {
-        return (
-            <div className="grid grow place-items-center">
-                <EmptyState icon={<Icon icon={GitBranch} size={20} />}>{t('git.list.noChanges')}</EmptyState>
-            </div>
-        );
+        return <PanelEmpty icon={GitBranch}>{t('git.list.noChanges')}</PanelEmpty>;
     }
     return (
         <div className="min-h-0 grow overflow-y-auto py-1">

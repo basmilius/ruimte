@@ -43,11 +43,11 @@ import { useProjectNodes, useWorktrees, worktreeLists } from '@/state/worktrees'
 import { useTransport } from '@/transport/context';
 import { Button } from '@/ui/Button';
 import { BTN_GROUP, MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
-import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
 import { Pill } from '@/ui/Pill';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
+import { PanelEmpty } from '@/ui/PanelEmpty';
 
 // Under this the header has no room for the counts, and the chips need what there is.
 const PILLS_FROM_WIDTH = 320;
@@ -332,11 +332,7 @@ export function GitPanel() {
     };
 
     if (cwd === null) {
-        return (
-            <div className="grid grow place-items-center">
-                <EmptyState icon={<Icon icon={Folder} size={20} />}>{t('git.panel.noFolder')}</EmptyState>
-            </div>
-        );
+        return <PanelEmpty icon={Folder}>{t('git.panel.noFolder')}</PanelEmpty>;
     }
 
     const push = pushButton(status);
