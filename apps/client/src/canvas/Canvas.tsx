@@ -9,6 +9,7 @@ import type { NodeSide } from '@ruimte/contracts';
 import { rectFromPoints } from '@ruimte/drawing';
 import { canLink } from '@/canvas/edge-lines';
 import { framePressHandsKeyboard } from '@/canvas/frame-press';
+import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { isNodeActive, NODE_SIZE, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { useEndpointId } from '@/state/keys';
 import { showFileOnCanvas } from '@/project/views';
@@ -20,8 +21,6 @@ import { NodeFrame } from '@/canvas/NodeFrame';
 import { TextElementView } from '@/canvas/TextElementView';
 import { TextToolbar } from '@/canvas/TextToolbar';
 import { isInFloatingLayer } from '@/ui/floating';
-import { isModHeld } from '@/ui/shortcut';
-import { isApplePlatform } from '@/desktop/bridge';
 
 type Gesture =
     | { kind: 'pan'; last: Point }
@@ -36,7 +35,6 @@ type Gesture =
           rect: Rect;
       };
 
-const ZOOM_SETTLE_MS = 160;
 /* World units between two files dropped at once: a node's own width and a gutter, so the second one
    stands beside the first instead of over it. */
 const DROP_STEP = NODE_SIZE.file.w + 24;
@@ -104,9 +102,6 @@ export function Canvas() {
     const canvasStore = useCanvasStore();
     const rootRef = useRef<HTMLDivElement>(null);
     const gestureRef = useRef<Gesture | null>(null);
-    const zoomTimer = useRef<number | null>(null);
-    const zoomAnchor = useRef<Point>({ x: 0, y: 0 });
-    const zoomMoved = useRef(false);
     const [box, setBox] = useState<Rect | null>(null);
     const [activeGesture, setActiveGesture] = useState<Gesture['kind'] | null>(null);
     /* A drag carrying files is hanging over the canvas, which the border says so nobody has to
@@ -160,80 +155,17 @@ export function Canvas() {
         return () => observer.disconnect();
     }, [canvasStore]);
 
-    /* Chromium reports a trackpad pinch as a wheel with Ctrl held on every platform, so Ctrl always
-       zooms and Cmd joins it on macOS; the Windows key never does. */
-    const wheelZooms = (e: WheelEvent): boolean => e.ctrlKey || isModHeld(e, isApplePlatform());
-
-    /* React registers wheel listeners as passive, so preventDefault there cannot stop the
-       browser's own pinch zoom. The canvas needs a native, non-passive listener. */
-    useEffect(() => {
-        const el = rootRef.current;
-        if (!el) {
-            return;
+    useWheelCamera(rootRef, canvasStore, {
+        locks: () => canvasStore.getState().locks,
+        /* The active node owns the wheel inside its body, and a pinch that reaches the canvas is the
+           camera's. A pinch over a page that owns the pointer goes nowhere: Chromium applies the page
+           scale only in the top-most widget, never in a `<webview>` guest, and the canvas never sees
+           the event. Two fingers over a node nobody is working in pan the canvas. */
+        defer: (e, zooming) => {
+            const ownerId = (e.target as HTMLElement).closest('[data-node-body]')?.closest('[data-node-id]')?.getAttribute('data-node-id');
+            return !zooming && ownerId !== null && ownerId !== undefined && isNodeActive(canvasStore.getState().bodyFocusId, ownerId);
         }
-        const onWheel = (e: WheelEvent): void => {
-            const s = canvasStore.getState();
-            const target = e.target as HTMLElement;
-            const ownerId = target.closest('[data-node-body]')?.closest('[data-node-id]')?.getAttribute('data-node-id');
-            const isZoom = wheelZooms(e);
-            /* The active node owns the wheel inside its body, and a pinch that reaches the canvas is the
-               camera's. A pinch over a page that owns the pointer goes nowhere: Chromium applies the page
-               scale only in the top-most widget, never in a `<webview>` guest, and the canvas never sees
-               the event. */
-            if (!isZoom && ownerId !== null && ownerId !== undefined && isNodeActive(s.bodyFocusId, ownerId)) {
-                return;
-            }
-            /* Two fingers over a node nobody is working in pan the canvas. This listener runs in the
-               capture phase and stops the event there, because a scrollable body (a terminal's
-               scrollback, a thread) scrolls itself rather than through a default this could prevent:
-               it would scroll and pan at once. */
-            e.stopPropagation();
-            e.preventDefault();
-            const rect = el.getBoundingClientRect();
-            const anchor = {
-                x: e.clientX - rect.left,
-                y: e.clientY - rect.top
-            };
-            if (isZoom) {
-                if (s.locks.zoom) {
-                    return;
-                }
-                s.zoomAt(Math.exp(-e.deltaY * 0.01), anchor);
-                zoomAnchor.current = anchor;
-                zoomMoved.current = true;
-                if (zoomTimer.current) {
-                    window.clearTimeout(zoomTimer.current);
-                }
-                zoomTimer.current = window.setTimeout(() => {
-                    if (zoomMoved.current) {
-                        canvasStore.getState().settleZoom(zoomAnchor.current);
-                        zoomMoved.current = false;
-                    }
-                }, ZOOM_SETTLE_MS);
-                return;
-            }
-            if (!s.locks.pan) {
-                s.panBy(-e.deltaX, -e.deltaY);
-            }
-        };
-        /* Outside the canvas (sidebar, dock) a pinch must not zoom the page either. */
-        const swallowPinch = (e: WheelEvent): void => {
-            if (wheelZooms(e) && !el.contains(e.target as Node)) {
-                e.preventDefault();
-            }
-        };
-        const swallowGesture = (e: Event): void => e.preventDefault();
-        el.addEventListener('wheel', onWheel, { passive: false, capture: true });
-        document.addEventListener('wheel', swallowPinch, { passive: false });
-        document.addEventListener('gesturestart', swallowGesture);
-        document.addEventListener('gesturechange', swallowGesture);
-        return () => {
-            el.removeEventListener('wheel', onWheel, { capture: true });
-            document.removeEventListener('wheel', swallowPinch);
-            document.removeEventListener('gesturestart', swallowGesture);
-            document.removeEventListener('gesturechange', swallowGesture);
-        };
-    }, [canvasStore]);
+    });
 
     const screenPoint = (e: { clientX: number; clientY: number }): Point => {
         const rect = rootRef.current!.getBoundingClientRect();

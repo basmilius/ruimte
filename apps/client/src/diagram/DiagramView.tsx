@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
@@ -7,7 +7,7 @@ import { Bot, Braces, FileJson, MoreHorizontal, Pencil, RotateCcw, Sparkles } fr
 import { useShallow } from 'zustand/react/shallow';
 import { DEFAULT_NODE_TONE } from '@ruimte/diagram';
 import { GRID, type Point } from '@/canvas/math';
-import { isApplePlatform } from '@/desktop/bridge';
+import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { DiagramDock } from '@/diagram/DiagramDock';
 import { DiagramScene } from '@/diagram/DiagramScene';
 import { exampleDiagram } from '@/diagram/example';
@@ -20,15 +20,11 @@ import { useProject } from '@/state/project';
 import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { isInFloatingLayer } from '@/ui/floating';
 import { Icon } from '@/ui/Icon';
-import { isModHeld } from '@/ui/shortcut';
 import { Tile } from '@/ui/Tile';
 import { Tooltip } from '@/ui/Tooltip';
 
 const isChrome = (target: EventTarget | null): boolean =>
     isInFloatingLayer(target) || (target instanceof Element && target.closest('[data-diagram-chrome]') !== null);
-
-/* The wheel settles on a whole percent this long after the last tick, as the canvas does. */
-const ZOOM_SETTLE_MS = 160;
 
 /* Screen pixels a press on a node may travel before it is a drag rather than a click. */
 const DRAG_THRESHOLD = 3;
@@ -209,8 +205,6 @@ export function DiagramView({ id }: { id: string }) {
     /* The editor of this cell, never the focused one: two diagrams can stand side by side. */
     const store = useDiagramStore();
     const rootRef = useRef<HTMLDivElement>(null);
-    const zoomAnchor = useRef<Point>({ x: 0, y: 0 });
-    const zoomTimer = useRef<number | null>(null);
     const panFrom = useRef<Point | null>(null);
     const drag = useRef<NodeDrag | null>(null);
     const [gesture, setGesture] = useState<'pan' | 'drag' | null>(null);
@@ -234,32 +228,7 @@ export function DiagramView({ id }: { id: string }) {
         return () => observer.disconnect();
     }, [store]);
 
-    /* React makes wheel listeners passive, so the browser's own pinch zoom needs a native one. */
-    useEffect(() => {
-        const root = rootRef.current;
-        if (!root) {
-            return;
-        }
-        const onWheel = (e: WheelEvent): void => {
-            e.preventDefault();
-            const state = store.getState();
-            // Chromium reports a trackpad pinch as a wheel with Ctrl held on every platform.
-            if (!e.ctrlKey && !isModHeld(e, isApplePlatform())) {
-                state.panBy(-e.deltaX, -e.deltaY);
-                return;
-            }
-            const rect = root.getBoundingClientRect();
-            const anchor = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-            state.zoomAt(Math.exp(-e.deltaY * 0.01), anchor);
-            zoomAnchor.current = anchor;
-            if (zoomTimer.current !== null) {
-                window.clearTimeout(zoomTimer.current);
-            }
-            zoomTimer.current = window.setTimeout(() => store.getState().settleZoom(zoomAnchor.current), ZOOM_SETTLE_MS);
-        };
-        root.addEventListener('wheel', onWheel, { passive: false });
-        return () => root.removeEventListener('wheel', onWheel);
-    }, [store]);
+    useWheelCamera(rootRef, store);
 
     const onPointerDown = (e: React.PointerEvent<HTMLDivElement>): void => {
         // Portaled controls still bubble here; capturing their pointer would consume the click.

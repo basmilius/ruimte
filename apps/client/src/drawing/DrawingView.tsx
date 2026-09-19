@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import type { DrawingElement } from '@ruimte/contracts';
 import { boundsOfElements, elementAt, rectFromPoints, resizeRect, scaleElement, type Point, type Rect, type ResizeHandle } from '@ruimte/drawing';
 import { GRID, toWorld } from '@/canvas/math';
+import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { DrawingDock } from '@/drawing/DrawingDock';
 import { DrawingMenuPopup } from '@/drawing/DrawingMenu';
 import { DrawingOverlay } from '@/drawing/DrawingOverlay';
@@ -60,7 +61,6 @@ type Gesture =
     | { kind: 'erase' };
 
 /* The wheel settles on a whole percent this long after the last tick, as the canvas does. */
-const ZOOM_SETTLE_MS = 160;
 
 /* The letters of the tools a first stroke usually starts with, as the keys in `use-drawing-keys.ts` read them. */
 const FIRST_TOOLS: readonly { key: string; name: string }[] = [
@@ -104,8 +104,6 @@ export function DrawingView({ id }: { id: string }) {
     const rootRef = useRef<HTMLDivElement>(null);
     const sceneRef = useRef<HTMLCanvasElement>(null);
     const draftRef = useRef<HTMLCanvasElement>(null);
-    const zoomAnchor = useRef({ x: 0, y: 0 });
-    const zoomTimer = useRef<number | null>(null);
     const spaceRef = useRef(false);
     const camera = useDrawing(useShallow((s) => s.camera));
     const tool = useDrawing((s) => s.tool);
@@ -208,32 +206,7 @@ export function DrawingView({ id }: { id: string }) {
         // The theme and the font change what the same elements look like, so both force a repaint.
     }, [drawingStore, theme, fontReady, id]);
 
-    /* React makes wheel listeners passive, so the browser's own pinch zoom needs a native one. */
-    useEffect(() => {
-        const root = rootRef.current;
-        if (!root) {
-            return;
-        }
-        const onWheel = (e: WheelEvent): void => {
-            e.preventDefault();
-            const state = drawingStore.getState();
-            const rect = root.getBoundingClientRect();
-            const anchor = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-            // Chromium reports a trackpad pinch as a wheel with Ctrl held on every platform.
-            if (!e.ctrlKey && !isModHeld(e, isApplePlatform())) {
-                state.panBy(-e.deltaX, -e.deltaY);
-                return;
-            }
-            state.zoomAt(Math.exp(-e.deltaY * 0.01), anchor);
-            zoomAnchor.current = anchor;
-            if (zoomTimer.current) {
-                window.clearTimeout(zoomTimer.current);
-            }
-            zoomTimer.current = window.setTimeout(() => drawingStore.getState().settleZoom(zoomAnchor.current), ZOOM_SETTLE_MS);
-        };
-        root.addEventListener('wheel', onWheel, { passive: false });
-        return () => root.removeEventListener('wheel', onWheel);
-    }, [drawingStore]);
+    useWheelCamera(rootRef, drawingStore);
 
     /* Space turns any tool into the hand for as long as it is held. */
     useEffect(() => {
