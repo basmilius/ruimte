@@ -1,16 +1,19 @@
+import { NodeKindSchema, PROJECT_VIEW_KINDS, UNKNOWN_KIND } from '@ruimte/contracts';
 import { z } from 'zod';
 
 export const ACTION_ACTOR_KINDS = ['person', 'voice', 'agent', 'automation'] as const;
 export const ActionActorKindSchema = z.enum(ACTION_ACTOR_KINDS);
 
-export const VIEW_KINDS = ['canvas', 'drawing', 'diagram', 'file', 'terminal', 'browser', 'device', 'chat', 'separator', 'unknown'] as const;
-export const ActionViewKindSchema = z.enum(VIEW_KINDS);
+/* Every kind a project knows, plus the one a newer Ruimte made: an action may name a view this version cannot open. */
+export const ActionViewKindSchema = z.enum([...PROJECT_VIEW_KINDS, UNKNOWN_KIND]);
+export const VIEW_KINDS = ActionViewKindSchema.options;
 
+/* What an action may ask to be made, which is shorter than what it can name and this catalog's own decision. */
 export const CREATABLE_VIEW_KINDS = ['canvas', 'drawing', 'diagram', 'terminal', 'browser', 'chat'] as const;
 export const ActionCreatableViewKindSchema = z.enum(CREATABLE_VIEW_KINDS);
 
-export const CANVAS_NODE_KINDS = ['terminal', 'chat', 'browser', 'device', 'group', 'note', 'drawing', 'diagram', 'file', 'unknown'] as const;
-export const ActionCanvasNodeKindSchema = z.enum(CANVAS_NODE_KINDS);
+export const ActionCanvasNodeKindSchema = z.enum([...NodeKindSchema.options, UNKNOWN_KIND]);
+export const CANVAS_NODE_KINDS = ActionCanvasNodeKindSchema.options;
 
 export const CREATABLE_CANVAS_NODE_KINDS = ['terminal', 'chat', 'browser', 'group', 'note'] as const;
 export const ActionCreatableCanvasNodeKindSchema = z.enum(CREATABLE_CANVAS_NODE_KINDS);

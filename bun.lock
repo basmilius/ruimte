@@ -147,6 +147,7 @@
       "name": "@ruimte/actions",
       "version": "0.0.0",
       "dependencies": {
+        "@ruimte/contracts": "workspace:*",
         "zod": "^4.5.4",
       },
       "devDependencies": {

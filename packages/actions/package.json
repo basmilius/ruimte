@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ruimte/contracts": "workspace:*",
     "zod": "^4.5.4"
   },
   "devDependencies": {
