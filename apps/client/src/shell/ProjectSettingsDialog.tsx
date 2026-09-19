@@ -94,7 +94,7 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
                 }}
             />
 
-            <div className={`${SECTION_LABEL} mt-5 mb-1.5`}>{t('viewIcon.icon')}</div>
+            <div className={`${SECTION_LABEL} mt-5 mb-1.5`}>{t('common:icon.label')}</div>
             <div className="flex items-center gap-3">
                 <ProjectGlyph projectId={project.projectId} endpointId={endpointId} icon={project.icon} color={project.color} size={32} />
                 <div className="flex min-w-0 flex-col">
