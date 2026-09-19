@@ -71,3 +71,38 @@ final class AttentionStoreTests: XCTestCase {
         for _ in 0..<5 { await Task.yield() }
     }
 }
+
+final class SessionReadingTests: XCTestCase {
+    func testALiveAgentSaysWhatTheSessionIsDoing() {
+        XCTAssertEqual(reading(agent: agent("running", live: true)).status, "running")
+        XCTAssertEqual(reading(agent: agent("needs-you", live: true)).status, "needs-you")
+    }
+
+    func testARecordLeftBehindByARestartedDaemonIsNotRunning() {
+        XCTAssertNil(reading(agent: agent("running", live: false)).status)
+        XCTAssertEqual(reading(agent: agent("exited", live: false)).status, "exited")
+        XCTAssertEqual(reading(agent: agent("running", live: false), shellExited: true).status, "error")
+    }
+
+    func testAShellWithoutAnAgentReadsFromItself() {
+        XCTAssertNil(reading().status)
+        XCTAssertEqual(reading(attached: true).status, "running")
+        XCTAssertEqual(reading(shellExited: true).status, "error")
+    }
+
+    @MainActor func testTheStoreStopsCallingADeadAgentRunning() {
+        let store = AttentionStore(client: AttentionMachine(snapshot: .object([:])))
+        store.read("terminal") { $0.agent = agent("running", live: true) }
+        XCTAssertEqual(store.statuses["terminal"], "running")
+        store.read("terminal") { $0.agent = agent("running", live: false) }
+        XCTAssertEqual(store.statuses["terminal"], "idle")
+    }
+
+    private func reading(agent: JSONValue? = nil, shellExited: Bool = false, attached: Bool = false) -> SessionReading {
+        SessionReading(agent: agent, shellExited: shellExited, attached: attached)
+    }
+
+    private func agent(_ status: String, live: Bool) -> JSONValue {
+        .object(["kind": .string("claude"), "status": .string(status), "live": .bool(live)])
+    }
+}

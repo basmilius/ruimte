@@ -4,12 +4,39 @@ import RuimtePulsar
 import RuimteTransport
 import SwiftUI
 
+/// What one session's status is made of. The word follows `sessionStatus` in the desktop client's
+/// `state/sessions.ts` one for one, so a machine that restarted reads the same on both.
+struct SessionReading: Equatable {
+    /// The agent record the CLI's hooks wrote, which outlives the CLI itself.
+    var agent: JSONValue?
+    var shellExited = false
+    /// Whether this client holds an attachment. Only a terminal page attaches, never this store, so it stays false
+    /// here; counting the attachments of other clients would call a shell someone opened on the desktop running.
+    var attached = false
+
+    var status: String? {
+        // A live agent knows better than the shell what is going on.
+        if let agent, agent["live"]?.boolValue == true {
+            return agent.text("status", fallback: "idle")
+        }
+        // The daemon marks the record when the CLI went down with the shell, and it outlives the shell.
+        if agent?.text("status") == "exited" {
+            return "exited"
+        }
+        if shellExited {
+            return "error"
+        }
+        return attached ? "running" : nil
+    }
+}
+
 @MainActor @Observable
 final class AttentionStore {
     private(set) var statuses: [String: String] = [:]
     private(set) var unseen = Set<String>()
     private(set) var approvalCounts: [String: Int] = [:]
     private var pushEntries: [String: JSONValue] = [:]
+    private var readings: [String: SessionReading] = [:]
     /// When the machine began keeping entries a client may mark nodes from; nil for a machine that never says, whose
     /// entries only ever concerned notifications and would otherwise all turn into marks after an update.
     private var marksFrom: Double?
@@ -28,8 +55,7 @@ final class AttentionStore {
         subscriptions.append(client.subscribe("push.attention") { [weak self] entry in self?.receivePush(entry) })
         subscriptions.append(
             client.subscribe("session.status") { [weak self] event in
-                self?.update(
-                    event.text("sessionId"), status: event["agent"]?.text("status", fallback: "idle") ?? "idle")
+                self?.read(event.text("sessionId")) { $0.agent = event["agent"] }
             })
         subscriptions.append(
             client.subscribe("session.approvals") { [weak self] event in
@@ -37,7 +63,7 @@ final class AttentionStore {
             })
         subscriptions.append(
             client.subscribe("session.exit") { [weak self] event in
-                self?.update(event.text("sessionId"), status: "exited")
+                self?.read(event.text("sessionId")) { $0.shellExited = true }
             })
         subscriptions.append(
             client.subscribe("chat.event") { [weak self] payload in
@@ -75,6 +101,16 @@ final class AttentionStore {
     }
     func blur(_ id: String) { focused[id] = max(0, focused[id, default: 0] - 1) }
     func needsYou(_ id: String) -> Bool { statuses[id] == "needs-you" || approvalCounts[id, default: 0] > 0 }
+
+    /// Folds one field of a session's reading in and writes the word that reading now derives. A session the client
+    /// knows nothing about reads as idle, which is the mark the desktop draws for no status at all: none.
+    func read(_ id: String, _ change: (inout SessionReading) -> Void) {
+        guard !id.isEmpty else { return }
+        var reading = readings[id] ?? SessionReading()
+        change(&reading)
+        readings[id] = reading
+        update(id, status: reading.status ?? "idle")
+    }
 
     func update(_ id: String, status: String) {
         guard !id.isEmpty else { return }
@@ -140,10 +176,10 @@ final class AttentionStore {
             guard !Task.isCancelled else { return }
             for session in sessions.list("sessions") {
                 let id = session.text("sessionId")
-                update(
-                    id,
-                    status: session["exited"] == .bool(true)
-                        ? "exited" : session["agent"]?.text("status", fallback: "idle") ?? "idle")
+                read(id) {
+                    $0.agent = session["agent"]
+                    $0.shellExited = session["exited"] == .bool(true)
+                }
                 approvalCounts[id] = session.list("approvals").count
             }
             let chats = try await client.request("chat.list", payload: .object([:]))
@@ -154,6 +190,7 @@ final class AttentionStore {
                 update(chat.text("chatId"), status: chat.text("status", fallback: "idle"))
             }
             statuses = statuses.filter { ids.contains($0.key) }
+            readings = readings.filter { ids.contains($0.key) }
             approvalCounts = approvalCounts.filter { ids.contains($0.key) }
             unseen.formIntersection(ids.union(unreadPushIDs))
         } catch {}
