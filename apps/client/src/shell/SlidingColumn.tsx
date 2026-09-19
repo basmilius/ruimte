@@ -42,7 +42,7 @@ export function SlidingColumn({ open, width, bounds, onWidth, columnRef, body, c
     const present = open || !settled;
     const ownRef = useRef<HTMLElement>(null);
     const ref = columnRef ?? ownRef;
-    const { startResize } = useColumnResize(ref, { ...bounds, width, from: 'right', onWidth });
+    const { startResize } = useColumnResize(ref, { ...bounds, size: width, from: 'right', onSize: onWidth });
 
     useEffect(() => {
         if (open || settled) {

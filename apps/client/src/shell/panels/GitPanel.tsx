@@ -29,6 +29,7 @@ import { useGitActions } from '@/shell/panels/use-git-actions';
 import { WorktreeSection } from '@/shell/panels/WorktreeSection';
 import { worktreeBase, worktreeDiffTab } from '@/shell/panels/worktree-rows';
 import { PanelHeaderSlot } from '@/shell/PanelHeaderSlot';
+import { useColumnResize } from '@/shell/useColumnResize';
 import { revealNode } from '@/project/views';
 import { useCanvas } from '@/state/canvas';
 import { useFiles } from '@/state/files';
@@ -117,6 +118,15 @@ export function GitPanel() {
     /* Goes up whenever the status moved, which is when the log below it may have moved too. */
     const [revision, setRevision] = useState(0);
     const bodyRef = useRef<HTMLDivElement>(null);
+    const logRef = useRef<HTMLDivElement>(null);
+    /* Dragging the line between the list and the log; both keep a whole number of pixels. */
+    const { startResize: startLogResize } = useColumnResize(logRef, {
+        size: logHeight,
+        min: MIN_LOG_HEIGHT,
+        from: 'bottom',
+        max: () => (bodyRef.current?.getBoundingClientRect().height ?? 0) - MIN_LIST_HEIGHT,
+        onSize: (next) => useGit.getState().setLogHeight(next)
+    });
     const roomForPills = (useUi((s) => s.panelWidth) ?? 540) >= PILLS_FROM_WIDTH;
     const run = useGitActions();
 
@@ -312,26 +322,6 @@ export function GitPanel() {
             .catch(() => setDialog({ kind: 'pull-request', subject: '' }));
     };
 
-    /* Dragging the line between the list and the log; both keep a whole number of pixels. */
-    const startLogResize = (event: React.PointerEvent<HTMLDivElement>): void => {
-        event.preventDefault();
-        const handle = event.currentTarget;
-        handle.setPointerCapture(event.pointerId);
-        const startY = event.clientY;
-        const startHeight = logHeight;
-        const available = (bodyRef.current?.getBoundingClientRect().height ?? 0) - MIN_LIST_HEIGHT;
-        const onMove = (move: PointerEvent): void => {
-            const next = Math.round(startHeight - (move.clientY - startY));
-            useGit.getState().setLogHeight(Math.max(MIN_LOG_HEIGHT, Math.min(Math.max(MIN_LOG_HEIGHT, available), next)));
-        };
-        const onUp = (): void => {
-            handle.removeEventListener('pointermove', onMove);
-            handle.removeEventListener('pointerup', onUp);
-        };
-        handle.addEventListener('pointermove', onMove);
-        handle.addEventListener('pointerup', onUp);
-    };
-
     if (cwd === null) {
         return <PanelEmpty icon={Folder}>{t('git.panel.noFolder')}</PanelEmpty>;
     }
@@ -475,7 +465,7 @@ export function GitPanel() {
                             className="-mb-px h-[5px] shrink-0 cursor-row-resize border-b border-border hover:border-border-strong"
                             onPointerDown={startLogResize}
                         />
-                        <div className="flex shrink-0 flex-col" style={{ height: logHeight }}>
+                        <div ref={logRef} className="flex shrink-0 flex-col" style={{ height: logHeight }}>
                             <CommitLog cwd={cwd} revision={revision} reading={readingCommit} onOpen={openCommit} />
                         </div>
                     </>

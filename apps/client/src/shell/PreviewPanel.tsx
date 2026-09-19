@@ -6,7 +6,7 @@ import { hasOverlayControls, isApplePlatform } from '@/desktop/bridge';
 import { FileTabs } from '@/shell/panels/FileTabs';
 import { FileViewer } from '@/shell/panels/FileViewer';
 import { SlidingColumn } from '@/shell/SlidingColumn';
-import { clampColumnWidth } from '@/shell/useColumnResize';
+import { clampColumnSize } from '@/shell/useColumnResize';
 import { focusedCanvas } from '@/state/canvas';
 import { useFiles } from '@/state/files';
 import { useUi } from '@/state/ui';
@@ -55,7 +55,7 @@ export function PreviewPanel() {
     }
     const bounds = { min: MIN_WIDTH, max: () => window.innerWidth - MIN_CANVAS_WIDTH };
     // The project may have been on a wider window than this one, so its width is clamped on the way in.
-    const width = clampColumnWidth(bounds, stored ?? appWidth);
+    const width = clampColumnSize(bounds, stored ?? appWidth);
 
     useEffect(() => {
         if (focusRequest === 0) {

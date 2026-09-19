@@ -13,7 +13,7 @@ import { closePlanPanel, pickPlan, PLAN_DEFAULT_WIDTH, PLAN_MIN_WIDTH } from '@/
 import { PlanList } from '@/plan/PlanList';
 import { resultsText, type PlanFilter } from '@/plan/plan-view';
 import { SlidingColumn } from '@/shell/SlidingColumn';
-import { clampColumnWidth } from '@/shell/useColumnResize';
+import { clampColumnSize } from '@/shell/useColumnResize';
 import { useDocument } from '@/state/document';
 import { useEndpointId } from '@/state/keys';
 import { useChatPlans } from '@/state/plans';
@@ -62,7 +62,7 @@ export function PlanPanel() {
         }
     };
     // The project may have been on a wider window than this one, so its width is clamped on the way in.
-    const width = clampColumnWidth({ min: PLAN_MIN_WIDTH, max: () => window.innerWidth - MIN_GRID_WIDTH }, stored ?? PLAN_DEFAULT_WIDTH);
+    const width = clampColumnSize({ min: PLAN_MIN_WIDTH, max: () => window.innerWidth - MIN_GRID_WIDTH }, stored ?? PLAN_DEFAULT_WIDTH);
 
     return (
         <SlidingColumn open={open} width={width} bounds={bounds} columnRef={ref} onWidth={(next) => useUi.getState().setPlanWidth(next)}>

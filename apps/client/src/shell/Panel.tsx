@@ -10,7 +10,7 @@ import { GitPanel } from '@/shell/panels/GitPanel';
 import { ProcessesPanel } from '@/shell/panels/ProcessesPanel';
 import { DevicesPanel } from '@/shell/panels/DevicesPanel';
 import { SlidingColumn } from '@/shell/SlidingColumn';
-import { clampColumnWidth } from '@/shell/useColumnResize';
+import { clampColumnSize } from '@/shell/useColumnResize';
 import { useUi, type PanelKind } from '@/state/ui';
 import { SECTION_LABEL } from '@/ui/classes';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
@@ -47,7 +47,7 @@ export function Panel() {
     const entry = PANELS.find((candidate) => candidate.kind === panel.kind);
     const bounds = { min: entry?.minWidth ?? 240, max: () => window.innerWidth - MIN_CANVAS_WIDTH };
     // The project may have been on a wider window than this one, so its width is clamped on the way in.
-    const width = clampColumnWidth(bounds, stored ?? DEFAULT_WIDTH);
+    const width = clampColumnSize(bounds, stored ?? DEFAULT_WIDTH);
 
     const label = entry === undefined ? t('panel.fallback') : t(`panel.names.${entry.kind}`);
 
