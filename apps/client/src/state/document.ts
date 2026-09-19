@@ -77,6 +77,9 @@ export interface DocumentState {
     edits: number;
     /* True for the one update that swaps in another project, so nobody reads it as edits. */
     loading: boolean;
+    /* The views that live in the shared file, which is the one a team commits. Everything else is
+       this person's, which is what a view is until someone shares it. */
+    shared: string[];
 
     load(document: ProjectDocument | null, local: ProjectLocal | null): void;
     /*
@@ -84,7 +87,9 @@ export interface DocumentState {
      * views, and what each canvas on screen has to take in. Not an edit, since it is already on disk,
      * and no view opens by itself: a person's grid only moves when the person moves it.
      */
-    applyMerge(views: ProjectView[], canvases: Record<string, CanvasPatch>): void;
+    applyMerge(views: ProjectView[], canvases: Record<string, CanvasPatch>, shared: string[]): void;
+    /* Puts a view in the shared file or takes it back out. Only a person does this; see `SharedViewIdsSchema`. */
+    setShared(id: string, shared: boolean): void;
     /* The nodes a gesture holds in any canvas on screen, which a merge leaves under the person's hand. */
     heldNodeIds(): Set<string>;
     /* Puts a view in the cell that has the focus, or moves the focus to the cell it already stands in. */
@@ -327,6 +332,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             viewNotice: null,
             edits: 0,
             loading: false,
+            shared: [],
 
             load(document, local) {
                 const views = document?.views ?? [];
@@ -336,15 +342,22 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 const layout = layoutOf(local ?? { activeViewId: null, layout: undefined }, views);
                 const settled = settledOn(views, viewLocal, layout, { lastCanvasViewId: views.find(isCanvasView)?.id ?? null });
                 // Another project is another set of views, so a banner about the one that just left goes with it.
-                set({ ...settled, viewNotice: null, loading: true, edits: 0 });
+                set({ ...settled, viewNotice: null, loading: true, edits: 0, shared: document?.shared ?? [] });
                 // The project that was here goes first, editors and all: nothing of it may show through.
                 peers.canvases.keep([]);
                 openEditors(views, viewLocal, layout === null ? [] : viewIdsIn(layout), settled.activeViewId, peers);
                 set({ loading: false });
             },
 
-            applyMerge(views, canvases) {
-                set((state) => ({ views, viewNotice: keptNotice(state.viewNotice, views) }));
+            setShared(id, shared) {
+                set((state) => {
+                    const without = state.shared.filter((viewId) => viewId !== id);
+                    return { shared: shared ? [...without, id] : without, edits: state.edits + 1 };
+                });
+            },
+
+            applyMerge(views, canvases, shared) {
+                set((state) => ({ views, shared, viewNotice: keptNotice(state.viewNotice, views) }));
                 for (const [viewId, patch] of Object.entries(canvases)) {
                     peers.canvases.peek(viewId)?.getState().applyExternal(patch);
                 }

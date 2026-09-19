@@ -17,6 +17,7 @@ import {
     Terminal,
     Trash,
     TriangleAlert,
+    Users,
     Workflow
 } from 'lucide-react';
 import clsx from 'clsx';
@@ -436,6 +437,13 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />
                     </Tooltip>
                 )}
+                {/* Only a shared row is marked: private is what a view is until someone says otherwise,
+                    and the default earns no icon. Never in the accent, like every other mark here. */}
+                {view.shared && (
+                    <Tooltip label={t('sidebar.shared')}>
+                        <Icon icon={Users} size={12} className="shrink-0 text-text-faint" />
+                    </Tooltip>
+                )}
                 {(view.self ? view.self.alert : view.nodes.some((node) => node.alert)) && <ProcessWarningMark />}
                 {row.status && <StatusDot status={row.status} plain />}
             </ContextMenu.Trigger>
@@ -453,6 +461,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
 export function Sidebar() {
     const { t } = useTranslation('shell');
     const source = useSidebarSource();
+    const shared = useDocument(useShallow((state) => state.shared));
     const endpointId = useEndpointId();
     const sessions = useSessions((s) => s.byKey);
     const chats = useChats((s) => s.byKey);
@@ -498,6 +507,7 @@ export function Sidebar() {
                     name: view.name ?? '',
                     titleSource: 'titleSource' in view ? view.titleSource : undefined,
                     kind: view.kind,
+                    shared: shared.includes(view.id),
                     icon: viewIconOf(view),
                     provider: provider ?? null,
                     path: view.kind === 'file' ? view.path : null,
@@ -507,7 +517,7 @@ export function Sidebar() {
                 };
             })
         }),
-        [source, endpointId, sessions, chats, drafts, warnings, unseen, tasks]
+        [source, shared, endpointId, sessions, chats, drafts, warnings, unseen, tasks]
     );
 
     const activeViewId = project.activeViewId;

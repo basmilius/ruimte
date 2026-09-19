@@ -32,11 +32,12 @@ interface CanvasesAccess {
 interface DocumentAccess {
     getState(): {
         views: ProjectView[];
+        shared: string[];
         activeViewId: string | null;
         edits: number;
         loading: boolean;
         load(document: ProjectDocument | null, local: ProjectLocal | null): void;
-        applyMerge(views: ProjectView[], canvases: Record<string, CanvasPatch>): void;
+        applyMerge(views: ProjectView[], canvases: Record<string, CanvasPatch>, shared: string[]): void;
         heldNodeIds(): Set<string>;
         exportViews(): ProjectView[];
         exportLocal(): Pick<ProjectLocal, 'activeViewId' | 'views' | 'layout'>;
@@ -461,9 +462,10 @@ export class ProjectClient {
             return Promise.resolve();
         }
         const content = this.contentOfScreen();
+        const shared = [...this.documents.getState().shared];
         this.sink.setDirty(false);
         this.saving = this.transport
-            .request('project.save', { projectId: current.projectId, baseRev: rev, content })
+            .request('project.save', { projectId: current.projectId, baseRev: rev, content, shared })
             .then((result) => {
                 // The file now holds what went out, which is what the next merge measures against.
                 this.base = content;
@@ -530,7 +532,9 @@ export class ProjectClient {
         this.refusal = null;
         this.base = contentOf(document);
         this.sink.setRev(document.rev);
-        this.documents.getState().applyMerge(merge.content.views, merge.changes.canvases);
+        /* Which file a view is in is the folder's answer and not this screen's: a colleague's pull
+           can share one, and nothing here may argue with what the daemon just read off disk. */
+        this.documents.getState().applyMerge(merge.content.views, merge.changes.canvases, document.shared ?? []);
         return true;
     }
 

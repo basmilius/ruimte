@@ -1,10 +1,12 @@
 import i18next from 'i18next';
 import {
+    canShareView,
     isCanvasView,
     isDiagramView,
     isDrawingView,
     isFileView,
     isOpenableView,
+    isSeparatorView,
     isSessionView,
     MAIN_VIEW_NAME,
     sessionNodesOfView,
@@ -22,6 +24,7 @@ import { currentEndpointId } from '@/state/keys';
 import { useDocument, viewOfNode, type DocumentState } from '@/state/document';
 import { useProject } from '@/state/project';
 import { nodeStatus, useSessions, type StatusOf } from '@/state/sessions';
+import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 
@@ -195,6 +198,29 @@ export const newFileView = (path: string): string | null => useDocument.getState
 export const showViewOnCanvas = (viewId: string): string | null => {
     const view = useDocument.getState().views.find((candidate) => candidate.id === viewId);
     return view && isFileView(view) ? showFileOnCanvas(view.path) : showOnCanvas(viewId);
+};
+
+/*
+ * Puts a view in the shared file, or takes it back out, and says what happened with a way back. No
+ * dialog: nothing reaches anyone until the person commits, so there is nothing here to confirm. The
+ * line names the count, which is the one thing a person did not see coming; the titles ride along
+ * with it, and a chat titles itself after its first prompt.
+ */
+export const setViewShared = (viewId: string, shared: boolean): void => {
+    const document = useDocument.getState();
+    const view = document.views.find((candidate) => candidate.id === viewId);
+    if (!view || (shared && !canShareView(view))) {
+        return;
+    }
+    document.setShared(viewId, shared);
+    const name = isSeparatorView(view) ? '' : view.name;
+    const nodes = isCanvasView(view) ? view.nodes.length : 0;
+    useToasts.getState().show({
+        kind: 'success',
+        title: shared ? i18next.t('shell:share.shared', { name, count: nodes }) : i18next.t('shell:share.private', { name }),
+        description: shared ? i18next.t('shell:share.kept') : undefined,
+        action: { label: i18next.t('common:action.undo'), run: () => useDocument.getState().setShared(viewId, !shared) }
+    });
 };
 
 /* Copies a canvas, a drawing or a diagram view. What a drawing or a diagram holds is copied by the daemon, not here. */

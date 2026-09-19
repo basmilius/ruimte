@@ -1,9 +1,19 @@
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
-import { Copy, Frame, PanelBottom, PanelRight, Pencil, Smile, Trash, X } from 'lucide-react';
-import type { ProjectView } from '@ruimte/contracts';
+import { Copy, Frame, PanelBottom, PanelRight, Pencil, Smile, Trash, UserRoundMinus, Users, X } from 'lucide-react';
+import { canShareView, type ProjectView } from '@ruimte/contracts';
 import { ForkMenuItem } from '@/chat/ui/ForkMenuItem';
-import { askDeleteView, askRenameView, askViewIcon, duplicateViewOf, freeViewFor, putOnCanvas, showViewOnCanvas, splitFocusedCell } from '@/project/views';
+import {
+    askDeleteView,
+    askRenameView,
+    askViewIcon,
+    duplicateViewOf,
+    freeViewFor,
+    putOnCanvas,
+    setViewShared,
+    showViewOnCanvas,
+    splitFocusedCell
+} from '@/project/views';
 import { canSplit, cellCount, type CellAt, type SplitDirection } from '@/shell/split';
 import { useDocument } from '@/state/document';
 import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
@@ -21,6 +31,11 @@ const DRAWN_KINDS: readonly ProjectView['kind'][] = ['canvas', 'drawing', 'diagr
 export function ViewMenuItems({ viewId, kind, onRename }: { viewId: string; kind: ProjectView['kind']; onRename?: () => void }) {
     const { t } = useTranslation(['shell', 'common']);
     const drawn = DRAWN_KINDS.includes(kind);
+    const shared = useDocument((state) => state.shared).includes(viewId);
+    /* Offered whether or not the folder is a repository: finding that out means starting a git watch,
+       which opening a menu has no business doing, and sharing without one only writes a file nobody
+       pulls yet. A view that cannot travel at all is the one case that is left out. */
+    const canShare = useDocument((state) => state.views.find((view) => view.id === viewId));
     return (
         <>
             <Menu.Item className="menu-item" onClick={() => (onRename === undefined ? askRenameView(viewId) : onRename())}>
@@ -43,6 +58,11 @@ export function ViewMenuItems({ viewId, kind, onRename }: { viewId: string; kind
             {(kind === 'drawing' || kind === 'diagram' || kind === 'file') && (
                 <Menu.Item className="menu-item" onClick={() => showViewOnCanvas(viewId)}>
                     <Icon icon={Frame} size={14} /> {t('viewMenu.showOnCanvas')}
+                </Menu.Item>
+            )}
+            {canShare !== undefined && (shared || canShareView(canShare)) && (
+                <Menu.Item className="menu-item" onClick={() => setViewShared(viewId, !shared)}>
+                    <Icon icon={shared ? UserRoundMinus : Users} size={14} /> {t(shared ? 'share.stop' : 'share.start')}
                 </Menu.Item>
             )}
             <Menu.Item className="menu-item text-status-error" onClick={() => askDeleteView(viewId)}>

@@ -11,13 +11,24 @@ const view = (id: string, nodes: SidebarNode[] = []): SidebarView => ({
     icon: null,
     provider: null,
     path: null,
+    shared: false,
     nodes,
     self: null
 });
 
-const separator = (id: string): SidebarView => ({ id, name: '', kind: 'separator', icon: null, provider: null, path: null, nodes: [], self: null });
+const separator = (id: string): SidebarView => ({
+    id,
+    name: '',
+    kind: 'separator',
+    icon: null,
+    provider: null,
+    path: null,
+    shared: false,
+    nodes: [],
+    self: null
+});
 
-const drawing = (id: string): SidebarView => ({ id, name: id, kind: 'drawing', icon: null, provider: null, path: null, nodes: [], self: null });
+const drawing = (id: string): SidebarView => ({ id, name: id, kind: 'drawing', icon: null, provider: null, path: null, shared: false, nodes: [], self: null });
 
 const standalone = (id: string, status: AgentStatus | null = null): SidebarView => ({
     id,
@@ -26,6 +37,7 @@ const standalone = (id: string, status: AgentStatus | null = null): SidebarView 
     kind: 'chat',
     provider: null,
     path: null,
+    shared: false,
     nodes: [],
     self: { id, title: id, kind: 'chat', provider: null, status, draft: true }
 });

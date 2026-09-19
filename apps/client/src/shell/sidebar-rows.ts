@@ -31,6 +31,8 @@ export interface SidebarView {
     provider: AgentKind | null;
     /* A file view's file, whose own name gives the row its icon. Null for every other kind. */
     path: string | null;
+    /* Whether this view lives in the shared file, which is the one a team commits. */
+    shared: boolean;
     /* What sits on the canvas. A view that is not a canvas lists nothing: it is one node itself. */
     nodes: SidebarNode[];
     /* The node a standalone view is, so its row carries the status and the draft dot of that node. */

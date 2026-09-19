@@ -21,6 +21,7 @@ import type { StoreApi } from 'zustand';
 import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
 import { PanelsPort } from './panels-port';
 import { rekeyLastProject } from './last-project';
+import { setViewShared } from './views';
 import { ProjectClient, type ProjectSink } from './project-client';
 import { sessionNodesOf } from './project-sessions';
 
@@ -349,6 +350,23 @@ describe('ProjectClient', () => {
         expect(transport.of('project.save-local')).toHaveLength(1);
         dispose();
         expect(listeners.has('pagehide')).toBe(false);
+    });
+
+    test('sharing a view is an edit that rides the next save, and the daemon is told which views travel', async () => {
+        const { transport, dispose } = setup();
+        await tick();
+        expect(useDocument.getState().shared).toEqual([]);
+
+        setViewShared('main', true);
+        await tick(10);
+        const save = transport.of('project.save')[0]?.payload as { shared: string[] };
+        expect(save.shared).toEqual(['main']);
+        expect(useDocument.getState().shared).toEqual(['main']);
+
+        // And what a pull says about the folder outranks this screen.
+        useDocument.getState().applyMerge(useDocument.getState().views, {}, []);
+        expect(useDocument.getState().shared).toEqual([]);
+        dispose();
     });
 
     test('an edit saves after the pause against the loaded rev, and a camera move only touches the local file', async () => {
