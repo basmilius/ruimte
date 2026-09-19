@@ -114,6 +114,8 @@ const newId = (): string => randomBytes(6).toString('base64url');
 export interface ProjectViewFiles {
     /* Every file whose view left the project is deleted, but only when a person saved. */
     removeOrphans(projectId: string, keep: Set<string>): Promise<void>;
+    /* The views that changed sides take their files along, from `private/` into git or back. */
+    resettle(projectId: string, viewIds: readonly string[]): Promise<void>;
     closeProject(projectId: string): void;
 }
 
@@ -449,6 +451,8 @@ export class ProjectStore {
         /* Only a person's save moves a view between the two files. A payload without a list leaves
            the folder as it is, which is what an older client and every other writer amount to. */
         const ids = [...(shared ?? state.shared)];
+        // The views that changed sides, so their drawing or diagram file can follow them over.
+        const moved = [...new Set([...ids, ...state.shared])].filter((id) => ids.includes(id) !== state.shared.includes(id));
         const portable = toPortable(content, state.entry.folder);
         const document: ProjectDocument = { version: PROJECT_VERSION, rev: state.rev + 1, ...portable, shared: ids };
         const written = await this.writeFiles(this.documentPath(state.entry), portable, ids, document.rev, {
@@ -459,6 +463,10 @@ export class ProjectStore {
         state.lastPrivate = written.private;
         state.shared = ids;
         state.rev = document.rev;
+        if (moved.length > 0) {
+            await this.drawings?.resettle(projectId, moved);
+            await this.diagrams?.resettle(projectId, moved);
+        }
         this.index.set(projectId, state.entry.folder, fromPortable(document, state.entry.folder));
         const drawingIds = drawingIdsIn(document.views);
         // A view that a person deleted here takes its file with it. An outside edit never does:
@@ -793,6 +801,15 @@ export class ProjectStore {
     /* Where the project file of an open project sits, which is where its drawings and diagrams sit beside it. */
     documentPathOf(projectId: string): string {
         return this.documentPath(this.require(projectId).entry);
+    }
+
+    /*
+     * Whether a view lives in the shared file, which is what its drawing or diagram file follows.
+     * A project nobody has open shares nothing as far as this answers: both callers only ask about
+     * a project they already hold, and the safe reading of "I cannot tell" is that it stays private.
+     */
+    isSharedView(projectId: string, viewId: string): boolean {
+        return this.open.get(projectId)?.shared.includes(viewId) === true;
     }
 
     /* The projects that are open right now, in no particular order. */

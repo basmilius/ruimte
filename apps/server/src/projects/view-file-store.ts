@@ -1,5 +1,5 @@
-import { mkdir, readdir, rm } from 'node:fs/promises';
-import { basename } from 'node:path';
+import { mkdir, readdir, rename, rm } from 'node:fs/promises';
+import { basename, dirname } from 'node:path';
 import { settled, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '../fs/watch-seam.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { tooNewMessage, viewFilePathIn, viewIdOfFile, type JsonDocumentRead } from './project-files.ts';
@@ -18,7 +18,8 @@ interface OpenFile {
 
 interface OpenProjectFiles {
     dir: string;
-    watcher: DirectoryWatcher | null;
+    privateDir: string;
+    watchers: DirectoryWatcher[];
     settles: Map<string, Settled>;
     open: Map<string, OpenFile>;
 }
@@ -33,7 +34,9 @@ export interface ViewFileKind<TDocument extends TContent & { rev: number }, TCon
     noun: string;
     /* The version this Ruimte writes, so a file that says a higher one can be named in the refusal. */
     version: number;
+    /* Where the files of shared views sit, and where the ones of private views sit beside it. */
     dirOf(documentPath: string): string;
+    privateDirOf(documentPath: string): string;
     read(path: string): Promise<JsonDocumentRead<TDocument>>;
     write(path: string, document: TDocument): Promise<string>;
     /* Only the fields of the document, so a payload never carries anything else into the file. */
@@ -83,7 +86,7 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
     open(projectId: string, viewId: string): Promise<TDocument> {
         return this.locked(async () => {
             const state = await this.stateOf(projectId, viewId);
-            const outcome = await this.kind.read(viewFilePathIn(state.dir, viewId));
+            const outcome = await this.kind.read(this.pathOf(projectId, state, viewId));
             if (outcome.kind === 'invalid') {
                 throw this.kind.invalid(outcome.message);
             }
@@ -116,7 +119,7 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
                 throw this.kind.invalid(problem);
             }
             const document = this.kind.documentOf(content, current.rev + 1);
-            const text = await this.kind.write(viewFilePathIn(state.dir, viewId), document);
+            const text = await this.kind.write(this.pathOf(projectId, state, viewId), document);
             state.open.set(viewId, { rev: document.rev, lastText: text });
             return document.rev;
         });
@@ -126,12 +129,12 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
     copy(projectId: string, from: string, to: string): Promise<void> {
         return this.locked(async () => {
             const state = await this.stateOf(projectId, to);
-            const outcome = await this.kind.read(viewFilePathIn(state.dir, from));
+            const outcome = await this.kind.read(this.pathOf(projectId, state, from));
             if (outcome.kind !== 'ok') {
                 // Nothing was ever saved for the source, so the copy has nothing to be.
                 return;
             }
-            const text = await this.kind.write(viewFilePathIn(state.dir, to), this.kind.documentOf(outcome.document, 0));
+            const text = await this.kind.write(this.pathOf(projectId, state, to), this.kind.documentOf(outcome.document, 0));
             state.open.set(to, { rev: 0, lastText: text });
         });
     }
@@ -140,26 +143,52 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
         this.states.get(projectId)?.open.delete(viewId);
     }
 
+    /* Where this view's file belongs right now, which is the side of the folder its view is on. */
+    private pathOf(projectId: string, state: OpenProjectFiles, viewId: string): string {
+        return viewFilePathIn(this.projects.isSharedView(projectId, viewId) ? state.dir : state.privateDir, viewId);
+    }
+
+    /*
+     * A view that changed sides takes its file along. Nothing is read or parsed: the bytes are the
+     * person's either way, and a file that is not there is a view nobody ever drew in.
+     */
+    async resettle(projectId: string, viewIds: readonly string[]): Promise<void> {
+        const state = this.states.get(projectId);
+        if (!state) {
+            return;
+        }
+        for (const viewId of viewIds) {
+            const shared = this.projects.isSharedView(projectId, viewId);
+            const from = viewFilePathIn(shared ? state.privateDir : state.dir, viewId);
+            const to = viewFilePathIn(shared ? state.dir : state.privateDir, viewId);
+            await mkdir(dirname(to), { recursive: true });
+            await rename(from, to).catch(() => undefined);
+        }
+    }
+
     async removeOrphans(projectId: string, keep: Set<string>): Promise<void> {
-        let dir: string;
+        let path: string;
         try {
-            dir = this.kind.dirOf(this.projects.documentPathOf(projectId));
+            path = this.projects.documentPathOf(projectId);
         } catch {
             return;
         }
-        let names: string[];
-        try {
-            names = await readdir(dir);
-        } catch {
-            return;
-        }
-        for (const name of names) {
-            const viewId = viewIdOfFile(name);
-            if (!viewId || keep.has(viewId)) {
+        // Both sides of the folder: a view that was shared once may have left its file on either.
+        for (const dir of [this.kind.dirOf(path), this.kind.privateDirOf(path)]) {
+            let names: string[];
+            try {
+                names = await readdir(dir);
+            } catch {
                 continue;
             }
-            await rm(viewFilePathIn(dir, viewId), { force: true });
-            this.close(projectId, viewId);
+            for (const name of names) {
+                const viewId = viewIdOfFile(name);
+                if (!viewId || keep.has(viewId)) {
+                    continue;
+                }
+                await rm(viewFilePathIn(dir, viewId), { force: true });
+                this.close(projectId, viewId);
+            }
         }
     }
 
@@ -168,7 +197,9 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
         if (!state) {
             return;
         }
-        state.watcher?.close();
+        for (const watcher of state.watchers) {
+            watcher.close();
+        }
         for (const settle of state.settles.values()) {
             settle.stop();
         }
@@ -216,9 +247,16 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
         if (known) {
             return known;
         }
-        const state: OpenProjectFiles = { dir: this.kind.dirOf(path), watcher: null, settles: new Map(), open: new Map() };
+        const state: OpenProjectFiles = {
+            dir: this.kind.dirOf(path),
+            privateDir: this.kind.privateDirOf(path),
+            watchers: [],
+            settles: new Map(),
+            open: new Map()
+        };
         this.states.set(projectId, state);
         await mkdir(state.dir, { recursive: true });
+        await mkdir(state.privateDir, { recursive: true });
         this.startWatching(projectId, state);
         return state;
     }
@@ -234,22 +272,29 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
         return settle;
     }
 
+    /* One watcher per directory: a pull lands in the shared one, a person's own editor in either. */
     private startWatching(projectId: string, state: OpenProjectFiles): void {
-        try {
-            state.watcher = this.seams.watch(state.dir, { recursive: false }, (_event, filename) => {
-                // A platform that reports no name could have touched any file of this project.
-                const touched = filename ? [viewIdOfFile(basename(filename))] : [...state.open.keys()];
-                for (const viewId of touched) {
-                    if (!viewId || !state.open.has(viewId)) {
-                        continue;
-                    }
-                    this.settleFor(state, projectId, viewId).nudge();
+        state.watchers = [state.dir, state.privateDir]
+            .map((dir) => {
+                try {
+                    const watcher = this.seams.watch(dir, { recursive: false }, (_event, filename) => {
+                        // A platform that reports no name could have touched any file of this project.
+                        const touched = filename ? [viewIdOfFile(basename(filename))] : [...state.open.keys()];
+                        for (const viewId of touched) {
+                            if (!viewId || !state.open.has(viewId)) {
+                                continue;
+                            }
+                            this.settleFor(state, projectId, viewId).nudge();
+                        }
+                    });
+                    watcher.on('error', () => undefined);
+                    return watcher;
+                } catch {
+                    // No watcher means no outside-edit detection; saving still works.
+                    return null;
                 }
-            });
-            state.watcher.on('error', () => undefined);
-        } catch {
-            // No watcher means no outside-edit detection; saving still works.
-        }
+            })
+            .filter((watcher) => watcher !== null);
     }
 
     private async reload(projectId: string, state: OpenProjectFiles, viewId: string): Promise<void> {
@@ -260,7 +305,7 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
         if (!current) {
             return;
         }
-        const outcome = await this.kind.read(viewFilePathIn(state.dir, viewId));
+        const outcome = await this.kind.read(this.pathOf(projectId, state, viewId));
         if (outcome.kind === 'invalid' || outcome.kind === 'too-new') {
             const why = outcome.kind === 'invalid' ? outcome.message : tooNewMessage(this.kind.noun, outcome.version, this.kind.version);
             console.warn(`An outside edit to the ${this.kind.noun} ${viewId} was ignored: ${why}`);

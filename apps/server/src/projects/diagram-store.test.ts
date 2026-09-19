@@ -39,7 +39,8 @@ const content = (...diagramIds: string[]): ProjectContent => ({
     ]
 });
 
-const diagramsDir = (): string => join(folder, '.ruimte', 'diagrams');
+/* Nothing here is shared, so every diagram sits on the private side of the folder; sharing its view moves it, which DrawingStore covers. */
+const diagramsDir = (): string => join(folder, '.ruimte', 'private', 'diagrams');
 
 const diagramFile = (viewId: string): string => join(diagramsDir(), `${viewId}.json`);
 

@@ -2841,8 +2841,9 @@ describe('view diagram', () => {
     const write = (viewId: string, document: string, token = 'term'): Promise<{ status: number; lines: string[] }> =>
         post('view', ['diagram', viewId, `--document=${document}`], token);
 
+    /* Nothing a verb makes is shared, so its diagram sits on the private side of the folder. */
     const diagramOnDisk = async (viewId: string, base = folder): Promise<unknown> =>
-        readFile(join(base, '.ruimte', 'diagrams', `${viewId}.json`), 'utf8')
+        readFile(join(base, '.ruimte', 'private', 'diagrams', `${viewId}.json`), 'utf8')
             .then((text) => JSON.parse(text))
             .catch(() => null);
 

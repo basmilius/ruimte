@@ -9,7 +9,7 @@ import {
     type ProjectView
 } from '@ruimte/contracts';
 import type { WatchSeams } from '../fs/watch-seam.ts';
-import { diagramsDirOf, parseDiagram, readDiagram, tooNewMessage, viewFilePathIn, writeDiagram } from './project-files.ts';
+import { diagramsDirOf, parseDiagram, privateDiagramsDirOf, readDiagram, tooNewMessage, viewFilePathIn, writeDiagram } from './project-files.ts';
 import { ProjectError, type ProjectStore } from './project-store.ts';
 import { ProjectViewFileStore, type ViewFileKind } from './view-file-store.ts';
 import { CodedError } from '../coded-error.ts';
@@ -22,6 +22,7 @@ const DIAGRAM_FILES: ViewFileKind<DiagramDocument, DiagramContent> = {
     noun: 'diagram',
     version: DIAGRAM_VERSION,
     dirOf: diagramsDirOf,
+    privateDirOf: privateDiagramsDirOf,
     read: readDiagram,
     write: writeDiagram,
     documentOf: (content, rev) => ({ version: DIAGRAM_VERSION, rev, meta: content.meta, nodes: content.nodes, groups: content.groups, edges: content.edges }),
@@ -44,6 +45,12 @@ const DIAGRAM_FILES: ViewFileKind<DiagramDocument, DiagramContent> = {
 export class DiagramStore extends ProjectViewFileStore<DiagramDocument, DiagramContent> {
     constructor(projects: ProjectStore, seams?: WatchSeams) {
         super(projects, DIAGRAM_FILES, seams);
+    }
+
+    /* The two calls below work on a project that may be closed, so they find the directory themselves. */
+    private pathIn(documentPath: string, projectId: string, viewId: string): string {
+        const dir = this.projects.isSharedView(projectId, viewId) ? diagramsDirOf(documentPath) : privateDiagramsDirOf(documentPath);
+        return viewFilePathIn(dir, viewId);
     }
 
     /*
@@ -70,7 +77,7 @@ export class DiagramStore extends ProjectViewFileStore<DiagramDocument, DiagramC
             if (!place.views.some((view) => view.id === viewId && isDiagramView(view))) {
                 throw new DiagramError('diagram-not-found', `${viewId} is not a diagram of project ${projectId}`);
             }
-            const path = viewFilePathIn(diagramsDirOf(place.documentPath), viewId);
+            const path = this.pathIn(place.documentPath, projectId, viewId);
             const outcome = await readDiagram(path);
             if (outcome.kind === 'invalid') {
                 throw new DiagramError('diagram-invalid', `The file of ${viewId} is not a diagram Ruimte will write over: ${outcome.message}`);
@@ -98,7 +105,7 @@ export class DiagramStore extends ProjectViewFileStore<DiagramDocument, DiagramC
         }
         let text: string;
         try {
-            text = await readFile(viewFilePathIn(diagramsDirOf(place.documentPath), viewId), 'utf8');
+            text = await readFile(this.pathIn(place.documentPath, projectId, viewId), 'utf8');
         } catch (e) {
             if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
                 return EMPTY_DIAGRAM;

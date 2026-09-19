@@ -136,6 +136,8 @@ Letting go of a project and closing one are two requests. `project.release` stop
 
 ## Drawings
 
+A drawing or diagram file follows its view: `.ruimte/drawings/<viewId>.json` while the view is shared, `.ruimte/private/drawings/<viewId>.json` while it is not, and sharing a view moves the file over. Both directories are watched, since a pull lands in the one and a person's own editor in either.
+
 A drawing view holds nothing in `project.json` but its id and its name; its elements live in
 `<folder>/.ruimte/drawings/<viewId>.json` (version 1, with a `rev`), which goes into git next to the
 project file. The top level is indented and every element sits on one line, so a diff reads like a

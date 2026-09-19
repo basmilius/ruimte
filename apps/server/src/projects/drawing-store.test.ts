@@ -32,7 +32,10 @@ const content = (...drawingIds: string[]): ProjectContent => ({
     ]
 });
 
-const drawingsDir = (): string => join(folder, '.ruimte', 'drawings');
+/* Nothing here is shared, so every drawing sits on the private side of the folder. */
+const drawingsDir = (): string => join(folder, '.ruimte', 'private', 'drawings');
+
+const sharedDrawingsDir = (): string => join(folder, '.ruimte', 'drawings');
 
 const drawingFile = (viewId: string): string => join(drawingsDir(), `${viewId}.json`);
 
@@ -68,6 +71,22 @@ afterEach(async () => {
 });
 
 describe('DrawingStore', () => {
+    test('a drawing follows its view into git and back out again', async () => {
+        await drawings.open(projectId, 'view-a');
+        await drawings.save(projectId, 'view-a', 0, drawn(element('e1')));
+        expect(await exists(drawingFile('view-a'))).toBe(true);
+
+        await projects.save(projectId, 1, content('view-a'), ['view-a']);
+        expect(await exists(join(sharedDrawingsDir(), 'view-a.json'))).toBe(true);
+        expect(await exists(drawingFile('view-a'))).toBe(false);
+        // The bytes went along, so what was drawn is still there after the move.
+        expect((await drawings.open(projectId, 'view-a')).elements).toHaveLength(1);
+
+        await projects.save(projectId, 2, content('view-a'), []);
+        expect(await exists(drawingFile('view-a'))).toBe(true);
+        expect(await exists(join(sharedDrawingsDir(), 'view-a.json'))).toBe(false);
+    });
+
     test('opening a drawing nobody drew gives an empty one and writes nothing', async () => {
         expect(await drawings.open(projectId, 'view-a')).toEqual({ version: 1, rev: 0, elements: [] });
         expect(await exists(drawingFile('view-a'))).toBe(false);

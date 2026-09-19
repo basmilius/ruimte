@@ -1,6 +1,6 @@
 import { DRAWING_VERSION, EMPTY_DRAWING, type DrawingContent, type DrawingDocument, type DrawingElement } from '@ruimte/contracts';
 import type { WatchSeams } from '../fs/watch-seam.ts';
-import { drawingsDirOf, readDrawing, viewFilePathIn, writeDrawing } from './project-files.ts';
+import { drawingsDirOf, privateDrawingsDirOf, readDrawing, viewFilePathIn, writeDrawing } from './project-files.ts';
 import type { ProjectStore } from './project-store.ts';
 import { ProjectViewFileStore, type ViewFileKind } from './view-file-store.ts';
 import { CodedError } from '../coded-error.ts';
@@ -13,6 +13,7 @@ const DRAWING_FILES: ViewFileKind<DrawingDocument, DrawingContent> = {
     noun: 'drawing',
     version: DRAWING_VERSION,
     dirOf: drawingsDirOf,
+    privateDirOf: privateDrawingsDirOf,
     read: readDrawing,
     write: writeDrawing,
     documentOf: (content, rev) => ({ version: DRAWING_VERSION, rev, elements: content.elements }),

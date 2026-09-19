@@ -284,6 +284,11 @@ export const drawingsDirOf = (documentPath: string): string => join(dirname(docu
 
 export const diagramsDirOf = (documentPath: string): string => join(dirname(documentPath), DIAGRAMS_DIR);
 
+/* The same two directories under `private/`, where the files of views nobody shared sit. */
+export const privateDrawingsDirOf = (documentPath: string): string => join(privateDirOf(documentPath), DRAWINGS_DIR);
+
+export const privateDiagramsDirOf = (documentPath: string): string => join(privateDirOf(documentPath), DIAGRAMS_DIR);
+
 /* The view id, never its name: a rename must not move a file, and two machines must agree. */
 export const viewFilePathIn = (dir: string, viewId: string): string => join(dir, `${encodeURIComponent(viewId)}.json`);
 
