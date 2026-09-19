@@ -171,8 +171,11 @@ enum ChatSubagents {
     static func previewOfItem(_ item: JSONValue) -> SubagentPreview? {
         switch item.text("kind") {
         case "tool":
+            // A preview has one line for the whole entry, so a call with nothing to say falls back to what the CLI
+            // reports about its progress. The tool row itself has no such fallback.
             let summary = ChatToolPresentation.summary(item)
-            return .tool(name: item.text("name", fallback: "Tool"), detail: oneLine(summary))
+            let detail = summary.isEmpty ? item["progress"]?.text("description") ?? "" : summary
+            return .tool(name: item.text("name", fallback: "Tool"), detail: oneLine(detail))
         case "assistant":
             let text = prose(item.text("text"))
             return text.isEmpty ? nil : .text(text)

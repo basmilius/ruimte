@@ -328,9 +328,12 @@ enum ChatToolPresentation {
         case "WebFetch", "WebSearch": keys = ["url", "query"]
         case "Task", "Agent": keys = ["description"]
         case "Skill": keys = ["skill"]
-        default: keys = ["description", "command", "cmd", "path", "file_path", "query"]
+        default:
+            // A tool nobody named shows whatever string it was called with, as chat/logic/tools.ts does. That reads
+            // the input in the order the CLI wrote it; a decoded object has no order, so the keys decide instead.
+            keys = (input.objectValue ?? [:]).keys.sorted()
         }
-        return keys.compactMap { input[$0]?.stringValue }.first ?? item["progress"]?.text("description") ?? ""
+        return keys.compactMap { input[$0]?.stringValue }.first ?? ""
     }
 
     static func icon(_ name: String) -> String {
@@ -347,7 +350,11 @@ enum ChatToolPresentation {
 
     static func elapsed(_ milliseconds: Double) -> String {
         let seconds = max(0, Int(milliseconds / 1000))
-        return seconds < 60 ? "\(seconds)s" : "\(seconds / 60)m \(seconds % 60)s"
+        if seconds < 60 {
+            return "\(seconds)s"
+        }
+        let rest = seconds % 60
+        return rest == 0 ? "\(seconds / 60)m" : "\(seconds / 60)m \(rest)s"
     }
 
     static func tail(_ item: JSONValue) -> String {

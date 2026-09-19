@@ -143,3 +143,39 @@ final class ChatPresentationTests: XCTestCase {
         .object(["id": .string(id), "kind": .string(kind), "text": .string("")])
     }
 }
+
+final class ChatToolPresentationTests: XCTestCase {
+    func testElapsedTimeReadsAsSecondsThenMinutes() {
+        XCTAssertEqual(ChatToolPresentation.elapsed(-5), "0s")
+        XCTAssertEqual(ChatToolPresentation.elapsed(12_400), "12s")
+        XCTAssertEqual(ChatToolPresentation.elapsed(120_000), "2m")
+        XCTAssertEqual(ChatToolPresentation.elapsed(125_000), "2m 5s")
+    }
+
+    func testANamedToolSaysWhatItWasCalledWith() {
+        XCTAssertEqual(summary("Bash", ["command": .string("bun test")]), "bun test")
+        XCTAssertEqual(
+            summary("Bash", ["command": .string("bun test"), "description": .string("Run the tests")]), "Run the tests")
+        XCTAssertEqual(summary("Read", ["file_path": .string("/a/b.ts")]), "/a/b.ts")
+        XCTAssertEqual(summary("Grep", ["pattern": .string("todo")]), "todo")
+    }
+
+    func testAToolNobodyNamedShowsWhateverStringItWasCalledWith() {
+        XCTAssertEqual(summary("Unknown", ["target": .string("src/app.ts")]), "src/app.ts")
+        XCTAssertEqual(summary("Unknown", ["depth": .number(3), "reason": .string("why")]), "why")
+        XCTAssertEqual(summary("Unknown", ["depth": .number(3)]), "")
+    }
+
+    func testTheToolRowLeavesTheProgressDescriptionToTheSubagentPreview() {
+        let item = JSONValue.object([
+            "kind": .string("tool"), "name": .string("Unknown"), "input": .object([:]),
+            "progress": .object(["description": .string("Still going")]),
+        ])
+        XCTAssertEqual(ChatToolPresentation.summary(item), "")
+        XCTAssertEqual(ChatSubagents.previewOfItem(item), .tool(name: "Unknown", detail: "Still going"))
+    }
+
+    private func summary(_ name: String, _ input: [String: JSONValue]) -> String {
+        ChatToolPresentation.summary(.object(["name": .string(name), "input": .object(input)]))
+    }
+}
