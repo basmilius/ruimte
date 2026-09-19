@@ -9,6 +9,7 @@ import { resolveBase } from './status.ts';
 import { GitError, git, gitOrThrow as run, runGit, toplevel } from './run.ts';
 import { WorktreeRegister, type WorktreeRecord } from './worktree-register.ts';
 import { ClientSinks } from '../client-sinks.ts';
+import { errorText } from '../error-text.ts';
 
 // Branch names carry slashes; the folder name must not.
 const safeName = (branch: string): string => branch.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'branch';
@@ -242,9 +243,7 @@ export class Worktrees {
         if (record) {
             await register.put(path, record);
         }
-        await this.linkShared(repo, path).catch((e: unknown) =>
-            this.log(`Linking the shared paths into ${path} failed: ${e instanceof Error ? e.message : String(e)}`)
-        );
+        await this.linkShared(repo, path).catch((e: unknown) => this.log(`Linking the shared paths into ${path} failed: ${errorText(e)}`));
         this.announce(main);
         return { worktree: { path, branch, ...(record ? recordFields(record) : {}) }, created: true };
     }

@@ -37,6 +37,7 @@ import { forkClaudeTranscript, type TranscriptCutPoint } from './claude-fork.ts'
 import { forkThreadOnce } from './codex-thread.ts';
 import { ChatError } from './errors.ts';
 import { handoffText } from './handoff.ts';
+import { errorText } from '../error-text.ts';
 
 /* Where a Codex fork goes on after: the turn Codex named, the n-th turn when it named none, or all of it. */
 export type ThreadCutPoint = { turnId: string } | { turns: number } | null;
@@ -149,8 +150,7 @@ export const switchNote = (cut: Cut, original: { title: string }, files: ForkFil
     return `Forked from ${original.title} after ${where} and continued with ${handoff.to}.${place} The agent got ${read} as text and can read the rest of ${original.title} through ruimte-context.`;
 };
 
-const cliRefusal = (error: unknown): ChatError =>
-    error instanceof ChatError ? error : new ChatError('fork-failed', error instanceof Error ? error.message : String(error));
+const cliRefusal = (error: unknown): ChatError => (error instanceof ChatError ? error : new ChatError('fork-failed', errorText(error)));
 
 /*
  * The tree of the files after a turn: the one taken when it settled, else the one the next turn
@@ -253,7 +253,7 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
             throw new ChatError('branch-exists', `The branch ${branch} exists already; name another one`);
         }
         const made = await deps.addWorktree({ cwd: info.cwd, branch, projectId: place.projectId, nodeId: forkId }).catch((error: unknown) => {
-            throw new ChatError('worktree-failed', `The worktree for ${branch} could not be made: ${error instanceof Error ? error.message : String(error)}`);
+            throw new ChatError('worktree-failed', `The worktree for ${branch} could not be made: ${errorText(error)}`);
         });
         undoers.push(() => made.undo());
         if (tree !== null) {

@@ -15,6 +15,7 @@ import {
     type ServiceSpec
 } from '@ruimte/service';
 import { buildFileOf, readBuildFile } from '../service/self-update.ts';
+import { describeError } from '../error-text.ts';
 
 /*
  * `ruimte service install|uninstall|status`: the background service for a machine without the app.
@@ -219,7 +220,7 @@ export const runServiceAction = async (action: string, facts: ServiceFacts, deps
                 return 1;
         }
     } catch (e) {
-        deps.err(e instanceof Error ? e.message : String(e));
+        deps.err(describeError(e, false));
         return 1;
     }
 };

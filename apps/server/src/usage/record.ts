@@ -18,6 +18,12 @@ export const EMPTY_TOTALS: UsageTotals = { calls: 0, input: 0, cacheRead: 0, cac
 /* A count on the wire is a whole non-negative number, whatever a transcript put in the field. */
 export const int = (value: unknown): number => (typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.trunc(value) : 0);
 
+/* A field a transcript wrote as anything; a reader takes what it can use and nothing else. */
+export const asObject = (value: unknown): Record<string, unknown> | null =>
+    typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
+
+export const asString = (value: unknown): string => (typeof value === 'string' ? value : '');
+
 export const addTotals = (into: UsageTotals, from: UsageTotals): void => {
     into.calls += from.calls;
     into.input += from.input;

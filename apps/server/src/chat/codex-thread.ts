@@ -4,6 +4,7 @@ import { CodexProtocol } from './codex-protocol.ts';
 import { CodexTransport } from './codex-transport.ts';
 import { ChatError } from './errors.ts';
 import { readingThread, settledReading } from './subagent-projection.ts';
+import { errorText } from '../error-text.ts';
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -144,7 +145,7 @@ export const forkThreadOnce = (spec: CodexProcessSpec, params: ThreadForkParams)
                 ...(lastTurnId === null ? {} : { lastTurnId })
             });
         } catch (error) {
-            throw new ChatError('fork-failed', error instanceof Error ? error.message : String(error));
+            throw new ChatError('fork-failed', errorText(error));
         }
         const thread = isRecord(result) && isRecord(result.thread) ? result.thread : null;
         if (thread === null || typeof thread.id !== 'string' || thread.id === '') {

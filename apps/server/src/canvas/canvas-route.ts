@@ -80,6 +80,6 @@ export const handleCanvasRequest = async (request: Request, pathname: string, de
             return refusal(e.code, e.message);
         }
         console.error(`Canvas verb ${name} failed:`, errorText(e));
-        return new Response(`The verb failed: ${e instanceof Error ? e.message : 'unknown error'}`, { status: 500, headers: TEXT });
+        return new Response(`The verb failed: ${errorText(e)}`, { status: 500, headers: TEXT });
     }
 };

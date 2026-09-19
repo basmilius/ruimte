@@ -1,6 +1,7 @@
 import type { UsageLimitsProvider } from '@ruimte/contracts';
 import { CodexTransport } from '../../chat/codex-transport.ts';
 import { readClaudeUsage, readCodexLimits, type ProviderReading } from './normalize.ts';
+import { errorText } from '../../error-text.ts';
 
 /* A CLI that has not answered by now is not going to; the next pass tries again. */
 const PROBE_TIMEOUT_MS = 20_000;
@@ -9,8 +10,6 @@ const CODEX_READ_TIMEOUT_MS = 3_000;
 export type ProbeResult = ProviderReading | { unavailable: UsageLimitsProvider['unavailable'] };
 
 const failure = (message: string): ProbeResult => ({ unavailable: { reason: 'failed', message } });
-
-const reason = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
 const withTimeout = <T>(work: Promise<T>, ms: number, what: string): Promise<T> =>
     Promise.race([work, new Promise<never>((_resolve, reject) => setTimeout(() => reject(new Error(`${what} did not answer in time`)), ms))]);
@@ -71,7 +70,7 @@ export const probeClaude = async (command: readonly string[]): Promise<ProbeResu
     try {
         return await withTimeout(read(), PROBE_TIMEOUT_MS, 'Claude Code');
     } catch (error) {
-        return failure(reason(error));
+        return failure(errorText(error));
     } finally {
         child.kill();
     }
@@ -101,7 +100,7 @@ export const probeCodex = async (command: readonly string[]): Promise<ProbeResul
         // An account on an API key has no plan windows; Codex answers, with nothing in it.
         return reading ?? { unavailable: { reason: 'no-subscription', message: null } };
     } catch (error) {
-        return failure(reason(error));
+        return failure(errorText(error));
     } finally {
         transport?.end();
         transport?.kill();

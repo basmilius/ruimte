@@ -1,11 +1,7 @@
-import { int, type UsageRecord } from '../record.ts';
+import { asObject, asString, int, type UsageRecord } from '../record.ts';
 
 /* Only a line with this in it can carry counts, which keeps `JSON.parse` off about two thirds of them. */
 export const claudeMightCarryUsage = (line: string): boolean => line.includes('"usage"');
-
-const asObject = (value: unknown): Record<string, unknown> | null => (typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null);
-
-const asString = (value: unknown): string => (typeof value === 'string' ? value : '');
 
 /*
  * One line of `~/.claude/projects/**\/*.jsonl`. An assistant line carries `message.usage` with the

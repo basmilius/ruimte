@@ -5,6 +5,7 @@ import type { ProgressSink } from './actions.ts';
 import { resolveBase } from './status.ts';
 import { GitError, git, runGit, streamGit } from './run.ts';
 import type { Worktrees } from './worktrees.ts';
+import { errorText } from '../error-text.ts';
 
 /* One agent whose folder is inside a worktree. */
 export interface WorktreeAgent {
@@ -101,7 +102,7 @@ export class WorktreeMerge {
         try {
             return await this.worktrees.exclusive(payload.repo, (main) => this.perform(main, payload, sink, job, limits));
         } catch (e) {
-            sink('failed', e instanceof Error ? e.message : String(e));
+            sink('failed', errorText(e));
             throw e;
         } finally {
             this.running.delete(payload.actionId);
@@ -302,7 +303,7 @@ export class WorktreeMerge {
                     const removed = await this.worktrees.removeHeld(main, entry.path, squashed || ahead === 0 ? { squashedInto: into } : {});
                     removal = { removed: true, branchDeleted: removed.branchDeleted };
                 } catch (e) {
-                    removal = { removed: false, kept: e instanceof Error ? e.message : String(e) };
+                    removal = { removed: false, kept: errorText(e) };
                 }
             }
         }

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { ApprovalChoice, ApprovalRequest } from '@ruimte/contracts';
-import { ASKING_TOOLS } from './hooks.ts';
+import { asString, ASKING_TOOLS } from './hooks.ts';
 
 // Expire before curl and the CLI hook timeouts so the daemon, not either outer layer, releases first.
 export const APPROVAL_HOLD_MS = 110_000;
@@ -15,8 +15,6 @@ interface PermissionAsk {
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const asString = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
 
 /*
  * The one line a person reads under the tool's name. A shell call is its command, a file tool its

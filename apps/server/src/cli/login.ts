@@ -10,6 +10,7 @@ import {
 } from '@ruimte/pulsar';
 import type { z } from 'zod';
 import { readLocalSecret } from '../auth/local-secret.ts';
+import { describeError } from '../error-text.ts';
 
 type Fetch = (input: string, init: RequestInit) => Promise<Response>;
 
@@ -173,7 +174,7 @@ export const runLogin = async (options: LoginOptions): Promise<number> => {
         } else if (e instanceof AddressBookRequestError) {
             err(`The address book refused: ${e.message}`);
         } else {
-            err(e instanceof Error ? e.message : String(e));
+            err(describeError(e, false));
         }
         return 1;
     }

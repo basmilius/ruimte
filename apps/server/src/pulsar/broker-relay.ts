@@ -10,6 +10,7 @@ import {
 } from '@ruimte/pulsar';
 import { verifySignature } from '../auth/keys.ts';
 import type { Relay } from '../auth/relay.ts';
+import { errorText } from '../error-text.ts';
 
 // The first retry after a lost broker, doubling up to the second; a broker that is down is not hammered.
 const BACKOFF_MIN_MS = 1_000;
@@ -139,7 +140,7 @@ export class BrokerRelay implements Relay {
         try {
             socket = (this.options.createSocket ?? ((url) => new WebSocket(url)))(this.options.url);
         } catch (e) {
-            this.lost(`The broker URL does not open: ${e instanceof Error ? e.message : String(e)}`);
+            this.lost(`The broker URL does not open: ${errorText(e)}`);
             return;
         }
         this.socket = socket;
