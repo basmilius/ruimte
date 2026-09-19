@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
@@ -12,8 +12,8 @@ import { collapseAll, copyPlanMarkdown, expandAll, focusChat, planClient, planVi
 import { closePlanPanel, pickPlan, PLAN_DEFAULT_WIDTH, PLAN_MIN_WIDTH } from '@/plan/plan-panel-watch';
 import { PlanList } from '@/plan/PlanList';
 import { resultsText, type PlanFilter } from '@/plan/plan-view';
-import { clampColumnWidth, useColumnResize } from '@/shell/useColumnResize';
-import { useInstantWidth } from '@/shell/useInstantWidth';
+import { SlidingColumn } from '@/shell/SlidingColumn';
+import { clampColumnWidth } from '@/shell/useColumnResize';
 import { useDocument } from '@/state/document';
 import { useEndpointId } from '@/state/keys';
 import { useChatPlans } from '@/state/plans';
@@ -25,8 +25,6 @@ import { Tooltip } from '@/ui/Tooltip';
 
 // The grid beside the panel keeps at least this much, the same floor the preview keeps.
 const MIN_GRID_WIDTH = 360;
-// The same number as `.panel-shell` in `styles.css`.
-const TRANSITION_MS = 200;
 
 /* Only the ids; the words a person reads are `planPanel.filters.<id>`, read inside the menu. */
 const FILTERS: readonly PlanFilter[] = ['all', 'open', 'issues'];
@@ -53,55 +51,23 @@ export function PlanPanel() {
     if (anchor !== null && found !== null && (shown?.plan !== found || shown.chatId !== anchor.chatId)) {
         setShown({ chatId: anchor.chatId, plan: found });
     }
-    const [settled, setSettled] = useState(!open);
-    const instant = useInstantWidth();
-    if (instant && settled !== !open) {
-        setSettled(!open);
-    }
-    const present = (open || !settled) && shown !== null;
     const ref = useRef<HTMLElement>(null);
-    // The project may have been on a wider window than this one, so its width is clamped on the way in.
-    const width = clampColumnWidth({ min: PLAN_MIN_WIDTH, max: () => window.innerWidth - MIN_GRID_WIDTH }, stored ?? PLAN_DEFAULT_WIDTH);
-    const { startResize } = useColumnResize(ref, {
+    const bounds = {
         min: PLAN_MIN_WIDTH,
         // Measured at drag time: the preview and the files panel beside it take their share of the window too.
-        max: () => {
+        max: (): number => {
             const column = ref.current;
             const grid = column?.previousElementSibling;
             return grid instanceof HTMLElement && column ? grid.clientWidth + column.clientWidth - MIN_GRID_WIDTH : window.innerWidth - MIN_GRID_WIDTH;
-        },
-        width,
-        from: 'right',
-        onWidth: (next) => useUi.getState().setPlanWidth(next)
-    });
-
-    useEffect(() => {
-        if (open || settled) {
-            return;
         }
-        // Reduced motion and a hidden tab paint no width change, so no `transitionend` arrives.
-        const timer = window.setTimeout(() => setSettled(true), TRANSITION_MS + 50);
-        return () => {
-            window.clearTimeout(timer);
-        };
-    }, [open, settled]);
+    };
+    // The project may have been on a wider window than this one, so its width is clamped on the way in.
+    const width = clampColumnWidth({ min: PLAN_MIN_WIDTH, max: () => window.innerWidth - MIN_GRID_WIDTH }, stored ?? PLAN_DEFAULT_WIDTH);
 
     return (
-        <aside
-            ref={ref}
-            inert={!open}
-            data-instant={instant ? '' : undefined}
-            className="panel-shell flex h-full shrink-0 justify-end overflow-hidden"
-            style={{ width: open ? width : 0 }}
-            onTransitionEnd={(event) => {
-                if (event.propertyName === 'width' && event.target === event.currentTarget) {
-                    setSettled(!open);
-                }
-            }}
-        >
-            {present && (
-                <div className="relative flex h-full shrink-0 flex-col border-l border-border bg-surface" style={{ width }}>
-                    {open && <div className="absolute inset-y-0 left-0 z-10 w-2 cursor-col-resize" onPointerDown={startResize} />}
+        <SlidingColumn open={open} width={width} bounds={bounds} columnRef={ref} onWidth={(next) => useUi.getState().setPlanWidth(next)}>
+            {shown !== null && (
+                <>
                     <PlanHeader
                         endpointId={endpointId}
                         chatId={shown.chatId}
@@ -113,9 +79,9 @@ export function PlanPanel() {
                     <ErrorBoundary label={t('planPanel.failed')} resetKeys={[shown.plan.id]} className="min-h-0 grow">
                         <PlanList key={shown.plan.id} endpointId={endpointId} chatId={shown.chatId} plan={shown.plan} />
                     </ErrorBoundary>
-                </div>
+                </>
             )}
-        </aside>
+        </SlidingColumn>
     );
 }
 
