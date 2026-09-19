@@ -180,6 +180,8 @@ export class DrawingClient {
         }
         state.setConflict(null);
         if (choice === 'theirs') {
+            // The edit that caused the conflict still has a save waiting; it would write their file back as ours.
+            this.cancelSave(drawing);
             state.applyDocument(conflict);
             return;
         }

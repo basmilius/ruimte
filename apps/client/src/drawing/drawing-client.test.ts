@@ -222,6 +222,22 @@ describe('DrawingClient', () => {
         expect(drawing().rev).toBe(9);
     });
 
+    test('taking theirs drops the save the stroke that caused the conflict still had waiting', async () => {
+        useDocument.getState().setActiveView('view-1');
+        await tick();
+        drawing().addElement(rect('b'));
+        // Their write lands before the pause after the stroke is over.
+        transport.emit('drawing.changed', { projectId: 'p1', viewId: 'view-1', document: { version: 1, rev: 8, elements: [rect('z')] } });
+        expect(drawing().conflict).toMatchObject({ rev: 8 });
+
+        await client.resolveConflict('theirs');
+        expect(drawing().elements.map((element) => element.id)).toEqual(['z']);
+        await tick(20);
+
+        expect(transport.of('drawing.save')).toHaveLength(0);
+        expect(drawing().rev).toBe(8);
+    });
+
     test('a change from disk with nothing unsaved is loaded in place', async () => {
         useDocument.getState().setActiveView('view-1');
         await tick();

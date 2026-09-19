@@ -50,7 +50,8 @@ const wireStores = (): void => {
     wiredStores = true;
     subscribeDrawings((viewId, state, previous) => {
         const key = endpointKey(currentEndpointId(), viewId);
-        if (state.elements !== previous.elements && watchers.has(key)) {
+        // An editor that is emptied on its way off screen is not the drawing becoming empty.
+        if (state.elements !== previous.elements && state.viewId === viewId && watchers.has(key)) {
             put(key, { elements: state.elements, gone: false, loading: false });
         }
     });
