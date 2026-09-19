@@ -1,14 +1,11 @@
 import { dirname, join, resolve, sep } from 'node:path';
 import type { SessionSink } from '../sessions/manager.ts';
 import { forgetSearchCache } from './search.ts';
-import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from './watch-seam.ts';
+import { PerClientWatches, settled, supportsRecursive, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from './watch-seam.ts';
 import { ClientSinks } from '../client-sinks.ts';
 
 // A save, a formatter and a build all touch the same folder in a burst; one event per burst is enough.
 const SETTLE_MS = 250;
-
-// Recursive watching costs one descriptor per directory outside macOS and Windows.
-const supportsRecursive = (platform: NodeJS.Platform): boolean => platform === 'darwin' || platform === 'win32';
 
 // FSEvents can miss writes immediately after `fs.watch`; delay readiness until its stream is running.
 const STREAM_START_MS = 200;
@@ -21,7 +18,7 @@ interface Watch {
     watcher: DirectoryWatcher;
     // The directories that changed since the last flush, absolute.
     touched: Set<string>;
-    cancelSettle: (() => void) | null;
+    settle: Settled;
 }
 
 /*
@@ -31,7 +28,10 @@ interface Watch {
  */
 export class FolderWatcher {
     private readonly sinks = new ClientSinks();
-    private readonly byClient = new Map<string, Map<string, Watch>>();
+    private readonly watches = new PerClientWatches<Watch>((state) => {
+        state.settle.stop();
+        state.watcher.close();
+    });
     private readonly platform: NodeJS.Platform;
     private readonly seams: WatchSeams;
     private readonly streamStartMs: number;
@@ -49,9 +49,7 @@ export class FolderWatcher {
     /* Starts watching at once; the promise settles when a write is sure to be reported. */
     watch(clientId: string, path: string): Promise<void> {
         const root = resolve(path);
-        const watches = this.byClient.get(clientId) ?? new Map<string, Watch>();
-        this.byClient.set(clientId, watches);
-        for (const existing of watches.values()) {
+        for (const [, existing] of this.watches.all(clientId)) {
             // A recursive watch above it already reports everything this one would.
             if (existing.recursive && isUnder(root, existing.root)) {
                 return Promise.resolve();
@@ -65,51 +63,35 @@ export class FolderWatcher {
                 const name = typeof filename === 'string' ? filename : null;
                 // A platform that reports no name could have touched anything under the root.
                 state.touched.add(name === null ? root : dirname(join(root, name)));
-                state.cancelSettle?.();
-                state.cancelSettle = this.seams.schedule(() => this.flush(clientId, state), SETTLE_MS);
+                state.settle.nudge();
             });
         } catch {
             // A folder that cannot be watched still lists; the tree just goes stale until a refresh.
             return Promise.resolve();
         }
-        const state: Watch = { root, recursive, watcher, touched: new Set(), cancelSettle: null };
+        const state: Watch = { root, recursive, watcher, touched: new Set(), settle: settled(this.seams, SETTLE_MS, () => this.flush(clientId, state)) };
         watcher.on('error', () => undefined);
         if (recursive) {
             // The new watch covers them, and two watchers over one directory would report twice.
-            for (const [key, existing] of watches) {
+            for (const [key, existing] of this.watches.all(clientId)) {
                 if (isUnder(existing.root, root)) {
-                    FolderWatcher.stop(existing);
-                    watches.delete(key);
+                    this.watches.remove(clientId, key);
                 }
             }
         }
-        watches.set(root, state);
+        this.watches.put(clientId, root, state);
         return this.platform === 'darwin' && this.streamStartMs > 0 ? Bun.sleep(this.streamStartMs) : Promise.resolve();
     }
 
     unwatch(clientId: string, path: string): void {
-        const watches = this.byClient.get(clientId);
-        const root = resolve(path);
-        const state = watches?.get(root);
-        if (!watches || !state) {
-            return;
-        }
-        FolderWatcher.stop(state);
-        watches.delete(root);
-        if (watches.size === 0) {
-            this.byClient.delete(clientId);
-        }
+        this.watches.remove(clientId, resolve(path));
     }
 
     detachAll(clientId: string): void {
-        for (const state of this.byClient.get(clientId)?.values() ?? []) {
-            FolderWatcher.stop(state);
-        }
-        this.byClient.delete(clientId);
+        this.watches.detachAll(clientId);
     }
 
     private flush(clientId: string, state: Watch): void {
-        state.cancelSettle = null;
         const paths = [...state.touched].sort();
         state.touched.clear();
         if (paths.length === 0) {
@@ -118,10 +100,5 @@ export class FolderWatcher {
         // The `@` picker reads the same folder from a cache of its own; a write there is stale news.
         forgetSearchCache();
         this.sinks.to(clientId, { event: 'fs.changed', payload: { root: state.root, paths } });
-    }
-
-    private static stop(state: Watch): void {
-        state.cancelSettle?.();
-        state.watcher.close();
     }
 }

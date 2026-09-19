@@ -1,6 +1,6 @@
 import { mkdir, readdir, rm } from 'node:fs/promises';
 import { basename } from 'node:path';
-import { SYSTEM_WATCH, type DirectoryWatcher, type WatchSeams } from '../fs/watch-seam.ts';
+import { settled, SYSTEM_WATCH, type DirectoryWatcher, type Settled, type WatchSeams } from '../fs/watch-seam.ts';
 import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { viewFilePathIn, viewIdOfFile, type JsonDocumentRead } from './project-files.ts';
 import type { ProjectStore, ProjectViewFiles } from './project-store.ts';
@@ -18,7 +18,7 @@ interface OpenFile {
 interface OpenProjectFiles {
     dir: string;
     watcher: DirectoryWatcher | null;
-    cancelSettles: Map<string, () => void>;
+    settles: Map<string, Settled>;
     open: Map<string, OpenFile>;
 }
 
@@ -161,8 +161,8 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
             return;
         }
         state.watcher?.close();
-        for (const cancel of state.cancelSettles.values()) {
-            cancel();
+        for (const settle of state.settles.values()) {
+            settle.stop();
         }
         this.states.delete(projectId);
     }
@@ -210,11 +210,22 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
         if (known) {
             return known;
         }
-        const state: OpenProjectFiles = { dir: this.kind.dirOf(path), watcher: null, cancelSettles: new Map(), open: new Map() };
+        const state: OpenProjectFiles = { dir: this.kind.dirOf(path), watcher: null, settles: new Map(), open: new Map() };
         this.states.set(projectId, state);
         await mkdir(state.dir, { recursive: true });
         this.startWatching(projectId, state);
         return state;
+    }
+
+    /* The burst of one view file; a view keeps the same one for as long as the project is open. */
+    private settleFor(state: OpenProjectFiles, projectId: string, viewId: string): Settled {
+        const known = state.settles.get(viewId);
+        if (known) {
+            return known;
+        }
+        const settle = settled(this.seams, WATCH_SETTLE_MS, () => this.reload(projectId, state, viewId));
+        state.settles.set(viewId, settle);
+        return settle;
     }
 
     private startWatching(projectId: string, state: OpenProjectFiles): void {
@@ -226,14 +237,7 @@ export abstract class ProjectViewFileStore<TDocument extends TContent & { rev: n
                     if (!viewId || !state.open.has(viewId)) {
                         continue;
                     }
-                    state.cancelSettles.get(viewId)?.();
-                    state.cancelSettles.set(
-                        viewId,
-                        this.seams.schedule(() => {
-                            state.cancelSettles.delete(viewId);
-                            return this.reload(projectId, state, viewId);
-                        }, WATCH_SETTLE_MS)
-                    );
+                    this.settleFor(state, projectId, viewId).nudge();
                 }
             });
             state.watcher.on('error', () => undefined);
