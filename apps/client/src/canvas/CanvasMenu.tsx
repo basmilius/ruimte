@@ -1,6 +1,6 @@
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { useTranslation } from 'react-i18next';
-import { FileText, Globe, LayoutGrid, Maximize, MessageSquare, Scan, Settings, SquareDashedMousePointer, StickyNote, Terminal, Type } from 'lucide-react';
+import { FileText, Globe, LayoutGrid, Maximize, MessageSquare, Scan, SquareDashedMousePointer, StickyNote, Terminal, Type } from 'lucide-react';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentNode } from '@/agents/nodes';
 import type { Point } from '@/canvas/math';
@@ -10,7 +10,6 @@ import { useUi } from '@/state/ui';
 import { MENU_HINT, MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
-import { APP_SHORTCUTS } from '@/shell/shortcuts';
 import { Kbd } from '@/ui/Kbd';
 
 /* The menu for a right-click on empty canvas; everything it adds lands where the click was. */
@@ -67,10 +66,6 @@ export function CanvasMenuPopup({ at }: { at: () => Point }) {
                     </ContextMenu.Item>
                     <ContextMenu.Item className="menu-item" onClick={() => canvasStore.getState().fitAll()}>
                         <Icon icon={Maximize} size={14} /> {t('canvasMenu.zoomToFit')} <Kbd shortcut={CANVAS_SHORTCUTS.fitAll} />
-                    </ContextMenu.Item>
-                    <ContextMenu.Separator className={MENU_SEPARATOR} />
-                    <ContextMenu.Item className="menu-item" onClick={() => useUi.getState().setSettings({ open: true })}>
-                        <Icon icon={Settings} size={14} /> {t('canvasMenu.settings')} <Kbd shortcut={APP_SHORTCUTS.settings} />
                     </ContextMenu.Item>
                 </ContextMenu.Popup>
             </ContextMenu.Positioner>
