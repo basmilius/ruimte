@@ -35,6 +35,10 @@ const microphoneFailureText = (error: unknown): string => {
     return error instanceof Error ? error.message : i18next.t('voice:error.microphoneFailed');
 };
 
+/*
+ * Not a line a person reads, so it is not written by `format/`: it is context for the speech model,
+ * and a fixed `en-GB` is what keeps the date unambiguous whatever the interface is set to.
+ */
 const temporalContext = (): string => {
     const now = new Date();
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown';

@@ -8,7 +8,7 @@ import { notifyTurnDone } from '@/shell/notifications';
 import { viewIdsIn } from '@/shell/split';
 import { nodeWorking } from '@/state/agent-work';
 import { seePushNotifications, clearPushNotification, subscribePushAttention, unreadOnMachine } from '@/state/push-attention';
-import { liveCanvas, subscribeCanvases } from '@/state/canvas';
+import { liveCanvas, subscribeCanvases, type CanvasState } from '@/state/canvas';
 import { useChats, type ChatsById } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey, useEndpointId } from '@/state/keys';
@@ -28,14 +28,29 @@ export interface CanvasSight {
     hidden?: ReadonlySet<string>;
 }
 
-// Count only readable, uncollapsed nodes inside the exact viewport, not the renderer's wider culling area.
-export const readableNodes = (canvas: CanvasSight): string[] => {
-    if (!isMeasured(canvas.viewport) || canvas.camera.zoom < READABLE_ZOOM) {
+/*
+ * The uncollapsed nodes inside the exact viewport, never the renderer's wider culling area. `readable`
+ * also asks that the camera be close enough to read them, which is what "a person saw this" means and
+ * so what attention counts. An agent asking what is on the canvas passes it false on purpose: it reads
+ * the node's own title and content rather than the pixels, so a zoomed-out canvas is not blind to it.
+ */
+export const visibleNodes = (canvas: CanvasSight, { readable }: { readable: boolean }): string[] => {
+    if (!isMeasured(canvas.viewport) || (readable && canvas.camera.zoom < READABLE_ZOOM)) {
         return [];
     }
     const rect = visibleRect(canvas.camera, canvas.viewport);
     return canvas.nodes.filter((node) => canvas.hidden?.has(node.id) !== true && intersects(node, rect)).map((node) => node.id);
 };
+
+export const readableNodes = (canvas: CanvasSight): string[] => visibleNodes(canvas, { readable: true });
+
+/* An open canvas as the question about sight: a store keys its nodes, a sight lists them in order. */
+export const sightOf = (canvas: CanvasState): CanvasSight => ({
+    camera: canvas.camera,
+    viewport: canvas.viewport,
+    nodes: canvas.order.map((id) => canvas.nodes[id]!),
+    hidden: canvas.hidden
+});
 
 /* One canvas as a question about which chats stand on it. */
 export interface ChatSightCanvas extends CanvasSight {
@@ -242,7 +257,7 @@ const nodesInSight = (): string[][] => {
         if (canvas === null) {
             return [];
         }
-        return [readableNodes({ camera: canvas.camera, viewport: canvas.viewport, nodes: canvas.order.map((id) => canvas.nodes[id]!), hidden: canvas.hidden })];
+        return [readableNodes(sightOf(canvas))];
     });
 };
 

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { AgentKind, ChatPreferencesPayload, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import { persistedJson } from '@/chat/persisted-json';
 
 const STORAGE_KEY = 'ruimte.chat.preferences';
 
@@ -73,27 +74,17 @@ export const chatPreferencesPayload = (preferences: ChatPreferences): ChatPrefer
     changedAt: preferences.changedAt
 });
 
-const read = (): ChatPreferences => {
-    try {
-        return parseChatPreferences(localStorage.getItem(STORAGE_KEY));
-    } catch {
-        return DEFAULT_CHAT_PREFERENCES;
-    }
-};
+const storage = persistedJson<ChatPreferences>(STORAGE_KEY, parseChatPreferences, DEFAULT_CHAT_PREFERENCES);
 
 /* What a new agent starts with: the last model and modes the person picked, like a remembered default. */
-export const useChatPreferences = create<ChatPreferences>(() => read());
+export const useChatPreferences = create<ChatPreferences>(() => storage.read());
 
 export const readChatPreferences = (): ChatPreferences => useChatPreferences.getState();
 
 const write = (preferences: ChatPreferences): void => {
     const next = { ...preferences, changedAt: Date.now() };
     useChatPreferences.setState(next);
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {
-        // Storage that refuses is not worth an error; the daemon's defaults still apply.
-    }
+    storage.write(next);
 };
 
 /* The composer writes here on every change and the settings dialog too; both edit the same remembered default. */

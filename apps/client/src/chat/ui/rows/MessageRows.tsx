@@ -284,22 +284,22 @@ function OpenChatButton({ chatId }: { chatId: string }) {
  * "Show result". When the CLI named the sub-agent it woke up about, the header opens that row.
  */
 export function AgentTurnRow({ label, onOpen }: { label: string; onOpen?: () => void }) {
-    if (!onOpen) {
-        return (
-            <div className="mb-0.5 flex h-7 w-full items-center gap-2 text-left text-xs text-text-muted">
-                <span className={ROW_GUTTER}>
-                    <Icon icon={Bot} size={12} />
-                </span>
-                <span className="min-w-0 truncate select-text">{label}</span>
-            </div>
-        );
-    }
-    return (
-        <button className="mb-0.5 flex h-7 w-full items-center gap-2 text-left text-xs text-text-muted hover:text-text" onClick={onOpen}>
+    const line = 'mb-0.5 flex h-7 w-full items-center gap-2 text-left text-xs text-text-muted';
+    // A header with nowhere to go is text to read and copy; one that opens a row is a button.
+    const content = (
+        <>
             <span className={ROW_GUTTER}>
                 <Icon icon={Bot} size={12} />
             </span>
-            <span className="min-w-0 truncate">{label}</span>
+            <span className={clsx('min-w-0 truncate', onOpen === undefined && 'select-text')}>{label}</span>
+        </>
+    );
+    if (onOpen === undefined) {
+        return <div className={line}>{content}</div>;
+    }
+    return (
+        <button className={clsx(line, 'hover:text-text')} onClick={onOpen}>
+            {content}
         </button>
     );
 }

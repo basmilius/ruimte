@@ -1,4 +1,5 @@
 import type { ChatFileChange, ChatToolItem } from '@ruimte/contracts';
+import { isRecord } from './json';
 import { toolEntry } from './tool-catalog';
 
 export interface FileChange {
@@ -6,8 +7,6 @@ export interface FileChange {
     before: string;
     after: string;
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const str = (value: unknown): string | null => (typeof value === 'string' ? value : null);
 
