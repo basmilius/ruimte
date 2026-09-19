@@ -26,6 +26,7 @@ import { machineTransport } from '@/transport';
 import { SECTION_LABEL } from '@/ui/classes';
 import { EmptyState } from '@/ui/EmptyState';
 import { Icon } from '@/ui/Icon';
+import { useNow } from '@/ui/useNow';
 import { statusLookOf } from '@/ui/status-look';
 import { Tooltip } from '@/ui/Tooltip';
 
@@ -66,19 +67,6 @@ const useTail = (chatId: string, toolUseId: string, enabled: boolean): readonly 
     }, [endpointId, chatId, toolUseId, enabled]);
     // What an earlier hold read says nothing once the entry stopped needing one.
     return enabled ? tail : null;
-};
-
-/* One clock for the whole list, ticking each second only while an entry is running. */
-const useListClock = (ticking: boolean): number => {
-    const [now, setNow] = useState(Date.now);
-    useEffect(() => {
-        if (!ticking) {
-            return;
-        }
-        const timer = window.setInterval(() => setNow(Date.now()), 1000);
-        return () => window.clearInterval(timer);
-    }, [ticking]);
-    return now;
 };
 
 function Preview({ preview }: { preview: SubagentPreview }) {
@@ -176,7 +164,8 @@ export function SubagentList({ chatId }: { chatId: string }) {
     const structure = useChatRow(chatId, (row) => row?.structure) ?? NO_STRUCTURE;
     const work = useMemo(() => threadWorkBy(order, structure), [order, structure]);
     const sections = useMemo(() => sectionSubagents(subagents, work), [subagents, work]);
-    const now = useListClock(sections.active.length > 0);
+    // One clock for the whole list, ticking only while an entry is running.
+    const now = useNow(1000, sections.active.length > 0);
     if (subagents.length === 0) {
         return <EmptyState icon={<Icon icon={Bot} size={16} />}>{t('subagents.empty')}</EmptyState>;
     }
