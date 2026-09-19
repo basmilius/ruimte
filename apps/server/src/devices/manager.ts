@@ -1,9 +1,10 @@
 import { Buffer } from 'node:buffer';
 import { randomUUID } from 'node:crypto';
 import type { DeviceAction, DeviceFrame, DeviceInfo, DeviceInput, DeviceOpenResult, DevicePlatform, DeviceSettings, LiveStreamFrame } from '@ruimte/contracts';
-import type { SessionSink } from '../sessions/manager.ts';
+import type { SessionEvent, SessionSink } from '../sessions/manager.ts';
 import { LiveStreamHub, type LiveFrameSource } from '../streams/live-stream.ts';
 import { CodedError } from '../coded-error.ts';
+import { FrameFanout, streamKeyOf } from '../streams/frame-fanout.ts';
 import { ClientSinks } from '../client-sinks.ts';
 
 export interface DeviceSource extends LiveFrameSource {
@@ -27,11 +28,6 @@ interface DeviceSession {
     source: DeviceSource;
     streamId: string;
     unregister: () => void;
-}
-
-interface FrameSubscription {
-    cancelled: boolean;
-    release: (() => void) | null;
 }
 
 /* Every code a device failure reaches a client with, the helper's own among them. */
@@ -71,11 +67,12 @@ export class DeviceManager {
     private readonly backends: Map<string, DeviceBackend>;
     private readonly sessions = new Map<string, DeviceSession>();
     private readonly sinks = new ClientSinks();
-    private readonly frameSubscriptions = new Map<string, Map<string, FrameSubscription>>();
+    private readonly frames: FrameFanout;
 
     constructor(backends: DeviceBackend[], streams = new LiveStreamHub()) {
         this.backends = new Map(backends.map((backend) => [backend.id, backend]));
         this.streams = streams;
+        this.frames = new FrameFanout(streams, this.sinks);
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
@@ -156,7 +153,7 @@ export class DeviceManager {
             if (stream === 'events') {
                 await this.startFrameEvents(session, clientId);
             } else {
-                this.stopFrameEvents(key, clientId);
+                this.frames.stop(key, clientId);
             }
         } catch (error) {
             session.clients.delete(clientId);
@@ -168,13 +165,13 @@ export class DeviceManager {
     detach(backendId: string, deviceId: string, clientId: string): void {
         const key = sessionKey(backendId, deviceId);
         this.sessions.get(key)?.clients.delete(clientId);
-        this.stopFrameEvents(key, clientId);
+        this.frames.stop(key, clientId);
     }
 
     detachAll(clientId: string): void {
         for (const [key, session] of [...this.sessions]) {
             session.clients.delete(clientId);
-            this.stopFrameEvents(key, clientId);
+            this.frames.stop(key, clientId);
             // The source keeps producing frames while it is registered, so the last client leaving ends the session.
             if (session.clients.size === 0) {
                 this.destroy(key);
@@ -210,42 +207,11 @@ export class DeviceManager {
 
     private async startFrameEvents(session: DeviceSession, clientId: string): Promise<void> {
         const key = sessionKey(session.info.backendId, session.info.deviceId);
-        this.stopFrameEvents(key, clientId);
-        const subscription: FrameSubscription = { cancelled: false, release: null };
-        const byClient = this.frameSubscriptions.get(key) ?? new Map<string, FrameSubscription>();
-        byClient.set(clientId, subscription);
-        this.frameSubscriptions.set(key, byClient);
+        const events = (frame: LiveStreamFrame): SessionEvent => ({ event: 'device.frame', payload: eventFrame(session.info, frame) });
         try {
-            const release = await this.streams.subscribe(session.streamId, (frame) => {
-                if (!subscription.cancelled) {
-                    this.sinks.to(clientId, { event: 'device.frame', payload: eventFrame(session.info, frame) });
-                }
-            });
-            if (subscription.cancelled) {
-                release();
-            } else {
-                subscription.release = release;
-            }
+            await this.frames.start(key, session.streamId, clientId, events);
         } catch (error) {
-            byClient.delete(clientId);
-            if (byClient.size === 0) {
-                this.frameSubscriptions.delete(key);
-            }
             throw this.sourceError(error);
-        }
-    }
-
-    private stopFrameEvents(key: string, clientId: string): void {
-        const byClient = this.frameSubscriptions.get(key);
-        const subscription = byClient?.get(clientId);
-        if (!byClient || !subscription) {
-            return;
-        }
-        subscription.cancelled = true;
-        subscription.release?.();
-        byClient.delete(clientId);
-        if (byClient.size === 0) {
-            this.frameSubscriptions.delete(key);
         }
     }
 
@@ -255,9 +221,7 @@ export class DeviceManager {
             return;
         }
         this.sessions.delete(key);
-        for (const clientId of [...session.clients]) {
-            this.stopFrameEvents(key, clientId);
-        }
+        this.frames.stopAll(key);
         session.unregister();
     }
 
@@ -273,7 +237,7 @@ export class DeviceManager {
     }
 }
 
-const sessionKey = (backendId: string, deviceId: string): string => JSON.stringify([backendId, deviceId]);
+const sessionKey = (backendId: string, deviceId: string): string => streamKeyOf(backendId, deviceId);
 
 const eventFrame = (device: DeviceInfo, frame: LiveStreamFrame): DeviceFrame => ({
     deviceId: device.deviceId,
