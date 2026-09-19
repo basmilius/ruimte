@@ -2,30 +2,13 @@ import Foundation
 import Observation
 import RuimtePulsar
 
-/// The six states of a step are final on the wire, so a switch over them needs no default.
-enum PlanStepState: String, CaseIterable, Sendable {
-    case open, active, done, failed, skipped, blocked, warning, info
-}
-
+/// `PlanStepState`, `PlanChecks` and `PlanKind` are generated from the wire schemas, so a switch over one needs no
+/// default and stops compiling when the daemon learns a new word. The markers come with them.
 extension PlanStepState {
     /// The states a person picks from; active is the agent's word for where it works.
     static let personStates: [PlanStepState] = [.open, .done, .warning, .info, .failed, .skipped, .blocked]
     /// The outcomes the mark of a test step offers.
     static let testOutcomes: [PlanStepState] = [.done, .warning, .info, .failed, .skipped, .blocked]
-
-    /// The markers of `plan read` and Copy as Markdown.
-    var marker: String {
-        switch self {
-        case .open: "[ ]"
-        case .active: "[~]"
-        case .done: "[x]"
-        case .failed: "[!]"
-        case .skipped: "[-]"
-        case .blocked: "[?]"
-        case .warning: "[w]"
-        case .info: "[i]"
-        }
-    }
 
     /// Outcomes that close a step without a failure, as `isFinishedOutcome` in `@ruimte/plan`.
     var isFinished: Bool { self == .done || self == .skipped || self == .warning || self == .info }
@@ -67,14 +50,6 @@ enum PlanRow: Identifiable, Equatable, Sendable {
         case .step(let step, _, _): step.id
         }
     }
-}
-
-enum PlanChecks: String, Sendable {
-    case anyone, agent, person
-}
-
-enum PlanKind: String, Sendable {
-    case steps, test
 }
 
 struct PlanStep: Identifiable, Equatable, Sendable {

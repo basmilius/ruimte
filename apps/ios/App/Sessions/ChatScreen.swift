@@ -67,7 +67,7 @@ struct ChatScreen: View {
             }
             .overlay {
                 if !isPrepared || model.loading {
-                    ProgressView().accessibilityLabel("Loading conversation…")
+                    MobileLoadingRow("Loading conversation…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .allowsHitTesting(false)
                 } else if model.messageCount == 0 {

@@ -30,7 +30,7 @@ struct ConnectionScreen: View {
                             Task { await runtime.signOut() }
                         }
                     } else if runtime.loading {
-                        ProgressView().accessibilityLabel("Loading sign-in options")
+                        MobileLoadingRow("Loading sign-in options")
                     } else {
                         ForEach(runtime.providers, id: \.rawValue) { provider in
                             Button(provider == .github ? "Continue with GitHub" : "Continue with Apple") {
@@ -44,10 +44,10 @@ struct ConnectionScreen: View {
                             Button("Retry") { Task { await runtime.start() } }
                         }
                         if runtime.signingIn {
-                            ProgressView().accessibilityLabel("Signing in")
+                            MobileLoadingRow("Signing in")
                             Button("Cancel sign-in") { runtime.cancelSignIn() }
                         }
-                        if runtime.signingOut { ProgressView().accessibilityLabel("Signing out") }
+                        if runtime.signingOut { MobileLoadingRow("Signing out") }
                     }
                     if let problem = runtime.problem {
                         Text(problem).foregroundStyle(.red).textSelection(.enabled)

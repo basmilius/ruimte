@@ -82,7 +82,7 @@ struct CanvasStartGrid: View {
     @ViewBuilder private var agentSection: some View {
         if providers == nil {
             if workspace.session.connected {
-                ProgressView().accessibilityLabel("Looking for agents").frame(maxWidth: .infinity)
+                MobileLoadingRow("Looking for agents").frame(maxWidth: .infinity)
             }
         } else if agents.isEmpty {
             VStack(alignment: .leading, spacing: 4) {

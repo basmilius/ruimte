@@ -26,7 +26,7 @@ struct TerminalScreen: View {
                     approvalStrip(request, now: context.date)
                 }
             }
-            if model.loading { ProgressView().accessibilityLabel("Loading terminal…").padding() }
+            if model.loading { MobileLoadingRow("Loading terminal…").padding() }
             HStack {
                 MobileStatus(
                     title: model.exited ? "Exited" : model.connected ? "Connected" : "Reconnecting",

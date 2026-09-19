@@ -105,13 +105,19 @@ private struct BrowserContent: UIViewRepresentable {
         }
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { update(webView) }
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            state.problem = error.localizedDescription
-            update(webView)
+            report(error, webView)
         }
         func webView(
             _ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error
         ) {
-            state.problem = error.localizedDescription
+            report(error, webView)
+        }
+        /// Tapping a second link while the first page is still loading fails the first one as cancelled. Nobody
+        /// walked into an error there, so the address bar says nothing about it.
+        private func report(_ error: Error, _ webView: WKWebView) {
+            if (error as? URLError)?.code != .cancelled {
+                state.problem = error.localizedDescription
+            }
             update(webView)
         }
         private func update(_ webView: WKWebView) {

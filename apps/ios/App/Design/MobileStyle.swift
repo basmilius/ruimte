@@ -1,41 +1,43 @@
+import RuimtePulsar
 import SwiftUI
 import UIKit
 
+/// The values are `RuimteColors` in `RuimtePulsar`, which the Live Activity widget reads from its own target; this
+/// only gives each one the UIKit and SwiftUI shape the app draws with.
 enum MobileStyle {
-    static let accentColor = UIColor { $0.userInterfaceStyle == .dark ? .white : .black }
+    static let accentColor = adaptive(RuimteColors.accent)
     static let accent = Color(uiColor: accentColor)
-    static let onAccent = Color(uiColor: UIColor { $0.userInterfaceStyle == .dark ? .black : .white })
-    // Keep these paired with the semantic gray tokens in apps/client/src/styles.css.
-    static let canvasColor = adaptive(light: 0xf4f4f5, dark: 0x0d0d10)
-    static let surfaceColor = adaptive(light: 0xffffff, dark: 0x131316)
-    static let panelColor = adaptive(light: 0xffffff, dark: 0x18181c)
-    static let textColor = adaptive(light: 0x18181b, dark: 0xececf1)
-    static let mutedColor = adaptive(light: 0x6f6f78, dark: 0x9a9aa6)
+    static let onAccent = Color(uiColor: adaptive(RuimteColors.onAccent))
+    static let canvasColor = adaptive(RuimteColors.canvas)
+    static let surfaceColor = adaptive(RuimteColors.surface)
+    static let panelColor = adaptive(RuimteColors.panel)
+    static let textColor = adaptive(RuimteColors.text)
+    static let mutedColor = adaptive(RuimteColors.muted)
     static let canvas = Color(uiColor: canvasColor)
     static let surface = Color(uiColor: surfaceColor)
     static let panel = Color(uiColor: panelColor)
-    static let inset = Color(uiColor: adaptive(light: 0xececef, dark: 0x08080a))
-    static let hover = Color(uiColor: adaptive(light: 0xf3f3f5, dark: 0x202024))
-    static let active = Color(uiColor: adaptive(light: 0xdcdce2, dark: 0x28282e))
-    static let pressed = Color(uiColor: adaptive(light: 0xededf1, dark: 0x202024))
-    static let border = Color(uiColor: adaptive(light: 0xe2e2e6, dark: 0x1f1f24))
+    static let inset = Color(uiColor: adaptive(RuimteColors.inset))
+    static let hover = Color(uiColor: adaptive(RuimteColors.hover))
+    static let active = Color(uiColor: adaptive(RuimteColors.active))
+    static let pressed = Color(uiColor: adaptive(RuimteColors.pressed))
+    static let border = Color(uiColor: adaptive(RuimteColors.border))
     static let text = Color(uiColor: textColor)
     static let muted = Color(uiColor: mutedColor)
-    static let faintColor = adaptive(light: 0xa1a1aa, dark: 0x5f5f6b)
+    static let faintColor = adaptive(RuimteColors.faint)
     static let faint = Color(uiColor: faintColor)
-    static let positive = Color(uiColor: adaptive(light: 0x15803d, dark: 0x4ade80))
-    static let statusRunningColor = adaptive(light: 0x2563eb, dark: 0x60a5fa)
-    static let statusErrorColor = adaptive(light: 0xdc2626, dark: 0xef4444)
-    static let statusNeedsYouColor = adaptive(light: 0xd97706, dark: 0xfbbf24)
-    static let statusIdleColor = adaptive(light: 0x16a34a, dark: 0x4ade80)
+    static let positive = Color(uiColor: adaptive(RuimteColors.positive))
+    static let statusRunningColor = adaptive(RuimteColors.statusRunning)
+    static let statusErrorColor = adaptive(RuimteColors.statusError)
+    static let statusNeedsYouColor = adaptive(RuimteColors.statusNeedsYou)
+    static let statusIdleColor = adaptive(RuimteColors.statusIdle)
     static let statusRunning = Color(uiColor: statusRunningColor)
     static let statusError = Color(uiColor: statusErrorColor)
     static let statusNeedsYou = Color(uiColor: statusNeedsYouColor)
     static let statusIdle = Color(uiColor: statusIdleColor)
 
-    private static func adaptive(light: UInt32, dark: UInt32) -> UIColor {
+    private static func adaptive(_ token: RuimteColorToken) -> UIColor {
         UIColor { traits in
-            let hex = traits.userInterfaceStyle == .dark ? dark : light
+            let hex = traits.userInterfaceStyle == .dark ? token.dark : token.light
             return UIColor(
                 red: CGFloat((hex >> 16) & 0xff) / 255,
                 green: CGFloat((hex >> 8) & 0xff) / 255,

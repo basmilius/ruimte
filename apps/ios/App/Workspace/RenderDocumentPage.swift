@@ -8,14 +8,13 @@ struct RenderDocumentPage: View {
     let projectID: String
     let viewID: String
     let kind: String
-    @State private var scene: JSONValue?
-    @State private var problem: String?
+    @State private var work = RemotePageState()
     @State private var generation = 0
     @State private var connection: (() -> Void)?
     @State private var subscription: (() -> Void)?
     var body: some View {
         Group {
-            if let scene {
+            if let scene = work.value {
                 MobileScrollViewport { insets in
                     NativeScene(scene: scene, viewportInsets: insets)
                 }
@@ -29,15 +28,17 @@ struct RenderDocumentPage: View {
                         .accessibilityIdentifier("diagram.empty")
                     }
                 }
-            } else if let problem {
+            } else if let problem = work.problem {
                 ContentUnavailableView(
                     "Could not load \(kind)", lucideIcon: "triangle-alert", description: Text(problem))
             } else {
-                ProgressView().accessibilityLabel("Loading \(kind)")
+                MobileLoadingRow("Loading \(kind)")
             }
         }
         .overlay(alignment: .bottom) {
-            if scene != nil, let problem { Text(problem).font(.caption).padding().background(.regularMaterial) }
+            if work.value != nil, let problem = work.problem {
+                Text(problem).font(.caption).padding().background(.regularMaterial)
+            }
         }
         .toolbar { Button("Refresh", lucideIcon: "refresh-cw") { generation += 1 } }
         .task {
@@ -49,13 +50,10 @@ struct RenderDocumentPage: View {
             }
         }
         .task(id: generation) {
-            do {
-                let result = try await DocumentSceneLoader.load(
+            await work.load {
+                try await DocumentSceneLoader.load(
                     client: client, projectID: projectID, viewID: viewID, kind: kind)
-                guard !Task.isCancelled else { return }
-                scene = result
-                problem = nil
-            } catch { if !Task.isCancelled { problem = error.localizedDescription } }
+            }
         }
         .onDisappear {
             subscription?()

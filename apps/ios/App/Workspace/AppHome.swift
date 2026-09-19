@@ -361,7 +361,7 @@ struct AppHome: View {
                 .listSectionSeparator(.hidden, edges: .top)
             } else if loadingProjects {
                 Section {
-                    ProgressView().accessibilityLabel("Loading projects")
+                    MobileLoadingRow("Loading projects")
                         .frame(maxWidth: .infinity, minHeight: 120)
                         .accessibilityIdentifier("projects.loading")
                 }.listRowBackground(Color.clear).listRowSeparator(.hidden)
@@ -419,7 +419,7 @@ struct AppHome: View {
         .toolbar {
             if (runtime.loading || projects.loading) && !visibleProjects.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
-                    ProgressView().accessibilityLabel("Updating projects")
+                    MobileLoadingRow("Updating projects")
                 }
             }
         }
@@ -450,7 +450,7 @@ struct RecentProjectsPage: View {
                 Section { ProjectLinks(runtime: runtime, rows: visible) }
                     .listSectionSeparator(.hidden, edges: .top)
             } else if projects.loading {
-                ProgressView().accessibilityLabel("Loading projects").frame(maxWidth: .infinity, minHeight: 120)
+                MobileLoadingRow("Loading projects").frame(maxWidth: .infinity, minHeight: 120)
                     .listRowBackground(Color.clear).listRowSeparator(.hidden)
             } else if !search.isEmpty {
                 ContentUnavailableView.search(text: search)

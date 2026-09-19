@@ -7,14 +7,12 @@ struct MachineProjectsPage: View {
     @State private var lease: MachineNavigationLease?
     @State private var projects: [JSONValue] = []
     @State private var search = ""
-    @State private var loading = false
-    @State private var problem: String?
+    @State private var work = RemotePageState()
     @State private var newProject = false
     @State private var projectName = ""
     @State private var folder = ""
     @Environment(\.openMobileWorkspace) private var openWorkspace
     @State private var createFolder = false
-    @State private var loadGeneration = 0
     @State private var unsubscribe: (() -> Void)?
     @State private var destination: MachineDestination?
     private enum MachineDestination: Hashable { case files, usage, settings }
@@ -52,15 +50,15 @@ struct MachineProjectsPage: View {
                     }.disabled(project["available"] == .bool(false))
                         .modifier(MobileSidebarRow())
                 }
-                if loading {
-                    ProgressView().accessibilityLabel("Loading projects")
+                if work.loading {
+                    MobileLoadingRow("Loading projects")
                 } else if session.connected && projects.isEmpty {
                     ContentUnavailableView(
                         "No projects yet", lucideIcon: "folder",
                         description: Text("Open a folder on this machine or create a new workspace."))
                 }
             }
-            if let problem {
+            if let problem = work.problem {
                 Section {
                     Text(problem).foregroundStyle(.red)
                     Button("Try again") { Task { await load() } }
@@ -128,12 +126,12 @@ struct MachineProjectsPage: View {
                     TextField("Folder on this machine (optional)", text: $folder).textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                     Toggle("Create folder if missing", isOn: $createFolder)
-                    if let problem { Text(problem).foregroundStyle(.red) }
+                    if let problem = work.problem { Text(problem).foregroundStyle(.red) }
                 }.navigationTitle("Open project")
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) { Button("Cancel") { newProject = false } }
                         ToolbarItem(placement: .confirmationAction) {
-                            Button("Open") { Task { await create() } }.disabled(loading)
+                            Button("Open") { Task { await create() } }.disabled(work.busy)
                         }
                     }
             }.presentationDetents([.medium, .large])
@@ -147,22 +145,17 @@ struct MachineProjectsPage: View {
     }
     private func load() async {
         guard session.connected else { return }
-        loadGeneration += 1
-        let operation = loadGeneration
         let connection = session.generation
-        loading = true
-        defer { if operation == loadGeneration { loading = false } }
-        do {
+        await work.read(loaded: false) { stillTheLatest in
             let result = try await session.rpc.request("project.list", payload: .object([:]))
-            guard !Task.isCancelled, operation == loadGeneration, connection == session.generation else { return }
+            try stillTheLatest()
+            // An answer for a link that has since been rebuilt says nothing about the one on screen now.
+            guard connection == session.generation else { throw CancellationError() }
             projects = result.list("projects").sorted { $0.number("lastOpenedAt") > $1.number("lastOpenedAt") }
             if let data = try? JSONValue.array(projects).encoded() { UserDefaults.standard.set(data, forKey: cacheKey) }
-            problem = nil
-        } catch { if !Task.isCancelled, operation == loadGeneration { problem = error.localizedDescription } }
+        }
     }
     private func create() async {
-        loading = true
-        defer { loading = false }
         var payload: [String: JSONValue] = [:]
         if !projectName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             payload["name"] = .string(projectName)
@@ -171,7 +164,7 @@ struct MachineProjectsPage: View {
             payload["folder"] = .string(folder)
             payload["createFolder"] = .bool(createFolder)
         }
-        do {
+        await work.perform {
             let result = try await session.rpc.request("project.open", payload: .object(payload))
             if let id = result["summary"]?["projectId"]?.stringValue {
                 session.retainProject(id)
@@ -179,7 +172,6 @@ struct MachineProjectsPage: View {
                 openWorkspace(MobileWorkspace(session: session, projectID: id))
             }
             newProject = false
-            problem = nil
-        } catch { problem = error.localizedDescription }
+        }
     }
 }

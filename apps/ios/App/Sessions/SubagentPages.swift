@@ -156,7 +156,7 @@ private struct SubagentEntryRow: View {
         let title = ChatSubagents.title(item)
         Button(action: open) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                SubagentStatusIcon(word: word)
+                if let word { SubagentStatusIcon(word: word) }
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(alignment: .firstTextBaseline, spacing: 12) {
                         Text(title).font(.body.weight(.medium)).foregroundStyle(MobileStyle.text).lineLimit(1)
@@ -173,7 +173,7 @@ private struct SubagentEntryRow: View {
             .contentShape(Rectangle())
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title), \(word.rawValue)")
+        .accessibilityLabel(word.map { "\(title), \($0.rawValue)" } ?? title)
         .task(id: needsTail) {
             guard needsTail else {
                 tail?.stop()
@@ -275,7 +275,7 @@ struct SubagentConversationPage: View {
         .overlay {
             switch conversation.status {
             case .loading:
-                ProgressView().accessibilityLabel("Loading conversation…").allowsHitTesting(false)
+                MobileLoadingRow("Loading conversation…").allowsHitTesting(false)
             case .failed where conversation.items.isEmpty:
                 ContentUnavailableView {
                     Label("Could not open", lucideIcon: "triangle-alert", iconSize: 48)

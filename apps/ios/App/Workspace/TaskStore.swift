@@ -84,12 +84,13 @@ final class TaskStore {
 enum AgentWorkLook {
     case running, done, failed, stopped
 
-    init(taskStatus: String) {
+    /// A task that never settled is work in progress; the rest each have a look of their own.
+    init(taskStatus: TaskStatus) {
         switch taskStatus {
-        case "done": self = .done
-        case "failed": self = .failed
-        case "cancelled": self = .stopped
-        default: self = .running
+        case .open: self = .running
+        case .done: self = .done
+        case .failed: self = .failed
+        case .cancelled: self = .stopped
         }
     }
 
@@ -110,23 +111,26 @@ enum AgentWorkLook {
 struct TaskMark: View {
     let task: JSONValue
 
-    static func word(_ status: String) -> String {
+    static func word(_ status: TaskStatus) -> String {
         switch status {
-        case "done": "done"
-        case "failed": "failed"
-        case "cancelled": "cancelled"
-        default: "working on it"
+        case .open: "working on it"
+        case .done: "done"
+        case .failed: "failed"
+        case .cancelled: "cancelled"
         }
     }
 
+    /// A record from a machine that knows a status this app does not is read as still open.
+    static func status(_ task: JSONValue) -> TaskStatus { TaskStatus(rawValue: task.text("status")) ?? .open }
+
     var body: some View {
-        let status = task.text("status")
+        let status = Self.status(task)
         let icon =
             switch status {
-            case "done": "list-checks"
-            case "failed": "circle-x"
-            case "cancelled": "circle-slash"
-            default: "circle-dashed"
+            case .open: "circle-dashed"
+            case .done: "list-checks"
+            case .failed: "circle-x"
+            case .cancelled: "circle-slash"
             }
         Image(lucide: icon, size: 14)
             .foregroundStyle(AgentWorkLook(taskStatus: status).color)

@@ -1,4 +1,5 @@
 import RuimtePulsar
+import RuimteTransport
 import SwiftUI
 
 struct NotificationSessionPage: View {
@@ -7,7 +8,7 @@ struct NotificationSessionPage: View {
     @State private var lease: MachineNavigationLease?
     @State private var session: SharedMachineSession?
     @State private var target = "unknown"
-    @State private var problem: String?
+    @State private var work = RemotePageState()
     var body: some View {
         Group {
             if let session, session.connected {
@@ -17,13 +18,13 @@ struct NotificationSessionPage: View {
                     ChatScreen(client: session.rpc, chatID: destination.nodeID, title: "Chat", session: session)
                 } else if target == "terminal" {
                     TerminalScreen(client: session.rpc, sessionID: destination.nodeID, title: "Terminal")
-                } else if let problem {
+                } else if let problem = work.problem {
                     ContentUnavailableView(
                         "Session unavailable", lucideIcon: "triangle-alert", description: Text(problem))
                 } else {
-                    ProgressView().accessibilityLabel("Finding session")
+                    MobileLoadingRow("Finding session")
                 }
-            } else if let problem {
+            } else if let problem = work.problem {
                 ContentUnavailableView(
                     "Machine unavailable", lucideIcon: "triangle-alert", description: Text(problem))
             } else if let session, session.failedAttempts >= 3 {
@@ -35,14 +36,14 @@ struct NotificationSessionPage: View {
                     Button("Try again") { session.reconnect() }
                 }
             } else {
-                ProgressView().accessibilityLabel("Connecting to your machine")
+                MobileLoadingRow("Connecting to your machine")
             }
         }
         .modifier(MobilePageSurface())
         .task {
             guard lease == nil else { return }
             guard let machine = runtime.machines.first(where: { $0.id == destination.machineID }) else {
-                problem = "This machine is no longer in your account. Refresh your machines and try again."
+                work.problem = "This machine is no longer in your account. Refresh your machines and try again."
                 return
             }
             let shared = runtime.session(for: machine)
@@ -53,19 +54,22 @@ struct NotificationSessionPage: View {
         }
         .task(id: session?.generation) {
             guard let session, session.connected, target == "unknown" else { return }
-            do {
+            // Nothing here is on screen yet, so the page draws its own spinner and this read shows none.
+            await work.read(loaded: true) { stillTheLatest in
                 let chats = try await session.rpc.request("chat.list").list("chats")
+                try stillTheLatest()
                 if chats.contains(where: { $0.text("chatId", fallback: $0.stableID) == destination.nodeID }) {
                     target = "chat"
                     return
                 }
                 let terminals = try await session.rpc.request("session.list").list("sessions")
-                if terminals.contains(where: { $0.text("sessionId") == destination.nodeID }) {
-                    target = "terminal"
-                } else {
-                    problem = "This session has ended or was removed."
+                try stillTheLatest()
+                guard terminals.contains(where: { $0.text("sessionId") == destination.nodeID }) else {
+                    // A node that is in neither list is why this read found nothing, so it reads as the failure.
+                    throw TransportFailure.invalid("This session has ended or was removed.")
                 }
-            } catch { problem = error.localizedDescription }
+                target = "terminal"
+            }
         }
     }
 }
@@ -74,12 +78,12 @@ private struct MachineActivityPage: View {
     let session: SharedMachineSession
     @State private var sessions: [JSONValue] = []
     @State private var chats: [JSONValue] = []
-    @State private var problem: String?
+    @State private var work = RemotePageState()
     @State private var subscriptions: [() -> Void] = []
 
     var body: some View {
         MobileList {
-            if let problem { Text(problem).foregroundStyle(.red) }
+            if let problem = work.problem { Text(problem).foregroundStyle(.red) }
             Section("Needs your attention") { rows(status: "needs-you") }
             Section("Working") { rows(status: "running") }
             if !sessions.contains(where: { active($0["agent"]?.text("status")) })
@@ -132,14 +136,14 @@ private struct MachineActivityPage: View {
     private func active(_ status: String?) -> Bool { status == "running" || status == "needs-you" }
 
     private func load() async {
-        do {
+        await work.read(loaded: true) { stillTheLatest in
             async let terminalResult = session.rpc.request("session.list")
             async let chatResult = session.rpc.request("chat.list")
-            sessions = try await terminalResult.list("sessions").filter { $0["exited"] != .bool(true) }.map {
-                $0.setting("id", $0["sessionId"])
-            }
-            chats = try await chatResult.list("chats").map { $0.setting("id", $0["chatId"] ?? $0["id"]) }
-            problem = nil
-        } catch { problem = error.localizedDescription }
+            let terminals = try await terminalResult.list("sessions")
+            let listed = try await chatResult.list("chats")
+            try stillTheLatest()
+            sessions = terminals.filter { $0["exited"] != .bool(true) }.map { $0.setting("id", $0["sessionId"]) }
+            chats = listed.map { $0.setting("id", $0["chatId"] ?? $0["id"]) }
+        }
     }
 }

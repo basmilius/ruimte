@@ -40,9 +40,23 @@ struct ChatMessageMark: Identifiable, Equatable {
 }
 
 /// The fork rules of the desktop client, kept apart from the views so they can be tested.
+///
+/// The refusals below are written out in English. The desktop client reads the same sentences from
+/// `fork.refusal.*`, `fork.point.*` and `fork.branch.*` in `apps/client/src/i18n/locales/en/chat.json`, and there is
+/// nothing that holds the two together: this app has no translation layer and is not getting one for these lines. A
+/// change to one of those keys has to be made here by hand.
 enum ChatForking {
-    /// The CLIs whose conversation a machine can fork, and go on with in a fork.
-    static let providers: Set<String> = ["claude", "codex"]
+    /// Whether a machine can fork this CLI's conversation and go on with it in a fork. Every kind the daemon knows is
+    /// answered here, so a CLI added to `AgentKindSchema` is decided on before it is offered a fork.
+    static func forkable(_ kind: AgentKind) -> Bool {
+        switch kind {
+        case .claude, .codex: true
+        case .gemini, .copilot: false
+        }
+    }
+
+    /// A CLI this app does not know is not forkable; only a machine that knows it can say what it can do.
+    static func forkable(provider: String) -> Bool { AgentKind(rawValue: provider).map(forkable) ?? false }
     static let titleMax = 120
 
     /// Why a chat cannot be forked after this turn right now, or nil when it can.
@@ -50,7 +64,7 @@ enum ChatForking {
         guard info != .null, let turn, turn.text("kind") == "turn" else {
             return "This turn is not in the conversation"
         }
-        guard providers.contains(info.text("provider")) else { return "This CLI has no conversation to fork" }
+        guard forkable(provider: info.text("provider")) else { return "This CLI has no conversation that can be forked" }
         guard info["agentSessionId"]?.stringValue != nil else { return "The CLI never started a conversation here" }
         if turn.text("state") == "running" || info["activeTurnId"]?.stringValue != nil {
             return "Wait for the turn to end"

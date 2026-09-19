@@ -165,7 +165,7 @@ public struct Account: Codable, Sendable, Equatable {
     }
 }
 
-public enum ProviderId: String, Codable, Sendable, Equatable {
+public enum ProviderId: String, CaseIterable, Codable, Sendable, Equatable {
     case `github` = "github"
     case `apple` = "apple"
 }
@@ -203,7 +203,7 @@ public struct Identity: Codable, Sendable, Equatable {
     }
 }
 
-public enum AddressBookErrorCode: String, Codable, Sendable, Equatable {
+public enum AddressBookErrorCode: String, CaseIterable, Codable, Sendable, Equatable {
     case `badRequest` = "bad-request"
     case `unauthorized` = "unauthorized"
     case `badSignature` = "bad-signature"
@@ -381,7 +381,7 @@ public struct MachineIcon: Codable, Sendable, Equatable {
     }
 }
 
-public enum MachineIconKind: String, Codable, Sendable, Equatable {
+public enum MachineIconKind: String, CaseIterable, Codable, Sendable, Equatable {
     case `emoji` = "emoji"
     case `lucide` = "lucide"
 }
@@ -907,7 +907,7 @@ public struct BrokerDelivered: Codable, Sendable, Equatable {
     }
 }
 
-public enum BrokerErrorCode: String, Codable, Sendable, Equatable {
+public enum BrokerErrorCode: String, CaseIterable, Codable, Sendable, Equatable {
     case `badFrame` = "bad-frame"
     case `badSignature` = "bad-signature"
     case `notConnected` = "not-connected"
@@ -986,7 +986,7 @@ public struct BrokerHello: Codable, Sendable, Equatable {
     }
 }
 
-public enum BrokerRole: String, Codable, Sendable, Equatable {
+public enum BrokerRole: String, CaseIterable, Codable, Sendable, Equatable {
     case `machine` = "machine"
     case `client` = "client"
 }
@@ -1420,7 +1420,7 @@ public struct SignalClose: Codable, Sendable, Equatable {
     }
 }
 
-public enum SignalCloseReason: String, Codable, Sendable, Equatable {
+public enum SignalCloseReason: String, CaseIterable, Codable, Sendable, Equatable {
     case `declined` = "declined"
     case `failed` = "failed"
     case `timeout` = "timeout"
@@ -1467,7 +1467,7 @@ public struct BrokerRateLimited: Codable, Sendable, Equatable {
     }
 }
 
-public enum BrokerRateLimitedScope: String, Codable, Sendable, Equatable {
+public enum BrokerRateLimitedScope: String, CaseIterable, Codable, Sendable, Equatable {
     case `ip` = "ip"
     case `key` = "key"
 }
@@ -2186,12 +2186,12 @@ public struct PushActivityAgent: Codable, Sendable, Equatable {
     }
 }
 
-public enum PushActivityAgentTarget: String, Codable, Sendable, Equatable {
+public enum PushActivityAgentTarget: String, CaseIterable, Codable, Sendable, Equatable {
     case `terminal` = "terminal"
     case `chat` = "chat"
 }
 
-public enum PushActivityAgentPhase: String, Codable, Sendable, Equatable {
+public enum PushActivityAgentPhase: String, CaseIterable, Codable, Sendable, Equatable {
     case `running` = "running"
     case `needsYou` = "needs-you"
 }
@@ -2244,7 +2244,7 @@ public struct PushActivityContent: Codable, Sendable, Equatable {
     }
 }
 
-public enum PushActivityContentPhase: String, Codable, Sendable, Equatable {
+public enum PushActivityContentPhase: String, CaseIterable, Codable, Sendable, Equatable {
     case `running` = "running"
     case `tool` = "tool"
     case `needsYou` = "needs-you"
@@ -2357,13 +2357,13 @@ public struct PushAlertContent: Codable, Sendable, Equatable {
     }
 }
 
-public enum PushAlertContentKind: String, Codable, Sendable, Equatable {
+public enum PushAlertContentKind: String, CaseIterable, Codable, Sendable, Equatable {
     case `turn` = "turn"
     case `attention` = "attention"
     case `approval` = "approval"
 }
 
-public enum PushAlertContentTarget: String, Codable, Sendable, Equatable {
+public enum PushAlertContentTarget: String, CaseIterable, Codable, Sendable, Equatable {
     case `terminal` = "terminal"
     case `chat` = "chat"
 }
@@ -2400,7 +2400,7 @@ public struct PushAlertContentChoicesItem: Codable, Sendable, Equatable {
     }
 }
 
-public enum PushAlertContentChoicesItemKind: String, Codable, Sendable, Equatable {
+public enum PushAlertContentChoicesItemKind: String, CaseIterable, Codable, Sendable, Equatable {
     case `allow` = "allow"
     case `remember` = "remember"
     case `deny` = "deny"
@@ -2701,7 +2701,7 @@ public struct PushRegisterDevicePayload: Codable, Sendable, Equatable {
     }
 }
 
-public enum PushRegisterDevicePayloadEnvironment: String, Codable, Sendable, Equatable {
+public enum PushRegisterDevicePayloadEnvironment: String, CaseIterable, Codable, Sendable, Equatable {
     case `sandbox` = "sandbox"
     case `production` = "production"
 }
@@ -2849,6 +2849,86 @@ public struct RuimteActivityAttributes: Codable, Sendable, Equatable {
         case `machineId` = "machineId"
         case `collapseId` = "collapseId"
     }
+}
+
+public enum AgentKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `claude` = "claude"
+    case `codex` = "codex"
+    case `gemini` = "gemini"
+    case `copilot` = "copilot"
+}
+
+public enum AgentStatus: String, CaseIterable, Codable, Sendable, Equatable {
+    case `running` = "running"
+    case `needsYou` = "needs-you"
+    case `idle` = "idle"
+    case `error` = "error"
+    case `exited` = "exited"
+}
+
+public enum TaskStatus: String, CaseIterable, Codable, Sendable, Equatable {
+    case `open` = "open"
+    case `done` = "done"
+    case `failed` = "failed"
+    case `cancelled` = "cancelled"
+}
+
+public enum PlanActor: String, CaseIterable, Codable, Sendable, Equatable {
+    case `person` = "person"
+    case `agent` = "agent"
+}
+
+public enum PlanChecks: String, CaseIterable, Codable, Sendable, Equatable {
+    case `anyone` = "anyone"
+    case `agent` = "agent"
+    case `person` = "person"
+}
+
+public enum PlanKind: String, CaseIterable, Codable, Sendable, Equatable {
+    case `steps` = "steps"
+    case `test` = "test"
+}
+
+public enum PlanStepState: String, CaseIterable, Codable, Sendable, Equatable {
+    case `open` = "open"
+    case `active` = "active"
+    case `done` = "done"
+    case `failed` = "failed"
+    case `skipped` = "skipped"
+    case `blocked` = "blocked"
+    case `warning` = "warning"
+    case `info` = "info"
+}
+
+public enum ChatApprovalDecision: String, CaseIterable, Codable, Sendable, Equatable {
+    case `pending` = "pending"
+    case `allow` = "allow"
+    case `allowAlways` = "allow-always"
+    case `deny` = "deny"
+    case `cancelled` = "cancelled"
+}
+
+public enum ChatSkillSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `user` = "user"
+    case `project` = "project"
+    case `plugin` = "plugin"
+}
+
+public enum ChatSubagentSource: String, CaseIterable, Codable, Sendable, Equatable {
+    case `claudeTranscript` = "claude-transcript"
+    case `codexThread` = "codex-thread"
+}
+
+public enum ChatSubagentStatus: String, CaseIterable, Codable, Sendable, Equatable {
+    case `running` = "running"
+    case `done` = "done"
+    case `failed` = "failed"
+}
+
+public enum ChatToolState: String, CaseIterable, Codable, Sendable, Equatable {
+    case `running` = "running"
+    case `done` = "done"
+    case `error` = "error"
 }
 
 public struct PairPayload: Codable, Sendable, Equatable {
@@ -3017,7 +3097,7 @@ public struct PairResultEndpoint: Codable, Sendable, Equatable {
     }
 }
 
-public enum PairResultEndpointNameSource: String, Codable, Sendable, Equatable {
+public enum PairResultEndpointNameSource: String, CaseIterable, Codable, Sendable, Equatable {
     case `chosen` = "chosen"
     case `default` = "default"
 }
@@ -3099,7 +3179,7 @@ public struct PairResultEndpointIconVariant1: Codable, Sendable, Equatable {
     }
 }
 
-public enum PairResultEndpointIconVariant1Value: String, Codable, Sendable, Equatable {
+public enum PairResultEndpointIconVariant1Value: String, CaseIterable, Codable, Sendable, Equatable {
     case `box` = "box"
     case `boxes` = "boxes"
     case `package` = "package"
@@ -3162,7 +3242,7 @@ public enum PairResultEndpointIconVariant1Value: String, Codable, Sendable, Equa
     case `coffee` = "coffee"
 }
 
-public enum PairResultEndpointReachability: String, Codable, Sendable, Equatable {
+public enum PairResultEndpointReachability: String, CaseIterable, Codable, Sendable, Equatable {
     case `loopback` = "loopback"
     case `lan` = "lan"
     case `tunnel` = "tunnel"
@@ -3382,5 +3462,21 @@ public struct ProjectCanvasDefaultsLayoutsItemTextsValue: Codable, Sendable, Equ
     private enum CodingKeys: String, CodingKey {
         case `x` = "x"
         case `y` = "y"
+    }
+}
+
+public extension PlanStepState {
+    /// The marker of this state, as `PLAN_STATE_MARKERS` in `@ruimte/plan` writes it.
+    var marker: String {
+        switch self {
+        case .open: "[ ]"
+        case .active: "[~]"
+        case .done: "[x]"
+        case .failed: "[!]"
+        case .skipped: "[-]"
+        case .blocked: "[?]"
+        case .warning: "[w]"
+        case .info: "[i]"
+        }
     }
 }

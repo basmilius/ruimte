@@ -234,7 +234,7 @@ func canvasWithoutNode(_ canvas: JSONValue, id: String) -> JSONValue {
 
 private struct CanvasViewport: UIViewRepresentable {
     let canvas: JSONValue
-    let statuses: [String: String]
+    let statuses: [String: AgentStatus]
     let tasks: [String: JSONValue]
     let unseen: Set<String>
     let needingYou: Set<String>
@@ -310,7 +310,7 @@ final class CanvasScrollView: UIScrollView, UIScrollViewDelegate {
         updateVisible()
     }
     func setAttention(
-        statuses: [String: String], unseen: Set<String>, needingYou: Set<String>, tasks: [String: JSONValue] = [:]
+        statuses: [String: AgentStatus], unseen: Set<String>, needingYou: Set<String>, tasks: [String: JSONValue] = [:]
     ) {
         surface.statuses = statuses
         surface.tasks = tasks
@@ -404,7 +404,7 @@ private final class CanvasSurface: UIView {
     }
     private let drawing = CanvasDrawing()
     var open: (String) -> Void = { _ in }
-    var statuses: [String: String] = [:]
+    var statuses: [String: AgentStatus] = [:]
     var tasks: [String: JSONValue] = [:]
     var unseen = Set<String>()
     var needingYou = Set<String>()
@@ -507,11 +507,11 @@ private final class CanvasSurface: UIView {
             path.lineWidth = 1
             path.stroke()
             let id = node.stableID
-            if needingYou.contains(id) || statuses[id] == "running" || unseen.contains(id) {
+            if needingYou.contains(id) || statuses[id] == .running || unseen.contains(id) {
                 let color: UIColor =
                     needingYou.contains(id)
                     ? MobileStyle.statusNeedsYouColor
-                    : statuses[id] == "running" ? MobileStyle.statusRunningColor : MobileStyle.accentColor
+                    : statuses[id] == .running ? MobileStyle.statusRunningColor : MobileStyle.accentColor
                 color.setFill()
                 UIBezierPath(ovalIn: CGRect(x: frame.maxX - 28, y: frame.minY + 20, width: 10, height: 10)).fill()
             }
@@ -523,7 +523,7 @@ private final class CanvasSurface: UIView {
                 font: .preferredFont(forTextStyle: .headline), color: .label)
             if let task = tasks[id] {
                 // The line into a task's node says so on the desktop; here the node carries the word itself.
-                let status = task.text("status")
+                let status = TaskMark.status(task)
                 drawText(
                     "Task: " + TaskMark.word(status),
                     rect: CGRect(x: frame.minX + 20, y: frame.minY + 50, width: frame.width - 40, height: 24),
@@ -563,7 +563,7 @@ private final class CanvasSurface: UIView {
             let element = CanvasAccessibleNode(accessibilityContainer: self)
             element.accessibilityLabel =
                 node.text("title") + ", " + node.text("kind")
-                + (tasks[node.stableID].map { ", task " + TaskMark.word($0.text("status")) } ?? "")
+                + (tasks[node.stableID].map { ", task " + TaskMark.word(TaskMark.status($0)) } ?? "")
             element.accessibilityTraits = .button
             element.accessibilityFrameInContainerSpace = rect.offsetBy(dx: -origin.x, dy: -origin.y)
             element.action = { [weak self] in self?.open(node.stableID) }
