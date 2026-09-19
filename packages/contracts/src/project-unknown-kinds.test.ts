@@ -1,6 +1,17 @@
 import { describe, expect, test } from 'bun:test';
-import { edgeRole, isOpenableView, isUnknownNode, isUnknownView, ProjectDocumentSchema, storedContentOf, type ProjectCanvasView } from './project.ts';
-import { duplicateIdIn, migrateDocument, withoutCrossViewEdges } from './project-migrate.ts';
+import {
+    edgeRole,
+    isOpenableView,
+    isUnknownNode,
+    isUnknownView,
+    PROJECT_VERSION,
+    ProjectDocumentSchema,
+    storedViewsOf,
+    type ProjectCanvasView
+} from './project.ts';
+import { duplicateIdIn, migrateSharedFile, withoutCrossViewEdges } from './project-migrate.ts';
+
+const migratedFile = (value: unknown) => migrateSharedFile(value)?.file ?? null;
 import { withDuplicatedView, withRenamedView, withViewIcon } from './project-views.ts';
 
 /* A file as a newer Ruimte writes it: a view and a canvas node of kinds this version never heard of. */
@@ -28,7 +39,7 @@ const NEWER_FILE = {
 };
 
 const parsedFrom = (file: unknown) => {
-    const document = migrateDocument(structuredClone(file));
+    const document = migratedFile(structuredClone(file));
     if (!document) {
         throw new Error('the newer file was refused');
     }
@@ -48,7 +59,7 @@ describe('kinds this version does not know', () => {
     test('a diagram node is a kind this version knows, not one it only carries', () => {
         const file = structuredClone(NEWER_FILE);
         file.views[0]!.nodes!.push({ id: 'flow', kind: 'diagram', title: 'Flow', x: 0, y: 400, w: 480, h: 360, viewId: 'flow-1' } as never);
-        const node = canvasOf(migrateDocument(file)!.views).nodes[2]!;
+        const node = canvasOf(migratedFile(file)!.views).nodes[2]!;
         expect(isUnknownNode(node)).toBe(false);
         expect(node).toMatchObject({ kind: 'diagram', viewId: 'flow-1' });
     });
@@ -60,27 +71,27 @@ describe('kinds this version does not know', () => {
         main.nodes.push({ id: 'phone-node', kind: 'device', title: 'Phone', x: 0, y: 400, w: 360, h: 720, device: reference });
         file.views.push({ id: 'phone-view', kind: 'device', name: 'Phone', device: reference });
 
-        const document = migrateDocument(file)!;
+        const document = migratedFile(file)!;
         expect(isUnknownNode(canvasOf(document.views).nodes.at(-1)!)).toBe(false);
         expect(isUnknownView(document.views.at(-1)!)).toBe(false);
 
         const missing = structuredClone(file);
         delete (missing.views.at(-1) as Record<string, unknown>).device;
-        expect(migrateDocument(missing)).toBeNull();
+        expect(migratedFile(missing)).toBeNull();
     });
 
     test('a view and a node of an unknown kind are read and written back byte for byte', () => {
         const document = parsed();
         expect(isUnknownView(document.views[1]!)).toBe(true);
         expect(isUnknownNode(canvasOf(document.views).nodes[1]!)).toBe(true);
-        expect(unknownEntriesOf(storedContentOf(document).views)).toBe(UNKNOWN_ENTRIES);
+        expect(unknownEntriesOf(storedViewsOf(document.views))).toBe(UNKNOWN_ENTRIES);
     });
 
     test('the wire carries the in-memory shape, and reading it again gives the same document and the same file', () => {
         const document = parsed();
-        const again = ProjectDocumentSchema.parse(JSON.parse(JSON.stringify(document)));
-        expect(again).toEqual(document);
-        expect(unknownEntriesOf(storedContentOf(again).views)).toBe(UNKNOWN_ENTRIES);
+        const again = ProjectDocumentSchema.parse(JSON.parse(JSON.stringify({ ...document, rev: 0 })));
+        expect(again.views).toEqual(document.views);
+        expect(unknownEntriesOf(storedViewsOf(again.views))).toBe(UNKNOWN_ENTRIES);
     });
 
     test('an unknown view is listed under its name and who made it, and nothing opens, renames or copies it', () => {
@@ -95,9 +106,9 @@ describe('kinds this version does not know', () => {
 
     test('an unknown view without a name is called after its kind, and still written without one', () => {
         const file = { ...NEWER_FILE, views: [NEWER_FILE.views[0], { kind: 'timeline', id: 'bare' }] };
-        const document = migrateDocument(structuredClone(file))!;
+        const document = migratedFile(structuredClone(file))!;
         expect(document.views[1]).toMatchObject({ kind: 'unknown', name: 'timeline' });
-        expect(JSON.stringify(storedContentOf(document).views[1])).toBe(JSON.stringify(file.views[1]));
+        expect(JSON.stringify(storedViewsOf(document.views)[1])).toBe(JSON.stringify(file.views[1]));
     });
 
     test('a node of an unknown kind that a person moved keeps every field it had and takes the new place', () => {
@@ -107,7 +118,7 @@ describe('kinds this version does not know', () => {
             ...document,
             views: [{ ...canvas, nodes: canvas.nodes.map((node) => (node.id === 'holo' ? { ...node, x: 10, h: 400 } : node)) }, ...document.views.slice(1)]
         };
-        const stored = canvasOf(storedContentOf(moved).views).nodes[1];
+        const stored = canvasOf(storedViewsOf(moved.views)).nodes[1];
         expect(stored).toEqual({ ...NEWER_FILE.views[0]!.nodes![1]!, x: 10, h: 400 } as never);
         expect(Object.keys(stored!)).toEqual(Object.keys(NEWER_FILE.views[0]!.nodes![1]!));
     });
@@ -115,20 +126,20 @@ describe('kinds this version does not know', () => {
     test('a copy of a canvas gives an unknown node its new id in the file too', () => {
         const document = parsed();
         const copy = withDuplicatedView(document.views, 'main', (prefix) => `${prefix}-copy`)!;
-        const stored = storedContentOf({ ...document, views: copy.views });
-        const nodes = canvasOf([stored.views[1]]).nodes as unknown as { id: string }[];
+        const stored = storedViewsOf(copy.views);
+        const nodes = canvasOf([stored[1]]).nodes as unknown as { id: string }[];
         expect(nodes.map((node) => node.id)).toEqual(['terminal-copy', 'unknown-copy']);
-        expect(duplicateIdIn(ProjectDocumentSchema.parse({ ...stored, version: 2, rev: 5 }).views)).toBeNull();
+        expect(duplicateIdIn(ProjectDocumentSchema.parse({ ...document, views: stored, version: PROJECT_VERSION, rev: 5 }).views)).toBeNull();
     });
 
     test('a field a newer Ruimte put on an edge is read, sent and written back with it', () => {
         const document = parsed();
         expect(canvasOf(document.views).edges[0]!.relation).toBe('origin');
-        expect(JSON.stringify(canvasOf(storedContentOf(document).views).edges)).toBe(JSON.stringify(NEWER_FILE.views[0]!.edges));
+        expect(JSON.stringify(canvasOf(storedViewsOf(document.views)).edges)).toBe(JSON.stringify(NEWER_FILE.views[0]!.edges));
 
         // The wire is parsed on both ends, so a field that only survives one of the two is still lost.
-        const again = ProjectDocumentSchema.parse(JSON.parse(JSON.stringify(document)));
-        expect(JSON.stringify(canvasOf(storedContentOf(again).views).edges)).toBe(JSON.stringify(NEWER_FILE.views[0]!.edges));
+        const again = ProjectDocumentSchema.parse(JSON.parse(JSON.stringify({ ...document, rev: 0 })));
+        expect(JSON.stringify(canvasOf(storedViewsOf(again.views)).edges)).toBe(JSON.stringify(NEWER_FILE.views[0]!.edges));
     });
 
     test('a role this version does not know keeps its line, and reads as no role', () => {
@@ -141,7 +152,7 @@ describe('kinds this version does not know', () => {
         expect(edges[0]!.role).toBe('beams');
         expect(edgeRole(edges[0]!)).toBeNull();
         // A known key is rewritten in the order of the schema, so only the fields themselves may be compared.
-        expect(canvasOf(storedContentOf(parsedFrom(file)).views).edges).toEqual(file.views[0]!.edges as never);
+        expect(canvasOf(storedViewsOf(parsedFrom(file).views)).edges).toEqual(file.views[0]!.edges as never);
     });
 
     test('a role this version knows is read off the line', () => {
@@ -155,26 +166,26 @@ describe('kinds this version does not know', () => {
         expect(canvasOf(withoutCrossViewEdges(document.views)).edges).toHaveLength(1);
         const clash = structuredClone(NEWER_FILE);
         clash.views[0]!.nodes![0]!.id = 'holo';
-        expect(duplicateIdIn(migrateDocument(clash)!.views)).toBe('holo');
+        expect(duplicateIdIn(migratedFile(clash)!.views)).toBe('holo');
     });
 
     test('a kind this version knows is still checked, field by field', () => {
         const badView = structuredClone(NEWER_FILE) as { views: Record<string, unknown>[] };
         badView.views[2] = { kind: 'browser', id: 'web', name: 'Web' };
-        expect(migrateDocument(badView)).toBeNull();
+        expect(migratedFile(badView)).toBeNull();
 
         const badNode = structuredClone(NEWER_FILE);
         badNode.views[0]!.nodes![0]!.w = -1;
-        expect(migrateDocument(badNode)).toBeNull();
+        expect(migratedFile(badNode)).toBeNull();
     });
 
     test('an entry without an id or a kind is still no document', () => {
         const noId = structuredClone(NEWER_FILE) as { views: Record<string, unknown>[] };
         noId.views[1] = { kind: 'timeline', name: 'Flow' };
-        expect(migrateDocument(noId)).toBeNull();
+        expect(migratedFile(noId)).toBeNull();
 
         const noKind = structuredClone(NEWER_FILE) as { views: Record<string, unknown>[] };
         noKind.views[1] = { id: 'timeline-1', name: 'Flow' };
-        expect(migrateDocument(noKind)).toBeNull();
+        expect(migratedFile(noKind)).toBeNull();
     });
 });

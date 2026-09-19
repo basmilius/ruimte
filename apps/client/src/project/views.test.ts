@@ -6,7 +6,7 @@ import { useDocument } from '../state/document';
 import { askAgentAboutDiagram } from './views';
 
 const document: ProjectDocument = {
-    version: 2,
+    version: 3,
     rev: 1,
     name: 'Atlas',
     color: '#000',

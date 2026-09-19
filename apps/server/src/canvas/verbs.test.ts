@@ -31,7 +31,7 @@ import {
 } from '@ruimte/contracts';
 import { SESSION_VARIABLES } from '../config.ts';
 import { MAX_SCREEN_LINES } from '../context/context-store.ts';
-import { documentPathInFolder } from '../projects/project-files.ts';
+import { documentOnDisk, rawPrivateViews, setPrivateViews } from '../projects/project-file-test-helpers.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { DiagramStore } from '../projects/diagram-store.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
@@ -243,7 +243,7 @@ const post = async (verb: string, argv: string[], token = 'term'): Promise<{ sta
     return { status: response.status, lines: body === '' ? [] : body.replace(/\n$/, '').split('\n') };
 };
 
-const onDisk = async (): Promise<ProjectDocument> => JSON.parse(await readFile(documentPathInFolder(folder), 'utf8'));
+const onDisk = (): Promise<ProjectDocument> => documentOnDisk(folder);
 
 const canvasOnDisk = async (id = 'main'): Promise<ProjectCanvasView> => (await onDisk()).views.find((view) => view.id === id) as ProjectCanvasView;
 
@@ -1888,15 +1888,14 @@ describe('view new', () => {
         const file = await onDisk();
         const main = file.views[0] as ProjectCanvasView;
         const views = [{ ...main, nodes: [...main.nodes, hologram] }, timeline, ...file.views.slice(1)];
-        await writeFile(documentPathInFolder(folder), JSON.stringify({ ...file, views }, null, 2));
+        await setPrivateViews(folder, views);
 
         expect((await post('view', ['new', 'Plan'])).status).toBe(200);
 
-        const after = await onDisk();
-        const raw = after.views as unknown as Array<{ id: string; nodes?: Array<{ id: string }> }>;
+        const raw = (await rawPrivateViews(folder)) as unknown as Array<{ id: string; nodes?: Array<{ id: string }> }>;
         expect(JSON.stringify(raw.find((view) => view.id === 'timeline-1'))).toBe(JSON.stringify(timeline));
         expect(JSON.stringify(raw[0]!.nodes!.find((node) => node.id === 'holo'))).toBe(JSON.stringify(hologram));
-        expect(after.views.at(-1)).toMatchObject({ kind: 'canvas', name: 'Plan' });
+        expect((await onDisk()).views.at(-1)).toMatchObject({ kind: 'canvas', name: 'Plan' });
     });
 
     test('adds a canvas last in the sidebar and writes the caller down as its maker', async () => {

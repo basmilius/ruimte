@@ -3,14 +3,19 @@ import { mkdir, readFile, rm, rmdir, stat } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import {
     EMPTY_LOCAL,
+    EMPTY_PRIVATE_FILE,
     MAIN_VIEW_ID,
+    PROJECT_PRIVATE_VERSION,
     PROJECT_VERSION,
     MAIN_VIEW_NAME,
     ProjectDocumentSchema,
     ProjectIconChoiceSchema,
     UNKNOWN_KIND,
     duplicateIdIn,
+    mergeFiles,
     migrateLocal,
+    privateFileOf,
+    splitContent,
     type ProjectContent,
     type ProjectDocument,
     type ProjectIcon,
@@ -20,6 +25,7 @@ import {
     type ProjectOpenResult,
     type ProjectSetIconPayload,
     type ProjectSetIdentityPayload,
+    type ProjectSharedFile,
     type ProjectSummary,
     type ProjectView
 } from '@ruimte/contracts';
@@ -31,13 +37,21 @@ import {
     diagramsDirOf,
     documentPathInFolder,
     drawingsDirOf,
+    gitignorePathOf,
     fromPortable,
-    parseDocument,
-    readDocument,
+    parseSharedFile,
+    privateDirOf,
+    privatePathOf,
+    readPrivateFile,
+    readSharedFile,
     removeIconFiles,
+    serializePrivateFile,
+    serializeSharedFile,
     toPortable,
     tooNewMessage,
-    writeDocument,
+    writeGitignoreIfMissing,
+    writePrivateFile,
+    writeSharedFile,
     writeIconFile,
     ICON_EXTENSION_BY_MIME,
     PROJECT_FILE
@@ -117,8 +131,12 @@ export interface ProjectMutation<T> {
 interface OpenProject {
     entry: RegistryEntry;
     rev: number;
-    // The exact text last written or read, so the watcher can tell our own write from someone else's.
+    /* The exact text last written or read of the shared file, so the watcher can tell our own write
+       from someone else's. The private file has no watcher: nothing but this daemon writes it. */
     lastText: string;
+    lastPrivate: string;
+    // The views that live in the shared file, which is what a save has to be told to change.
+    shared: string[];
     watcher: DirectoryWatcher | null;
     cancelSettle: (() => void) | null;
     // The burst that is settling touched an icon file, so the folder has to be read again.
@@ -127,6 +145,13 @@ interface OpenProject {
     drawingIds: Set<string>;
     diagramIds: Set<string>;
 }
+
+/*
+ * Whether git tracks a path. A version-2 file someone committed was shared on purpose, so migrating
+ * it keeps its views in the shared file; one nobody committed becomes that person's own. Injected
+ * rather than imported, so a test decides this without a repository and the store stays out of git.
+ */
+export type TrackedProbe = (path: string) => Promise<boolean>;
 
 /* A view of a kind this daemon does not know may own a file under either folder, so it counts as live for both. */
 const viewIdsIn = (views: ProjectView[], kind: 'drawing' | 'diagram'): Set<string> =>
@@ -160,9 +185,66 @@ export class ProjectStore {
 
     private readonly seams: WatchSeams;
 
+    /* Nothing is shared until the daemon hands over a probe that can ask git; see `TrackedProbe`. */
+    private tracked: TrackedProbe = async () => false;
+
     constructor(home: string, seams: WatchSeams = SYSTEM_WATCH) {
         this.home = home;
         this.seams = seams;
+    }
+
+    attachTracked(tracked: TrackedProbe): void {
+        this.tracked = tracked;
+    }
+
+    /*
+     * Both files of a project as one document. The shared file is the one a team commits; the
+     * private one holds the rest, the rev and the sidebar order. A file from version 1 or 2 held
+     * everything at once, so reading one is also the moment the folder is split: what git tracks
+     * was committed on purpose and stays shared, and what it does not becomes this person's own.
+     */
+    private async loadFiles(
+        path: string,
+        entry: RegistryEntry,
+        read: { file: ProjectSharedFile; legacyRev: number | null } | null
+    ): Promise<{ content: ProjectContent; shared: string[]; rev: number; privateText: string | null }> {
+        const fallback = { name: entry.name, color: entry.color };
+        if (read?.legacyRev !== null && read !== null) {
+            const shared = (await this.tracked(path)) ? read.file.views.map((view: ProjectView) => view.id) : [];
+            const merged = mergeFiles(read.file, privateFileOf(shared.length > 0 ? [] : read.file.views, read.legacyRev), fallback);
+            return { content: merged.content, shared, rev: read.legacyRev, privateText: null };
+        }
+        const outcome = await readPrivateFile(privatePathOf(path));
+        if (outcome.kind === 'invalid' || outcome.kind === 'too-new') {
+            const why = outcome.kind === 'invalid' ? outcome.message : tooNewMessage('private project file', outcome.version, PROJECT_PRIVATE_VERSION);
+            throw new ProjectError('project-invalid', why);
+        }
+        const file = outcome.kind === 'ok' ? outcome.document : EMPTY_PRIVATE_FILE;
+        const merged = mergeFiles(read?.file ?? null, file, fallback);
+        return { content: merged.content, shared: merged.shared, rev: file.rev, privateText: outcome.kind === 'ok' ? outcome.text : null };
+    }
+
+    /*
+     * Writes whichever of the two files changed. The shared one is left alone when its text is what
+     * is already there, so moving a private node never shows up in anybody's git status.
+     */
+    private async writeFiles(
+        path: string,
+        content: ProjectContent,
+        shared: readonly string[],
+        rev: number,
+        was: { text: string; private: string }
+    ): Promise<{ text: string; private: string }> {
+        const split = splitContent(content, shared, rev);
+        const sharedText = serializeSharedFile(split.shared);
+        if (sharedText !== was.text) {
+            await writeSharedFile(path, split.shared);
+        }
+        const privateText = serializePrivateFile(split.private);
+        if (privateText !== was.private) {
+            await writePrivateFile(privatePathOf(path), split.private);
+        }
+        return { text: sharedText, private: privateText };
     }
 
     /* The drawing store follows this one: it hears about a save and about a project closing. */
@@ -279,7 +361,7 @@ export class ProjectStore {
         }
 
         const path = this.documentPath(entry);
-        let outcome = await readDocument(path);
+        let outcome = await readSharedFile(path);
         if (outcome.kind === 'invalid') {
             throw new ProjectError('project-invalid', outcome.message);
         }
@@ -290,21 +372,27 @@ export class ProjectStore {
             console.warn(`Set aside a canvas that would not parse: ${outcome.setAside}`);
             outcome = { kind: 'missing' };
         }
-        let document: ProjectDocument;
-        let text: string;
-        if (outcome.kind === 'ok') {
-            document = outcome.document;
-            text = outcome.text;
-        } else if (payload.projectId && entry.folder) {
+        const missing = outcome.kind !== 'ok';
+        if (missing && payload.projectId && entry.folder) {
             throw new ProjectError('project-missing', `The project file of ${entry.name} is missing from ${entry.folder}`);
-        } else {
-            // The one moment `.idea/.name` counts: it seeds the file, and the file owns the name from here.
-            if (firstOpen && entry.folder && !payload.name) {
-                entry = { ...entry, name: (await readIdeaName(entry.folder)) ?? entry.name };
-            }
-            document = { version: 2, rev: 0, name: entry.name, color: entry.color, views: [firstView()] };
-            text = await writeDocument(path, document);
         }
+        // The one moment `.idea/.name` counts: it seeds the file, and the file owns the name from here.
+        if (missing && firstOpen && entry.folder && !payload.name) {
+            entry = { ...entry, name: (await readIdeaName(entry.folder)) ?? entry.name };
+        }
+        const loaded = await this.loadFiles(path, entry, outcome.kind === 'ok' ? outcome.document : null);
+        const content = missing ? { name: entry.name, color: entry.color, views: [firstView()] } : loaded.content;
+        let text = outcome.kind === 'ok' ? outcome.text : '';
+        let privateText = loaded.privateText ?? '';
+        /* A folder that has no private file yet is one this daemon never wrote: a fresh project, a
+           clone of a repository with a canvas in it, or a version-2 file this open is splitting. */
+        if (missing || loaded.privateText === null) {
+            const written = await this.writeFiles(path, toPortable(content, entry.folder), loaded.shared, loaded.rev, { text, private: privateText });
+            text = written.text;
+            privateText = written.private;
+        }
+        await writeGitignoreIfMissing(path);
+        const document: ProjectDocument = { version: PROJECT_VERSION, rev: loaded.rev, ...content, shared: loaded.shared };
 
         // Opening is what takes a project back out of Recent, wherever the open came from.
         const wasRecent = entry.closedAt !== null && entry.closedAt !== undefined;
@@ -320,6 +408,8 @@ export class ProjectStore {
             entry,
             rev: document.rev,
             lastText: text,
+            lastPrivate: privateText,
+            shared: loaded.shared,
             watcher: null,
             cancelSettle: null,
             iconTouched: false,
@@ -341,17 +431,33 @@ export class ProjectStore {
     }
 
     /* `origin` is the client that sent the save: it already holds the document, and every other client is told. */
-    save(projectId: string, baseRev: number, content: ProjectContent, origin: string | null = null): Promise<number> {
-        return this.locked(() => this.saveUnlocked(projectId, baseRev, content, origin));
+    save(projectId: string, baseRev: number, content: ProjectContent, shared?: readonly string[], origin: string | null = null): Promise<number> {
+        return this.locked(() => this.saveUnlocked(projectId, baseRev, content, shared, origin));
     }
 
-    private async saveUnlocked(projectId: string, baseRev: number, content: ProjectContent, origin: string | null): Promise<number> {
+    private async saveUnlocked(
+        projectId: string,
+        baseRev: number,
+        content: ProjectContent,
+        shared: readonly string[] | undefined,
+        origin: string | null
+    ): Promise<number> {
         const state = this.require(projectId);
         if (baseRev !== state.rev) {
             throw new ProjectError('rev-conflict', `The canvas is at rev ${state.rev}, the save was based on ${baseRev}`);
         }
-        const document: ProjectDocument = { version: 2, rev: state.rev + 1, ...toPortable(content, state.entry.folder) };
-        state.lastText = await writeDocument(this.documentPath(state.entry), document);
+        /* Only a person's save moves a view between the two files. A payload without a list leaves
+           the folder as it is, which is what an older client and every other writer amount to. */
+        const ids = [...(shared ?? state.shared)];
+        const portable = toPortable(content, state.entry.folder);
+        const document: ProjectDocument = { version: PROJECT_VERSION, rev: state.rev + 1, ...portable, shared: ids };
+        const written = await this.writeFiles(this.documentPath(state.entry), portable, ids, document.rev, {
+            text: state.lastText,
+            private: state.lastPrivate
+        });
+        state.lastText = written.text;
+        state.lastPrivate = written.private;
+        state.shared = ids;
         state.rev = document.rev;
         this.index.set(projectId, state.entry.folder, fromPortable(document, state.entry.folder));
         const drawingIds = drawingIdsIn(document.views);
@@ -398,12 +504,12 @@ export class ProjectStore {
     }
 
     private async mutateUnlocked<T>(projectId: string, apply: (content: ProjectContent) => ProjectMutation<T> | Promise<ProjectMutation<T>>): Promise<T> {
-        const { entry, path, rev, content } = await this.readCurrent(projectId);
+        const { entry, path, rev, content, shared } = await this.readCurrent(projectId);
         const mutation = await apply(content);
         if (mutation.content === null) {
             return mutation.result;
         }
-        const parsed = ProjectDocumentSchema.safeParse({ version: 2, rev: rev + 1, ...toPortable(mutation.content, entry.folder) });
+        const parsed = ProjectDocumentSchema.safeParse({ version: PROJECT_VERSION, rev: rev + 1, ...toPortable(mutation.content, entry.folder), shared });
         if (!parsed.success) {
             throw new ProjectError('project-invalid', `The change would not make a valid canvas: ${parsed.error.issues[0]?.message ?? 'unknown'}`);
         }
@@ -412,7 +518,11 @@ export class ProjectStore {
         if (duplicate) {
             throw new ProjectError('project-invalid', `The change would give two things the id "${duplicate}"`);
         }
-        const text = await writeDocument(path, document);
+        const state = this.open.get(projectId);
+        const written = await this.writeFiles(path, toPortable(mutation.content, entry.folder), shared, document.rev, {
+            text: state?.lastText ?? '',
+            private: state?.lastPrivate ?? ''
+        });
         const icon = mutation.content.icon ?? null;
         const identityChanged = mutation.content.name !== entry.name || mutation.content.color !== entry.color || !sameIcon(icon, entry.icon ?? null);
         const nextEntry = identityChanged ? { ...entry, name: mutation.content.name, color: mutation.content.color, icon } : entry;
@@ -420,10 +530,11 @@ export class ProjectStore {
             const entries = await this.loadRegistry();
             await this.saveRegistry(entries.map((candidate) => (candidate.projectId === projectId ? nextEntry : candidate)));
         }
-        const state = this.open.get(projectId);
         if (state) {
             state.entry = nextEntry;
-            state.lastText = text;
+            state.lastText = written.text;
+            state.lastPrivate = written.private;
+            state.shared = [...shared];
             state.rev = document.rev;
             state.drawingIds = drawingIdsIn(document.views);
             state.diagramIds = diagramIdsIn(document.views);
@@ -466,8 +577,8 @@ export class ProjectStore {
         });
     }
 
-    /* Deliberately not `readDocument`: a verb that finds a broken file refuses, it does not move a person's file aside. */
-    private async readCurrent(projectId: string): Promise<{ entry: RegistryEntry; path: string; rev: number; content: ProjectContent }> {
+    /* Deliberately not `readSharedFile`: a verb that finds a broken file refuses, it does not move a person's file aside. */
+    private async readCurrent(projectId: string): Promise<{ entry: RegistryEntry; path: string; rev: number; content: ProjectContent; shared: string[] }> {
         const entry = (await this.loadRegistry()).find((candidate) => candidate.projectId === projectId);
         if (!entry) {
             throw new ProjectError('project-not-found', `No project ${projectId}`);
@@ -482,7 +593,7 @@ export class ProjectStore {
             }
             throw e;
         }
-        const parsed = parseDocument(text);
+        const parsed = parseSharedFile(text);
         if (parsed.kind === 'invalid') {
             throw new ProjectError('project-invalid', parsed.message);
         }
@@ -492,8 +603,8 @@ export class ProjectStore {
         if (parsed.kind !== 'ok') {
             throw new ProjectError('project-invalid', `${path} does not parse as a canvas`);
         }
-        const { version: _version, rev, ...content } = parsed.document;
-        return { entry, path, rev, content: fromPortable(content, entry.folder) };
+        const loaded = await this.loadFiles(path, entry, parsed.document);
+        return { entry, path, rev: loaded.rev, content: fromPortable(loaded.content, entry.folder), shared: loaded.shared };
     }
 
     async saveLocal(projectId: string, local: ProjectLocal): Promise<void> {
@@ -630,6 +741,9 @@ export class ProjectStore {
             // is the person's project. Those go first, or the rmdir below finds `.ruimte` full.
             await rm(drawingsDirOf(this.documentPath(entry)), { recursive: true, force: true });
             await rm(diagramsDirOf(this.documentPath(entry)), { recursive: true, force: true });
+            // Everything of this project that never left the machine, the private views among it.
+            await rm(privateDirOf(this.documentPath(entry)), { recursive: true, force: true });
+            await rm(gitignorePathOf(this.documentPath(entry)), { force: true });
             await rm(this.documentPath(entry), { force: true });
             // `.ruimte` goes only when nothing else is in it: an icon or a file a person put there
             // keeps it, and `rmdir` says so by failing.
@@ -655,9 +769,11 @@ export class ProjectStore {
                 } catch {
                     return;
                 }
-                const parsed = parseDocument(text);
+                const parsed = parseSharedFile(text);
                 if (parsed.kind === 'ok' && !this.index.has(entry.projectId)) {
-                    this.index.set(entry.projectId, entry.folder, fromPortable(parsed.document, entry.folder));
+                    const loaded = await this.loadFiles(this.documentPath(entry), entry, parsed.document);
+                    const document: ProjectDocument = { version: PROJECT_VERSION, rev: loaded.rev, ...loaded.content, shared: loaded.shared };
+                    this.index.set(entry.projectId, entry.folder, fromPortable(document, entry.folder));
                 }
             })
         );
@@ -749,7 +865,7 @@ export class ProjectStore {
         if (text === state.lastText) {
             return;
         }
-        const parsed = parseDocument(text);
+        const parsed = parseSharedFile(text);
         if (parsed.kind === 'invalid') {
             console.warn(`An outside edit to ${path} was ignored: ${parsed.message}`);
             return;
@@ -758,9 +874,14 @@ export class ProjectStore {
             // Half-written by someone else; the event that follows the finished write reads it whole.
             return;
         }
-        const { document } = parsed;
+        /* The rev goes up for this machine: what arrived is a state no client here has, and every
+           one of them has to base its next save on it. The private file keeps its own views. */
+        const loaded = await this.loadFiles(path, state.entry, parsed.document);
+        const rev = state.rev + 1;
+        const document: ProjectDocument = { version: PROJECT_VERSION, rev, ...loaded.content, shared: loaded.shared };
         state.lastText = text;
-        state.rev = document.rev;
+        state.shared = loaded.shared;
+        state.rev = rev;
         state.drawingIds = drawingIdsIn(document.views);
         state.diagramIds = diagramIdsIn(document.views);
         state.entry = { ...state.entry, name: document.name, color: document.color, icon: document.icon ?? null };

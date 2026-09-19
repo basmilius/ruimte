@@ -9,7 +9,7 @@ const node = (id: string, kind: ProjectNode['kind'] = 'terminal'): ProjectNode =
 
 const view = (id: string, nodes: ProjectNode[]): ProjectCanvasView => ({ kind: 'canvas', id, name: id, nodes, texts: [], edges: [], layouts: [] });
 
-const project = (views: ProjectCanvasView[]): ProjectDocument => ({ version: 2, rev: 1, name: 'p', color: '#000', views });
+const project = (views: ProjectCanvasView[]): ProjectDocument => ({ version: 3, rev: 1, name: 'p', color: '#000', views });
 
 const container: Endpoint = {
     id: 'Xk3p',

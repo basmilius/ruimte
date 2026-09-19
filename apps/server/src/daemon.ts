@@ -99,6 +99,7 @@ import { createSampler } from './processes/sampler.ts';
 import { handleProjectRequest, PROJECTS_PATH } from './projects/icon-route.ts';
 import { DiagramStore } from './projects/diagram-store.ts';
 import { DrawingStore } from './projects/drawing-store.ts';
+import { isTrackedPath } from './git/ignore.ts';
 import { ProjectStore } from './projects/project-store.ts';
 import { takesNoteOnLine } from './providers/launch.ts';
 import { ProviderRegistry } from './providers/registry.ts';
@@ -235,6 +236,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         plans
     });
     const projects = new ProjectStore(config.home);
+    projects.attachTracked(isTrackedPath);
     const outboxWiring = wireOutbox({
         link: outboxLink,
         outbox,

@@ -15,7 +15,7 @@ const view = (id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectCanvas
 
 const node = (id: string, x = 0, y = 0): ProjectCanvasView['nodes'][number] => ({ id, kind: 'terminal', title: id, x, y, w: 100, h: 80 });
 
-const document = (views: ProjectCanvasView[]): ProjectDocument => ({ version: 2, rev: 1, name: 'p', color: '#000', views });
+const document = (views: ProjectCanvasView[]): ProjectDocument => ({ version: 3, rev: 1, name: 'p', color: '#000', views });
 
 const shape = (): string[][] => (useDocument.getState().layout?.columns ?? []).map((column) => column.cells.map((cell) => cell.viewId));
 

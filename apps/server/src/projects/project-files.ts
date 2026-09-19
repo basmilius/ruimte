@@ -3,28 +3,35 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import {
     DIAGRAM_VERSION,
     DRAWING_VERSION,
+    PROJECT_PRIVATE_VERSION,
     PROJECT_VERSION,
+    ProjectPrivateFileSchema,
     diagramProblemIn,
     duplicateElementIdIn,
     duplicateIdIn,
     isCanvasView,
     migrateDiagram,
-    migrateDocument,
     migrateDrawing,
+    migrateSharedFile,
     newerVersionIn,
-    storedContentOf,
+    storedViewsOf,
     withoutCrossViewEdges,
     type DiagramDocument,
     type DrawingDocument,
     type ProjectContent,
-    type ProjectDocument,
+    type ProjectPrivateFile,
+    type ProjectSharedFile,
     type ProjectNode,
-    type ProjectView
+    type ProjectView,
+    type SharedFileRead
 } from '@ruimte/contracts';
-import { isNotFound, writeAtomic } from '../fs.ts';
+import { fileExists, isNotFound, writeAtomic } from '../fs.ts';
 
 export const PROJECT_DIR = '.ruimte';
 export const PROJECT_FILE = 'project.json';
+/* The mirror of `.ruimte` that holds what belongs to one person. The `.gitignore` beside it names this one line. */
+export const PRIVATE_DIR = 'private';
+export const GITIGNORE_FILE = '.gitignore';
 // One file per drawing view, in a directory of their own: `.ruimte` is read by people and by git,
 // and its top level stays the two files the daemon documents.
 export const DRAWINGS_DIR = 'drawings';
@@ -90,12 +97,43 @@ export const writeJsonDocument = async <T>(path: string, document: T, serialize:
 export const tooNewMessage = (noun: string, version: number, known: number): string =>
     `This ${noun} was written by a newer Ruimte (file version ${version}, this one reads ${known}). Update Ruimte to open it.`;
 
-export type DocumentParse = JsonDocumentParse<ProjectDocument>;
+/* Where the two files of a project sit, and the one line that keeps the second out of the repository. */
+export const documentPathInFolder = (folder: string): string => join(folder, PROJECT_DIR, PROJECT_FILE);
 
-/* Reads a canvas file, version 1 or 2. */
-export const readDocument = (path: string): Promise<JsonDocumentRead<ProjectDocument>> => readJsonDocument(path, parseDocument);
+export const privateDirOf = (documentPath: string): string => join(dirname(documentPath), PRIVATE_DIR);
 
-export const parseDocument = (text: string): DocumentParse => {
+export const privatePathOf = (documentPath: string): string => join(privateDirOf(documentPath), PROJECT_FILE);
+
+export const gitignorePathOf = (documentPath: string): string => join(dirname(documentPath), GITIGNORE_FILE);
+
+/*
+ * Written once, when a project folder has none, and never touched again: a person who edits these
+ * rules keeps their edit. `private/` is the whole point; the other two are the leftovers of a write
+ * that crashed and of a file this daemon had to set aside, neither of which belongs in a commit.
+ */
+export const GITIGNORE_TEXT = [
+    '# Ruimte writes this folder. Everything here is meant to be committed,',
+    '# except what belongs to one person or to one machine.',
+    `${PRIVATE_DIR}/`,
+    '*.corrupt-*',
+    '*.tmp',
+    ''
+].join('\n');
+
+export const writeGitignoreIfMissing = async (documentPath: string): Promise<boolean> => {
+    const path = gitignorePathOf(documentPath);
+    if (await fileExists(path)) {
+        return false;
+    }
+    await mkdir(dirname(path), { recursive: true });
+    await writeAtomic(path, GITIGNORE_TEXT, 0o644);
+    return true;
+};
+
+/* Reads `.ruimte/project.json` on any version there has been. */
+export const readSharedFile = (path: string): Promise<JsonDocumentRead<SharedFileRead>> => readJsonDocument(path, parseSharedFile);
+
+export const parseSharedFile = (text: string): JsonDocumentParse<SharedFileRead> => {
     let value: unknown;
     try {
         value = JSON.parse(text);
@@ -106,22 +144,97 @@ export const parseDocument = (text: string): DocumentParse => {
     if (newer !== null) {
         return { kind: 'too-new', version: newer };
     }
-    const document = migrateDocument(value);
-    if (!document) {
+    const read = migrateSharedFile(value);
+    if (!read) {
         return { kind: 'unreadable' };
     }
-    const duplicate = duplicateIdIn(document.views);
+    const duplicate = duplicateIdIn(read.file.views);
     if (duplicate) {
         return { kind: 'invalid', message: `Two views or nodes in this project share the id "${duplicate}"` };
     }
-    return { kind: 'ok', document: { ...document, views: withoutCrossViewEdges(document.views) } };
+    return { kind: 'ok', document: { ...read, file: { ...read.file, views: withoutCrossViewEdges(read.file.views) } } };
 };
 
-/* Pretty-printed with a trailing newline, so a diff of the file in git reads like one. An entry of a
-   kind a newer Ruimte wrote goes back in exactly as it was read. */
-export const serializeDocument = (document: ProjectDocument): string => `${JSON.stringify(storedContentOf(document), null, 2)}\n`;
+export const parsePrivateFile = (text: string): JsonDocumentParse<ProjectPrivateFile> => {
+    let value: unknown;
+    try {
+        value = JSON.parse(text);
+    } catch {
+        return { kind: 'unreadable' };
+    }
+    const newer = newerVersionIn(value, PROJECT_PRIVATE_VERSION);
+    if (newer !== null) {
+        return { kind: 'too-new', version: newer };
+    }
+    const parsed = ProjectPrivateFileSchema.safeParse(value);
+    if (!parsed.success) {
+        return { kind: 'unreadable' };
+    }
+    return { kind: 'ok', document: { ...parsed.data, views: withoutCrossViewEdges(parsed.data.views) } };
+};
 
-export const writeDocument = (path: string, document: ProjectDocument): Promise<string> => writeJsonDocument(path, document, serializeDocument);
+export const readPrivateFile = (path: string): Promise<JsonDocumentRead<ProjectPrivateFile>> => readJsonDocument(path, parsePrivateFile);
+
+/*
+ * The file the way git reads best: two spaces for the shape, and every node, text, line and
+ * arrangement of a canvas on a line of its own. `JSON.stringify(document, null, 2)` puts a node
+ * over twenty lines, so two people who each add one collide at the end of the same array; this way
+ * moving a node is one changed line and adding one is one line more. The drawings and the diagrams
+ * have been written like this all along.
+ */
+const INDENT = '  ';
+
+const LINE_PER_ITEM = new Set(['nodes', 'texts', 'edges', 'layouts']);
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const itemsOnLines = (items: readonly unknown[], indent: string): string =>
+    items.length === 0 ? '[]' : `[\n${items.map((item) => `${indent}${INDENT}${JSON.stringify(item)}`).join(',\n')}\n${indent}]`;
+
+/* A canvas opened up; every other view is small enough to read on one line. */
+const serializeView = (view: unknown, indent: string): string => {
+    if (!isRecord(view) || view.kind !== 'canvas') {
+        return `${indent}${JSON.stringify(view)}`;
+    }
+    const inner = `${indent}${INDENT}`;
+    const fields = Object.entries(view).map(([key, value]) =>
+        LINE_PER_ITEM.has(key) && Array.isArray(value)
+            ? `${inner}${JSON.stringify(key)}: ${itemsOnLines(value, inner)}`
+            : `${inner}${JSON.stringify(key)}: ${JSON.stringify(value)}`
+    );
+    return `${indent}{\n${fields.join(',\n')}\n${indent}}`;
+};
+
+const viewsOnLines = (views: readonly ProjectView[], indent: string): string => {
+    const stored = storedViewsOf(views);
+    return stored.length === 0 ? '[]' : `[\n${stored.map((view) => serializeView(view, `${indent}${INDENT}`)).join(',\n')}\n${indent}]`;
+};
+
+export const serializeSharedFile = (file: ProjectSharedFile): string => {
+    const fields = [
+        `${INDENT}"version": ${file.version}`,
+        `${INDENT}"name": ${JSON.stringify(file.name)}`,
+        `${INDENT}"color": ${JSON.stringify(file.color)}`,
+        ...(file.icon ? [`${INDENT}"icon": ${JSON.stringify(file.icon)}`] : []),
+        `${INDENT}"views": ${viewsOnLines(file.views, INDENT)}`
+    ];
+    return `{\n${fields.join(',\n')}\n}\n`;
+};
+
+export const serializePrivateFile = (file: ProjectPrivateFile): string => {
+    const fields = [
+        `${INDENT}"version": ${file.version}`,
+        `${INDENT}"rev": ${file.rev}`,
+        `${INDENT}"views": ${viewsOnLines(file.views, INDENT)}`,
+        `${INDENT}"order": ${itemsOnLines(file.order, INDENT)}`,
+        `${INDENT}"overlay": ${JSON.stringify(file.overlay, null, 2).split('\n').join(`\n${INDENT}`)}`
+    ];
+    return `{\n${fields.join(',\n')}\n}\n`;
+};
+
+export const writeSharedFile = (path: string, file: ProjectSharedFile): Promise<string> => writeJsonDocument(path, file, serializeSharedFile);
+
+export const writePrivateFile = (path: string, file: ProjectPrivateFile): Promise<string> => writeJsonDocument(path, file, serializePrivateFile);
 
 const toPosix = (path: string): string => path.split(sep).join('/');
 
@@ -166,8 +279,6 @@ export const fromPortable = <T extends ProjectContent>(content: T, folder: strin
     }
     return { ...content, views: mapViews(content.views, (cwd) => (isAbsolute(cwd) ? cwd : resolve(folder, cwd))) };
 };
-
-export const documentPathInFolder = (folder: string): string => join(folder, PROJECT_DIR, PROJECT_FILE);
 
 export const drawingsDirOf = (documentPath: string): string => join(dirname(documentPath), DRAWINGS_DIR);
 

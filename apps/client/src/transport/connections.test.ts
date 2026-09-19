@@ -43,7 +43,7 @@ const answer =
                 ? Promise.reject(new Error('That project is gone'))
                 : Promise.resolve({
                       summary: project,
-                      document: { version: 2, rev: 1, name: project.name, color: project.color, views: [] },
+                      document: { version: 3, rev: 1, name: project.name, color: project.color, views: [] },
                       local: { activeViewId: null, views: {} }
                   } as unknown as RequestMap[RequestType]['result']);
         }

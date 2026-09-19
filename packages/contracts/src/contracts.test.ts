@@ -305,7 +305,7 @@ describe('project', () => {
 
     test('a separator view carries an id and, if a person gave it one, a label', () => {
         const view = { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [], texts: [], edges: [] };
-        const document = (views: unknown[]) => ProjectDocumentSchema.safeParse({ version: 2, rev: 1, name: 'p', color: 'violet', views });
+        const document = (views: unknown[]) => ProjectDocumentSchema.safeParse({ version: 3, rev: 1, name: 'p', color: 'violet', views });
         expect(document([view, { kind: 'separator', id: 's1' }]).success).toBe(true);
         expect(document([view, { kind: 'separator', id: 's1', name: 'Agents' }]).success).toBe(true);
         // An empty label is not a label: a separator without one is the bare line.
@@ -315,7 +315,7 @@ describe('project', () => {
 
     test('a view may overrule the mark of its kind, with the same two kinds a project picks from', () => {
         const view = { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [], texts: [], edges: [] };
-        const document = (views: unknown[]) => ProjectDocumentSchema.safeParse({ version: 2, rev: 1, name: 'p', color: 'violet', views });
+        const document = (views: unknown[]) => ProjectDocumentSchema.safeParse({ version: 3, rev: 1, name: 'p', color: 'violet', views });
         expect(document([{ ...view, icon: { kind: 'lucide', value: 'rocket' } }]).success).toBe(true);
         expect(document([{ ...view, icon: { kind: 'emoji', value: '\u{1f680}' } }]).success).toBe(true);
         // No icon at all is the default: the row wears the mark of what it is.
@@ -330,7 +330,7 @@ describe('project', () => {
 
     test('a canvas file without an icon parses, and only the two kinds a person picks are allowed', () => {
         const view = { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [], texts: [], edges: [] };
-        const before = { version: 2, rev: 4, name: 'p', color: 'violet', views: [view] };
+        const before = { version: 3, rev: 4, name: 'p', color: 'violet', views: [view] };
         const parsed = ProjectDocumentSchema.safeParse(before);
         expect(parsed.success).toBe(true);
         expect(parsed.success && parsed.data.icon).toBeUndefined();

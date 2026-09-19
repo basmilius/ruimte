@@ -32,7 +32,7 @@ const summary: ProjectSummary = {
 };
 
 const project = (): ProjectDocument => ({
-    version: 2,
+    version: 3,
     rev: 1,
     name: 'p',
     color: '#000',

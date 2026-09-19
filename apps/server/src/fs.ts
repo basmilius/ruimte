@@ -1,5 +1,5 @@
 import { renameSync, writeFileSync } from 'node:fs';
-import { rename, writeFile } from 'node:fs/promises';
+import { rename, stat, writeFile } from 'node:fs/promises';
 
 // Windows can refuse a rename while a watcher or an indexer holds the target; a few short retries cover it.
 const RENAME_RETRIES = 5;
@@ -57,3 +57,12 @@ export const writeAtomicSync = (target: string, content: string | Uint8Array, mo
 };
 
 export const isNotFound = (e: unknown): boolean => typeof e === 'object' && e !== null && 'code' in e && e.code === 'ENOENT';
+
+export const fileExists = async (path: string): Promise<boolean> => {
+    try {
+        await stat(path);
+        return true;
+    } catch {
+        return false;
+    }
+};

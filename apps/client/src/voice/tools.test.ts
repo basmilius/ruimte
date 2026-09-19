@@ -10,7 +10,7 @@ import { executeVoiceTool } from '@/voice/tools';
 const main: ProjectCanvasView = { kind: 'canvas', id: 'main', name: 'Main', nodes: [], texts: [], edges: [], layouts: [] };
 
 const document: ProjectDocument = {
-    version: 2,
+    version: 3,
     rev: 1,
     name: 'Atlas',
     color: '#000',

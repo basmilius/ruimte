@@ -1,39 +1,59 @@
 import {
     MAIN_VIEW_ID,
     MAIN_VIEW_NAME,
-    ProjectDocumentSchema,
+    PROJECT_VERSION,
     ProjectDocumentV1Schema,
+    ProjectDocumentV2Schema,
     ProjectLocalSchema,
     ProjectLocalV1Schema,
+    ProjectSharedFileSchema,
     isCanvasView,
-    type ProjectDocument,
     type ProjectLocal,
+    type ProjectSharedFile,
     type ProjectView
 } from './project.ts';
 
+/* What reading `.ruimte/project.json` gives: the file, and what an older one carried beside it. */
+export interface SharedFileRead {
+    file: ProjectSharedFile;
+    /*
+     * The rev of a version-1 or version-2 file, which moves into the private file, and the sign
+     * that the folder still has to be split. Null for a file that is already version 3.
+     */
+    legacyRev: number | null;
+}
+
 /*
- * Reading a project file. Version 2 is what the daemon writes; a version-1 file is wrapped in one
- * canvas view on the way in. The view keeps the fixed id `main` on purpose: the file can be
+ * Reading a project file, on every version there has been. Version 1 was one canvas and version 2
+ * put everything in one file; both become the shared file of version 3, and the daemon decides what
+ * of it stays shared. A version-1 canvas keeps the fixed view id `main` on purpose: the file can be
  * committed, and two machines that migrate it on their own have to end up on the same id, or the
  * second save would add a ghost view next to the first one.
  */
-export const migrateDocument = (value: unknown): ProjectDocument | null => {
-    const current = ProjectDocumentSchema.safeParse(value);
+export const migrateSharedFile = (value: unknown): SharedFileRead | null => {
+    const current = ProjectSharedFileSchema.safeParse(value);
     if (current.success) {
-        return current.data;
+        return { file: current.data, legacyRev: null };
     }
-    const legacy = ProjectDocumentV1Schema.safeParse(value);
-    if (!legacy.success) {
+    const two = ProjectDocumentV2Schema.safeParse(value);
+    if (two.success) {
+        const { version: _version, rev, ...content } = two.data;
+        return { file: { version: PROJECT_VERSION, ...content }, legacyRev: rev };
+    }
+    const one = ProjectDocumentV1Schema.safeParse(value);
+    if (!one.success) {
         return null;
     }
-    const { rev, name, color, icon, nodes, texts, edges, layouts } = legacy.data;
+    const { rev, name, color, icon, nodes, texts, edges, layouts } = one.data;
     return {
-        version: 2,
-        rev,
-        name,
-        color,
-        ...(icon ? { icon } : {}),
-        views: [{ kind: 'canvas', id: MAIN_VIEW_ID, name: MAIN_VIEW_NAME, nodes, texts, edges, layouts }]
+        file: {
+            version: PROJECT_VERSION,
+            name,
+            color,
+            ...(icon ? { icon } : {}),
+            views: [{ kind: 'canvas', id: MAIN_VIEW_ID, name: MAIN_VIEW_NAME, nodes, texts, edges, layouts }]
+        },
+        legacyRev: rev
     };
 };
 

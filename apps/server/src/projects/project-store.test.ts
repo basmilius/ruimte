@@ -2,11 +2,13 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { PROJECT_VERSION, type ProjectCanvasView, type ProjectContent, type ProjectDocument } from '@ruimte/contracts';
+import { GITIGNORE_TEXT } from './project-files.ts';
+import { PROJECT_VERSION, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
 import { FakeWatch } from '../fs/watch-test-helpers.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { DiagramStore } from './diagram-store.ts';
 import { DrawingStore } from './drawing-store.ts';
+import { documentOnDisk, privateFileOnDisk, rawPrivateViews } from './project-file-test-helpers.ts';
 import { documentPathInFolder, fromPortable, toPortable } from './project-files.ts';
 import { ProjectStore } from './project-store.ts';
 
@@ -76,13 +78,13 @@ describe('ProjectStore', () => {
     test('opening a folder creates the canvas file, lists it, and saves with a rising rev', async () => {
         const opened = await store.openProject({ folder });
         expect(opened.summary).toMatchObject({ name: 'repo', folder, available: true });
-        expect(opened.document).toMatchObject({ version: 2, rev: 0 });
+        expect(opened.document).toMatchObject({ version: PROJECT_VERSION, rev: 0, shared: [] });
         expect(canvas(opened.document)).toMatchObject({ id: 'main', name: 'Canvas', nodes: [] });
         expect(opened.local).toEqual({ activeViewId: null, views: {} });
 
         expect(await store.save(opened.summary.projectId, 0, content())).toBe(1);
         expect(await store.save(opened.summary.projectId, 1, content('renamed'))).toBe(2);
-        const onDisk = JSON.parse(await readFile(documentPathInFolder(folder), 'utf8')) as ProjectDocument;
+        const onDisk = await documentOnDisk(folder);
         expect(onDisk.rev).toBe(2);
         // Relative on disk, absolute once read back.
         expect(canvas(onDisk).nodes[0]?.cwd).toBe('./apps/server');
@@ -103,7 +105,7 @@ describe('ProjectStore', () => {
 
         const opened = await store.openProject({ folder });
         await store.save(opened.summary.projectId, 0, withEdge);
-        const onDisk = JSON.parse(await readFile(documentPathInFolder(folder), 'utf8')) as ProjectDocument;
+        const onDisk = await documentOnDisk(folder);
         expect(canvas(onDisk).edges).toEqual([edge]);
 
         const again = await store.openProject({ projectId: opened.summary.projectId });
@@ -119,7 +121,7 @@ describe('ProjectStore', () => {
     test('an outside edit is reported once with what is on disk, and our own write is not', async () => {
         const opened = await store.openProject({ folder });
         // Saved by the one client listening, which already holds what it wrote.
-        await store.save(opened.summary.projectId, 0, content(), 'c1');
+        await store.save(opened.summary.projectId, 0, content(), undefined, 'c1');
         projectDirWatcher().emit('project.json');
         await fake.settle();
         expect(changed).toEqual([]);
@@ -129,20 +131,21 @@ describe('ProjectStore', () => {
         expect(fake.pending).toBe(0);
 
         const path = documentPathInFolder(folder);
-        const pulled: ProjectDocument = { ...(JSON.parse(await readFile(path, 'utf8')) as ProjectDocument), rev: 7, name: 'from git' };
+        const pulled = { ...(JSON.parse(await readFile(path, 'utf8')) as Record<string, unknown>), name: 'from git' };
         await writeFile(path, JSON.stringify(pulled, null, 2));
         projectDirWatcher().emit('project.json');
         projectDirWatcher().emit('project.json');
         expect(fake.pending).toBe(1);
         await fake.settle();
         expect(changed).toHaveLength(1);
+        /* The rev of a pull is this machine's own and goes up by one: the shared file carries no rev,
+           and every client here has to base its next save on what just arrived. */
         expect(changed[0]).toMatchObject({
             event: 'project.changed',
-            payload: { projectId: opened.summary.projectId, document: { rev: 7, name: 'from git' } }
+            payload: { projectId: opened.summary.projectId, document: { rev: 2, name: 'from git' } }
         });
-        // The daemon now expects saves against the pulled rev.
         await expect(store.save(opened.summary.projectId, 1, content())).rejects.toMatchObject({ code: 'rev-conflict' });
-        expect(await store.save(opened.summary.projectId, 7, content())).toBe(8);
+        expect(await store.save(opened.summary.projectId, 2, content())).toBe(3);
     });
 
     test('a corrupt file is set aside and a fresh canvas takes its place', async () => {
@@ -216,7 +219,7 @@ describe('ProjectStore', () => {
         const opened = await store.openProject({ folder });
         await store.delete(opened.summary.projectId, false);
         expect((await store.list()).map((project) => project.folder)).not.toContain(folder);
-        expect(await readFile(documentPathInFolder(folder), 'utf8')).toContain('"version": 2');
+        expect(await readFile(documentPathInFolder(folder), 'utf8')).toContain(`"version": ${PROJECT_VERSION}`);
     });
 
     test('a daemon nobody has opened a project on lists nothing, and listing makes nothing', async () => {
@@ -278,7 +281,7 @@ describe('ProjectStore', () => {
         expect(opened.summary.name).toBe('Ruimte Daemon');
         expect(opened.summary.nameSource).toBe('chosen');
         expect(opened.document.name).toBe('Ruimte Daemon');
-        const onDisk = JSON.parse(await readFile(documentPathInFolder(folder), 'utf8')) as ProjectDocument;
+        const onDisk = await documentOnDisk(folder);
         expect(onDisk.name).toBe('Ruimte Daemon');
     });
 
@@ -310,16 +313,19 @@ describe('ProjectStore', () => {
         await writeFile(documentPathInFolder(folder), `${JSON.stringify(legacy, null, 2)}\n`);
 
         const opened = await store.openProject({ folder });
-        expect(opened.document).toMatchObject({ version: 2, rev: 11, name: 'ruimte' });
+        expect(opened.document).toMatchObject({ version: PROJECT_VERSION, rev: 11, name: 'ruimte' });
         expect(opened.document.views).toHaveLength(1);
         expect(canvas(opened.document)).toMatchObject({ id: 'main', name: 'Canvas' });
         expect(canvas(opened.document).nodes[0]?.cwd).toBe(join(folder, 'apps'));
-        // A project that is only read stays readable for an older build; the first save moves it on.
-        expect(await readFile(documentPathInFolder(folder), 'utf8')).toContain('"version": 1');
+        /* Opening splits the folder: the views of a file nobody committed become this person's own,
+           so the shared file keeps the identity and the private file everything else. */
+        expect(await readFile(documentPathInFolder(folder), 'utf8')).toContain(`"version": ${PROJECT_VERSION}`);
+        expect((await privateFileOnDisk(folder)).views).toHaveLength(1);
+        expect(opened.document.shared).toEqual([]);
 
         await store.save(opened.summary.projectId, 11, { ...content(), views: opened.document.views });
-        const onDisk = JSON.parse(await readFile(documentPathInFolder(folder), 'utf8')) as ProjectDocument;
-        expect(onDisk).toMatchObject({ version: 2, rev: 12 });
+        const onDisk = await documentOnDisk(folder);
+        expect(onDisk).toMatchObject({ version: PROJECT_VERSION, rev: 12 });
         expect(canvas(onDisk).nodes[0]?.cwd).toBe('./apps');
     });
 
@@ -410,7 +416,7 @@ describe('ProjectStore', () => {
         await store.closeProject(summary.projectId);
         expect(store.openProjectIds()).toEqual([]);
         // Nothing was saved or removed, so the canvas is still where it was.
-        expect(await readFile(documentPathInFolder(folder), 'utf8')).toContain('"version": 2');
+        expect(await readFile(documentPathInFolder(folder), 'utf8')).toContain(`"version": ${PROJECT_VERSION}`);
     });
 
     test('closing survives a restart, because the registry carries it and not the client', async () => {
@@ -443,7 +449,7 @@ describe('ProjectStore', () => {
         const opened = await store.openProject({ folder: deep, createFolder: true });
         expect(opened.summary.folder).toBe(deep);
         expect(opened.summary.name).toBe('c');
-        expect(await readFile(documentPathInFolder(deep), 'utf8')).toContain('"version": 2');
+        expect(await readFile(documentPathInFolder(deep), 'utf8')).toContain(`"version": ${PROJECT_VERSION}`);
     });
 
     test('createFolder onto a file leaves the file alone and still reads as no folder', async () => {
@@ -578,7 +584,7 @@ describe('mutate', () => {
 
         expect(await store.mutate(projectId, addNote('note-1'))).toBe('note-1');
 
-        const onDisk = JSON.parse(await readFile(documentPathInFolder(folder), 'utf8')) as ProjectDocument;
+        const onDisk = await documentOnDisk(folder);
         expect(onDisk.rev).toBe(2);
         expect(canvas(onDisk).nodes.map((node) => node.id)).toEqual(['n1', 'note-1']);
         // The terminal's cwd went through the portable form and back, like a save.
@@ -615,7 +621,7 @@ describe('mutate', () => {
                 throw new Error('no');
             })
         ).rejects.toThrow('no');
-        expect((JSON.parse(await readFile(documentPathInFolder(folder), 'utf8')) as ProjectDocument).rev).toBe(opened.document.rev);
+        expect((await privateFileOnDisk(folder)).rev).toBe(opened.document.rev);
         expect(changed).toEqual([]);
     });
 
@@ -626,7 +632,7 @@ describe('mutate', () => {
         changed = [];
         const seen: Array<{ rev: number; events: number }> = [];
         const landed = async () => {
-            const onDisk = JSON.parse(await readFile(documentPathInFolder(folder), 'utf8')) as ProjectDocument;
+            const onDisk = await documentOnDisk(folder);
             seen.push({ rev: onDisk.rev, events: changed.length });
         };
 
@@ -645,6 +651,115 @@ describe('mutate', () => {
         await rm(documentPathInFolder(folder));
         await expect(store.mutate(opened.summary.projectId, addNote('x'))).rejects.toMatchObject({ code: 'project-missing' });
         await expect(store.mutate('nope', addNote('x'))).rejects.toMatchObject({ code: 'project-not-found' });
+    });
+});
+
+describe('the two files of a project', () => {
+    const sharedText = (): Promise<string> => readFile(documentPathInFolder(folder), 'utf8');
+
+    const gitignore = (): Promise<string> => readFile(join(folder, '.ruimte', '.gitignore'), 'utf8');
+
+    test('opening writes a gitignore that keeps the private half out of the repository, and leaves an edited one alone', async () => {
+        await store.openProject({ folder });
+        expect(await gitignore()).toBe(GITIGNORE_TEXT);
+        expect(GITIGNORE_TEXT).toContain('private/');
+
+        await writeFile(join(folder, '.ruimte', '.gitignore'), 'private/\n# mine\n');
+        store.closeAll();
+        await store.openProject({ folder });
+        expect(await gitignore()).toBe('private/\n# mine\n');
+    });
+
+    test('nothing is shared until a save says so, and then only that view travels', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        expect(opened.document.shared).toEqual([]);
+        expect(await sharedText()).not.toContain('"main"');
+
+        expect(await store.save(projectId, 0, content(), ['main'])).toBe(1);
+        expect(await sharedText()).toContain('"main"');
+        expect((await privateFileOnDisk(folder)).views).toEqual([]);
+        expect((await documentOnDisk(folder)).shared).toEqual(['main']);
+
+        // And back: the view returns to the private file and the shared one keeps only the identity.
+        expect(await store.save(projectId, 1, content(), [])).toBe(2);
+        expect(await sharedText()).not.toContain('"main"');
+        expect((await privateFileOnDisk(folder)).views).toHaveLength(1);
+    });
+
+    test('a session, a mode and a worktree stay behind when a canvas travels, and are laid back on the way in', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        const withSession = content();
+        canvas(withSession).nodes[0] = {
+            ...canvas(withSession).nodes[0]!,
+            resume: 'sess-1',
+            runtimeMode: 'auto',
+            worktree: { path: join(home, 'worktrees', 'x'), branch: 'feat' }
+        };
+        await store.save(projectId, 0, withSession, ['main']);
+
+        const shared = JSON.parse(await sharedText()) as { views: { nodes: Record<string, unknown>[] }[] };
+        const node = shared.views[0]!.nodes[0]!;
+        expect(node.resume).toBeUndefined();
+        expect(node.runtimeMode).toBeUndefined();
+        expect(node.worktree).toBeUndefined();
+        expect(node.title).toBe('shell');
+        expect((await privateFileOnDisk(folder)).overlay.n1).toMatchObject({ resume: 'sess-1', runtimeMode: 'auto' });
+
+        // Reading the folder again puts the node back together.
+        store.closeAll();
+        const again = await store.openProject({ folder });
+        expect(canvas(again.document).nodes[0]).toMatchObject({ resume: 'sess-1', runtimeMode: 'auto' });
+        expect(again.document.shared).toEqual(['main']);
+    });
+
+    test('a save that changes nothing shared leaves that file untouched, so git sees no change', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        await store.save(projectId, 0, content(), ['main']);
+        const before = await sharedText();
+
+        // A private view moves; the shared file has no business changing for it.
+        const moved = content();
+        moved.views = [...moved.views, { kind: 'canvas', id: 'mine', name: 'Mine', nodes: [], texts: [], edges: [], layouts: [] }];
+        await store.save(projectId, 1, moved, ['main']);
+        expect(await sharedText()).toBe(before);
+        expect((await privateFileOnDisk(folder)).views.map((view) => view.id)).toEqual(['mine']);
+    });
+
+    test('a version-2 file git tracks was shared on purpose and stays that way', async () => {
+        await mkdir(join(folder, '.ruimte'));
+        const legacy = { version: 2, rev: 5, name: 'repo', color: '#123456', views: content().views };
+        await writeFile(documentPathInFolder(folder), JSON.stringify(legacy));
+        store.attachTracked(async () => true);
+
+        const opened = await store.openProject({ folder });
+        expect(opened.document.shared).toEqual(['main']);
+        expect(await sharedText()).toContain('"main"');
+        expect((await privateFileOnDisk(folder)).views).toEqual([]);
+        // The folder it named is this machine's, so it waits in the overlay all the same.
+        expect((await privateFileOnDisk(folder)).overlay).toEqual({});
+    });
+
+    test('a node an agent adds to a shared canvas travels with it, and a verb never moves a view between the files', async () => {
+        const opened = await store.openProject({ folder });
+        const projectId = opened.summary.projectId;
+        await store.save(projectId, 0, content(), ['main']);
+
+        await store.mutate(projectId, (current) => {
+            const view = current.views[0] as ProjectCanvasView;
+            return {
+                content: {
+                    ...current,
+                    views: [{ ...view, nodes: [...view.nodes, { id: 'n2', kind: 'note', title: 'by an agent', x: 0, y: 0, w: 10, h: 10 }] }]
+                },
+                result: null
+            };
+        });
+
+        expect(await sharedText()).toContain('by an agent');
+        expect((await documentOnDisk(folder)).shared).toEqual(['main']);
     });
 });
 
@@ -670,12 +785,13 @@ describe('kinds a newer Ruimte wrote', () => {
             2
         )}\n`;
 
-    /* The entries this daemon does not know, the way they stand in the file right now. */
+    /* The entries this daemon does not know, the way they stand in the files right now. Opening a
+       version-2 file nobody committed moves its views to the private one, which is where they sit. */
     const unknownOnDisk = async (): Promise<string> => {
-        const document = JSON.parse(await readFile(documentPathInFolder(folder), 'utf8')) as { views: Array<{ id: string; nodes?: unknown[] }> };
+        const views = (await rawPrivateViews(folder)) as Array<{ id: string; nodes?: unknown[] }>;
         return JSON.stringify([
-            document.views.find((view) => view.id === 'main')!.nodes!.find((node) => (node as { id: string }).id === 'holo'),
-            document.views.find((view) => view.id === 'timeline-1')
+            views.find((view) => view.id === 'main')!.nodes!.find((node) => (node as { id: string }).id === 'holo'),
+            views.find((view) => view.id === 'timeline-1')
         ]);
     };
 
@@ -688,8 +804,8 @@ describe('kinds a newer Ruimte wrote', () => {
 
     test('opening such a file sets nothing aside and hands the entries on', async () => {
         const opened = await store.openProject({ folder });
-        expect(await readdir(join(folder, '.ruimte'))).toEqual(['project.json']);
-        expect(await readFile(documentPathInFolder(folder), 'utf8')).toBe(newerFile());
+        expect((await readdir(join(folder, '.ruimte'))).sort()).toEqual(['.gitignore', 'private', 'project.json']);
+        expect(await unknownOnDisk()).toBe(UNKNOWN);
         expect(opened.document.views.map((view) => view.kind)).toEqual(['canvas', 'unknown', 'drawing', 'diagram']);
         expect(canvas(opened.document).nodes[0]).toMatchObject({ id: 'holo', kind: 'unknown', x: 600 });
     });

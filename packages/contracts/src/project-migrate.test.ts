@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { ProjectDocumentSchema, ProjectLocalSchema, ProjectSaveLocalPayloadSchema, type ProjectCanvasView } from './project.ts';
-import { duplicateIdIn, migrateDocument, migrateLocal, newerVersionIn, withoutCrossViewEdges } from './project-migrate.ts';
+import { PROJECT_VERSION, ProjectLocalSchema, ProjectSaveLocalPayloadSchema, ProjectSharedFileSchema, type ProjectCanvasView } from './project.ts';
+import { duplicateIdIn, migrateLocal, migrateSharedFile, newerVersionIn, withoutCrossViewEdges } from './project-migrate.ts';
+
+/* The shared file a value migrates to, which is what every case here is about; the rev beside it has its own test. */
+const migratedFile = (value: unknown) => migrateSharedFile(value)?.file ?? null;
 
 /* A copy of `.ruimte/project.json` of this repository, the way version 1 wrote it. */
 const V1_FILE = {
@@ -25,11 +28,18 @@ const canvasOf = (view: ProjectCanvasView | undefined): ProjectCanvasView => {
     return view;
 };
 
-describe('migrateDocument', () => {
+describe('migrateSharedFile', () => {
+    test('the rev of an older file comes back beside it, and a version-3 file has none', () => {
+        expect(migrateSharedFile(V1_FILE)!.legacyRev).toBe(V1_FILE.rev);
+        const shared = { version: 3, name: 'p', color: '#000', views: [] };
+        expect(migrateSharedFile(shared)!.legacyRev).toBeNull();
+        expect(migrateSharedFile(shared)!.file.views).toEqual([]);
+    });
+
     test('a version-1 file becomes exactly one canvas view called main', () => {
-        const migrated = migrateDocument(V1_FILE);
+        const migrated = migratedFile(V1_FILE);
         expect(migrated).not.toBeNull();
-        expect(migrated).toMatchObject({ version: 2, rev: 11, name: 'ruimte', color: '#7c74ff' });
+        expect(migrated).toMatchObject({ version: PROJECT_VERSION, name: 'ruimte', color: '#7c74ff' });
         expect(migrated!.views).toHaveLength(1);
         const canvas = canvasOf(migrated!.views[0] as ProjectCanvasView);
         expect(canvas).toMatchObject({ kind: 'canvas', id: 'main', name: 'Canvas' });
@@ -37,24 +47,24 @@ describe('migrateDocument', () => {
         expect(canvas.layouts).toEqual([]);
     });
 
-    test('what the migration produces is what version 2 parses, and reading it again changes nothing', () => {
-        const once = migrateDocument(V1_FILE)!;
-        expect(ProjectDocumentSchema.safeParse(once).success).toBe(true);
-        const twice = migrateDocument(JSON.parse(JSON.stringify(once)));
+    test('what the migration produces is what the shared file parses, and reading it again changes nothing', () => {
+        const once = migratedFile(V1_FILE)!;
+        expect(ProjectSharedFileSchema.safeParse(once).success).toBe(true);
+        const twice = migratedFile(JSON.parse(JSON.stringify(once)));
         expect(twice).toEqual(once);
     });
 
     test('a file from before layouts existed migrates on the default', () => {
         const { layouts: _layouts, ...withoutLayouts } = V1_FILE;
-        expect(canvasOf(migrateDocument(withoutLayouts)!.views[0] as ProjectCanvasView).layouts).toEqual([]);
+        expect(canvasOf(migratedFile(withoutLayouts)!.views[0] as ProjectCanvasView).layouts).toEqual([]);
     });
 
     test('an icon rides along and anything else is refused', () => {
-        const migrated = migrateDocument({ ...V1_FILE, icon: { kind: 'lucide', value: 'rocket' } });
+        const migrated = migratedFile({ ...V1_FILE, icon: { kind: 'lucide', value: 'rocket' } });
         expect(migrated!.icon).toEqual({ kind: 'lucide', value: 'rocket' });
-        expect(migrateDocument({ version: 3, rev: 0 })).toBeNull();
-        expect(migrateDocument({ ...V1_FILE, nodes: [{ id: 'n1', kind: 'note' }] })).toBeNull();
-        expect(migrateDocument('nonsense')).toBeNull();
+        expect(migratedFile({ version: 4, rev: 0 })).toBeNull();
+        expect(migratedFile({ ...V1_FILE, nodes: [{ id: 'n1', kind: 'note' }] })).toBeNull();
+        expect(migratedFile('nonsense')).toBeNull();
     });
 });
 

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { ProjectSavePayloadSchema, storedContentOf, type ProjectCanvasView, type ProjectDocument, type ProjectNode, type ProjectView } from '@ruimte/contracts';
+import { ProjectSavePayloadSchema, storedViewsOf, type ProjectCanvasView, type ProjectDocument, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import { viewIdsIn } from '@/shell/split';
 import { focusedCanvas } from './canvas';
 import { useDocument } from './document';
@@ -16,7 +16,7 @@ const view = (id: string, nodes: ProjectCanvasView['nodes'] = []): ProjectCanvas
 
 const node = (id: string, x = 0, y = 0): ProjectCanvasView['nodes'][number] => ({ id, kind: 'terminal', title: id, x, y, w: 100, h: 80 });
 
-const document = (views: ProjectCanvasView[]): ProjectDocument => ({ version: 2, rev: 1, name: 'p', color: '#000', views });
+const document = (views: ProjectCanvasView[]): ProjectDocument => ({ version: 3, rev: 1, name: 'p', color: '#000', views });
 
 const canvasAt = (at: number): ProjectCanvasView => useDocument.getState().views[at] as ProjectCanvasView;
 
@@ -44,11 +44,11 @@ describe('loading a project', () => {
 
     test('a view of its own comes back as the one that was open', () => {
         const views = [view('a'), { kind: 'browser' as const, id: 'page', name: 'Page', url: 'https://bas.dev' }];
-        useDocument.getState().load({ version: 2, rev: 1, name: 'p', color: '#000', views }, { activeViewId: 'a', views: {} });
+        useDocument.getState().load({ version: 3, rev: 1, name: 'p', color: '#000', views }, { activeViewId: 'a', views: {} });
         useDocument.getState().setActiveView('page');
         const local = useDocument.getState().exportLocal();
         expect(local.activeViewId).toBe('page');
-        useDocument.getState().load({ version: 2, rev: 1, name: 'p', color: '#000', views }, local);
+        useDocument.getState().load({ version: 3, rev: 1, name: 'p', color: '#000', views }, local);
         expect(useDocument.getState().activeViewId).toBe('page');
         expect(useDocument.getState().bodyFocused).toBe(true);
     });
@@ -383,7 +383,7 @@ describe('what a newer Ruimte wrote', () => {
 
     beforeEach(() => {
         const views = [timeline, view('a', [node('n1'), hologram])];
-        useDocument.getState().load({ version: 2, rev: 1, name: 'p', color: '#000', views } as ProjectDocument, { activeViewId: 'timeline', views: {} });
+        useDocument.getState().load({ version: 3, rev: 1, name: 'p', color: '#000', views } as ProjectDocument, { activeViewId: 'timeline', views: {} });
         measure();
     });
 
@@ -401,7 +401,7 @@ describe('what a newer Ruimte wrote', () => {
         expect((views[1] as ProjectCanvasView).nodes[1]).toEqual(hologram);
 
         const sent = ProjectSavePayloadSchema.parse(JSON.parse(JSON.stringify({ projectId: 'p', baseRev: 1, content: { name: 'p', color: '#000', views } })));
-        const stored = storedContentOf(sent.content).views;
+        const stored = storedViewsOf(sent.content.views);
         expect(stored[0]).toEqual(timeline.raw);
         expect((stored[1] as { nodes: unknown[] }).nodes[1]).toEqual(hologram.raw);
     });

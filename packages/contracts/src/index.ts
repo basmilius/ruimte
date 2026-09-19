@@ -225,6 +225,7 @@ export * from './plan.ts';
 export * from './processes.ts';
 export * from './project.ts';
 export * from './project-migrate.ts';
+export * from './project-split.ts';
 export * from './protocol.ts';
 export * from './project-views.ts';
 export * from './server.ts';

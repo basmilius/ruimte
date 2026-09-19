@@ -73,7 +73,7 @@ describe('the diagram document', () => {
 
 describe('a diagram view in a project document', () => {
     const document = {
-        version: 2,
+        version: 3,
         rev: 1,
         name: 'ruimte',
         color: '#7c74ff',

@@ -54,7 +54,7 @@ const canvasView = (id: string, nodes: ProjectCanvasView['nodes'] = []): Project
 });
 
 const document = (rev: number, views: ProjectDocument['views'] = [canvasView('main')]): ProjectDocument => ({
-    version: 2,
+    version: 3,
     rev,
     name: 'p',
     color: '#000',

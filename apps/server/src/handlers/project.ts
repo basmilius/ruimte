@@ -15,7 +15,7 @@ export const registerProjectHandlers = (dispatcher: Dispatcher, store: ProjectSt
     );
 
     dispatcher.register('project.save', (payload, client) =>
-        translate(async () => ({ rev: await store.save(payload.projectId, payload.baseRev, payload.content, client.id) }))
+        translate(async () => ({ rev: await store.save(payload.projectId, payload.baseRev, payload.content, payload.shared, client.id) }))
     );
 
     dispatcher.register('project.save-local', (payload) =>

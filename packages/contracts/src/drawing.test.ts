@@ -89,7 +89,7 @@ describe('the drawing document', () => {
 
 describe('a drawing view in a project document', () => {
     const document = {
-        version: 2,
+        version: 3,
         rev: 1,
         name: 'ruimte',
         color: '#7c74ff',

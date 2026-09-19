@@ -497,24 +497,92 @@ export const ProjectContentSchema = z.object({
 });
 export type ProjectContent = z.infer<typeof ProjectContentSchema>;
 
+/*
+ * The views that live in the shared file, which is the one a team commits. Derived by the daemon
+ * from which of the two files a view was read out of and never stored as a list of its own, so
+ * there is nothing here that can fall out of step with the folder. Absent means nothing is shared,
+ * which is every project until a person says otherwise.
+ *
+ * It rides beside the content and not in it on purpose: a verb hands back content, so this is one
+ * thing an agent cannot change by writing a canvas. Only a person's save names a different list.
+ */
+export const SharedViewIdsSchema = z.array(z.string()).optional();
+
 /* The version this Ruimte writes. A file that says a higher number is not broken, only newer. */
-export const PROJECT_VERSION = 2;
+export const PROJECT_VERSION = 3;
 
 export const ProjectDocumentSchema = ProjectContentSchema.extend({
     version: z.literal(PROJECT_VERSION),
     // Goes up by one on every write; a save that names an older rev is a conflict.
-    rev: z.number().int().nonnegative()
+    rev: z.number().int().nonnegative(),
+    shared: SharedViewIdsSchema
 });
 export type ProjectDocument = z.infer<typeof ProjectDocumentSchema>;
 
 /*
- * Content or a document as it goes into the file: every entry of an unknown kind back in the shape
- * it was read in. The wire takes either shape, since reading opens an `unknown` entry up again.
+ * Views as a file holds them: every entry of an unknown kind back in the shape it was read in. The
+ * wire takes either shape, since reading opens an `unknown` entry up again.
  */
-export const storedContentOf = <T extends ProjectContent>(content: T): Omit<T, 'views'> & { views: unknown[] } => ({
-    ...content,
-    views: content.views.map(storedViewOf)
+export const storedViewsOf = (views: readonly ProjectView[]): unknown[] => views.map(storedViewOf);
+
+/*
+ * What `.ruimte/project.json` holds: the identity of the project and the views a person put in git.
+ * No rev, because that line changes on every write and would be the one thing that conflicts on
+ * every pull; it lives in the private file, which never travels. The list may be empty, which is
+ * every project nobody shared anything of.
+ */
+export const ProjectSharedFileSchema = z.object({
+    version: z.literal(PROJECT_VERSION),
+    name: z.string().min(1),
+    color: z.string(),
+    icon: ProjectIconChoiceSchema.optional(),
+    views: z.array(ProjectViewSchema)
 });
+export type ProjectSharedFile = z.infer<typeof ProjectSharedFileSchema>;
+
+/* What one person's node of a shared canvas carries that nobody else can use. */
+export const ProjectNodeOverlaySchema = ProjectNodeSchema.pick({
+    cwd: true,
+    resume: true,
+    runtimeMode: true,
+    worktree: true,
+    path: true
+});
+export type ProjectNodeOverlay = z.infer<typeof ProjectNodeOverlaySchema>;
+
+export const PROJECT_PRIVATE_VERSION = 1;
+
+/*
+ * What `.ruimte/private/project.json` holds, which the `.gitignore` beside it keeps out of the
+ * repository: the views only you have, where every row of the sidebar sits, and per shared node the
+ * fields that could not travel. One flat map is enough for the last of those, since a view id and a
+ * node id are the same namespace.
+ */
+export const ProjectPrivateFileSchema = z.object({
+    version: z.literal(PROJECT_PRIVATE_VERSION),
+    // The rev of the whole document, shared file included. Only ever compared on this machine.
+    rev: z.number().int().nonnegative(),
+    views: z.array(ProjectViewSchema),
+    /* Every view id in sidebar order, the shared ones among them. An id the shared file has and
+       this list does not falls in behind the one before it, so a view a colleague added arrives in
+       the right place without anybody merging an order. */
+    order: z.array(z.string()),
+    overlay: z.record(z.string(), ProjectNodeOverlaySchema).default({})
+});
+export type ProjectPrivateFile = z.infer<typeof ProjectPrivateFileSchema>;
+
+export const EMPTY_PRIVATE_FILE: ProjectPrivateFile = { version: PROJECT_PRIVATE_VERSION, rev: 0, views: [], order: [], overlay: {} };
+
+/* What a version-2 file holds: one file for everything, with the rev in it. Read, migrated, never written again. */
+export const ProjectDocumentV2Schema = z.object({
+    version: z.literal(2),
+    rev: z.number().int().nonnegative(),
+    name: z.string().min(1),
+    color: z.string(),
+    icon: ProjectIconChoiceSchema.optional(),
+    views: z.array(ProjectViewSchema).min(1)
+});
+export type ProjectDocumentV2 = z.infer<typeof ProjectDocumentV2Schema>;
 
 /* What a version-1 file holds: one project is one canvas. Read, migrated, never written again. */
 export const ProjectDocumentV1Schema = z.object({
@@ -741,7 +809,8 @@ export const ProjectSavePayloadSchema = z.object({
     projectId: ProjectIdSchema,
     // The rev the client last loaded; the daemon refuses when the file moved on.
     baseRev: z.number().int().nonnegative(),
-    content: ProjectContentSchema
+    content: ProjectContentSchema,
+    shared: SharedViewIdsSchema
 });
 export type ProjectSavePayload = z.infer<typeof ProjectSavePayloadSchema>;
 

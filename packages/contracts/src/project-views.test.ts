@@ -265,12 +265,12 @@ describe('who made a view', () => {
             },
             { kind: 'terminal', id: 't1', name: 'Shell', node: {}, createdBy: 'term-1' }
         ];
-        const parsed = ProjectDocumentSchema.parse({ version: 2, rev: 1, name: 'repo', color: '#123456', views });
+        const parsed = ProjectDocumentSchema.parse({ version: 3, rev: 1, name: 'repo', color: '#123456', views });
         expect(parsed.views.map((view) => view.createdBy)).toEqual(views.map(() => 'term-1'));
     });
 
     test('a view nobody wrote down carries nothing, which is what a person making one looks like', () => {
-        const parsed = ProjectDocumentSchema.parse({ version: 2, rev: 1, name: 'repo', color: '#123456', views: [emptyCanvasView('a', 'Canvas')] });
+        const parsed = ProjectDocumentSchema.parse({ version: 3, rev: 1, name: 'repo', color: '#123456', views: [emptyCanvasView('a', 'Canvas')] });
         expect(parsed.views[0]!.createdBy).toBeUndefined();
     });
 });
