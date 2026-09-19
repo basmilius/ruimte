@@ -12,7 +12,7 @@ import type {
 } from '@ruimte/contracts';
 import type { ChatSink } from '../state/chats';
 import type { ProviderInfo } from '@ruimte/contracts';
-import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
+import { isConnectionError, type Transport, type TransportStatus } from '../transport/transport';
 
 interface ChatOpenOptions {
     /* Which agent CLI answers; a chat that exists on the daemon keeps its own. */
@@ -42,8 +42,6 @@ interface Mounted extends ChatOpenOptions {
 interface ProviderSink {
     setProviders(providers: ProviderInfo[]): void;
 }
-
-const isConnectionError = (e: unknown): boolean => e instanceof TransportError && (e.code === 'not-connected' || e.code === 'disconnected');
 
 /*
  * One daemon chat per node id. Like the terminal's session client: a node opens on mount and

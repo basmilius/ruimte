@@ -1,6 +1,6 @@
 import type { AgentLaunch, SessionAttachResult, SessionInfo } from '@ruimte/contracts';
 import type { SessionSink } from '../state/sessions';
-import { TransportError, type Transport, type TransportStatus } from '../transport/transport';
+import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../transport/transport';
 
 type OutputHandler = (data: string) => void;
 type ExitHandler = (exitCode: number) => void;
@@ -20,8 +20,6 @@ interface Mounted extends OpenOptions {
     /* False between a lost connection (or a failed attach) and the next successful attach. */
     attached: boolean;
 }
-
-const isConnectionError = (e: unknown): boolean => e instanceof TransportError && (e.code === 'not-connected' || e.code === 'disconnected');
 
 /*
  * Recreates and reattaches mounted sessions after a lost socket or daemon restart, then supplies a

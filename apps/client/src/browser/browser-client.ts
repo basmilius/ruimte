@@ -2,7 +2,7 @@ import type { BrowserFrame, BrowserInfo, BrowserInput, LiveStreamFrame } from '@
 import i18next from 'i18next';
 import { endpointKey } from '@/state/keys';
 import { useBrowser } from './registry';
-import { TransportError, type Transport, type TransportStatus } from '@/transport/transport';
+import { isConnectionError, type Transport, type TransportStatus } from '@/transport/transport';
 
 interface MountedBrowser {
     refs: number;
@@ -13,8 +13,6 @@ interface MountedBrowser {
     attached: boolean;
     stream: 'http' | 'events';
 }
-
-const connectionLost = (error: unknown): boolean => error instanceof TransportError && (error.code === 'not-connected' || error.code === 'disconnected');
 
 export class BrowserClient {
     private readonly frameHandlers = new Map<string, Set<(frame: LiveStreamFrame) => void>>();
@@ -66,7 +64,7 @@ export class BrowserClient {
             mounted.attached = true;
             this.apply(info);
         } catch (error) {
-            if (!connectionLost(error)) {
+            if (!isConnectionError(error)) {
                 if (this.mounted.get(browserId) === mounted) {
                     this.mounted.delete(browserId);
                 }
@@ -126,7 +124,7 @@ export class BrowserClient {
         mounted.height = height;
         mounted.deviceScaleFactor = deviceScaleFactor ?? mounted.deviceScaleFactor;
         await this.transport.request('browser.resize', { browserId, width, height, deviceScaleFactor: mounted.deviceScaleFactor }).catch((error) => {
-            if (!connectionLost(error)) {
+            if (!isConnectionError(error)) {
                 this.fail(browserId, error);
             }
         });
@@ -134,7 +132,7 @@ export class BrowserClient {
 
     input(browserId: string, input: BrowserInput): void {
         void this.transport.request('browser.input', { browserId, input }).catch((error) => {
-            if (!connectionLost(error)) {
+            if (!isConnectionError(error)) {
                 this.fail(browserId, error);
             }
         });
@@ -211,7 +209,7 @@ export class BrowserClient {
                     this.apply(info);
                 })
                 .catch((error) => {
-                    if (!connectionLost(error)) {
+                    if (!isConnectionError(error)) {
                         this.fail(browserId, error);
                     }
                 });

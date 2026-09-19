@@ -1,7 +1,7 @@
 import i18next from 'i18next';
 import type { DeviceAction, DeviceDetail, DeviceFrame, DeviceInfo, DeviceInput, LiveStreamFrame } from '@ruimte/contracts';
 import { useDevices } from '@/devices/state';
-import { TransportError, type Transport, type TransportStatus } from '@/transport/transport';
+import { isConnectionError, type Transport, type TransportStatus } from '@/transport/transport';
 
 interface MountedDevice {
     refs: number;
@@ -12,7 +12,6 @@ interface MountedDevice {
 }
 
 const DEVICE_REFRESH_MS = 1_000;
-const disconnected = (error: unknown): boolean => error instanceof TransportError && (error.code === 'not-connected' || error.code === 'disconnected');
 export type DeviceTarget = Pick<DeviceInfo, 'backendId' | 'platform' | 'deviceId'>;
 
 const keyOf = (device: Pick<DeviceInfo, 'backendId' | 'deviceId'>): string => `${device.backendId}:${device.deviceId}`;
@@ -105,7 +104,7 @@ export class DeviceClient {
         try {
             return await this.attach(mounted);
         } catch (error) {
-            if (!disconnected(error)) {
+            if (!isConnectionError(error)) {
                 this.mounted.delete(key);
             }
             throw error;
@@ -192,7 +191,7 @@ export class DeviceClient {
             useDevices.getState().receive(this.endpointId, devices);
             return devices;
         } catch (error) {
-            if (!disconnected(error)) {
+            if (!isConnectionError(error)) {
                 useDevices.getState().fail(this.endpointId, messageOf(error, i18next.t('machines:device.listFailed')));
             }
             throw error;
