@@ -1,4 +1,4 @@
-import { chmodSync, copyFileSync, mkdirSync, renameSync, rmSync } from 'node:fs';
+import { chmodSync, copyFileSync, mkdirSync, rmSync } from 'node:fs';
 import { homedir, userInfo } from 'node:os';
 import { dirname, join } from 'node:path';
 import {
@@ -16,6 +16,7 @@ import {
 } from '@ruimte/service';
 import { buildFileOf, readBuildFile } from '../service/self-update.ts';
 import { describeError } from '../error-text.ts';
+import { replaceSync, tempNameFor } from '../fs.ts';
 
 /*
  * `ruimte service install|uninstall|status`: the background service for a machine without the app.
@@ -230,10 +231,10 @@ const copyBinaries = (from: string, to: string): void => {
     mkdirSync(to, { recursive: true });
     for (const name of BINARY_FILES) {
         const target = join(to, name);
-        const temporary = `${target}.${process.pid}.tmp`;
+        const temporary = tempNameFor(target);
         copyFileSync(join(from, name), temporary);
         chmodSync(temporary, name === 'ruimte.build' ? 0o644 : 0o755);
-        renameSync(temporary, target);
+        replaceSync(temporary, target);
     }
 };
 

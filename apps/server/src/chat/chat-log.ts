@@ -1,8 +1,9 @@
-import { closeSync, mkdirSync, openSync, renameSync, rmSync, writeFileSync, writeSync } from 'node:fs';
+import { closeSync, mkdirSync, openSync, rmSync, writeSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { ChatEventSchema, type ChatEvent } from '@ruimte/contracts';
 import { z } from 'zod';
 import { errorText } from '../error-text.ts';
+import { writeAtomicSync } from '../fs.ts';
 
 export interface ChatLogLine {
     seq: number;
@@ -147,9 +148,7 @@ export class ChatLog {
                 rmSync(this.path, { force: true });
                 return;
             }
-            const temp = `${this.path}.${process.pid}.tmp`;
-            writeFileSync(temp, text, { mode: 0o600 });
-            renameSync(temp, this.path);
+            writeAtomicSync(this.path, text);
         } catch (e) {
             console.error(`Compacting ${this.path} failed:`, errorText(e));
         }

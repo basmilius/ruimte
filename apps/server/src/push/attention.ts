@@ -1,4 +1,6 @@
-import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { writeAtomicSync } from '../fs.ts';
 import { PushAttentionResultSchema, type PushAttentionEntry } from '@ruimte/contracts';
 
 const RETENTION_MS = 30 * 24 * 60 * 60_000;
@@ -79,7 +81,7 @@ export class PushAttention {
         if (!this.path) {
             return;
         }
-        writeFileSync(`${this.path}.tmp`, JSON.stringify({ entries: [...this.entries.values()], marksFrom: this.marksFrom }), { mode: 0o600 });
-        renameSync(`${this.path}.tmp`, this.path);
+        mkdirSync(dirname(this.path), { recursive: true, mode: 0o700 });
+        writeAtomicSync(this.path, JSON.stringify({ entries: [...this.entries.values()], marksFrom: this.marksFrom }));
     }
 }

@@ -1,9 +1,9 @@
-import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import { mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ChatInfoSchema, ChatItemSchema, type ChatInfo, type ChatItem } from '@ruimte/contracts';
 import { z } from 'zod';
-import { isNotFound, writeAtomic } from '../fs.ts';
+import { isNotFound, writeAtomic, writeAtomicSync } from '../fs.ts';
 import { isPlanFileName } from '../plans/plan-store.ts';
 import { migrateInlineAttachments, type AttachmentStore } from './attachment-store.ts';
 import { parseLog, type ChatLogLine } from './chat-log.ts';
@@ -103,11 +103,8 @@ export class ChatStore {
      * before an awaited write comes back, so a shutdown has to put the threads down synchronously.
      */
     writeSync(chatId: string, info: ChatInfo, items: ChatItem[], at: ChatSeq = { seq: 0, resetSeq: 0 }, preambles: readonly string[] = []): void {
-        const target = join(this.dir, recordFileName(chatId));
-        const temp = `${target}.${process.pid}.tmp`;
         mkdirSync(this.dir, { recursive: true, mode: 0o700 });
-        writeFileSync(temp, recordBody(info, items, at, preambles), { mode: 0o600 });
-        renameSync(temp, target);
+        writeAtomicSync(join(this.dir, recordFileName(chatId)), recordBody(info, items, at, preambles));
     }
 
     async read(chatId: string): Promise<ChatRecord | null> {
