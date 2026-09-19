@@ -7,7 +7,7 @@ import { ArrowDown, ArrowUp, CircleAlert, Eye, FilePen, FilePlus, FolderX, GitBr
 import type { LucideIcon } from 'lucide-react';
 import type { Worktree } from '@ruimte/contracts';
 import { StatusDot } from '@/canvas/NodeFrame';
-import { GitPrompt } from '@/shell/panels/GitDialogs';
+import { PromptDialog } from '@/ui/PromptDialog';
 import { nodesInWorktree, originLabel, sharePathsOf, workBadges, workBadgesLabel, type WorkBadgeKind } from '@/shell/panels/worktree-rows';
 import { nodeWorking } from '@/state/agent-work';
 import { useChats } from '@/state/chats';
@@ -125,11 +125,11 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                     </button>
                 </Tooltip>
             </div>
-            <GitPrompt
+            <PromptDialog
                 open={sharing}
                 title={t('worktree.share.title')}
                 description={t('worktree.share.description')}
-                field={{ label: t('worktree.share.field'), initial: shared.join(', '), placeholder: 'node_modules, .env' }}
+                field={{ mono: true, label: t('worktree.share.field'), initial: shared.join(', '), placeholder: 'node_modules, .env' }}
                 allowEmpty
                 confirmLabel={t('common:action.save')}
                 onConfirm={saveShare}

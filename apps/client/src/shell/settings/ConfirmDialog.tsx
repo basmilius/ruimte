@@ -1,7 +1,4 @@
-import { Dialog } from '@base-ui-components/react/dialog';
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/ui/Button';
-import { useAsyncAction } from '@/ui/useAsyncAction';
+import { PromptDialog } from '@/ui/PromptDialog';
 
 interface ConfirmDialogProps {
     open: boolean;
@@ -15,41 +12,19 @@ interface ConfirmDialogProps {
 
 /* One destructive step, asked before it happens, over whichever dialog it was opened from. */
 export function ConfirmDialog({ open, onOpenChange, title, description, confirmLabel, onConfirm }: ConfirmDialogProps) {
-    const { t } = useTranslation('common');
-    const { busy, failure, run, clear } = useAsyncAction();
-
-    const confirm = async (): Promise<void> => {
-        if (await run(onConfirm)) {
-            onOpenChange(false);
-        }
-    };
-
     return (
-        <Dialog.Root
+        <PromptDialog
             open={open}
-            onOpenChange={(next) => {
-                clear();
-                onOpenChange(next);
+            nested
+            danger
+            title={title}
+            description={description}
+            confirmLabel={confirmLabel}
+            onConfirm={async () => {
+                await onConfirm();
+                onOpenChange(false);
             }}
-        >
-            <Dialog.Portal>
-                <Dialog.Backdrop className="dialog-backdrop dialog-backdrop-nested" forceRender />
-                <Dialog.Popup className="dialog-popup dialog-popup-nested w-[400px] p-5">
-                    <Dialog.Title className="text-base font-semibold break-words text-text">{title}</Dialog.Title>
-                    <Dialog.Description className="mt-1 text-xs break-words text-text-muted">{description}</Dialog.Description>
-                    {failure && (
-                        <p className="mt-2 text-xs break-words text-status-error" role="alert">
-                            {failure}
-                        </p>
-                    )}
-                    <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
-                        <Button onClick={() => onOpenChange(false)}>{t('action.cancel')}</Button>
-                        <Button variant="danger" disabled={busy} onClick={() => void confirm()}>
-                            {confirmLabel}
-                        </Button>
-                    </div>
-                </Dialog.Popup>
-            </Dialog.Portal>
-        </Dialog.Root>
+            onClose={() => onOpenChange(false)}
+        />
     );
 }

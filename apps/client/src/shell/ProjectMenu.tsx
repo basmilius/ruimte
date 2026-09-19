@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import { Dialog } from '@base-ui-components/react/dialog';
 import { Menu } from '@base-ui-components/react/menu';
 import { ChevronDown, ChevronRight, ExternalLink, FolderOpen, History, MoreHorizontal, Plus, Settings2, X } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
@@ -23,9 +22,9 @@ import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 import { useMachineHold, useOpenEndpoints } from '@/transport/status';
 import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
-import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
+import { PromptDialog } from '@/ui/PromptDialog';
 
 interface ProjectRowProps {
     row: ProjectMenuRow;
@@ -308,21 +307,16 @@ export function ProjectMenu() {
                 onOpenChangeComplete={(open) => !open && setSettingsTarget(null)}
             />
 
-            <Dialog.Root open={closing !== null} onOpenChange={(next) => !next && setClosing(null)}>
-                <Dialog.Portal>
-                    <Dialog.Backdrop className="dialog-backdrop" />
-                    <Dialog.Popup className="dialog-popup w-[420px] p-5">
-                        <Dialog.Title className="text-base font-semibold text-text">{t('projectMenu.closeTitle', { name: closing?.name ?? '' })}</Dialog.Title>
-                        <p className="mt-1 text-xs text-text-muted">{closeWarning(closing?.sessions ?? 0)}</p>
-                        <div className="mt-4 flex items-center justify-end gap-2">
-                            <Button onClick={() => setClosing(null)}>{t('common:action.cancel')}</Button>
-                            <Button variant={closing?.sessions === 0 ? 'primary' : 'danger'} onClick={() => void close()}>
-                                <Icon icon={X} size={12} /> {t('common:action.close')}
-                            </Button>
-                        </div>
-                    </Dialog.Popup>
-                </Dialog.Portal>
-            </Dialog.Root>
+            <PromptDialog
+                open={closing !== null}
+                title={t('projectMenu.closeTitle', { name: closing?.name ?? '' })}
+                description={closeWarning(closing?.sessions ?? 0)}
+                confirmLabel={t('common:action.close')}
+                confirmIcon={X}
+                danger={closing !== null && closing.sessions > 0}
+                onConfirm={() => void close()}
+                onClose={() => setClosing(null)}
+            />
         </>
     );
 }

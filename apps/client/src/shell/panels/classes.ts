@@ -7,8 +7,3 @@ export const FILE_TOOLBAR = 'flex h-10 shrink-0 items-center gap-2 border-b bord
 
 /* The header over a group of the git panel: the changes of one state, and the commits of one day. */
 export const GIT_GROUP = 'flex h-7 items-center gap-2 pr-2 pl-3 text-xs';
-
-/* The message of the commit to come. The one multiline field in the app, so it carries the field's
-   border and focus ring without its fixed height. */
-export const COMMIT_MESSAGE =
-    'min-h-16 w-full resize-none rounded-lg border border-border bg-surface px-2 py-1.5 text-xs text-text outline-none placeholder:text-text-faint focus-visible:-outline-offset-1 focus-visible:outline-2 focus-visible:outline-accent';

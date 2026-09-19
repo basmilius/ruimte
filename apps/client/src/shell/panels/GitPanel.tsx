@@ -19,7 +19,8 @@ import { FILE_TOOLBAR } from '@/shell/panels/classes';
 import { CommitBox } from '@/shell/panels/CommitBox';
 import { CommitLog } from '@/shell/panels/CommitLog';
 import { basenameOf } from '@/shell/panels/files-tree';
-import { GitChoice, GitPrompt, type Choice } from '@/shell/panels/GitDialogs';
+import { GitChoice, type Choice } from '@/shell/panels/GitDialogs';
+import { PromptDialog } from '@/ui/PromptDialog';
 import { GitFileList } from '@/shell/panels/GitFileList';
 import { isUnmergedRefusal, pushButton } from '@/shell/panels/git-actions';
 import { activeDiffPath, allDirs } from '@/shell/panels/git-tree';
@@ -481,37 +482,37 @@ export function GitPanel() {
                 )}
             </div>
 
-            <GitPrompt
+            <PromptDialog
                 open={dialog?.kind === 'create-branch'}
                 title={t('git.dialog.createBranch.title')}
                 description={t('git.dialog.createBranch.description')}
-                field={{ label: t('git.dialog.name'), placeholder: 'feature/what-it-does' }}
+                field={{ mono: true, label: t('git.dialog.name'), placeholder: 'feature/what-it-does' }}
                 confirmLabel={t('git.dialog.createBranch.confirm')}
                 busy={busy}
                 onConfirm={(name) => void act('create-branch', { name })}
                 onClose={() => setDialog(null)}
             />
-            <GitPrompt
+            <PromptDialog
                 open={dialog?.kind === 'rename-branch'}
                 title={t('git.dialog.renameBranch.title')}
                 description={t('git.dialog.renameBranch.description')}
-                field={{ label: t('git.dialog.name'), initial: status?.branch ?? '' }}
+                field={{ mono: true, label: t('git.dialog.name'), initial: status?.branch ?? '' }}
                 confirmLabel={t('git.dialog.renameBranch.confirm')}
                 busy={busy}
                 onConfirm={(name) => void act('rename-branch', { name })}
                 onClose={() => setDialog(null)}
             />
-            <GitPrompt
+            <PromptDialog
                 open={dialog?.kind === 'stash'}
                 title={t('git.dialog.stash.title')}
                 description={t('git.dialog.stash.description')}
-                field={{ label: t('git.dialog.message'), placeholder: t('git.dialog.optional') }}
+                field={{ mono: true, label: t('git.dialog.message'), placeholder: t('git.dialog.optional') }}
                 confirmLabel={t('git.dialog.stash.confirm')}
                 busy={busy}
                 onConfirm={(subject) => void act('stash', { subject })}
                 onClose={() => setDialog(null)}
             />
-            <GitPrompt
+            <PromptDialog
                 open={dialog?.kind === 'force-push'}
                 title={t('git.dialog.forcePush.title')}
                 description={t('git.dialog.forcePush.description')}
@@ -521,7 +522,7 @@ export function GitPanel() {
                 onConfirm={() => void act('force-push')}
                 onClose={() => setDialog(null)}
             />
-            <GitPrompt
+            <PromptDialog
                 open={dialog?.kind === 'switch'}
                 title={dialog?.kind === 'switch' ? t('git.dialog.switch.title', { branch: dialog.ref.name }) : t('git.dialog.switch.fallback')}
                 description={t('git.dialog.switch.description')}
@@ -534,7 +535,7 @@ export function GitPanel() {
                 }}
                 onClose={() => setDialog(null)}
             />
-            <GitPrompt
+            <PromptDialog
                 open={dialog?.kind === 'confirm-delete'}
                 title={dialog?.kind === 'confirm-delete' ? t('git.dialog.deleteBranch.title', { branch: dialog.ref }) : t('git.dialog.deleteBranch.fallback')}
                 description={
@@ -550,7 +551,7 @@ export function GitPanel() {
                 }}
                 onClose={() => setDialog(null)}
             />
-            <GitPrompt
+            <PromptDialog
                 open={dialog?.kind === 'discard'}
                 title={dialog?.kind === 'discard' ? t('git.dialog.discard.title', { name: basenameOf(dialog.file.path) }) : t('git.dialog.discard.fallback')}
                 description={t('git.dialog.discard.description')}
@@ -564,11 +565,11 @@ export function GitPanel() {
                 }}
                 onClose={() => setDialog(null)}
             />
-            <GitPrompt
+            <PromptDialog
                 open={dialog?.kind === 'pull-request'}
                 title={t('git.dialog.pullRequest.title')}
                 description={t('git.dialog.pullRequest.description')}
-                field={{ label: t('git.dialog.pullRequest.subject'), initial: dialog?.kind === 'pull-request' ? dialog.subject : '' }}
+                field={{ mono: true, label: t('git.dialog.pullRequest.subject'), initial: dialog?.kind === 'pull-request' ? dialog.subject : '' }}
                 area={{ label: t('git.dialog.pullRequest.body'), placeholder: t('git.dialog.pullRequest.bodyPlaceholder') }}
                 confirmLabel={t('git.dialog.pullRequest.confirm')}
                 busy={busy}
