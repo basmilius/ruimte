@@ -60,13 +60,11 @@ export function VoicePane() {
             .catch((error: unknown) => {
                 if (current) {
                     // Read off i18next rather than the hook's `t`, which would make the language a reason to ask again.
-                    useToasts
-                        .getState()
-                        .show({
-                            kind: 'error',
-                            title: i18next.t('settings:voice.toast.readFailed'),
-                            description: messageOf(error, i18next.t('settings:voice.key.readFailure'))
-                        });
+                    useToasts.getState().show({
+                        kind: 'error',
+                        title: i18next.t('settings:voice.toast.readFailed'),
+                        description: messageOf(error, i18next.t('settings:voice.key.readFailure'))
+                    });
                 }
             });
         return () => {

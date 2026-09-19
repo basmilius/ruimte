@@ -1,15 +1,14 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, ChevronDown, FileText, Frame, Globe, Minus, PanelBottom, PanelRight, PenTool, Workflow, Terminal, X } from 'lucide-react';
+import { Check, ChevronDown, FileText, Frame, Globe, Minus, PenTool, Workflow, Terminal } from 'lucide-react';
 import { isOpenableView, viewIconOf, type ProjectView } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { AgentSubmenus } from '@/agents/AgentMenus';
 import { addAgentView } from '@/agents/nodes';
-import { newCanvasView, newDiagramView, newDrawingView, newSeparatorView, freeViewFor, newTerminalView, splitFocusedCell, showView } from '@/project/views';
+import { newCanvasView, newDiagramView, newDrawingView, newSeparatorView, newTerminalView, showView } from '@/project/views';
 import { ViewGlyph } from '@/project/ViewGlyph';
-import { canSplit, cellCount, type SplitDirection } from '@/shell/split';
-import { ViewMenuItems } from '@/shell/ViewMenuItems';
+import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useProviders } from '@/state/providers';
@@ -104,41 +103,6 @@ export function NewViewItems() {
             <Menu.Item className="menu-item" onClick={() => void newSeparatorView()}>
                 <Icon icon={Minus} size={14} /> {t('viewKinds.separator')}
             </Menu.Item>
-        </>
-    );
-}
-
-/*
- * Putting a view beside the one on screen. Which view lands there is the same question the shortcut
- * answers (`freeViewFor`): the first one that is not standing anywhere yet, since a view is in at
- * most one cell. With every view already up, or with the grid full, the row is not offered.
- */
-function SplitItems() {
-    const { t } = useTranslation('shell');
-    const layout = useDocument((s) => s.layout);
-    const free = useDocument(freeViewFor);
-    const closable = layout !== null && cellCount(layout) > 1;
-    const room = (direction: SplitDirection): boolean => layout !== null && free !== null && canSplit(layout, layout.focus, direction, free);
-    if (!room('right') && !room('down') && !closable) {
-        return null;
-    }
-    return (
-        <>
-            {room('right') && (
-                <Menu.Item className="menu-item" onClick={() => splitFocusedCell('right')}>
-                    <Icon icon={PanelRight} size={14} /> {t('viewMenu.splitRight')} <Kbd shortcut={CANVAS_SHORTCUTS.splitRight} />
-                </Menu.Item>
-            )}
-            {room('down') && (
-                <Menu.Item className="menu-item" onClick={() => splitFocusedCell('down')}>
-                    <Icon icon={PanelBottom} size={14} /> {t('viewMenu.splitDown')} <Kbd shortcut={CANVAS_SHORTCUTS.splitDown} />
-                </Menu.Item>
-            )}
-            {closable && (
-                <Menu.Item className="menu-item" onClick={() => useDocument.getState().closeCellAt(layout.focus)}>
-                    <Icon icon={X} size={14} /> {t('cellToolbar.closeCell')} <Kbd shortcut={CANVAS_SHORTCUTS.closeCell} />
-                </Menu.Item>
-            )}
         </>
     );
 }
