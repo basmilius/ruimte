@@ -1,7 +1,7 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
-import { homedir, userInfo } from 'node:os';
+import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { buildIdentityOf, machineWorkOf, MACHINE_HEALTH_PATH, MACHINE_WORK_PATH, type BuildIdentity, type MachineWork } from '@ruimte/contracts';
 import type { AgentActivity, BackgroundServiceState, UpdateState } from '@ruimte/desktop-bridge';
@@ -10,17 +10,7 @@ import { listenForLogin, type LoopbackLogin } from './pulsar-login';
 import { fileSessionKey, fileSessionStore } from './pulsar-store';
 import { createReleaseNotes } from './release-notes';
 import { createServiceController } from './service/controller';
-import {
-    LAUNCH_AGENT_LABEL,
-    diskFiles,
-    launchAgentPlist,
-    launchdManager,
-    runCommand,
-    systemdManager,
-    systemdUnit,
-    type ServiceManager,
-    type ServiceSpec
-} from '@ruimte/service';
+import { daemonServiceSpec, platformServiceManager, serviceDefinition as definitionFor, type ServiceManager } from '@ruimte/service';
 import { keepRunningSetting, serviceSupport } from './service/settings';
 import { fileSecretStore, type SecretStore } from './secret-store';
 import { createOpenAiLiveSession, parseOpenAiLivePreferences } from './openai-live';
@@ -193,42 +183,22 @@ const bundledBuild = (): string | null => {
 const support = serviceSupport({ packaged: app.isPackaged, platform: process.platform, appImage: process.env.APPIMAGE });
 
 /* Only a packaged app on macOS or Linux gets one; the dev app has none to touch, whatever it is asked. */
-const createServiceManager = (): ServiceManager | null => {
-    if (support !== 'supported') {
-        return null;
-    }
-    if (process.platform === 'darwin') {
-        return launchdManager({
-            uid: process.getuid?.() ?? 0,
-            home: homedir(),
-            run: runCommand,
-            files: diskFiles,
-            sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-        });
-    }
-    return systemdManager({
-        configHome: process.env.XDG_CONFIG_HOME || join(homedir(), '.config'),
-        user: userInfo().username,
-        run: runCommand,
-        files: diskFiles
-    });
-};
+const createServiceManager = (): ServiceManager | null => (support === 'supported' ? platformServiceManager(process.platform) : null);
 
 const serviceDefinition = (): string => {
     const target = daemonCommand();
     if (!target) {
         throw new Error(MISSING_DAEMON);
     }
-    const spec: ServiceSpec = {
-        label: LAUNCH_AGENT_LABEL,
+    const spec = daemonServiceSpec({
         program: target.command,
         args: target.args,
-        // `RUIMTE_SERVICE` tells the daemon that something starts it again when it exits, so it may update itself.
-        environment: { RUIMTE_HOME: ruimteHome, PATH: loginShellPath() ?? process.env.PATH ?? '/usr/bin:/bin', RUIMTE_SERVICE: '1' },
-        workingDirectory: homedir(),
-        logFile: join(app.getPath('logs'), 'daemon.log')
-    };
-    return process.platform === 'darwin' ? launchAgentPlist(spec) : systemdUnit(spec);
+        home: homedir(),
+        ruimteHome,
+        // A packaged app inherits the launcher's PATH, which is not the one a terminal of this person finds.
+        path: loginShellPath() ?? process.env.PATH ?? '/usr/bin:/bin'
+    });
+    return definitionFor(process.platform, spec);
 };
 
 const serviceController = createServiceController({

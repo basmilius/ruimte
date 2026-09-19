@@ -3,17 +3,13 @@ import { buildIdentityOf, MACHINE_HEALTH_PATH, type BuildIdentity } from '@ruimt
 import { homedir, userInfo } from 'node:os';
 import { dirname, join } from 'node:path';
 import {
-    LAUNCH_AGENT_LABEL,
+    daemonServiceSpec,
     definitionRunsProgram,
     diskFiles,
-    launchAgentPlist,
-    launchdManager,
-    runCommand,
-    systemdManager,
-    systemdUnit,
+    platformServiceManager,
+    serviceDefinition,
     type ServiceFiles,
-    type ServiceManager,
-    type ServiceSpec
+    type ServiceManager
 } from '@ruimte/service';
 import { buildFileOf, readBuildFile } from '../service/self-update.ts';
 
@@ -58,6 +54,8 @@ export const servicePath = (path: string | undefined): string => {
     return unique.length > 0 ? unique.join(':') : '/usr/local/bin:/usr/bin:/bin';
 };
 
+export const UNSUPPORTED_PLATFORM = 'The background service runs on macOS and Linux only.';
+
 export const serviceKindOf = (platform: NodeJS.Platform): 'launchd' | 'systemd' | null => {
     if (platform === 'darwin') {
         return 'launchd';
@@ -71,21 +69,18 @@ export const serviceKindOf = (platform: NodeJS.Platform): 'launchd' | 'systemd' 
 export const servicePlan = (facts: ServiceFacts): ServicePlan | string => {
     const kind = serviceKindOf(facts.platform);
     if (kind === null) {
-        return 'The background service runs on macOS and Linux only.';
+        return UNSUPPORTED_PLATFORM;
     }
     const binDir = join(facts.ruimteHome, 'bin');
     const program = join(binDir, 'ruimte');
-    const spec: ServiceSpec = {
-        label: LAUNCH_AGENT_LABEL,
+    const spec = daemonServiceSpec({
         program,
         args: facts.flags,
-        // `RUIMTE_SERVICE` tells the daemon that something starts it again when it exits, so it may update itself.
-        environment: { RUIMTE_HOME: facts.ruimteHome, PATH: servicePath(facts.path), RUIMTE_SERVICE: '1' },
-        workingDirectory: facts.home,
-        // The same log the app's service writes, so one place to look whichever installed it.
-        logFile: join(facts.home, 'Library', 'Logs', 'Ruimte', 'daemon.log')
-    };
-    return { kind, binDir, program, definition: kind === 'launchd' ? launchAgentPlist(spec) : systemdUnit(spec) };
+        home: facts.home,
+        ruimteHome: facts.ruimteHome,
+        path: servicePath(facts.path)
+    });
+    return { kind, binDir, program, definition: serviceDefinition(facts.platform, spec) };
 };
 
 export interface ServiceDeps {
@@ -247,26 +242,13 @@ const health = async (port: number): Promise<BuildIdentity | null> => {
     }
 };
 
-const createManager = (platform: NodeJS.Platform): ServiceManager => {
-    if (platform === 'darwin') {
-        return launchdManager({
-            uid: process.getuid?.() ?? 0,
-            home: homedir(),
-            run: runCommand,
-            files: diskFiles,
-            sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-        });
+export const runService = (args: string[], options: { port: number; ruimteHome: string; compiled: boolean }): Promise<number> => {
+    const manager = platformServiceManager(process.platform);
+    if (manager === null) {
+        console.error(UNSUPPORTED_PLATFORM);
+        return Promise.resolve(1);
     }
-    return systemdManager({
-        configHome: process.env.XDG_CONFIG_HOME || join(homedir(), '.config'),
-        user: userInfo().username,
-        run: runCommand,
-        files: diskFiles
-    });
-};
-
-export const runService = (args: string[], options: { port: number; ruimteHome: string; compiled: boolean }): Promise<number> =>
-    runServiceAction(
+    return runServiceAction(
         args[0] ?? '',
         {
             platform: process.platform,
@@ -279,7 +261,7 @@ export const runService = (args: string[], options: { port: number; ruimteHome: 
             flags: args.slice(1)
         },
         {
-            manager: createManager(process.platform),
+            manager,
             files: diskFiles,
             copyBinaries,
             removeBinaries,
@@ -290,3 +272,4 @@ export const runService = (args: string[], options: { port: number; ruimteHome: 
             err: (line) => console.error(line)
         }
     );
+};
