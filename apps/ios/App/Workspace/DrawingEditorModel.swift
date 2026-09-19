@@ -97,7 +97,10 @@ final class DrawingEditorModel {
             guard revision == lifecycle else { return }
             guard let document = result["document"] else { throw MachineClientError.invalid("The drawing is missing.") }
             receive(document)
-        } catch { if revision == lifecycle { problem = error.localizedDescription } }
+        } catch is CancellationError {
+        } catch {
+            if revision == lifecycle { problem = error.localizedDescription }
+        }
     }
 
     private func receive(_ remote: JSONValue) {
@@ -309,7 +312,10 @@ final class DrawingEditorModel {
                 let scene = try await LocalDocumentRenderer.shared.render(kind: "drawing", document: document)
                 guard !Task.isCancelled, revision == generation else { return }
                 self.scene = scene
-            } catch { if !Task.isCancelled { problem = error.localizedDescription } }
+            } catch is CancellationError {
+            } catch {
+                if !Task.isCancelled, revision == generation { problem = error.localizedDescription }
+            }
         }
     }
 
