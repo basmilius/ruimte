@@ -3,7 +3,8 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AuthStore } from '../auth/auth-store.ts';
-import { FS_FILE_PATH, handleFsFileRequest, parseByteRange } from './file-route.ts';
+import { parseByteRange } from '../bytes/byte-route.ts';
+import { FS_FILE_PATH, handleFsFileRequest } from './file-route.ts';
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d]);
 const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
