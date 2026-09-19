@@ -73,90 +73,90 @@ export function BranchMenu({ target, targets, branch, detached, refs, loading, o
                 </Menu.Trigger>
             </Tooltip>
             <MenuPopup className="max-h-96 w-80 overflow-y-auto">
-                        <div className={MENU_LABEL}>{t('git.branchMenu.checkout')}</div>
-                        <Menu.RadioGroup
-                            value={target.cwd ?? ''}
-                            onValueChange={(value: string) => {
-                                const picked = targets.find((entry) => entry.cwd === value);
-                                if (picked) {
-                                    onPickTarget(picked);
-                                }
-                            }}
-                        >
-                            {targets.map((entry) => (
-                                <Menu.RadioItem key={entry.cwd ?? entry.label} value={entry.cwd ?? ''} className="menu-item">
-                                    <span className="grid h-5 w-4 shrink-0 place-items-center">
-                                        <Menu.RadioItemIndicator>
-                                            <Icon icon={Check} size={14} />
-                                        </Menu.RadioItemIndicator>
-                                    </span>
-                                    <span className="truncate">{entry.label}</span>
-                                    {entry.group !== undefined && <span className={`${MENU_HINT} truncate`}>{entry.group}</span>}
-                                </Menu.RadioItem>
-                            ))}
-                            {targets.length === 0 && (
-                                <Menu.Item className="menu-item" disabled>
-                                    {t('git.branchMenu.noCheckouts')}
-                                </Menu.Item>
-                            )}
-                        </Menu.RadioGroup>
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        <div className={MENU_LABEL}>{t('git.branchMenu.branches')}</div>
-                        <Menu.Item className="menu-item" onClick={onCreate}>
-                            <Icon icon={Plus} size={14} />
-                            {t('git.branchMenu.create')}
+                <div className={MENU_LABEL}>{t('git.branchMenu.checkout')}</div>
+                <Menu.RadioGroup
+                    value={target.cwd ?? ''}
+                    onValueChange={(value: string) => {
+                        const picked = targets.find((entry) => entry.cwd === value);
+                        if (picked) {
+                            onPickTarget(picked);
+                        }
+                    }}
+                >
+                    {targets.map((entry) => (
+                        <Menu.RadioItem key={entry.cwd ?? entry.label} value={entry.cwd ?? ''} className="menu-item">
+                            <span className="grid h-5 w-4 shrink-0 place-items-center">
+                                <Menu.RadioItemIndicator>
+                                    <Icon icon={Check} size={14} />
+                                </Menu.RadioItemIndicator>
+                            </span>
+                            <span className="truncate">{entry.label}</span>
+                            {entry.group !== undefined && <span className={`${MENU_HINT} truncate`}>{entry.group}</span>}
+                        </Menu.RadioItem>
+                    ))}
+                    {targets.length === 0 && (
+                        <Menu.Item className="menu-item" disabled>
+                            {t('git.branchMenu.noCheckouts')}
                         </Menu.Item>
-                        {refs.length > FILTER_FROM && (
-                            <div className="mx-1 my-1 flex items-center gap-2 rounded-lg border border-border px-2.5">
-                                <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />
-                                <input
-                                    ref={inputRef}
-                                    className="h-8 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
-                                    placeholder={t('git.branchMenu.search')}
-                                    spellCheck={false}
-                                    value={query}
-                                    onChange={(event) => setQuery(event.target.value)}
-                                    /* A menu types to jump to a row; while this field has focus the
+                    )}
+                </Menu.RadioGroup>
+                <Menu.Separator className={MENU_SEPARATOR} />
+                <div className={MENU_LABEL}>{t('git.branchMenu.branches')}</div>
+                <Menu.Item className="menu-item" onClick={onCreate}>
+                    <Icon icon={Plus} size={14} />
+                    {t('git.branchMenu.create')}
+                </Menu.Item>
+                {refs.length > FILTER_FROM && (
+                    <div className="mx-1 my-1 flex items-center gap-2 rounded-lg border border-border px-2.5">
+                        <Icon icon={Search} size={14} className="shrink-0 text-text-faint" />
+                        <input
+                            ref={inputRef}
+                            className="h-8 w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
+                            placeholder={t('git.branchMenu.search')}
+                            spellCheck={false}
+                            value={query}
+                            onChange={(event) => setQuery(event.target.value)}
+                            /* A menu types to jump to a row; while this field has focus the
                                        letters belong to it, and only the keys that move or close
                                        the menu are passed on. */
-                                    onKeyDown={(event) => {
-                                        if (!MENU_KEYS.has(event.key)) {
-                                            event.stopPropagation();
-                                        }
-                                    }}
-                                />
-                            </div>
-                        )}
-                        {loading && <p className="px-3 py-2 text-xs text-text-faint">{t('git.branchMenu.loading')}</p>}
-                        {!loading && shown.length === 0 && <p className="px-3 py-2 text-xs text-text-faint">{t('git.branchMenu.noMatch')}</p>}
-                        <Menu.RadioGroup
-                            value={current}
-                            onValueChange={(value: string) => {
-                                const picked = refs.find((ref) => ref.name === value);
-                                if (picked && !picked.current) {
-                                    onCheckout(picked);
+                            onKeyDown={(event) => {
+                                if (!MENU_KEYS.has(event.key)) {
+                                    event.stopPropagation();
                                 }
                             }}
+                        />
+                    </div>
+                )}
+                {loading && <p className="px-3 py-2 text-xs text-text-faint">{t('git.branchMenu.loading')}</p>}
+                {!loading && shown.length === 0 && <p className="px-3 py-2 text-xs text-text-faint">{t('git.branchMenu.noMatch')}</p>}
+                <Menu.RadioGroup
+                    value={current}
+                    onValueChange={(value: string) => {
+                        const picked = refs.find((ref) => ref.name === value);
+                        if (picked && !picked.current) {
+                            onCheckout(picked);
+                        }
+                    }}
+                >
+                    {shown.map((ref) => (
+                        <Menu.RadioItem
+                            key={`${ref.kind}:${ref.name}`}
+                            value={ref.name}
+                            disabled={ref.worktree !== undefined}
+                            className={clsx('menu-item', ref.worktree !== undefined && 'opacity-45')}
                         >
-                            {shown.map((ref) => (
-                                <Menu.RadioItem
-                                    key={`${ref.kind}:${ref.name}`}
-                                    value={ref.name}
-                                    disabled={ref.worktree !== undefined}
-                                    className={clsx('menu-item', ref.worktree !== undefined && 'opacity-45')}
-                                >
-                                    <span className="grid h-5 w-4 shrink-0 place-items-center">
-                                        <Menu.RadioItemIndicator>
-                                            <Icon icon={Check} size={14} />
-                                        </Menu.RadioItemIndicator>
-                                    </span>
-                                    <span className="truncate font-mono text-xs">{ref.name}</span>
-                                    {ref.isDefault && <span className={MENU_HINT}>{t('git.branchMenu.default')}</span>}
-                                    {ref.worktree !== undefined && <span className={`${MENU_HINT} truncate`}>{t('git.branchMenu.inWorktree')}</span>}
-                                </Menu.RadioItem>
-                            ))}
-                        </Menu.RadioGroup>
-                    </MenuPopup>
+                            <span className="grid h-5 w-4 shrink-0 place-items-center">
+                                <Menu.RadioItemIndicator>
+                                    <Icon icon={Check} size={14} />
+                                </Menu.RadioItemIndicator>
+                            </span>
+                            <span className="truncate font-mono text-xs">{ref.name}</span>
+                            {ref.isDefault && <span className={MENU_HINT}>{t('git.branchMenu.default')}</span>}
+                            {ref.worktree !== undefined && <span className={`${MENU_HINT} truncate`}>{t('git.branchMenu.inWorktree')}</span>}
+                        </Menu.RadioItem>
+                    ))}
+                </Menu.RadioGroup>
+            </MenuPopup>
         </Menu.Root>
     );
 }

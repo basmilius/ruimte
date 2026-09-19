@@ -205,15 +205,15 @@ export function WorktreeSection({ folder, worktrees, nodes, current, busy, onVie
                                         </Menu.Trigger>
                                     </Tooltip>
                                     <MenuPopup align="end">
-                                                <WorktreeMenuItems
-                                                    worktree={worktree}
-                                                    reveal={reveal}
-                                                    onView={onView}
-                                                    onMerge={onMerge}
-                                                    onRemove={onRemove}
-                                                    onReveal={onReveal}
-                                                />
-                                            </MenuPopup>
+                                        <WorktreeMenuItems
+                                            worktree={worktree}
+                                            reveal={reveal}
+                                            onView={onView}
+                                            onMerge={onMerge}
+                                            onRemove={onRemove}
+                                            onReveal={onReveal}
+                                        />
+                                    </MenuPopup>
                                 </Menu.Root>
                             </ContextMenu.Trigger>
                             <ContextMenu.Portal>

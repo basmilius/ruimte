@@ -6,7 +6,7 @@ import { isApplePlatform, isDesktop } from '@/desktop/bridge';
 import { appCommands } from '@/shell/commands';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Keys } from '@/shell/settings/controls';
+import { Keys } from '@/ui/Kbd';
 import { commandShortcuts, filterShortcuts, shortcutGroups } from '@/shell/settings/shortcuts';
 import { Icon } from '@/ui/Icon';
 import { formatShortcut } from '@/ui/shortcut';

@@ -6,7 +6,8 @@ import { messageOf } from '@/pulsar/account';
 import { desktop, type OpenAiCredentialStatus } from '@/desktop/bridge';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Badge, Skeleton, Toggle } from '@/shell/settings/controls';
+import { Skeleton, Toggle } from '@/shell/settings/controls';
+import { Pill } from '@/ui/Pill';
 import { useSettings } from '@/state/settings';
 import { useToasts } from '@/state/toasts';
 import { Button } from '@/ui/Button';
@@ -61,7 +62,11 @@ export function VoicePane() {
                     // Read off i18next rather than the hook's `t`, which would make the language a reason to ask again.
                     useToasts
                         .getState()
-                        .show({ kind: 'error', title: i18next.t('settings:voice.toast.readFailed'), description: messageOf(error, i18next.t('settings:voice.key.readFailure')) });
+                        .show({
+                            kind: 'error',
+                            title: i18next.t('settings:voice.toast.readFailed'),
+                            description: messageOf(error, i18next.t('settings:voice.key.readFailure'))
+                        });
                 }
             });
         return () => {
@@ -179,9 +184,9 @@ export function VoicePane() {
                     description={displayStatus ? descriptionFor(displayStatus) : t('voice.key.checking')}
                     control={
                         displayStatus ? (
-                            <Badge tone={displayStatus.configured ? 'accent' : 'muted'}>
+                            <Pill shape="tag" tone={displayStatus.configured ? 'accent' : 'muted'}>
                                 {displayStatus.configured ? t('voice.key.configured') : t('voice.key.notConfigured')}
-                            </Badge>
+                            </Pill>
                         ) : (
                             <Skeleton className="w-20" />
                         )

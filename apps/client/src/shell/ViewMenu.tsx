@@ -166,36 +166,36 @@ export function ViewMenu() {
                 <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
             </Menu.Trigger>
             <MenuPopup className="min-w-52">
-                        <div className={MENU_LABEL}>{t('viewMenu.views')}</div>
-                        {views.filter(isOpenableView).map((view, index) => (
-                            <Menu.Item key={view.id} className="menu-item" onClick={() => showView(view.id)}>
-                                <ViewGlyph
-                                    id={view.id}
-                                    kind={view.kind}
-                                    icon={viewIconOf(view)}
-                                    provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
-                                    path={view.kind === 'file' ? view.path : null}
-                                />
-                                <ViewName view={view} className="truncate" />
-                                {view.id === activeViewId && (
-                                    <span className="ml-auto flex shrink-0 items-center">
-                                        <Icon icon={Check} size={14} />
-                                    </span>
-                                )}
-                                {/* The first nine have a shortcut of their own; the rest are one click away. */}
-                                {index < 9 && view.id !== activeViewId && <Kbd shortcut={viewShortcut(index)!} />}
-                            </Menu.Item>
-                        ))}
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        {/* Here the items follow the list of views, so they say what they are; under
+                <div className={MENU_LABEL}>{t('viewMenu.views')}</div>
+                {views.filter(isOpenableView).map((view, index) => (
+                    <Menu.Item key={view.id} className="menu-item" onClick={() => showView(view.id)}>
+                        <ViewGlyph
+                            id={view.id}
+                            kind={view.kind}
+                            icon={viewIconOf(view)}
+                            provider={view.kind === 'chat' || view.kind === 'terminal' ? view.node.provider : null}
+                            path={view.kind === 'file' ? view.path : null}
+                        />
+                        <ViewName view={view} className="truncate" />
+                        {view.id === activeViewId && (
+                            <span className="ml-auto flex shrink-0 items-center">
+                                <Icon icon={Check} size={14} />
+                            </span>
+                        )}
+                        {/* The first nine have a shortcut of their own; the rest are one click away. */}
+                        {index < 9 && view.id !== activeViewId && <Kbd shortcut={viewShortcut(index)!} />}
+                    </Menu.Item>
+                ))}
+                <Menu.Separator className={MENU_SEPARATOR} />
+                {/* Here the items follow the list of views, so they say what they are; under
                             the sidebar's plus they would repeat what the plus already says. */}
-                        <div className={MENU_LABEL}>{t('viewMenu.newView')}</div>
-                        <NewViewItems />
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        <SplitItems />
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        <ViewMenuItems viewId={active.id} kind={active.kind} />
-                    </MenuPopup>
+                <div className={MENU_LABEL}>{t('viewMenu.newView')}</div>
+                <NewViewItems />
+                <Menu.Separator className={MENU_SEPARATOR} />
+                <SplitItems />
+                <Menu.Separator className={MENU_SEPARATOR} />
+                <ViewMenuItems viewId={active.id} kind={active.kind} />
+            </MenuPopup>
         </Menu.Root>
     );
 }

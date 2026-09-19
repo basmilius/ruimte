@@ -242,47 +242,47 @@ export function ProjectMenu() {
                     <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
                 </Menu.Trigger>
                 <MenuPopup className="min-w-60">
-                            {open.length > 0 && <div className={MENU_LABEL}>{t('projectMenu.projects')}</div>}
-                            {open.map((row) => (
-                                <ProjectRow
-                                    key={`${row.endpointId}:${row.summary.projectId}`}
-                                    row={row}
-                                    showMachine={showMachine}
-                                    actions={{
-                                        platform: servers[row.endpointId]?.platform ?? null,
-                                        onSettings: () => openSettings(row),
-                                        onClose: () => void askClose(row)
-                                    }}
-                                />
-                            ))}
-                            {recent.length > 0 && (
-                                <>
-                                    {open.length > 0 && <Menu.Separator className={MENU_SEPARATOR} />}
-                                    <Menu.SubmenuRoot>
-                                        <Menu.SubmenuTrigger className="menu-item">
-                                            <Icon icon={History} size={14} /> {t('projectMenu.recent')}
-                                            <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
-                                        </Menu.SubmenuTrigger>
-                                        <Menu.Portal>
-                                            <Menu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
-                                                <Menu.Popup className="menu-popup min-w-60">
-                                                    {recent.map((row) => (
-                                                        <ProjectRow key={`${row.endpointId}:${row.summary.projectId}`} row={row} showMachine={showMachine} />
-                                                    ))}
-                                                </Menu.Popup>
-                                            </Menu.Positioner>
-                                        </Menu.Portal>
-                                    </Menu.SubmenuRoot>
-                                </>
-                            )}
-                            {(open.length > 0 || recent.length > 0) && <Menu.Separator className={MENU_SEPARATOR} />}
-                            <Menu.Item className="menu-item" onClick={() => setNewOpen(true)}>
-                                <Icon icon={Plus} size={14} /> {t('projectMenu.newProject')}
-                            </Menu.Item>
-                            <Menu.Item className="menu-item" onClick={() => useUi.getState().openFolderBrowser()}>
-                                <Icon icon={FolderOpen} size={14} /> {t('projectMenu.openFolder')}
-                            </Menu.Item>
-                        </MenuPopup>
+                    {open.length > 0 && <div className={MENU_LABEL}>{t('projectMenu.projects')}</div>}
+                    {open.map((row) => (
+                        <ProjectRow
+                            key={`${row.endpointId}:${row.summary.projectId}`}
+                            row={row}
+                            showMachine={showMachine}
+                            actions={{
+                                platform: servers[row.endpointId]?.platform ?? null,
+                                onSettings: () => openSettings(row),
+                                onClose: () => void askClose(row)
+                            }}
+                        />
+                    ))}
+                    {recent.length > 0 && (
+                        <>
+                            {open.length > 0 && <Menu.Separator className={MENU_SEPARATOR} />}
+                            <Menu.SubmenuRoot>
+                                <Menu.SubmenuTrigger className="menu-item">
+                                    <Icon icon={History} size={14} /> {t('projectMenu.recent')}
+                                    <Icon icon={ChevronRight} size={14} className="ml-auto text-text-faint" />
+                                </Menu.SubmenuTrigger>
+                                <Menu.Portal>
+                                    <Menu.Positioner className="z-(--z-popup)" sideOffset={4} alignOffset={-4}>
+                                        <Menu.Popup className="menu-popup min-w-60">
+                                            {recent.map((row) => (
+                                                <ProjectRow key={`${row.endpointId}:${row.summary.projectId}`} row={row} showMachine={showMachine} />
+                                            ))}
+                                        </Menu.Popup>
+                                    </Menu.Positioner>
+                                </Menu.Portal>
+                            </Menu.SubmenuRoot>
+                        </>
+                    )}
+                    {(open.length > 0 || recent.length > 0) && <Menu.Separator className={MENU_SEPARATOR} />}
+                    <Menu.Item className="menu-item" onClick={() => setNewOpen(true)}>
+                        <Icon icon={Plus} size={14} /> {t('projectMenu.newProject')}
+                    </Menu.Item>
+                    <Menu.Item className="menu-item" onClick={() => useUi.getState().openFolderBrowser()}>
+                        <Icon icon={FolderOpen} size={14} /> {t('projectMenu.openFolder')}
+                    </Menu.Item>
+                </MenuPopup>
             </Menu.Root>
 
             <ProjectNameDialog

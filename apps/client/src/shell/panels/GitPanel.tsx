@@ -661,58 +661,58 @@ function ActionsMenu({ busy, canPullRequest, stashes, onOpen, onAction, onDialog
                 </Menu.Trigger>
             </Tooltip>
             <MenuPopup align="end">
-                        <Menu.Item className="menu-item" onClick={() => onAction('pull')}>
-                            {t('git.actions.pull')}
-                        </Menu.Item>
-                        <Menu.Item className="menu-item" onClick={() => onAction('push')}>
-                            {t('git.actions.push')}
-                        </Menu.Item>
-                        <Menu.Item className="menu-item" onClick={() => onAction('sync')}>
-                            {t('git.actions.sync')}
-                            <span className={MENU_HINT}>{t('git.actions.syncHint')}</span>
-                        </Menu.Item>
+                <Menu.Item className="menu-item" onClick={() => onAction('pull')}>
+                    {t('git.actions.pull')}
+                </Menu.Item>
+                <Menu.Item className="menu-item" onClick={() => onAction('push')}>
+                    {t('git.actions.push')}
+                </Menu.Item>
+                <Menu.Item className="menu-item" onClick={() => onAction('sync')}>
+                    {t('git.actions.sync')}
+                    <span className={MENU_HINT}>{t('git.actions.syncHint')}</span>
+                </Menu.Item>
+                <Menu.Separator className={MENU_SEPARATOR} />
+                <Menu.Item className="menu-item" onClick={() => onAction('fetch')}>
+                    {t('git.actions.fetch')}
+                </Menu.Item>
+                <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'force-push' })}>
+                    {t('git.actions.forcePush')}
+                </Menu.Item>
+                <Menu.Separator className={MENU_SEPARATOR} />
+                <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'merge' })}>
+                    {t('git.actions.merge')}
+                </Menu.Item>
+                <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'rebase' })}>
+                    {t('git.actions.rebase')}
+                </Menu.Item>
+                <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'rename-branch' })}>
+                    {t('git.actions.renameBranch')}
+                </Menu.Item>
+                <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'delete-branch' })}>
+                    {t('git.actions.deleteBranch')}
+                </Menu.Item>
+                <Menu.Separator className={MENU_SEPARATOR} />
+                <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'stash' })}>
+                    {t('git.actions.stash')}
+                </Menu.Item>
+                <Menu.Item
+                    className="menu-item"
+                    disabled={stashes.length === 0}
+                    onClick={() => (stashes.length > 1 ? onDialog({ kind: 'pick-stash' }) : onAction('stash-pop'))}
+                >
+                    {t('git.actions.popStash')}
+                    {stashes.length > 1 && <span className={MENU_HINT}>{stashes.length}</span>}
+                </Menu.Item>
+                {canPullRequest && (
+                    <>
                         <Menu.Separator className={MENU_SEPARATOR} />
-                        <Menu.Item className="menu-item" onClick={() => onAction('fetch')}>
-                            {t('git.actions.fetch')}
+                        <Menu.Item className="menu-item" onClick={onPullRequest}>
+                            <Icon icon={GitPullRequest} size={14} />
+                            {t('git.actions.pullRequest')}
                         </Menu.Item>
-                        <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'force-push' })}>
-                            {t('git.actions.forcePush')}
-                        </Menu.Item>
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'merge' })}>
-                            {t('git.actions.merge')}
-                        </Menu.Item>
-                        <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'rebase' })}>
-                            {t('git.actions.rebase')}
-                        </Menu.Item>
-                        <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'rename-branch' })}>
-                            {t('git.actions.renameBranch')}
-                        </Menu.Item>
-                        <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'pick-branch', action: 'delete-branch' })}>
-                            {t('git.actions.deleteBranch')}
-                        </Menu.Item>
-                        <Menu.Separator className={MENU_SEPARATOR} />
-                        <Menu.Item className="menu-item" onClick={() => onDialog({ kind: 'stash' })}>
-                            {t('git.actions.stash')}
-                        </Menu.Item>
-                        <Menu.Item
-                            className="menu-item"
-                            disabled={stashes.length === 0}
-                            onClick={() => (stashes.length > 1 ? onDialog({ kind: 'pick-stash' }) : onAction('stash-pop'))}
-                        >
-                            {t('git.actions.popStash')}
-                            {stashes.length > 1 && <span className={MENU_HINT}>{stashes.length}</span>}
-                        </Menu.Item>
-                        {canPullRequest && (
-                            <>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <Menu.Item className="menu-item" onClick={onPullRequest}>
-                                    <Icon icon={GitPullRequest} size={14} />
-                                    {t('git.actions.pullRequest')}
-                                </Menu.Item>
-                            </>
-                        )}
-                    </MenuPopup>
+                    </>
+                )}
+            </MenuPopup>
         </Menu.Root>
     );
 }

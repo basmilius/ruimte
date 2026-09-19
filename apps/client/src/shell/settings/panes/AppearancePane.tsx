@@ -66,20 +66,20 @@ function AccentSwatches() {
                     </Menu.Trigger>
                 </Tooltip>
                 <MenuPopup align="end" className="max-h-96 overflow-y-auto">
-                            <Menu.RadioGroup value={accent} onValueChange={(value: AccentId) => pick(value)}>
-                                {rest.map((entry) => (
-                                    <Menu.RadioItem key={entry.id} value={entry.id} className="menu-item">
-                                        <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: entry.color }} aria-hidden />
-                                        <span className="grow">{accentLabel(entry.id)}</span>
-                                        <span className="grid h-5 w-4 shrink-0 place-items-center">
-                                            <Menu.RadioItemIndicator>
-                                                <Icon icon={Check} size={14} />
-                                            </Menu.RadioItemIndicator>
-                                        </span>
-                                    </Menu.RadioItem>
-                                ))}
-                            </Menu.RadioGroup>
-                        </MenuPopup>
+                    <Menu.RadioGroup value={accent} onValueChange={(value: AccentId) => pick(value)}>
+                        {rest.map((entry) => (
+                            <Menu.RadioItem key={entry.id} value={entry.id} className="menu-item">
+                                <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: entry.color }} aria-hidden />
+                                <span className="grow">{accentLabel(entry.id)}</span>
+                                <span className="grid h-5 w-4 shrink-0 place-items-center">
+                                    <Menu.RadioItemIndicator>
+                                        <Icon icon={Check} size={14} />
+                                    </Menu.RadioItemIndicator>
+                                </span>
+                            </Menu.RadioItem>
+                        ))}
+                    </Menu.RadioGroup>
+                </MenuPopup>
             </Menu.Root>
         </div>
     );

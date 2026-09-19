@@ -109,7 +109,12 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
                 </div>
             </div>
 
-            <IconPicker value={chosen} disabled={busy} gridLabel={t('projectSettings.symbol')} onChange={(icon) => void run(() => actions.setChosenIcon(icon))} />
+            <IconPicker
+                value={chosen}
+                disabled={busy}
+                gridLabel={t('projectSettings.symbol')}
+                onChange={(icon) => void run(() => actions.setChosenIcon(icon))}
+            />
 
             {failure && (
                 <p className="mt-3 text-sm text-status-error" role="alert">

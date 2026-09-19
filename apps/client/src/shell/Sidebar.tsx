@@ -720,8 +720,8 @@ export function Sidebar() {
                             <Icon icon={Plus} size={14} /> {t('viewMenu.newView')}
                         </Menu.Trigger>
                         <MenuPopup side="top" className="min-w-52">
-                                    <NewViewItems />
-                                </MenuPopup>
+                            <NewViewItems />
+                        </MenuPopup>
                     </Menu.Root>
                     <ConnectionDot />
                     <UsageLimitsCard>

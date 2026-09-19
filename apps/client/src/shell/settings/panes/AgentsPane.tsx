@@ -14,7 +14,8 @@ import { canKeepAwake } from '@/desktop/bridge';
 import { DeleteAnyViewSection } from '@/shell/settings/DeleteAnyViewSection';
 import { SettingsRow } from '@/shell/settings/SettingsRow';
 import { SettingsSection } from '@/shell/settings/SettingsSection';
-import { Badge, Skeleton, Toggle } from '@/shell/settings/controls';
+import { Skeleton, Toggle } from '@/shell/settings/controls';
+import { Pill } from '@/ui/Pill';
 import { useProviders } from '@/state/providers';
 import { useSettings } from '@/state/settings';
 import { Select, type SelectItem } from '@/ui/Select';
@@ -261,9 +262,13 @@ export function AgentsPane() {
                         }
                         control={
                             provider.installed ? (
-                                <Badge tone="idle">{t('agents.providers.installed')}</Badge>
+                                <Pill shape="tag" tone="idle">
+                                    {t('agents.providers.installed')}
+                                </Pill>
                             ) : (
-                                <Badge tone="muted">{t('agents.providers.missing')}</Badge>
+                                <Pill shape="tag" tone="muted">
+                                    {t('agents.providers.missing')}
+                                </Pill>
                             )
                         }
                     />

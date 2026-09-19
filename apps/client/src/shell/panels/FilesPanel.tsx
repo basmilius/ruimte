@@ -485,35 +485,35 @@ export function FilesPanel() {
                         </Menu.Trigger>
                     </Tooltip>
                     <MenuPopup align="end">
-                                <Menu.Item className="menu-item" onClick={() => useUi.getState().openFindInFiles()}>
-                                    <Icon icon={FileSearch} size={14} /> {t('file.empty.findInFiles')} <Kbd shortcut={APP_SHORTCUTS.findInFiles} />
-                                </Menu.Item>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <Menu.CheckboxItem
-                                    className="menu-item"
-                                    checked={showHidden}
-                                    onCheckedChange={(checked) => useSettings.getState().update({ filesShowHidden: checked })}
-                                    closeOnClick={false}
-                                >
-                                    <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
-                                        <Menu.CheckboxItemIndicator>
-                                            <Icon icon={Check} size={12} />
-                                        </Menu.CheckboxItemIndicator>
-                                    </span>
-                                    {t('files.showHidden')}
-                                </Menu.CheckboxItem>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <Menu.Item className="menu-item" onClick={expandAll}>
-                                    <Icon icon={ChevronsUpDown} size={14} /> {t('git.panel.expandAll')}
-                                </Menu.Item>
-                                <Menu.Item className="menu-item" onClick={collapseAll}>
-                                    <Icon icon={ChevronsDownUp} size={14} /> {t('git.panel.collapseAll')}
-                                </Menu.Item>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <Menu.Item className="menu-item" onClick={refresh}>
-                                    <Icon icon={RefreshCw} size={14} /> {t('file.menu.refresh')}
-                                </Menu.Item>
-                            </MenuPopup>
+                        <Menu.Item className="menu-item" onClick={() => useUi.getState().openFindInFiles()}>
+                            <Icon icon={FileSearch} size={14} /> {t('file.empty.findInFiles')} <Kbd shortcut={APP_SHORTCUTS.findInFiles} />
+                        </Menu.Item>
+                        <Menu.Separator className={MENU_SEPARATOR} />
+                        <Menu.CheckboxItem
+                            className="menu-item"
+                            checked={showHidden}
+                            onCheckedChange={(checked) => useSettings.getState().update({ filesShowHidden: checked })}
+                            closeOnClick={false}
+                        >
+                            <span className="grid h-4 w-4 place-items-center rounded border border-border-strong">
+                                <Menu.CheckboxItemIndicator>
+                                    <Icon icon={Check} size={12} />
+                                </Menu.CheckboxItemIndicator>
+                            </span>
+                            {t('files.showHidden')}
+                        </Menu.CheckboxItem>
+                        <Menu.Separator className={MENU_SEPARATOR} />
+                        <Menu.Item className="menu-item" onClick={expandAll}>
+                            <Icon icon={ChevronsUpDown} size={14} /> {t('git.panel.expandAll')}
+                        </Menu.Item>
+                        <Menu.Item className="menu-item" onClick={collapseAll}>
+                            <Icon icon={ChevronsDownUp} size={14} /> {t('git.panel.collapseAll')}
+                        </Menu.Item>
+                        <Menu.Separator className={MENU_SEPARATOR} />
+                        <Menu.Item className="menu-item" onClick={refresh}>
+                            <Icon icon={RefreshCw} size={14} /> {t('file.menu.refresh')}
+                        </Menu.Item>
+                    </MenuPopup>
                 </Menu.Root>
             </div>
             {reachability !== null && reachability !== 'loopback' && (

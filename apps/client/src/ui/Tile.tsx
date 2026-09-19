@@ -1,6 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import clsx from 'clsx';
-import { TOOLTIP_KBD } from '@/ui/classes';
 import { Kbd } from '@/ui/Kbd';
 import type { Shortcut } from '@/ui/shortcut';
 
@@ -44,7 +43,7 @@ export function Tile({ icon, title, description, shortcut, primary = false, size
                 <span className="truncate text-sm font-medium text-text">{title}</span>
                 {description && <span className="truncate text-xs text-text-muted">{description}</span>}
             </span>
-            {shortcut && <Kbd shortcut={shortcut} className={clsx(TOOLTIP_KBD, 'shrink-0')} />}
+            {shortcut && <Kbd shortcut={shortcut} variant="inline" className="shrink-0" />}
         </button>
     );
 }

@@ -113,15 +113,13 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
                         <Icon icon={ChevronDown} size={12} />
                     </Menu.Trigger>
                     <MenuPopup className="min-w-56">
-                                {plans.map((entry) => (
-                                    <Menu.Item key={entry.id} className="menu-item" onClick={() => pickPlan(entry.id)}>
-                                        <span className="grid h-4 w-4 shrink-0 place-items-center">
-                                            {entry.id === plan.id && <Icon icon={Check} size={14} />}
-                                        </span>
-                                        <span className="min-w-0 truncate">{entry.meta.title}</span>
-                                    </Menu.Item>
-                                ))}
-                            </MenuPopup>
+                        {plans.map((entry) => (
+                            <Menu.Item key={entry.id} className="menu-item" onClick={() => pickPlan(entry.id)}>
+                                <span className="grid h-4 w-4 shrink-0 place-items-center">{entry.id === plan.id && <Icon icon={Check} size={14} />}</span>
+                                <span className="min-w-0 truncate">{entry.meta.title}</span>
+                            </Menu.Item>
+                        ))}
+                    </MenuPopup>
                 </Menu.Root>
             )}
             <div className={clsx(BTN_GROUP, 'ml-auto shrink-0')}>
@@ -133,54 +131,54 @@ function PlanHeader({ endpointId, chatId, plans, plan, inset }: { endpointId: st
                         </Menu.Trigger>
                     </Tooltip>
                     <MenuPopup align="end" className="min-w-56">
-                                <div className={MENU_LABEL}>{t('planPanel.show')}</div>
-                                <Menu.RadioGroup value={filter} onValueChange={(value: PlanFilter) => usePlanViewPrefs.getState().setFilter(value)}>
-                                    {FILTERS.map((id) => (
-                                        <Menu.RadioItem key={id} value={id} className="menu-item">
-                                            <span className="grid h-4 w-4 place-items-center">
-                                                <Menu.RadioItemIndicator>
-                                                    <Icon icon={Check} size={14} />
-                                                </Menu.RadioItemIndicator>
-                                            </span>
-                                            {t(`planPanel.filters.${id}`)}
-                                        </Menu.RadioItem>
-                                    ))}
-                                </Menu.RadioGroup>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <Menu.CheckboxItem
-                                    className="menu-item"
-                                    checked={collapseDone}
-                                    onCheckedChange={(checked) => usePlanViewPrefs.getState().setCollapseDone(checked)}
-                                >
+                        <div className={MENU_LABEL}>{t('planPanel.show')}</div>
+                        <Menu.RadioGroup value={filter} onValueChange={(value: PlanFilter) => usePlanViewPrefs.getState().setFilter(value)}>
+                            {FILTERS.map((id) => (
+                                <Menu.RadioItem key={id} value={id} className="menu-item">
                                     <span className="grid h-4 w-4 place-items-center">
-                                        <Menu.CheckboxItemIndicator>
+                                        <Menu.RadioItemIndicator>
                                             <Icon icon={Check} size={14} />
-                                        </Menu.CheckboxItemIndicator>
+                                        </Menu.RadioItemIndicator>
                                     </span>
-                                    {t('planPanel.collapseDone')}
-                                </Menu.CheckboxItem>
-                                <Menu.Item className="menu-item" onClick={() => expandAll(planKey)}>
-                                    <Icon icon={ChevronsUpDown} size={14} /> {t('planPanel.expandAll')}
-                                </Menu.Item>
-                                <Menu.Item className="menu-item" onClick={() => collapseAll(planKey, plan)}>
-                                    <Icon icon={ChevronsDownUp} size={14} /> {t('planPanel.collapseAll')}
-                                </Menu.Item>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <Menu.Item className="menu-item" onClick={() => copyPlanMarkdown(plan)}>
-                                    <Icon icon={Copy} size={14} /> {t('planPanel.copyMarkdown')}
-                                </Menu.Item>
-                                <Menu.Item className="menu-item" disabled={results === null} onClick={() => sendResultsToChat(chatId, plan)}>
-                                    <Icon icon={Send} size={14} /> {t('planPanel.sendResults')}
-                                </Menu.Item>
-                                <Menu.Separator className={MENU_SEPARATOR} />
-                                <Menu.Item
-                                    className="menu-item"
-                                    disabled={!hasLockedStep(plan)}
-                                    onClick={() => void planClient.unlock(endpointId, chatId, plan.id, 'all')}
-                                >
-                                    <Icon icon={LockOpen} size={14} /> {t('planPanel.unlockAll')}
-                                </Menu.Item>
-                            </MenuPopup>
+                                    {t(`planPanel.filters.${id}`)}
+                                </Menu.RadioItem>
+                            ))}
+                        </Menu.RadioGroup>
+                        <Menu.Separator className={MENU_SEPARATOR} />
+                        <Menu.CheckboxItem
+                            className="menu-item"
+                            checked={collapseDone}
+                            onCheckedChange={(checked) => usePlanViewPrefs.getState().setCollapseDone(checked)}
+                        >
+                            <span className="grid h-4 w-4 place-items-center">
+                                <Menu.CheckboxItemIndicator>
+                                    <Icon icon={Check} size={14} />
+                                </Menu.CheckboxItemIndicator>
+                            </span>
+                            {t('planPanel.collapseDone')}
+                        </Menu.CheckboxItem>
+                        <Menu.Item className="menu-item" onClick={() => expandAll(planKey)}>
+                            <Icon icon={ChevronsUpDown} size={14} /> {t('planPanel.expandAll')}
+                        </Menu.Item>
+                        <Menu.Item className="menu-item" onClick={() => collapseAll(planKey, plan)}>
+                            <Icon icon={ChevronsDownUp} size={14} /> {t('planPanel.collapseAll')}
+                        </Menu.Item>
+                        <Menu.Separator className={MENU_SEPARATOR} />
+                        <Menu.Item className="menu-item" onClick={() => copyPlanMarkdown(plan)}>
+                            <Icon icon={Copy} size={14} /> {t('planPanel.copyMarkdown')}
+                        </Menu.Item>
+                        <Menu.Item className="menu-item" disabled={results === null} onClick={() => sendResultsToChat(chatId, plan)}>
+                            <Icon icon={Send} size={14} /> {t('planPanel.sendResults')}
+                        </Menu.Item>
+                        <Menu.Separator className={MENU_SEPARATOR} />
+                        <Menu.Item
+                            className="menu-item"
+                            disabled={!hasLockedStep(plan)}
+                            onClick={() => void planClient.unlock(endpointId, chatId, plan.id, 'all')}
+                        >
+                            <Icon icon={LockOpen} size={14} /> {t('planPanel.unlockAll')}
+                        </Menu.Item>
+                    </MenuPopup>
                 </Menu.Root>
                 <Tooltip label={t('planPanel.close')} name>
                     <button type="button" className="icon-btn" onClick={closePlanPanel}>

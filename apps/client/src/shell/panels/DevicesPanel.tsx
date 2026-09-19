@@ -294,9 +294,9 @@ function DevicePlacementMenu({ device }: { device: DeviceInfo }) {
                 </Menu.Trigger>
             </Tooltip>
             <MenuPopup align="end">
-                        <div className={MENU_LABEL}>{t('devices.openSimulator')}</div>
-                        <DeviceMenuItems device={device} />
-                    </MenuPopup>
+                <div className={MENU_LABEL}>{t('devices.openSimulator')}</div>
+                <DeviceMenuItems device={device} />
+            </MenuPopup>
         </Menu.Root>
     );
 }
