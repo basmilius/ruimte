@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { GitFile } from '@ruimte/contracts';
 import type { TabState } from '@/state/files';
-import { activeDiffPath, allDirs, collapsedPathsOf, expansionChanges, pathsUnder, statusColor, type GitTreeRow } from './git-tree.ts';
+import { activeDiffPath, allDirs, collapsedPathsOf, expansionChanges, mergeCollapsedPaths, pathsUnder, statusColor, type GitTreeRow } from './git-tree.ts';
 
 const file = (path: string, status = 'M'): GitFile => ({ path, state: 'unstaged', status, added: 1, deleted: 0, binary: false });
 
@@ -31,6 +31,23 @@ describe('what the tree is told about a group', () => {
 });
 
 describe('which folders stand folded up', () => {
+    test('selection notifications from different groups leave shared folds unchanged', () => {
+        const current = ['src', 'docs'];
+        const staged = mergeCollapsedPaths(current, [dir('src/', false)]);
+        const unstaged = mergeCollapsedPaths(staged, [dir('docs/', false)]);
+        expect(staged).toBe(current);
+        expect(unstaged).toBe(current);
+        expect(mergeCollapsedPaths(current, [dir('docs/', false), dir('src/', false)])).toBe(current);
+    });
+
+    test('fold changes preserve hidden descendants and folders belonging to other groups', () => {
+        const current = ['src', 'src/nested', 'docs'];
+        const next = mergeCollapsedPaths(current, [dir('src/', true), dir('tests/', false)]);
+        expect(next).toEqual(['src/nested', 'docs', 'tests']);
+        expect(mergeCollapsedPaths(next, [dir('src/', true), dir('tests/', false)])).toBe(next);
+        expect(current).toEqual(['src', 'src/nested', 'docs']);
+    });
+
     test('a row that is closed is one, and the trailing slash of a directory is not part of it', () => {
         expect(collapsedPathsOf([dir('src/', false), dir('apps/client/', true), { path: 'a.ts', kind: 'file', isExpanded: false }])).toEqual(['src']);
     });

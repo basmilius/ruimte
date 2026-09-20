@@ -50,6 +50,20 @@ export const dirPathOf = (rowPath: string): string => (rowPath.endsWith('/') ? r
 export const collapsedPathsOf = (rows: readonly GitTreeRow[]): string[] =>
     rows.filter((row) => row.kind === 'directory' && !row.isExpanded).map((row) => dirPathOf(row.path));
 
+export const mergeCollapsedPaths = (current: string[], rows: readonly GitTreeRow[]): string[] => {
+    const known = new Set(rows.filter((row) => row.kind === 'directory').map((row) => dirPathOf(row.path)));
+    const folded = new Set(collapsedPathsOf(rows));
+    const next = current.filter((dir) => !known.has(dir) || folded.has(dir));
+    const existing = new Set(current);
+    for (const dir of folded) {
+        if (!existing.has(dir)) {
+            next.push(dir);
+        }
+    }
+    // Selection also notifies subscribers; unchanged folds must not restart the shared-state cycle.
+    return next.length === current.length && next.every((dir, index) => dir === current[index]) ? current : next;
+};
+
 /* Which rows have to move for a tree to stand the way the collapse set says. The set is shared by
    every group, so it holds folders this tree never heard of. */
 export const expansionChanges = (rows: readonly GitTreeRow[], collapsed: ReadonlySet<string>): { collapse: string[]; expand: string[] } => {

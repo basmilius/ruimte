@@ -7,7 +7,7 @@ import { ChevronsDownUp, ChevronsUpDown, Copy, CornerUpRight, FileDiff, FileText
 import type { GitFile, GitFileState, GitStatus } from '@ruimte/contracts';
 import { GIT_GROUP } from '@/shell/panels/classes';
 import { revealableInFiles } from '@/shell/panels/files-tree';
-import { collapsedPathsOf, dirPathOf, expansionChanges, pathsUnder, statusColor, type GitTreeRow } from '@/shell/panels/git-tree';
+import { dirPathOf, expansionChanges, mergeCollapsedPaths, pathsUnder, statusColor, type GitTreeRow } from '@/shell/panels/git-tree';
 import { directoryHandle, rowPathOf, PANEL_TREE_CSS, PANEL_TREE_ROW_HEIGHT } from '@/shell/panels/panel-tree';
 import { useFiles } from '@/state/files';
 import { useGit } from '@/state/git';
@@ -248,13 +248,9 @@ function GitGroup({ label, state, files, root, folder, platform, collapsed, read
                 if (applyingRef.current) {
                     return;
                 }
-                const rows = visibleRows(model);
-                const known = new Set(rows.filter((row) => row.kind === 'directory').map((row) => dirPathOf(row.path)));
-                const folded = collapsedPathsOf(rows);
-                const kept = useGit.getState().collapsedDirs.filter((dir) => !known.has(dir));
-                const next = [...kept, ...folded];
                 const current = useGit.getState().collapsedDirs;
-                if (next.length !== current.length || next.some((dir, index) => dir !== current[index])) {
+                const next = mergeCollapsedPaths(current, visibleRows(model));
+                if (next !== current) {
                     useGit.getState().setCollapsedDirs(next);
                 }
             }),
