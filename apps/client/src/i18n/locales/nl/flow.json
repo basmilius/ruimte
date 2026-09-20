@@ -6,7 +6,8 @@
         "add": "Kaart toevoegen",
         "run": "Deze flow nu draaien",
         "runHint": "Kies eerst de trigger om vanaf te draaien",
-        "runs": "Wat deze flow gedaan heeft"
+        "runs": "Wat deze flow gedaan heeft",
+        "runOffHint": "Zet de flow aan om hem te draaien, of probeer een kaart uit vanuit de kolom"
     },
     "kinds": {
         "trigger": "Als",

@@ -45,15 +45,21 @@ export const useLiveRun = (viewId: string): FlowLiveRun | null => {
             const { run } = event;
             window.clearTimeout(clear);
             if (run.outcome === 'running') {
-                setLive({
-                    runId: run.id,
-                    entry: run.trigger as string,
-                    settled: run.settled ?? {},
-                    waiting: run.waiting ?? [],
-                    lastCard: null,
-                    lastAt: run.startedAt,
-                    over: false
-                });
+                /* A run parked on a wait card is written down again while it is still going, so the
+                   card that flashed last keeps its flash rather than starting the run over. */
+                setLive((before) =>
+                    before !== null && before.runId === run.id
+                        ? { ...before, settled: run.settled ?? {}, waiting: run.waiting ?? [] }
+                        : {
+                              runId: run.id,
+                              entry: run.trigger as string,
+                              settled: run.settled ?? {},
+                              waiting: run.waiting ?? [],
+                              lastCard: null,
+                              lastAt: run.startedAt,
+                              over: false
+                          }
+                );
                 return;
             }
             /* A run that never began leaves no path to show, so it does not take the last one down. */

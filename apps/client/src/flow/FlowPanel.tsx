@@ -91,17 +91,19 @@ export function FlowPanel() {
                 </Tooltip>
             </header>
             {/* The header stays, so the column can still be closed when what is in it fails to draw. */}
-            <ErrorBoundary label={t('panel.failed')} resetKeys={[viewId, cardId]} className="min-h-0 grow overflow-y-auto">
-                {cardId !== null && card !== undefined ? (
-                    <FlowInspector id={cardId} card={card} content={content} flow={flow} />
-                ) : (
-                    <FlowRuns
-                        content={content}
-                        runs={flow.runs}
-                        onRunAgain={(run) => void flow.test({ from: run.trigger as string, scope: 'graph', dry: true, tokens: run.tokens })}
-                    />
-                )}
-            </ErrorBoundary>
+            <div className="min-h-0 grow overflow-y-auto">
+                <ErrorBoundary label={t('panel.failed')} resetKeys={[viewId, cardId]} className="min-h-full">
+                    {cardId !== null && card !== undefined ? (
+                        <FlowInspector id={cardId} card={card} content={content} flow={flow} />
+                    ) : (
+                        <FlowRuns
+                            content={content}
+                            runs={flow.runs}
+                            onRunAgain={(run) => void flow.test({ from: run.trigger as string, scope: 'graph', dry: true, tokens: run.tokens })}
+                        />
+                    )}
+                </ErrorBoundary>
+            </div>
             {replacing && cardId !== null && card !== undefined && (
                 <FlowCardPicker
                     /* Only its own kind: an action on a trigger's place is not a choice, and the lines

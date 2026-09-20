@@ -101,7 +101,7 @@ export function FlowDock({ viewId }: { viewId: string }) {
             <Separator />
 
             <div className={BTN_GROUP}>
-                <Tooltip label={target === null ? t('dock.runHint') : t('dock.run')} name>
+                <Tooltip label={!state.enabled ? t('dock.runOffHint') : target === null ? t('dock.runHint') : t('dock.run')} name>
                     <button className="icon-btn" disabled={busy || !known || !state.enabled || target === null} onClick={() => void start(target as string)}>
                         <Icon icon={Play} size={16} />
                     </button>
