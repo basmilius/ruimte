@@ -8,7 +8,7 @@ import type { FlowCardResult } from '@/flow/card-result';
 import { cardRect, ICON_SIZE, roundingOf } from '@/flow/geometry';
 import { glyphOf } from '@/flow/glyphs';
 import type { CardLight } from '@/flow/live-look';
-import { cardLabel, cardSentence, cardSource } from '@/flow/labels';
+import { argLabel, cardLabel, cardSentence, cardSource } from '@/flow/labels';
 import { plateClass } from '@/flow/source-look';
 import { formatDuration } from '@/format/duration';
 import { Icon } from '@/ui/Icon';
@@ -147,7 +147,7 @@ export function FlowCardBox({ id, card, content, selected, problems, light, puls
             {/* The ports are drawn in the layer under the cards, with the lines they belong to. */}
             <span className="sr-only">
                 {ports.map((port) => t(`ports.${port}`)).join(', ')}
-                {wrong.length > 0 && ` ${t('inspector.missing', { fields: wrong.join(', ') })}`}
+                {wrong.length > 0 && ` ${t('inspector.missing', { fields: wrong.map((name) => argLabel(t, card, name)).join(', ') })}`}
             </span>
             {flash}
         </div>

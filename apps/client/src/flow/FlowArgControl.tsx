@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { Check } from 'lucide-react';
 import type { FlowArgDefinition, FlowCard, FlowContent } from '@ruimte/contracts';
-import { textArg, tokensForArg } from '@ruimte/flow';
+import { textArg, tokensForArg, type FlowArgProblem } from '@ruimte/flow';
 import { chatChoices } from '@/flow/chats';
 import { FlowTokenField } from '@/flow/FlowTokenField';
 import { argLabel, choiceLabel, countOf } from '@/flow/labels';
@@ -17,6 +17,8 @@ interface FlowArgControlProps {
     card: FlowCard;
     content: FlowContent;
     arg: FlowArgDefinition;
+    /* What is wrong with what this field holds, so the control can say why. */
+    problem?: FlowArgProblem;
     /* Closes the control, which is what Enter on a one line field means. */
     onDone(): void;
 }
@@ -36,7 +38,7 @@ function Pick({ picked, label, onPick }: { picked: boolean; label: string; onPic
  * the catalog, so a card added to the schemas is fillable in without a line of interface behind it,
  * and every type here is one a card really uses.
  */
-export function FlowArgControl({ id, card, content, arg, onDone }: FlowArgControlProps) {
+export function FlowArgControl({ id, card, content, arg, problem, onDone }: FlowArgControlProps) {
     const { t } = useTranslation('flow');
     const store = useFlowStore();
     const rootRef = useRef<HTMLDivElement>(null);
@@ -156,10 +158,15 @@ export function FlowArgControl({ id, card, content, arg, onDone }: FlowArgContro
             />
         );
 
+    /* Only the fields a person types in: a list cannot hand back an answer it never offered, so a
+       choice or a chat is never the one that is unreadable. */
+    const wrong = problem !== 'invalid' ? null : arg.tokens === true ? t('inspector.broken') : t('inspector.invalid');
+
     return (
         <div ref={rootRef} className={clsx('flex flex-col gap-1.5 p-2', arg.type === 'longText' ? 'w-80' : 'w-64')}>
             <span className={SECTION_LABEL}>{label}</span>
             {body}
+            {wrong !== null && <p className="text-xs/[inherit] text-status-error">{wrong}</p>}
         </div>
     );
 }

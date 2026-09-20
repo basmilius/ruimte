@@ -48,7 +48,7 @@ export function FlowArgSlot({ id, card, content, arg, text, problem }: FlowArgSl
             <Popover.Portal>
                 <Popover.Positioner className="z-(--z-popup)" side="bottom" sideOffset={6} align="start">
                     <Popover.Popup className="menu-popup min-w-0 p-0">
-                        <FlowArgControl id={id} card={card} content={content} arg={arg} onDone={() => store.getState().edit(null)} />
+                        <FlowArgControl id={id} card={card} content={content} arg={arg} problem={problem} onDone={() => store.getState().edit(null)} />
                     </Popover.Popup>
                 </Popover.Positioner>
             </Popover.Portal>
