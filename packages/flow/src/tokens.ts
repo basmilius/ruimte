@@ -25,6 +25,31 @@ export const tokenKey = (cardId: string, token: string): string => `${cardId}.${
 export const parseTokenRefs = (text: string): FlowTokenRef[] =>
     [...text.matchAll(TOKEN_PATTERN)].map((match) => ({ cardId: match[1] as string, token: match[2] as string, text: match[0] }));
 
+/* A piece of a text, which is either typed words or one whole reference. */
+export type FlowTextSegment = { kind: 'text'; text: string } | ({ kind: 'token' } & FlowTokenRef);
+
+/*
+ * The text cut into the pieces a field draws. A reference is one piece and never two, which is what
+ * lets the editor put a chip there: a person removes the whole thing or none of it, and there is no
+ * way to type away half a reference and be left with something that parses as words.
+ */
+export const tokenSegments = (text: string): FlowTextSegment[] => {
+    const segments: FlowTextSegment[] = [];
+    let at = 0;
+    for (const ref of parseTokenRefs(text)) {
+        const index = text.indexOf(ref.text, at);
+        if (index > at) {
+            segments.push({ kind: 'text', text: text.slice(at, index) });
+        }
+        segments.push({ kind: 'token', ...ref });
+        at = index + ref.text.length;
+    }
+    if (at < text.length) {
+        segments.push({ kind: 'text', text: text.slice(at) });
+    }
+    return segments;
+};
+
 /*
  * The text with its references replaced. A reference nobody has a value for becomes empty rather than
  * staying as it is: a person reading a notification should not be shown the plumbing.
