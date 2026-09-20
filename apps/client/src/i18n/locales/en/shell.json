@@ -207,10 +207,8 @@
     "share": {
         "start": "Share with your team",
         "stop": "Keep to yourself",
-        "shared_one": "{{name}} is in git now, with 1 node.",
-        "shared_other": "{{name}} is in git now, with {{count}} nodes.",
-        "kept": "Your chats, sessions and worktrees stay here.",
-        "private": "{{name}} is yours alone again."
+        "shared": "Shared {{name}}",
+        "private": "Made {{name}} private"
     },
     "planPanel": {
         "failed": "This plan failed to render",

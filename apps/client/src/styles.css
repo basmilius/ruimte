@@ -757,6 +757,8 @@
         display: block;
         height: 100%;
         --trees-bg-override: transparent;
+        /* The tree insets its rows by 16, twice the 8 the panel keeps above the first row. */
+        --trees-padding-inline-override: 8px;
         /* The tree calls its hover "muted"; in this app a row under the pointer lifts, never sinks. */
         --trees-bg-muted-override: var(--surface-hover);
         --trees-fg-override: var(--text);

@@ -17,6 +17,8 @@ const node = (id: string, extra: Record<string, unknown> = {}): ProjectCanvasVie
 
 const chatView = (id: string, extra: Record<string, unknown> = {}): ProjectView => ({ kind: 'chat', id, name: id, node: extra });
 
+const separator = (id: string): ProjectView => ({ kind: 'separator', id, name: id });
+
 const content = (views: ProjectView[]): ProjectContent => ({ name: 'repo', color: '#7c74ff', views });
 
 const fallback = { name: 'repo', color: '#7c74ff' };
@@ -65,6 +67,17 @@ describe('splitContent', () => {
         const split = splitContent(content([outside, inside]), ['f1', 'f2'], 1);
         expect(split.shared.views.map((view) => view.id)).toEqual(['f2']);
         expect(split.private.views.map((view) => view.id)).toEqual(['f1']);
+    });
+
+    test('a separator travels with the group under it and stays home when that whole stretch is private', () => {
+        const views = [separator('s1'), canvas('a'), canvas('b'), separator('s2'), canvas('mine')];
+        const split = splitContent(content(views), ['b'], 1);
+        expect(split.shared.views.map((view) => view.id)).toEqual(['s1', 'b']);
+        expect(split.private.views.map((view) => view.id)).toEqual(['a', 's2', 'mine']);
+
+        // Nobody shares a separator itself, whatever the list says.
+        expect(viewShareRefusal(separator('s1'))).toBe('separator-follows-its-group');
+        expect(splitContent(content(views), ['s1'], 1).shared.views).toEqual([]);
     });
 
     test('an id in the list that names no view of this project is ignored', () => {

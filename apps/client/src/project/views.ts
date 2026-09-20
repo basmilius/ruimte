@@ -6,7 +6,6 @@ import {
     isDrawingView,
     isFileView,
     isOpenableView,
-    isSeparatorView,
     isSessionView,
     MAIN_VIEW_NAME,
     sessionNodesOfView,
@@ -213,12 +212,9 @@ export const setViewShared = (viewId: string, shared: boolean): void => {
         return;
     }
     document.setShared(viewId, shared);
-    const name = isSeparatorView(view) ? '' : view.name;
-    const nodes = isCanvasView(view) ? view.nodes.length : 0;
     useToasts.getState().show({
         kind: 'success',
-        title: shared ? i18next.t('shell:share.shared', { name, count: nodes }) : i18next.t('shell:share.private', { name }),
-        description: shared ? i18next.t('shell:share.kept') : undefined,
+        title: i18next.t(shared ? 'shell:share.shared' : 'shell:share.private', { name: view.name }),
         action: { label: i18next.t('common:action.undo'), run: () => useDocument.getState().setShared(viewId, !shared) }
     });
 };

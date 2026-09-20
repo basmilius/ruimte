@@ -437,15 +437,17 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />
                     </Tooltip>
                 )}
-                {/* Only a shared row is marked: private is what a view is until someone says otherwise,
-                    and the default earns no icon. Never in the accent, like every other mark here. */}
+                {(view.self ? view.self.alert : view.nodes.some((node) => node.alert)) && <ProcessWarningMark />}
+                {row.status && <StatusDot status={row.status} plain />}
+                {/* Last of the row, after every dot: where a view lives says something about the
+                    project and not about what is happening in it, and the dots are the news. Only a
+                    shared row is marked, since private is what a view is until someone says
+                    otherwise. Never in the accent, like every other mark here. */}
                 {view.shared && (
                     <Tooltip label={t('sidebar.shared')}>
                         <Icon icon={Users} size={12} className="shrink-0 text-text-faint" />
                     </Tooltip>
                 )}
-                {(view.self ? view.self.alert : view.nodes.some((node) => node.alert)) && <ProcessWarningMark />}
-                {row.status && <StatusDot status={row.status} plain />}
             </ContextMenu.Trigger>
             <ContextMenu.Portal>
                 <ContextMenu.Positioner className="z-(--z-popup)">

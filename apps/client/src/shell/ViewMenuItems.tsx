@@ -34,8 +34,10 @@ export function ViewMenuItems({ viewId, kind, onRename }: { viewId: string; kind
     const shared = useDocument((state) => state.shared).includes(viewId);
     /* Offered whether or not the folder is a repository: finding that out means starting a git watch,
        which opening a menu has no business doing, and sharing without one only writes a file nobody
-       pulls yet. A view that cannot travel at all is the one case that is left out. */
-    const canShare = useDocument((state) => state.views.find((view) => view.id === viewId));
+       pulls yet. Left out for a view that cannot travel, and for a separator, which goes where the
+       group under it goes and is nobody's to share. */
+    const view = useDocument((state) => state.views.find((candidate) => candidate.id === viewId));
+    const offerShare = view !== undefined && kind !== 'separator' && (shared || canShareView(view));
     return (
         <>
             <Menu.Item className="menu-item" onClick={() => (onRename === undefined ? askRenameView(viewId) : onRename())}>
@@ -60,7 +62,7 @@ export function ViewMenuItems({ viewId, kind, onRename }: { viewId: string; kind
                     <Icon icon={Frame} size={14} /> {t('viewMenu.showOnCanvas')}
                 </Menu.Item>
             )}
-            {canShare !== undefined && (shared || canShareView(canShare)) && (
+            {offerShare && (
                 <Menu.Item className="menu-item" onClick={() => setViewShared(viewId, !shared)}>
                     <Icon icon={shared ? UserRoundMinus : Users} size={14} /> {t(shared ? 'share.stop' : 'share.start')}
                 </Menu.Item>

@@ -4,6 +4,7 @@ import {
     PROJECT_PRIVATE_VERSION,
     PROJECT_VERSION,
     isCanvasView,
+    isSeparatorView,
     type ProjectContent,
     type ProjectNode,
     type ProjectNodeOverlay,
@@ -61,15 +62,35 @@ const withoutOverlay = <T extends Carrier>(carrier: T, overlay: ProjectNodeOverl
  * that points off the project folder has nothing left to share; every other kind keeps working
  * without the fields that stay behind.
  */
-export const viewShareRefusal = (view: ProjectView): 'path-outside-project' | null =>
-    view.kind === 'file' && isAbsolutePath(view.path) ? 'path-outside-project' : null;
+export const viewShareRefusal = (view: ProjectView): 'path-outside-project' | 'separator-follows-its-group' | null => {
+    if (isSeparatorView(view)) {
+        return 'separator-follows-its-group';
+    }
+    return view.kind === 'file' && isAbsolutePath(view.path) ? 'path-outside-project' : null;
+};
 
 export const canShareView = (view: ProjectView): boolean => viewShareRefusal(view) === null;
 
-/* The asked-for ids that name a view of this project that may travel. */
+/*
+ * The asked-for ids that name a view of this project that may travel, and the separators that go
+ * with them. Nobody shares a separator: it is a line between rows rather than a row that holds
+ * anything, so it travels when a view in the stretch under it does and stays home when that whole
+ * stretch is one person's. Any other rule leaves a colleague with two lines on top of each other,
+ * or with a heading over nothing.
+ */
 const sharedIdsOf = (views: readonly ProjectView[], shared: readonly string[]): Set<string> => {
     const asked = new Set(shared);
-    return new Set(views.filter((view) => asked.has(view.id) && canShareView(view)).map((view) => view.id));
+    const ids = new Set(views.filter((view) => asked.has(view.id) && canShareView(view)).map((view) => view.id));
+    let above: string | null = null;
+    for (const view of views) {
+        if (isSeparatorView(view)) {
+            above = view.id;
+        } else if (ids.has(view.id) && above !== null) {
+            ids.add(above);
+            above = null;
+        }
+    }
+    return ids;
 };
 
 /*

@@ -207,10 +207,8 @@
     "share": {
         "start": "Delen met je team",
         "stop": "Alleen voor jou",
-        "shared_one": "{{name}} staat nu in git, met 1 node.",
-        "shared_other": "{{name}} staat nu in git, met {{count}} nodes.",
-        "kept": "Je gesprekken, sessies en worktrees blijven hier.",
-        "private": "{{name}} is weer alleen van jou."
+        "shared": "{{name}} gedeeld",
+        "private": "{{name}} is weer privé"
     },
     "planPanel": {
         "failed": "Dit plan kon niet worden getekend",
