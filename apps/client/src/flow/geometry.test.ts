@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { FlowCard } from '@ruimte/contracts';
 import { NODE_GAP } from '@/canvas/edge-route';
-import { CARD_H, CARD_W, cardRect, edgeInset, inputDot, portDot, roundingOf } from '@/flow/geometry';
+import { CARD_H, CARD_W, cardHeight, cardRect, edgeInset, inputDot, portDot, roundingOf } from '@/flow/geometry';
 
 const card = (over: Partial<FlowCard> = {}): FlowCard => ({ kind: 'condition', args: {}, x: 100, y: 200, ...over });
 
@@ -58,5 +58,27 @@ describe('the ports of a card', () => {
     test('a card about the graph itself is narrower than one with a sentence on it', () => {
         expect(cardRect(card({ kind: 'delay' })).w).toBeLessThan(CARD_W);
         expect(cardRect(card({ kind: 'start' })).w).toBe(cardRect(card({ kind: 'start' })).h);
+    });
+});
+
+describe('how tall a card is', () => {
+    test('a sentence with two controls in it fits the plain card', () => {
+        expect(cardHeight(card({ kind: 'action', card: 'chat.message' }))).toBe(CARD_H);
+    });
+
+    test('a third control buys a line rather than a measurement', () => {
+        expect(cardHeight(card({ kind: 'condition', card: 'text.contains' }))).toBeGreaterThan(CARD_H);
+    });
+
+    test('a field the card is not asking for right now costs nothing', () => {
+        // `time.at` carries three fields and never reads more than two of them at once.
+        const daily = card({ kind: 'trigger', card: 'time.at', args: { every: 'day', at: '08:00' } });
+        expect(cardHeight(daily)).toBe(CARD_H);
+    });
+
+    test('every height lands on the grid the cards snap to', () => {
+        for (const kind of ['trigger', 'condition', 'action'] as const) {
+            expect(cardHeight(card({ kind, card: 'text.contains' })) % 8).toBe(0);
+        }
     });
 });

@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FlowCardKind, FlowPort } from '@ruimte/contracts';
+import { argProblemsOf } from '@ruimte/flow';
 import { GRID, snapToGrid, toWorld, type Point } from '@/canvas/math';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { FlowCardBox } from '@/flow/FlowCardBox';
@@ -71,6 +72,9 @@ export function FlowView({ id }: { id: string }) {
     const viewId = useFlow((s) => s.viewId);
     const live = useLiveRun(viewId ?? '');
     const lights = useMemo(() => flowLights(content, live), [content, live]);
+    /* Once for the worksheet: whether a token reference still holds depends on every line drawn,
+       so a card that asked for itself would work the whole graph out again. */
+    const problems = useMemo(() => argProblemsOf(content), [content]);
 
     useLayoutEffect(() => {
         const root = rootRef.current;
@@ -228,6 +232,7 @@ export function FlowView({ id }: { id: string }) {
                         card={card}
                         content={content}
                         selected={selection.includes(cardId)}
+                        problems={problems[cardId]}
                         light={lights?.cards[cardId]}
                         pulse={lights?.pulse === cardId ? live?.lastAt : undefined}
                     />

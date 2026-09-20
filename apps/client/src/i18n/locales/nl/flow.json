@@ -46,7 +46,12 @@
         "missing": "Ontbreekt: {{fields}}",
         "broken": "Een token op deze kaart ligt niet op elk pad hierheen, dus hij zou de helft van de tijd leeg zijn.",
         "brokenToken": "een token dat weg is",
-        "pickChat": "Kies een chat"
+        "pickChat": "Kies een chat",
+        "noChats": "Dit project heeft nog geen chat.",
+        "boolean": {
+            "yes": "Ja",
+            "no": "Nee"
+        }
     },
     "error": {
         "open": "Deze flow kon niet worden geopend.",

@@ -12,6 +12,8 @@ export const cardKey = (id: string): string => id.replace(/\./g, '_');
 export interface SentencePart {
     text: string;
     value: boolean;
+    /* The field this piece stands for, so the editor can put its control in the sentence itself. */
+    arg?: string;
 }
 
 const PLACEHOLDER = /\{\{(\w+)\}\}/g;
@@ -28,8 +30,9 @@ export const sentenceParts = (template: string, values: Readonly<Record<string, 
         if (index > at) {
             parts.push({ text: template.slice(at, index), value: false });
         }
-        const filled = values[match[1] as string] ?? '';
-        parts.push({ text: filled === '' ? blank : filled, value: true });
+        const name = match[1] as string;
+        const filled = values[name] ?? '';
+        parts.push({ text: filled === '' ? blank : filled, value: true, arg: name });
         at = index + match[0].length;
     }
     if (at < template.length) {

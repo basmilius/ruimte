@@ -20,14 +20,14 @@ describe('the sentence on a card', () => {
     test('reads as one line, with the values apart from the words', () => {
         const parts = sentenceParts('{{path}} changed', { path: 'README.md' });
         expect(parts).toEqual([
-            { text: 'README.md', value: true },
+            { text: 'README.md', value: true, arg: 'path' },
             { text: ' changed', value: false }
         ]);
     });
 
     test('a value nobody filled in is a placeholder rather than a hole', () => {
         expect(sentenceParts('{{path}} changed', {})).toEqual([
-            { text: '…', value: true },
+            { text: '…', value: true, arg: 'path' },
             { text: ' changed', value: false }
         ]);
     });
@@ -51,6 +51,10 @@ describe('the sentence on a card', () => {
 
     test('a token whose card is gone says so rather than leaving the reference there', () => {
         expect(withTokenLabels(t, flow({}), `it said ${tokenRef('trigger', 'content')}`)).toBe('it said a token that is gone');
+    });
+
+    test('a value piece names the field it stands for, so a control can take its place', () => {
+        expect(sentenceParts('{{text}} contains {{value}}', { text: 'a', value: 'b' }).map((part) => part.arg)).toEqual(['text', undefined, 'value']);
     });
 
     test('a card says what it is and where its signal comes from', () => {

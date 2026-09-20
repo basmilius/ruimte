@@ -1,11 +1,31 @@
 import type { FlowCard, FlowContent, FlowPort } from '@ruimte/contracts';
-import { portsOf } from '@ruimte/flow';
+import { argApplies, argsOf, portsOf } from '@ruimte/flow';
 import { portPoint, type Obstacle } from '@/canvas/edge-route';
 import { unionOf, type Point, type Rect } from '@/canvas/math';
 
-/* Wide enough for a sentence with two values in it, and the same for every card so a worksheet lines up. */
-export const CARD_W = 320;
+/*
+ * Wide enough for a sentence with two controls in it, and the same for every card so a worksheet
+ * lines up. A value is filled in on the card itself, so a value is a control and not a word, and
+ * the card carries the room that takes.
+ */
+export const CARD_W = 360;
+
+/* Two lines of sentence beside the source icon, which is what most cards say. */
 export const CARD_H = 88;
+
+/* What one more line of sentence adds. A whole number of grid steps, so a taller card still snaps. */
+const SENTENCE_LINE = 24;
+
+/*
+ * How tall a card with a sentence on it is. A control takes more room than the word it replaced, so
+ * from the third one on the sentence gets a line per control. It follows from what the card asks
+ * for and never from measuring it: the router works on rectangles, and a measured height would make
+ * the lines between two cards depend on the font a person reads them in, or on the language.
+ */
+export const cardHeight = (card: FlowCard): number => {
+    const controls = argsOf(card).filter((arg) => argApplies(card, arg)).length;
+    return CARD_H + SENTENCE_LINE * Math.max(0, controls - 2);
+};
 
 /*
  * A card about the graph itself carries a word and no sentence, so it is a pill rather than a card.
@@ -35,7 +55,7 @@ const sizeOf = (card: FlowCard): { w: number; h: number } => {
         case 'note':
             return { w: CARD_W, h: NOTE_H };
         default:
-            return { w: CARD_W, h: CARD_H };
+            return { w: CARD_W, h: cardHeight(card) };
     }
 };
 

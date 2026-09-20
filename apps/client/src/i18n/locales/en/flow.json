@@ -46,7 +46,12 @@
         "missing": "Missing: {{fields}}",
         "broken": "A token on this card is not on every path here, so it would be empty half the time.",
         "brokenToken": "a token that is gone",
-        "pickChat": "Pick a chat"
+        "pickChat": "Pick a chat",
+        "noChats": "This project has no chat yet.",
+        "boolean": {
+            "yes": "Yes",
+            "no": "No"
+        }
     },
     "error": {
         "open": "This flow could not be opened.",

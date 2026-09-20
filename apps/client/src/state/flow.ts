@@ -10,7 +10,7 @@ import {
     type FlowPort,
     type ProjectViewLocal
 } from '@ruimte/contracts';
-import { defaultArgsOf, portsOf, takesInput } from '@ruimte/flow';
+import { defaultArgsOf, firstEmptyArgOf, portsOf, takesInput } from '@ruimte/flow';
 import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
 import { cameraOfView, snapToGrid, type Point } from '@/canvas/math';
 import { boundsOf } from '@/flow/geometry';
@@ -38,6 +38,9 @@ export interface FlowState extends CameraSlice {
     /* The line a person picked, which is what a key acting on the selection finds when no card is
        picked. One line at a time, and never together with a card: the two answer the same keys. */
     selectedLink: FlowLink | null;
+    /* The field whose control is open on a card. A card is filled in where it stands, so this is
+       which of its sentence a person has in hand, and putting a card down opens its first empty one. */
+    editing: { cardId: string; arg: string } | null;
 
     load(viewId: string, document: FlowDocument, local: ProjectViewLocal | null): void;
     unload(): void;
@@ -50,6 +53,8 @@ export interface FlowState extends CameraSlice {
     moveCard(id: string, at: Point, first: boolean): void;
     /* Puts another card in this one's place, keeping where it stands and the lines that still hold. */
     replaceCard(id: string, kind: FlowCardKind, card: string | undefined): void;
+    /* A copy of this card beside it, with what it holds but none of its lines; answers its id. */
+    duplicateCard(id: string): string | null;
     setArg(id: string, name: string, value: FlowArgValue): void;
     setInverted(id: string, inverted: boolean): void;
     removeCards(ids: readonly string[]): void;
@@ -59,6 +64,8 @@ export interface FlowState extends CameraSlice {
 
     select(ids: string[], additive?: boolean): void;
     selectLink(link: FlowLink | null): void;
+    /* Opens the control of one field, or closes whichever is open. */
+    edit(at: { cardId: string; arg: string } | null): void;
     undo(): void;
     redo(): void;
 
@@ -78,6 +85,15 @@ export const contentOf = (document: FlowDocument): FlowContent => ({
 const EMPTY_CONTENT = contentOf(EMPTY_FLOW);
 
 export const FLOW_HISTORY_LIMIT = 100;
+
+/* How far beside its original a copy lands, far enough that the two read as two cards. */
+const DUPLICATE_OFFSET = 32;
+
+/* The field a card that was just put down opens on, or nothing when it has nothing left to answer. */
+const openingOf = (id: string, card: FlowCard): { cardId: string; arg: string } | null => {
+    const arg = firstEmptyArgOf(card);
+    return arg === null ? null : { cardId: id, arg };
+};
 
 const changed = (state: FlowState, content: FlowContent, first = true): Partial<FlowState> => ({
     content,
@@ -118,6 +134,7 @@ export const createFlowStore = (): StoreApi<FlowState> =>
         error: null,
         selection: [],
         selectedLink: null,
+        editing: null,
 
         load(viewId, document, local) {
             set({
@@ -133,6 +150,7 @@ export const createFlowStore = (): StoreApi<FlowState> =>
                 error: null,
                 selection: [],
                 selectedLink: null,
+                editing: null,
                 pendingCamera: null
             });
             const stored = local?.camera ?? null;
@@ -158,7 +176,8 @@ export const createFlowStore = (): StoreApi<FlowState> =>
                 conflict: null,
                 error: null,
                 selection: [],
-                selectedLink: null
+                selectedLink: null,
+                editing: null
             });
         },
 
@@ -180,7 +199,13 @@ export const createFlowStore = (): StoreApi<FlowState> =>
                 x: snapToGrid(at.x),
                 y: snapToGrid(at.y)
             };
-            set({ ...changed(state, { ...state.content, cards: { ...state.content.cards, [id]: made } }), selection: [id] });
+            set({
+                ...changed(state, { ...state.content, cards: { ...state.content.cards, [id]: made } }),
+                selection: [id],
+                /* Putting a card down and filling it in are one move, so the first field still
+                   waiting for an answer asks for it rather than sitting there quietly. */
+                editing: openingOf(id, made)
+            });
             return id;
         },
 
@@ -211,7 +236,21 @@ export const createFlowStore = (): StoreApi<FlowState> =>
             /* A line out of a port the new card does not offer has nowhere left to leave from, and one
                into a card that takes nothing in has nowhere to land. The rest of the drawing stands. */
             const links = state.content.links.filter((link) => (link.from !== id || ports.has(link.fromPort)) && (link.to !== id || takesInput(made)));
-            set(changed(state, { ...state.content, cards: { ...state.content.cards, [id]: made }, links }));
+            set({ ...changed(state, { ...state.content, cards: { ...state.content.cards, [id]: made }, links }), editing: openingOf(id, made) });
+        },
+
+        duplicateCard(id) {
+            const state = get();
+            const before = state.content.cards[id];
+            if (before === undefined) {
+                return null;
+            }
+            const made = nextId('card');
+            /* Beside the original rather than on top of it, and none of its lines: a copy is a
+               second card to draw into, not a second card in the same place in the graph. */
+            const copy: FlowCard = { ...before, args: { ...before.args }, x: snapToGrid(before.x + DUPLICATE_OFFSET), y: before.y };
+            set({ ...changed(state, { ...state.content, cards: { ...state.content.cards, [made]: copy } }), selection: [made], editing: null });
+            return made;
         },
 
         setArg(id, name, value) {
@@ -251,7 +290,8 @@ export const createFlowStore = (): StoreApi<FlowState> =>
             set({
                 ...changed(state, { ...state.content, cards, links }),
                 selection: state.selection.filter((id) => !gone.has(id)),
-                selectedLink: null
+                selectedLink: null,
+                ...(state.editing !== null && gone.has(state.editing.cardId) ? { editing: null } : {})
             });
         },
 
@@ -281,7 +321,11 @@ export const createFlowStore = (): StoreApi<FlowState> =>
         },
 
         selectLink(link) {
-            set({ selectedLink: link, selection: [] });
+            set({ selectedLink: link, selection: [], editing: null });
+        },
+
+        edit(at) {
+            set({ editing: at });
         },
 
         undo() {

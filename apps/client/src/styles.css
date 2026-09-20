@@ -876,6 +876,41 @@
     /* The flash over a flow card the moment it settled in a run. A layer of its own, so the card
        keeps its own background while the mark fades; with motion off it stays until the next card
        settles or the run's afterglow ends. */
+    /* A text field on a card where a reference is a chip. It is the field's border and focus ring
+       with the height let go: a reference wraps like a word, so the field grows with what is in it. */
+    .flow-token-field {
+        min-height: 32px;
+        width: 100%;
+        padding: 5px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        font-size: var(--text-sm);
+        line-height: var(--text-sm--line-height);
+        outline: none;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+    }
+    .flow-token-field:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+    .flow-token-field:empty::before {
+        content: attr(data-placeholder);
+        color: var(--text-faint);
+    }
+
+    /* One reference, drawn as one thing. The caret steps over it rather than into it, so there is no
+       half of it to be left with. */
+    .flow-token-chip {
+        display: inline-block;
+        margin: 0 1px;
+        padding: 0 6px;
+        border-radius: 6px;
+        background: var(--surface-sunken);
+        color: var(--text-muted);
+        white-space: nowrap;
+        user-select: all;
+    }
+
     .flow-card-flash {
         position: absolute;
         inset: 0;

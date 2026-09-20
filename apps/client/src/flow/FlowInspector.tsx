@@ -1,27 +1,14 @@
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isCanvasView, type FlowArgDefinition, type FlowCard, type FlowContent, type ProjectView } from '@ruimte/contracts';
+import type { FlowArgDefinition, FlowCard, FlowContent } from '@ruimte/contracts';
 import { argApplies, argsOf, brokenTokenRefsIn, textArg, tokenRef, visibleTokens } from '@ruimte/flow';
+import { chatChoices } from '@/flow/FlowArgControl';
 import { FlowTestBar } from '@/flow/FlowTestBar';
 import { argLabel, choiceLabel, tokenLabel } from '@/flow/labels';
 import type { FlowStateHandle } from '@/flow/use-flow-state';
 import { useDocument } from '@/state/document';
 import { useFlowStore } from '@/state/flow';
 import { Select } from '@/ui/Select';
-
-/* Every chat in the project, wherever it stands, for a card that has to name one. */
-export const chatChoices = (views: readonly ProjectView[]): { id: string; name: string }[] => {
-    const chats: { id: string; name: string }[] = [];
-    for (const view of views) {
-        if (view.kind === 'chat') {
-            // A chat view has no node id of its own: the view is the chat.
-            chats.push({ id: view.id, name: view.name });
-        } else if (isCanvasView(view)) {
-            chats.push(...view.nodes.filter((node) => node.kind === 'chat').map((node) => ({ id: node.id, name: node.title || view.name })));
-        }
-    }
-    return chats;
-};
 
 /* One field of a card, in the shape its type asks for. */
 function Field({ id, card, content, arg }: { id: string; card: FlowCard; content: FlowContent; arg: FlowArgDefinition }) {
