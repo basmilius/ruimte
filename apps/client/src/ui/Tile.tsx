@@ -25,7 +25,7 @@ export function Tile({ icon, title, description, shortcut, primary = false, size
             type={type}
             className={clsx(
                 'flex min-w-0 items-center border bg-surface text-left hover:bg-surface-hover disabled:opacity-50 disabled:hover:bg-surface',
-                size === 'md' ? 'gap-3 rounded-xl px-4 py-3' : 'gap-2 rounded-lg px-2 py-1.5',
+                size === 'md' ? 'gap-3 rounded-xl p-3' : 'gap-2 rounded-lg px-2 py-1.5',
                 primary ? 'border-accent' : 'border-border',
                 className
             )}

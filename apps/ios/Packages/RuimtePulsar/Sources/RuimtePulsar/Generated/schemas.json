@@ -16696,7 +16696,6 @@
             ]
           },
           "views": {
-            "minItems": 1,
             "type": "array",
             "items": {
               "oneOf": [
@@ -18704,7 +18703,6 @@
             ]
           },
           "views": {
-            "minItems": 1,
             "type": "array",
             "items": {
               "oneOf": [
@@ -33218,7 +33216,6 @@
             ]
           },
           "views": {
-            "minItems": 1,
             "type": "array",
             "items": {
               "oneOf": [

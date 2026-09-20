@@ -35,6 +35,20 @@ beforeEach(() => {
 });
 
 describe('loading a project', () => {
+    test('an empty project stays empty until its first canvas is added', () => {
+        useDocument.getState().load(document([]), { activeViewId: null, views: {} });
+        expect(useDocument.getState().views).toEqual([]);
+        expect(useDocument.getState().activeViewId).toBeNull();
+        expect(useDocument.getState().layout).toBeNull();
+        expect(useDocument.getState().exportViews()).toEqual([]);
+
+        const id = useDocument.getState().addCanvasView('Canvas');
+        expect(useDocument.getState().activeViewId).toBe(id);
+        expect(viewIdsIn(useDocument.getState().layout!)).toEqual([id]);
+        expect(useDocument.getState().views).toHaveLength(1);
+        expect(canvasAt(0).nodes).toEqual([]);
+    });
+
     test('the first view is on the canvas with its own camera, and the rest waits in the document', () => {
         expect(useDocument.getState().activeViewId).toBe('a');
         expect(focusedCanvas().getState().order).toEqual(['n1']);

@@ -511,8 +511,8 @@ export const ProjectContentSchema = z.object({
     color: z.string(),
     // Absent means "show what the folder declares"; a file written before this existed parses fine.
     icon: ProjectIconChoiceSchema.optional(),
-    // In sidebar order. Never empty: deleting the last view leaves an empty canvas behind.
-    views: z.array(ProjectViewSchema).min(1)
+    // In sidebar order. A new project has no views until someone adds one.
+    views: z.array(ProjectViewSchema)
 });
 export type ProjectContent = z.infer<typeof ProjectContentSchema>;
 

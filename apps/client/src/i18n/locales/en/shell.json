@@ -1,4 +1,8 @@
 {
+    "projectStart": {
+        "description": "Choose what you want to start with. You can add more later.",
+        "failed": "The project start screen failed to render"
+    },
     "sidebar": {
         "hide": "Hide sidebar",
         "show": "Show sidebar",
@@ -6,7 +10,7 @@
         "processWarning": "Process warning, see the processes panel",
         "unsentDraft": "Unsent draft",
         "needsNewerRuimte": "This view needs a newer version of Ruimte",
-        "noViews": "This project has no views yet. Start with one of these.",
+        "noViews": "No views yet.",
         "duplicate": "Duplicate",
         "usage": "Usage",
         "openInAnotherCell": ", open in another cell",

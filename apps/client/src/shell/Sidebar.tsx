@@ -64,7 +64,7 @@ import { Brand } from '@/ui/Brand';
 import { MENU_HINT, SECTION_LABEL } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { SidebarToggle } from '@/shell/SidebarToggle';
-import { NewViewItems, NewViewTiles } from '@/shell/ViewMenu';
+import { NewViewItems } from '@/shell/ViewMenu';
 import { setDragging as setDraggedView, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useInstantWidth } from '@/shell/useInstantWidth';
 import { UsageLimitsCard } from '@/shell/usage/UsageLimitsCard';
@@ -863,10 +863,7 @@ export function Sidebar() {
                         </div>
                     )}
                     {empty ? (
-                        <div className="flex flex-col gap-2 px-1 pt-2">
-                            <p className="px-1 text-xs text-text-muted">{t('sidebar.noViews')}</p>
-                            <NewViewTiles />
-                        </div>
+                        <p className="px-2 py-4 text-center text-xs text-text-muted">{t('sidebar.noViews')}</p>
                     ) : (
                         sections.map((section, sectionIndex) => {
                             // Only the list of views takes a drop, and only the one the row came out of; the

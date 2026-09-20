@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promis
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { GITIGNORE_TEXT } from './project-files.ts';
-import { PROJECT_VERSION, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
+import { PROJECT_VERSION, ProjectOpenResultSchema, emptyCanvasView, type ProjectCanvasView, type ProjectContent } from '@ruimte/contracts';
 import { FakeWatch } from '../fs/watch-test-helpers.ts';
 import type { SessionEvent } from '../sessions/manager.ts';
 import { DiagramStore } from './diagram-store.ts';
@@ -75,11 +75,14 @@ const canvas = (document: Pick<ProjectContent, 'views'>, at = 0): ProjectCanvasV
 const projectDirWatcher = () => fake.on(dirname(documentPathInFolder(folder)));
 
 describe('ProjectStore', () => {
-    test('opening a folder creates the canvas file, lists it, and saves with a rising rev', async () => {
+    test('opening a folder creates an empty project, lists it, and saves with a rising rev', async () => {
         const opened = await store.openProject({ folder });
         expect(opened.summary).toMatchObject({ name: 'repo', folder, available: true });
         expect(opened.document).toMatchObject({ version: PROJECT_VERSION, rev: 0, shared: [] });
-        expect(canvas(opened.document)).toMatchObject({ id: 'main', name: 'Canvas', nodes: [] });
+        expect(opened.document.views).toEqual([]);
+        expect(ProjectOpenResultSchema.safeParse(opened).success).toBe(true);
+        expect((await documentOnDisk(folder)).views).toEqual([]);
+        expect((await store.openProject({ projectId: opened.summary.projectId })).document.views).toEqual([]);
         expect(opened.local).toEqual({ activeViewId: null, views: {} });
 
         expect(await store.save(opened.summary.projectId, 0, content())).toBe(1);
@@ -572,7 +575,7 @@ describe('portable paths', () => {
 describe('mutate', () => {
     const addNote = (id: string) => (current: ProjectContent) => {
         const [first, ...rest] = current.views;
-        const view = first as ProjectCanvasView;
+        const view = (first ?? emptyCanvasView('main', 'Canvas')) as ProjectCanvasView;
         const note = { id, kind: 'note' as const, title: 'Note', x: 0, y: 400, w: 320, h: 240, body: 'hello' };
         return { content: { ...current, views: [{ ...view, nodes: [...view.nodes, note] }, ...rest] }, result: id };
     };
@@ -872,7 +875,7 @@ describe('reading the combined sidebar', () => {
         const watcherCount = fake.watchers.length;
         const overview = await store.sidebar();
         expect(overview.projects.map((entry) => entry.summary.projectId).sort()).toEqual(before.map((entry) => entry.projectId).sort());
-        expect(overview.projects[0]!.views?.[0]?.name).toBe('Canvas');
+        expect(overview.projects[0]!.views).toEqual([]);
         expect(await store.list()).toEqual(before);
         expect(fake.watchers.length).toBe(watcherCount);
         expect(overview.projects.flatMap((entry) => entry.views ?? []).every((view) => !('texts' in view) && !('edges' in view))).toBe(true);
@@ -888,7 +891,7 @@ describe('reading the combined sidebar', () => {
         const overview = await store.sidebar();
         expect(overview.projects.map((entry) => entry.summary.projectId)).not.toContain(closed.summary.projectId);
         expect(overview.projects.find((entry) => entry.summary.projectId === broken.summary.projectId)?.views).toBeNull();
-        expect(overview.projects.find((entry) => entry.summary.projectId === healthy.summary.projectId)?.views).toHaveLength(1);
+        expect(overview.projects.find((entry) => entry.summary.projectId === healthy.summary.projectId)?.views).toHaveLength(0);
         expect(await readFile(documentPathInFolder(folder), 'utf8')).toBe('broken json');
     });
 

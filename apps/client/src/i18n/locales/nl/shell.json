@@ -1,4 +1,8 @@
 {
+    "projectStart": {
+        "description": "Kies waarmee je wilt beginnen. Je kunt later meer toevoegen.",
+        "failed": "Het startscherm van het project kon niet worden weergegeven"
+    },
     "sidebar": {
         "hide": "Zijbalk verbergen",
         "show": "Zijbalk tonen",
@@ -6,7 +10,7 @@
         "processWarning": "Waarschuwing over een proces, zie het processen-paneel",
         "unsentDraft": "Niet-verstuurde prompt",
         "needsNewerRuimte": "Deze weergave heeft een nieuwere versie van Ruimte nodig",
-        "noViews": "Dit project heeft nog geen weergaven. Begin met een van deze.",
+        "noViews": "Nog geen weergaven.",
         "duplicate": "Dupliceren",
         "usage": "Verbruik",
         "openInAnotherCell": ", open in een andere cel",

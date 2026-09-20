@@ -6,10 +6,8 @@ import {
     projectSidebarViews,
     type ProjectSidebarResult,
     EMPTY_PRIVATE_FILE,
-    MAIN_VIEW_ID,
     PROJECT_PRIVATE_VERSION,
     PROJECT_VERSION,
-    MAIN_VIEW_NAME,
     ProjectDocumentSchema,
     ProjectIconChoiceSchema,
     UNKNOWN_KIND,
@@ -110,9 +108,6 @@ const WATCH_SETTLE_MS = 150;
 const isIconFile = (filename: string): boolean => filename.startsWith('icon.');
 
 const DEFAULT_COLOR = '#7c74ff';
-
-/* What a project starts with: one canvas, under the id every migrated version-1 file gets too. */
-const firstView = (): ProjectView => ({ kind: 'canvas', id: MAIN_VIEW_ID, name: MAIN_VIEW_NAME, nodes: [], texts: [], edges: [], layouts: [] });
 
 const newId = (): string => randomBytes(6).toString('base64url');
 
@@ -414,7 +409,7 @@ export class ProjectStore {
             entry = { ...entry, name: (await readIdeaName(entry.folder)) ?? entry.name };
         }
         const loaded = await this.loadFiles(path, entry, outcome.kind === 'ok' ? outcome.document : null);
-        const content = missing ? { name: entry.name, color: entry.color, views: [firstView()] } : loaded.content;
+        const content = missing ? { name: entry.name, color: entry.color, views: [] } : loaded.content;
         let text = outcome.kind === 'ok' ? outcome.text : '';
         let privateText = loaded.privateText ?? '';
         /* A folder that has no private file yet is one this daemon never wrote: a fresh project, a

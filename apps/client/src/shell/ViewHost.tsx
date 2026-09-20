@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isCanvasView, isFileView, type ProjectView } from '@ruimte/contracts';
 import { Canvas } from '@/canvas/Canvas';
+import { ProjectStartScreen } from '@/shell/ProjectStartScreen';
 import { SplitGrid } from '@/shell/SplitGrid';
 import { DiagramView } from '@/diagram/DiagramView';
 import { DrawingView } from '@/drawing/DrawingView';
@@ -110,5 +111,14 @@ export function ViewSurface({ view }: { view: ProjectView }) {
 
 /* The main column: the grid of cells of the open project. */
 export function ViewHost() {
-    return <SplitGrid />;
+    const { t } = useTranslation('shell');
+    const empty = useDocument((s) => s.views.length === 0);
+    const projectId = useProject((s) => s.current?.projectId);
+    return empty ? (
+        <ErrorBoundary label={t('projectStart.failed')} resetKeys={[projectId]}>
+            <ProjectStartScreen />
+        </ErrorBoundary>
+    ) : (
+        <SplitGrid />
+    );
 }

@@ -47,11 +47,8 @@ const inOrder = (entries: (NewViewEntry | false)[]): ReactNode[] => {
         .map((entry) => <Fragment key={entry.id}>{entry.node}</Fragment>);
 };
 
-/*
- * The same choices as tiles, for a project without any view: an empty sidebar with nothing to click
- * reads as broken. A divider is left out, since a line or a heading over no rows divides nothing.
- */
-export function NewViewTiles() {
+/* Dividers are left out of the start screen because there are no views to group yet. */
+export function NewViewTiles({ size = 'sm' }: { size?: 'sm' | 'md' }) {
     const { t } = useTranslation('shell');
     const hasFolder = useProject((s) => s.current?.folder != null);
     const providers = useProviders((s) => s.providers);
@@ -62,29 +59,29 @@ export function NewViewTiles() {
                 {
                     id: 'canvas',
                     label: t('viewKinds.canvas'),
-                    node: <Tile size="sm" icon={<Icon icon={Frame} size={14} />} title={t('viewKinds.canvas')} onClick={() => newCanvasView()} />
+                    node: <Tile size={size} icon={<Icon icon={Frame} size={14} />} title={t('viewKinds.canvas')} onClick={() => newCanvasView()} />
                 },
                 {
                     id: 'drawing',
                     label: t('viewKinds.drawing'),
-                    node: <Tile size="sm" icon={<Icon icon={PenTool} size={14} />} title={t('viewKinds.drawing')} onClick={() => void newDrawingView()} />
+                    node: <Tile size={size} icon={<Icon icon={PenTool} size={14} />} title={t('viewKinds.drawing')} onClick={() => void newDrawingView()} />
                 },
                 {
                     id: 'diagram',
                     label: t('viewKinds.diagram'),
-                    node: <Tile size="sm" icon={<Icon icon={Workflow} size={14} />} title={t('viewKinds.diagram')} onClick={() => void newDiagramView()} />
+                    node: <Tile size={size} icon={<Icon icon={Workflow} size={14} />} title={t('viewKinds.diagram')} onClick={() => void newDiagramView()} />
                 },
                 {
                     id: 'terminal',
                     label: t('viewKinds.terminal'),
-                    node: <Tile size="sm" icon={<Icon icon={Terminal} size={14} />} title={t('viewKinds.terminal')} onClick={() => void newTerminalView()} />
+                    node: <Tile size={size} icon={<Icon icon={Terminal} size={14} />} title={t('viewKinds.terminal')} onClick={() => void newTerminalView()} />
                 },
                 ...agents.map((provider) => ({
                     id: `agent:${provider.kind}`,
                     label: provider.name,
                     node: (
                         <Tile
-                            size="sm"
+                            size={size}
                             icon={<AgentIcon kind={provider.kind} size={14} />}
                             title={provider.name}
                             onClick={() => void addAgentView('chat', provider)}
@@ -96,7 +93,7 @@ export function NewViewTiles() {
                     label: t('viewKinds.browser'),
                     node: (
                         <Tile
-                            size="sm"
+                            size={size}
                             icon={<Icon icon={Globe} size={14} />}
                             title={t('viewKinds.browser')}
                             onClick={() => useUi.getState().setViewDialog({ kind: 'new-browser' })}
@@ -108,7 +105,7 @@ export function NewViewTiles() {
                     label: t('viewKinds.file'),
                     node: (
                         <Tile
-                            size="sm"
+                            size={size}
                             icon={<Icon icon={FileText} size={14} />}
                             title={t('viewKinds.file')}
                             onClick={() => useUi.getState().openFilePicker({ kind: 'view' })}

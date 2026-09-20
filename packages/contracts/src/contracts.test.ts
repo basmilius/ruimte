@@ -299,8 +299,7 @@ describe('project', () => {
         expect(
             payload.safeParse({ projectId: 'p1', baseRev: 0, content: { ...content, views: [{ ...view, nodes: [{ ...view.nodes[0], color: 7 }] }] } }).success
         ).toBe(false);
-        // A project always has a view; the last one that goes leaves an empty canvas behind.
-        expect(payload.safeParse({ projectId: 'p1', baseRev: 0, content: { ...content, views: [] } }).success).toBe(false);
+        expect(payload.safeParse({ projectId: 'p1', baseRev: 0, content: { ...content, views: [] } }).success).toBe(true);
     });
 
     test('a separator view carries an id and, if a person gave it one, a label', () => {
