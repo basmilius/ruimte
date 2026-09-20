@@ -74,8 +74,8 @@ export class OutboxWorker {
     }
 
     /* Owes a piece of work and starts on it; resolves once the entry is on disk, not once it is done. */
-    async enqueue(projectId: string, target: string, work: Parameters<OutboxStore['put']>[2]): Promise<void> {
-        await this.store.put(projectId, target, work, this.clock.now());
+    async enqueue(projectId: string, target: string, work: Parameters<OutboxStore['put']>[2], notBefore?: number): Promise<void> {
+        await this.store.put(projectId, target, work, this.clock.now(), notBefore);
         this.drain();
     }
 

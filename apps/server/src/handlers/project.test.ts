@@ -58,6 +58,7 @@ const twoClients = () => {
         projects: store,
         drawings: quiet,
         diagrams: quiet,
+        flows: quiet,
         folders: quiet,
         statuses: quiet,
         usage: quiet,

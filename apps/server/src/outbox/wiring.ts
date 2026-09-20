@@ -12,7 +12,7 @@ import { wireTasks, type TaskWiring } from '../tasks/wiring.ts';
 import { errorText } from '../error-text.ts';
 import { wireEndChildren, type EndChildrenWiring } from './end-children.ts';
 import type { OutboxStore, OutboxWork } from './outbox.ts';
-import { OutboxWorker, type OutboxClock } from './outbox-worker.ts';
+import { OutboxWorker, type OutboxClock, type OutboxHandlers } from './outbox-worker.ts';
 import { oweResume, resumeRunHandler, resumeRunParked } from './resume-run.ts';
 import { startAgentHandler } from './start-agent.ts';
 
@@ -48,8 +48,8 @@ export class OutboxLink {
         this.worker = worker;
     }
 
-    async enqueue(projectId: string, target: string, work: OutboxWork): Promise<void> {
-        await this.require().enqueue(projectId, target, work);
+    async enqueue(projectId: string, target: string, work: OutboxWork, notBefore?: number): Promise<void> {
+        await this.require().enqueue(projectId, target, work, notBefore);
         this.onEnqueued?.();
     }
 
@@ -75,6 +75,8 @@ export interface OutboxWiringDeps {
     tasks: TaskStore;
     chats: ChatManager;
     sessions: SessionManager;
+    /* The two handlers a flow owes: built before the worker, since the worker takes them whole. */
+    flows: Pick<OutboxHandlers, 'run-flow' | 'flow-trigger'>;
     /* Raises attention on a node; the daemon pushes, a test only writes down that it happened. */
     alert(target: 'chat' | 'terminal', nodeId: string, title: string, body: string): void;
     clock?: OutboxClock;
@@ -168,7 +170,9 @@ export const wireOutbox = (deps: OutboxWiringDeps): OutboxWiring => {
                 placed
             }),
             'end-children': endChildren.handler,
-            'deliver-summary': summaries.handler
+            'deliver-summary': summaries.handler,
+            'run-flow': deps.flows['run-flow'],
+            'flow-trigger': deps.flows['flow-trigger']
         },
         onParked: (entry, error) => {
             resumeRunParked(chats)(entry, error);

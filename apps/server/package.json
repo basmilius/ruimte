@@ -22,6 +22,7 @@
     "@ruimte/csp": "workspace:*",
     "@ruimte/diagram": "workspace:*",
     "@ruimte/drawing": "workspace:*",
+    "@ruimte/flow": "workspace:*",
     "@ruimte/plan": "workspace:*",
     "@ruimte/pulsar": "workspace:*",
     "@ruimte/service": "workspace:*",

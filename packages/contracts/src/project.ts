@@ -403,6 +403,11 @@ export type ProjectDrawingView = z.infer<typeof ProjectDrawingViewSchema>;
 export const ProjectDiagramViewSchema = ViewBaseSchema.extend({ kind: z.literal('diagram') });
 export type ProjectDiagramView = z.infer<typeof ProjectDiagramViewSchema>;
 
+/* An automation, drawn as a graph. The cards live in `.ruimte/flows/<id>.json`, never in this file,
+   and whether it runs here is not in either: that is one person's word on one machine. */
+export const ProjectFlowViewSchema = ViewBaseSchema.extend({ kind: z.literal('flow') });
+export type ProjectFlowView = z.infer<typeof ProjectFlowViewSchema>;
+
 /* One file on disk, read and never written. The path is the whole view: the bytes are the
    file system's, so there is nothing here for Ruimte to own, migrate or save. */
 export const ProjectFileViewSchema = ViewBaseSchema.extend({ kind: z.literal('file'), path: z.string().min(1) });
@@ -416,6 +421,7 @@ const KNOWN_VIEW_SCHEMAS = [
     ProjectDeviceViewSchema,
     ProjectDrawingViewSchema,
     ProjectDiagramViewSchema,
+    ProjectFlowViewSchema,
     ProjectFileViewSchema,
     ProjectSeparatorViewSchema,
     ProjectSubheaderViewSchema
@@ -472,6 +478,8 @@ export const isDividerView = (view: ProjectView): view is ProjectSeparatorView |
 export const isDrawingView = (view: ProjectView): view is ProjectDrawingView => view.kind === 'drawing';
 
 export const isDiagramView = (view: ProjectView): view is ProjectDiagramView => view.kind === 'diagram';
+
+export const isFlowView = (view: ProjectView): view is ProjectFlowView => view.kind === 'flow';
 
 export const isFileView = (view: ProjectView): view is ProjectFileView => view.kind === 'file';
 

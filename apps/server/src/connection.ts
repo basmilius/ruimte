@@ -48,6 +48,8 @@ export interface ConnectionServices {
     projects: Subscribable;
     drawings: Subscribable;
     diagrams: Subscribable;
+    /* One channel for everything about flows: the file, the switch, the runs and a notification. */
+    flows: Subscribable;
     folders: Attachable;
     statuses: Attachable;
     usage: Subscribable;
@@ -101,6 +103,7 @@ export const connectionOpener = (services: ConnectionServices): ((channel: Clien
             services.projects.subscribe(clientId, sink),
             services.drawings.subscribe(clientId, sink),
             services.diagrams.subscribe(clientId, sink),
+            services.flows.subscribe(clientId, sink),
             services.folders.subscribe(clientId, sink),
             services.statuses.subscribe(clientId, sink),
             services.usage.subscribe(clientId, sink),

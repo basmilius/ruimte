@@ -59,6 +59,8 @@ import { ATTACHMENTS_PATH, handleAttachmentRequest } from './chat/attachment-rou
 import { AttachmentStore } from './chat/attachment-store.ts';
 import { CANVAS_PATH, handleCanvasRequest } from './canvas/canvas-route.ts';
 import { ChatManager } from './chat/chat-manager.ts';
+import { chatOpener } from './chat/wake-chat.ts';
+import { wireFlows } from './flows/wiring.ts';
 import { hookContext } from './context/context-note.ts';
 import { CONTEXT_PATH, ContextStore } from './context/context-store.ts';
 import { deliverNotice, noticeNote, NoticeStore, renderNotice, showNotices, type Notice } from './context/notices.ts';
@@ -82,6 +84,7 @@ import { readMedia } from './fs/read.ts';
 import { registerGitHandlers } from './handlers/git.ts';
 import { registerDiagramHandlers } from './handlers/diagram.ts';
 import { registerDrawingHandlers } from './handlers/drawing.ts';
+import { registerFlowHandlers } from './handlers/flow.ts';
 import { registerProjectHandlers } from './handlers/project.ts';
 import { registerServerHandlers } from './handlers/server.ts';
 import { readMachineModel } from './machine-model.ts';
@@ -99,6 +102,7 @@ import { createSampler } from './processes/sampler.ts';
 import { handleProjectRequest, PROJECTS_PATH } from './projects/icon-route.ts';
 import { DiagramStore } from './projects/diagram-store.ts';
 import { DrawingStore } from './projects/drawing-store.ts';
+import { FlowStore } from './projects/flow-store.ts';
 import { isTrackedPath } from './git/ignore.ts';
 import { ProjectStore } from './projects/project-store.ts';
 import { takesNoteOnLine } from './providers/launch.ts';
@@ -237,6 +241,20 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     });
     const projects = new ProjectStore(config.home);
     projects.attachTracked(isTrackedPath);
+    const flowFiles = new FlowStore(projects);
+    projects.attachFlows(flowFiles);
+    /* Built before the worker, because it hands it the two handlers a flow runs on. */
+    const flows = wireFlows({
+        home: config.home,
+        projects,
+        flows: flowFiles,
+        outbox,
+        link: outboxLink,
+        message: async (chatId, text, label) => {
+            const chat = await chatOpener({ chats, placed: (nodeId) => projects.index.locate(nodeId) !== null })(chatId);
+            return chat?.wake({ text, label, taskIds: [] }) ?? false;
+        }
+    });
     const outboxWiring = wireOutbox({
         link: outboxLink,
         outbox,
@@ -247,6 +265,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         tasks,
         chats,
         sessions: manager,
+        flows: flows.handlers,
         alert: (target, nodeId, title, body) => push.alert(target, nodeId, title, body)
     });
     const outboxWorker = outboxWiring.worker;
@@ -260,6 +279,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     projects.attachDiagrams(diagrams);
     // Before the socket answers, so an agent whose project nobody opened since the restart still reads its links.
     await projects.warmIndex();
+    // The flows this machine was left with take up their moments again, and their watches with them.
+    await flows.start();
     const folders = new FolderWatcher();
     const liveStreams = new LiveStreamHub();
     const browsers = BrowserManager.withBun(config.home, liveStreams);
@@ -449,6 +470,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
     registerProjectHandlers(dispatcher, projects);
     registerDrawingHandlers(dispatcher, drawings);
     registerDiagramHandlers(dispatcher, diagrams);
+    registerFlowHandlers(dispatcher, flowFiles, flows);
     registerAuthHandlers(dispatcher, auth, {
         identity,
         version: VERSION,
@@ -573,6 +595,7 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         projects,
         drawings,
         diagrams,
+        flows: { subscribe: (clientId, sink) => flows.subscribe(clientId, sink) },
         folders,
         statuses,
         usage,
@@ -869,6 +892,8 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         projects.closeAll();
         drawings.closeAll();
         diagrams.closeAll();
+        flows.stop();
+        flowFiles.closeAll();
         peers.closeAll();
         await relay.stop();
         server.stop(true);

@@ -37,6 +37,7 @@ import {
     diagramsDirOf,
     documentPathInFolder,
     drawingsDirOf,
+    flowsDirOf,
     gitignorePathOf,
     fromPortable,
     parseSharedFile,
@@ -146,6 +147,7 @@ interface OpenProject {
     // The drawing and diagram views of the document as it stands, so an orphan file can be told from a live one.
     drawingIds: Set<string>;
     diagramIds: Set<string>;
+    flowIds: Set<string>;
 }
 
 /*
@@ -156,12 +158,14 @@ interface OpenProject {
 export type TrackedProbe = (path: string) => Promise<boolean>;
 
 /* A view of a kind this daemon does not know may own a file under either folder, so it counts as live for both. */
-const viewIdsIn = (views: ProjectView[], kind: 'drawing' | 'diagram'): Set<string> =>
+const viewIdsIn = (views: ProjectView[], kind: 'drawing' | 'diagram' | 'flow'): Set<string> =>
     new Set(views.filter((view) => view.kind === kind || view.kind === UNKNOWN_KIND).map((view) => view.id));
 
 const drawingIdsIn = (views: ProjectView[]): Set<string> => viewIdsIn(views, 'drawing');
 
 const diagramIdsIn = (views: ProjectView[]): Set<string> => viewIdsIn(views, 'diagram');
+
+const flowIdsIn = (views: ProjectView[]): Set<string> => viewIdsIn(views, 'flow');
 
 /*
  * Every canvas the daemon knows, where it lives and which ones are open. A folder project is
@@ -182,6 +186,7 @@ export class ProjectStore {
     private readonly identity = new IdentityCache();
     private drawings: ProjectViewFiles | null = null;
     private diagrams: ProjectViewFiles | null = null;
+    private flows: ProjectViewFiles | null = null;
     // Registry changes run one after the other; two clients opening at once must not lose an entry.
     private readonly writes = new Serializer();
 
@@ -257,6 +262,11 @@ export class ProjectStore {
     /* The diagram store follows this one the same way. */
     attachDiagrams(diagrams: ProjectViewFiles): void {
         this.diagrams = diagrams;
+    }
+
+    /* And the flow store, whose files sit in the same two folders. */
+    attachFlows(flows: ProjectViewFiles): void {
+        this.flows = flows;
     }
 
     subscribe(clientId: string, sink: SessionSink): () => void {
@@ -416,7 +426,8 @@ export class ProjectStore {
             cancelSettle: null,
             iconTouched: false,
             drawingIds: drawingIdsIn(document.views),
-            diagramIds: diagramIdsIn(document.views)
+            diagramIds: diagramIdsIn(document.views),
+            flowIds: flowIdsIn(document.views)
         };
         this.open.set(entry.projectId, state);
         this.startWatching(state, path);
@@ -466,6 +477,7 @@ export class ProjectStore {
         if (moved.length > 0) {
             await this.drawings?.resettle(projectId, moved);
             await this.diagrams?.resettle(projectId, moved);
+            await this.flows?.resettle(projectId, moved);
         }
         this.index.set(projectId, state.entry.folder, fromPortable(document, state.entry.folder));
         const drawingIds = drawingIdsIn(document.views);
@@ -480,6 +492,11 @@ export class ProjectStore {
             await this.diagrams.removeOrphans(projectId, diagramIds);
         }
         state.diagramIds = diagramIds;
+        const flowIds = flowIdsIn(document.views);
+        if (this.flows && [...state.flowIds].some((id) => !flowIds.has(id))) {
+            await this.flows.removeOrphans(projectId, flowIds);
+        }
+        state.flowIds = flowIds;
         const icon = content.icon ?? null;
         if (content.name !== state.entry.name || content.color !== state.entry.color || !sameIcon(icon, state.entry.icon ?? null)) {
             state.entry = { ...state.entry, name: content.name, color: content.color, icon };
@@ -546,6 +563,7 @@ export class ProjectStore {
             state.rev = document.rev;
             state.drawingIds = drawingIdsIn(document.views);
             state.diagramIds = diagramIdsIn(document.views);
+            state.flowIds = flowIdsIn(document.views);
         }
         const daemonSide = fromPortable(document, entry.folder);
         this.index.set(projectId, entry.folder, daemonSide);
@@ -575,13 +593,14 @@ export class ProjectStore {
     }
 
     /*
-     * Where the project file sits and which views it holds, read from disk whether the project is open
-     * or not: a diagram written after the person switched away still has to land in its own folder.
+     * Where the project file sits, which views it holds and which of them are shared, read from disk
+     * whether the project is open or not: a diagram written after the person switched away still has
+     * to land in its own folder, and a flow the runner reads has to be looked for on the right side.
      */
-    place(projectId: string): Promise<{ documentPath: string; views: ProjectView[] }> {
+    place(projectId: string): Promise<{ documentPath: string; views: ProjectView[]; shared: string[] }> {
         return this.locked(async () => {
-            const { path, content } = await this.readCurrent(projectId);
-            return { documentPath: path, views: content.views };
+            const { path, content, shared } = await this.readCurrent(projectId);
+            return { documentPath: path, views: content.views, shared };
         });
     }
 
@@ -706,6 +725,7 @@ export class ProjectStore {
         }
         this.drawings?.closeProject(projectId);
         this.diagrams?.closeProject(projectId);
+        this.flows?.closeProject(projectId);
         state.watcher?.close();
         state.cancelSettle?.();
         this.open.delete(projectId);
@@ -745,10 +765,11 @@ export class ProjectStore {
             return;
         }
         if (entry.folder) {
-            // Only the canvas file and the drawings and diagrams that belong to it; the rest of the folder
+            // Only the canvas file and the drawings, diagrams and flows that belong to it; the rest of the folder
             // is the person's project. Those go first, or the rmdir below finds `.ruimte` full.
             await rm(drawingsDirOf(this.documentPath(entry)), { recursive: true, force: true });
             await rm(diagramsDirOf(this.documentPath(entry)), { recursive: true, force: true });
+            await rm(flowsDirOf(this.documentPath(entry)), { recursive: true, force: true });
             // Everything of this project that never left the machine, the private views among it.
             await rm(privateDirOf(this.documentPath(entry)), { recursive: true, force: true });
             await rm(gitignorePathOf(this.documentPath(entry)), { force: true });
@@ -823,6 +844,10 @@ export class ProjectStore {
 
     isDiagramView(projectId: string, viewId: string): boolean {
         return this.require(projectId).diagramIds.has(viewId);
+    }
+
+    isFlowView(projectId: string, viewId: string): boolean {
+        return this.require(projectId).flowIds.has(viewId);
     }
 
     private documentPath(entry: RegistryEntry): string {
@@ -901,6 +926,7 @@ export class ProjectStore {
         state.rev = rev;
         state.drawingIds = drawingIdsIn(document.views);
         state.diagramIds = diagramIdsIn(document.views);
+        state.flowIds = flowIdsIn(document.views);
         state.entry = { ...state.entry, name: document.name, color: document.color, icon: document.icon ?? null };
         this.index.set(state.entry.projectId, state.entry.folder, fromPortable(document, state.entry.folder));
         this.emit({ event: 'project.changed', payload: { projectId: state.entry.projectId, document: fromPortable(document, state.entry.folder) } });

@@ -11,6 +11,7 @@ import { startProcessWarnings } from '@/processes/watch';
 import { startTaskWatch } from '@/tasks/watch';
 import { startPlanPanelWatch } from '@/plan/plan-panel-watch';
 import { startProjectList } from '@/project/list';
+import { startFlowNoticeWatch } from '@/flow/notice-watch';
 import { startShowViewWatch } from '@/project/show-view-watch';
 import { bootWindow } from '@/project/open';
 import { startConnections } from '@/transport/connections';
@@ -46,6 +47,7 @@ startProjectList();
 /* After the cached lists are in, so the switch screen can name the project it is opening. */
 void bootWindow();
 startShowViewWatch();
+startFlowNoticeWatch();
 startInputModality();
 startKeepAwake();
 /* Before the account: a `/link` address leaves the address bar and waits for whoever signs in. */

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ProjectIdSchema, ProjectSaveResultSchema } from './project.ts';
 
 /*
  * The port a line leaves a card by, which is the whole meaning of the line. A trigger and an action
@@ -76,3 +77,42 @@ export const migrateFlow = (value: unknown): FlowDocument | null => {
     const parsed = FlowDocumentSchema.safeParse(value);
     return parsed.success ? parsed.data : null;
 };
+
+export const FlowTargetPayloadSchema = z.object({
+    projectId: ProjectIdSchema,
+    viewId: z.string().min(1)
+});
+export type FlowTargetPayload = z.infer<typeof FlowTargetPayloadSchema>;
+
+export const FlowOpenResultSchema = z.object({
+    document: FlowDocumentSchema
+});
+export type FlowOpenResult = z.infer<typeof FlowOpenResultSchema>;
+
+export const FlowSavePayloadSchema = z.object({
+    projectId: ProjectIdSchema,
+    viewId: z.string().min(1),
+    // The rev the client last loaded; the daemon refuses when the file moved on.
+    baseRev: z.number().int().nonnegative(),
+    content: FlowContentSchema
+});
+export type FlowSavePayload = z.infer<typeof FlowSavePayloadSchema>;
+
+export const FlowSaveResultSchema = ProjectSaveResultSchema;
+export type FlowSaveResult = z.infer<typeof FlowSaveResultSchema>;
+
+// Duplicating a view: the daemon copies the file under the new id at rev 0.
+export const FlowCopyPayloadSchema = z.object({
+    projectId: ProjectIdSchema,
+    from: z.string().min(1),
+    to: z.string().min(1)
+});
+export type FlowCopyPayload = z.infer<typeof FlowCopyPayloadSchema>;
+
+// The file changed under the daemon (a git pull, another machine); carries what is on disk now.
+export const FlowChangedEventSchema = z.object({
+    projectId: ProjectIdSchema,
+    viewId: z.string().min(1),
+    document: FlowDocumentSchema
+});
+export type FlowChangedEvent = z.infer<typeof FlowChangedEventSchema>;

@@ -3,6 +3,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import {
     DIAGRAM_VERSION,
     DRAWING_VERSION,
+    FLOW_VERSION,
     PROJECT_PRIVATE_VERSION,
     PROJECT_VERSION,
     ProjectPrivateFileSchema,
@@ -12,12 +13,14 @@ import {
     isCanvasView,
     migrateDiagram,
     migrateDrawing,
+    migrateFlow,
     migrateSharedFile,
     newerVersionIn,
     storedViewsOf,
     withoutCrossViewEdges,
     type DiagramDocument,
     type DrawingDocument,
+    type FlowDocument,
     type ProjectContent,
     type ProjectPrivateFile,
     type ProjectSharedFile,
@@ -25,6 +28,7 @@ import {
     type ProjectView,
     type SharedFileRead
 } from '@ruimte/contracts';
+import { flowProblemIn } from '@ruimte/flow';
 import { fileExists, isNotFound, writeAtomic } from '../fs.ts';
 
 export const PROJECT_DIR = '.ruimte';
@@ -37,6 +41,8 @@ export const GITIGNORE_FILE = '.gitignore';
 export const DRAWINGS_DIR = 'drawings';
 // The same rule for diagrams, in a directory beside it, so a file name never says which kind it is.
 export const DIAGRAMS_DIR = 'diagrams';
+// And for flows, whose recipe is content like any other: it may be shared, and then it is in git.
+export const FLOWS_DIR = 'flows';
 
 /*
  * `unreadable` is broken JSON or a shape no version of ours ever wrote; `invalid` is a file that
@@ -289,6 +295,10 @@ export const privateDrawingsDirOf = (documentPath: string): string => join(priva
 
 export const privateDiagramsDirOf = (documentPath: string): string => join(privateDirOf(documentPath), DIAGRAMS_DIR);
 
+export const flowsDirOf = (documentPath: string): string => join(dirname(documentPath), FLOWS_DIR);
+
+export const privateFlowsDirOf = (documentPath: string): string => join(privateDirOf(documentPath), FLOWS_DIR);
+
 /* The view id, never its name: a rename must not move a file, and two machines must agree. */
 export const viewFilePathIn = (dir: string, viewId: string): string => join(dir, `${encodeURIComponent(viewId)}.json`);
 
@@ -382,6 +392,53 @@ export const parseDiagram = (text: string): DiagramParse => {
     }
     return { kind: 'ok', document };
 };
+
+/* One card and one line per line, so a diff names the card that moved rather than the whole flow. */
+const oneEntryPerLine = (entries: Readonly<Record<string, unknown>>): string => {
+    const keys = Object.keys(entries).sort();
+    return keys.length === 0 ? '{}' : `{\n${keys.map((key) => `    ${JSON.stringify(key)}: ${JSON.stringify(entries[key])}`).join(',\n')}\n  }`;
+};
+
+export const serializeFlow = (document: FlowDocument): string =>
+    [
+        '{',
+        `  "version": ${document.version},`,
+        `  "rev": ${document.rev},`,
+        ...(document.folder === undefined ? [] : [`  "folder": ${JSON.stringify(document.folder)},`]),
+        `  "cards": ${oneEntryPerLine(document.cards)},`,
+        `  "links": ${oneItemPerLine(document.links)}`,
+        '}',
+        ''
+    ].join('\n');
+
+export type FlowParse = JsonDocumentParse<FlowDocument>;
+
+export const parseFlow = (text: string): FlowParse => {
+    let value: unknown;
+    try {
+        value = JSON.parse(text);
+    } catch {
+        return { kind: 'unreadable' };
+    }
+    const newer = newerVersionIn(value, FLOW_VERSION);
+    if (newer !== null) {
+        return { kind: 'too-new', version: newer };
+    }
+    const document = migrateFlow(value);
+    if (!document) {
+        // JSON that is not a flow at all: a person's file under our name, so it stays where it is.
+        return { kind: 'invalid', message: 'This file is not a flow Ruimte can read' };
+    }
+    const problem = flowProblemIn(document);
+    if (problem) {
+        return { kind: 'invalid', message: problem };
+    }
+    return { kind: 'ok', document };
+};
+
+export const readFlow = (path: string): Promise<JsonDocumentRead<FlowDocument>> => readJsonDocument(path, parseFlow);
+
+export const writeFlow = (path: string, document: FlowDocument): Promise<string> => writeJsonDocument(path, document, serializeFlow);
 
 export const readDiagram = (path: string): Promise<JsonDocumentRead<DiagramDocument>> => readJsonDocument(path, parseDiagram);
 

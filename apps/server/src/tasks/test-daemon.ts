@@ -10,7 +10,11 @@ import { chatForkDeps, forkChat, readForkInfo } from '../chat/fork.ts';
 import { fakeClaude } from '../chat/fake-claude.ts';
 import { fakeCodex } from '../chat/fake-codex.ts';
 import { inProcess, type InProcessCli } from '../chat/fake-cli.ts';
+import { chatOpener } from '../chat/wake-chat.ts';
 import { turnFromMessage } from '../context/deliver-message.ts';
+import { wireFlows, type FlowWiring } from '../flows/wiring.ts';
+import type { WatchSeams } from '../fs/watch-seam.ts';
+import { FlowStore } from '../projects/flow-store.ts';
 import { deliverNotice, NoticeStore, renderNotice, showNotices } from '../context/notices.ts';
 import { Dispatcher } from '../dispatcher.ts';
 import { Checkpoints, type CheckpointService } from '../git/checkpoints.ts';
@@ -54,6 +58,7 @@ export interface TestDaemon {
     wiring: TaskWiring;
     endChildren: EndChildrenWiring;
     host: CanvasHost;
+    flows: FlowWiring;
     alerts: string[];
     /* A request over the wire from one client, answered by the same handlers a socket reaches. */
     request(type: string, payload: unknown): Promise<ServerFrame>;
@@ -73,9 +78,11 @@ export interface TestDaemonOptions {
     worktrees?: Worktrees;
     /* The CLIs this machine says it has; Claude Code alone unless a test needs another. */
     installed?: AgentKind[];
+    /* What a file trigger watches through; without it nothing here ever reaches the file system. */
+    watch?: WatchSeams;
 }
 
-export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktrees, installed = ['claude'] }: TestDaemonOptions): Promise<TestDaemon> => {
+export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktrees, installed = ['claude'], watch }: TestDaemonOptions): Promise<TestDaemon> => {
     const prompts = new PendingPromptStore(home);
     await prompts.load();
     const lineage = new AgentLineageStore(home);
@@ -126,6 +133,21 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         }
     };
     const alerts: string[] = [];
+    const flowFiles = new FlowStore(store, watch);
+    store.attachFlows(flowFiles);
+    const flows = wireFlows({
+        home,
+        projects: store,
+        flows: flowFiles,
+        outbox,
+        link: outboxLink,
+        message: async (chatId, text, label) => {
+            const chat = await chatOpener({ chats, placed: (nodeId) => store.index.locate(nodeId) !== null })(chatId);
+            return chat?.wake({ text, label, taskIds: [] }) ?? false;
+        },
+        now: () => clock.now(),
+        ...(watch ? { seams: watch } : {})
+    });
     const outboxWiring = wireOutbox({
         link: outboxLink,
         outbox,
@@ -136,6 +158,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         tasks,
         chats,
         sessions,
+        flows: flows.handlers,
         alert: (_target, nodeId, title, body) => alerts.push(`${nodeId}\t${title}\t${body}`),
         clock,
         now: () => clock.now(),
@@ -148,6 +171,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
     const endChildren = outboxWiring.endChildren;
     const summaries = outboxWiring.summaries;
     endChildren.start();
+    await flows.start();
     sessions.onProcessChange = (sessionId, phase) => {
         if (phase === 'changed' && sessions.get(sessionId)?.exited !== false) {
             wiring.coordinator.terminalEnded(sessionId);
@@ -272,6 +296,7 @@ export const bootTestDaemon = async ({ home, store, clock, checkpoints, worktree
         wiring,
         endChildren,
         host,
+        flows,
         alerts,
         request: async (type, payload) => {
             const frames: ServerFrame[] = [];

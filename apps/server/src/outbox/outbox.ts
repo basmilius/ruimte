@@ -54,6 +54,23 @@ const DeliverSummarySchema = z.object({
     payload: z.object({ forkId: z.string().min(1), turnId: z.string().min(1), text: z.string() })
 });
 
+/*
+ * A run of a flow that is on its way: the state of the run itself is in the timeline, so this only
+ * names which run to pick up. A wait card leaves one of these behind with a `notBefore` on it, which
+ * is why a wait survives a restart at three in the morning without a timer in anyone's memory.
+ */
+const RunFlowSchema = z.object({
+    kind: z.literal('run-flow'),
+    /* `resume` is the wait card this entry comes back for, so the run knows which branch woke up. */
+    payload: z.object({ viewId: z.string().min(1), runId: z.string().min(1), resume: z.string().min(1).optional() })
+});
+
+/* A moment a trigger card is waiting for. The handler fires the flow and owes the next moment. */
+const FlowTriggerSchema = z.object({
+    kind: z.literal('flow-trigger'),
+    payload: z.object({ viewId: z.string().min(1), cardId: z.string().min(1), due: z.number() })
+});
+
 const OutboxWorkSchema = z.discriminatedUnion('kind', [
     StartAgentSchema,
     ResumeRunSchema,
@@ -61,7 +78,9 @@ const OutboxWorkSchema = z.discriminatedUnion('kind', [
     GiveTaskSchema,
     DeliverMessageSchema,
     EndChildrenSchema,
-    DeliverSummarySchema
+    DeliverSummarySchema,
+    RunFlowSchema,
+    FlowTriggerSchema
 ]);
 
 const OutboxEntrySchema = z.intersection(
@@ -86,8 +105,17 @@ export type GiveTaskEntry = Extract<OutboxEntry, { kind: 'give-task' }>;
 export type DeliverMessageEntry = Extract<OutboxEntry, { kind: 'deliver-message' }>;
 export type EndChildrenEntry = Extract<OutboxEntry, { kind: 'end-children' }>;
 export type DeliverSummaryEntry = Extract<OutboxEntry, { kind: 'deliver-summary' }>;
+export type RunFlowEntry = Extract<OutboxEntry, { kind: 'run-flow' }>;
+export type FlowTriggerEntry = Extract<OutboxEntry, { kind: 'flow-trigger' }>;
 
 /* The nodes an entry is about: work on any of them waits while it runs. Ending children holds their lanes too, so no start or resume of one runs beside it. */
+/*
+ * Whether the target of an entry is a node of the document at all. Ending the children of a deleted
+ * node is owed exactly because it is gone, and the work of a flow is aimed at a view rather than at a
+ * node, so neither is dropped when the nodes of a project change.
+ */
+const aboutANode = (entry: OutboxEntry): boolean => entry.kind !== 'end-children' && entry.kind !== 'run-flow' && entry.kind !== 'flow-trigger';
+
 export const lanesOf = (entry: OutboxEntry): string[] => (entry.kind === 'end-children' ? [entry.target, ...entry.payload.nodeIds] : [entry.target]);
 
 /*
@@ -109,7 +137,8 @@ export class OutboxStore {
         return this.entries.load();
     }
 
-    async put(projectId: string, target: string, work: OutboxWork, now: number): Promise<OutboxEntry> {
+    /* `notBefore` is the earliest this may run; without one it is due at once. */
+    async put(projectId: string, target: string, work: OutboxWork, now: number, notBefore?: number): Promise<OutboxEntry> {
         const entry: OutboxEntry = {
             ...work,
             id: `${work.kind}-${randomBytes(6).toString('hex')}`,
@@ -117,7 +146,7 @@ export class OutboxStore {
             target,
             createdAt: now,
             attempts: 0,
-            notBefore: now
+            notBefore: notBefore ?? now
         };
         await this.entries.write(entry);
         return entry;
@@ -149,6 +178,6 @@ export class OutboxStore {
      * deleted. Ending the children of a deleted node is owed exactly because it is gone, so that stays.
      */
     prune(projectId: string, ids: ReadonlySet<string>): Promise<void> {
-        return this.entries.prune((entry) => entry.projectId === projectId && entry.kind !== 'end-children' && !ids.has(entry.target));
+        return this.entries.prune((entry) => entry.projectId === projectId && aboutANode(entry) && !ids.has(entry.target));
     }
 }

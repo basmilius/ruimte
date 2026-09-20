@@ -140,6 +140,15 @@ import {
     DrawingTargetPayloadSchema
 } from './drawing.ts';
 import {
+    FlowChangedEventSchema,
+    FlowCopyPayloadSchema,
+    FlowOpenResultSchema,
+    FlowSavePayloadSchema,
+    FlowSaveResultSchema,
+    FlowTargetPayloadSchema
+} from './flow.ts';
+import { FlowEnablePayloadSchema, FlowNoticeEventSchema, FlowRunEventSchema, FlowStateResultSchema, FlowSwitchedEventSchema } from './flow-run.ts';
+import {
     DiagramChangedEventSchema,
     DiagramCopyPayloadSchema,
     DiagramOpenResultSchema,
@@ -216,6 +225,7 @@ export * from './drawing.ts';
 export * from './envelope.ts';
 export * from './flow.ts';
 export * from './flow-cards.ts';
+export * from './flow-run.ts';
 export * from './font.ts';
 export * from './fs.ts';
 export * from './git.ts';
@@ -322,6 +332,13 @@ export const REQUEST_SCHEMAS = {
     'diagram.save': { payload: DiagramSavePayloadSchema, result: DiagramSaveResultSchema },
     'diagram.close': { payload: DiagramTargetPayloadSchema, result: EmptySchema },
     'diagram.copy': { payload: DiagramCopyPayloadSchema, result: EmptySchema },
+    'flow.open': { payload: FlowTargetPayloadSchema, result: FlowOpenResultSchema },
+    'flow.save': { payload: FlowSavePayloadSchema, result: FlowSaveResultSchema },
+    'flow.close': { payload: FlowTargetPayloadSchema, result: EmptySchema },
+    'flow.copy': { payload: FlowCopyPayloadSchema, result: EmptySchema },
+    // Whether the flow runs here, and what it did: the switch and the timeline of one flow.
+    'flow.state': { payload: FlowTargetPayloadSchema, result: FlowStateResultSchema },
+    'flow.enable': { payload: FlowEnablePayloadSchema, result: FlowStateResultSchema },
     'fs.browse': { payload: FsBrowsePayloadSchema, result: FsBrowseResultSchema },
     'fs.reveal': { payload: FsRevealPayloadSchema, result: EmptySchema },
     'fs.search': { payload: FsSearchPayloadSchema, result: FsSearchResultSchema },
@@ -403,6 +420,10 @@ export const EVENT_SCHEMAS = {
     'project.summary': ProjectSummaryEventSchema,
     'drawing.changed': DrawingChangedEventSchema,
     'diagram.changed': DiagramChangedEventSchema,
+    'flow.changed': FlowChangedEventSchema,
+    'flow.switched': FlowSwitchedEventSchema,
+    'flow.run': FlowRunEventSchema,
+    'flow.notice': FlowNoticeEventSchema,
     'fs.changed': FsChangedEventSchema,
     'git.status': GitStatusEventSchema,
     'git.changed': GitChangedEventSchema,

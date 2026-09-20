@@ -11,6 +11,7 @@ import {
     Smartphone,
     Terminal,
     Workflow,
+    Zap,
     type LucideIcon
 } from 'lucide-react';
 import type { AgentKind, ProjectIconChoice, ProjectViewKind } from '@ruimte/contracts';
@@ -29,6 +30,7 @@ const VIEW_KIND_GLYPHS: Record<ProjectViewKind, LucideIcon> = {
     device: Smartphone,
     drawing: PenTool,
     diagram: Workflow,
+    flow: Zap,
     file: FileText,
     separator: Minus,
     subheader: Heading,

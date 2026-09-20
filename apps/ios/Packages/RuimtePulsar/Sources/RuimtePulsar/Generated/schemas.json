@@ -17596,6 +17596,117 @@
                     },
                     "kind": {
                       "type": "string",
+                      "const": "flow"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "kind"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "titleSource": {
+                      "type": "string",
+                      "enum": [
+                        "auto",
+                        "user"
+                      ]
+                    },
+                    "icon": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "lucide"
+                        },
+                        "value": {
+                          "type": "string",
+                          "enum": [
+                            "box",
+                            "boxes",
+                            "package",
+                            "layers",
+                            "code",
+                            "terminal",
+                            "cpu",
+                            "circuit-board",
+                            "memory-stick",
+                            "pc-case",
+                            "laptop",
+                            "monitor",
+                            "smartphone",
+                            "tablet",
+                            "webcam",
+                            "printer",
+                            "hard-drive",
+                            "usb",
+                            "database",
+                            "server",
+                            "container",
+                            "network",
+                            "router",
+                            "ethernet-port",
+                            "cable",
+                            "plug",
+                            "wifi",
+                            "radio-tower",
+                            "satellite-dish",
+                            "cloud",
+                            "globe",
+                            "rocket",
+                            "zap",
+                            "flame",
+                            "sparkles",
+                            "star",
+                            "heart",
+                            "flag",
+                            "bookmark",
+                            "folder",
+                            "file-text",
+                            "book",
+                            "puzzle",
+                            "palette",
+                            "brush",
+                            "camera",
+                            "music",
+                            "video",
+                            "gamepad-2",
+                            "bot",
+                            "brain",
+                            "beaker",
+                            "wrench",
+                            "hammer",
+                            "shield",
+                            "key",
+                            "compass",
+                            "map",
+                            "leaf",
+                            "coffee"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ]
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "kind": {
+                      "type": "string",
                       "const": "file"
                     },
                     "path": {
@@ -17705,6 +17816,7 @@
                   "device",
                   "drawing",
                   "diagram",
+                  "flow",
                   "file",
                   "separator",
                   "subheader"
@@ -19583,6 +19695,117 @@
                     },
                     "kind": {
                       "type": "string",
+                      "const": "flow"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "kind"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "titleSource": {
+                      "type": "string",
+                      "enum": [
+                        "auto",
+                        "user"
+                      ]
+                    },
+                    "icon": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "lucide"
+                        },
+                        "value": {
+                          "type": "string",
+                          "enum": [
+                            "box",
+                            "boxes",
+                            "package",
+                            "layers",
+                            "code",
+                            "terminal",
+                            "cpu",
+                            "circuit-board",
+                            "memory-stick",
+                            "pc-case",
+                            "laptop",
+                            "monitor",
+                            "smartphone",
+                            "tablet",
+                            "webcam",
+                            "printer",
+                            "hard-drive",
+                            "usb",
+                            "database",
+                            "server",
+                            "container",
+                            "network",
+                            "router",
+                            "ethernet-port",
+                            "cable",
+                            "plug",
+                            "wifi",
+                            "radio-tower",
+                            "satellite-dish",
+                            "cloud",
+                            "globe",
+                            "rocket",
+                            "zap",
+                            "flame",
+                            "sparkles",
+                            "star",
+                            "heart",
+                            "flag",
+                            "bookmark",
+                            "folder",
+                            "file-text",
+                            "book",
+                            "puzzle",
+                            "palette",
+                            "brush",
+                            "camera",
+                            "music",
+                            "video",
+                            "gamepad-2",
+                            "bot",
+                            "brain",
+                            "beaker",
+                            "wrench",
+                            "hammer",
+                            "shield",
+                            "key",
+                            "compass",
+                            "map",
+                            "leaf",
+                            "coffee"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ]
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "kind": {
+                      "type": "string",
                       "const": "file"
                     },
                     "path": {
@@ -19692,6 +19915,7 @@
                   "device",
                   "drawing",
                   "diagram",
+                  "flow",
                   "file",
                   "separator",
                   "subheader"
@@ -23926,6 +24150,717 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {}
+  },
+  "request.flow.open.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "viewId"
+    ]
+  },
+  "request.flow.open.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "document": {
+        "type": "object",
+        "properties": {
+          "folder": {
+            "type": "string",
+            "minLength": 1
+          },
+          "cards": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "trigger",
+                    "condition",
+                    "action",
+                    "start",
+                    "delay",
+                    "any",
+                    "all",
+                    "note"
+                  ]
+                },
+                "card": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "args": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "inverted": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "kind",
+                "args",
+                "x",
+                "y"
+              ]
+            }
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "fromPort": {
+                  "type": "string",
+                  "enum": [
+                    "done",
+                    "error",
+                    "true",
+                    "false"
+                  ]
+                },
+                "to": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "from",
+                "fromPort",
+                "to"
+              ]
+            }
+          },
+          "version": {
+            "type": "number",
+            "const": 1
+          },
+          "rev": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "cards",
+          "links",
+          "version",
+          "rev"
+        ]
+      }
+    },
+    "required": [
+      "document"
+    ]
+  },
+  "request.flow.save.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "baseRev": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "content": {
+        "type": "object",
+        "properties": {
+          "folder": {
+            "type": "string",
+            "minLength": 1
+          },
+          "cards": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "trigger",
+                    "condition",
+                    "action",
+                    "start",
+                    "delay",
+                    "any",
+                    "all",
+                    "note"
+                  ]
+                },
+                "card": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "args": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "inverted": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "kind",
+                "args",
+                "x",
+                "y"
+              ]
+            }
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "fromPort": {
+                  "type": "string",
+                  "enum": [
+                    "done",
+                    "error",
+                    "true",
+                    "false"
+                  ]
+                },
+                "to": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "from",
+                "fromPort",
+                "to"
+              ]
+            }
+          }
+        },
+        "required": [
+          "cards",
+          "links"
+        ]
+      }
+    },
+    "required": [
+      "projectId",
+      "viewId",
+      "baseRev",
+      "content"
+    ]
+  },
+  "request.flow.save.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "rev": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      }
+    },
+    "required": [
+      "rev"
+    ]
+  },
+  "request.flow.close.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "viewId"
+    ]
+  },
+  "request.flow.close.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.flow.copy.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "from": {
+        "type": "string",
+        "minLength": 1
+      },
+      "to": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "from",
+      "to"
+    ]
+  },
+  "request.flow.copy.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.flow.state.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "viewId"
+    ]
+  },
+  "request.flow.state.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "switch": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "ceiling": {
+            "type": "string",
+            "enum": [
+              "supervised",
+              "auto-accept-edits",
+              "auto",
+              "full-access"
+            ]
+          },
+          "budget": {
+            "type": "number",
+            "minimum": 0
+          },
+          "enabledBy": {
+            "type": "string"
+          },
+          "enabledAt": {
+            "type": "number"
+          },
+          "recipeHash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "runs": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "trigger": {
+              "type": "string",
+              "minLength": 1
+            },
+            "startedAt": {
+              "type": "number"
+            },
+            "endedAt": {
+              "type": "number"
+            },
+            "outcome": {
+              "type": "string",
+              "enum": [
+                "running",
+                "done",
+                "refused",
+                "skipped",
+                "missed"
+              ]
+            },
+            "note": {
+              "type": "string"
+            },
+            "depth": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "cardId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "at": {
+                    "type": "number"
+                  },
+                  "port": {
+                    "type": "string",
+                    "enum": [
+                      "done",
+                      "error",
+                      "true",
+                      "false"
+                    ]
+                  },
+                  "note": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "cardId",
+                  "at"
+                ]
+              }
+            },
+            "settled": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "done",
+                      "error",
+                      "true",
+                      "false"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "waiting": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "tokens": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ]
+              }
+            }
+          },
+          "required": [
+            "id",
+            "startedAt",
+            "outcome",
+            "steps",
+            "tokens"
+          ]
+        }
+      }
+    },
+    "required": [
+      "switch",
+      "runs"
+    ]
+  },
+  "request.flow.enable.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "enabled": {
+        "type": "boolean"
+      },
+      "ceiling": {
+        "type": "string",
+        "enum": [
+          "supervised",
+          "auto-accept-edits",
+          "auto",
+          "full-access"
+        ]
+      },
+      "budget": {
+        "type": "number",
+        "minimum": 0
+      }
+    },
+    "required": [
+      "projectId",
+      "viewId",
+      "enabled"
+    ]
+  },
+  "request.flow.enable.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "switch": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "ceiling": {
+            "type": "string",
+            "enum": [
+              "supervised",
+              "auto-accept-edits",
+              "auto",
+              "full-access"
+            ]
+          },
+          "budget": {
+            "type": "number",
+            "minimum": 0
+          },
+          "enabledBy": {
+            "type": "string"
+          },
+          "enabledAt": {
+            "type": "number"
+          },
+          "recipeHash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "runs": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "trigger": {
+              "type": "string",
+              "minLength": 1
+            },
+            "startedAt": {
+              "type": "number"
+            },
+            "endedAt": {
+              "type": "number"
+            },
+            "outcome": {
+              "type": "string",
+              "enum": [
+                "running",
+                "done",
+                "refused",
+                "skipped",
+                "missed"
+              ]
+            },
+            "note": {
+              "type": "string"
+            },
+            "depth": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "cardId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "at": {
+                    "type": "number"
+                  },
+                  "port": {
+                    "type": "string",
+                    "enum": [
+                      "done",
+                      "error",
+                      "true",
+                      "false"
+                    ]
+                  },
+                  "note": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "cardId",
+                  "at"
+                ]
+              }
+            },
+            "settled": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "done",
+                      "error",
+                      "true",
+                      "false"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "waiting": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "tokens": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ]
+              }
+            }
+          },
+          "required": [
+            "id",
+            "startedAt",
+            "outcome",
+            "steps",
+            "tokens"
+          ]
+        }
+      }
+    },
+    "required": [
+      "switch",
+      "runs"
+    ]
   },
   "request.fs.browse.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -33814,6 +34749,117 @@
                     },
                     "kind": {
                       "type": "string",
+                      "const": "flow"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "kind"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "titleSource": {
+                      "type": "string",
+                      "enum": [
+                        "auto",
+                        "user"
+                      ]
+                    },
+                    "icon": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "lucide"
+                        },
+                        "value": {
+                          "type": "string",
+                          "enum": [
+                            "box",
+                            "boxes",
+                            "package",
+                            "layers",
+                            "code",
+                            "terminal",
+                            "cpu",
+                            "circuit-board",
+                            "memory-stick",
+                            "pc-case",
+                            "laptop",
+                            "monitor",
+                            "smartphone",
+                            "tablet",
+                            "webcam",
+                            "printer",
+                            "hard-drive",
+                            "usb",
+                            "database",
+                            "server",
+                            "container",
+                            "network",
+                            "router",
+                            "ethernet-port",
+                            "cable",
+                            "plug",
+                            "wifi",
+                            "radio-tower",
+                            "satellite-dish",
+                            "cloud",
+                            "globe",
+                            "rocket",
+                            "zap",
+                            "flame",
+                            "sparkles",
+                            "star",
+                            "heart",
+                            "flag",
+                            "bookmark",
+                            "folder",
+                            "file-text",
+                            "book",
+                            "puzzle",
+                            "palette",
+                            "brush",
+                            "camera",
+                            "music",
+                            "video",
+                            "gamepad-2",
+                            "bot",
+                            "brain",
+                            "beaker",
+                            "wrench",
+                            "hammer",
+                            "shield",
+                            "key",
+                            "compass",
+                            "map",
+                            "leaf",
+                            "coffee"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ]
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "kind": {
+                      "type": "string",
                       "const": "file"
                     },
                     "path": {
@@ -33923,6 +34969,7 @@
                   "device",
                   "drawing",
                   "diagram",
+                  "flow",
                   "file",
                   "separator",
                   "subheader"
@@ -35403,6 +36450,356 @@
       "projectId",
       "viewId",
       "document"
+    ]
+  },
+  "event.flow.changed": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "document": {
+        "type": "object",
+        "properties": {
+          "folder": {
+            "type": "string",
+            "minLength": 1
+          },
+          "cards": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "trigger",
+                    "condition",
+                    "action",
+                    "start",
+                    "delay",
+                    "any",
+                    "all",
+                    "note"
+                  ]
+                },
+                "card": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "args": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "additionalProperties": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                },
+                "inverted": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "kind",
+                "args",
+                "x",
+                "y"
+              ]
+            }
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "fromPort": {
+                  "type": "string",
+                  "enum": [
+                    "done",
+                    "error",
+                    "true",
+                    "false"
+                  ]
+                },
+                "to": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "from",
+                "fromPort",
+                "to"
+              ]
+            }
+          },
+          "version": {
+            "type": "number",
+            "const": 1
+          },
+          "rev": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "cards",
+          "links",
+          "version",
+          "rev"
+        ]
+      }
+    },
+    "required": [
+      "projectId",
+      "viewId",
+      "document"
+    ]
+  },
+  "event.flow.switched": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "switch": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "ceiling": {
+            "type": "string",
+            "enum": [
+              "supervised",
+              "auto-accept-edits",
+              "auto",
+              "full-access"
+            ]
+          },
+          "budget": {
+            "type": "number",
+            "minimum": 0
+          },
+          "enabledBy": {
+            "type": "string"
+          },
+          "enabledAt": {
+            "type": "number"
+          },
+          "recipeHash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      }
+    },
+    "required": [
+      "projectId",
+      "viewId",
+      "switch"
+    ]
+  },
+  "event.flow.run": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "run": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "trigger": {
+            "type": "string",
+            "minLength": 1
+          },
+          "startedAt": {
+            "type": "number"
+          },
+          "endedAt": {
+            "type": "number"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "running",
+              "done",
+              "refused",
+              "skipped",
+              "missed"
+            ]
+          },
+          "note": {
+            "type": "string"
+          },
+          "depth": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "cardId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "at": {
+                  "type": "number"
+                },
+                "port": {
+                  "type": "string",
+                  "enum": [
+                    "done",
+                    "error",
+                    "true",
+                    "false"
+                  ]
+                },
+                "note": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "cardId",
+                "at"
+              ]
+            }
+          },
+          "settled": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "done",
+                    "error",
+                    "true",
+                    "false"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "waiting": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "tokens": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "startedAt",
+          "outcome",
+          "steps",
+          "tokens"
+        ]
+      }
+    },
+    "required": [
+      "projectId",
+      "viewId",
+      "run"
+    ]
+  },
+  "event.flow.notice": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "flow": {
+        "type": "string"
+      },
+      "text": {
+        "type": "string"
+      },
+      "at": {
+        "type": "number"
+      }
+    },
+    "required": [
+      "projectId",
+      "viewId",
+      "flow",
+      "text",
+      "at"
     ]
   },
   "event.fs.changed": {

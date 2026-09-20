@@ -75,7 +75,7 @@ class FakeSource {
     }
 }
 
-const NAMES = ['sessions', 'chats', 'identity', 'projects', 'drawings', 'diagrams', 'folders', 'statuses', 'usage', 'limits', 'processes'] as const;
+const NAMES = ['sessions', 'chats', 'identity', 'projects', 'drawings', 'diagrams', 'flows', 'folders', 'statuses', 'usage', 'limits', 'processes'] as const;
 
 const setup = (screens: Record<string, string> = {}) => {
     const order: string[] = [];

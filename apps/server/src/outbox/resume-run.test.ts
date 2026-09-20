@@ -102,6 +102,8 @@ const boot = async (spawn?: SpawnChatProcess): Promise<Daemon> => {
         clock,
         handlers: {
             'deliver-message': () => Promise.reject(new Error('no messages in these tests')),
+            'run-flow': () => Promise.reject(new Error('no flows run in these tests')),
+            'flow-trigger': () => Promise.reject(new Error('no flows run in these tests')),
             'deliver-summary': () => Promise.reject(new Error('no summaries in these tests')),
             'give-task': () => Promise.reject(new Error('no tasks are given in these tests')),
             'start-agent': () => Promise.reject(new Error('no start in these tests')),
