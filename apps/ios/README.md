@@ -155,19 +155,35 @@ safe-area bar with a soft scroll-edge blur. Reduce Motion switches states direct
 The shape uses concentric corners with a minimum 24-point radius away from screen edges.
 
 Current iteration agreement: build and install only on Bas's physical iPhone,
-`00008130-001C7D411E20001C`. No simulator, UI tests or iPad installation. Targeted
+`00008160-000C312926A0000A`. No simulator, UI tests or iPad installation. Targeted
 protocol, crypto and state tests run on the Mac. Do not restart the running daemon.
 
 ```sh
 xcodebuild -project apps/ios/Ruimte.xcodeproj -scheme Ruimte -configuration Debug \
     -destination 'generic/platform=iOS' -derivedDataPath /tmp/ruimte-ios-xcode \
     -allowProvisioningUpdates build
-xcrun devicectl device install app --device 00008130-001C7D411E20001C \
+xcrun devicectl device install app --device 00008160-000C312926A0000A \
     /tmp/ruimte-ios-xcode/Build/Products/Debug-iphoneos/Ruimte.app
 swift test --package-path apps/ios/Packages/RuimtePulsar --scratch-path /tmp/ruimte-ios-pulsar-build
 swift test --package-path apps/ios/Packages/RuimteTransport --scratch-path /tmp/ruimte-ios-transport-build
 bun run check
 ```
+
+A Release build installs the same way, with its own derived data so the two builds do not
+overwrite each other's products. Both carry the same bundle ID, so installing one replaces
+the other on the device and keeps its data.
+
+```sh
+xcodebuild -project apps/ios/Ruimte.xcodeproj -scheme Ruimte -configuration Release \
+    -destination 'generic/platform=iOS' -derivedDataPath /tmp/ruimte-ios-xcode-release \
+    -allowProvisioningUpdates build
+xcrun devicectl device install app --device 00008160-000C312926A0000A \
+    /tmp/ruimte-ios-xcode-release/Build/Products/Release-iphoneos/Ruimte.app
+```
+
+Release sets `PUSH_ENVIRONMENT: production` while a local development profile grants
+`aps-environment: development`, so a locally signed Release build registers against the
+wrong APNs environment. Test notifications on a Debug build.
 
 ## Native Apple sign-in
 
