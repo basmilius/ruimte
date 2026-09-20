@@ -83,33 +83,26 @@ if (values.os === 'mac') {
     const axHelper = join(nativeDir, 'serve-sim-ax-settings');
     await copyFile(join(dirname(middleware), 'simax', 'serve-sim-ax-settings'), axHelper);
     await chmod(axHelper, 0o755);
-}
 
-const speechTriples: Record<string, string> = {
-    'mac-arm64': 'aarch64-apple-darwin',
-    'mac-x64': 'x86_64-apple-darwin',
-    'linux-arm64': 'aarch64-unknown-linux-gnu',
-    'linux-x64': 'x86_64-unknown-linux-gnu',
-    'win-arm64': 'aarch64-pc-windows-msvc',
-    'win-x64': 'x86_64-pc-windows-msvc'
-};
-const speechTarget = speechTriples[`${values.os}-${values.arch}`]!;
-const speechRoot = join(root, '../speech-bridge');
-const installedCargo = join(homedir(), '.cargo', 'bin', process.platform === 'win32' ? 'cargo.exe' : 'cargo');
-const speechBuild = Bun.spawnSync(
-    [process.env.CARGO ?? (existsSync(installedCargo) ? installedCargo : 'cargo'), 'build', '--release', '--locked', '--target', speechTarget],
-    {
-        cwd: speechRoot,
-        stdio: ['ignore', 'inherit', 'inherit']
+    /* The speech helper links a prebuilt ONNX Runtime that needs a newer glibc and libstdc++ than
+       the Linux build targets, so Speech to Text stays macOS only until that floor moves. A build
+       without the helper reports the feature as unavailable. */
+    const speechRoot = join(root, '../speech-bridge');
+    const installedCargo = join(homedir(), '.cargo', 'bin', 'cargo');
+    const speechBuild = Bun.spawnSync(
+        [process.env.CARGO ?? (existsSync(installedCargo) ? installedCargo : 'cargo'), 'build', '--release', '--locked', '--target', rustTarget],
+        {
+            cwd: speechRoot,
+            stdio: ['ignore', 'inherit', 'inherit']
+        }
+    );
+    if (speechBuild.exitCode !== 0) {
+        process.exit(speechBuild.exitCode);
     }
-);
-if (speechBuild.exitCode !== 0) {
-    process.exit(speechBuild.exitCode);
+    const speechHelper = join(nativeDir, 'speech-bridge');
+    await copyFile(join(speechRoot, 'target', rustTarget, 'release', 'speech-bridge'), speechHelper);
+    await chmod(speechHelper, 0o755);
 }
-const speechBinary = values.os === 'win' ? 'speech-bridge.exe' : 'speech-bridge';
-await mkdir(join(outDir, 'native'), { recursive: true });
-await copyFile(join(speechRoot, 'target', speechTarget, 'release', speechBinary), join(outDir, 'native', speechBinary));
-await chmod(join(outDir, 'native', speechBinary), 0o755);
 
 await copyFile(join(root, 'bin', 'ruimte-context'), join(outDir, 'ruimte-context'));
 await chmod(join(outDir, 'ruimte-context'), 0o755);

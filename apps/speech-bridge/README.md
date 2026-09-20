@@ -2,6 +2,8 @@
 
 Local streaming speech recognition for the optional Speech to Text feature. The Electron shell owns the helper and model files. Audio is held in memory for the current dictation and is never written to disk or sent over the network.
 
+A release builds the helper for macOS only. The prebuilt ONNX Runtime that `ort` links wants a newer glibc and libstdc++ than the Ubuntu 22.04 floor the Linux build targets, and raising that floor would lock out Debian 12. Without the helper beside the daemon, Settings reports Speech to Text as unavailable.
+
 ## Development
 
 `bun dev` builds the release helper before starting Electron. Rust and a working native toolchain are required. A standalone build is `cargo build --release --locked` in this directory.

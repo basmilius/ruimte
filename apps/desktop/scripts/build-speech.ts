@@ -4,7 +4,12 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const installed = join(homedir(), '.cargo', 'bin', process.platform === 'win32' ? 'cargo.exe' : 'cargo');
+// The helper only builds against the ONNX Runtime the release ships, which is macOS only for now.
+if (process.platform !== 'darwin') {
+    process.exit(0);
+}
+
+const installed = join(homedir(), '.cargo', 'bin', 'cargo');
 const cargo = process.env.CARGO ?? (existsSync(installed) ? installed : 'cargo');
 const manifest = join(dirname(fileURLToPath(import.meta.url)), '../../speech-bridge/Cargo.toml');
 const build = spawnSync(cargo, ['build', '--release', '--locked', '--manifest-path', manifest], { stdio: ['ignore', 'inherit', 'inherit'] });
