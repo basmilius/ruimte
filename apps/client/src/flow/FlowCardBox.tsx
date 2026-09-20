@@ -8,6 +8,7 @@ import { cardRect, ICON_SIZE, roundingOf } from '@/flow/geometry';
 import { glyphOf } from '@/flow/glyphs';
 import type { CardLight } from '@/flow/live-look';
 import { cardLabel, cardSentence, cardSource } from '@/flow/labels';
+import { plateClass } from '@/flow/source-look';
 import { Icon } from '@/ui/Icon';
 
 /* The kinds that carry a word and no sentence, which is what makes them a chip. */
@@ -16,7 +17,10 @@ const isChip = (card: FlowCard): boolean => card.kind === 'delay' || card.kind =
 /* The round plate the source icon sits in, on the left of every card and every chip alike. */
 function IconPlate({ card, size }: { card: FlowCard; size: number }) {
     return (
-        <div className="grid shrink-0 place-items-center rounded-full bg-surface-sunken text-text-muted" style={{ width: ICON_SIZE, height: ICON_SIZE }}>
+        <div
+            className={clsx('grid shrink-0 place-items-center rounded-full text-flow-source-ink', plateClass(card))}
+            style={{ width: ICON_SIZE, height: ICON_SIZE }}
+        >
             <Icon icon={glyphOf(card)} size={size} />
         </div>
     );

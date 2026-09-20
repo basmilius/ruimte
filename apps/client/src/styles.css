@@ -114,6 +114,18 @@
     --term-ansi-bright-magenta: #c026d3;
     --term-ansi-bright-cyan: #0891b2;
     --term-ansi-bright-white: #e4e4e7;
+    /* One color per source a flow card can come from, so a full worksheet reads before a word on it
+       does. The shape still says what kind of card it is; this only says where its signal comes
+       from, and it is a token per source rather than a color per app, so nothing anywhere names a
+       color of its own. The glyph on such a plate is drawn in the reverse. */
+    --flow-source-time: #7c3aed;
+    --flow-source-files: #2563eb;
+    --flow-source-text: #0e7490;
+    --flow-source-chat: #15803d;
+    --flow-source-person: #b45309;
+    /* A card about the graph itself has no source, so it stays the quiet one. */
+    --flow-source-flow: #52525b;
+    --flow-source-ink: #ffffff;
     --note-yellow: #fff3bf;
     --note-green: #dcf5e3;
     --note-blue: #dbe9ff;
@@ -251,6 +263,13 @@
     --term-ansi-bright-magenta: #d8b4fe;
     --term-ansi-bright-cyan: #a5f3fc;
     --term-ansi-bright-white: #f4f4f5;
+    --flow-source-time: #8b5cf6;
+    --flow-source-files: #3b82f6;
+    --flow-source-text: #0891b2;
+    --flow-source-chat: #16a34a;
+    --flow-source-person: #d97706;
+    --flow-source-flow: #71717a;
+    --flow-source-ink: #ffffff;
     --note-yellow: #3b3416;
     --note-green: #173a25;
     --note-blue: #182f4b;
@@ -375,6 +394,13 @@
     --color-term-blue: var(--term-blue);
     --color-term-yellow: var(--term-yellow);
     --color-term-red: var(--term-red);
+    --color-flow-source-time: var(--flow-source-time);
+    --color-flow-source-files: var(--flow-source-files);
+    --color-flow-source-text: var(--flow-source-text);
+    --color-flow-source-chat: var(--flow-source-chat);
+    --color-flow-source-person: var(--flow-source-person);
+    --color-flow-source-flow: var(--flow-source-flow);
+    --color-flow-source-ink: var(--flow-source-ink);
     --color-note-yellow: var(--note-yellow);
     --color-note-green: var(--note-green);
     --color-note-blue: var(--note-blue);

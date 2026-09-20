@@ -68,6 +68,7 @@ Decisions the code cannot show. Do not reverse one without asking Bas.
 - Two things wake a chat, each once: a finished task wakes the chat that delegated it, and a message wakes the chat it was sent to. A message goes one step deep, so the turn it opened wakes nobody, and a terminal is never woken at all.
 - Every shortcut needs a modifier. The only bare keys are a drawing view's tools, and only while no text is typed and no dialog is up, and the widget keys inside a prompt card (arrows, Home, End, Space, Enter), only while the focus is in that card.
 - Never highlight the canvas grid in the accent color. Type: only the four sizes in `@theme`, no bracket sizes, nothing below 12px; Geist only for the wordmark, Kalam only for drawing text.
+- The shape of a flow card says what kind it is, and its source says where it comes from in a color of its own: one semantic token per source in `styles.css`, with the glyph in the reverse. Never a color per app and never a raw one.
 - A page in a `<webview>` does not pinch-zoom (Chromium scales only the top-most widget); a `WebContentsView` per page and `setZoomFactor` were weighed and rejected.
 - The wire only gains optional fields, new requests and new events. Never a new `ChatItemSchema` member or enum value in a chat or push payload: the iPhone app validates `chat.attach` and `chat.history` whole.
 - Agents cannot type into or close another node's session, start a command through a verb (only `agent` starts anything) or drive a browser; `--cwd` stays inside the project folder or its worktrees.
