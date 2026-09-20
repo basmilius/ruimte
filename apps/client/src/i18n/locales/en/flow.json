@@ -7,7 +7,8 @@
         "run": "Run this flow now",
         "runHint": "Pick the trigger to run from first",
         "runs": "What this flow has done",
-        "runOffHint": "Turn the flow on to run it, or try a card out from its menu"
+        "runOffHint": "Turn the flow on to run it, or try a card out from its menu",
+        "more": "More"
     },
     "kinds": {
         "trigger": "When",
@@ -38,7 +39,9 @@
         "watching": "Watching",
         "watchingHint": "Runs on its triggers and carries nothing out, so you can read what it would have done",
         "on": "On",
-        "onHint": "Runs on this machine and does what it says"
+        "onHint": "Runs on this machine and does what it says",
+        "title": "On",
+        "mode": "While it is on"
     },
     "inspector": {
         "title": "The card you picked",

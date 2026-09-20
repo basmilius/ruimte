@@ -7,7 +7,8 @@
         "run": "Deze flow nu draaien",
         "runHint": "Kies eerst de trigger om vanaf te draaien",
         "runs": "Wat deze flow gedaan heeft",
-        "runOffHint": "Zet de flow aan om hem te draaien, of probeer een kaart uit via zijn menu"
+        "runOffHint": "Zet de flow aan om hem te draaien, of probeer een kaart uit via zijn menu",
+        "more": "Meer"
     },
     "kinds": {
         "trigger": "Als",
@@ -38,7 +39,9 @@
         "watching": "Meekijken",
         "watchingHint": "Draait op zijn triggers en voert niets uit, zodat je kunt lezen wat hij gedaan zou hebben",
         "on": "Aan",
-        "onHint": "Draait op deze machine en doet wat er staat"
+        "onHint": "Draait op deze machine en doet wat er staat",
+        "title": "Aan",
+        "mode": "Terwijl hij aan staat"
     },
     "inspector": {
         "title": "De kaart die je koos",
