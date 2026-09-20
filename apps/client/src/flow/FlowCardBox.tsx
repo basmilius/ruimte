@@ -1,17 +1,53 @@
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
-import { CircleAlert, CornerDownRight, GitMerge, Play, Split, StickyNote, Timer } from 'lucide-react';
-import type { FlowCard, FlowContent } from '@ruimte/contracts';
+import {
+    CircleAlert,
+    Clock,
+    CornerDownRight,
+    FileText,
+    GitMerge,
+    MessageSquare,
+    Play,
+    Split,
+    StickyNote,
+    Timer,
+    Type,
+    User,
+    Workflow,
+    type LucideIcon
+} from 'lucide-react';
+import { flowCardDefinition, type FlowCard, type FlowCardSource, type FlowContent } from '@ruimte/contracts';
 import { missingArgsOf, portsOf, textArg } from '@ruimte/flow';
-import { CARD_H, CARD_W, NOTE_H } from '@/flow/geometry';
+import { cardRect, ICON_SIZE, roundingOf } from '@/flow/geometry';
 import { cardLabel, cardSentence, cardSource } from '@/flow/labels';
 import { Icon } from '@/ui/Icon';
 
 /*
- * The mark of a card. A trigger, a condition and an action are told apart by their shape and their
- * ports rather than by a color, so the built-in cards are the only ones with a glyph of their own.
+ * The mark in the round plate is where the card's signal comes from, never what kind of card it is:
+ * the kind is the shape, and a second drawing of it would only take the room the source needs.
  */
+const SOURCE_GLYPHS: Record<FlowCardSource, LucideIcon> = {
+    time: Clock,
+    files: FileText,
+    text: Type,
+    chat: MessageSquare,
+    person: User
+};
+
+/* A card without a source says something about the graph itself, so it carries its own mark. */
 const BUILT_IN_GLYPHS = { start: Play, delay: Timer, any: Split, all: GitMerge, note: StickyNote } as const;
+
+const glyphOf = (card: FlowCard): LucideIcon => {
+    const builtIn = BUILT_IN_GLYPHS[card.kind as keyof typeof BUILT_IN_GLYPHS];
+    if (builtIn !== undefined) {
+        return builtIn;
+    }
+    const source = card.card === undefined ? null : flowCardDefinition(card.card)?.source;
+    return source === null || source === undefined ? Workflow : SOURCE_GLYPHS[source];
+};
+
+/* The kinds that carry a word and no sentence, which is what makes them narrow. */
+const isPill = (card: FlowCard): boolean => card.kind === 'delay' || card.kind === 'any' || card.kind === 'all';
 
 /*
  * One card on the worksheet. A trigger has no way in and one way out, a condition has two ways out,
@@ -22,56 +58,64 @@ export function FlowCardBox({ id, card, content, selected }: { id: string; card:
     const { t } = useTranslation('flow');
     const ports = portsOf(card);
     const missing = missingArgsOf(card);
-    const parts = cardSentence(t, content, card);
-    const glyph = card.card === undefined ? BUILT_IN_GLYPHS[card.kind as keyof typeof BUILT_IN_GLYPHS] : null;
+    const rect = cardRect(card);
+    const rounding = roundingOf(card);
+    const style = {
+        left: rect.x,
+        top: rect.y,
+        width: rect.w,
+        height: rect.h,
+        borderRadius: `${rounding.left}px ${rounding.right}px ${rounding.right}px ${rounding.left}px`
+    };
 
     if (card.kind === 'note') {
         return (
             <div
                 data-flow-card={id}
                 className={clsx(
-                    'pointer-events-auto absolute overflow-hidden rounded-lg border border-border bg-note-yellow p-3 text-sm whitespace-pre-wrap text-text',
+                    'pointer-events-auto absolute overflow-hidden border border-border bg-note-yellow p-3 text-sm whitespace-pre-wrap text-text',
                     selected && 'ring-2 ring-accent'
                 )}
-                style={{ left: card.x, top: card.y, width: CARD_W, height: NOTE_H }}
+                style={style}
             >
                 {textArg(card, 'text') || t('builtIn.note.placeholder')}
             </div>
         );
     }
 
+    const shell = clsx('pointer-events-auto absolute border border-border bg-surface-raised shadow-float', selected && 'ring-2 ring-accent');
+
+    if (card.kind === 'start') {
+        return (
+            <div data-flow-card={id} className={clsx(shell, 'grid place-items-center')} style={style} aria-label={cardLabel(t, card)}>
+                <Icon icon={Play} size={20} className="text-text-muted" />
+                <span className="sr-only">{cardLabel(t, card)}</span>
+            </div>
+        );
+    }
+
+    if (isPill(card)) {
+        return (
+            <div data-flow-card={id} className={clsx(shell, 'flex items-center justify-center gap-2 px-4')} style={style}>
+                <Icon icon={glyphOf(card)} size={16} className="shrink-0 text-text-muted" />
+                <span className="truncate text-sm text-text">{sentenceOf(t, content, card)}</span>
+            </div>
+        );
+    }
+
     return (
-        <div
-            data-flow-card={id}
-            className={clsx(
-                'pointer-events-auto absolute flex flex-col justify-center gap-0.5 border border-border bg-surface-raised px-3 shadow-float',
-                /* Three silhouettes, so a full worksheet reads without its text and without color: a
-                   trigger is round where a run starts and square where it leaves, a condition is round
-                   on both ends because it asks something, and an action is a square box that does. */
-                card.kind === 'trigger' || card.kind === 'start' ? 'rounded-l-2xl rounded-r-lg' : card.kind === 'condition' ? 'rounded-2xl' : 'rounded-lg',
-                selected && 'ring-2 ring-accent'
-            )}
-            style={{ left: card.x, top: card.y, width: CARD_W, height: CARD_H }}
-        >
-            <div className="flex items-center gap-1.5 text-xs/[inherit] text-text-faint">
-                {glyph !== null && <Icon icon={glyph} size={12} />}
-                <span className="truncate">{cardSource(t, card)}</span>
-                {missing.length > 0 && <Icon icon={CircleAlert} size={12} className="ml-auto text-status-needs-you" />}
+        <div data-flow-card={id} className={clsx(shell, 'flex items-center gap-3 px-3')} style={style}>
+            <div className="grid shrink-0 place-items-center rounded-full bg-surface-sunken text-text-muted" style={{ width: ICON_SIZE, height: ICON_SIZE }}>
+                <Icon icon={glyphOf(card)} size={18} />
             </div>
-            <div className="line-clamp-2 text-sm/tight text-text">
-                {parts.length === 0
-                    ? cardLabel(t, card)
-                    : parts.map((part, index) => (
-                          <span key={index} className={part.value ? 'font-medium text-text' : 'text-text-muted'}>
-                              {part.text}
-                          </span>
-                      ))}
-            </div>
-            {card.inverted === true && (
-                <div className="flex items-center gap-1 text-xs/[inherit] text-text-faint">
-                    <Icon icon={CornerDownRight} size={12} /> {t('inspector.inverted')}
+            <div className="flex min-w-0 grow flex-col gap-0.5">
+                <div className="flex items-center gap-1.5 text-xs/[inherit] text-text-faint">
+                    <span className="truncate">{cardSource(t, card)}</span>
+                    {card.inverted === true && <Icon icon={CornerDownRight} size={12} />}
                 </div>
-            )}
+                <div className="line-clamp-2 text-sm/tight text-text">{sentenceOf(t, content, card)}</div>
+            </div>
+            {missing.length > 0 && <Icon icon={CircleAlert} size={14} className="shrink-0 text-status-needs-you" />}
             {/* The ports are drawn in the layer under the cards, with the lines they belong to. */}
             <span className="sr-only">
                 {ports.map((port) => t(`ports.${port}`)).join(', ')}
@@ -79,4 +123,17 @@ export function FlowCardBox({ id, card, content, selected }: { id: string; card:
             </span>
         </div>
     );
+}
+
+/* The sentence of a card, with the values a person filled in drawn heavier than the words around them. */
+function sentenceOf(t: ReturnType<typeof useTranslation<'flow'>>['t'], content: FlowContent, card: FlowCard) {
+    const parts = cardSentence(t, content, card);
+    if (parts.length === 0) {
+        return cardLabel(t, card);
+    }
+    return parts.map((part, index) => (
+        <span key={index} className={part.value ? 'font-medium text-text' : 'text-text-muted'}>
+            {part.text}
+        </span>
+    ));
 }

@@ -3,7 +3,7 @@ import clsx from 'clsx';
 import type { FlowContent, FlowLink, FlowPort } from '@ruimte/contracts';
 import { portsOf } from '@ruimte/flow';
 import { routeDraft, routeEdge, type EdgeRoute } from '@/canvas/edge-route';
-import { cardRect, obstaclesOf, portBand, portDot } from '@/flow/geometry';
+import { bandOf, cardRect, obstaclesOf, portDot } from '@/flow/geometry';
 import type { Point } from '@/canvas/math';
 
 /* How close a pointer comes before a port opens up to be pulled from, in world units. */
@@ -37,7 +37,7 @@ const routeOf = (content: FlowContent, link: FlowLink): EdgeRoute | null => {
     if (from === undefined || to === undefined) {
         return null;
     }
-    const band = portBand(cardRect(from), link.fromPort, portsOf(from));
+    const band = bandOf(from, link.fromPort);
     const obstacles = obstaclesOf(content).filter((obstacle) => obstacle.id !== link.from && obstacle.id !== link.to);
     return routeEdge(band, cardRect(to), obstacles, { fromSide: 'right', toSide: 'left' });
 };
@@ -57,7 +57,7 @@ export function FlowLinkLayer({ content, zoom, pointer, draft, hovered, onHover,
         draft === null || content.cards[draft.from] === undefined
             ? null
             : routeDraft(
-                  portBand(cardRect(content.cards[draft.from]!), draft.fromPort, portsOf(content.cards[draft.from]!)),
+                  bandOf(content.cards[draft.from]!, draft.fromPort),
                   draft.at,
                   obstacles.filter((obstacle) => obstacle.id !== draft.from),
                   { fromSide: 'right' }

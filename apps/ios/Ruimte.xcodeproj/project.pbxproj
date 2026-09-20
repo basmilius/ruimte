@@ -11,6 +11,7 @@
 		01A24DD7477F2A95C9EF42E0 /* document-renderer.js in Resources */ = {isa = PBXBuildFile; fileRef = A8C83388F2EE72EDED082639 /* document-renderer.js */; };
 		036421AA923C27CCC1A4FE3A /* UsageMoneyFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13B248061C8BA76C3B7DC1F8 /* UsageMoneyFormatter.swift */; };
 		0A14CC9ED096B72837DF02F5 /* IceCandidateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F29B9E631BA0053CAC8D2A6 /* IceCandidateTests.swift */; };
+		0ADF4AA4572DAF49C8A26900 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = A84B645FE2D16EFA24FD14F6 /* AppIcon.icon */; };
 		0B547D0A6B2838F62FB295E9 /* LucideSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 06F665001E0BC007A06510C8 /* LucideSwift */; };
 		0C50DA276AE717B500B6D27B /* ViewIconPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B68348C7C35F8C9CAC737CA /* ViewIconPicker.swift */; };
 		0C7BBCCED0B7814415E137A6 /* DrawingCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = 732B16DF3002A0A3499B1ADF /* DrawingCanvas.swift */; };
@@ -40,7 +41,6 @@
 		397C943D1175F19383822284 /* ChatPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29EB1C15C9B520845CD3BB82 /* ChatPresentationTests.swift */; };
 		3A580D1A13AD08B9E927CEA4 /* ChatContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207A88BAF2E56E0957CB1944 /* ChatContent.swift */; };
 		3AF2536CFF4F274E9CA1F5B2 /* CanvasPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78AF6CD8C27D406B882C8FA0 /* CanvasPage.swift */; };
-		3CD58CE19C2DF420F784D712 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 61FFADFD19E4CE715EF4F691 /* AppIcon.icon */; };
 		3D31A6E3A8580B2F81EE4763 /* ChatTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5566FA42E11FDC5B932C0F2E /* ChatTimeline.swift */; };
 		3F688FC111081CCF1B4670DF /* ChatModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 070AB913E963308BAD40498B /* ChatModel.swift */; };
 		3FF11289E9C9D97393BA9DEC /* AttentionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97203F1CB27A45176505F61D /* AttentionStoreTests.swift */; };
@@ -247,7 +247,6 @@
 		59965D01855765D4A850A9AD /* ChatPromptCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPromptCard.swift; sourceTree = "<group>"; };
 		5A672F255CAFCD537E1F2A74 /* UnifiedProjects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedProjects.swift; sourceTree = "<group>"; };
 		6121F187F1A5B808F82EE616 /* NotificationService.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NotificationService.entitlements; sourceTree = "<group>"; };
-		61FFADFD19E4CE715EF4F691 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		62D07C5E01735816B53D3E59 /* ProjectArtwork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectArtwork.swift; sourceTree = "<group>"; };
 		653536E5B98BEFB676B13733 /* SharedMachineSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedMachineSession.swift; sourceTree = "<group>"; };
 		6E5C2124CCC572A4A3D407AB /* NotificationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCoordinator.swift; sourceTree = "<group>"; };
@@ -281,6 +280,7 @@
 		9F2414AA03D39CF3F8A6A5CC /* ChatContentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatContentTests.swift; sourceTree = "<group>"; };
 		A21EE5A4525ED716D15BF003 /* NavigationRowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationRowTests.swift; sourceTree = "<group>"; };
 		A531355B6DBA1AEA2747E700 /* TerminalModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalModel.swift; sourceTree = "<group>"; };
+		A84B645FE2D16EFA24FD14F6 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		A8954363C79663F275CDF04A /* MobileStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileStyle.swift; sourceTree = "<group>"; };
 		A8C83388F2EE72EDED082639 /* document-renderer.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = "document-renderer.js"; sourceTree = "<group>"; };
 		A8D9470CFA8BEF5941D91543 /* ChatSubagentsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSubagentsTests.swift; sourceTree = "<group>"; };
@@ -503,15 +503,6 @@
 			path = Fixtures;
 			sourceTree = "<group>";
 		};
-		8A5BAE517DEC66861C891888 /* agent-a02ca4c12c06125d2 */ = {
-			isa = PBXGroup;
-			children = (
-				95461F791E17C86794582DD6 /* assets */,
-			);
-			name = "agent-a02ca4c12c06125d2";
-			path = ../..;
-			sourceTree = "<group>";
-		};
 		8A7C995AE1145EC5F2E4A2DE /* UITests */ = {
 			isa = PBXGroup;
 			children = (
@@ -558,10 +549,10 @@
 			path = Tests;
 			sourceTree = "<group>";
 		};
-		95461F791E17C86794582DD6 /* assets */ = {
+		96C0AD17E8E9AE2F439B90D6 /* assets */ = {
 			isa = PBXGroup;
 			children = (
-				61FFADFD19E4CE715EF4F691 /* AppIcon.icon */,
+				A84B645FE2D16EFA24FD14F6 /* AppIcon.icon */,
 			);
 			path = assets;
 			sourceTree = "<group>";
@@ -588,15 +579,24 @@
 		D927DFB4C45849E607D0FC81 = {
 			isa = PBXGroup;
 			children = (
-				8A5BAE517DEC66861C891888 /* agent-a02ca4c12c06125d2 */,
 				708C224944B4027467FF1534 /* App */,
 				3C3B62CB8A399F181539F779 /* Configuration */,
 				C1745C6D84A901A991566B0C /* Extensions */,
 				E7D2E16C602F28AE55AEFEF8 /* Packages */,
+				DED6F5F29F409BC49D8E06BF /* ruimte */,
 				931D8A8CF648CE72B8A24E6B /* Tests */,
 				8A7C995AE1145EC5F2E4A2DE /* UITests */,
 				73F389015C48C67AED5707FE /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		DED6F5F29F409BC49D8E06BF /* ruimte */ = {
+			isa = PBXGroup;
+			children = (
+				96C0AD17E8E9AE2F439B90D6 /* assets */,
+			);
+			name = ruimte;
+			path = ../..;
 			sourceTree = "<group>";
 		};
 		E7D2E16C602F28AE55AEFEF8 /* Packages */ = {
@@ -818,7 +818,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3CD58CE19C2DF420F784D712 /* AppIcon.icon in Resources */,
+				0ADF4AA4572DAF49C8A26900 /* AppIcon.icon in Resources */,
 				C077E0093362AFCFC0EE2B3F /* Assets.xcassets in Resources */,
 				BD2BF8096B72184143296EA2 /* Lucide-LICENSE.txt in Resources */,
 				59959A4B0DD426A2CB3F1DCF /* PrivacyInfo.xcprivacy in Resources */,
