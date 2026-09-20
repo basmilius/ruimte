@@ -19,7 +19,7 @@ import { FileActionItems } from '@/shell/panels/FileActionItems';
 import { resolveStoredPath } from '@/shell/panels/files-tree';
 import { canSplit, cellCount, type CellAt, type SplitDirection } from '@/shell/split';
 import { useChatRow } from '@/state/chats';
-import { useDocument } from '@/state/document';
+import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useProviders } from '@/state/providers';
 import { useSessionRow } from '@/state/sessions';
@@ -62,6 +62,7 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
     /* A canvas to land on. Without one the rows that put a view on a canvas would do nothing at all,
        so they are left out rather than greyed, which a menu has no room to explain. */
     const hasCanvas = useDocument((state) => state.views.some(isCanvasView));
+    const onCanvas = useDocument(hasActiveCanvas);
     const folder = useProject((state) => state.current?.folder ?? null);
     const platform = useServer((state) => state.platform);
     /* What the daemon knows about the session, which is newer than what the view was opened with. */
@@ -92,7 +93,7 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
     // What a file view holds is stored against the project folder; the menu acts on the daemon's path.
     const filePath = view?.kind === 'file' ? resolveStoredPath(folder, view.path) : null;
     const offerPut = !drawn && kind !== 'file' && hasCanvas;
-    const offerShow = (kind === 'drawing' || kind === 'diagram') && hasCanvas;
+    const offerShow = (kind === 'drawing' || kind === 'diagram') && onCanvas;
     const place = offerPut || offerShow || filePath !== null || workingFolder !== null;
 
     return (

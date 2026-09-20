@@ -10,6 +10,7 @@ import { StatusDot } from '@/canvas/NodeFrame';
 import { PromptDialog } from '@/ui/PromptDialog';
 import { nodesInWorktree, originLabel, sharePathsOf, workBadges, workBadgesLabel, type WorkBadgeKind } from '@/shell/panels/worktree-rows';
 import { nodeWorking } from '@/state/agent-work';
+import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useChats } from '@/state/chats';
 import { useEndpointId } from '@/state/keys';
 import { useSessions } from '@/state/sessions';
@@ -250,6 +251,8 @@ interface WorktreeMenuProps extends Pick<WorktreeSectionProps, 'onView' | 'onMer
  */
 function WorktreeMenuItems({ worktree, reveal, onView, onMerge, onRemove, onReveal }: WorktreeMenuProps) {
     const { t } = useTranslation('panels');
+    const onCanvas = useDocument(hasActiveCanvas);
+    const offerReveal = reveal !== null && onCanvas;
     return (
         <>
             {!worktree.missing && (
@@ -262,12 +265,12 @@ function WorktreeMenuItems({ worktree, reveal, onView, onMerge, onRemove, onReve
                     </Menu.Item>
                 </>
             )}
-            {reveal !== null && (
+            {offerReveal && (
                 <Menu.Item className="menu-item" onClick={() => onReveal(reveal)}>
                     <Icon icon={LocateFixed} size={14} /> {t('file.menu.showOnCanvas')}
                 </Menu.Item>
             )}
-            {(!worktree.missing || reveal !== null) && <Menu.Separator className={MENU_SEPARATOR} />}
+            {(!worktree.missing || offerReveal) && <Menu.Separator className={MENU_SEPARATOR} />}
             <Menu.Item className="menu-item text-status-error" onClick={() => onRemove(worktree)}>
                 <Icon icon={Trash} size={14} /> {t('worktree.section.remove')}
             </Menu.Item>

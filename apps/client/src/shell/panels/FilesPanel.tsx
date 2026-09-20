@@ -50,6 +50,7 @@ import {
     type EntryCache
 } from '@/shell/panels/files-tree';
 import { directoryHandle, rowPathOf, PANEL_TREE_CSS, PANEL_TREE_ROW_HEIGHT } from '@/shell/panels/panel-tree';
+import { hasActiveCanvas, useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { folderWatches } from '@/state/fs-watch';
 import { useGit } from '@/state/git';
@@ -106,6 +107,7 @@ const EMPTY_CACHE: EntryCache = new Map();
 export function FilesPanel() {
     const { t } = useTranslation('panels');
     const folder = useProject((s) => s.current?.folder ?? null);
+    const onCanvas = useDocument(hasActiveCanvas);
     const platform = useServer((s) => s.platform);
     const reachability = useServer((s) => s.reachability);
     const machine = useServer((s) => s.label);
@@ -569,9 +571,11 @@ export function FilesPanel() {
                                 {menuPath !== null && !isDirectoryPath(menuPath) && (
                                     <>
                                         <ContextMenu.Separator className={MENU_SEPARATOR} />
-                                        <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => showFileOnCanvas(absolute))}>
-                                            <Icon icon={Frame} size={14} /> {t('file.menu.showOnCanvas')}
-                                        </ContextMenu.Item>
+                                        {onCanvas && (
+                                            <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => showFileOnCanvas(absolute))}>
+                                                <Icon icon={Frame} size={14} /> {t('file.menu.showOnCanvas')}
+                                            </ContextMenu.Item>
+                                        )}
                                         <ContextMenu.Item className="menu-item" onClick={onMenuPath((absolute) => newFileView(absolute))}>
                                             <Icon icon={Columns2} size={14} /> {t('file.menu.openAsView')}
                                         </ContextMenu.Item>

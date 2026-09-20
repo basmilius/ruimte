@@ -723,3 +723,8 @@ export const viewOfNode = (views: ProjectView[], nodeId: string): ProjectView | 
 
 export const activeViewOf = (state: Pick<DocumentState, 'views' | 'activeViewId'>): ProjectView | null =>
     state.views.find((view) => view.id === state.activeViewId) ?? null;
+
+export const hasActiveCanvas = (state: Pick<DocumentState, 'views' | 'activeViewId'>): boolean => {
+    const view = activeViewOf(state);
+    return view !== null && isCanvasView(view);
+};
