@@ -1,4 +1,4 @@
-import { NodeKindSchema, PROJECT_VIEW_KINDS, UNKNOWN_KIND } from '@ruimte/contracts';
+import { AgentStatusSchema, NodeKindSchema, PROJECT_VIEW_KINDS, UNKNOWN_KIND } from '@ruimte/contracts';
 import { z } from 'zod';
 
 export const ACTION_ACTOR_KINDS = ['person', 'voice', 'agent', 'automation'] as const;
@@ -22,6 +22,83 @@ const viewId = z.string().min(1);
 const viewName = z.string().trim().min(1);
 
 export const ACTION_DEFINITIONS = {
+    'agents.inspect': {
+        title: 'Inspect agents',
+        description: 'Reads current agent statuses in this project from the daemon.',
+        effect: 'read',
+        actors: ACTION_ACTOR_KINDS,
+        input: z.object({}),
+        output: z.object({
+            project: z.string(),
+            connected: z.boolean(),
+            observedAt: z.number(),
+            agents: z.array(
+                z.object({
+                    id: z.string(),
+                    name: z.string(),
+                    view: z.string(),
+                    kind: z.enum(['chat', 'terminal']),
+                    status: z.union([AgentStatusSchema, z.literal('unknown')]),
+                    working: z.boolean().nullable(),
+                    selected: z.boolean(),
+                    toolHistory: z.boolean(),
+                    updatedAt: z.number().nullable()
+                })
+            )
+        })
+    },
+    'agent.activity': {
+        title: 'Read agent activity',
+        description: 'Reads bounded structured tool activity, never internal reasoning.',
+        effect: 'read',
+        actors: ACTION_ACTOR_KINDS,
+        input: z.object({ agentId: z.string().min(1), limit: z.number().int().min(1).max(20), toolId: z.string().nullable() }),
+        output: z.object({
+            agent: z.string(),
+            supported: z.boolean(),
+            truncated: z.boolean(),
+            tools: z.array(
+                z.object({
+                    id: z.string(),
+                    name: z.string(),
+                    state: z.enum(['running', 'done', 'error']),
+                    createdAt: z.number(),
+                    input: z.string(),
+                    output: z.string().nullable(),
+                    parentToolUseId: z.string().nullable(),
+                    paths: z.array(z.string()),
+                    truncated: z.boolean()
+                })
+            )
+        })
+    },
+    'projects.list-open': {
+        title: 'List open projects',
+        description: 'Lists projects in use in the project navigation, excluding Recent.',
+        effect: 'read',
+        actors: ACTION_ACTOR_KINDS,
+        input: z.object({}),
+        output: z.object({
+            projects: z.array(
+                z.object({
+                    endpointId: z.string(),
+                    projectId: z.string(),
+                    name: z.string(),
+                    machine: z.string(),
+                    active: z.boolean(),
+                    available: z.boolean()
+                })
+            )
+        })
+    },
+    'project.switch': {
+        title: 'Switch open project',
+        description: 'Switches this window to an existing open project.',
+        effect: 'local',
+        actors: ['person', 'voice'] as readonly ActionActorKind[],
+        input: z.object({ endpointId: z.string().min(1), projectId: z.string().min(1) }),
+        output: z.object({ project: z.string(), endpointId: z.string(), projectId: z.string() })
+    },
     'workspace.inspect': {
         title: 'Inspect workspace',
         description: 'Reads the current project, active view, openable views, active canvas nodes and selection.',
@@ -266,6 +343,14 @@ export const ACTION_DEFINITIONS = {
             queued: z.boolean(),
             turnId: z.string().min(1).optional()
         })
+    },
+    'chat.clear': {
+        title: 'Clear AI Chat',
+        description: 'Clears conversation history, attachments and plans, and stops the current turn after confirmation. Keeps the chat node or view.',
+        effect: 'external',
+        actors: ['person', 'voice'] as readonly ActionActorKind[],
+        input: z.object({ chatId: z.string().min(1) }),
+        output: z.object({ chatId: z.string().min(1), chat: z.string() })
     },
     'chat.read': {
         title: 'Read recent AI Chat messages',

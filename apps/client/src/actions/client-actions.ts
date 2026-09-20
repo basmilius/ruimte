@@ -1,3 +1,4 @@
+import { inspectionActions } from '@/actions/inspection-actions';
 import { ActionRefusal, ActionRegistry, type ActionCall, type ActionOutput } from '@ruimte/actions';
 import { isCanvasView, isOpenableView, isUnknownNode, isUnknownView, type NodeTitleSource, type ProjectNode, type ProjectView } from '@ruimte/contracts';
 import type { StoreApi } from 'zustand';
@@ -74,8 +75,12 @@ const chatTitle = (document: StoreApi<DocumentState>, chatId: string): string | 
     return null;
 };
 
-export const createClientActionRegistry = (document: StoreApi<DocumentState>): ActionRegistry<void> =>
+export const createClientActionRegistry = (
+    document: StoreApi<DocumentState>,
+    clearChat: (chatId: string) => Promise<void> = (chatId) => chatClient.clear(chatId, true)
+): ActionRegistry<void> =>
     new ActionRegistry<void>({
+        ...inspectionActions(document),
         'workspace.inspect': () => {
             const state = document.getState();
             const active = activeViewOf(state);
@@ -437,6 +442,25 @@ export const createClientActionRegistry = (document: StoreApi<DocumentState>): A
             }
             const submitted = await chatClient.send(chatId, prompt);
             return { output: { chatId, chat, ...submitted } };
+        },
+        'chat.clear': async ({ chatId }, { confirmed }) => {
+            const chat = chatTitle(document, chatId);
+            if (!chat) {
+                throw new ActionRefusal('unknown-chat', 'This AI Chat no longer exists in the current project.');
+            }
+            if (!confirmed) {
+                return {
+                    confirmation: {
+                        title: `Clear AI Chat “${chat}”?`,
+                        consequences: [
+                            'The conversation history, attachments and plans will be deleted. This cannot be undone.',
+                            'Any current turn and queued messages in this chat will be stopped or discarded. The chat itself stays in place.'
+                        ]
+                    }
+                };
+            }
+            await clearChat(chatId);
+            return { output: { chatId, chat } };
         },
         'chat.read': ({ chatId, limit }) => {
             const chat = chatTitle(document, chatId);

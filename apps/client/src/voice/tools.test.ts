@@ -1,3 +1,6 @@
+import { useProjectList } from '@/state/project-list';
+import { useProject } from '@/state/project';
+import type { ProjectSummary } from '@ruimte/contracts';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { VOICE_TOOL_DEFINITIONS, type ProjectCanvasView, type ProjectDocument, type ProjectNode } from '@ruimte/contracts';
 import { defaultCanvases } from '@/state/canvas';
@@ -53,6 +56,8 @@ afterEach(() => {
     useSettings.setState({ voiceConfirmDestructiveActions: true });
     useDocument.getState().load(null, null);
     useChats.setState({ byKey: {} });
+    useProjectList.setState({ projects: [] });
+    useProject.setState({ switching: false });
     defaultCanvases.release('main');
     defaultCanvases.focus(null);
 });
@@ -60,6 +65,9 @@ afterEach(() => {
 describe('Voice domain tools', () => {
     test('exposes compact domain tools and confirmation control with strict object inputs', () => {
         expect(VOICE_TOOL_DEFINITIONS.map((tool) => tool.name)).toEqual([
+            'inspect_agents',
+            'inspect_agent_activity',
+            'manage_projects',
             'inspect_workspace',
             'manage_views',
             'manage_canvas',
@@ -67,6 +75,83 @@ describe('Voice domain tools', () => {
             'control_action'
         ]);
         expect(VOICE_TOOL_DEFINITIONS.every((tool) => tool.strict && tool.parameters.additionalProperties === false)).toBe(true);
+    });
+
+    test('clear_ai_chat resolves the selected chat and asks for confirmation', async () => {
+        useDocument.getState().addStandaloneView({ kind: 'chat', name: 'Research', node: {} });
+        const result = await executeVoiceTool(
+            'communicate',
+            JSON.stringify({ action: 'clear_ai_chat', chat: null, prompt: null, limit: null, notify_on_completion: false })
+        );
+        expect(result.output).toMatchObject({ ok: false, needs_confirmation: true });
+        expect(result.clearedChatKey).toBeUndefined();
+        const cancelled = await executeVoiceTool('control_action', JSON.stringify({ action: 'cancel', confirmation_token: result.output.confirmation_token }));
+        expect(cancelled.output.ok).toBe(false);
+    });
+
+    test('clear_ai_chat never chooses between duplicate chat names', async () => {
+        useDocument.getState().addStandaloneView({ kind: 'chat', name: 'Research', node: {} });
+        useDocument.getState().addStandaloneView({ kind: 'chat', name: 'Research', node: {} });
+        const result = await executeVoiceTool(
+            'communicate',
+            JSON.stringify({ action: 'clear_ai_chat', chat: 'Research', prompt: null, limit: null, notify_on_completion: false })
+        );
+        expect(result.output.ok).toBe(false);
+        expect(result.output.candidates).toHaveLength(2);
+        expect(result.output.confirmation_token).toBeUndefined();
+    });
+
+    test('lists only open projects and never guesses between duplicate names', async () => {
+        const summary = (projectId: string, name: string, closedAt: number | null): ProjectSummary => ({
+            projectId,
+            name,
+            closedAt,
+            color: '#000',
+            folder: null,
+            lastOpenedAt: 1,
+            available: true,
+            icon: { kind: 'initial', value: 'F' },
+            nameSource: 'chosen'
+        });
+        useProjectList.setState({
+            projects: [
+                { endpointId: 'one', summary: summary('p1', 'Flux', null) },
+                { endpointId: 'two', summary: summary('p2', 'Flux', null) },
+                { endpointId: 'one', summary: summary('p3', 'Closed', 1) }
+            ]
+        });
+        const listed = await executeVoiceTool('manage_projects', JSON.stringify({ action: 'list', project: null, machine: null }));
+        expect(listed.output.ok).toBe(true);
+        expect(listed.output.projects).toHaveLength(2);
+        const ambiguous = await executeVoiceTool('manage_projects', JSON.stringify({ action: 'switch', project: 'Flux', machine: null }));
+        expect(ambiguous.output.ok).toBe(false);
+        expect(ambiguous.output.candidates).toHaveLength(2);
+        const closed = await executeVoiceTool('manage_projects', JSON.stringify({ action: 'switch', project: 'Closed', machine: null }));
+        expect(closed.output.ok).toBe(false);
+    });
+
+    test('offline agent status is unknown rather than idle or successful', async () => {
+        defaultCanvases.of('main').getState().addNode('chat', { x: 0, y: 0 }, { title: 'Research' });
+        const result = await executeVoiceTool('inspect_agents', JSON.stringify({ agent: 'Research', scope: 'all' }));
+        expect(result.output).toMatchObject({ ok: true, connected: false, agents: [{ name: 'Research', status: 'unknown', working: null }] });
+    });
+
+    test('selected activity requires exactly one agent and reports unsupported terminal history', async () => {
+        defaultCanvases.of('main').getState().select([]);
+        expect((await executeVoiceTool('inspect_agent_activity', JSON.stringify({ agent: null, limit: 5, tool_id: null }))).output.ok).toBe(false);
+        defaultCanvases.of('main').getState().addNode('terminal', { x: 0, y: 0 }, { title: 'CLI' });
+        const result = await executeVoiceTool('inspect_agent_activity', JSON.stringify({ agent: 'CLI', limit: 5, tool_id: null }));
+        expect(result.output).toMatchObject({ ok: true, supported: false, tools: [] });
+    });
+
+    test('workspace actions refuse while the project is switching', async () => {
+        useProject.setState({ switching: true });
+        const result = await executeVoiceTool(
+            'manage_views',
+            JSON.stringify({ action: 'focus', view: 'Release', kind: null, name: null, url: null, command: null })
+        );
+        expect(result.output.ok).toBe(false);
+        expect(useDocument.getState().activeViewId).toBe('main');
     });
 
     test('focuses a view through manage_views and the shared registry', async () => {
@@ -189,6 +274,22 @@ describe('Voice domain tools', () => {
         );
         expect(confirmed.output).toMatchObject({ ok: true, viewId: 'release' });
         expect(useDocument.getState().views.some((view) => view.id === 'release')).toBe(false);
+    });
+
+    test('a confirmation cannot survive leaving and returning to the workspace', async () => {
+        const requested = await executeVoiceTool(
+            'manage_views',
+            JSON.stringify({ action: 'delete', view: 'Release', kind: null, name: null, url: null, command: null })
+        );
+        expect(requested.output.needs_confirmation).toBe(true);
+        useProject.setState({ switching: true });
+        useProject.setState({ switching: false });
+        const confirmed = await executeVoiceTool(
+            'control_action',
+            JSON.stringify({ action: 'confirm', confirmation_token: requested.output.confirmation_token })
+        );
+        expect(confirmed.output.ok).toBe(false);
+        expect(useDocument.getState().views.some((view) => view.id === 'release')).toBe(true);
     });
 
     test('deletes nodes immediately when Voice confirmation is disabled', async () => {

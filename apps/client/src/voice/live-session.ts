@@ -68,10 +68,12 @@ export class LiveSession {
         await this.#peer.setRemoteDescription({ type: 'answer', sdp: answer.transport.sdp });
     }
 
-    send(event: LiveEvent): void {
+    send(event: LiveEvent): boolean {
         if (this.#events.readyState === 'open') {
             this.#events.send(JSON.stringify(event));
+            return true;
         }
+        return false;
     }
 
     close(): void {

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { ProjectCanvasView, ProjectDocument } from '@ruimte/contracts';
-import { clientActions, PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
+import { clientActions, createClientActionRegistry, PERSON_ACTION_CALL, VOICE_ACTION_CALL } from './client-actions';
 import { defaultCanvases } from '@/state/canvas';
 import { useDocument } from '@/state/document';
 
@@ -27,6 +27,53 @@ afterEach(() => {
 });
 
 describe('client actions', () => {
+    test('clearing asks before deleting the conversation and keeps the chat view', async () => {
+        const chatId = useDocument.getState().addStandaloneView({ kind: 'chat', name: 'Research', node: {} })!;
+        const cleared: string[] = [];
+        const registry = createClientActionRegistry(useDocument, async (id) => {
+            cleared.push(id);
+        });
+        const requested = await registry.execute('chat.clear', { chatId }, VOICE_ACTION_CALL);
+        expect(requested.status).toBe('needs_confirmation');
+        expect(cleared).toEqual([]);
+        if (requested.status !== 'needs_confirmation') {
+            return;
+        }
+        expect(requested.confirmation.consequences.join(' ')).toContain('current turn');
+        const result = await registry.confirm(requested.confirmationToken, true, VOICE_ACTION_CALL);
+        expect(result).toMatchObject({ status: 'completed', output: { chatId, chat: 'Research' } });
+        expect(cleared).toEqual([chatId]);
+        expect(useDocument.getState().views.some((view) => view.id === chatId)).toBe(true);
+        expect('undoToken' in result).toBe(false);
+    });
+
+    test('cancelling a clear leaves the conversation untouched', async () => {
+        const chatId = useDocument.getState().addStandaloneView({ kind: 'chat', name: 'Research', node: {} })!;
+        let cleared = false;
+        const registry = createClientActionRegistry(useDocument, async () => {
+            cleared = true;
+        });
+        const result = await registry.execute('chat.clear', { chatId }, VOICE_ACTION_CALL);
+        if (result.status !== 'needs_confirmation') {
+            throw new Error('Expected confirmation');
+        }
+        expect((await registry.confirm(result.confirmationToken, false, VOICE_ACTION_CALL)).status).toBe('failed');
+        expect(cleared).toBe(false);
+    });
+
+    test('a missing chat or a daemon failure never reports a successful clear', async () => {
+        const registry = createClientActionRegistry(useDocument, async () => {
+            throw new Error('offline');
+        });
+        expect((await registry.execute('chat.clear', { chatId: 'missing' }, VOICE_ACTION_CALL)).status).toBe('failed');
+        const chatId = useDocument.getState().addStandaloneView({ kind: 'chat', name: 'Research', node: {} })!;
+        const result = await registry.execute('chat.clear', { chatId }, VOICE_ACTION_CALL);
+        if (result.status !== 'needs_confirmation') {
+            throw new Error('Expected confirmation');
+        }
+        expect((await registry.confirm(result.confirmationToken, true, VOICE_ACTION_CALL)).status).toBe('failed');
+    });
+
     test('the same focus action serves a person and Voice and carries its own undo', async () => {
         expect(await clientActions.execute('view.focus', { viewId: 'release' }, PERSON_ACTION_CALL)).toMatchObject({
             status: 'completed',
@@ -79,6 +126,10 @@ describe('client actions', () => {
 
     test('publishes only actions with working client executors', () => {
         expect(clientActions.catalog(VOICE_ACTION_CALL).map((entry) => entry.name)).toEqual([
+            'agents.inspect',
+            'agent.activity',
+            'projects.list-open',
+            'project.switch',
             'workspace.inspect',
             'view.focus',
             'view.rename',
@@ -95,6 +146,7 @@ describe('client actions', () => {
             'history.undo',
             'history.redo',
             'chat.send',
+            'chat.clear',
             'chat.read'
         ]);
     });

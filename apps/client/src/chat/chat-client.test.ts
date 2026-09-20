@@ -134,6 +134,25 @@ const setup = () => {
 };
 
 describe('ChatClient', () => {
+    test('inspecting a hidden chat neither creates it nor keeps it attached', async () => {
+        const { client, transport } = setup();
+        const first = client.inspect('hidden');
+        const second = client.inspect('hidden');
+        const snapshot = await first;
+        await second;
+        expect(snapshot.info.chatId).toBe('hidden');
+        expect(transport.of('chat.create')).toHaveLength(0);
+        expect(transport.of('chat.attach')).toHaveLength(1);
+        expect(transport.of('chat.detach')).toHaveLength(1);
+    });
+
+    test('inspecting a mounted chat preserves its live attachment', async () => {
+        const { client, transport } = setup();
+        await client.open('visible', {});
+        await client.inspect('visible');
+        expect(transport.of('chat.detach')).toHaveLength(0);
+    });
+
     test('open creates with cwd and resume, attaches and resets the store with the thread', async () => {
         const { transport, sink, client } = setup();
         transport.items = [{ id: 'u1', kind: 'user', createdAt: 1, turnId: null, text: 'hi' }];

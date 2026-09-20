@@ -4,6 +4,7 @@ import type {
     ChatCheckpointDiff,
     ChatConfigurePayload,
     ChatInfo,
+    ChatAttachResult,
     ChatPreferencesPayload,
     ChatSkill,
     FsSearchResult,
@@ -77,6 +78,24 @@ export class ChatClient {
             void this.loadProviders();
             void this.loadStatuses();
         }
+    }
+
+    private readonly inspections = new Map<string, Promise<ChatAttachResult>>();
+
+    inspect(chatId: string): Promise<ChatAttachResult> {
+        const pending = this.inspections.get(chatId);
+        if (pending) {
+            return pending;
+        }
+        const read = this.transport.request('chat.attach', { chatId, historyLimit: 100 }).finally(async () => {
+            this.inspections.delete(chatId);
+            // A visible chat owns its attachment; an inspection must never release it.
+            if (!this.mounted.get(chatId)) {
+                await this.transport.request('chat.detach', { chatId }).catch(() => undefined);
+            }
+        });
+        this.inspections.set(chatId, read);
+        return read;
     }
 
     /* Answers false when the transport is not connected; the chat opens once it is. */

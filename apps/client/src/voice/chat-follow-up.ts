@@ -3,6 +3,7 @@ import type { ChatState } from '@/state/chats';
 
 export interface VoiceChatFollowUp {
     key: string;
+    project?: string;
     chat: string;
     turnId: string;
 }
@@ -34,5 +35,5 @@ export const chatCompletion = (chat: ChatState | undefined, turnId: string): Voi
 
 export const completionPrompt = (followUp: VoiceChatFollowUp, completion: VoiceChatCompletion): string => {
     const result = completion.answer || 'The AI Chat returned no final answer.';
-    return `Ruimte completion event. The user asked you to report when AI Chat “${followUp.chat}” finished. Its tracked turn ${followUp.turnId} ended with state ${completion.state}. Final answer:\n${result}\nTell the user now what happened and summarize this result concisely. Clearly say if the turn was aborted or failed. Do not claim that you performed the target chat's work yourself.`;
+    return `Ruimte completion event. The user asked you to report when AI Chat “${followUp.chat}” finished. Project: ${followUp.project ?? 'the original project'}. Its tracked turn ${followUp.turnId} ended with state ${completion.state}. Final answer:\n${result}\nEnd of quoted AI Chat result.`;
 };
