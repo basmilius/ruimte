@@ -237,6 +237,9 @@ function StartContent() {
     // A fresh desktop install: nothing to go back to and only this machine, so there is one thing to do.
     const firstStart = boot === null && listed.length === 0 && failure === null && machines.length <= 1;
 
+    // Nothing to go back to leaves the second column empty, and a lone column belongs in the middle.
+    const hasRecent = failure !== null || listed.length > 0;
+
     const openFolder = (): void => useUi.getState().openFolderBrowser();
 
     const machineList = (
@@ -286,7 +289,7 @@ function StartContent() {
                     {offerSignIn && <SignInCard description={t('start.reachMachines')} />}
                 </div>
             ) : (
-                <div className="grid grow grid-cols-1 items-start gap-10 md:grid-cols-2">
+                <div className={clsx('grid grow grid-cols-1 items-start gap-10', hasRecent ? 'md:grid-cols-2' : 'mx-auto w-full max-w-md')}>
                     <div className="flex min-w-0 flex-col gap-8">
                         {boot === 'machines' && machineList}
                         <Section label={t('start.start')}>
@@ -327,8 +330,8 @@ function StartContent() {
                         </Section>
                         {boot === null && machineList}
                     </div>
-                    <div className="flex min-w-0 flex-col gap-8">
-                        {(failure !== null || listed.length > 0) && (
+                    {hasRecent && (
+                        <div className="flex min-w-0 flex-col gap-8">
                             <Section label={t('start.recent')}>
                                 <div className="flex flex-col gap-px">
                                     {failure !== null && <FailedRow failure={failure} row={failedRow} />}
@@ -337,8 +340,8 @@ function StartContent() {
                                     ))}
                                 </div>
                             </Section>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             )}
 
