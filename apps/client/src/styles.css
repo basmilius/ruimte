@@ -911,6 +911,16 @@
         user-select: all;
     }
 
+    /* A card that was asked to do something it cannot. It moves a few pixels and stops: the mark on
+       the field is the answer, and this is what points at it. */
+    .flow-card-shake { animation: flow-card-shake 320ms ease-in-out; }
+    @keyframes flow-card-shake {
+        0%, 100% { translate: 0; }
+        20% { translate: -4px; }
+        50% { translate: 4px; }
+        80% { translate: -2px; }
+    }
+
     .flow-card-flash {
         position: absolute;
         inset: 0;

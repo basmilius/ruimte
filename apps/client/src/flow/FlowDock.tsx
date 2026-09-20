@@ -10,7 +10,7 @@ import { FlowCardPicker, type FlowCardChoice } from '@/flow/FlowCardPicker';
 import { CARD_H, CARD_W } from '@/flow/geometry';
 import { toggleFlowRuns } from '@/flow/panel-watch';
 import { runTarget } from '@/flow/run-target';
-import { useFlowState } from '@/flow/use-flow-state';
+import type { FlowStateHandle } from '@/flow/use-flow-state';
 import { useFlow, useFlowStore } from '@/state/flow';
 import { BTN_GROUP } from '@/ui/classes';
 import { DockShell } from '@/ui/DockShell';
@@ -31,7 +31,7 @@ type SwitchState = (typeof STATES)[number];
  * the switch that decides whether any of it runs on its own. The switch sits apart on the right,
  * because turning a flow on is the one thing here that changes what a machine does without you.
  */
-export function FlowDock({ viewId }: { viewId: string }) {
+export function FlowDock({ flow }: { flow: FlowStateHandle }) {
     const { t } = useTranslation('flow');
     const store = useFlowStore();
     const zoom = useFlow((s) => s.camera.zoom);
@@ -39,7 +39,7 @@ export function FlowDock({ viewId }: { viewId: string }) {
     const canRedo = useFlow((s) => s.future.length > 0);
     const content = useFlow((s) => s.content);
     const selection = useFlow((s) => s.selection);
-    const { state, known, busy, enable, start } = useFlowState(viewId);
+    const { state, known, busy, enable, start } = flow;
     const [picking, setPicking] = useState(false);
 
     const cards = Object.keys(content.cards).length;

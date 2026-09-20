@@ -1,15 +1,18 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ContextMenu } from '@base-ui-components/react/context-menu';
 import type { FlowCardKind, FlowPort } from '@ruimte/contracts';
 import { argProblemsOf } from '@ruimte/flow';
 import { GRID, snapToGrid, toWorld, type Point } from '@/canvas/math';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { FlowCardBox } from '@/flow/FlowCardBox';
+import { FlowCardMenu } from '@/flow/FlowCardMenu';
 import { FlowCardPicker, type FlowCardChoice } from '@/flow/FlowCardPicker';
 import { FlowDock } from '@/flow/FlowDock';
 import { FlowLinkLayer, linkKey, type FlowDraft } from '@/flow/FlowLinkLayer';
 import { CARD_H, cardRect } from '@/flow/geometry';
 import { flowLights } from '@/flow/live-look';
+import { useFlowState } from '@/flow/use-flow-state';
 import { useLiveRun } from '@/flow/use-live-run';
 import { useFlow, useFlowStore } from '@/state/flow';
 import { isInFloatingLayer } from '@/ui/floating';
@@ -65,11 +68,19 @@ export function FlowView({ id }: { id: string }) {
     const [hovered, setHovered] = useState<string | null>(null);
     /* A line let go over nothing: the picker opens on what may follow it, and the line waits here. */
     const [landing, setLanding] = useState<{ at: Point; from: string; fromPort: FlowPort } | null>(null);
+    /* The card the menu was last opened on. It stays after the menu closes, because what the menu
+       opened (the picker, the question about the values a test is short of) outlives the menu. */
+    const [menuCard, setMenuCard] = useState<string | null>(null);
+    /* The card that was asked to do something it cannot, and when, so it shakes once each time. */
+    const [refused, setRefused] = useState<{ id: string; at: number } | null>(null);
     const camera = useFlow((s) => s.camera);
     const content = useFlow((s) => s.content);
     const selection = useFlow((s) => s.selection);
     const selectedLink = useFlow((s) => s.selectedLink);
     const viewId = useFlow((s) => s.viewId);
+    /* Once for the worksheet: the dock, the cards and their menus all read the same answer, and a
+       second subscription would be a second read of the same state. */
+    const flow = useFlowState(id);
     const live = useLiveRun(viewId ?? '');
     const lights = useMemo(() => flowLights(content, live), [content, live]);
     /* Once for the worksheet: whether a token reference still holds depends on every line drawn,
@@ -204,40 +215,69 @@ export function FlowView({ id }: { id: string }) {
             onPointerCancel={onPointerUp}
             onPointerLeave={() => setPointer(null)}
         >
-            {/* The lines and the ports go under the cards, which is where a connector belongs. */}
-            <svg className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
-                <g transform={`translate(${camera.x} ${camera.y}) scale(${camera.zoom})`}>
-                    <FlowLinkLayer
+            <ContextMenu.Root>
+                <ContextMenu.Trigger
+                    className="absolute inset-0"
+                    onContextMenu={(e) => {
+                        const cardId = cardIdAt(e.target);
+                        // Only a card has a menu; a right-click on bare worksheet opens nothing.
+                        if (cardId === null) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return;
+                        }
+                        store.getState().select([cardId]);
+                        setMenuCard(cardId);
+                    }}
+                >
+                    {/* The lines and the ports go under the cards, which is where a connector belongs. */}
+                    <svg className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
+                        <g transform={`translate(${camera.x} ${camera.y}) scale(${camera.zoom})`}>
+                            <FlowLinkLayer
+                                content={content}
+                                zoom={camera.zoom}
+                                pointer={pointer}
+                                draft={draft}
+                                hovered={hovered}
+                                selected={selectedLink === null ? null : linkKey(selectedLink)}
+                                lights={lights}
+                                onHover={setHovered}
+                                onSelect={(link) => store.getState().selectLink(link)}
+                                onRemove={(link) => store.getState().unlink(link.from, link.fromPort, link.to)}
+                            />
+                        </g>
+                    </svg>
+                    <div
+                        className="pointer-events-none absolute top-0 left-0 origin-top-left"
+                        style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})` }}
+                    >
+                        {Object.entries(content.cards).map(([cardId, card]) => (
+                            <FlowCardBox
+                                key={cardId}
+                                id={cardId}
+                                card={card}
+                                content={content}
+                                selected={selection.includes(cardId)}
+                                problems={problems[cardId]}
+                                light={lights?.cards[cardId]}
+                                pulse={lights?.pulse === cardId ? live?.lastAt : undefined}
+                                armed={flow.armed?.from === cardId}
+                                refused={refused?.id === cardId ? refused.at : undefined}
+                            />
+                        ))}
+                    </div>
+                </ContextMenu.Trigger>
+                {menuCard !== null && content.cards[menuCard] !== undefined && (
+                    <FlowCardMenu
+                        id={menuCard}
+                        card={content.cards[menuCard]}
                         content={content}
-                        zoom={camera.zoom}
-                        pointer={pointer}
-                        draft={draft}
-                        hovered={hovered}
-                        selected={selectedLink === null ? null : linkKey(selectedLink)}
-                        lights={lights}
-                        onHover={setHovered}
-                        onSelect={(link) => store.getState().selectLink(link)}
-                        onRemove={(link) => store.getState().unlink(link.from, link.fromPort, link.to)}
+                        flow={flow}
+                        problems={problems}
+                        onRefuse={(cardId) => setRefused({ id: cardId, at: Date.now() })}
                     />
-                </g>
-            </svg>
-            <div
-                className="pointer-events-none absolute top-0 left-0 origin-top-left"
-                style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})` }}
-            >
-                {Object.entries(content.cards).map(([cardId, card]) => (
-                    <FlowCardBox
-                        key={cardId}
-                        id={cardId}
-                        card={card}
-                        content={content}
-                        selected={selection.includes(cardId)}
-                        problems={problems[cardId]}
-                        light={lights?.cards[cardId]}
-                        pulse={lights?.pulse === cardId ? live?.lastAt : undefined}
-                    />
-                ))}
-            </div>
+                )}
+            </ContextMenu.Root>
 
             {empty && (
                 <div className="pointer-events-none absolute inset-0 grid place-items-center px-6 pb-20">
@@ -246,7 +286,7 @@ export function FlowView({ id }: { id: string }) {
             )}
 
             {landing !== null && <FlowCardPicker kinds={NEXT_KINDS} onPick={land} onClose={() => setLanding(null)} />}
-            <FlowDock viewId={id} />
+            <FlowDock flow={flow} />
         </div>
     );
 }

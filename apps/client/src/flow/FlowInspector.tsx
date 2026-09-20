@@ -2,10 +2,8 @@ import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FlowArgDefinition, FlowCard, FlowContent } from '@ruimte/contracts';
 import { argApplies, argsOf, brokenTokenRefsIn, textArg, tokenRef, visibleTokens } from '@ruimte/flow';
-import { chatChoices } from '@/flow/FlowArgControl';
-import { FlowTestBar } from '@/flow/FlowTestBar';
+import { chatChoices } from '@/flow/chats';
 import { argLabel, choiceLabel, tokenLabel } from '@/flow/labels';
-import type { FlowStateHandle } from '@/flow/use-flow-state';
 import { useDocument } from '@/state/document';
 import { useFlowStore } from '@/state/flow';
 import { Select } from '@/ui/Select';
@@ -91,7 +89,7 @@ function Field({ id, card, content, arg }: { id: string; card: FlowCard; content
  * to the schemas gets its fields here without a line of interface behind it, and the tokens it may
  * use are the ones every path to it passes.
  */
-export function FlowInspector({ id, card, content, flow }: { id: string; card: FlowCard; content: FlowContent; flow: FlowStateHandle }) {
+export function FlowInspector({ id, card, content }: { id: string; card: FlowCard; content: FlowContent }) {
     const { t } = useTranslation('flow');
     const store = useFlowStore();
     const fields = argsOf(card).filter((arg) => argApplies(card, arg));
@@ -114,7 +112,6 @@ export function FlowInspector({ id, card, content, flow }: { id: string; card: F
                 </label>
             )}
             {broken.length > 0 && <p className="text-xs/[inherit] text-status-error">{t('inspector.broken')}</p>}
-            <FlowTestBar id={id} card={card} content={content} flow={flow} />
         </div>
     );
 }

@@ -56,7 +56,8 @@
     "error": {
         "open": "Deze flow kon niet worden geopend.",
         "save": "Deze flow kon niet worden opgeslagen.",
-        "copy": "Deze flow kon niet worden gekopieerd."
+        "copy": "Deze flow kon niet worden gekopieerd.",
+        "request": "De machine weigerde dat"
     },
     "cards": {
         "time_at": {
@@ -224,5 +225,9 @@
         "searchHint": "Zoekt in de naam van een kaart, wat erop staat en waar hij vandaan komt.",
         "results": "Kaarten",
         "noMatch": "Geen kaart past daarbij."
+    },
+    "menu": {
+        "replace": "Een andere kaart hier",
+        "duplicate": "Dupliceren"
     }
 }

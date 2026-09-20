@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
-import { CircleAlert, CornerDownRight, Play } from 'lucide-react';
+import { CircleAlert, CornerDownRight, Play, Timer } from 'lucide-react';
 import type { FlowCard, FlowContent } from '@ruimte/contracts';
 import { argsOf, portsOf, textArg, type FlowArgProblem } from '@ruimte/flow';
 import { FlowArgSlot } from '@/flow/FlowArgSlot';
@@ -24,6 +24,10 @@ interface FlowCardBoxProps {
     light?: CardLight;
     /* Flashes once, the moment this card settled. */
     pulse?: number;
+    /* A test is waiting on this card for the next time its trigger really fires. */
+    armed?: boolean;
+    /* When this card was last asked to do something it cannot, so it shakes once for each time. */
+    refused?: number;
 }
 
 /*
@@ -34,7 +38,7 @@ interface FlowCardBoxProps {
  * Its values are filled in here rather than in a form beside it: a card is a sentence, and the parts
  * of it a person decides are controls in that sentence.
  */
-export function FlowCardBox({ id, card, content, selected, problems, light, pulse }: FlowCardBoxProps) {
+export function FlowCardBox({ id, card, content, selected, problems, light, pulse, armed, refused }: FlowCardBoxProps) {
     const { t } = useTranslation('flow');
     const ports = portsOf(card);
     const wrong = Object.keys(problems ?? {});
@@ -52,6 +56,8 @@ export function FlowCardBox({ id, card, content, selected, problems, light, puls
        a failure, it is where that branch ends. */
     const lit = clsx(light === 'dead' && 'opacity-40', light === 'ran' && 'border-accent');
     const flash = pulse === undefined ? null : <span key={pulse} className="flow-card-flash" />;
+    /* A new element every refusal, since an animation that is already on does not start over. */
+    const shakeKey = refused === undefined ? 'still' : `shake-${refused}`;
 
     if (card.kind === 'note') {
         return (
@@ -82,7 +88,12 @@ export function FlowCardBox({ id, card, content, selected, problems, light, puls
 
     if (isPill(card)) {
         return (
-            <div data-flow-card={id} className={clsx(shell, 'flex items-center justify-center gap-2 px-4')} style={style}>
+            <div
+                key={shakeKey}
+                data-flow-card={id}
+                className={clsx(shell, 'flex items-center justify-center gap-2 px-4', refused !== undefined && 'flow-card-shake')}
+                style={style}
+            >
                 <Icon icon={glyphOf(card)} size={16} className="shrink-0 text-text-muted" />
                 <span className="flex min-w-0 flex-wrap items-center gap-x-1 text-sm text-text">
                     <Sentence id={id} card={card} content={content} problems={problems} />
@@ -106,6 +117,7 @@ export function FlowCardBox({ id, card, content, selected, problems, light, puls
                     <Sentence id={id} card={card} content={content} problems={problems} />
                 </div>
             </div>
+            {armed === true && <Icon icon={Timer} size={14} className="shrink-0 text-accent" aria-label={t('test.waiting')} />}
             {wrong.length > 0 && <Icon icon={CircleAlert} size={14} className="shrink-0 text-status-error" />}
             {/* The ports are drawn in the layer under the cards, with the lines they belong to. */}
             <span className="sr-only">

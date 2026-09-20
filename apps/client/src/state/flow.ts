@@ -38,6 +38,9 @@ export interface FlowState extends CameraSlice {
     /* The line a person picked, which is what a key acting on the selection finds when no card is
        picked. One line at a time, and never together with a card: the two answer the same keys. */
     selectedLink: FlowLink | null;
+    /* Whether trying a card out writes down what it would do rather than doing it. Per worksheet
+       and never in its file: it is how a person is working right now, not part of the recipe. */
+    dryTest: boolean;
     /* The field whose control is open on a card. A card is filled in where it stands, so this is
        which of its sentence a person has in hand, and putting a card down opens its first empty one. */
     editing: { cardId: string; arg: string } | null;
@@ -66,6 +69,7 @@ export interface FlowState extends CameraSlice {
     selectLink(link: FlowLink | null): void;
     /* Opens the control of one field, or closes whichever is open. */
     edit(at: { cardId: string; arg: string } | null): void;
+    setDryTest(dry: boolean): void;
     undo(): void;
     redo(): void;
 
@@ -135,6 +139,7 @@ export const createFlowStore = (): StoreApi<FlowState> =>
         selection: [],
         selectedLink: null,
         editing: null,
+        dryTest: true,
 
         load(viewId, document, local) {
             set({
@@ -326,6 +331,10 @@ export const createFlowStore = (): StoreApi<FlowState> =>
 
         edit(at) {
             set({ editing: at });
+        },
+
+        setDryTest(dry) {
+            set({ dryTest: dry });
         },
 
         undo() {

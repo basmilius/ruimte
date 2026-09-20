@@ -94,7 +94,7 @@ export function FlowPanel() {
             <div className="min-h-0 grow overflow-y-auto">
                 <ErrorBoundary label={t('panel.failed')} resetKeys={[viewId, cardId]} className="min-h-full">
                     {cardId !== null && card !== undefined ? (
-                        <FlowInspector id={cardId} card={card} content={content} flow={flow} />
+                        <FlowInspector id={cardId} card={card} content={content} />
                     ) : (
                         <FlowRuns
                             content={content}

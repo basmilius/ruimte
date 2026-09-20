@@ -56,7 +56,8 @@
     "error": {
         "open": "This flow could not be opened.",
         "save": "This flow could not be saved.",
-        "copy": "This flow could not be copied."
+        "copy": "This flow could not be copied.",
+        "request": "The machine refused that"
     },
     "cards": {
         "time_at": {
@@ -224,5 +225,9 @@
         "searchHint": "Searches the name of a card, what it says and where it comes from.",
         "results": "Cards",
         "noMatch": "No card matches that."
+    },
+    "menu": {
+        "replace": "Another card here",
+        "duplicate": "Duplicate"
     }
 }

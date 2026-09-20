@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
+import i18next from 'i18next';
 import type { FlowArgValue, FlowArmedTest, FlowRun, FlowSwitch, FlowTestScope } from '@ruimte/contracts';
 import { flowClient } from '@/project';
 import { useProject } from '@/state/project';
+import { useToasts } from '@/state/toasts';
 import { useTransport } from '@/transport/context';
 
 const OFF: FlowSwitch = { enabled: false };
@@ -93,7 +95,12 @@ export const useFlowState = (viewId: string): FlowStateHandle => {
                 await flowClient.flush();
                 return await work();
             } catch (e) {
-                setError(e instanceof Error ? e.message : String(e));
+                const message = e instanceof Error ? e.message : String(e);
+                setError(message);
+                /* The buttons that ask the daemon anything are spread over the worksheet now, so a
+                   refusal is said once where a person is looking rather than beside whichever one
+                   they happened to press. */
+                useToasts.getState().show({ id: `flow-${viewId}`, title: i18next.t('flow:error.request'), description: message, kind: 'error' });
                 return fallback;
             } finally {
                 setBusy(false);
