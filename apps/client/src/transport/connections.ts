@@ -4,6 +4,7 @@ import { BrowserClient } from '@/browser/browser-client';
 import { DeviceClient } from '@/devices/device-client';
 import { chatPreferencesPayload, useChatPreferences } from '@/chat/preferences';
 import { DiagramClient } from '@/diagram/diagram-client';
+import { FlowClient } from '@/flow/flow-client';
 import { DrawingClient } from '@/drawing/drawing-client';
 import { foldList } from '@/project/list';
 import { panelsPort } from '@/project/panels-port';
@@ -41,6 +42,7 @@ export interface Connection {
     projects: ProjectClient;
     drawings: DrawingClient;
     diagrams: DiagramClient;
+    flows: FlowClient;
 }
 
 /* The clients of one daemon that write state keyed on that daemon, so several may be alive at once. */
@@ -167,15 +169,19 @@ const connect = (endpoint: Endpoint, onLoad: (connection: Connection) => void): 
     const diagrams = new DiagramClient(transport, stores.diagrams, stores.document, stores.project, {
         flushProject: (): Promise<void> => projects.flush()
     });
+    const flows = new FlowClient(transport, stores.flows, stores.document, stores.project, {
+        flushProject: (): Promise<void> => projects.flush()
+    });
     const projects = new ProjectClient(transport, stores.canvases, stores.document, panelsPort, projectSink(endpointId), {
         drawings: stores.drawings,
         diagrams: stores.diagrams,
+        flows: stores.flows,
         beforeLeave: async (): Promise<void> => {
-            await Promise.all([drawings.flush(), diagrams.flush()]);
+            await Promise.all([drawings.flush(), diagrams.flush(), flows.flush()]);
         },
         endSessions: endProjectSessions,
         afterResume: async (): Promise<void> => {
-            await Promise.all([drawings.resume(), diagrams.resume()]);
+            await Promise.all([drawings.resume(), diagrams.resume(), flows.resume()]);
         },
         onLoad: () => onLoad(connection),
         endpointId
@@ -199,7 +205,8 @@ const connect = (endpoint: Endpoint, onLoad: (connection: Connection) => void): 
         },
         projects,
         drawings,
-        diagrams
+        diagrams,
+        flows
     };
     const hold = new LinkHold((row) => pool.hold(row));
     hold.set(endpoint);
@@ -222,6 +229,7 @@ const disposeConnection = (connection: Connection): void => {
     connection.projects.dispose();
     connection.drawings.dispose();
     connection.diagrams.dispose();
+    connection.flows.dispose();
     useSessions.getState().clear(connection.endpointId);
     useChats.getState().clear(connection.endpointId);
 };
@@ -332,6 +340,7 @@ export const chatClient = activeClient(() => activeMachine().chats);
 export const projectClient = workspaceClient((connection) => connection.projects);
 export const drawingClient = workspaceClient((connection) => connection.drawings);
 export const diagramClient = workspaceClient((connection) => connection.diagrams);
+export const flowClient = workspaceClient((connection) => connection.flows);
 
 /* The session client of one machine, for a node that names the daemon it runs on. */
 export const sessionClientFor = (endpointId: string): SessionClient | null => machineFor(endpointId)?.sessions ?? null;

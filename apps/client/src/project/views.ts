@@ -3,6 +3,7 @@ import {
     canShareView,
     isCanvasView,
     isDiagramView,
+    isFlowView,
     isDrawingView,
     isOpenableView,
     isSessionView,
@@ -118,6 +119,8 @@ export const newSubheaderView = (): string | null => {
 export const newDrawingView = (): string | null => useDocument.getState().addDrawingView(freeName(useDocument.getState().views, 'Drawing'));
 
 export const newDiagramView = (): string | null => useDocument.getState().addDiagramView(freeName(useDocument.getState().views, 'Diagram'));
+
+export const newFlowView = (): string | null => useDocument.getState().addFlowView(freeName(useDocument.getState().views, 'Flow'));
 
 /*
  * Puts a mirror of a drawing or a diagram view on the canvas that was open last. The view itself
@@ -251,7 +254,7 @@ export const openSessionInKind = (viewId: string, kind: 'chat' | 'terminal', han
     return id;
 };
 
-/* Copies a canvas, a drawing or a diagram view. What a drawing or a diagram holds is copied by the daemon, not here. */
+/* Copies a canvas, a drawing, a diagram or a flow view. What such a view holds is copied by the daemon, not here. */
 export const duplicateViewOf = (id: string): string | null => {
     const source = useDocument.getState().views.find((view) => view.id === id);
     const copyId = useDocument.getState().duplicateView(id);
@@ -262,6 +265,11 @@ export const duplicateViewOf = (id: string): string | null => {
     }
     if (copyId && source && isDiagramView(source)) {
         void import('@/project').then(({ diagramClient }) => diagramClient.copy(id, copyId));
+    }
+    /* The copy starts out off: the switch of a flow is one person's word about one recipe, and this
+       is another recipe. */
+    if (copyId && source && isFlowView(source)) {
+        void import('@/project').then(({ flowClient }) => flowClient.copy(id, copyId));
     }
     return copyId;
 };

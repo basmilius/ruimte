@@ -87,6 +87,8 @@ interface ProjectClientOptions {
     drawings?: DrawingsAccess;
     /* A diagram keeps its camera in its own editor the way a drawing does. */
     diagrams?: DrawingsAccess;
+    /* And a flow, whose worksheet has a camera of its own as well. */
+    flows?: DrawingsAccess;
     /* Runs before the project is left for another one, so the drawing on screen reaches its own file first. */
     beforeLeave?: () => Promise<void>;
     /* Runs in the tick the opened project reaches the stores, so the window shows it with nothing in between. */
@@ -166,7 +168,7 @@ export class ProjectClient {
             canvases.subscribe((_viewId, state, previous) => this.onCanvas(state, previous)),
             documents.subscribe((state, previous) => this.onDocument(state, previous)),
             panels.subscribe(() => this.scheduleLocal()),
-            ...[options.drawings, options.diagrams].flatMap((editors) =>
+            ...[options.drawings, options.diagrams, options.flows].flatMap((editors) =>
                 editors
                     ? [
                           editors.subscribe((_viewId, state, previous) => {

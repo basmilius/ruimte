@@ -1,12 +1,12 @@
 import { Fragment, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
-import { Check, ChevronDown, FileText, Frame, Globe, Heading, Minus, PenTool, Workflow, Terminal } from 'lucide-react';
+import { Check, ChevronDown, FileText, Frame, Globe, Heading, Minus, PenTool, Workflow, Terminal, Zap } from 'lucide-react';
 import { isOpenableView, viewIconOf, type ProjectView, type ProviderInfo } from '@ruimte/contracts';
 import { AgentIcon } from '@/agents/AgentIcon';
 import { AgentSubmenu } from '@/agents/AgentMenus';
 import { addAgentView, agentTargetLabel, type AgentTarget } from '@/agents/nodes';
-import { newCanvasView, newDiagramView, newDrawingView, newSeparatorView, newSubheaderView, newTerminalView, showView } from '@/project/views';
+import { newCanvasView, newDiagramView, newDrawingView, newFlowView, newSeparatorView, newSubheaderView, newTerminalView, showView } from '@/project/views';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
 import { useDocument } from '@/state/document';
@@ -73,6 +73,11 @@ export function NewViewTiles() {
                     id: 'diagram',
                     label: t('viewKinds.diagram'),
                     node: <Tile size="sm" icon={<Icon icon={Workflow} size={14} />} title={t('viewKinds.diagram')} onClick={() => void newDiagramView()} />
+                },
+                {
+                    id: 'flow',
+                    label: t('viewKinds.flow'),
+                    node: <Tile size="sm" icon={<Icon icon={Zap} size={14} />} title={t('viewKinds.flow')} onClick={() => void newFlowView()} />
                 },
                 {
                     id: 'terminal',
@@ -159,6 +164,15 @@ export function NewViewItems() {
                     node: (
                         <Menu.Item className="menu-item" onClick={() => void newDiagramView()}>
                             <Icon icon={Workflow} size={14} /> {t('viewKinds.diagram')}
+                        </Menu.Item>
+                    )
+                },
+                {
+                    id: 'flow',
+                    label: t('viewKinds.flow'),
+                    node: (
+                        <Menu.Item className="menu-item" onClick={() => void newFlowView()}>
+                            <Icon icon={Zap} size={14} /> {t('viewKinds.flow')}
                         </Menu.Item>
                     )
                 },

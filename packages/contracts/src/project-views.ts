@@ -6,6 +6,7 @@ import {
     isDiagramView,
     isDividerView,
     isDrawingView,
+    isFlowView,
     isOpenableView,
     isSessionView,
     isUnknownView,
@@ -111,7 +112,7 @@ export const withDuplicatedView = (
     nextId: (prefix: string) => string
 ): { views: ProjectView[]; id: string } | null => {
     const source = views.find((view) => view.id === id);
-    if (!source || (!isCanvasView(source) && !isDrawingView(source) && !isDiagramView(source))) {
+    if (!source || (!isCanvasView(source) && !isDrawingView(source) && !isDiagramView(source) && !isFlowView(source))) {
         return null;
     }
     const copy: ProjectView = isCanvasView(source)

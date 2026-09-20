@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { isCanvasView, isDiagramView } from '@ruimte/contracts';
+import { isCanvasView, isDiagramView, isFlowView } from '@ruimte/contracts';
 import { browserRegistry } from '@/browser/registry';
 import { ADD_NODE_SHORTCUTS, CANVAS_SHORTCUTS, FOCUS_SHORTCUTS, VIEW_SHORTCUTS } from '@/canvas/shortcuts';
 import { isApplePlatform } from '@/desktop/bridge';
@@ -13,6 +13,7 @@ import { stepTimelineMessage } from '@/chat/timeline-scroll';
 import { focusedCanvas } from '@/state/canvas';
 import { transportFor } from '@/transport';
 import { focusedDiagram } from '@/state/diagram';
+import { focusedFlow } from '@/state/flow';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { cellCount, type SplitDirection } from '@/shell/split';
@@ -206,6 +207,28 @@ export const useCanvasShortcuts = (): void => {
                     focusedDiagram().getState().redo();
                 } else {
                     focusedDiagram().getState().undo();
+                }
+                return;
+            }
+            /* A flow has a worksheet of its own: the same undo, and a card is removed with the key
+               that removes a node, since a card on a flow is what a node is on a canvas. */
+            if (active !== null && isFlowView(active)) {
+                if (isTypingTarget(e.target) || isInFloatingLayer(e.target) || useUi.getState().settings.open) {
+                    return;
+                }
+                const flow = focusedFlow().getState();
+                if (is(CANVAS_SHORTCUTS.redo)) {
+                    e.preventDefault();
+                    flow.redo();
+                } else if (is(CANVAS_SHORTCUTS.undo)) {
+                    e.preventDefault();
+                    flow.undo();
+                } else if ((e.key === 'Delete' || e.key === 'Backspace') && flow.selection.length > 0) {
+                    e.preventDefault();
+                    flow.removeCards(flow.selection);
+                } else if (is(CANVAS_SHORTCUTS.fitAll)) {
+                    e.preventDefault();
+                    flow.fitAll();
                 }
                 return;
             }

@@ -4,6 +4,7 @@ import type { CanvasState } from '@/state/canvas';
 import type { DiagramState } from '@/state/diagram';
 import type { DocumentState } from '@/state/document';
 import type { DrawingState } from '@/state/drawing';
+import type { FlowState } from '@/state/flow';
 import type { EditorRegistry } from '@/state/editors';
 import type { ProjectState } from '@/state/project';
 
@@ -13,10 +14,11 @@ import type { ProjectState } from '@/state/project';
  * in type-only, so nothing here imports a store at runtime and the store modules can import this one.
  */
 export interface WorkspaceStores {
-    /* The three that hold a view each are registries, one editor per view the grid has on screen. */
+    /* The four that hold a view each are registries, one editor per view the grid has on screen. */
     canvases: EditorRegistry<CanvasState>;
     drawings: EditorRegistry<DrawingState>;
     diagrams: EditorRegistry<DiagramState>;
+    flows: EditorRegistry<FlowState>;
     document: StoreApi<DocumentState>;
     project: StoreApi<ProjectState>;
 }

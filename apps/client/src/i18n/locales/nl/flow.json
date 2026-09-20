@@ -1,0 +1,159 @@
+{
+    "empty": {
+        "description": "Een flow is een werkblad met kaarten: iets dat gebeurt, iets dat waar moet zijn, en iets dat je daaraan doet. Voeg een kaart toe om te beginnen."
+    },
+    "dock": {
+        "add": "Kaart toevoegen"
+    },
+    "kinds": {
+        "trigger": "Als",
+        "condition": "En",
+        "action": "Dan",
+        "builtIn": "Over de graaf zelf"
+    },
+    "sources": {
+        "time": "Tijd",
+        "files": "Bestanden",
+        "text": "Tekst",
+        "chat": "Chat",
+        "person": "Jij",
+        "flow": "Flow"
+    },
+    "ports": {
+        "done": "Klaar",
+        "error": "Mislukt",
+        "true": "Waar",
+        "false": "Onwaar"
+    },
+    "link": {
+        "remove": "Deze lijn weghalen"
+    },
+    "switch": {
+        "on": "Aan",
+        "off": "Uit",
+        "onHint": "Deze flow op deze machine laten draaien",
+        "offHint": "Deze flow niet meer laten draaien"
+    },
+    "inspector": {
+        "title": "De kaart die je koos",
+        "inverted": "Andersom lezen",
+        "missing": "Ontbreekt: {{fields}}",
+        "broken": "Een token op deze kaart ligt niet op elk pad hierheen, dus hij zou de helft van de tijd leeg zijn.",
+        "brokenToken": "een token dat weg is",
+        "pickChat": "Kies een chat"
+    },
+    "error": {
+        "open": "Deze flow kon niet worden geopend.",
+        "save": "Deze flow kon niet worden opgeslagen.",
+        "copy": "Deze flow kon niet worden gekopieerd."
+    },
+    "cards": {
+        "time_at": {
+            "label": "Op een tijdstip",
+            "sentence_day": "elke dag om {{at}}",
+            "sentence_weekday": "elke werkdag om {{at}}",
+            "sentence_minutes": "elke {{minutes}} minuten",
+            "sentence": "op een tijdstip",
+            "args": {
+                "every": "Herhaling",
+                "at": "Tijd",
+                "minutes": "Minuten"
+            },
+            "choices": {
+                "day": "elke dag",
+                "weekday": "elke werkdag",
+                "minutes": "elke zoveel minuten"
+            },
+            "tokens": {
+                "time": "de tijd",
+                "day": "de dag"
+            }
+        },
+        "files_changed": {
+            "label": "Een bestand veranderde",
+            "sentence": "{{path}} veranderde",
+            "args": {
+                "path": "Bestand of map"
+            },
+            "tokens": {
+                "path": "het pad",
+                "content": "de tekst van het bestand"
+            }
+        },
+        "text_contains": {
+            "label": "Tekst bevat",
+            "sentence_contains": "{{text}} bevat {{value}}",
+            "sentence_matches": "{{text}} matcht {{value}}",
+            "sentence": "tekst bevat iets",
+            "args": {
+                "text": "Tekst",
+                "value": "Zoekt naar",
+                "mode": "Hoe"
+            },
+            "choices": {
+                "contains": "bevat",
+                "matches": "matcht een patroon"
+            },
+            "tokens": {}
+        },
+        "person_notify": {
+            "label": "Toon een melding",
+            "sentence": "toon {{text}}",
+            "args": {
+                "text": "Tekst"
+            },
+            "tokens": {}
+        },
+        "chat_message": {
+            "label": "Stuur een bericht naar een chat",
+            "sentence": "stuur {{text}} naar {{chat}}",
+            "args": {
+                "chat": "Chat",
+                "text": "Bericht"
+            },
+            "tokens": {}
+        }
+    },
+    "builtIn": {
+        "start": {
+            "label": "Ik start hem zelf",
+            "sentence": "ik start hem zelf",
+            "tokens": {
+                "input": "wat ik meegaf"
+            }
+        },
+        "delay": {
+            "label": "Wacht",
+            "sentence": "wacht {{amount}} {{unit}}",
+            "args": {
+                "amount": "Hoelang",
+                "unit": "Eenheid"
+            },
+            "choices": {
+                "seconds": "seconden",
+                "minutes": "minuten",
+                "hours": "uren"
+            },
+            "tokens": {}
+        },
+        "any": {
+            "label": "Een van",
+            "sentence": "ga door met de eerste tak die aankomt",
+            "tokens": {}
+        },
+        "all": {
+            "label": "Alle",
+            "sentence": "wacht op elke tak",
+            "tokens": {}
+        },
+        "note": {
+            "label": "Notitie",
+            "sentence": "een notitie",
+            "placeholder": "Een notitie voor jezelf",
+            "args": {
+                "text": "Notitie"
+            },
+            "tokens": {}
+        }
+    }
+}

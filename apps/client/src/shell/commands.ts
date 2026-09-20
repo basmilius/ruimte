@@ -10,6 +10,7 @@ import {
     canOpenAsView,
     newCanvasView,
     newDiagramView,
+    newFlowView,
     newDrawingView,
     newSeparatorView,
     newSubheaderView,
@@ -178,6 +179,7 @@ export const appCommands = (): Command[] => {
                       : []),
                   { id: 'view-new-drawing', label: i18next.t('shell:palette.commands.newDrawingView'), run: () => void newDrawingView() },
                   { id: 'view-new-diagram', label: i18next.t('shell:palette.commands.newDiagramView'), run: () => void newDiagramView() },
+                  { id: 'view-new-flow', label: i18next.t('shell:palette.commands.newFlowView'), run: () => void newFlowView() },
                   ...(folder
                       ? [
                             {

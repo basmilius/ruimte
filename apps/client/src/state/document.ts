@@ -5,6 +5,7 @@ import {
     emptyCanvasView,
     isCanvasView,
     isDiagramView,
+    isFlowView,
     isDrawingView,
     isOpenableView,
     isSessionView,
@@ -29,6 +30,7 @@ import {
 import type { CanvasPatch } from '@/project/merge';
 import { NODE_SIZE, defaultCanvases, nextId, type CanvasState } from '@/state/canvas';
 import { defaultDiagrams, type DiagramState } from '@/state/diagram';
+import { defaultFlows, type FlowState } from '@/state/flow';
 import { defaultDrawings, type DrawingState } from '@/state/drawing';
 import type { EditorRegistry } from '@/state/editors';
 import {
@@ -127,6 +129,7 @@ export interface DocumentState {
     /* A sketch of its own. Its elements live in a file of their own, which the daemon keeps. */
     addDrawingView(name: string): string;
     addDiagramView(name: string): string;
+    addFlowView(name: string): string;
     /* One file on disk, read and never written. The path is all it holds. */
     addFileView(name: string, path: string): string;
     /* A chat, terminal or browser without a canvas under it. The id is the session id, as for a node. */
@@ -175,6 +178,7 @@ export interface DocumentPeers {
     canvases: EditorRegistry<CanvasState>;
     drawings: EditorRegistry<DrawingState>;
     diagrams: EditorRegistry<DiagramState>;
+    flows: EditorRegistry<FlowState>;
 }
 
 /* What a view holds right now: its editor while it is on screen, the document's copy otherwise. */
@@ -202,6 +206,7 @@ const openEditors = (views: ProjectView[], viewLocal: Record<string, ProjectView
     peers.canvases.focus(focus);
     peers.drawings.focus(focus);
     peers.diagrams.focus(focus);
+    peers.flows.focus(focus);
 };
 
 /* Where a view on screen stands. A drawing and a diagram keep their camera in their own editor, a canvas in its own. */
@@ -211,6 +216,9 @@ const localOfView = (view: ProjectView | undefined, peers: DocumentPeers): Proje
     }
     if (view && isDiagramView(view)) {
         return { camera: peers.diagrams.peek(view.id)?.getState().viewCamera() ?? null, focusedNodeId: null };
+    }
+    if (view && isFlowView(view)) {
+        return { camera: peers.flows.peek(view.id)?.getState().viewCamera() ?? null, focusedNodeId: null };
     }
     const canvas = canvasOf(view?.id, peers);
     return canvas === null ? { camera: null, focusedNodeId: null } : { camera: canvas.viewCamera(), focusedNodeId: canvas.bodyFocusId };
@@ -524,6 +532,10 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 return addView({ kind: 'drawing', id: nextId('view'), name }, true);
             },
 
+            addFlowView(name) {
+                return addView({ kind: 'flow', id: nextId('view'), name }, true);
+            },
+
             addDiagramView(name) {
                 return addView({ kind: 'diagram', id: nextId('view'), name }, true);
             },
@@ -690,7 +702,8 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 const open = new Set([
                     ...peers.canvases.live().map(([viewId]) => viewId),
                     ...peers.drawings.live().map(([viewId]) => viewId),
-                    ...peers.diagrams.live().map(([viewId]) => viewId)
+                    ...peers.diagrams.live().map(([viewId]) => viewId),
+                    ...peers.flows.live().map(([viewId]) => viewId)
                 ]);
                 const next = { ...viewLocal };
                 for (const viewId of open) {
@@ -704,7 +717,12 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
         };
     });
 
-export const defaultDocumentStore = createDocumentStore({ canvases: defaultCanvases, drawings: defaultDrawings, diagrams: defaultDiagrams });
+export const defaultDocumentStore = createDocumentStore({
+    canvases: defaultCanvases,
+    drawings: defaultDrawings,
+    diagrams: defaultDiagrams,
+    flows: defaultFlows
+});
 
 export const useDocument = storeHook(defaultDocumentStore);
 

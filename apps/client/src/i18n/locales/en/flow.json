@@ -1,0 +1,159 @@
+{
+    "empty": {
+        "description": "A flow is a worksheet of cards: something that happens, something that has to be true, and something to do about it. Add a card to begin."
+    },
+    "dock": {
+        "add": "Add a card"
+    },
+    "kinds": {
+        "trigger": "When",
+        "condition": "And",
+        "action": "Then",
+        "builtIn": "The graph itself"
+    },
+    "sources": {
+        "time": "Time",
+        "files": "Files",
+        "text": "Text",
+        "chat": "Chat",
+        "person": "You",
+        "flow": "Flow"
+    },
+    "ports": {
+        "done": "Done",
+        "error": "Failed",
+        "true": "True",
+        "false": "False"
+    },
+    "link": {
+        "remove": "Remove this line"
+    },
+    "switch": {
+        "on": "On",
+        "off": "Off",
+        "onHint": "Run this flow on this machine",
+        "offHint": "Stop running this flow"
+    },
+    "inspector": {
+        "title": "The card you picked",
+        "inverted": "The other way round",
+        "missing": "Missing: {{fields}}",
+        "broken": "A token on this card is not on every path here, so it would be empty half the time.",
+        "brokenToken": "a token that is gone",
+        "pickChat": "Pick a chat"
+    },
+    "error": {
+        "open": "This flow could not be opened.",
+        "save": "This flow could not be saved.",
+        "copy": "This flow could not be copied."
+    },
+    "cards": {
+        "time_at": {
+            "label": "On a time",
+            "sentence_day": "every day at {{at}}",
+            "sentence_weekday": "every weekday at {{at}}",
+            "sentence_minutes": "every {{minutes}} minutes",
+            "sentence": "on a time",
+            "args": {
+                "every": "Repeat",
+                "at": "Time",
+                "minutes": "Minutes"
+            },
+            "choices": {
+                "day": "every day",
+                "weekday": "every weekday",
+                "minutes": "every so many minutes"
+            },
+            "tokens": {
+                "time": "the time",
+                "day": "the day"
+            }
+        },
+        "files_changed": {
+            "label": "A file changed",
+            "sentence": "{{path}} changed",
+            "args": {
+                "path": "File or folder"
+            },
+            "tokens": {
+                "path": "the path",
+                "content": "the text of the file"
+            }
+        },
+        "text_contains": {
+            "label": "Text contains",
+            "sentence_contains": "{{text}} contains {{value}}",
+            "sentence_matches": "{{text}} matches {{value}}",
+            "sentence": "text contains something",
+            "args": {
+                "text": "Text",
+                "value": "Looking for",
+                "mode": "How"
+            },
+            "choices": {
+                "contains": "contains",
+                "matches": "matches a pattern"
+            },
+            "tokens": {}
+        },
+        "person_notify": {
+            "label": "Show a notification",
+            "sentence": "show {{text}}",
+            "args": {
+                "text": "Text"
+            },
+            "tokens": {}
+        },
+        "chat_message": {
+            "label": "Send a message to a chat",
+            "sentence": "send {{text}} to {{chat}}",
+            "args": {
+                "chat": "Chat",
+                "text": "Message"
+            },
+            "tokens": {}
+        }
+    },
+    "builtIn": {
+        "start": {
+            "label": "I start it myself",
+            "sentence": "I start it myself",
+            "tokens": {
+                "input": "what I passed"
+            }
+        },
+        "delay": {
+            "label": "Wait",
+            "sentence": "wait {{amount}} {{unit}}",
+            "args": {
+                "amount": "How long",
+                "unit": "Unit"
+            },
+            "choices": {
+                "seconds": "seconds",
+                "minutes": "minutes",
+                "hours": "hours"
+            },
+            "tokens": {}
+        },
+        "any": {
+            "label": "Any",
+            "sentence": "go on with the first branch that arrives",
+            "tokens": {}
+        },
+        "all": {
+            "label": "All",
+            "sentence": "wait for every branch",
+            "tokens": {}
+        },
+        "note": {
+            "label": "Note",
+            "sentence": "a note",
+            "placeholder": "A note to yourself",
+            "args": {
+                "text": "Note"
+            },
+            "tokens": {}
+        }
+    }
+}

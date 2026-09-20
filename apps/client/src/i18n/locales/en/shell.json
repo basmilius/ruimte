@@ -128,7 +128,8 @@
         "conflict": {
             "canvas": "The canvas changed on disk while you had unsaved edits.",
             "drawing": "The drawing changed on disk while you had unsaved edits.",
-            "diagram": "The diagram changed on disk while you had unsaved edits."
+            "diagram": "The diagram changed on disk while you had unsaved edits.",
+            "flow": "The flow changed on disk while you had unsaved edits."
         }
     },
     "viewDialogs": {
@@ -188,6 +189,7 @@
         "canvas": "Canvas",
         "drawing": "Drawing",
         "diagram": "Diagram",
+        "flow": "Flow",
         "terminal": "Terminal",
         "browser": "Browser",
         "file": "File",
@@ -463,6 +465,7 @@
             "newCanvasView": "New canvas view",
             "newDrawingView": "New drawing view",
             "newDiagramView": "New diagram view",
+            "newFlowView": "New flow view",
             "newFileView": "New file view",
             "newTerminalView": "New terminal view",
             "newSeparator": "New separator",

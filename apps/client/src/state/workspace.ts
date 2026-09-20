@@ -2,6 +2,7 @@ import { createCanvasStore, defaultCanvases } from '@/state/canvas';
 import { createDiagramStore, defaultDiagrams } from '@/state/diagram';
 import { createDocumentStore, defaultDocumentStore } from '@/state/document';
 import { createDrawingStore, defaultDrawings } from '@/state/drawing';
+import { createFlowStore, defaultFlows } from '@/state/flow';
 import { createEditorRegistry } from '@/state/editors';
 import { createProjectStore, defaultProjectStore } from '@/state/project';
 import type { WorkspaceStores } from '@/state/workspace-stores';
@@ -15,7 +16,8 @@ export const createWorkspaceStores = (): WorkspaceStores => {
     const canvases = createEditorRegistry(createCanvasStore);
     const drawings = createEditorRegistry(createDrawingStore);
     const diagrams = createEditorRegistry(createDiagramStore);
-    return { canvases, drawings, diagrams, document: createDocumentStore({ canvases, drawings, diagrams }), project: createProjectStore() };
+    const flows = createEditorRegistry(createFlowStore);
+    return { canvases, drawings, diagrams, flows, document: createDocumentStore({ canvases, drawings, diagrams, flows }), project: createProjectStore() };
 };
 
 /*
@@ -27,5 +29,6 @@ export const defaultWorkspaceStores: WorkspaceStores = {
     document: defaultDocumentStore,
     drawings: defaultDrawings,
     diagrams: defaultDiagrams,
+    flows: defaultFlows,
     project: defaultProjectStore
 };

@@ -32,7 +32,7 @@ import { Kbd } from '@/ui/Kbd';
 import { KEY_SHORTCUTS } from '@/ui/shortcut';
 
 /* A view a person drew on a surface of its own is duplicated rather than moved to a canvas. */
-const DRAWN_KINDS: readonly ProjectView['kind'][] = ['canvas', 'drawing', 'diagram'];
+const DRAWN_KINDS: readonly ProjectView['kind'][] = ['canvas', 'drawing', 'diagram', 'flow'];
 
 interface ViewMenuItemsProps {
     viewId: string;

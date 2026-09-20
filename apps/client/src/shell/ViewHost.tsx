@@ -4,8 +4,10 @@ import { isCanvasView, isFileView, type ProjectView } from '@ruimte/contracts';
 import { Canvas } from '@/canvas/Canvas';
 import { SplitGrid } from '@/shell/SplitGrid';
 import { DiagramView } from '@/diagram/DiagramView';
+import { FlowView } from '@/flow/FlowView';
 import { DrawingView } from '@/drawing/DrawingView';
 import { useDiagram } from '@/state/diagram';
+import { useFlow } from '@/state/flow';
 import { drawingHasSomethingToClear, useDrawing, useDrawingStore } from '@/state/drawing';
 import { BrowserFallback, usePage } from '@/nodes/BrowserBody';
 import { DeviceBody } from '@/devices/DeviceBody';
@@ -73,6 +75,7 @@ function StandaloneView({ view }: { view: ProjectView }) {
             {view.kind === 'device' && <DeviceBody id={view.id} />}
             {view.kind === 'drawing' && <DrawingView id={view.id} />}
             {view.kind === 'diagram' && <DiagramView id={view.id} />}
+            {view.kind === 'flow' && <FlowView id={view.id} />}
             {/* No column around it: prose centers itself at 768px inside its own renderer, and
                 code wants every pixel the window has. */}
             {isFileView(view) && <FileSurface path={view.path} on="view" />}
@@ -99,10 +102,11 @@ export function ViewSurface({ view }: { view: ProjectView }) {
     const rev = useProject((s) => s.rev);
     const drawing = useDrawing((s) => s.elements);
     const diagram = useDiagram((s) => s.content);
+    const flow = useFlow((s) => s.content);
     return (
         /* Inside the cell and around the view alone: the cell's toolbar and the dock stay usable,
            and the cells beside it never notice. */
-        <ErrorBoundary label={t('viewHost.failed')} resetKeys={[view.id, rev, drawing, diagram]}>
+        <ErrorBoundary label={t('viewHost.failed')} resetKeys={[view.id, rev, drawing, diagram, flow]}>
             {isCanvasView(view) ? <Canvas /> : <StandaloneView view={view} />}
         </ErrorBoundary>
     );

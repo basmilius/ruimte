@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { CircleAlert, Eye, GitBranch } from 'lucide-react';
-import { diagramClient, drawingClient, projectClient } from '@/project';
+import { diagramClient, drawingClient, flowClient, projectClient } from '@/project';
 import { Banner } from '@/shell/Banner';
 import { focusedDiagram, useDiagram } from '@/state/diagram';
 import { useDocument } from '@/state/document';
 import { focusedDrawing, useDrawing } from '@/state/drawing';
+import { focusedFlow, useFlow } from '@/state/flow';
 import { useProject } from '@/state/project';
 import { Button } from '@/ui/Button';
 
@@ -14,9 +15,11 @@ export function ProjectBanner() {
     const projectConflict = useProject((s) => s.conflict);
     const drawingConflict = useDrawing((s) => s.conflict);
     const diagramConflict = useDiagram((s) => s.conflict);
+    const flowConflict = useFlow((s) => s.conflict);
     const projectError = useProject((s) => s.error);
     const drawingError = useDrawing((s) => s.error);
     const diagramError = useDiagram((s) => s.error);
+    const flowError = useFlow((s) => s.error);
     const notice = useDocument((s) => s.viewNotice);
     // One banner for every file: the wording is the same and several of them would stack.
     const file =
@@ -24,9 +27,11 @@ export function ProjectBanner() {
             ? 'drawing'
             : diagramConflict !== null || (diagramError !== null && projectError === null)
               ? 'diagram'
-              : 'canvas';
-    const conflict = projectConflict ?? drawingConflict ?? diagramConflict;
-    const error = projectError ?? drawingError ?? diagramError;
+              : flowConflict !== null || (flowError !== null && projectError === null)
+                ? 'flow'
+                : 'canvas';
+    const conflict = projectConflict ?? drawingConflict ?? diagramConflict ?? flowConflict;
+    const error = projectError ?? drawingError ?? diagramError ?? flowError;
     if (!conflict && !error) {
         return notice === null ? null : (
             <Banner icon={Eye} tone="neutral" message={notice.message}>
@@ -42,7 +47,7 @@ export function ProjectBanner() {
         );
     }
     const resolve = (choice: 'theirs' | 'mine'): void => {
-        const client = file === 'drawing' ? drawingClient : file === 'diagram' ? diagramClient : projectClient;
+        const client = file === 'drawing' ? drawingClient : file === 'diagram' ? diagramClient : file === 'flow' ? flowClient : projectClient;
         void client.resolveConflict(choice);
     };
     const dismiss = (): void => {
@@ -50,6 +55,8 @@ export function ProjectBanner() {
             focusedDrawing().getState().setError(null);
         } else if (file === 'diagram') {
             focusedDiagram().getState().setError(null);
+        } else if (file === 'flow') {
+            focusedFlow().getState().setError(null);
         } else {
             useProject.getState().setError(null);
         }

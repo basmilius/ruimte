@@ -128,7 +128,8 @@
         "conflict": {
             "canvas": "Het canvas is op schijf gewijzigd terwijl je niet-opgeslagen bewerkingen had.",
             "drawing": "De tekening is op schijf gewijzigd terwijl je niet-opgeslagen bewerkingen had.",
-            "diagram": "Het diagram is op schijf gewijzigd terwijl je niet-opgeslagen bewerkingen had."
+            "diagram": "Het diagram is op schijf gewijzigd terwijl je niet-opgeslagen bewerkingen had.",
+            "flow": "De flow is op schijf gewijzigd terwijl je niet-opgeslagen bewerkingen had."
         }
     },
     "viewDialogs": {
@@ -188,6 +189,7 @@
         "canvas": "Canvas",
         "drawing": "Tekening",
         "diagram": "Diagram",
+        "flow": "Flow",
         "terminal": "Terminal",
         "browser": "Browser",
         "file": "Bestand",
@@ -463,6 +465,7 @@
             "newCanvasView": "Nieuwe canvasweergave",
             "newDrawingView": "Nieuwe tekenweergave",
             "newDiagramView": "Nieuwe diagramweergave",
+            "newFlowView": "Nieuwe flowweergave",
             "newFileView": "Nieuwe bestandsweergave",
             "newTerminalView": "Nieuwe terminalweergave",
             "newSeparator": "Nieuwe scheiding",
