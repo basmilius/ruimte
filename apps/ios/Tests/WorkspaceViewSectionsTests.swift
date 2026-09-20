@@ -11,7 +11,7 @@ final class WorkspaceViewSectionsTests: XCTestCase {
             separator("empty", "  \n"), view("terminal"), separator("trailing", "Later"),
         ]
         let sections = WorkspaceViewSections.split(views)
-        XCTAssertEqual(sections.map(\.id), [.leading, .separator("named"), .separator("empty")])
+        XCTAssertEqual(sections.map(\.id), [.leading, .divider("named"), .divider("empty")])
         XCTAssertEqual(sections.map(\.title), [nil, "Work", nil])
         XCTAssertEqual(sections.map { $0.items.map(\.stableID) }, [["leading"], ["chat"], ["terminal"]])
     }
@@ -22,19 +22,33 @@ final class WorkspaceViewSectionsTests: XCTestCase {
         ])
         XCTAssertEqual(sections.count, 1)
         XCTAssertEqual(sections.first?.title, "Used")
-        XCTAssertEqual(sections.first?.id, .separator("second"))
+        XCTAssertEqual(sections.first?.id, .divider("second"))
         XCTAssertTrue(WorkspaceViewSections.split([separator("only")]).isEmpty)
+    }
+
+    func testSubheadersOpenASectionUnderTheirOwnTextAndKeepTheirSlot() throws {
+        let views = [view("leading"), subheader("work", "Work"), view("a"), view("b"), separator("line"), view("terminal")]
+        let sections = WorkspaceViewSections.split(views)
+        XCTAssertEqual(sections.map(\.id), [.leading, .divider("work"), .divider("line")])
+        XCTAssertEqual(sections.map(\.title), [nil, "Work", nil])
+        XCTAssertEqual(sections.map { $0.items.map(\.stableID) }, [["leading"], ["a", "b"], ["terminal"]])
+        // A heading divides the list rather than standing in it, so a reorder never moves into its slot.
+        let moved = try XCTUnwrap(
+            WorkspaceViewSections.moving(
+                views, sectionID: .divider("work"), expectedIDs: ["a", "b"], from: [0], to: 2))
+        XCTAssertEqual(moved.map(\.stableID), ["leading", "work", "b", "a", "line", "terminal"])
+        XCTAssertEqual(moved[1], views[1])
     }
 
     func testSearchPreservesSectionMembershipAndCannotExposeSeparatorsAsRows() {
         let views = [view("first", "Alpha"), separator("work", "Work"), view("second", "Beta"), view("third", "Alpha")]
         let sections = WorkspaceViewSections.split(views, search: "alpha")
-        XCTAssertEqual(sections.map(\.id), [.leading, .separator("work")])
+        XCTAssertEqual(sections.map(\.id), [.leading, .divider("work")])
         XCTAssertEqual(sections.map { $0.items.map(\.stableID) }, [["first"], ["third"]])
         XCTAssertTrue(WorkspaceViewSections.split(views, search: "Work").isEmpty)
         XCTAssertNil(
             WorkspaceViewSections.moving(
-                views, sectionID: .separator("work"), expectedIDs: ["third"], from: [0], to: 1))
+                views, sectionID: .divider("work"), expectedIDs: ["third"], from: [0], to: 1))
     }
 
     func testReorderUsesSectionLocalOffsetsAndPreservesSeparatorSlots() throws {
@@ -44,7 +58,7 @@ final class WorkspaceViewSectionsTests: XCTestCase {
         ]
         let moved = try XCTUnwrap(
             WorkspaceViewSections.moving(
-                views, sectionID: .separator("work"), expectedIDs: ["a", "b", "c"], from: [0], to: 3))
+                views, sectionID: .divider("work"), expectedIDs: ["a", "b", "c"], from: [0], to: 3))
         XCTAssertEqual(moved.map(\.stableID), ["before", "work", "b", "c", "a", "after", "last"])
         XCTAssertEqual(moved[1], views[1])
         XCTAssertEqual(moved[5], views[5])
@@ -70,7 +84,7 @@ final class WorkspaceViewSectionsTests: XCTestCase {
                 [view("inserted")] + views, sectionID: .leading, expectedIDs: ["a", "b"], from: [0], to: 2))
         XCTAssertNil(
             WorkspaceViewSections.moving(
-                views, sectionID: .separator("removed"), expectedIDs: ["a", "b"], from: [0], to: 2))
+                views, sectionID: .divider("removed"), expectedIDs: ["a", "b"], from: [0], to: 2))
     }
 
     func testInvalidOffsetsOrDuplicateIDsCannotCorruptAnotherSection() {
@@ -88,6 +102,7 @@ final class WorkspaceViewSectionsTests: XCTestCase {
         let expected = [
             "canvas": "frame", "chat": "message-square", "terminal": "terminal", "browser": "globe",
             "drawing": "pen-tool", "diagram": "workflow", "file": "file-text", "unknown": "circle-question-mark",
+            "separator": "minus", "subheader": "heading",
         ]
         for (kind, icon) in expected {
             let item = view(kind).setting("kind", .string(kind))
@@ -105,5 +120,8 @@ final class WorkspaceViewSectionsTests: XCTestCase {
     }
     private func separator(_ id: String, _ name: String = "") -> JSONValue {
         .object(["id": .string(id), "kind": .string("separator"), "name": .string(name)])
+    }
+    private func subheader(_ id: String, _ name: String) -> JSONValue {
+        .object(["id": .string(id), "kind": .string("subheader"), "name": .string(name)])
     }
 }

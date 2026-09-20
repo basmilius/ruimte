@@ -2021,9 +2021,14 @@ describe('view icon', () => {
         expect(lines.slice(1).flatMap((line) => line.split('\t').slice(1))).toEqual([...PROJECT_ICON_NAMES]);
     });
 
-    test('a separator is a line in the sidebar with no room for a mark', async () => {
+    test('a divider has no room for a mark', async () => {
         expect((await post('view', ['icon', 'sep-1', 'rocket'])).lines[0]).toBe(
-            'refused\tnot-markable\tsep-1 is a separator, a line in the sidebar with no room for a mark'
+            'refused\tnot-markable\tsep-1 is a separator, a row that divides the sidebar and has no room for a mark'
+        );
+        const [made] = (await post('view', ['new', 'Agents', '--kind', 'subheader'])).lines;
+        const id = made!.split('\t')[0]!;
+        expect((await post('view', ['icon', id, 'rocket'])).lines[0]).toBe(
+            `refused\tnot-markable\t${id} is a subheader, a row that divides the sidebar and has no room for a mark`
         );
     });
 });
@@ -2197,11 +2202,18 @@ describe('view open', () => {
         expect(watching).toHaveLength(1);
     });
 
-    test('a separator never opens', async () => {
+    test('a divider never opens', async () => {
         const { status, lines } = await post('view', ['open', 'sep-1']);
         expect(status).toBe(422);
-        expect(lines[0]).toBe('refused\tnever-opens\tsep-1 is a separator, a line in the sidebar with nothing to show');
+        expect(lines[0]).toBe('refused\tnever-opens\tsep-1 is a separator and has nothing to show');
         expect(lines.slice(1)).toEqual(VIEW_LINES);
+        expect(watching).toEqual([]);
+
+        const [made] = (await post('view', ['new', 'Agents', '--kind', 'subheader'])).lines;
+        const id = made!.split('\t')[0]!;
+        const heading = await post('view', ['open', id]);
+        expect(heading.status).toBe(422);
+        expect(heading.lines[0]).toBe(`refused\tnever-opens\t${id} is a subheader and has nothing to show`);
         expect(watching).toEqual([]);
     });
 

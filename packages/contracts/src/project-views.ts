@@ -4,9 +4,9 @@ import {
     MAIN_VIEW_NAME,
     isCanvasView,
     isDiagramView,
+    isDividerView,
     isDrawingView,
     isOpenableView,
-    isSeparatorView,
     isSessionView,
     isUnknownView,
     type NodeTitleSource,
@@ -61,28 +61,28 @@ export const withView = (views: readonly ProjectView[], view: ProjectView, after
 
 /*
  * A renamed view, or null when the name and its source are already what is asked for: a page that
- * reopens on its own name claims no edit, and neither side should write a rev for it. A separator
+ * reopens on its own name claims no edit, and neither side should write a rev for it. A divider
  * carries a bare label and no `titleSource`, since nothing it hosts could rename it.
  */
 export const withRenamedView = (views: readonly ProjectView[], id: string, name: string, source: NodeTitleSource | null = 'user'): ProjectView[] | null => {
     const current = views.find((view) => view.id === id);
     // A view of an unknown kind is written back as it was read, so a new name would never reach the file.
-    if (!current || isUnknownView(current) || (current.name === name && (isSeparatorView(current) || (current.titleSource ?? null) === source))) {
+    if (!current || isUnknownView(current) || (current.name === name && (isDividerView(current) || (current.titleSource ?? null) === source))) {
         return null;
     }
     return views.map((view) => {
         if (view.id !== id) {
             return view;
         }
-        return isSeparatorView(view) || isUnknownView(view) ? { ...view, name } : { ...view, name, titleSource: source ?? undefined };
+        return isDividerView(view) || isUnknownView(view) ? { ...view, name } : { ...view, name, titleSource: source ?? undefined };
     });
 };
 
 /* A mark a person or an agent picked over the one the view's kind gives it; null hands it back. */
 export const withViewIcon = (views: readonly ProjectView[], id: string, icon: ProjectIconChoice | null): ProjectView[] | null => {
     const current = views.find((view) => view.id === id);
-    // A separator is a line with no room for a mark, so there is nothing to override.
-    if (!current || isSeparatorView(current) || isUnknownView(current) || ((current.icon ?? null) === null && icon === null)) {
+    // A divider marks the list rather than standing in it, so there is nothing to override.
+    if (!current || isDividerView(current) || isUnknownView(current) || ((current.icon ?? null) === null && icon === null)) {
         return null;
     }
     return views.map((view) => (view.id === id ? { ...view, icon: icon ?? undefined } : view));
@@ -143,8 +143,8 @@ const copyOfCanvas = (view: ProjectCanvasView, name: string, nextId: (prefix: st
 
 /*
  * The list without one view, and the view that left. A project always has a view to open, so taking
- * the last one leaves an empty canvas behind: separators alone are a list of lines with nowhere to
- * go. Null for an id the project does not have.
+ * the last one leaves an empty canvas behind: dividers alone are a list of headings with nowhere
+ * to go. Null for an id the project does not have.
  */
 export const withoutView = (views: readonly ProjectView[], id: string): { views: ProjectView[]; removed: ProjectView } | null => {
     const removed = views.find((view) => view.id === id);

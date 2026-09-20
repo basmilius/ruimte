@@ -12,6 +12,7 @@ import {
     newDiagramView,
     newDrawingView,
     newSeparatorView,
+    newSubheaderView,
     newTerminalView,
     putOnCanvas,
     showOnCanvas
@@ -188,6 +189,7 @@ export const appCommands = (): Command[] => {
                       : []),
                   { id: 'view-new-terminal', label: i18next.t('shell:palette.commands.newTerminalView'), run: () => void newTerminalView() },
                   { id: 'view-new-separator', label: i18next.t('shell:palette.commands.newSeparator'), run: () => void newSeparatorView() },
+                  { id: 'view-new-subheader', label: i18next.t('shell:palette.commands.newSubheader'), run: () => void newSubheaderView() },
                   {
                       id: 'view-new-browser',
                       label: i18next.t('shell:viewDialogs.newBrowser.title'),

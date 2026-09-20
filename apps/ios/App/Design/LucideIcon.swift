@@ -90,6 +90,7 @@ struct WorkspaceViewIcon: View {
         case "browser": return "globe"
         case "device": return "smartphone"
         case "separator": return "minus"
+        case "subheader": return "heading"
         case "drawing": return "pen-tool"
         case "diagram": return "workflow"
         case "file": return "file-text"

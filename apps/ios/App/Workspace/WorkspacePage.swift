@@ -280,7 +280,7 @@ struct WorkspacePage: View {
     }
 
     private func openView(_ id: String) {
-        guard workspace.views.contains(where: { $0.stableID == id && $0.text("kind") != "separator" }) else { return }
+        guard workspace.views.contains(where: { $0.stableID == id && !WorkspaceViewSections.isDivider($0) }) else { return }
         workspace.select(id)
         withAnimation(reduceMotion ? nil : .default) {
             navigation.section = .views
@@ -472,7 +472,7 @@ struct AddProjectItem: View {
                 Picker("Kind", selection: $kind) {
                     ForEach(
                         canvasID == nil
-                            ? ["chat", "terminal", "canvas", "browser", "file", "drawing", "diagram", "separator"]
+                            ? ["chat", "terminal", "canvas", "browser", "file", "drawing", "diagram", "separator", "subheader"]
                             : ["chat", "terminal", "browser", "file", "note", "group"], id: \.self
                     ) { Text($0.capitalized).tag($0) }
                 }
@@ -537,7 +537,8 @@ struct AddProjectItem: View {
             }
         } else {
             await workspace.edit { $0.setting("views", .array($0.list("views") + [value])) }
-            workspace.select(id)
+            // A line and a heading divide the list rather than standing in it, so neither opens.
+            if !WorkspaceViewSections.isDivider(value) { workspace.select(id) }
         }
         if workspace.problem == nil { dismiss() }
     }

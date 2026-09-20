@@ -74,9 +74,11 @@ describe('renaming', () => {
         expect(withRenamedView(views, 'a', 'Board', null)).not.toBeNull();
     });
 
-    test('a separator carries a bare label and no source, since nothing it hosts could rename it', () => {
+    test('a divider carries a bare label and no source, since nothing it hosts could rename it', () => {
         const views = withRenamedView([{ kind: 'separator', id: 'sep' }], 'sep', 'Scratch')!;
         expect(views[0]).toEqual({ kind: 'separator', id: 'sep', name: 'Scratch' });
+        const headings = withRenamedView([{ kind: 'subheader', id: 'h1', name: 'Agents' }], 'h1', 'Scratch')!;
+        expect(headings[0]).toEqual({ kind: 'subheader', id: 'h1', name: 'Scratch' });
     });
 });
 
@@ -91,8 +93,9 @@ describe('the mark a view wears', () => {
         expect(withViewIcon([canvas('a')], 'a', null)).toBeNull();
     });
 
-    test('a separator has no room for one', () => {
+    test('a divider has no room for one', () => {
         expect(withViewIcon([{ kind: 'separator', id: 'sep' }], 'sep', { kind: 'lucide', value: 'rocket' })).toBeNull();
+        expect(withViewIcon([{ kind: 'subheader', id: 'h1', name: 'Agents' }], 'h1', { kind: 'lucide', value: 'rocket' })).toBeNull();
     });
 });
 
@@ -150,8 +153,8 @@ describe('deleting', () => {
     });
 
     test('separators alone are a list of lines with nowhere to go', () => {
-        const result = withoutView([canvas('a'), { kind: 'separator', id: 'sep' }], 'a')!;
-        expect(result.views.map((view) => view.kind)).toEqual(['separator', 'canvas']);
+        const result = withoutView([canvas('a'), { kind: 'separator', id: 'sep' }, { kind: 'subheader', id: 'h1', name: 'Agents' }], 'a')!;
+        expect(result.views.map((view) => view.kind)).toEqual(['separator', 'subheader', 'canvas']);
     });
 });
 

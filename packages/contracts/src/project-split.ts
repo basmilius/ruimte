@@ -4,7 +4,7 @@ import {
     PROJECT_PRIVATE_VERSION,
     PROJECT_VERSION,
     isCanvasView,
-    isSeparatorView,
+    isDividerView,
     type ProjectContent,
     type ProjectNode,
     type ProjectNodeOverlay,
@@ -62,9 +62,9 @@ const withoutOverlay = <T extends Carrier>(carrier: T, overlay: ProjectNodeOverl
  * that points off the project folder has nothing left to share; every other kind keeps working
  * without the fields that stay behind.
  */
-export const viewShareRefusal = (view: ProjectView): 'path-outside-project' | 'separator-follows-its-group' | null => {
-    if (isSeparatorView(view)) {
-        return 'separator-follows-its-group';
+export const viewShareRefusal = (view: ProjectView): 'path-outside-project' | 'follows-its-group' | null => {
+    if (isDividerView(view)) {
+        return 'follows-its-group';
     }
     return view.kind === 'file' && isAbsolutePath(view.path) ? 'path-outside-project' : null;
 };
@@ -72,22 +72,25 @@ export const viewShareRefusal = (view: ProjectView): 'path-outside-project' | 's
 export const canShareView = (view: ProjectView): boolean => viewShareRefusal(view) === null;
 
 /*
- * The asked-for ids that name a view of this project that may travel, and the separators that go
- * with them. Nobody shares a separator: it is a line between rows rather than a row that holds
- * anything, so it travels when a view in the stretch under it does and stays home when that whole
- * stretch is one person's. Any other rule leaves a colleague with two lines on top of each other,
- * or with a heading over nothing.
+ * The asked-for ids that name a view of this project that may travel, and the dividers that go with
+ * them. Nobody shares a divider: a line and a heading mark the list rather than standing in it, so
+ * one travels when a view in the stretch under it does and stays home when that whole stretch is
+ * one person's. Any other rule leaves a colleague with two lines on top of each other, or with a
+ * heading over nothing. The last of each kind is the one that goes, which is why a line and the
+ * heading under it both reach the shared file while two lines in a row do not.
  */
 const sharedIdsOf = (views: readonly ProjectView[], shared: readonly string[]): Set<string> => {
     const asked = new Set(shared);
     const ids = new Set(views.filter((view) => asked.has(view.id) && canShareView(view)).map((view) => view.id));
-    let above: string | null = null;
+    const above = new Map<string, string>();
     for (const view of views) {
-        if (isSeparatorView(view)) {
-            above = view.id;
-        } else if (ids.has(view.id) && above !== null) {
-            ids.add(above);
-            above = null;
+        if (isDividerView(view)) {
+            above.set(view.kind, view.id);
+        } else if (ids.has(view.id) && above.size > 0) {
+            for (const id of above.values()) {
+                ids.add(id);
+            }
+            above.clear();
         }
     }
     return ids;

@@ -28,6 +28,8 @@ const separator = (id: string): SidebarView => ({
     self: null
 });
 
+const subheader = (id: string): SidebarView => ({ ...separator(id), kind: 'subheader', name: 'Agents' });
+
 const drawing = (id: string): SidebarView => ({ id, name: id, kind: 'drawing', icon: null, provider: null, path: null, shared: false, nodes: [], self: null });
 
 const standalone = (id: string, status: AgentStatus | null = null): SidebarView => ({
@@ -84,10 +86,19 @@ describe('buildSidebar', () => {
         expect(list!.rows[0]).toMatchObject({ expandable: false, expanded: false, status: null });
     });
 
-    test('a separator is a row with nothing behind it, and never the current one', () => {
-        const [list] = build([separator('gap'), frontend], 'frontend', ['frontend']);
+    test('a divider is a row with nothing behind it, and never the current one', () => {
+        const [list] = build([separator('gap'), subheader('agents'), frontend], 'frontend', ['frontend']);
         expect(list!.rows[0]).toMatchObject({ rowId: 'view:gap', index: 0, active: false, expandable: false, status: null, draft: false });
-        expect(list!.rows[1]).toMatchObject({ rowId: 'view:frontend', index: 1, active: true });
+        expect(list!.rows[1]).toMatchObject({ rowId: 'view:agents', index: 1, active: false, expandable: false, status: null, draft: false });
+        expect(list!.rows[2]).toMatchObject({ rowId: 'view:frontend', index: 2, active: true });
+    });
+
+    test('a separator with a heading right under it gives up the room below its line', () => {
+        const tightly = (views: SidebarView[]): boolean[] =>
+            build(views, 'frontend', [])[0]!.rows.flatMap((row) => (row.type === 'view' ? [row.headingBelow] : []));
+        expect(tightly([separator('gap'), subheader('agents'), frontend])).toEqual([true, false, false]);
+        // Only a separator ever says it, and only when the heading is the very next row.
+        expect(tightly([separator('gap'), frontend, subheader('agents')])).toEqual([false, false, false]);
     });
 
     test('every view row knows where it sits in the project list', () => {

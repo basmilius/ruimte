@@ -26,7 +26,7 @@ export const serverViewActions = new ActionRegistry<ServerActionContext>({
             throw new ActionRefusal('unknown-view', `${viewId} is not a view of this project`);
         }
         if (!isOpenableView(view)) {
-            throw new ActionRefusal('view-not-openable', `${viewId} is a separator, a line in the sidebar with nothing to show`);
+            throw new ActionRefusal('view-not-openable', `${viewId} is a ${view.kind} and has nothing to show`);
         }
         const delivered = context.host.showView(context.projectId, viewId, actor.id);
         return { output: { viewId, view: view.name ?? viewId, kind: kindOf(view), changed: delivered, delivered } };

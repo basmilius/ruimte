@@ -171,12 +171,16 @@ interface UiStore {
     forkDialog: { chatId: string; turnId: string } | null;
     /* What a view is being asked about, from the sidebar, the breadcrumb or the palette alike. */
     viewDialog: ViewDialog;
+    /* The row the sidebar puts the caret in, which is how a new heading opens: it is nothing but
+       what it says, so it is typed where it stands rather than in a dialog. */
+    renamingViewId: string | null;
     setUsageOpen(open: boolean): void;
     setWorktreeDialogFor(groupId: string | null): void;
     setWorktreeRemoval(removal: { folder: string; paths: string[] } | null): void;
     setWorktreeMerge(merge: WorktreeMergeRequest | null): void;
     setForkDialog(fork: { chatId: string; turnId: string } | null): void;
     setViewDialog(dialog: ViewDialog): void;
+    setRenamingViewId(viewId: string | null): void;
     setSidebarOpen(open: boolean): void;
     toggleSidebar(): void;
     openPalette(seed?: string): void;
@@ -233,6 +237,7 @@ export const useUi = create<UiStore>((set, get) => ({
     worktreeMerge: null,
     forkDialog: null,
     viewDialog: null,
+    renamingViewId: null,
     setUsageOpen(open) {
         set({ usageOpen: open });
     },
@@ -250,6 +255,9 @@ export const useUi = create<UiStore>((set, get) => ({
     },
     setViewDialog(dialog) {
         set({ viewDialog: dialog });
+    },
+    setRenamingViewId(viewId) {
+        set({ renamingViewId: viewId });
     },
     setSidebarOpen(open) {
         persistSidebarOpen(open);

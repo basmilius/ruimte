@@ -370,6 +370,19 @@ export const ProjectSeparatorViewSchema = z.object({
 });
 export type ProjectSeparatorView = z.infer<typeof ProjectSeparatorViewSchema>;
 
+/*
+ * A heading over the rows under it. Like a separator it is a row that divides the list rather than
+ * a place to go, but its whole point is what it says, so the name is required where a separator's
+ * is optional. It wears no mark: the text lines up with the marks of the rows it heads.
+ */
+export const ProjectSubheaderViewSchema = z.object({
+    kind: z.literal('subheader'),
+    id: z.string().min(1),
+    name: z.string().min(1),
+    createdBy: CreatedBySchema
+});
+export type ProjectSubheaderView = z.infer<typeof ProjectSubheaderViewSchema>;
+
 export const ProjectChatViewSchema = ViewBaseSchema.extend({ kind: z.literal('chat'), node: StandaloneNodeSchema });
 export type ProjectChatView = z.infer<typeof ProjectChatViewSchema>;
 
@@ -404,7 +417,8 @@ const KNOWN_VIEW_SCHEMAS = [
     ProjectDrawingViewSchema,
     ProjectDiagramViewSchema,
     ProjectFileViewSchema,
-    ProjectSeparatorViewSchema
+    ProjectSeparatorViewSchema,
+    ProjectSubheaderViewSchema
 ] as const;
 
 /* The kinds this version can make and open, in the order of the union. */
@@ -449,6 +463,12 @@ export const isCanvasView = (view: ProjectView): view is ProjectCanvasView => vi
 
 export const isSeparatorView = (view: ProjectView): view is ProjectSeparatorView => view.kind === 'separator';
 
+export const isSubheaderView = (view: ProjectView): view is ProjectSubheaderView => view.kind === 'subheader';
+
+/* The rows that divide the list rather than stand in it: a line, and a heading over what follows.
+   Neither opens, neither holds a session, and neither is shared on its own. */
+export const isDividerView = (view: ProjectView): view is ProjectSeparatorView | ProjectSubheaderView => isSeparatorView(view) || isSubheaderView(view);
+
 export const isDrawingView = (view: ProjectView): view is ProjectDrawingView => view.kind === 'drawing';
 
 export const isDiagramView = (view: ProjectView): view is ProjectDiagramView => view.kind === 'diagram';
@@ -457,21 +477,20 @@ export const isFileView = (view: ProjectView): view is ProjectFileView => view.k
 
 export const isUnknownView = (view: ProjectView): view is ProjectUnknownView => view.kind === UNKNOWN_KIND;
 
-/* The mark a person picked for a view; a separator has no room for one and an unknown view keeps whatever it has in the file. */
-export const viewIconOf = (view: ProjectView): ProjectIconChoice | null =>
-    view.kind === 'separator' || view.kind === UNKNOWN_KIND ? null : (view.icon ?? null);
+/* The mark a person picked for a view; a divider has no room for one and an unknown view keeps whatever it has in the file. */
+export const viewIconOf = (view: ProjectView): ProjectIconChoice | null => (isDividerView(view) || view.kind === UNKNOWN_KIND ? null : (view.icon ?? null));
 
 /*
  * The views that are one session under their own id: what a node carries, without a canvas around
- * it. A separator holds nothing, and a drawing, a diagram and a file are all read off disk, so none
+ * it. A divider holds nothing, and a drawing, a diagram and a file are all read off disk, so none
  * of them has a session to attach to.
  */
 export const isSessionView = (view: ProjectView): view is ProjectChatView | ProjectTerminalView | ProjectBrowserView | ProjectDeviceView =>
     view.kind === 'chat' || view.kind === 'terminal' || view.kind === 'browser' || view.kind === 'device';
 
-/* The views a person can put on screen. A separator is a line in the list, not a place to go, and
+/* The views a person can put on screen. A divider marks the list rather than standing in it, and
    this version has nothing to draw a view of an unknown kind with. */
-export const isOpenableView = (view: ProjectView): boolean => view.kind !== 'separator' && view.kind !== UNKNOWN_KIND;
+export const isOpenableView = (view: ProjectView): boolean => !isDividerView(view) && view.kind !== UNKNOWN_KIND;
 
 /* A view the way the file holds it. */
 export const storedViewOf = (view: ProjectView): unknown => {

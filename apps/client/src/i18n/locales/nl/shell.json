@@ -10,7 +10,8 @@
         "duplicate": "Dupliceren",
         "usage": "Verbruik",
         "openInAnotherCell": ", open in een andere cel",
-        "shared": "Gedeeld met je team"
+        "shared": "Gedeeld met je team",
+        "doubleClick": "dubbelklik"
     },
     "panel": {
         "fallback": "Paneel",
@@ -190,7 +191,8 @@
         "terminal": "Terminal",
         "browser": "Browser",
         "file": "Bestand",
-        "separator": "Scheiding"
+        "separator": "Scheiding",
+        "subheader": "Kopje"
     },
     "viewMenu": {
         "filePick": "Bestand...",
@@ -464,6 +466,7 @@
             "newFileView": "Nieuwe bestandsweergave",
             "newTerminalView": "Nieuwe terminalweergave",
             "newSeparator": "Nieuwe scheiding",
+            "newSubheader": "Nieuw kopje",
             "newTerminal": "Nieuwe terminal",
             "newChat": "Nieuwe chat",
             "newBrowser": "Nieuwe browser",

@@ -3,7 +3,7 @@ import {
     PROJECT_VIEW_KINDS,
     emptyCanvasView,
     isCanvasView,
-    isSeparatorView,
+    isDividerView,
     sessionNodesOfView,
     storedPathOf,
     withMovedView,
@@ -41,7 +41,13 @@ const KIND_FLAGS: Partial<Record<ProjectViewKind, ViewFlag>> = { file: 'path', b
 
 /* The prefix a fresh id gets, the same one the client's own `nextId` uses for that kind: a chat,
    terminal or browser view is a session under its own id, so it carries its kind in the id. */
-const ID_PREFIX: Partial<Record<ProjectViewKind, string>> = { chat: 'chat', terminal: 'terminal', browser: 'browser', separator: 'separator' };
+const ID_PREFIX: Partial<Record<ProjectViewKind, string>> = {
+    chat: 'chat',
+    terminal: 'terminal',
+    browser: 'browser',
+    separator: 'separator',
+    subheader: 'subheader'
+};
 
 const kindsFor = (flag: ViewFlag): string =>
     VIEW_KINDS.filter((kind) => KIND_FLAGS[kind] === flag)
@@ -112,6 +118,7 @@ const newSub = defineAction('view', {
         `flag\t--url U\t${kindsFor('url')}\tAn http or https address`,
         'flag\t--after V\toptional\tPuts the row right under view V; without it the row goes last',
         'kind\tseparator\tA line in the sidebar with a label, which never opens and holds nothing',
+        'kind\tsubheader\tA heading over the rows under it, which never opens and holds nothing',
         'kind\tchat, terminal\tOpened empty, with no CLI and no directory; the id is the session id',
         'paths\t--path is resolved against the project folder, never against your own directory; it may also be absolute and then points outside',
         `limit\tA project holds at most ${MAX_PROJECT_VIEWS} views`,
@@ -173,7 +180,7 @@ const madeView = (kind: (typeof VIEW_KINDS)[number], id: string, name: string, c
     if (kind === 'canvas') {
         return { ...emptyCanvasView(id, name), createdBy };
     }
-    if (kind === 'separator') {
+    if (kind === 'separator' || kind === 'subheader') {
         return { kind, id, name, createdBy };
     }
     if (kind === 'chat' || kind === 'terminal') {
@@ -231,7 +238,7 @@ const iconSub = defineAction('view', {
         'argument\t<mark>\trequired\tA Lucide name from the set the picker has',
         'prints\tid\tkind\tlucide\tthe mark the view now wears',
         `names\t${PROJECT_ICON_NAMES.length} Lucide names; a refusal prints all of them`,
-        'note\tA separator is a line in the sidebar and has no room for a mark'
+        'note\tA separator and a subheader divide the sidebar and have no room for a mark'
     ],
     positionals: z.tuple([z.string().min(1, 'view icon needs the id of a view'), z.string().min(1, 'view icon needs a Lucide name')], {
         error: (issue) => (issue.code === 'too_big' ? 'view icon takes a view id and one mark' : 'view icon needs the id of a view and a Lucide name')
@@ -242,8 +249,8 @@ const iconSub = defineAction('view', {
         const icon = iconChoice(value);
         return call.host.mutate(place.projectId, (content) => {
             const view = viewNamed(content, id, 'view icon');
-            if (isSeparatorView(view)) {
-                throw new VerbRefusal('not-markable', `${id} is a separator, a line in the sidebar with no room for a mark`);
+            if (isDividerView(view)) {
+                throw new VerbRefusal('not-markable', `${id} is a ${view.kind}, a row that divides the sidebar and has no room for a mark`);
             }
             const views = withViewIcon(content.views, id, icon);
             return { content: views === null ? null : { ...content, views }, result: [`${id}\t${view.kind}\t${icon.kind}\t${field(icon.value)}`] };

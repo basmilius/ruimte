@@ -92,7 +92,7 @@ final class MobileWorkspace {
                         "local"] ?? local
                 selectedID =
                     local["activeViewId"]?.stringValue
-                    ?? views.first(where: { $0.text("kind") != "separator" })?.stableID
+                    ?? views.first(where: { !WorkspaceViewSections.isDivider($0) })?.stableID
                 ready = true
                 reconcileSelection()
             }
@@ -177,8 +177,8 @@ final class MobileWorkspace {
     }
 
     private func reconcileSelection() {
-        guard !views.contains(where: { $0.stableID == selectedID && $0.text("kind") != "separator" }) else { return }
-        select(views.first(where: { $0.text("kind") != "separator" })?.stableID)
+        guard !views.contains(where: { $0.stableID == selectedID && !WorkspaceViewSections.isDivider($0) }) else { return }
+        select(views.first(where: { !WorkspaceViewSections.isDivider($0) })?.stableID)
     }
 
     func select(_ id: String?) {

@@ -56,7 +56,7 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
     const shared = useDocument((state) => state.shared).includes(viewId);
     /* Offered whether or not the folder is a repository: finding that out means starting a git watch,
        which opening a menu has no business doing, and sharing without one only writes a file nobody
-       pulls yet. Left out for a view that cannot travel, and for a separator, which goes where the
+       pulls yet. Left out for a view that cannot travel, and for a divider, which goes where the
        group under it goes and is nobody's to share. */
     const view = useDocument((state) => state.views.find((candidate) => candidate.id === viewId));
     /* A canvas to land on. Without one the rows that put a view on a canvas would do nothing at all,
@@ -71,7 +71,7 @@ export function ViewMenuItems({ viewId, kind, onSidebar = false }: ViewMenuItems
     const offersFork = useOffersFork(viewId);
     const transport = useTransport();
 
-    const offerShare = view !== undefined && kind !== 'separator' && (shared || canShareView(view));
+    const offerShare = view !== undefined && kind !== 'separator' && kind !== 'subheader' && (shared || canShareView(view));
     const offerFork = kind === 'chat' && offersFork;
 
     /*

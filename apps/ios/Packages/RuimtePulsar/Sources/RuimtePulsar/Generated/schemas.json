@@ -17640,6 +17640,32 @@
                   "properties": {
                     "kind": {
                       "type": "string",
+                      "const": "subheader"
+                    },
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "id",
+                    "name"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
                       "const": "unknown"
                     },
                     "id": {
@@ -17680,7 +17706,8 @@
                   "drawing",
                   "diagram",
                   "file",
-                  "separator"
+                  "separator",
+                  "subheader"
                 ],
                 "template": {
                   "kind": "unknown",
@@ -19600,6 +19627,32 @@
                   "properties": {
                     "kind": {
                       "type": "string",
+                      "const": "subheader"
+                    },
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "id",
+                    "name"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
                       "const": "unknown"
                     },
                     "id": {
@@ -19640,7 +19693,8 @@
                   "drawing",
                   "diagram",
                   "file",
-                  "separator"
+                  "separator",
+                  "subheader"
                 ],
                 "template": {
                   "kind": "unknown",
@@ -33804,6 +33858,32 @@
                   "properties": {
                     "kind": {
                       "type": "string",
+                      "const": "subheader"
+                    },
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "createdBy": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "id",
+                    "name"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
                       "const": "unknown"
                     },
                     "id": {
@@ -33844,7 +33924,8 @@
                   "drawing",
                   "diagram",
                   "file",
-                  "separator"
+                  "separator",
+                  "subheader"
                 ],
                 "template": {
                   "kind": "unknown",

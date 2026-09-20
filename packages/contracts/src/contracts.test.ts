@@ -313,6 +313,15 @@ describe('project', () => {
         expect(document([view, { kind: 'separator' }]).success).toBe(false);
     });
 
+    test('a subheader view carries an id and the text it is, which is the one thing it cannot do without', () => {
+        const view = { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [], texts: [], edges: [] };
+        const document = (views: unknown[]) => ProjectDocumentSchema.safeParse({ version: 3, rev: 1, name: 'p', color: 'violet', views });
+        expect(document([view, { kind: 'subheader', id: 'h1', name: 'Agents' }]).success).toBe(true);
+        // A heading is nothing but what it says, so one without a name is no heading at all.
+        expect(document([view, { kind: 'subheader', id: 'h1' }]).success).toBe(false);
+        expect(document([view, { kind: 'subheader', id: 'h1', name: '' }]).success).toBe(false);
+    });
+
     test('a view may overrule the mark of its kind, from the same set a project picks from', () => {
         const view = { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [], texts: [], edges: [] };
         const document = (views: unknown[]) => ProjectDocumentSchema.safeParse({ version: 3, rev: 1, name: 'p', color: 'violet', views });
@@ -324,9 +333,11 @@ describe('project', () => {
         expect(bare.success && bare.data.views[0]!.kind === 'canvas' && bare.data.views[0]!.icon).toBeUndefined();
         expect(document([{ ...view, icon: { kind: 'lucide', value: 'unicorn' } }]).success).toBe(false);
         expect(document([{ ...view, icon: { kind: 'image', value: '.ruimte/icon.svg', version: '1' } }]).success).toBe(false);
-        // A separator has no room for a mark, so one written into the file is dropped on the way in.
+        // A divider has no room for a mark, so one written into the file is dropped on the way in.
         const withSeparator = document([view, { kind: 'separator', id: 's1', icon: { kind: 'lucide', value: 'rocket' } }]);
         expect(withSeparator.success && withSeparator.data.views[1]).toEqual({ kind: 'separator', id: 's1' });
+        const withSubheader = document([view, { kind: 'subheader', id: 'h1', name: 'Agents', icon: { kind: 'lucide', value: 'rocket' } }]);
+        expect(withSubheader.success && withSubheader.data.views[1]).toEqual({ kind: 'subheader', id: 'h1', name: 'Agents' });
     });
 
     test('a canvas file without an icon parses, and only a name from the closed list is allowed', () => {

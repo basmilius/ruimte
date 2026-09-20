@@ -107,6 +107,14 @@ export const newTerminalView = (): string | null =>
 
 export const newSeparatorView = (): string | null => useDocument.getState().addSeparatorView();
 
+/* A heading over the rows under it. It lands with a name it can be read by and the sidebar puts the
+   caret in it at once: a heading is nothing but what it says, so typing is the first thing to do. */
+export const newSubheaderView = (): string | null => {
+    const id = useDocument.getState().addSubheaderView(freeName(useDocument.getState().views, 'Section'));
+    useUi.getState().setRenamingViewId(id);
+    return id;
+};
+
 export const newDrawingView = (): string | null => useDocument.getState().addDrawingView(freeName(useDocument.getState().views, 'Drawing'));
 
 export const newDiagramView = (): string | null => useDocument.getState().addDiagramView(freeName(useDocument.getState().views, 'Diagram'));
@@ -258,7 +266,7 @@ export const duplicateViewOf = (id: string): string | null => {
     return copyId;
 };
 
-/* The nth view, one-based, for Cmd+1 through Cmd+9. Separators are lines, so they are not counted. */
+/* The nth view, one-based, for Cmd+1 through Cmd+9. A divider is no place to go, so it is not counted. */
 export const viewAtIndex = (index: number): ProjectView | undefined => useDocument.getState().views.filter(isOpenableView)[index - 1];
 
 export const stepView = (delta: -1 | 1): void => {

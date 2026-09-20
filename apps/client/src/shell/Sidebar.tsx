@@ -9,6 +9,7 @@ import {
     Globe,
     LayoutGrid,
     MessageSquare,
+    Pencil,
     PenTool,
     Plus,
     Settings,
@@ -60,7 +61,7 @@ import { StatusDot } from '@/canvas/NodeFrame';
 import { NodeMenuPopup } from '@/canvas/NodeMenu';
 import { ViewGlyph } from '@/project/ViewGlyph';
 import { Brand } from '@/ui/Brand';
-import { SECTION_LABEL } from '@/ui/classes';
+import { MENU_HINT, SECTION_LABEL } from '@/ui/classes';
 import { Tooltip } from '@/ui/Tooltip';
 import { SidebarToggle } from '@/shell/SidebarToggle';
 import { NewViewItems, NewViewTiles } from '@/shell/ViewMenu';
@@ -282,6 +283,10 @@ function DeleteRowMenu({ onDelete }: { onDelete(): void }) {
 /*
  * A separator is a line, not a place: it has no body, never opens and says nothing. It drags and
  * reorders like any other row, because it earns its keep by where it sits between them.
+ *
+ * With a heading right under it the line keeps its distance from the group above and gives up the
+ * room below, so the two read as one thing: a rule that closes a group and the heading that opens
+ * the next. That is the line at the bottom of a shorter row rather than in the middle of a tall one.
  */
 function SeparatorRow({ row, tabbable, onFocus, onArrow, onDelete, onDrag }: Omit<ViewRowProps, 'onToggle'>) {
     const { t } = useTranslation(['shell', 'common']);
@@ -296,7 +301,10 @@ function SeparatorRow({ row, tabbable, onFocus, onArrow, onDelete, onDrag }: Omi
                 data-sidebar-row={row.rowId}
                 data-view-index={row.index}
                 tabIndex={tabbable ? 0 : -1}
-                className="flex h-6 w-full cursor-default items-center outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                className={clsx(
+                    'flex w-full cursor-default outline-none focus-visible:ring-1 focus-visible:ring-accent',
+                    row.headingBelow ? 'h-4 items-end' : 'h-6 items-center'
+                )}
                 onFocus={onFocus}
                 onDragStart={(event) => onDrag(view.id, event.dataTransfer)}
                 onDragEnd={() => onDrag(null)}
@@ -307,6 +315,74 @@ function SeparatorRow({ row, tabbable, onFocus, onArrow, onDelete, onDrag }: Omi
                 <span className="-mx-2 h-px grow bg-border-soft" />
             </ContextMenu.Trigger>
             <DeleteRowMenu onDelete={onDelete} />
+        </ContextMenu.Root>
+    );
+}
+
+/*
+ * A heading over the rows under it, and nothing else: it never opens and holds no node, so all it
+ * offers is its own text. That text starts where the marks of the view rows start, so the list
+ * reads as one column of names under one column of headings; the row is as tall as a view row, so
+ * a drag lands between the same gaps everywhere. A new heading opens in the field straight away.
+ */
+function SubheaderRow({ row, tabbable, onFocus, onArrow, onDelete, onDrag }: Omit<ViewRowProps, 'onToggle'>) {
+    const { t } = useTranslation(['shell', 'common']);
+    const { view } = row;
+    const renaming = useUi((state) => state.renamingViewId) === view.id;
+    const rename = (on: boolean): void => useUi.getState().setRenamingViewId(on ? view.id : null);
+    if (renaming) {
+        return (
+            <div className="flex h-8 w-full items-center px-2">
+                <RenameField
+                    value={view.name}
+                    onDone={(next) => {
+                        // An empty field is not a heading, so the one it had stands.
+                        if (next) {
+                            renameViewAction(view.id, next);
+                        }
+                        rename(false);
+                    }}
+                />
+            </div>
+        );
+    }
+    return (
+        <ContextMenu.Root>
+            <ContextMenu.Trigger
+                render={<div />}
+                draggable
+                role="heading"
+                aria-level={3}
+                data-sidebar-row={row.rowId}
+                data-view-index={row.index}
+                tabIndex={tabbable ? 0 : -1}
+                className={clsx(SECTION_LABEL, 'flex h-8 w-full cursor-default items-center px-2 outline-none focus-visible:ring-1 focus-visible:ring-accent')}
+                onFocus={onFocus}
+                onDoubleClick={() => rename(true)}
+                onDragStart={(event) => onDrag(view.id, event.dataTransfer)}
+                onDragEnd={() => onDrag(null)}
+                onKeyDown={(e) => {
+                    arrowStep(e, onArrow);
+                    if (e.key === 'F2') {
+                        e.preventDefault();
+                        rename(true);
+                    }
+                }}
+            >
+                <span className="min-w-0 truncate">{view.name}</span>
+            </ContextMenu.Trigger>
+            <ContextMenu.Portal>
+                <ContextMenu.Positioner className="z-(--z-popup)">
+                    <ContextMenu.Popup className="menu-popup">
+                        <ContextMenu.Item className="menu-item" onClick={() => rename(true)}>
+                            <Icon icon={Pencil} size={14} /> {t('common:action.rename')} <span className={MENU_HINT}>{t('sidebar.doubleClick')}</span>
+                        </ContextMenu.Item>
+                        <ContextMenu.Item className="menu-item text-status-error" onClick={onDelete}>
+                            <Icon icon={Trash} size={14} /> {t('common:action.delete')}
+                        </ContextMenu.Item>
+                    </ContextMenu.Popup>
+                </ContextMenu.Positioner>
+            </ContextMenu.Portal>
         </ContextMenu.Root>
     );
 }
@@ -517,7 +593,7 @@ export function Sidebar() {
                     provider: provider ?? null,
                     path: view.kind === 'file' ? view.path : null,
                     nodes: live.filter((node) => isSessionKind(node.kind)).map(asRow),
-                    // Only a session view is a node of its own; a separator and a drawing have no status.
+                    // Only a session view is a node of its own; a divider and a drawing have no status.
                     self: isSessionView(view) ? asRow({ id: view.id, kind: view.kind, title: view.name, titleSource: view.titleSource, provider }) : null
                 };
             })
@@ -703,6 +779,8 @@ export function Sidebar() {
                                                 {takesDrop && insertAt === row.index && <div className={INSERT_LINE} />}
                                                 {row.view.kind === 'separator' ? (
                                                     <SeparatorRow {...shared} />
+                                                ) : row.view.kind === 'subheader' ? (
+                                                    <SubheaderRow {...shared} />
                                                 ) : row.view.kind === 'unknown' ? (
                                                     <UnknownViewRow {...shared} />
                                                 ) : (

@@ -20,7 +20,7 @@ export const openAction = defineAction('view', {
         'shows\tThe view takes the place of the one the person was working in; a view already on screen is brought to the front instead',
         'note\tThis writes nothing, so it is the one verb a person can turn off: a client may be set to only mention the view and stay where it is',
         'note\tNobody watching is not a failure; nothing waits, and the same call later shows it to whoever is there then',
-        'note\tA separator is a line in the sidebar and holds nothing to show',
+        'note\tA separator and a subheader divide the sidebar and hold nothing to show',
         'see\truimte-context view list\tthe views of the project, which is where the id comes from'
     ],
     positionals: z.tuple([z.string().min(1, 'view open needs the id of a view')], {
@@ -32,7 +32,7 @@ export const openAction = defineAction('view', {
         const result = await serverViewActions.execute('view.focus', { viewId: id }, serverActionCall(call.host, place.projectId, call.caller));
         if (result.status !== 'completed') {
             const content = await call.host.read(place.projectId);
-            // Only what view open itself takes: a refusal that listed the separators would offer what the next call refuses.
+            // Only what view open itself takes: a refusal that listed the dividers would offer what the next call refuses.
             const openable = orNote(viewLines(content.views.filter(isOpenableView)), 'This project has no view that opens');
             const code =
                 result.status === 'failed' && result.error.code === 'view-not-openable'

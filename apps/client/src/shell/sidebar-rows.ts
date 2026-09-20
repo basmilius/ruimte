@@ -21,7 +21,7 @@ export interface SidebarNode {
 
 export interface SidebarView {
     id: string;
-    /* Empty for a separator, which is a bare line with nothing on it. */
+    /* Empty for a separator, which is a bare line with nothing on it; a subheader is its text alone. */
     name: string;
     titleSource?: NodeTitleSource;
     kind: ProjectViewKind;
@@ -55,6 +55,10 @@ export interface SidebarViewRow {
     status: AgentStatus | null;
     /* A standalone chat with an unsent prompt; a canvas keeps that dot on the node's own row. */
     draft: boolean;
+    /* A heading stands right under this row. Only ever true on a separator, which then gives up the
+       room under its line: a rule that closes a group and the heading that opens the next are one
+       thing, and the space between them should say so. */
+    headingBelow: boolean;
 }
 
 export interface SidebarNodeRow {
@@ -139,7 +143,8 @@ export const buildSidebar = ({ project, expandedIds }: SidebarInput): SidebarSec
             expandable,
             expanded,
             status: view.self ? view.self.status : heaviestStatus(view.nodes),
-            draft: view.self?.draft ?? false
+            draft: view.self?.draft ?? false,
+            headingBelow: view.kind === 'separator' && project.views[index + 1]?.kind === 'subheader'
         });
         if (!expanded) {
             continue;

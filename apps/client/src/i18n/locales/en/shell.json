@@ -10,7 +10,8 @@
         "duplicate": "Duplicate",
         "usage": "Usage",
         "openInAnotherCell": ", open in another cell",
-        "shared": "Shared with your team"
+        "shared": "Shared with your team",
+        "doubleClick": "dbl-click"
     },
     "panel": {
         "fallback": "Panel",
@@ -190,7 +191,8 @@
         "terminal": "Terminal",
         "browser": "Browser",
         "file": "File",
-        "separator": "Separator"
+        "separator": "Separator",
+        "subheader": "Subheader"
     },
     "viewMenu": {
         "filePick": "File...",
@@ -464,6 +466,7 @@
             "newFileView": "New file view",
             "newTerminalView": "New terminal view",
             "newSeparator": "New separator",
+            "newSubheader": "New subheader",
             "newTerminal": "New terminal",
             "newChat": "New chat",
             "newBrowser": "New browser",

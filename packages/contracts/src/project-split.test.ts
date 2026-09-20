@@ -19,6 +19,8 @@ const chatView = (id: string, extra: Record<string, unknown> = {}): ProjectView 
 
 const separator = (id: string): ProjectView => ({ kind: 'separator', id, name: id });
 
+const subheader = (id: string): ProjectView => ({ kind: 'subheader', id, name: id });
+
 const content = (views: ProjectView[]): ProjectContent => ({ name: 'repo', color: '#7c74ff', views });
 
 const fallback = { name: 'repo', color: '#7c74ff' };
@@ -76,8 +78,25 @@ describe('splitContent', () => {
         expect(split.private.views.map((view) => view.id)).toEqual(['a', 's2', 'mine']);
 
         // Nobody shares a separator itself, whatever the list says.
-        expect(viewShareRefusal(separator('s1'))).toBe('separator-follows-its-group');
+        expect(viewShareRefusal(separator('s1'))).toBe('follows-its-group');
         expect(splitContent(content(views), ['s1'], 1).shared.views).toEqual([]);
+    });
+
+    test('a subheader follows the same rule as a separator, and a line above a heading takes both along', () => {
+        const views = [separator('s1'), subheader('h1'), canvas('a'), subheader('h2'), canvas('mine')];
+        const split = splitContent(content(views), ['a'], 1);
+        expect(split.shared.views.map((view) => view.id)).toEqual(['s1', 'h1', 'a']);
+        expect(split.private.views.map((view) => view.id)).toEqual(['h2', 'mine']);
+
+        expect(viewShareRefusal(subheader('h1'))).toBe('follows-its-group');
+        expect(splitContent(content(views), ['h1'], 1).shared.views).toEqual([]);
+    });
+
+    test('only the last heading before a shared view travels, so a colleague never reads two in a row', () => {
+        const views = [subheader('h1'), subheader('h2'), canvas('a')];
+        const split = splitContent(content(views), ['a'], 1);
+        expect(split.shared.views.map((view) => view.id)).toEqual(['h2', 'a']);
+        expect(split.private.views.map((view) => view.id)).toEqual(['h1']);
     });
 
     test('an id in the list that names no view of this project is ignored', () => {

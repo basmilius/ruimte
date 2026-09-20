@@ -122,6 +122,8 @@ export interface DocumentState {
     addCanvasView(name: string): string;
     /* A line in the sidebar with nothing behind it, to group the views around it. */
     addSeparatorView(): string;
+    /* A heading over the rows under it, with nothing behind it either. */
+    addSubheaderView(name: string): string;
     /* A sketch of its own. Its elements live in a file of their own, which the daemon keeps. */
     addDrawingView(name: string): string;
     addDiagramView(name: string): string;
@@ -313,7 +315,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             }
         };
 
-        /* A new view goes last in the list; everything but a separator opens on the spot. */
+        /* A new view goes last in the list; everything but a divider opens on the spot. */
         const addView = (view: ProjectView, opens: boolean): string => {
             set((state) => ({ views: withView(state.exportViews(), view), edits: state.edits + 1 }));
             if (opens) {
@@ -511,6 +513,11 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             addSeparatorView() {
                 // A line in the list, not a place to go, so nothing opens on it.
                 return addView({ kind: 'separator', id: nextId('separator') }, false);
+            },
+
+            addSubheaderView(name) {
+                // A heading over the rows under it, which is a row that divides the list, not a place to go.
+                return addView({ kind: 'subheader', id: nextId('subheader'), name }, false);
             },
 
             addDrawingView(name) {
