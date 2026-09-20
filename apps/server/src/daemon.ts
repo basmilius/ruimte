@@ -222,6 +222,11 @@ export const startDaemon = async (config: ServerConfig): Promise<void> => {
         binDir,
         depthOf: (chatId) => lineage.depthOf(chatId),
         contextSources: (chatId) => context.list(chatId),
+        standalone: (chatId) => projects.index.locate(chatId)?.canvasId === null,
+        openingSelection: (chatId, provider) => {
+            const entry = outbox.list().find((entry) => entry.kind === 'start-agent' && entry.target === chatId);
+            return entry?.kind === 'start-agent' && entry.payload.provider === provider ? entry.payload.selection : undefined;
+        },
         messages: messagesFor,
         unshownMessages: unshownFor,
         firstPrompt: (chatId) => prompts.take(chatId),

@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
 import { RecordDirectory } from '../record-directory.ts';
-import { AgentKindSchema, RuntimeModeSchema } from '@ruimte/contracts';
+import { AgentKindSchema, ModelSelectionSchema, RuntimeModeSchema } from '@ruimte/contracts';
 import { z } from 'zod';
 
 const StartAgentSchema = z.object({
@@ -9,6 +9,7 @@ const StartAgentSchema = z.object({
     payload: z.object({
         node: z.enum(['chat', 'terminal']),
         provider: AgentKindSchema,
+        selection: ModelSelectionSchema.optional(),
         // Null starts where a session without a directory starts, which is the machine's home.
         cwd: z.string().nullable(),
         // The mode `--mode` asked for, the mode of the chat that opened a chat, or the mode a terminal was written down with.

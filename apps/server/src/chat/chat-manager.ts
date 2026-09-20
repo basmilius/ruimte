@@ -77,6 +77,9 @@ interface ChatManagerOptions {
     contextUrl?: string;
     // How deep a chat sits in a chain of agents; an unknown chat is one a person opened.
     depthOf?: (chatId: string) => number;
+    standalone?: (chatId: string) => boolean;
+    // A client may create an agent chat before the outbox starts it; the explicit model still wins.
+    openingSelection?: (chatId: string, provider: AgentKind) => ModelSelection | undefined;
     // The sources themselves, so a chat can name them to its agent and tell it what came and went between turns.
     contextSources?: (chatId: string) => ContextSource[];
     // What another node left for this chat, taken once and put in front of the next prompt.
@@ -147,6 +150,8 @@ export class ChatManager {
     private readonly activity = new Map<string, number>();
     private readonly contextUrl: string | null;
     private readonly depthOf: (chatId: string) => number;
+    private readonly standalone: (chatId: string) => boolean;
+    private readonly openingSelection: NonNullable<ChatManagerOptions['openingSelection']>;
     private readonly contextSources: (chatId: string) => ContextSource[];
     private readonly messages: (chatId: string) => string[];
     private readonly unshownMessages: (chatId: string) => Promise<string[]>;
@@ -178,6 +183,8 @@ export class ChatManager {
         this.onLimits = options.onLimits ?? null;
         this.contextUrl = options.contextUrl ?? null;
         this.depthOf = options.depthOf ?? (() => 0);
+        this.openingSelection = options.openingSelection ?? (() => undefined);
+        this.standalone = options.standalone ?? (() => false);
         this.contextSources = options.contextSources ?? (() => []);
         this.messages = options.messages ?? (() => []);
         this.unshownMessages = options.unshownMessages ?? (() => Promise.resolve([]));
@@ -316,7 +323,7 @@ export class ChatManager {
         const kind = stored?.info.provider ?? payload.provider ?? 'claude';
         const provider = this.providers.get(kind);
         const catalog = provider.catalog;
-        const selection = catalog.normalize(stored?.info.selection ?? payload.selection);
+        const selection = catalog.normalize(stored?.info.selection ?? this.openingSelection(payload.chatId, kind) ?? payload.selection);
         const info: ChatInfo = stored?.info
             ? stored.info
             : {
@@ -349,6 +356,7 @@ export class ChatManager {
             ...(this.spawn ? { spawn: this.spawn } : {}),
             env: this.contextUrl ? { ...this.env, RUIMTE_CONTEXT_URL: this.contextUrl, RUIMTE_CONTEXT_TOKEN: token } : this.env,
             depth: () => this.depthOf(payload.chatId),
+            standalone: () => this.standalone(payload.chatId),
             contextSources: () => this.contextSources(payload.chatId),
             messages: () => this.messages(payload.chatId),
             ...(this.checkpoints ? { checkpoints: this.checkpoints } : {}),

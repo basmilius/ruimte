@@ -1,6 +1,7 @@
 import { AgentKindSchema, NODE_SIZE, type AgentKind, type ProjectCanvasView, type ProjectEdge, type ProjectNode, type RuntimeMode } from '@ruimte/contracts';
 import { z } from 'zod';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
+import { modelFlag, modelLines, selectionForOpening } from './model.ts';
 import { DEFAULT_RUNTIME_MODE } from '../providers/launch.ts';
 import { providerFor } from '../providers/registry.ts';
 import { DEPTH_LIMIT_LINES, depthForOpening } from './depth.ts';
@@ -53,6 +54,8 @@ const AGENT_DETAIL: readonly string[] = [
     'flag\t--group G\toptional\tPuts the node inside group node G of that canvas; not together with --beside',
     `flag\t--title T\toptional\tThe title, at most ${MAX_TITLE_LENGTH} characters; without one the node is called after the CLI, and the session may rename it`,
     `flag\t--task T\toptional\tGives the new agent a task titled T, which the prompt describes and whose result wakes you; needs a prompt of at most ${MAX_TASK_PROMPT_LENGTH} characters, and the title of the node is T unless --title says otherwise`,
+    "flag\t--model M\toptional\tThe model id for a chat agent, with that model's default options; omitted uses the composer preference. Refused for terminals and unknown models",
+    ...chatKinds().flatMap(modelLines),
     'flag\t--mode M\toptional\tThe permission mode the agent runs in: supervised, auto-accept-edits, auto or full-access, never wider than your own',
     'flag\t--worktree\tno value\tStarts the agent in a git worktree of its own on a new branch; not together with --cwd',
     'flag\t--branch B\toptional\tWith --worktree: the branch to use instead of one named after the task or the title; an existing branch is checked out as it is',
@@ -147,7 +150,7 @@ const promptOf = async (flags: { prompt?: string; 'prompt-file'?: string }, call
 
 export const agentVerb = defineVerb({
     name: 'agent',
-    usage: `<${AGENT_KINDS.join('|')}> [--terminal] [--prompt T | --prompt-file F] [--cwd P] [--reads A,B] [--view V] [--beside N] [--group G] [--title T] [--task T] [--mode M] [--worktree [--branch B]] [--dry-run]`,
+    usage: `<${AGENT_KINDS.join('|')}> [--terminal] [--prompt T | --prompt-file F] [--cwd P] [--reads A,B] [--view V] [--beside N] [--group G] [--title T] [--task T] [--model M] [--mode M] [--worktree [--branch B]] [--dry-run]`,
     summary: 'Opens an agent node that starts working, with an edge from you into it when you are a node on that canvas, so it can read what you have',
     detail: AGENT_DETAIL,
     dryRun: true,
@@ -166,6 +169,7 @@ export const agentVerb = defineVerb({
         title: titleField('--title', '--title needs a title').optional(),
         task: titleField('--task', '--task needs the title of the task').optional(),
         mode: modeFlag,
+        model: modelFlag,
         branch: z.string().min(1, '--branch needs the name of a branch').optional()
     }),
     async run({ positionals: [kind], flags, switches, dryRun }, call) {
@@ -173,6 +177,7 @@ export const agentVerb = defineVerb({
         const depth = depthForOpening(call, 'agent', 1);
         const ceiling = modeForOpening(call, flags.mode);
         const chat = !switches.has('terminal') && providerFor(kind).capabilities.chat;
+        const selection = selectionForOpening(kind, chat, flags.model);
         const inWorktree = switches.has('worktree');
         if (flags.branch !== undefined && !inWorktree) {
             throw new VerbRefusal('branch-needs-worktree', '--branch names the branch of a worktree; add --worktree');
@@ -308,6 +313,7 @@ export const agentVerb = defineVerb({
                             openedBy: call.caller,
                             node: chat ? 'chat' : 'terminal',
                             provider: kind,
+                            ...(selection ? { selection } : {}),
                             cwd: cwd ?? place.folder,
                             ...(runtimeMode === undefined ? {} : { runtimeMode })
                         });

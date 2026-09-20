@@ -6,6 +6,7 @@ import {
     type ProjectCanvasView,
     type ProjectContent,
     type RuntimeMode,
+    type ModelSelection,
     type Task,
     type Worktree,
     type WorktreeMergePayload,
@@ -113,6 +114,7 @@ export interface AgentStart {
     cwd: string | null;
     /* The mode `--mode` asked for, and for a terminal the mode it was written down with; absent leaves a chat to the daemon. */
     runtimeMode?: RuntimeMode;
+    selection?: ModelSelection;
 }
 
 export interface VerbCall {

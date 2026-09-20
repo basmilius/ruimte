@@ -1133,6 +1133,41 @@ describe('node new', () => {
     });
 });
 
+describe('agent model selection', () => {
+    test('a model alias selects that model for a chat, including its defaults', async () => {
+        const result = await post('agent', ['codex', '--model', 'sol', '--prompt', 'implement']);
+        expect(result.status).toBe(200);
+        expect(started[0]?.selection).toEqual({ model: 'gpt-5.6-sol', options: { effort: 'low', serviceTier: false } });
+    });
+
+    test('unknown and terminal models refuse before creating nodes, also in a dry run', async () => {
+        const before = await onDisk();
+        for (const tail of [[], ['--dry-run']]) {
+            const unknown = await post('agent', ['codex', '--model', 'missing', ...tail]);
+            expect(unknown.lines[0]).toStartWith('refused\tunknown-model\t');
+            expect(unknown.lines.some((line) => line.includes('gpt-5.6-sol'))).toBe(true);
+            const terminal = await post('agent', ['codex', '--terminal', '--model', 'sol', ...tail]);
+            expect(terminal.lines[0]).toStartWith('refused\tmodel-needs-chat\t');
+        }
+        expect((await onDisk()).rev).toBe(before.rev);
+        expect(started).toEqual([]);
+    });
+
+    test('each team role can choose a model and an invalid role creates nothing', async () => {
+        const roles = [
+            { title: 'Builder', prompt: 'build', provider: 'codex', model: 'sol' },
+            { title: 'Reviewer', prompt: 'review', provider: 'codex', model: 'astra' }
+        ];
+        const before = await onDisk();
+        const invalid = await post('team', ['--label', 'Team', '--roles', JSON.stringify([...roles, { ...roles[0], model: 'missing' }])]);
+        expect(invalid.lines[0]).toStartWith('refused\tunknown-model\trole 2 (model):');
+        expect((await onDisk()).rev).toBe(before.rev);
+        expect(started).toEqual([]);
+        expect((await post('team', ['--label', 'Team', '--roles', JSON.stringify(roles)])).status).toBe(200);
+        expect(started.map((start) => start.selection?.model)).toEqual(['gpt-5.6-sol', 'gpt-6-astra']);
+    });
+});
+
 describe('agent', () => {
     test('--terminal opens a terminal agent with an edge from the caller into it, and holds the prompt', async () => {
         const { status, lines } = await post('agent', ['claude', '--terminal', '--prompt', 'say hello']);

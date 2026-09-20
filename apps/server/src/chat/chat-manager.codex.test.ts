@@ -406,6 +406,28 @@ describe('ChatManager with Codex', () => {
         expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: second (medium)']);
     });
 
+    test('a client opening an agent before its outbox start keeps the requested model', async () => {
+        await retire(manager);
+        manager = makeManager({ openingSelection: () => ({ model: 'gpt-5.6-sol', options: {} }) });
+        const info = await manager.create({ chatId: 'chat-model', provider: 'codex', cwd: home, selection: { model: 'gpt-6-astra', options: {} } });
+        expect(info.selection.model).toBe('gpt-5.6-sol');
+        await manager.configure({ chatId: 'chat-model', selection: { model: 'gpt-5.6-luna', options: {} } });
+        await retire(manager);
+        manager = makeManager({ openingSelection: () => ({ model: 'gpt-5.6-sol', options: {} }) });
+        const restored = await manager.create({ chatId: 'chat-model', provider: 'codex', cwd: home });
+        expect(restored.selection.model).toBe('gpt-5.6-luna');
+    });
+
+    test('a standalone chat passes its location to Codex developer instructions', async () => {
+        await retire(manager);
+        manager = makeManager({ standalone: (id) => id === 'chat-view' });
+        manager.subscribe('c1', recorder.sink());
+        await open('chat-view');
+        await manager.send('chat-view', 'note?');
+        await recorder.until(idle);
+        expect(recorder.ofKind('assistant')[0]?.text).toBe(verbsNote({ depth: 0, standalone: true }));
+    });
+
     test('a thread starts with the note about the verbs as developer instructions, and no prompt carries it', async () => {
         await retire(manager);
         manager = makeManager({ depthOf: () => 1 });

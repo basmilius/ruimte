@@ -32,6 +32,7 @@ export const startAgentWork = (start: AgentStart, deps: NodeModeDeps): OutboxWor
         payload: {
             node: start.node,
             provider: start.provider,
+            ...(start.selection ? { selection: start.selection } : {}),
             cwd: start.cwd,
             ...(runtimeMode ? { runtimeMode } : {}),
             ceiling: nodeMode(deps)(start.openedBy)
@@ -77,7 +78,7 @@ export interface StartAgentDeps {
 export const startAgentHandler =
     (deps: StartAgentDeps) =>
     async (entry: StartAgentEntry): Promise<void> => {
-        const { node, provider, cwd, runtimeMode, ceiling } = entry.payload;
+        const { node, provider, cwd, runtimeMode, ceiling, selection } = entry.payload;
         const nodeId = entry.target;
         const log = deps.log ?? ((line: string) => console.error(line));
         if (!deps.placed(nodeId)) {
@@ -90,13 +91,14 @@ export const startAgentHandler =
                 }
                 // The mode of the chat that opened it beats the person's pick, which fills in the rest; neither is wider than the opener.
                 const preference = deps.composerPreference(provider);
+                const modelSelection = selection ?? preference.selection;
                 const picked = runtimeMode ?? preference.runtimeMode;
                 const mode = ceiling === undefined ? picked : narrowerMode(picked ?? DEFAULT_RUNTIME_MODE, ceiling);
                 await deps.createChat({
                     chatId: nodeId,
                     provider,
                     ...(cwd === null ? {} : { cwd }),
-                    ...(preference.selection ? { selection: preference.selection } : {}),
+                    ...(modelSelection ? { selection: modelSelection } : {}),
                     ...(mode === undefined ? {} : { runtimeMode: mode })
                 });
             } else {

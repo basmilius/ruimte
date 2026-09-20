@@ -442,6 +442,31 @@ describe('the start of one agent node', () => {
         expect(nodeMode({ chatMode: () => undefined, launch: () => null, reportedMode: () => 'full-access' })('x')).toBe('full-access');
     });
 
+    test('an explicit model survives the durable outbox and overrides the composer preference', async () => {
+        const selection = { model: 'gpt-5.6-sol', options: { effort: 'low', serviceTier: false } };
+        const work = startAgentWork(
+            {
+                projectId,
+                nodeId: 'chat-1',
+                openedBy: 'lead',
+                node: 'chat',
+                provider: 'codex',
+                cwd: '/work',
+                selection
+            },
+            { chatMode: () => 'supervised', launch: () => null, reportedMode: () => null }
+        );
+        const outbox = new OutboxStore(home);
+        await outbox.load();
+        const saved = await outbox.put(projectId, 'chat-1', work, 1);
+        const loaded = new OutboxStore(home);
+        await loaded.load();
+        const { calls, deps } = fakeDeps({ composerPreference: () => ({ selection: { model: 'gpt-6-astra', options: {} } }) });
+        await startAgentHandler(deps)(loaded.list().find((entry) => entry.id === saved.id) as StartAgentEntry);
+        expect(calls[0]).toContain(JSON.stringify(selection));
+        expect(calls[0]).not.toContain('gpt-6-astra');
+    });
+
     test('a chat takes the model and mode of the composer preference, and the mode of the chat that opened it beats it', async () => {
         const opus = { model: 'claude-opus-5', options: { effort: 'high' } };
         const { calls, deps } = fakeDeps({ composerPreference: () => ({ runtimeMode: 'auto', selection: opus }) });

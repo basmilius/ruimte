@@ -310,6 +310,17 @@ describe('ChatManager', () => {
         expect(recorder.ofKind('compaction')[0]).toMatchObject({ preTokens: 5000 });
     });
 
+    test('a standalone chat passes its location to the Claude system prompt', async () => {
+        await retire(manager);
+        manager = makeManager({ standalone: (id) => id === 'chat-view' });
+        manager.subscribe('c1', recorder.sink());
+        await manager.create({ chatId: 'chat-view', cwd: home });
+        manager.attach('chat-view', 'c1');
+        await manager.send('chat-view', 'system?');
+        await recorder.until(idle);
+        expect(recorder.ofKind('assistant')[0]?.text).toBe(verbsNote({ depth: 0, standalone: true }));
+    });
+
     test('the system prompt names the verbs always and the linked sources by name when there are some', async () => {
         await manager.create({ chatId: 'chat-sys', cwd: home });
         manager.attach('chat-sys', 'c1');

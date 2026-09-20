@@ -79,6 +79,19 @@ describe('contextPrompt', () => {
     });
 });
 
+test('a standalone chat delegates inside the chat and only opens canvas agents when requested', () => {
+    for (const depth of [0, 1, 2]) {
+        const note = chatPrompt({ sources: [device], depth, standalone: true });
+        expect(note).toContain('standalone AI-chat view, not a node on a canvas');
+        expect(note).toContain("Use your CLI's own subagents");
+        expect(note).toContain('Preserve any model choice');
+        expect(note).toContain('when the person asks for canvas agents');
+        expect(note).toContain('--view');
+        expect(note).not.toContain('never a subagent of your own');
+        expect(note).toContain('"iPhone 18 Pro Max" (device)');
+    }
+});
+
 describe('chatPrompt', () => {
     test('always names the verbs for its depth, and the links by name only when there are some', () => {
         expect(chatPrompt({ sources: [], depth: 0 })).toBe(VERBS_NOTE);

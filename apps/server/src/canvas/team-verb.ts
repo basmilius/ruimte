@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { NODE_SIZE, type AgentKind, type ProjectEdge, type ProjectNode } from '@ruimte/contracts';
 import { z } from 'zod';
 import { MAX_PROMPT_LENGTH } from '../agents/pending-prompts.ts';
+import { modelFlag, modelLines, selectionForOpening } from './model.ts';
 import { providerFor } from '../providers/registry.ts';
 import { AGENT_KINDS, agentNode, chatKinds, nameOf, terminalMode } from './agent-verb.ts';
 import { DEPTH_LIMIT_LINES, MAX_OPENED_PER_CALLER, MAX_TEAM_DEPTH, depthForOpening } from './depth.ts';
@@ -42,6 +43,7 @@ const RoleSchema = z.strictObject({
             error: (issue) => `prompt is ${lengthOf(issue.input)} characters and at most ${MAX_PROMPT_LENGTH} fit on the line a CLI is started with`
         }),
     provider: z.enum(AGENT_KINDS, { error: `provider needs a CLI: ${AGENT_KINDS.join(', ')}` }),
+    model: modelFlag,
     terminal: z.boolean({ error: 'terminal is true or false' }).optional()
 });
 
@@ -61,6 +63,8 @@ const ROLES_LINES: readonly string[] = [
     `roles\tprompt\trequired\tWhat that agent starts working on, at most ${MAX_PROMPT_LENGTH} characters`,
     `roles\tprovider\trequired\t${AGENT_KINDS.join(', ')}`,
     `roles\tterminal\toptional\ttrue opens a terminal node instead of a chat node; a CLI without a chat backend is a terminal anyway (only ${chatKinds().join(', ')} have one)`,
+    "roles\tmodel\toptional\tThe model id for a chat role, with that model's default options; omitted uses the composer preference. Refused for terminals and unknown models",
+    ...chatKinds().flatMap(modelLines),
     `roles\tcount\tbetween 1 and ${MAX_ROLES}`
 ];
 
@@ -154,6 +158,16 @@ export const teamVerb = defineVerb({
     async run({ flags, switches, dryRun }, call) {
         const place = placeOf(call);
         const roles = parseRoles(flags.roles);
+        const selections = roles.map((role, index) => {
+            try {
+                return selectionForOpening(role.provider, kindOf(role) === 'chat', role.model);
+            } catch (e) {
+                if (e instanceof VerbRefusal) {
+                    throw new VerbRefusal(e.code, `role ${index} (model): ${e.message}`, e.lines);
+                }
+                throw e;
+            }
+        });
         const tasked = switches.has('task');
         const long = tasked ? roles.findIndex((role) => role.prompt.length > MAX_TASK_PROMPT_LENGTH) : -1;
         if (long !== -1) {
@@ -331,6 +345,7 @@ export const teamVerb = defineVerb({
                                 openedBy: call.caller,
                                 node: chat ? 'chat' : 'terminal',
                                 provider,
+                                ...(selections[index] ? { selection: selections[index] } : {}),
                                 cwd: roleCwds[index] ?? place.folder,
                                 ...(modes[index] === undefined ? {} : { runtimeMode: modes[index] })
                             });

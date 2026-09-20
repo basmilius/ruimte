@@ -24,6 +24,7 @@ export interface BackendLaunch {
     context: ContextSource[];
     // How deep in a chain of agents this chat sits, which decides what the note about the verbs offers it.
     depth: number;
+    standalone?: boolean;
     // How the CLI is started; a test runs a fake in the same process, everything else spawns it.
     spawn?: SpawnChatProcess;
 }
