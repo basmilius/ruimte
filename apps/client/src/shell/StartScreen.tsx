@@ -3,17 +3,16 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { isRecentProject } from '@ruimte/contracts';
-import { Copy, ExternalLink, FolderOpen, LogIn, MonitorSmartphone, Plus, RotateCw } from 'lucide-react';
+import { Copy, ExternalLink, FolderOpen, LogIn, MonitorSmartphone, RotateCw } from 'lucide-react';
 import { isDesktop } from '@/desktop/bridge';
 import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { openableRows, recentProjects, type ProjectMenuRow } from '@/project/list';
-import { createProjectOn, openProject } from '@/project/open';
+import { openProject } from '@/project/open';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { usePulsarAccount } from '@/pulsar/account';
 import { usePulsarMachines } from '@/pulsar/machines';
 import { LinkMachineDialog } from '@/shell/LinkMachineDialog';
-import { ProjectNameDialog } from '@/shell/ProjectNameDialog';
 import { linkDot, linkHint, machineLink } from '@/shell/palette-browse';
 import { SignInButtons } from '@/shell/SignInButtons';
 import { STRIP_PADDING_PX } from '@/shell/Sidebar';
@@ -26,7 +25,7 @@ import { stationBoot } from '@/station';
 import { useEndpoints } from '@/state/endpoints';
 import { fileManagerName, useServers } from '@/state/server';
 import { transportFor } from '@/transport';
-import { hasLocalMachine, isRealMachine } from '@/state/local-machine';
+import { hasLocalMachine } from '@/state/local-machine';
 import { useProjectList } from '@/state/project-list';
 import { canShowReleaseNotes, openReleaseNotes } from '@/state/release-notes';
 import { useUi } from '@/state/ui';
@@ -208,13 +207,12 @@ function Footer() {
 function StartContent() {
     const { t } = useTranslation('shell');
     const endpoints = useEndpoints((s) => s.endpoints);
-    const activeId = useEndpoints((s) => s.activeId);
     const rows = useProjectList((s) => s.projects);
     const connected = useOpenEndpoints();
     const accountStatus = usePulsarAccount((s) => s.status);
     const accountMachines = usePulsarMachines((s) => s.machines);
     const failure = useWindow((s) => s.bootFailure);
-    const [dialog, setDialog] = useState<'new' | 'add' | 'link' | null>(null);
+    const [dialog, setDialog] = useState<'add' | 'link' | null>(null);
 
     const station = !hasLocalMachine();
     const boot = stationBoot({ station, accountStatus, machines: accountMachines });
@@ -230,7 +228,6 @@ function StartContent() {
 
     // The web client waits for the account: without it there is no machine to open anything on.
     const waiting = boot !== null && boot !== 'machines';
-    const newOn = isRealMachine(activeId) ? activeId : null;
     // On the desktop signing in is one way in among the others, offered only while it can be done.
     const offerSignIn = boot === null && accountStatus === 'signed-out';
     // A fresh desktop install: nothing to go back to and only this machine, so there is one thing to do.
@@ -270,14 +267,7 @@ function StartContent() {
                         onClick={openFolder}
                     />
                     <p className="px-1 pb-2 text-center text-xs text-text-muted">{t('start.projectIsAFolder')}</p>
-                    <div className="grid grid-cols-2 gap-2">
-                        <Tile
-                            icon={<Icon icon={Plus} size={16} />}
-                            title={t('projectMenu.newProject')}
-                            description={t('start.withoutFolder')}
-                            disabled={newOn === null}
-                            onClick={() => setDialog('new')}
-                        />
+                    <div className="grid gap-2">
                         <Tile
                             icon={<Icon icon={MonitorSmartphone} size={16} />}
                             title={t('start.connectMachine')}
@@ -311,13 +301,6 @@ function StartContent() {
                                     onClick={openFolder}
                                 />
                                 <Tile
-                                    icon={<Icon icon={Plus} size={16} />}
-                                    title={t('projectMenu.newProject')}
-                                    description={newOn === null ? t('start.openMachineFirst') : t('start.withoutFolder')}
-                                    disabled={waiting || newOn === null}
-                                    onClick={() => setDialog('new')}
-                                />
-                                <Tile
                                     icon={<Icon icon={MonitorSmartphone} size={16} />}
                                     title={t('start.connectMachine')}
                                     description={t('start.withPairingLink')}
@@ -344,19 +327,6 @@ function StartContent() {
                 </div>
             )}
 
-            <ProjectNameDialog
-                open={dialog === 'new'}
-                onOpenChange={(open) => setDialog(open ? 'new' : null)}
-                title={t('projectMenu.newProject')}
-                description={t('projectMenu.newProjectDescription')}
-                action={t('projectMenu.create')}
-                fallback={t('projectMenu.untitled')}
-                onSubmit={async (name) => {
-                    if (newOn !== null) {
-                        await createProjectOn(newOn, name);
-                    }
-                }}
-            />
             <AddMachineDialog
                 nested={false}
                 open={dialog === 'add'}

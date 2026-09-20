@@ -19,7 +19,7 @@ const summary = (projectId: string, available = true, closedAt: number | null = 
     available,
     closedAt,
     lastOpenedAt: 0,
-    folder: null,
+    folder: '/repo',
     color: '#123456',
     nameSource: 'chosen',
     icon: { kind: 'initial', value: 'P' }

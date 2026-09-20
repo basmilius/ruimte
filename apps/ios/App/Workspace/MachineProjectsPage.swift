@@ -8,7 +8,7 @@ struct MachineProjectsPage: View {
     @State private var projects: [JSONValue] = []
     @State private var search = ""
     @State private var work = RemotePageState()
-    @State private var newProject = false
+    @State private var openingFolder = false
     @State private var projectName = ""
     @State private var folder = ""
     @Environment(\.openMobileWorkspace) private var openWorkspace
@@ -55,7 +55,7 @@ struct MachineProjectsPage: View {
                 } else if session.connected && projects.isEmpty {
                     ContentUnavailableView(
                         "No projects yet", lucideIcon: "folder",
-                        description: Text("Open a folder on this machine or create a new workspace."))
+                        description: Text("Open a folder on this machine."))
                 }
             }
             if let problem = work.problem {
@@ -101,7 +101,7 @@ struct MachineProjectsPage: View {
         .searchable(text: $search, prompt: "Find a project")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("New project", lucideIcon: "plus") { newProject = true }.disabled(!session.connected)
+                Button("Open folder", lucideIcon: "folder-open") { openingFolder = true }.disabled(!session.connected)
             }
         }
         .task {
@@ -119,19 +119,19 @@ struct MachineProjectsPage: View {
             unsubscribe?()
             unsubscribe = nil
         }
-        .mobileSheet(isPresented: $newProject) {
+        .mobileSheet(isPresented: $openingFolder) {
             NavigationStack {
                 MobileForm {
                     TextField("Name", text: $projectName)
-                    TextField("Folder on this machine (optional)", text: $folder).textInputAutocapitalization(.never)
+                    TextField("Folder on this machine", text: $folder).textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                     Toggle("Create folder if missing", isOn: $createFolder)
                     if let problem = work.problem { Text(problem).foregroundStyle(.red) }
                 }.navigationTitle("Open project")
                     .toolbar {
-                        ToolbarItem(placement: .cancellationAction) { Button("Cancel") { newProject = false } }
+                        ToolbarItem(placement: .cancellationAction) { Button("Cancel") { openingFolder = false } }
                         ToolbarItem(placement: .confirmationAction) {
-                            Button("Open") { Task { await create() } }.disabled(work.busy)
+                            Button("Open") { Task { await openFolder() } }.disabled(work.busy || folder.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         }
                     }
             }.presentationDetents([.medium, .large])
@@ -155,14 +155,12 @@ struct MachineProjectsPage: View {
             if let data = try? JSONValue.array(projects).encoded() { UserDefaults.standard.set(data, forKey: cacheKey) }
         }
     }
-    private func create() async {
-        var payload: [String: JSONValue] = [:]
+    private func openFolder() async {
+        let path = folder.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !path.isEmpty else { return }
+        var payload: [String: JSONValue] = ["folder": .string(path), "createFolder": .bool(createFolder)]
         if !projectName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             payload["name"] = .string(projectName)
-        }
-        if !folder.isEmpty {
-            payload["folder"] = .string(folder)
-            payload["createFolder"] = .bool(createFolder)
         }
         await work.perform {
             let result = try await session.rpc.request("project.open", payload: .object(payload))
@@ -171,7 +169,7 @@ struct MachineProjectsPage: View {
                 await session.releaseProject(id)
                 openWorkspace(MobileWorkspace(session: session, projectID: id))
             }
-            newProject = false
+            openingFolder = false
         }
     }
 }

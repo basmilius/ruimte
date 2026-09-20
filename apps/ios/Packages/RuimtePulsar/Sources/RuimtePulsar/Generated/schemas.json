@@ -15774,10 +15774,8 @@
                   "type": "string"
                 },
                 "folder": {
-                  "type": [
-                    "string",
-                    "null"
-                  ]
+                  "type": "string",
+                  "minLength": 1
                 },
                 "lastOpenedAt": {
                   "type": "number"
@@ -16258,10 +16256,8 @@
               "type": "string"
             },
             "folder": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string",
+              "minLength": 1
             },
             "lastOpenedAt": {
               "type": "number"
@@ -16427,7 +16423,8 @@
         "minLength": 1
       },
       "folder": {
-        "type": "string"
+        "type": "string",
+        "minLength": 1
       },
       "name": {
         "type": "string"
@@ -16458,10 +16455,8 @@
             "type": "string"
           },
           "folder": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string",
+            "minLength": 1
           },
           "lastOpenedAt": {
             "type": "number"
@@ -20728,10 +20723,8 @@
             "type": "string"
           },
           "folder": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string",
+            "minLength": 1
           },
           "lastOpenedAt": {
             "type": "number"
@@ -21007,10 +21000,8 @@
             "type": "string"
           },
           "folder": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string",
+            "minLength": 1
           },
           "lastOpenedAt": {
             "type": "number"
@@ -34827,10 +34818,8 @@
             "type": "string"
           },
           "folder": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string",
+            "minLength": 1
           },
           "lastOpenedAt": {
             "type": "number"

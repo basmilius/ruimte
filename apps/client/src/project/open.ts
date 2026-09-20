@@ -12,11 +12,10 @@ import { useProjectList } from '@/state/project-list';
 import { useWindow, windowWorkspace } from '@/state/window';
 import { enterWorkspace, leaveWorkspace, machineFor, showStart, type OpenRequest } from '@/transport/connections';
 
-/* Where the window is going: a project, a folder, or a new project without a folder. */
+/* Where the window is going. */
 export type SwitchPlan =
     | { kind: 'project'; endpointId: string; projectId: string }
-    | { kind: 'folder'; endpointId: string; folder: string; createFolder: boolean }
-    | { kind: 'new'; endpointId: string; name: string };
+    | { kind: 'folder'; endpointId: string; folder: string; createFolder: boolean };
 
 /* The project the window had open when a switch began, which is what going back opens again. */
 export interface Whereabouts {
@@ -51,8 +50,6 @@ const requestOf = (plan: SwitchPlan): OpenRequest => {
             return { projectId: plan.projectId };
         case 'folder':
             return { folder: plan.folder, createFolder: plan.createFolder };
-        case 'new':
-            return { name: plan.name };
     }
 };
 
@@ -119,7 +116,7 @@ const targetOf = (plan: SwitchPlan): SwitchTarget => ({
               null)
             : null,
     folder: plan.kind === 'folder' ? plan.folder : null,
-    name: plan.kind === 'new' ? plan.name : null
+    name: null
 });
 
 /* Every way into a project passes here, so the window can say what it is waiting on. */
@@ -138,9 +135,6 @@ export const openProject = (endpointId: string, projectId: string): Promise<Swit
  */
 export const openFolderOn = (endpointId: string, folder: string, createFolder = false): Promise<SwitchOutcome> =>
     begin({ kind: 'folder', endpointId, folder, createFolder });
-
-/* A project stored in the app rather than in a folder, on one machine. */
-export const createProjectOn = (endpointId: string, name: string): Promise<SwitchOutcome> => begin({ kind: 'new', endpointId, name });
 
 /* Puts the open project away and goes back to the start screen. Its sessions end, and it moves to Recent. */
 export const closeProject = async (): Promise<void> => {

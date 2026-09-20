@@ -1079,29 +1079,6 @@ describe('node new', () => {
         expect(listed.lines).toEqual([listed.lines[0]!, `folder\t${folder}`, `worktree\t${worktree}`]);
     });
 
-    test('a project without a folder refuses --cwd', async () => {
-        const opened = await store.openProject({ name: 'loose' });
-        const loose: ProjectContent = {
-            name: 'loose',
-            color: '#000000',
-            views: [
-                {
-                    kind: 'canvas',
-                    id: 'loose-main',
-                    name: 'Canvas',
-                    nodes: [{ id: 'term-2', kind: 'terminal', title: 't', x: 0, y: 0, w: 10, h: 10 }],
-                    texts: [],
-                    edges: [],
-                    layouts: []
-                }
-            ]
-        };
-        await store.save(opened.summary.projectId, opened.document.rev, loose);
-        TOKENS.loose = 'term-2';
-        expect((await post('node', ['new', 'terminal', '--cwd', '/tmp'], 'loose')).lines[0]).toStartWith('refused\tno-folder\t');
-        expect((await post('node', ['new', 'note'], 'loose')).status).toBe(200);
-    });
-
     test('an id is unique across the whole project', async () => {
         const ids = new Set<string>();
         for (let i = 0; i < 20; i++) {

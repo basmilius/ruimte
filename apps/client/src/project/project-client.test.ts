@@ -33,7 +33,7 @@ const canvasOf = (stores: WorkspaceStores): StoreApi<CanvasState> => {
     return (active === null ? null : stores.canvases.peek(active)) ?? stores.canvases.blank;
 };
 
-const summary = (projectId: string, folder: string | null = null): ProjectSummary => ({
+const summary = (projectId: string, folder: string = '/repo'): ProjectSummary => ({
     projectId,
     name: projectId,
     color: '#000',

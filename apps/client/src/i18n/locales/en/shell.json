@@ -181,7 +181,7 @@
         "description": "Creates a checkout of this branch. Every terminal and chat you add to the group starts in it.",
         "branchLabel": "Branch name",
         "branchPlaceholder": "branch name",
-        "noFolder": "This project is not in a folder, so it has no repository.",
+        "noFolder": "Open a project to create a worktree.",
         "creating": "Creating checkout...",
         "bind": "Bind",
         "failed": "Could not create the worktree"
@@ -279,7 +279,6 @@
         "saveLayout": "Save current layout"
     },
     "projectMenu": {
-        "noFolder": "Not in a folder",
         "folderGone": "That folder is gone",
         "actionsFor": "Actions for {{name}}",
         "openIn": "Open in {{app}}",
@@ -287,10 +286,6 @@
         "closeProject": "Close project",
         "projects": "Projects",
         "recent": "Recent projects",
-        "newProject": "New project",
-        "newProjectDescription": "Stored in the app, not in a folder. To share a project through git, open a folder instead.",
-        "create": "Create",
-        "untitled": "Untitled project",
         "openFolder": "Open folder",
         "closeTitle": "Close {{name}}?"
     },
@@ -301,7 +296,6 @@
         "firstLetter": "The first letter of the name",
         "chooseImage": "Choose image…",
         "useFolderIcon": "Use folder's icon",
-        "noFolderImage": "A project without a folder cannot use an image.",
         "tooLarge": "That image is larger than 256 KB",
         "unreadable": "That file could not be read"
     },
@@ -439,8 +433,6 @@
         "openFolderFirst": "The folder of something you work on",
         "onAMachine": "On a machine",
         "projectIsAFolder": "A project is a folder with a .ruimte/project.json in it, which Ruimte writes the first time the folder opens.",
-        "withoutFolder": "Without a folder",
-        "openMachineFirst": "Open a machine first",
         "connectMachine": "Connect machine",
         "withALink": "With a link",
         "withPairingLink": "With a pairing link",
@@ -537,7 +529,7 @@
         "regex": "Regular expression",
         "results": "Results",
         "noMatch": "Nothing matches",
-        "noProjectFolder": "This project has no folder.",
+        "noProjectFolder": "No project is open.",
         "noFileMatch": "No file in this folder matches",
         "noLineMatch": "No line in this folder matches",
         "typeToSearch": "Type to search every file in this folder.",

@@ -22,14 +22,11 @@ interface InsideRule {
  * on real paths, so neither a symlink inside the folder nor `/tmp` against `/private/tmp` decides it.
  */
 const checkInsideProject = async (
-    folder: string | null,
+    folder: string,
     rule: InsideRule,
     path: string,
     worktreePaths: (folder: string) => Promise<string[]>
 ): Promise<{ resolved: string; real: string }> => {
-    if (folder === null) {
-        throw new VerbRefusal('no-folder', `This project has no folder, so ${rule.flag} has nothing to be inside of`);
-    }
     const resolved = resolve(folder, path);
     const real = await realOrNull(resolved);
     if (real === null) {
@@ -56,7 +53,7 @@ const PROMPT_FILE_RULE: InsideRule = { flag: '--prompt-file', badCode: 'bad-prom
 const RESULT_FILE_RULE: InsideRule = { flag: '--result-file', badCode: 'bad-result-file', outsideCode: 'result-file-outside-project' };
 
 /* Where a shell or an agent may start: a directory inside the project folder or a worktree of it. */
-export const checkCwd = async (folder: string | null, cwd: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> => {
+export const checkCwd = async (folder: string, cwd: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> => {
     const { resolved, real } = await checkInsideProject(folder, CWD_RULE, cwd, worktreePaths);
     if (!(await stat(real)).isDirectory()) {
         throw new VerbRefusal('bad-cwd', `${resolved} is not a folder; --cwd is resolved against the project folder unless it is absolute`);
@@ -64,7 +61,7 @@ export const checkCwd = async (folder: string | null, cwd: string, worktreePaths
     return resolved;
 };
 
-const readInsideFile = async (rule: InsideRule, folder: string | null, path: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> => {
+const readInsideFile = async (rule: InsideRule, folder: string, path: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> => {
     const { resolved, real } = await checkInsideProject(folder, rule, path, worktreePaths);
     if (!(await stat(real)).isFile()) {
         throw new VerbRefusal(rule.badCode, `${resolved} is not a file; ${rule.flag} is resolved against the project folder unless it is absolute`);
@@ -73,22 +70,19 @@ const readInsideFile = async (rule: InsideRule, folder: string | null, path: str
 };
 
 /* The prompt a caller put in a file, under the same folder rule a cwd follows. */
-export const readPromptFile = (folder: string | null, path: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> =>
+export const readPromptFile = (folder: string, path: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> =>
     readInsideFile(PROMPT_FILE_RULE, folder, path, worktreePaths);
 
 /* The result of a task a child put in a file, under the same rule. */
-export const readResultFile = (folder: string | null, path: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> =>
+export const readResultFile = (folder: string, path: string, worktreePaths: (folder: string) => Promise<string[]>): Promise<string> =>
     readInsideFile(RESULT_FILE_RULE, folder, path, worktreePaths);
 
 /*
  * A file a node points at. Unlike a cwd this one may sit outside the project: a person drags a file
  * onto the canvas from anywhere, and the node then keeps the absolute path.
  */
-export const checkPath = async (folder: string | null, path: string): Promise<string> => {
-    if (folder === null && !isAbsolute(path)) {
-        throw new VerbRefusal('bad-path', 'This project has no folder, so --path has to be absolute');
-    }
-    const resolved = folder === null ? path : resolve(folder, path);
+export const checkPath = async (folder: string, path: string): Promise<string> => {
+    const resolved = resolve(folder, path);
     const info = await stat(resolved).catch(() => null);
     if (!info?.isFile()) {
         throw new VerbRefusal('bad-path', `${resolved} is not a file; --path is resolved against the project folder unless it is absolute`);

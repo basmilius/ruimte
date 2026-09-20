@@ -315,7 +315,7 @@
       "discardRestore": "Restore {{stash}} with \"git stash pop\".",
       "discardStashed": "Stashed {{path}}",
       "expandAll": "Expand all folders",
-      "noFolder": "This canvas has no folder.",
+      "noFolder": "No project is open.",
       "statusFailed": "Could not read the status."
     },
     "phase": {

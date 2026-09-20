@@ -6,7 +6,7 @@ const summary: ProjectSummary = {
     projectId: 'project',
     name: 'Project',
     color: '#000',
-    folder: null,
+    folder: '/repo',
     lastOpenedAt: 10,
     closedAt: null,
     available: true,

@@ -4,7 +4,7 @@ import { basenameOf } from '@/shell/panels/files-tree';
 import { worktreeOfPath } from '@/shell/panels/worktree-rows';
 
 export interface GitTarget {
-    /* The checkout every request of the panel acts on; null for a canvas without a folder. */
+    /* The checkout every request of the panel acts on; null when no project is open. */
     cwd: string | null;
     /* What the chip says: the folder's name, or the branch of the worktree. */
     label: string;

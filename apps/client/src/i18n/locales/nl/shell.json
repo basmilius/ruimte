@@ -181,7 +181,7 @@
         "description": "Maakt een checkout van deze branch. Elke terminal en chat die je aan de groep toevoegt, start erin.",
         "branchLabel": "Naam van de branch",
         "branchPlaceholder": "naam van de branch",
-        "noFolder": "Dit project staat niet in een map en heeft dus geen repository.",
+        "noFolder": "Open een project om een worktree aan te maken.",
         "creating": "Checkout maken...",
         "bind": "Koppelen",
         "failed": "Kon de worktree niet maken"
@@ -279,7 +279,6 @@
         "saveLayout": "Huidige indeling opslaan"
     },
     "projectMenu": {
-        "noFolder": "Niet in een map",
         "folderGone": "Die map bestaat niet meer",
         "actionsFor": "Acties voor {{name}}",
         "openIn": "Openen in {{app}}",
@@ -287,10 +286,6 @@
         "closeProject": "Project sluiten",
         "projects": "Projecten",
         "recent": "Recente projecten",
-        "newProject": "Nieuw project",
-        "newProjectDescription": "Wordt in de app bewaard, niet in een map. Open een map als je een project via git wilt delen.",
-        "create": "Maken",
-        "untitled": "Naamloos project",
         "openFolder": "Map openen",
         "closeTitle": "{{name}} sluiten?"
     },
@@ -301,7 +296,6 @@
         "firstLetter": "De eerste letter van de naam",
         "chooseImage": "Afbeelding kiezen…",
         "useFolderIcon": "Het icoon van de map gebruiken",
-        "noFolderImage": "Een project zonder map kan geen afbeelding gebruiken.",
         "tooLarge": "Die afbeelding is groter dan 256 KB",
         "unreadable": "Dat bestand kon niet worden gelezen"
     },
@@ -439,8 +433,6 @@
         "openFolderFirst": "De map van iets waar je aan werkt",
         "onAMachine": "Op een machine",
         "projectIsAFolder": "Een project is een map met een .ruimte/project.json erin, die Ruimte schrijft zodra de map voor het eerst opengaat.",
-        "withoutFolder": "Zonder map",
-        "openMachineFirst": "Open eerst een machine",
         "connectMachine": "Machine verbinden",
         "withALink": "Met een link",
         "withPairingLink": "Met een pairing-link",
@@ -537,7 +529,7 @@
         "regex": "Reguliere expressie",
         "results": "Resultaten",
         "noMatch": "Niets komt overeen",
-        "noProjectFolder": "Dit project heeft geen map.",
+        "noProjectFolder": "Er is geen project geopend.",
         "noFileMatch": "Geen bestand in deze map komt overeen",
         "noLineMatch": "Geen regel in deze map komt overeen",
         "typeToSearch": "Typ om elk bestand in deze map te doorzoeken.",

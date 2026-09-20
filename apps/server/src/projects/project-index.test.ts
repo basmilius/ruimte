@@ -44,8 +44,8 @@ describe('ProjectIndex', () => {
 
     test('a later set replaces what the project said before, and remove forgets it', () => {
         const index = new ProjectIndex();
-        index.set('p1', null, { views: views('first') });
-        index.set('p1', null, { views: views('second') });
+        index.set('p1', '/repo', { views: views('first') });
+        index.set('p1', '/repo', { views: views('second') });
         expect(index.sourcesFor('agent')[0]).toMatchObject({ text: 'second' });
         index.remove('p1');
         expect(index.sourcesFor('agent')).toEqual([]);
@@ -55,10 +55,10 @@ describe('ProjectIndex', () => {
     test('locates a node on its canvas and a session view as a place of its own', () => {
         const index = new ProjectIndex();
         index.set('p1', '/repo', { views: views('x') });
-        index.set('p2', null, { views: [{ kind: 'terminal', id: 'other-shell', name: 'Shell', node: {} }] });
+        index.set('p2', '/other', { views: [{ kind: 'terminal', id: 'other-shell', name: 'Shell', node: {} }] });
         expect(index.locate('agent')).toEqual({ projectId: 'p1', folder: '/repo', canvasId: 'main' });
         expect(index.locate('solo-chat')).toEqual({ projectId: 'p1', folder: '/repo', canvasId: null });
-        expect(index.locate('other-shell')).toEqual({ projectId: 'p2', folder: null, canvasId: null });
+        expect(index.locate('other-shell')).toEqual({ projectId: 'p2', folder: '/other', canvasId: null });
         // A drawing view and a canvas are places to look at, not something an agent runs in.
         expect(index.locate('sketch')).toBeNull();
         expect(index.locate('main')).toBeNull();

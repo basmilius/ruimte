@@ -11,7 +11,7 @@ const project: ProjectSummary = {
     projectId: 'flux',
     name: 'Flux',
     color: '#000',
-    folder: null,
+    folder: '/repo',
     lastOpenedAt: 1,
     closedAt: null,
     available: true,

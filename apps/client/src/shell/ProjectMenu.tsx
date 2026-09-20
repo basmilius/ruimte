@@ -2,16 +2,15 @@ import { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
-import { ChevronDown, ChevronRight, ExternalLink, FolderOpen, History, MoreHorizontal, Plus, Settings2, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink, FolderOpen, History, MoreHorizontal, Settings2, X } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { projectClient } from '@/project';
 import { closeListedProjectLocally, menuProjects, openableRows, type ProjectMenuRow } from '@/project/list';
-import { closeProject, createProjectOn, openProject } from '@/project/open';
+import { closeProject, openProject } from '@/project/open';
 import { closeWarning, sessionNodesOf } from '@/project/project-sessions';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
 import { setProjectFolderIcon, setProjectIdentity, uploadProjectIcon, type ProjectSettingsResult } from '@/project/settings';
 import { ProjectSettingsDialog, type ProjectSettingsSubject } from '@/shell/ProjectSettingsDialog';
-import { ProjectNameDialog } from '@/shell/ProjectNameDialog';
 import { useDocument } from '@/state/document';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { listedEndpoints } from '@/state/local-machine';
@@ -21,7 +20,7 @@ import { fileManagerName, useServers } from '@/state/server';
 import { useUi } from '@/state/ui';
 import { transportFor } from '@/transport';
 import { useMachineHold, useOpenEndpoints } from '@/transport/status';
-import { MENU_LABEL, MENU_SEPARATOR } from '@/ui/classes';
+import { MENU_SEPARATOR } from '@/ui/classes';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 import { PromptDialog } from '@/ui/PromptDialog';
@@ -44,7 +43,7 @@ function ProjectRow({ row, showMachine, actions }: ProjectRowProps) {
     const { summary } = row;
     const tooltip = (
         <span className="flex flex-col items-start">
-            <span>{summary.folder ?? t('projectMenu.noFolder')}</span>
+            <span>{summary.folder}</span>
             {/* Not connected is about the machine, unavailable about the folder; a row can be either. */}
             {!row.connected && <span className="text-text-muted">{t('connection.noLink')}</span>}
             {!summary.available && <span className="text-text-muted">{t('projectMenu.folderGone')}</span>}
@@ -116,8 +115,7 @@ function ProjectRow({ row, showMachine, actions }: ProjectRowProps) {
     );
 }
 
-/* The project segment of the toolbar's breadcrumb: projects to switch to, their actions, and the
-   two ways to bring in one that is not listed yet. */
+/* The project segment of the toolbar's breadcrumb: projects to switch to, their actions, and opening a folder. */
 export function ProjectMenu() {
     const { t } = useTranslation(['shell', 'common']);
     const rows = useProjectList((s) => s.projects);
@@ -127,7 +125,6 @@ export function ProjectMenu() {
     const endpoints = useMemo(() => listedEndpoints(stored), [stored]);
     const activeId = useEndpoints((s) => s.activeId);
     const connected = useOpenEndpoints();
-    const [newOpen, setNewOpen] = useState(false);
     const [settingsTarget, setSettingsTarget] = useState<ProjectMenuRow | null>(null);
     /* Apart from the target, which outlives it: the dialog closes first and is emptied afterwards. */
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -249,7 +246,6 @@ export function ProjectMenu() {
                     <Icon icon={ChevronDown} size={14} className="shrink-0 text-text-muted" />
                 </Menu.Trigger>
                 <MenuPopup className="min-w-60">
-                    {open.length > 0 && <div className={MENU_LABEL}>{t('projectMenu.projects')}</div>}
                     {open.map((row) => (
                         <ProjectRow
                             key={`${row.endpointId}:${row.summary.projectId}`}
@@ -283,26 +279,11 @@ export function ProjectMenu() {
                         </>
                     )}
                     {(open.length > 0 || recent.length > 0) && <Menu.Separator className={MENU_SEPARATOR} />}
-                    <Menu.Item className="menu-item" onClick={() => setNewOpen(true)}>
-                        <Icon icon={Plus} size={14} /> {t('projectMenu.newProject')}
-                    </Menu.Item>
                     <Menu.Item className="menu-item" onClick={() => useUi.getState().openFolderBrowser()}>
                         <Icon icon={FolderOpen} size={14} /> {t('projectMenu.openFolder')}
                     </Menu.Item>
                 </MenuPopup>
             </Menu.Root>
-
-            <ProjectNameDialog
-                open={newOpen}
-                onOpenChange={setNewOpen}
-                title={t('projectMenu.newProject')}
-                description={t('projectMenu.newProjectDescription')}
-                action={t('projectMenu.create')}
-                fallback={t('projectMenu.untitled')}
-                onSubmit={async (name) => {
-                    await createProjectOn(machineId, name);
-                }}
-            />
 
             <ProjectSettingsDialog
                 subject={settingsSubject}

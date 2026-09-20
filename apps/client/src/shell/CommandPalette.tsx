@@ -617,7 +617,7 @@ export function CommandPalette() {
         const switches: Entry[] = projects
             .filter((row) => row.summary.available && !(row.summary.projectId === currentProjectId && row.endpointId === currentEndpointId))
             .map(({ endpointId, summary }) => {
-                const where = summary.folder ?? t('projectMenu.noFolder');
+                const where = summary.folder;
                 const label = endpoints.find((endpoint) => endpoint.id === endpointId)?.label ?? t('start.anotherMachine');
                 const machine = connected.includes(endpointId) ? label : t('palette.machineNotConnected', { machine: label });
                 return {

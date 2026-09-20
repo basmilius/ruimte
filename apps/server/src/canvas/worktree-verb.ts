@@ -17,9 +17,6 @@ const hostOf = (call: VerbCall): WorktreeHost => {
 /* The worktrees of the caller's project, refusing a project outside a repository. */
 const worktreesOf = async (call: VerbCall): Promise<{ folder: string; content: ProjectContent; worktrees: Worktree[] }> => {
     const place = placeOf(call);
-    if (place.folder === null) {
-        throw new VerbRefusal('not-a-repository', 'This project has no folder, so it has no worktrees');
-    }
     const [content, worktrees] = await Promise.all([
         call.host.read(place.projectId),
         hostOf(call)

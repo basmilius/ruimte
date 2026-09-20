@@ -65,7 +65,7 @@ export interface Workspace {
 }
 
 /* What one payload of `project.open` asks for: a project by id, a folder, or a new project by name. */
-export type OpenRequest = { projectId: string } | { folder: string; createFolder: boolean } | { name: string };
+export type OpenRequest = { projectId: string } | { folder: string; createFolder: boolean };
 
 const stores = defaultWorkspaceStores;
 const machines = new Map<string, Machine>();
@@ -243,10 +243,8 @@ export const enterWorkspace = async (endpointId: string, request: OpenRequest): 
     try {
         if ('projectId' in request) {
             await connection.projects.openProject(request.projectId);
-        } else if ('folder' in request) {
-            await connection.projects.openFolder(request.folder, request.createFolder);
         } else {
-            await connection.projects.createProject(request.name);
+            await connection.projects.openFolder(request.folder, request.createFolder);
         }
     } catch (e) {
         if (windowWorkspace()?.connection !== connection) {

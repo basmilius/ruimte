@@ -785,8 +785,7 @@ export const ProjectSummarySchema = z.object({
     projectId: ProjectIdSchema,
     name: z.string(),
     color: z.string(),
-    // Null for a canvas that lives in the app data dir instead of a folder.
-    folder: z.string().nullable(),
+    folder: z.string().min(1),
     lastOpenedAt: z.number(),
     /* When a person last closed this project, which is the only thing that moves it out of the list
        of projects in use and under Recent. Null while it belongs in the list; absent from a daemon
@@ -805,16 +804,18 @@ export const ProjectListResultSchema = z.object({
 });
 export type ProjectListResult = z.infer<typeof ProjectListResultSchema>;
 
-// Open by id, by folder (created there when the folder has no canvas yet), or a fresh one without a folder.
-export const ProjectOpenPayloadSchema = z.object({
-    projectId: ProjectIdSchema.optional(),
-    folder: z.string().optional(),
-    name: z.string().optional(),
-    color: z.string().optional(),
-    /* Makes the folder, and every missing folder above it, when nothing is there yet. Only the
+// Opening a folder creates its project file when none exists.
+export const ProjectOpenPayloadSchema = z
+    .object({
+        projectId: ProjectIdSchema.optional(),
+        folder: z.string().min(1).optional(),
+        name: z.string().optional(),
+        color: z.string().optional(),
+        /* Makes the folder, and every missing folder above it, when nothing is there yet. Only the
        folder picker asks for this; every other caller opens what already exists. */
-    createFolder: z.boolean().optional()
-});
+        createFolder: z.boolean().optional()
+    })
+    .refine((payload) => Boolean(payload.projectId || payload.folder), { message: 'A project id or folder is required' });
 export type ProjectOpenPayload = z.infer<typeof ProjectOpenPayloadSchema>;
 
 export const ProjectOpenResultSchema = z.object({

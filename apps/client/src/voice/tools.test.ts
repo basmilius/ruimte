@@ -107,7 +107,7 @@ describe('Voice domain tools', () => {
             name,
             closedAt,
             color: '#000',
-            folder: null,
+            folder: '/repo',
             lastOpenedAt: 1,
             available: true,
             icon: { kind: 'initial', value: 'F' },

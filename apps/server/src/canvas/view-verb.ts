@@ -174,7 +174,7 @@ const newSub = defineAction('view', {
 });
 
 /* A path stays inside the project folder as a stored one, and stays absolute when it points out. */
-const storedFilePath = (folder: string | null, path: string): string => (folder !== null && isInside(folder, path) ? storedPathOf(folder, path) : path);
+const storedFilePath = (folder: string, path: string): string => (folder !== null && isInside(folder, path) ? storedPathOf(folder, path) : path);
 
 const madeView = (kind: (typeof VIEW_KINDS)[number], id: string, name: string, createdBy: string, parts: { url?: string; path?: string }): ProjectView => {
     if (kind === 'canvas') {

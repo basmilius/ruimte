@@ -129,10 +129,10 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
                 }}
             />
             <div className="mt-4 flex items-center gap-2">
-                <Button disabled={busy || !project.folder} onClick={() => fileRef.current?.click()}>
+                <Button disabled={busy} onClick={() => fileRef.current?.click()}>
                     <Icon icon={ImageUp} size={12} /> {t('projectSettings.chooseImage')}
                 </Button>
-                <Button disabled={busy || !project.folder} onClick={() => void run(actions.useFolderIcon)}>
+                <Button disabled={busy} onClick={() => void run(actions.useFolderIcon)}>
                     <Icon icon={FolderSearch} size={12} /> {t('projectSettings.useFolderIcon')}
                 </Button>
                 <span className="grow" />
@@ -140,7 +140,6 @@ function ProjectSettingsForm({ project, endpointId, actions, onOpenChange }: Pro
                     {t('common:action.done')}
                 </Button>
             </div>
-            {!project.folder && <p className="mt-2 text-sm text-text-faint">{t('projectSettings.noFolderImage')}</p>}
         </>
     );
 }

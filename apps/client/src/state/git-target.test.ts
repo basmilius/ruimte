@@ -25,7 +25,7 @@ describe('gitTarget', () => {
         expect(gitTarget(nodes(group, inside), [], '/repo')).toEqual({ cwd: '/repo', label: 'repo', branch: null, kind: 'project' });
     });
 
-    test('a canvas without a folder has nothing to point at', () => {
+    test('without an open project there is no default checkout', () => {
         expect(gitTarget({}, [], null)).toEqual({ cwd: null, label: '', branch: null, kind: 'project' });
     });
 
@@ -84,7 +84,7 @@ describe('gitTargets', () => {
         ]);
     });
 
-    test('a canvas without a folder offers the worktrees alone', () => {
+    test('without an open project only supplied worktrees are offered', () => {
         expect(gitTargets({}, [{ path: '/wt/feature', branch: 'feature/x' }], null).map((target) => target.cwd)).toEqual(['/wt/feature']);
     });
 });

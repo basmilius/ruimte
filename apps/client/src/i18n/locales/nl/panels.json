@@ -315,7 +315,7 @@
       "discardRestore": "Zet {{stash}} terug met \"git stash pop\".",
       "discardStashed": "{{path}} gestasht",
       "expandAll": "Alle mappen uitklappen",
-      "noFolder": "Dit canvas heeft geen map.",
+      "noFolder": "Er is geen project geopend.",
       "statusFailed": "Kon de status niet lezen."
     },
     "phase": {

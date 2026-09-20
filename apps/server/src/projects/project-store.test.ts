@@ -176,9 +176,9 @@ describe('ProjectStore', () => {
         await expect(store.mutate(projectId, (content) => ({ content, result: null }))).rejects.toMatchObject({ code: 'project-too-new' });
     });
 
-    test('a canvas without a folder lives under the app data dir, and local state stays out of the shared file', async () => {
-        const opened = await store.openProject({ name: 'scratch' });
-        expect(opened.summary.folder).toBeNull();
+    test('local state stays in the app data dir and out of the project folder', async () => {
+        const opened = await store.openProject({ folder: join(root, 'scratch'), createFolder: true, name: 'scratch' });
+        expect(opened.summary.folder).toBe(join(root, 'scratch'));
         const panels = {
             panel: { open: true, kind: 'files' as const },
             preview: { open: true },
@@ -211,7 +211,6 @@ describe('ProjectStore', () => {
 
         await store.delete(opened.summary.projectId, true);
         expect(await readdir(join(home, 'projects'))).toEqual([]);
-        // The registry is empty now, so listing seeds a new default canvas instead of the deleted one.
         expect((await store.list()).map((project) => project.projectId)).not.toContain(opened.summary.projectId);
     });
 
@@ -228,7 +227,10 @@ describe('ProjectStore', () => {
     });
 
     test('two opens at once both end up registered', async () => {
-        const [a, b] = await Promise.all([store.openProject({ name: 'a' }), store.openProject({ name: 'b' })]);
+        const [a, b] = await Promise.all([
+            store.openProject({ folder: join(root, 'a'), createFolder: true, name: 'a' }),
+            store.openProject({ folder: join(root, 'b'), createFolder: true, name: 'b' })
+        ]);
         expect((await store.list()).map((project) => project.projectId).sort()).toEqual([a.summary.projectId, b.summary.projectId].sort());
     });
 
@@ -863,7 +865,7 @@ describe('kinds a newer Ruimte wrote', () => {
 describe('reading the combined sidebar', () => {
     test('reads released projects without opening them, changing the registry or creating a watcher', async () => {
         const first = await store.openProject({ folder });
-        const second = await store.openProject({ name: 'Second' });
+        const second = await store.openProject({ folder: join(root, 'Second'), createFolder: true, name: 'Second' });
         store.release(first.summary.projectId);
         store.release(second.summary.projectId);
         const before = await store.list();
@@ -878,8 +880,8 @@ describe('reading the combined sidebar', () => {
 
     test('excludes closed projects and isolates an unreadable project', async () => {
         const broken = await store.openProject({ folder });
-        const closed = await store.openProject({ name: 'Closed' });
-        const healthy = await store.openProject({ name: 'Healthy' });
+        const closed = await store.openProject({ folder: join(root, 'Closed'), createFolder: true, name: 'Closed' });
+        const healthy = await store.openProject({ folder: join(root, 'Healthy'), createFolder: true, name: 'Healthy' });
         await store.closeProject(closed.summary.projectId);
         store.release(broken.summary.projectId);
         await writeFile(documentPathInFolder(folder), 'broken json');
@@ -900,4 +902,22 @@ describe('reading the combined sidebar', () => {
         expect(await readFile(actual, 'utf8')).toBe('broken private json');
         expect(await readdir(dirname(actual))).toEqual(before);
     });
+});
+
+test('opening without a folder or project id is refused', async () => {
+    for (const payload of [{}, { name: 'Loose' }, { folder: '' }]) {
+        await expect(store.openProject(payload)).rejects.toMatchObject({ code: 'project-invalid' });
+    }
+    expect(await store.list()).toEqual([]);
+});
+
+test('an obsolete folderless registry entry does not hide folder projects', async () => {
+    const opened = await store.openProject({ folder });
+    store.closeAll();
+    const path = join(home, 'projects.json');
+    const registry = JSON.parse(await readFile(path, 'utf8'));
+    registry.projects.push({ ...registry.projects[0], projectId: 'loose', folder: null });
+    await writeFile(path, JSON.stringify(registry));
+    store = new ProjectStore(home, new FakeWatch());
+    expect((await store.list()).map((project) => project.projectId)).toEqual([opened.summary.projectId]);
 });

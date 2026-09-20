@@ -4,12 +4,12 @@ import { deriveProjectContextSources, isCanvasView, isSessionView, type ContextS
    terminal or browser that is a view of its own). */
 export interface IndexedPlace {
     projectId: string;
-    folder: string | null;
+    folder: string;
     canvasId: string | null;
 }
 
 interface IndexedProject {
-    folder: string | null;
+    folder: string;
     content: Pick<ProjectContent, 'views'>;
     sources: Map<string, ContextSource[]>;
     places: Map<string, string | null>;
@@ -28,7 +28,7 @@ export class ProjectIndex {
     onPlaces: ((projectId: string, ids: ReadonlySet<string>) => void) | null = null;
 
     /* The content in its daemon-side form: cwds absolute, file paths still as stored. */
-    set(projectId: string, folder: string | null, content: Pick<ProjectContent, 'views'>): void {
+    set(projectId: string, folder: string, content: Pick<ProjectContent, 'views'>): void {
         const places = new Map<string, string | null>();
         for (const view of content.views) {
             if (isCanvasView(view)) {

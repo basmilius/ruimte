@@ -208,10 +208,6 @@ export class ProjectClient {
         await this.open({ folder, createFolder });
     }
 
-    async createProject(name: string): Promise<void> {
-        await this.open({ name });
-    }
-
     /*
      * Lets go of the project for another one. What is on screen is written first, and the daemon is told
      * the project is released rather than closed, since switching away does not put it under Recent.

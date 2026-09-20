@@ -33,10 +33,10 @@ export const freeBranch = (base: string, taken: ReadonlySet<string>): string => 
 };
 
 /* The branches of the project's repository, refusing a project that is not in one. */
-export const branchesForWorktrees = async (call: VerbCall, folder: string | null): Promise<Set<string>> => {
-    const branches = folder === null ? null : await call.host.branchesOf(folder);
+export const branchesForWorktrees = async (call: VerbCall, folder: string): Promise<Set<string>> => {
+    const branches = await call.host.branchesOf(folder);
     if (branches === null) {
-        throw new VerbRefusal('not-a-repository', `--worktree needs a git repository, and ${folder ?? 'this project'} is not in one`);
+        throw new VerbRefusal('not-a-repository', `--worktree needs a git repository, and ${folder} is not in one`);
     }
     return new Set(branches);
 };

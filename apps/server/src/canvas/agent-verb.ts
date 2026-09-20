@@ -122,7 +122,7 @@ const groupLines = (canvas: ProjectCanvasView): string[] =>
     );
 
 /* The prompt, from whichever flag carried it, checked against the one length a line into a shell survives. */
-const promptOf = async (flags: { prompt?: string; 'prompt-file'?: string }, call: VerbCall, folder: string | null): Promise<string | null> => {
+const promptOf = async (flags: { prompt?: string; 'prompt-file'?: string }, call: VerbCall, folder: string): Promise<string | null> => {
     if (flags.prompt !== undefined && flags['prompt-file'] !== undefined) {
         throw new VerbRefusal('prompt-twice', '--prompt and --prompt-file both say what to start on; give one of them');
     }

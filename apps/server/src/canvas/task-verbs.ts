@@ -155,7 +155,7 @@ export const doneVerb = defineVerb({
 const NEEDS_PROMPT = '--prompt needs what the task asks, in quotes';
 
 /* What the task asks, from whichever flag carried it, against the room a task's prompt has. */
-const taskPromptOf = async (flags: { prompt?: string; 'prompt-file'?: string }, call: VerbCall, folder: string | null): Promise<string> => {
+const taskPromptOf = async (flags: { prompt?: string; 'prompt-file'?: string }, call: VerbCall, folder: string): Promise<string> => {
     if (flags.prompt !== undefined && flags['prompt-file'] !== undefined) {
         throw new VerbRefusal('prompt-twice', '--prompt and --prompt-file both say what the task asks; give one of them');
     }

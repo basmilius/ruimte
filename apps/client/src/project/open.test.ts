@@ -27,10 +27,7 @@ const describeRequest = (request: OpenRequest): string => {
     if ('projectId' in request) {
         return `project:${request.projectId}`;
     }
-    if ('folder' in request) {
-        return `folder:${request.folder}:${request.createFolder}`;
-    }
-    return `new:${request.name}`;
+    return `folder:${request.folder}:${request.createFolder}`;
 };
 
 /* A window with a project on screen (or none), and every step the switch takes written down. */
@@ -119,12 +116,6 @@ describe('opening a project', () => {
         const { deps, steps } = spyDeps(HERE);
         await run({ kind: 'project', endpointId: 'local', projectId: 'p0' }, deps).done;
         expect(steps).toEqual(['ensure:local']);
-    });
-
-    test('a new project is created in a workspace of its own', async () => {
-        const { deps, steps } = spyDeps(HERE);
-        await run({ kind: 'new', endpointId: 'local', name: 'Atlas' }, deps).done;
-        expect(steps).toEqual(['ensure:local', 'leave', 'enter:local:new:Atlas']);
     });
 
     test('a run cancelled while connecting stops before anything moves, and going back undoes nothing', async () => {

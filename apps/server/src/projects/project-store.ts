@@ -83,7 +83,7 @@ const RegistryEntrySchema = z.object({
     projectId: z.string().min(1),
     name: z.string(),
     color: z.string(),
-    folder: z.string().nullable(),
+    folder: z.string().min(1),
     lastOpenedAt: z.number(),
     /* When a person last closed this project. Set means the menu keeps it under Recent; only
        closing puts it there and only opening takes it out, so neither age nor whether it is open
@@ -94,7 +94,14 @@ const RegistryEntrySchema = z.object({
 });
 type RegistryEntry = z.infer<typeof RegistryEntrySchema>;
 
-const RegistrySchema = z.object({ projects: z.array(RegistryEntrySchema) });
+const RegistrySchema = z.object({
+    projects: z.array(z.unknown()).transform((entries) =>
+        entries.flatMap((entry) => {
+            const parsed = RegistryEntrySchema.safeParse(entry);
+            return parsed.success ? [parsed.data] : [];
+        })
+    )
+});
 
 // Editors and git write in bursts; one event per burst is what the client wants.
 const WATCH_SETTLE_MS = 150;
@@ -167,9 +174,7 @@ const drawingIdsIn = (views: ProjectView[]): Set<string> => viewIdsIn(views, 'dr
 const diagramIdsIn = (views: ProjectView[]): Set<string> => viewIdsIn(views, 'diagram');
 
 /*
- * Every canvas the daemon knows, where it lives and which ones are open. A folder project is
- * `<folder>/.ruimte/project.json`; one without a folder lives under the app data dir. Machine
- * state (camera, focus) never goes into the shared file.
+ * Projects live in `<folder>/.ruimte/project.json`. Machine state stays out of the shared file.
  */
 export class ProjectStore {
     readonly home: string;
@@ -298,9 +303,7 @@ export class ProjectStore {
     /* Every project in the registry, without opening or resolving anything: what a folder is called
        and which project it is, for whoever has a path in hand and wants the name that goes with it. */
     async known(): Promise<{ projectId: string; name: string; folder: string }[]> {
-        return (await this.loadRegistry()).flatMap((entry) =>
-            entry.folder === null ? [] : [{ projectId: entry.projectId, name: entry.name, folder: entry.folder }]
-        );
+        return (await this.loadRegistry()).map((entry) => ({ projectId: entry.projectId, name: entry.name, folder: entry.folder }));
     }
 
     /* Reading the list makes nothing: a daemon nobody has opened a project on answers an empty list,
@@ -315,9 +318,9 @@ export class ProjectStore {
      * icon and where the name came from. A chosen icon wins; without one the folder is asked.
      */
     private async summarize(entry: RegistryEntry): Promise<ProjectSummary> {
-        const available = entry.folder === null || (await exists(this.documentPath(entry)));
-        const derived = entry.folder ? await this.identity.resolve(entry.folder) : null;
-        const image = derived?.icon ?? null;
+        const available = await exists(this.documentPath(entry));
+        const derived = await this.identity.resolve(entry.folder);
+        const image = derived.icon ?? null;
         const icon: ProjectIcon = entry.icon ?? (image ? imageIcon(image) : initialIcon(entry.name));
         return {
             projectId: entry.projectId,
@@ -387,13 +390,7 @@ export class ProjectStore {
                 lastOpenedAt: Date.now()
             };
         } else {
-            entry = {
-                projectId: newId(),
-                name: payload.name ?? 'Untitled project',
-                color: payload.color ?? DEFAULT_COLOR,
-                folder: null,
-                lastOpenedAt: Date.now()
-            };
+            throw new ProjectError('project-invalid', 'A project id or folder is required');
         }
 
         const path = this.documentPath(entry);
@@ -409,11 +406,11 @@ export class ProjectStore {
             outcome = { kind: 'missing' };
         }
         const missing = outcome.kind !== 'ok';
-        if (missing && payload.projectId && entry.folder) {
+        if (missing && payload.projectId) {
             throw new ProjectError('project-missing', `The project file of ${entry.name} is missing from ${entry.folder}`);
         }
         // The one moment `.idea/.name` counts: it seeds the file, and the file owns the name from here.
-        if (missing && firstOpen && entry.folder && !payload.name) {
+        if (missing && firstOpen && !payload.name) {
             entry = { ...entry, name: (await readIdeaName(entry.folder)) ?? entry.name };
         }
         const loaded = await this.loadFiles(path, entry, outcome.kind === 'ok' ? outcome.document : null);
@@ -456,9 +453,7 @@ export class ProjectStore {
         this.startWatching(state, path);
 
         // Opening a project is the moment to look at the folder again, whatever the cache holds.
-        if (entry.folder) {
-            this.identity.invalidate(entry.folder);
-        }
+        this.identity.invalidate(entry.folder);
         return {
             summary: await this.summarize(entry),
             document: fromPortable(document, entry.folder),
@@ -695,9 +690,6 @@ export class ProjectStore {
         if (!entry) {
             throw new ProjectError('project-not-found', `No project ${payload.projectId}`);
         }
-        if (!entry.folder) {
-            throw new ProjectError('bad-icon', 'A canvas without a folder has nowhere to keep an icon');
-        }
         if (payload.image === null) {
             await removeIconFiles(entry.folder);
         } else {
@@ -781,21 +773,17 @@ export class ProjectStore {
         if (!removeFiles) {
             return;
         }
-        if (entry.folder) {
-            // Only the canvas file and the drawings and diagrams that belong to it; the rest of the folder
-            // is the person's project. Those go first, or the rmdir below finds `.ruimte` full.
-            await rm(drawingsDirOf(this.documentPath(entry)), { recursive: true, force: true });
-            await rm(diagramsDirOf(this.documentPath(entry)), { recursive: true, force: true });
-            // Everything of this project that never left the machine, the private views among it.
-            await rm(privateDirOf(this.documentPath(entry)), { recursive: true, force: true });
-            await rm(gitignorePathOf(this.documentPath(entry)), { force: true });
-            await rm(this.documentPath(entry), { force: true });
-            // `.ruimte` goes only when nothing else is in it: an icon or a file a person put there
-            // keeps it, and `rmdir` says so by failing.
-            await rmdir(dirname(this.documentPath(entry))).catch(() => undefined);
-        } else {
-            await rm(dirname(this.documentPath(entry)), { recursive: true, force: true });
-        }
+        // Only the canvas file and the drawings and diagrams that belong to it; the rest of the folder
+        // is the person's project. Those go first, or the rmdir below finds `.ruimte` full.
+        await rm(drawingsDirOf(this.documentPath(entry)), { recursive: true, force: true });
+        await rm(diagramsDirOf(this.documentPath(entry)), { recursive: true, force: true });
+        // Everything of this project that never left the machine, the private views among it.
+        await rm(privateDirOf(this.documentPath(entry)), { recursive: true, force: true });
+        await rm(gitignorePathOf(this.documentPath(entry)), { force: true });
+        await rm(this.documentPath(entry), { force: true });
+        // `.ruimte` goes only when nothing else is in it: an icon or a file a person put there
+        // keeps it, and `rmdir` says so by failing.
+        await rmdir(dirname(this.documentPath(entry))).catch(() => undefined);
     }
 
     /*
@@ -863,7 +851,7 @@ export class ProjectStore {
     }
 
     private documentPath(entry: RegistryEntry): string {
-        return entry.folder ? documentPathInFolder(entry.folder) : join(this.home, 'projects', encodeURIComponent(entry.projectId), PROJECT_FILE);
+        return documentPathInFolder(entry.folder);
     }
 
     private localPath(projectId: string): string {
@@ -1006,10 +994,7 @@ const sameIcon = (left: ProjectIcon | null, right: ProjectIcon | null): boolean 
  * under the icon picker. Renaming to exactly that string reads as the folder's too, which is the
  * honest answer: there is nothing on disk that says otherwise.
  */
-const nameSourceOf = (name: string, folder: string | null): ProjectNameSource => {
-    if (!folder) {
-        return 'chosen';
-    }
+const nameSourceOf = (name: string, folder: string): ProjectNameSource => {
     return name === basename(folder) ? 'folder' : 'chosen';
 };
 

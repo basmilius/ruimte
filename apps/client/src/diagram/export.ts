@@ -67,7 +67,7 @@ export const copyDiagramJson = async (store: DiagramSource): Promise<void> => {
     await navigator.clipboard.writeText(`${JSON.stringify(store.getState().content, null, 2)}\n`);
 };
 
-/* Where the file of a diagram view sits, or null for a project without a folder, whose files are the daemon's own. */
+/* Where the file of a diagram view sits, or null when no project is open. */
 export const diagramJsonPath = (viewId: string): string | null => {
     const folder = useProject.getState().current?.folder ?? null;
     return folder === null ? null : `${folder}/.ruimte/diagrams/${encodeURIComponent(viewId)}.json`;

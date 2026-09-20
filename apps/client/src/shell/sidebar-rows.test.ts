@@ -200,7 +200,7 @@ const group = (endpointId: string, collapsed = false): SidebarGroup => ({
         projectId: 'project',
         name: endpointId,
         color: '#123456',
-        folder: null,
+        folder: '/repo',
         lastOpenedAt: 0,
         closedAt: null,
         available: true,
