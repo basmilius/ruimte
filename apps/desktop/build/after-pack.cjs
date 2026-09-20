@@ -12,7 +12,8 @@ module.exports = async (context) => {
     if (!existsSync(daemon)) {
         throw new Error(`No daemon at ${daemon}; run \`bun run --cwd apps/server compile\` for this os and arch first`);
     }
-    if (!existsSync(join(resources, 'bin', 'native', context.electronPlatformName === 'win32' ? 'speech-bridge.exe' : 'speech-bridge'))) {
+    // Speech to Text ships on macOS only; see `apps/speech-bridge/README.md`.
+    if (context.electronPlatformName === 'darwin' && !existsSync(join(resources, 'bin', 'native', 'speech-bridge'))) {
         throw new Error('No speech helper; compile the server resources for this os and arch first');
     }
     if (!existsSync(join(resources, 'client', 'index.html'))) {
