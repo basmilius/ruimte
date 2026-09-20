@@ -1,50 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
-import {
-    CircleAlert,
-    Clock,
-    CornerDownRight,
-    FileText,
-    GitMerge,
-    MessageSquare,
-    Play,
-    Split,
-    StickyNote,
-    Timer,
-    Type,
-    User,
-    Workflow,
-    type LucideIcon
-} from 'lucide-react';
-import { flowCardDefinition, type FlowCard, type FlowCardSource, type FlowContent } from '@ruimte/contracts';
+import { CircleAlert, CornerDownRight, Play } from 'lucide-react';
+import type { FlowCard, FlowContent } from '@ruimte/contracts';
 import { missingArgsOf, portsOf, textArg } from '@ruimte/flow';
 import { cardRect, ICON_SIZE, roundingOf } from '@/flow/geometry';
+import { glyphOf } from '@/flow/glyphs';
 import { cardLabel, cardSentence, cardSource } from '@/flow/labels';
 import { Icon } from '@/ui/Icon';
-
-/*
- * The mark in the round plate is where the card's signal comes from, never what kind of card it is:
- * the kind is the shape, and a second drawing of it would only take the room the source needs.
- */
-const SOURCE_GLYPHS: Record<FlowCardSource, LucideIcon> = {
-    time: Clock,
-    files: FileText,
-    text: Type,
-    chat: MessageSquare,
-    person: User
-};
-
-/* A card without a source says something about the graph itself, so it carries its own mark. */
-const BUILT_IN_GLYPHS = { start: Play, delay: Timer, any: Split, all: GitMerge, note: StickyNote } as const;
-
-const glyphOf = (card: FlowCard): LucideIcon => {
-    const builtIn = BUILT_IN_GLYPHS[card.kind as keyof typeof BUILT_IN_GLYPHS];
-    if (builtIn !== undefined) {
-        return builtIn;
-    }
-    const source = card.card === undefined ? null : flowCardDefinition(card.card)?.source;
-    return source === null || source === undefined ? Workflow : SOURCE_GLYPHS[source];
-};
 
 /* The kinds that carry a word and no sentence, which is what makes them narrow. */
 const isPill = (card: FlowCard): boolean => card.kind === 'delay' || card.kind === 'any' || card.kind === 'all';

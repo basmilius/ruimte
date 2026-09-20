@@ -5,6 +5,7 @@ import { Dialog } from '@base-ui-components/react/dialog';
 import { Search } from 'lucide-react';
 import { FLOW_BUILT_IN_KINDS, FLOW_CARDS, type FlowCard, type FlowCardKind, type FlowContent } from '@ruimte/contracts';
 import { groupCards, searchCards, type FlowCardRow } from '@/flow/card-search';
+import { cardGlyph } from '@/flow/glyphs';
 import { cardLabel, cardSentence, cardSource } from '@/flow/labels';
 import { labelCollator } from '@/format/locale';
 import { SECTION_LABEL } from '@/ui/classes';
@@ -148,6 +149,7 @@ export function FlowCardPicker({ kinds, current, onPick, onClose }: FlowCardPick
                                             onMouseEnter={() => setIndex(at)}
                                             onClick={() => pick(row)}
                                         >
+                                            <Icon icon={cardGlyph(row.kind, row.card)} size={14} className="shrink-0 text-text-faint" />
                                             <span className="min-w-0 truncate">{row.label}</span>
                                             <span className="ml-auto shrink-0 pl-3 text-xs text-text-faint">{row.source}</span>
                                         </button>
