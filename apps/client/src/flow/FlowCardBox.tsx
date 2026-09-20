@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
-import { CircleAlert, CornerDownRight, Play, Timer } from 'lucide-react';
+import { CircleAlert, CornerDownRight, Timer } from 'lucide-react';
 import type { FlowCard, FlowContent } from '@ruimte/contracts';
 import { argsOf, portsOf, textArg, type FlowArgProblem } from '@ruimte/flow';
 import { FlowArgSlot } from '@/flow/FlowArgSlot';
@@ -10,8 +10,17 @@ import type { CardLight } from '@/flow/live-look';
 import { cardLabel, cardSentence, cardSource } from '@/flow/labels';
 import { Icon } from '@/ui/Icon';
 
-/* The kinds that carry a word and no sentence, which is what makes them narrow. */
-const isPill = (card: FlowCard): boolean => card.kind === 'delay' || card.kind === 'any' || card.kind === 'all';
+/* The kinds that carry a word and no sentence, which is what makes them a chip. */
+const isChip = (card: FlowCard): boolean => card.kind === 'delay' || card.kind === 'any' || card.kind === 'all';
+
+/* The round plate the source icon sits in, on the left of every card and every chip alike. */
+function IconPlate({ card, size }: { card: FlowCard; size: number }) {
+    return (
+        <div className="grid shrink-0 place-items-center rounded-full bg-surface-sunken text-text-muted" style={{ width: ICON_SIZE, height: ICON_SIZE }}>
+            <Icon icon={glyphOf(card)} size={size} />
+        </div>
+    );
+}
 
 interface FlowCardBoxProps {
     id: string;
@@ -79,23 +88,23 @@ export function FlowCardBox({ id, card, content, selected, problems, light, puls
     if (card.kind === 'start') {
         return (
             <div data-flow-card={id} className={clsx(shell, 'grid place-items-center')} style={style} aria-label={cardLabel(t, card)}>
-                <Icon icon={Play} size={20} className="text-text-muted" />
+                <IconPlate card={card} size={18} />
                 <span className="sr-only">{cardLabel(t, card)}</span>
                 {flash}
             </div>
         );
     }
 
-    if (isPill(card)) {
+    if (isChip(card)) {
         return (
             <div
                 key={shakeKey}
                 data-flow-card={id}
-                className={clsx(shell, 'flex items-center justify-center gap-2 px-4', refused !== undefined && 'flow-card-shake')}
+                className={clsx(shell, 'flex items-center gap-2 p-2', card.kind === 'delay' && 'pr-3', refused !== undefined && 'flow-card-shake')}
                 style={style}
             >
-                <Icon icon={glyphOf(card)} size={16} className="shrink-0 text-text-muted" />
-                <span className="flex min-w-0 flex-wrap items-center gap-x-1 text-sm text-text">
+                <IconPlate card={card} size={18} />
+                <span className="flex min-w-0 grow items-center gap-x-1 truncate text-sm text-text">
                     <Sentence id={id} card={card} content={content} problems={problems} />
                 </span>
                 {flash}
@@ -104,10 +113,13 @@ export function FlowCardBox({ id, card, content, selected, problems, light, puls
     }
 
     return (
-        <div data-flow-card={id} className={clsx(shell, 'flex items-center gap-3 px-3', wrong.length > 0 && 'border-status-error')} style={style}>
-            <div className="grid shrink-0 place-items-center rounded-full bg-surface-sunken text-text-muted" style={{ width: ICON_SIZE, height: ICON_SIZE }}>
-                <Icon icon={glyphOf(card)} size={18} />
-            </div>
+        <div
+            key={shakeKey}
+            data-flow-card={id}
+            className={clsx(shell, 'flex items-center gap-2 p-2', wrong.length > 0 && 'border-status-error', refused !== undefined && 'flow-card-shake')}
+            style={style}
+        >
+            <IconPlate card={card} size={18} />
             <div className="flex min-w-0 grow flex-col gap-0.5">
                 <div className="flex items-center gap-1.5 text-xs/[inherit] text-text-faint">
                     <span className="truncate">{cardSource(t, card)}</span>

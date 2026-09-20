@@ -1,20 +1,50 @@
 import type { FlowCard, FlowContent, FlowPort } from '@ruimte/contracts';
-import { argApplies, argsOf, portsOf } from '@ruimte/flow';
+import { argApplies, argsOf, numberArg, portsOf } from '@ruimte/flow';
 import { portPoint, type Obstacle } from '@/canvas/edge-route';
-import { unionOf, type Point, type Rect } from '@/canvas/math';
+import { GRID, unionOf, type Point, type Rect } from '@/canvas/math';
 
 /*
  * Wide enough for a sentence with two controls in it, and the same for every card so a worksheet
  * lines up. A value is filled in on the card itself, so a value is a control and not a word, and
  * the card carries the room that takes.
  */
-export const CARD_W = 360;
+export const CARD_W = 340;
 
 /* Two lines of sentence beside the source icon, which is what most cards say. */
 export const CARD_H = 88;
 
 /* What one more line of sentence adds. A whole number of grid steps, so a taller card still snaps. */
 const SENTENCE_LINE = 24;
+
+/* The round plate the source icon sits in, on the left of every card. */
+export const ICON_SIZE = 40;
+
+/* The air around what a card holds, and the gap between the plate and the words beside it. */
+const PADDING = 8;
+const GAP = 8;
+
+/* A wait carries a sentence rather than a word, and it is given a little more room to end on. */
+const WAIT_PADDING = 12;
+
+/* The circle the start card is: the plate with less air around it than a card of words needs. */
+const START_PADDING = 4;
+export const START_SIZE = ICON_SIZE + START_PADDING * 2;
+
+/* A card about the graph itself is the plate and a word, so it is one row high and no more. */
+export const CHIP_H = ICON_SIZE + PADDING * 2;
+
+/*
+ * The room the word on such a card gets, in characters. A join says one word and a wait says a short
+ * sentence with a number in it.
+ */
+const JOIN_ROOM = 9;
+const WAIT_ROOM = 13;
+
+/* What a character takes at the size a card is read in. */
+const CHAR_W = 7;
+
+/* A note is a yellow sticker, so it is as wide as a card and as tall as a few lines. */
+export const NOTE_H = 116;
 
 /*
  * How tall a card with a sentence on it is. A control takes more room than the word it replaced, so
@@ -27,22 +57,21 @@ export const cardHeight = (card: FlowCard): number => {
     return CARD_H + SENTENCE_LINE * Math.max(0, controls - 2);
 };
 
+/* Up to the grid the cards snap to, so a chip lines up with everything else on the worksheet. */
+const snapUp = (value: number): number => Math.ceil(value / GRID) * GRID;
+
 /*
- * A card about the graph itself carries a word and no sentence, so it is a pill rather than a card.
- * Its width is fixed and not measured: the router works on rectangles, and a width that came out of
- * the DOM would make the lines between two cards depend on the font a person reads them in.
+ * How wide a card about the graph itself is. It says one word, so it is a chip beside the cards that
+ * carry a sentence rather than a block half their width. The room for that word is worked out from
+ * the card and never measured: the router works on rectangles, and a width taken from the DOM would
+ * make the lines between two cards depend on the font they are read in. A word that outgrows its
+ * room is cut, the way every other label in the interface is.
  */
-export const PILL_W = 176;
-export const PILL_H = 48;
-
-/* The start card is the icon and nothing else, so it is a circle as wide as a card is high. */
-export const START_SIZE = CARD_H;
-
-/* A note is a yellow sticker, so it is as wide as a card and as tall as a few lines. */
-export const NOTE_H = 116;
-
-/* The round plate the source icon sits in, on the left of every card that carries a sentence. */
-export const ICON_SIZE = 40;
+export const chipWidth = (card: FlowCard): number => {
+    const wait = card.kind === 'delay';
+    const room = wait ? WAIT_ROOM + String(numberArg(card, 'amount', 0)).length : JOIN_ROOM;
+    return snapUp(PADDING + ICON_SIZE + GAP + room * CHAR_W + (wait ? WAIT_PADDING : PADDING));
+};
 
 const sizeOf = (card: FlowCard): { w: number; h: number } => {
     switch (card.kind) {
@@ -51,7 +80,7 @@ const sizeOf = (card: FlowCard): { w: number; h: number } => {
         case 'delay':
         case 'any':
         case 'all':
-            return { w: PILL_W, h: PILL_H };
+            return { w: chipWidth(card), h: CHIP_H };
         case 'note':
             return { w: CARD_W, h: NOTE_H };
         default:
@@ -75,35 +104,37 @@ export const boundsOf = (content: FlowContent, ids?: readonly string[]): Rect | 
 };
 
 /*
- * How round either end of a card is. A trigger is a capsule where a run begins and a plain box where
- * it leaves, a condition is a capsule on both ends because it asks something, and an action is a box
- * that does. That is what tells the three apart on a full worksheet without reading a word of them,
- * and it works for anyone who reads color poorly.
+ * How round either end of a card is. A trigger is round where a run begins, a condition and an
+ * action are the plain box the rest of the interface draws, a join is round on the side its branches
+ * leave by, a wait is round all over and the start card is a circle.
+ *
+ * It is a language of shapes and not a rule written in them: which side is round says nothing about
+ * where a line arrives. What it does is tell the kinds apart on a full worksheet before a word or a
+ * color is read, which is what it has to do for anyone who reads color poorly.
  */
 export interface CardRounding {
     left: number;
     right: number;
 }
 
-/* The radius that makes an end a half circle rather than a rounded corner. */
-const capsule = (h: number): number => h / 2;
-
-/* Every other end, in the radius the rest of the interface uses for a box this size. */
+/* The radius the rest of the interface gives a box this size. */
 const BOX_RADIUS = 10;
 
+/* Round enough to read as an end rather than as a corner, without being a half circle. */
+const TRIGGER_RADIUS = 30;
+const CHIP_RADIUS = 20;
+
 export const roundingOf = (card: FlowCard): CardRounding => {
-    const { h } = sizeOf(card);
     switch (card.kind) {
         case 'trigger':
-            return { left: capsule(h), right: BOX_RADIUS };
-        case 'condition':
-        case 'delay':
-        case 'any':
-            return { left: capsule(h), right: capsule(h) };
+            return { left: TRIGGER_RADIUS, right: BOX_RADIUS };
         case 'all':
-            return { left: capsule(h), right: BOX_RADIUS };
+            return { left: BOX_RADIUS, right: CHIP_RADIUS };
+        case 'any':
+        case 'delay':
+            return { left: CHIP_RADIUS, right: CHIP_RADIUS };
         case 'start':
-            return { left: capsule(h), right: capsule(h) };
+            return { left: START_SIZE / 2, right: START_SIZE / 2 };
         default:
             return { left: BOX_RADIUS, right: BOX_RADIUS };
     }

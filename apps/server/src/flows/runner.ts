@@ -380,6 +380,7 @@ export class FlowRunner {
                     );
                     continue;
                 }
+                const began = this.now();
                 const outcome = await this.runCard({ projectId, viewId, flowName, runId, cardId, card, tokens, dry, test });
                 for (const [name, value] of Object.entries(outcome.tokens ?? {})) {
                     tokens[tokenKey(cardId, name)] = value;
@@ -388,6 +389,7 @@ export class FlowRunner {
                 wrote({
                     cardId,
                     at: this.now(),
+                    ms: this.now() - began,
                     ...(outcome.port === null ? {} : { port: outcome.port }),
                     ...(outcome.note === undefined ? {} : { note: outcome.note }),
                     ...(outcome.dry === undefined ? {} : { dry: outcome.dry })

@@ -12,6 +12,8 @@ export const FlowRunStepSchema = z.object({
     at: z.number(),
     /* The port the card left by; absent for a card that went nowhere at all. */
     port: FlowPortSchema.optional(),
+    /* How long the card itself took, in milliseconds. Absent on one that did no work of its own. */
+    ms: z.number().nonnegative().optional(),
     /* The one sentence a person reads back when they wonder why the flow did nothing. */
     note: z.string().optional(),
     /* Written down rather than carried out, which is what the note holds the filled-in text for. */
