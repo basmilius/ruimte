@@ -23,6 +23,7 @@ const run = (settled: Record<string, FlowPort | null>, lastCard: string | null):
     entry: 'trigger',
     settled,
     waiting: [],
+    steps: [],
     lastCard,
     lastAt: 1,
     over: false

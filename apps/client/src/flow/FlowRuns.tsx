@@ -22,6 +22,10 @@ const OUTCOME_TONE: Record<FlowRun['outcome'], string> = {
 interface FlowRunsProps {
     content: FlowContent;
     runs: readonly FlowRun[];
+    /* The run the cards on the worksheet are reading, so the row it came from says so. */
+    picked: string | null;
+    /* Puts this run on the cards, or takes the worksheet back to the run going on now. */
+    onPick(runId: string | null): void;
     /* Runs this one again with exactly the values it had, which is the loop a person debugs in. */
     onRunAgain(run: FlowRun): void;
 }
@@ -32,7 +36,7 @@ interface FlowRunsProps {
  * which one, on what value. This is the answer to that, and it is why the timeline was on disk from
  * the first version rather than waiting for a screen.
  */
-export function FlowRuns({ content, runs, onRunAgain }: FlowRunsProps) {
+export function FlowRuns({ content, runs, picked, onPick, onRunAgain }: FlowRunsProps) {
     const { t } = useTranslation('flow');
     const [openRun, setOpenRun] = useState<string | null>(null);
     // The words a time is written in follow the region, which a person may change while this is up.
@@ -48,13 +52,18 @@ export function FlowRuns({ content, runs, onRunAgain }: FlowRunsProps) {
                 const open = openRun === run.id;
                 const label = run.trigger === undefined ? t('runs.noTrigger') : (nameOf(t, content, run.trigger) ?? t('runs.goneCard'));
                 return (
-                    <li key={run.id} className="border-b border-border last:border-b-0">
+                    <li key={run.id} className={clsx('border-b border-border-soft last:border-b-0', picked === run.id && 'bg-surface-active')}>
                         <div className="flex items-center gap-1 pr-2">
                             <button
                                 type="button"
                                 className="flex min-w-0 grow items-center gap-2 px-2 py-2 text-left hover:bg-surface-hover"
                                 aria-expanded={open}
-                                onClick={() => setOpenRun(open ? null : run.id)}
+                                onClick={() => {
+                                    /* Opening a run is asking what it did, and the answer belongs on
+                                       the cards as much as in this list. */
+                                    setOpenRun(open ? null : run.id);
+                                    onPick(open ? null : run.id);
+                                }}
                             >
                                 <Icon icon={open ? ChevronDown : ChevronRight} size={14} className="shrink-0 text-text-faint" />
                                 <span className="min-w-0 grow">

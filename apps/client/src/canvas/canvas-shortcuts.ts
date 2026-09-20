@@ -13,6 +13,7 @@ import { stepTimelineMessage } from '@/chat/timeline-scroll';
 import { focusedCanvas } from '@/state/canvas';
 import { transportFor } from '@/transport';
 import { focusedDiagram } from '@/state/diagram';
+import { useRunsDrawer } from '@/flow/runs-drawer';
 import { focusedFlow } from '@/state/flow';
 import { activeViewOf, useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
@@ -236,6 +237,10 @@ export const useCanvasShortcuts = (): void => {
                 } else if (is(CANVAS_SHORTCUTS.fitAll)) {
                     e.preventDefault();
                     flow.fitAll();
+                } else if (e.key === 'Escape' && useRunsDrawer.getState().open) {
+                    // The list is what you pull up to the worksheet, so the worksheet takes it back.
+                    e.preventDefault();
+                    useRunsDrawer.getState().setOpen(false);
                 }
                 return;
             }

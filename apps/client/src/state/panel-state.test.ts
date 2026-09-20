@@ -9,7 +9,6 @@ const defaults: PanelsState = {
     previewWidth: null,
     planAnchor: null,
     planWidth: null,
-    flowWidth: null,
     tabs: [],
     active: null,
     expandedDirs: [],
@@ -27,7 +26,6 @@ const full: PanelsState = {
     previewWidth: 640,
     planAnchor: { chatId: 'chat-1', planId: 'plan-1', dismissed: true },
     planWidth: 400,
-    flowWidth: 400,
     tabs: [
         { key: '/repo/readme.md', path: '/repo/readme.md', pinned: true, dirty: false },
         { key: '/repo/src/main.ts', path: '/repo/src/main.ts', pinned: false, dirty: false },
@@ -99,5 +97,12 @@ describe('panels in the machine-local file', () => {
         const local = { activeViewId: 'main', views: {}, panels: serializePanels(full) };
         expect(ProjectLocalSchema.parse(local)).toEqual(local);
         expect(ProjectLocalSchema.parse({ activeViewId: null, views: {} }).panels).toBeUndefined();
+    });
+
+    test('a file that still carries the width of a column that is gone opens all the same', () => {
+        const stored = { ...serializePanels(full), flowWidth: 420 };
+        const parsed = ProjectLocalSchema.parse({ activeViewId: 'main', views: {}, panels: stored });
+        expect(parsed.panels).not.toHaveProperty('flowWidth');
+        expect(parsed.panels?.panelWidth).toBe(480);
     });
 });

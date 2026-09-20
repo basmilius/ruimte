@@ -18019,11 +18019,6 @@
                 "exclusiveMinimum": 0,
                 "maximum": 9007199254740991
               },
-              "flowWidth": {
-                "type": "integer",
-                "exclusiveMinimum": 0,
-                "maximum": 9007199254740991
-              },
               "tabs": {
                 "type": "array",
                 "items": {
@@ -20137,11 +20132,6 @@
                 ]
               },
               "planWidth": {
-                "type": "integer",
-                "exclusiveMinimum": 0,
-                "maximum": 9007199254740991
-              },
-              "flowWidth": {
                 "type": "integer",
                 "exclusiveMinimum": 0,
                 "maximum": 9007199254740991

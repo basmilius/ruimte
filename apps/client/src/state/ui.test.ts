@@ -88,8 +88,7 @@ describe('ui', () => {
             panelWidth: 720,
             previewWidth: null,
             planAnchor: null,
-            planWidth: null,
-            flowWidth: null
+            planWidth: null
         });
         expect(useUi.getState().panel).toEqual({ open: true, kind: 'files' });
         expect(useUi.getState().panelWidth).toBe(720);
@@ -105,8 +104,7 @@ describe('ui', () => {
             panelWidth: null,
             previewWidth: null,
             planAnchor: null,
-            planWidth: null,
-            flowWidth: null
+            planWidth: null
         });
         expect(useUi.getState().panelsRestoring).toBe(true);
     });
@@ -118,8 +116,6 @@ describe('ui', () => {
             () => useUi.getState().setPreviewOpen(true),
             () => useUi.getState().setPanelWidth(600),
             () => useUi.getState().setPreviewWidth(480),
-            () => useUi.getState().setFlowPanel({ open: true, runs: false }),
-            () => useUi.getState().setFlowWidth(420),
             () => useUi.getState().setSidebarOpen(false)
         ];
         for (const move of moves) {
@@ -140,8 +136,7 @@ describe('ui', () => {
             panelWidth: 720,
             previewWidth: 480,
             planAnchor: null,
-            planWidth: null,
-            flowWidth: null
+            planWidth: null
         });
         unsubscribe();
         expect(notified).toBe(1);

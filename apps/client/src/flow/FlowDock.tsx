@@ -8,7 +8,7 @@ import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { visibleRect } from '@/canvas/math';
 import { FlowCardPicker, type FlowCardChoice } from '@/flow/FlowCardPicker';
 import { CARD_H, CARD_W } from '@/flow/geometry';
-import { toggleFlowRuns } from '@/flow/panel-watch';
+import { useRunsDrawer } from '@/flow/runs-drawer';
 import { runTarget } from '@/flow/run-target';
 import type { FlowStateHandle } from '@/flow/use-flow-state';
 import { useFlow, useFlowStore } from '@/state/flow';
@@ -18,6 +18,9 @@ import { Icon } from '@/ui/Icon';
 import { Separator } from '@/ui/Separator';
 import { Tooltip } from '@/ui/Tooltip';
 import { ZoomControls } from '@/ui/ZoomControls';
+
+/* How far the dock floats above whatever is under it, which is what `DockShell` keeps on its own. */
+const DOCK_GAP = 16;
 
 /* Everything a person may put on a worksheet, which is what the button on the left offers. */
 const EVERY_KIND: readonly FlowCardKind[] = ['trigger', 'condition', 'action', ...FLOW_BUILT_IN_KINDS];
@@ -40,6 +43,8 @@ export function FlowDock({ flow }: { flow: FlowStateHandle }) {
     const content = useFlow((s) => s.content);
     const selection = useFlow((s) => s.selection);
     const { state, known, busy, enable, start } = flow;
+    const drawerOpen = useRunsDrawer((s) => s.open);
+    const drawerHeight = useRunsDrawer((s) => s.height);
     const [picking, setPicking] = useState(false);
 
     const cards = Object.keys(content.cards).length;
@@ -59,7 +64,8 @@ export function FlowDock({ flow }: { flow: FlowStateHandle }) {
     };
 
     return (
-        <DockShell data-flow-chrome className="px-4">
+        /* The drawer takes the bottom of the worksheet, so the dock stands on top of it. */
+        <DockShell data-flow-chrome className="px-4" style={{ bottom: drawerOpen ? drawerHeight + DOCK_GAP : DOCK_GAP }}>
             <Tooltip label={t('dock.add')} name>
                 <button className="icon-btn" onClick={() => setPicking(true)}>
                     <Icon icon={Plus} size={16} />
@@ -107,7 +113,7 @@ export function FlowDock({ flow }: { flow: FlowStateHandle }) {
                     </button>
                 </Tooltip>
                 <Tooltip label={t('dock.runs')} name>
-                    <button className="icon-btn" onClick={toggleFlowRuns}>
+                    <button className="icon-btn" onClick={() => useRunsDrawer.getState().toggle()}>
                         <Icon icon={History} size={16} />
                     </button>
                 </Tooltip>

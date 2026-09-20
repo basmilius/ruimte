@@ -11,7 +11,6 @@ import { startProcessWarnings } from '@/processes/watch';
 import { startTaskWatch } from '@/tasks/watch';
 import { startPlanPanelWatch } from '@/plan/plan-panel-watch';
 import { startProjectList } from '@/project/list';
-import { startFlowPanelWatch } from '@/flow/panel-watch';
 import { startFlowNoticeWatch } from '@/flow/notice-watch';
 import { startShowViewWatch } from '@/project/show-view-watch';
 import { bootWindow } from '@/project/open';
@@ -49,7 +48,6 @@ startProjectList();
 void bootWindow();
 startShowViewWatch();
 startFlowNoticeWatch();
-startFlowPanelWatch();
 startInputModality();
 startKeepAwake();
 /* Before the account: a `/link` address leaves the address bar and waits for whoever signs in. */

@@ -7,7 +7,7 @@
         "run": "Deze flow nu draaien",
         "runHint": "Kies eerst de trigger om vanaf te draaien",
         "runs": "Wat deze flow gedaan heeft",
-        "runOffHint": "Zet de flow aan om hem te draaien, of probeer een kaart uit vanuit de kolom"
+        "runOffHint": "Zet de flow aan om hem te draaien, of probeer een kaart uit via zijn menu"
     },
     "kinds": {
         "trigger": "Als",
@@ -195,7 +195,10 @@
         "startedFrom": {
             "graph": "Begon bij {{card}} en alles erna",
             "card": "Begon bij {{card}}, die kaart alleen"
-        }
+        },
+        "close": "De lijst sluiten",
+        "failed": "Deze lijst kon niet getekend worden",
+        "stopReading": "Terug naar wat er draait"
     },
     "test": {
         "title": "Uitproberen",

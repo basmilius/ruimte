@@ -4,12 +4,15 @@ import { CircleAlert, CornerDownRight, Timer } from 'lucide-react';
 import type { FlowCard, FlowContent } from '@ruimte/contracts';
 import { argsOf, portsOf, textArg, type FlowArgProblem } from '@ruimte/flow';
 import { FlowArgSlot } from '@/flow/FlowArgSlot';
+import type { FlowCardResult } from '@/flow/card-result';
 import { cardRect, ICON_SIZE, roundingOf } from '@/flow/geometry';
 import { glyphOf } from '@/flow/glyphs';
 import type { CardLight } from '@/flow/live-look';
 import { cardLabel, cardSentence, cardSource } from '@/flow/labels';
 import { plateClass } from '@/flow/source-look';
+import { formatDuration } from '@/format/duration';
 import { Icon } from '@/ui/Icon';
+import { Tooltip } from '@/ui/Tooltip';
 
 /* The kinds that carry a word and no sentence, which is what makes them a chip. */
 const isChip = (card: FlowCard): boolean => card.kind === 'delay' || card.kind === 'any' || card.kind === 'all';
@@ -41,6 +44,8 @@ interface FlowCardBoxProps {
     armed?: boolean;
     /* When this card was last asked to do something it cannot, so it shakes once for each time. */
     refused?: number;
+    /* What this card did in the run being read: the one going on, or one picked in the drawer. */
+    result?: FlowCardResult;
 }
 
 /*
@@ -51,7 +56,7 @@ interface FlowCardBoxProps {
  * Its values are filled in here rather than in a form beside it: a card is a sentence, and the parts
  * of it a person decides are controls in that sentence.
  */
-export function FlowCardBox({ id, card, content, selected, problems, light, pulse, armed, refused }: FlowCardBoxProps) {
+export function FlowCardBox({ id, card, content, selected, problems, light, pulse, armed, refused, result }: FlowCardBoxProps) {
     const { t } = useTranslation('flow');
     const ports = portsOf(card);
     const wrong = Object.keys(problems ?? {});
@@ -131,6 +136,7 @@ export function FlowCardBox({ id, card, content, selected, problems, light, puls
                 <div className="flex items-center gap-1.5 text-xs/[inherit] text-text-faint">
                     <span className="truncate">{cardSource(t, card)}</span>
                     {card.inverted === true && <Icon icon={CornerDownRight} size={12} />}
+                    <Result card={card} result={result} />
                 </div>
                 <div className="flex flex-wrap items-center gap-x-0.5 gap-y-1 text-sm/tight text-text">
                     <Sentence id={id} card={card} content={content} problems={problems} />
@@ -166,4 +172,30 @@ function Sentence({ id, card, content, problems }: { id: string; card: FlowCard;
         }
         return <FlowArgSlot key={index} id={id} card={card} content={content} arg={arg} text={part.text} problem={problems?.[arg.name]} />;
     });
+}
+
+/*
+ * What this card did the last time a run reached it, on the line it already carries: how long it
+ * took, the way out it chose and whether it was written down rather than carried out. The sentence
+ * it wrote is a tooltip, because in a dry run that sentence is the whole command or the whole
+ * message and a card is not the place to read one of those.
+ */
+function Result({ card, result }: { card: FlowCard; result?: FlowCardResult }) {
+    const { t } = useTranslation('flow');
+    if (result === undefined) {
+        return null;
+    }
+    const line = (
+        <span className="ml-auto flex shrink-0 items-center gap-1.5">
+            {result.dry && <span className="rounded-full bg-surface-sunken px-1.5">{t('runs.dry')}</span>}
+            {result.ms !== undefined && <span className="tabular-nums">{formatDuration(result.ms)}</span>}
+            <span className={clsx(result.port === 'error' && 'text-status-error')}>
+                {result.port === undefined ? t('runs.wentNowhere') : t(`ports.${result.port}`)}
+            </span>
+        </span>
+    );
+    if (result.note === undefined) {
+        return line;
+    }
+    return <Tooltip label={`${cardLabel(t, card)}: ${result.note}`}>{line}</Tooltip>;
 }

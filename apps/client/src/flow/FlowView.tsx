@@ -9,9 +9,12 @@ import { FlowCardBox } from '@/flow/FlowCardBox';
 import { FlowCardMenu } from '@/flow/FlowCardMenu';
 import { FlowCardPicker, type FlowCardChoice } from '@/flow/FlowCardPicker';
 import { FlowDock } from '@/flow/FlowDock';
+import { FlowRunsDrawer } from '@/flow/FlowRunsDrawer';
 import { FlowLinkLayer, linkKey, type FlowDraft } from '@/flow/FlowLinkLayer';
 import { CARD_H, cardRect } from '@/flow/geometry';
+import { cardResultsOf } from '@/flow/card-result';
 import { flowLights } from '@/flow/live-look';
+import { useRunsDrawer } from '@/flow/runs-drawer';
 import { useFlowState } from '@/flow/use-flow-state';
 import { useLiveRun } from '@/flow/use-live-run';
 import { useFlow, useFlowStore } from '@/state/flow';
@@ -73,6 +76,8 @@ export function FlowView({ id }: { id: string }) {
     const [menuCard, setMenuCard] = useState<string | null>(null);
     /* The card that was asked to do something it cannot, and when, so it shakes once each time. */
     const [refused, setRefused] = useState<{ id: string; at: number } | null>(null);
+    /* The run the cards are reading back, picked in the drawer. Null is the run going on now. */
+    const [reading, setReading] = useState<string | null>(null);
     const camera = useFlow((s) => s.camera);
     const content = useFlow((s) => s.content);
     const selection = useFlow((s) => s.selection);
@@ -86,6 +91,11 @@ export function FlowView({ id }: { id: string }) {
     /* Once for the worksheet: whether a token reference still holds depends on every line drawn,
        so a card that asked for itself would work the whole graph out again. */
     const problems = useMemo(() => argProblemsOf(content), [content]);
+    const drawerOpen = useRunsDrawer((s) => s.open);
+    /* A run picked in the drawer is what the cards say, and with none picked they say the one that
+       is going on. Either way it is the same stream, read where the question was asked. */
+    const readingSteps = reading === null ? (live?.steps ?? []) : (flow.runs.find((run) => run.id === reading)?.steps ?? []);
+    const results = useMemo(() => cardResultsOf(readingSteps), [readingSteps]);
 
     useLayoutEffect(() => {
         const root = rootRef.current;
@@ -265,6 +275,7 @@ export function FlowView({ id }: { id: string }) {
                                 pulse={lights?.pulse === cardId ? live?.lastAt : undefined}
                                 armed={flow.armed?.from === cardId}
                                 refused={refused?.id === cardId ? refused.at : undefined}
+                                result={results[cardId]}
                             />
                         ))}
                     </div>
@@ -288,6 +299,7 @@ export function FlowView({ id }: { id: string }) {
             )}
 
             {landing !== null && <FlowCardPicker kinds={NEXT_KINDS} onPick={land} onClose={() => setLanding(null)} />}
+            {drawerOpen && <FlowRunsDrawer content={content} flow={flow} picked={reading} onPick={setReading} />}
             <FlowDock flow={flow} />
         </div>
     );

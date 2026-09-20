@@ -17,7 +17,6 @@ import { WorktreeDialog } from '@/shell/WorktreeDialog';
 import { SettingsDialog } from '@/shell/SettingsDialog';
 import { UsageDialog } from '@/shell/usage/UsageDialog';
 import { ALL_SETTINGS_SECTIONS } from '@/shell/settings/sections';
-import { FlowPanel } from '@/flow/FlowPanel';
 import { Panel } from '@/shell/Panel';
 import { PlanPanel } from '@/shell/PlanPanel';
 import { PreviewPanel } from '@/shell/PreviewPanel';
@@ -76,7 +75,6 @@ function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                         </div>
                     </FileToolbarSlotProvider>
                     <PlanPanel />
-                    <FlowPanel />
                     <PreviewPanel />
                     <Panel />
                     <VoicePanel />

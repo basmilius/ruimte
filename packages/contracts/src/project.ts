@@ -687,8 +687,6 @@ export const ProjectPanelsSchema = z.object({
     // The plan the plan panel shows. Whether it is open follows from whether its chat is on screen, never from this file.
     plan: z.object({ chatId: z.string().min(1), planId: z.string().min(1), dismissed: z.boolean() }).optional(),
     planWidth: z.number().int().positive().optional(),
-    // The column beside a flow. Whether it is open follows from the worksheet, never from this file.
-    flowWidth: z.number().int().positive().optional(),
     tabs: z.array(ProjectFileTabSchema).optional(),
     activeTab: z.string().nullable().optional(),
     // What the file tree had open, the way the tree names a directory: relative, POSIX, trailing slash.

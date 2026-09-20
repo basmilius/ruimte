@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { FlowPort } from '@ruimte/contracts';
+import type { FlowPort, FlowRunStep } from '@ruimte/contracts';
 import { useProject } from '@/state/project';
 import { useTransport } from '@/transport/context';
 
@@ -16,6 +16,8 @@ export interface FlowLiveRun {
     entry: string;
     settled: Record<string, FlowPort | null>;
     waiting: string[];
+    /* What each card did, in the order it settled, so a card can say it where it stands. */
+    steps: FlowRunStep[];
     /* The card that settled last, and the moment it did, so it can flash once and only once. */
     lastCard: string | null;
     lastAt: number;
@@ -55,6 +57,7 @@ export const useLiveRun = (viewId: string): FlowLiveRun | null => {
                               entry: run.trigger as string,
                               settled: run.settled ?? {},
                               waiting: run.waiting ?? [],
+                              steps: run.steps,
                               lastCard: null,
                               lastAt: run.startedAt,
                               over: false
@@ -73,7 +76,14 @@ export const useLiveRun = (viewId: string): FlowLiveRun | null => {
             setLive((before) =>
                 before === null || before.runId !== event.runId
                     ? before
-                    : { ...before, settled: event.settled, waiting: event.waiting, lastCard: event.step.cardId, lastAt: event.step.at }
+                    : {
+                          ...before,
+                          settled: event.settled,
+                          waiting: event.waiting,
+                          steps: [...before.steps, event.step],
+                          lastCard: event.step.cardId,
+                          lastAt: event.step.at
+                      }
             );
         });
         return () => {
