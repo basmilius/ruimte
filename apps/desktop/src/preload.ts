@@ -67,6 +67,25 @@ contextBridge.exposeInMainWorld('ruimteDesktop', {
         clearApiKey: (): Promise<unknown> => ipcRenderer.invoke('openai:clear-api-key'),
         createLiveSession: (sdp: string, preferences: unknown): Promise<unknown> => ipcRenderer.invoke('openai:create-live-session', sdp, preferences)
     },
+    speech: {
+        state: (): Promise<unknown> => ipcRenderer.invoke('speech:state'),
+        setEnabled: (enabled: boolean): Promise<unknown> => ipcRenderer.invoke('speech:enable', enabled),
+        removeModel: (): Promise<unknown> => ipcRenderer.invoke('speech:remove'),
+        start: (id: string, language: string): Promise<void> => ipcRenderer.invoke('speech:start', id, language),
+        samples: (id: string, samples: Float32Array): Promise<void> => ipcRenderer.invoke('speech:samples', id, samples),
+        stop: (id: string): Promise<void> => ipcRenderer.invoke('speech:stop', id),
+        cancel: (id: string): Promise<void> => ipcRenderer.invoke('speech:cancel', id),
+        onState: (listener: (state: unknown) => void): (() => void) => {
+            const handler = (_event: unknown, value: unknown): void => listener(value);
+            ipcRenderer.on('speech:state', handler);
+            return () => ipcRenderer.removeListener('speech:state', handler);
+        },
+        onEvent: (listener: (event: unknown) => void): (() => void) => {
+            const handler = (_event: unknown, value: unknown): void => listener(value);
+            ipcRenderer.on('speech:event', handler);
+            return () => ipcRenderer.removeListener('speech:event', handler);
+        }
+    },
     backgroundService: {
         state: (): Promise<unknown> => ipcRenderer.invoke('service:state'),
         onState: (listener: (state: unknown) => void): (() => void) => {

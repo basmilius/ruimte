@@ -256,6 +256,18 @@ describe('the camera of an editor that has not been measured', () => {
 });
 
 describe('notes', () => {
+    test('dictated text can be undone in one step without removing earlier typing', () => {
+        const store = createCanvasStore();
+        store.setState({ viewId: 'main' });
+        const id = store.getState().addNode('note', { x: 0, y: 0 })!;
+        store.getState().updateNode(id, { body: 'Typed first. ' });
+        store.getState().updateNode(id, { body: 'Typed first. Dictated sentence.' }, true);
+        store.getState().undo();
+        expect(store.getState().nodes[id]?.body).toBe('Typed first. ');
+        store.getState().redo();
+        expect(store.getState().nodes[id]?.body).toBe('Typed first. Dictated sentence.');
+    });
+
     test('a note starts empty with the default title and keeps its body and color through updateNode', () => {
         focusedCanvas().setState({ nodes: {}, texts: {}, order: [], edges: [], selection: [], viewId: 'main' });
         const id = canvas().addNode('note', { x: 0, y: 0 })!;

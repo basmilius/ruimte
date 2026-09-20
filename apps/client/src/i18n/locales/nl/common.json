@@ -44,5 +44,13 @@
         "cancelled": "geannuleerd"
     },
     "taskMark": "Taak: {{title}} ({{status}})",
-    "unseen": "Klaar terwijl je weg was"
+    "unseen": "Klaar terwijl je weg was",
+    "microphone": {
+        "default": "Standaardmicrofoon",
+        "error": {
+            "disabled": "Toegang tot de microfoon staat uit in Systeeminstellingen",
+            "noTrack": "Er was geen audiospoor van de microfoon beschikbaar",
+            "stopped": "De microfoontest is gestopt"
+        }
+    }
 }

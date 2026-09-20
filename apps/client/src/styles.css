@@ -755,6 +755,28 @@
     }
     @keyframes chat-shine { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
+    /* CodeMirror gives its empty-document placeholder an inline display style. */
+    .cm-content:has(.dictation-preview, .dictation-waveform) .cm-placeholder { display: none !important; }
+
+    .cm-editor:has(.dictation-waveform) .cm-cursor { visibility: hidden; }
+    .cm-content:has(.dictation-waveform) { caret-color: transparent; }
+    .dictation-waveform {
+        display: inline-flex;
+        height: 1em;
+        align-items: center;
+        gap: 2px;
+        margin-inline: 4px;
+        vertical-align: middle;
+    }
+    .dictation-waveform > span {
+        width: 2px;
+        height: 14px;
+        transform-origin: center;
+        transition: transform 64ms linear;
+        border-radius: 999px;
+        background: var(--accent);
+    }
+
     /* A word of a reply that just arrived. The duration is REVEAL_FADE_MS in chat/ui/reveal.ts, which
        keeps the spans until it is over; ease-in-out, because ease-out jumps up and then trails. */
     .chat-fade { animation: chat-fade 300ms ease-in-out both; }

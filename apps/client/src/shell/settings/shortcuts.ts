@@ -114,6 +114,7 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
     {
         title: say('chat.title'),
         shortcuts: [
+            { keys: CANVAS_SHORTCUTS.dictation, label: say('chat.dictation') },
             { keys: CANVAS_SHORTCUTS.previousMessage, label: say('chat.previousMessage') },
             { keys: CANVAS_SHORTCUTS.nextMessage, label: say('chat.nextMessage') }
         ]

@@ -1,3 +1,4 @@
+import { DictationTextarea } from '@/dictation/DictationTextarea';
 import { Suspense, lazy, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
@@ -84,7 +85,7 @@ export function ApprovalBody({
         <>
             <ApprovalDetails item={item} />
             {denyReason && draft.showReason && (
-                <textarea
+                <DictationTextarea
                     className="field min-h-16 text-sm"
                     autoFocus
                     aria-label={t('approval.reasonLabel')}

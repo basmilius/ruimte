@@ -1,4 +1,4 @@
-import type { AgentActivity, BackgroundServiceState, OpenAiLivePreferences, ReleaseNotesState, UpdateState } from '@ruimte/desktop-bridge';
+import type { AgentActivity, BackgroundServiceState, OpenAiLivePreferences, ReleaseNotesState, SpeechBridge, UpdateState } from '@ruimte/desktop-bridge';
 import type { SessionLoginCode } from '@ruimte/pulsar';
 
 /* The shapes the preload and the page both hold, passed on so the client reads the whole bridge here. */
@@ -165,6 +165,9 @@ export interface DesktopBridge {
     /* The API key stays in the shell; the page can replace it and learn whether one exists, but it
        can never read the value back. Optional until the running shell has restarted onto this API. */
     openAi?: OpenAiBridge;
+    /* Speech to text in a helper beside the app, on this machine. Optional for the same reason
+       `onBrowserContextMenu` is; without it dictation is not offered. */
+    speech?: SpeechBridge;
     /* The background service. Optional for the same reason `onBrowserContextMenu` is; without it
        This machine offers no switch, which is also what a browser and the web client get. */
     backgroundService?: BackgroundServiceBridge;

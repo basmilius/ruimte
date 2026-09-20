@@ -1,3 +1,4 @@
+import { claimMicrophone } from '@/audio/ownership';
 import i18next from 'i18next';
 import { isCanvasView, isOpenableView } from '@ruimte/contracts';
 import { focusedCanvas } from '@/state/canvas';
@@ -6,13 +7,14 @@ import { activeViewOf, useDocument } from '@/state/document';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { LiveSession, type LiveEvent } from '@/voice/live-session';
-import { MicrophoneMonitor, WaveformMonitor, WAVEFORM_BAND_COUNT } from '@/voice/microphone';
+import { MicrophoneMonitor, WaveformMonitor, WAVEFORM_BAND_COUNT } from '@/audio/microphone';
 import { ResponseToolLoop } from '@/voice/response-tool-loop';
 import { chatCompletion, completionPrompt, type VoiceChatFollowUp } from '@/voice/chat-follow-up';
 import { addTranscriptDelta, nextVoiceTimelineOrder, useVoice, type VoiceAction, type VoiceActionKind } from '@/voice/state';
 import { executeVoiceTool } from '@/voice/tools';
 
 let session: LiveSession | null = null;
+let releaseMicrophone: (() => void) | null = null;
 let microphone: MicrophoneMonitor | null = null;
 let outputWaveform: WaveformMonitor | null = null;
 let toolLoop: ResponseToolLoop | null = null;
@@ -125,6 +127,7 @@ const handleEvent = (event: LiveEvent): void => {
         return;
     }
     if (event.type === 'session.error') {
+        stopVoice();
         useVoice.setState({ phase: 'error', error: i18next.t('voice:error.session') });
     }
 };
@@ -133,6 +136,7 @@ export async function startVoice(): Promise<void> {
     if (session !== null) {
         return;
     }
+    releaseMicrophone = claimMicrophone(stopVoice);
     useVoice.setState({
         phase: 'connecting',
         error: null,
@@ -143,11 +147,21 @@ export async function startVoice(): Promise<void> {
         sessionStartedAt: null
     });
     undo.clear();
-    const next = new LiveSession(handleEvent, (stream) => {
-        outputWaveform?.stop();
-        outputWaveform = new WaveformMonitor((outputBands) => useVoice.setState({ outputBands }));
-        void outputWaveform.start(stream).catch(() => undefined);
-    });
+    const next = new LiveSession(
+        (event) => {
+            if (session === next) {
+                handleEvent(event);
+            }
+        },
+        (stream) => {
+            if (session !== next) {
+                return;
+            }
+            outputWaveform?.stop();
+            outputWaveform = new WaveformMonitor((outputBands) => useVoice.setState({ outputBands }));
+            void outputWaveform.start(stream).catch(() => undefined);
+        }
+    );
     toolLoop = new ResponseToolLoop(
         (event) => next.send(event),
         async (name, args) => {
@@ -164,8 +178,16 @@ export async function startVoice(): Promise<void> {
     session = next;
     try {
         const stream = await startMicrophone();
+        if (session !== next) {
+            stream.getTracks().forEach((track) => track.stop());
+            return;
+        }
         const { voiceLanguage, liveVoice } = useSettings.getState();
         await next.start(stream, { language: voiceLanguage, voice: liveVoice });
+        if (session !== next) {
+            next.close();
+            return;
+        }
         clockTimer = window.setInterval(appendTime, 60_000);
         let previous = workspaceContext();
         unsubscribeDocument = useDocument.subscribe(() => {
@@ -181,6 +203,12 @@ export async function startVoice(): Promise<void> {
         });
         unsubscribeChats = useChats.subscribe(flushChatFollowUps);
     } catch (error) {
+        if (session !== next) {
+            next.close();
+            return;
+        }
+        releaseMicrophone?.();
+        releaseMicrophone = null;
         next.close();
         session = null;
         toolLoop?.reset();
@@ -196,6 +224,8 @@ export async function startVoice(): Promise<void> {
 }
 
 export function stopVoice(): void {
+    releaseMicrophone?.();
+    releaseMicrophone = null;
     if (contextTimer !== null) {
         window.clearTimeout(contextTimer);
         contextTimer = null;

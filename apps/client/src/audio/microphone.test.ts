@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { DEFAULT_MICROPHONE_ID, microphoneConstraints, openMicrophoneStream } from '@/voice/microphone';
+import { DEFAULT_MICROPHONE_ID, microphoneConstraints, openMicrophoneStream } from '@/audio/microphone';
 
 describe('microphone selection', () => {
     test('leaves device selection to the operating system by default', () => {

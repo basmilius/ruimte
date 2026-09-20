@@ -1,54 +1,78 @@
 {
-  "title": "Voice",
-  "button": "Voice",
-  "close": "Close voice panel",
-  "waveform": "Conversation audio activity",
-  "phase": {
-    "idle": "Ready",
-    "connecting": "Connecting…",
-    "listening": "Listening",
-    "closing": "Ending…",
-    "error": "Needs attention",
-    "live": "Live · {{elapsed}}"
-  },
-  "speaker": {
-    "assistant": "Voice",
-    "person": "You",
-    "interrupted": "Interrupted"
-  },
-  "empty": {
-    "listening": "Listening…",
-    "title": "Talk to your workspace",
-    "description": "Ask about what is on screen, focus another view, add a note or open a terminal."
-  },
-  "actions": {
-    "undo": "Undo action",
-    "undoGroup_one": "Undo {{count}} note action",
-    "undoGroup_other": "Undo {{count}} note actions",
-    "collapse": "Collapse note actions",
-    "expand": "Expand note actions",
-    "notesAdded_one": "{{count}} note added",
-    "notesAdded_other": "{{count}} notes added"
-  },
-  "conversation": {
-    "start": "Start Voice conversation",
-    "restart": "Start new conversation",
-    "end": "End conversation"
-  },
-  "error": {
-    "start": "GPT-Live could not start",
-    "session": "GPT-Live reported a session error",
-    "microphoneDenied": "Microphone access was denied. Allow it in System Settings, then try again.",
-    "microphoneMissing": "No microphone was found.",
-    "microphoneFailed": "The microphone could not be opened.",
-    "microphoneDisabled": "Microphone access is disabled in System Settings",
-    "microphoneStopped": "The microphone test was stopped",
-    "noAudioTrack": "No microphone audio track was available",
-    "noSession": "Ruimte could not create a microphone session"
-  },
-  "microphone": {
-    "default": "Default microphone"
-  },
-  "untitledProject": "Untitled project",
-  "waveformLines": "Your voice above the line and Voice below it"
+    "title": "Voice Control",
+    "button": "Voice Control",
+    "close": "Close Voice Control",
+    "waveform": "Conversation audio activity",
+    "phase": {
+        "idle": "Ready",
+        "connecting": "Connecting…",
+        "listening": "Listening",
+        "closing": "Ending…",
+        "error": "Needs attention",
+        "live": "Live · {{elapsed}}"
+    },
+    "speaker": {
+        "assistant": "Voice Control",
+        "person": "You",
+        "interrupted": "Interrupted"
+    },
+    "empty": {
+        "listening": "Listening…",
+        "title": "Talk to your workspace",
+        "description": "Ask about what is on screen, focus another view, add a note or open a terminal."
+    },
+    "actions": {
+        "undo": "Undo action",
+        "undoGroup_one": "Undo {{count}} note action",
+        "undoGroup_other": "Undo {{count}} note actions",
+        "collapse": "Collapse note actions",
+        "expand": "Expand note actions",
+        "notesAdded_one": "{{count}} note added",
+        "notesAdded_other": "{{count}} notes added"
+    },
+    "conversation": {
+        "start": "Start Voice Control",
+        "restart": "Start new conversation",
+        "end": "End conversation"
+    },
+    "error": {
+        "start": "GPT-Live could not start",
+        "session": "GPT-Live reported a session error",
+        "microphoneDenied": "Microphone access was denied. Allow it in System Settings, then try again.",
+        "microphoneMissing": "No microphone was found.",
+        "microphoneFailed": "The microphone could not be opened.",
+        "noSession": "Ruimte could not create a microphone session"
+    },
+    "untitledProject": "Untitled project",
+    "waveformLines": "Your voice above the line and Voice Control below it",
+    "dictation": {
+        "title": "Speech to Text",
+        "description": "Dictate into a text field and see the words as you speak. Recognition runs on this computer; your audio is never uploaded or saved.",
+        "enable": "Enable Speech to Text",
+        "downloadHint": "Downloads a model of about 2.6 GB on first use. No account or API key required. Turning this off keeps the model for later.",
+        "desktopOnly": "Speech to Text is available in the desktop app.",
+        "unavailable": "The speech helper is missing. Rebuild or update the desktop app.",
+        "download": "Downloading the speech model",
+        "verifying": "Checking the speech model…",
+        "progress": "{{received}} / {{total}} MB downloaded",
+        "cancelDownload": "Cancel download",
+        "retry": "Retry download",
+        "remove": "Remove model",
+        "start": "Start dictation",
+        "stop": "Stop dictation",
+        "cancel": "Discard dictation",
+        "starting": "Preparing microphone…",
+        "listening": "Listening…",
+        "finishing": "Finishing…",
+        "idle": "Ready",
+        "error": "Dictation stopped",
+        "preview": "Live transcript",
+        "failed": "Speech to Text could not start",
+        "unsupportedLanguage": "This language is not supported by Speech to Text. Choose another language in Voice settings.",
+        "targetChanged": "The text field changed. Please dictate again.",
+        "terminalDraft": "Dictated text to paste",
+        "paste": "Paste into terminal",
+        "discard": "Discard",
+        "noEnter": "Pastes text without pressing Enter."
+    }
 }

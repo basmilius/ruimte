@@ -1,3 +1,5 @@
+import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
+import { useDictation } from '@/dictation/controller';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import { Check, Globe, LayoutGrid, LayoutTemplate, Lock, LockOpen, MessageSquare, Plus, Save, StickyNote, Terminal, Type, X } from 'lucide-react';
@@ -33,6 +35,7 @@ const centerWorld = (store: StoreApi<CanvasState>) => {
  */
 export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) => void }) {
     const { t } = useTranslation(['shell', 'common']);
+    const dictationEnabled = useDictation((state) => state.model?.enabled === true);
     /* The canvas under this dock. It is drawn in the focused cell only, so the focused editor would
        answer the same today, but reading the cell keeps that a coincidence rather than a rule. */
     const canvasStore = useCanvasStore();
@@ -49,6 +52,10 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
             layouts: s.layouts
         }))
     );
+    const terminalId = useCanvas((s) => {
+        const id = s.bodyFocusId ?? (s.selection.length === 1 ? s.selection[0] : null);
+        return id && s.nodes[id]?.kind === 'terminal' && !s.hidden.has(id) ? id : null;
+    });
     const anyLocked = Object.values(locks).some(Boolean);
     const allLocked = Object.values(locks).every(Boolean);
 
@@ -119,6 +126,15 @@ export function Dock({ onHiddenChange }: { onHiddenChange?: (hidden: boolean) =>
                 }}
             />
             <Separator />
+
+            {dictationEnabled && (
+                <>
+                    <div className={BTN_GROUP}>
+                        <TerminalDictationButton terminalId={terminalId} />
+                    </div>
+                    <Separator />
+                </>
+            )}
 
             <div className={BTN_GROUP}>
                 <Menu.Root>

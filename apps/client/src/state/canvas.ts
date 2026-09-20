@@ -165,7 +165,7 @@ export interface CanvasState extends CameraSlice {
     /* A null source unnames the node, since nothing named it, so its own source may name it again. */
     renameNode(id: string, title: string, source?: NodeTitleSource | null): void;
     /* Changes what a node carries (its page, its folder) without touching its placement. */
-    updateNode(id: string, patch: Partial<Pick<CanvasNode, 'url' | 'cwd' | 'command' | 'resume' | 'body' | 'color' | 'provider'>>): void;
+    updateNode(id: string, patch: Partial<Pick<CanvasNode, 'url' | 'cwd' | 'command' | 'resume' | 'body' | 'color' | 'provider'>>, undoable?: boolean): void;
     duplicateNode(id: string): void;
     /* Null with no view under the canvas, since nothing in the project file could hold such a node. */
     addNode(kind: NodeKind, at: Point, options?: AddNodeOptions): string | null;
@@ -417,8 +417,12 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 return { nodes: { ...s.nodes, [id]: { ...node, title, titleSource: source ?? undefined } } };
             });
         },
-        updateNode(id, patch) {
-            set((s) => (s.nodes[id] && !isUnknownNode(s.nodes[id]) ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], ...patch } } } : {}));
+        updateNode(id, patch, undoable = false) {
+            set((s) =>
+                s.nodes[id] && !isUnknownNode(s.nodes[id])
+                    ? { nodes: { ...s.nodes, [id]: { ...s.nodes[id], ...patch } }, ...(undoable ? remember(s) : {}) }
+                    : {}
+            );
         },
         duplicateNode(id) {
             const source = get().nodes[id];

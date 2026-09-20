@@ -122,6 +122,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     const [confirmClear, setConfirmClear] = useState(false);
     const endpointId = useEndpointId();
     const inputRef = useRef<ComposerInputHandle>(null);
+    const [dictationToolbar, setDictationToolbar] = useState<HTMLDivElement | null>(null);
     // A paste event says nothing about the keys behind it, so the key that asked for text inline is remembered here.
     const pasteInlineRef = useRef(false);
     const providers = useProviders((s) => s.providers);
@@ -878,6 +879,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                     )}
                     <ComposerInput
                         ref={inputRef}
+                        dictationToolbar={dictationToolbar}
                         className="composer-input select-text text-sm leading-normal text-text"
                         value={text}
                         placeholder={placeholder}
@@ -925,6 +927,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                         <StashPicker onRestore={restoreStashed} />
                         <span className="grow" />
                         <ContextMeter usage={info.usage} disabled={busy || disabled} onCompact={() => void chatClient.compact(chatId).catch(() => undefined)} />
+                        <div ref={setDictationToolbar} className="flex shrink-0 items-center" />
                         {busy && (
                             <Tooltip label={composerStopLabel()} name>
                                 <button

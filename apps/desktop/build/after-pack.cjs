@@ -12,6 +12,9 @@ module.exports = async (context) => {
     if (!existsSync(daemon)) {
         throw new Error(`No daemon at ${daemon}; run \`bun run --cwd apps/server compile\` for this os and arch first`);
     }
+    if (!existsSync(join(resources, 'bin', 'native', context.electronPlatformName === 'win32' ? 'speech-bridge.exe' : 'speech-bridge'))) {
+        throw new Error('No speech helper; compile the server resources for this os and arch first');
+    }
     if (!existsSync(join(resources, 'client', 'index.html'))) {
         throw new Error('No built client; run `bun run --cwd apps/client build` first');
     }

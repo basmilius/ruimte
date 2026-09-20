@@ -1,54 +1,78 @@
 {
-  "title": "Voice",
-  "button": "Voice",
-  "close": "Voice-paneel sluiten",
-  "waveform": "Geluid van het gesprek",
-  "phase": {
-    "idle": "Klaar",
-    "connecting": "Verbinden…",
-    "listening": "Luistert",
-    "closing": "Stoppen…",
-    "error": "Vraagt aandacht",
-    "live": "Live · {{elapsed}}"
-  },
-  "speaker": {
-    "assistant": "Voice",
-    "person": "Jij",
-    "interrupted": "Onderbroken"
-  },
-  "empty": {
-    "listening": "Luistert…",
-    "title": "Praat met je werkruimte",
-    "description": "Vraag wat er op het scherm staat, ga naar een andere weergave, maak een notitie of open een terminal."
-  },
-  "actions": {
-    "undo": "Actie ongedaan maken",
-    "undoGroup_one": "{{count}} notitie-actie ongedaan maken",
-    "undoGroup_other": "{{count}} notitie-acties ongedaan maken",
-    "collapse": "Notitie-acties inklappen",
-    "expand": "Notitie-acties uitklappen",
-    "notesAdded_one": "{{count}} notitie toegevoegd",
-    "notesAdded_other": "{{count}} notities toegevoegd"
-  },
-  "conversation": {
-    "start": "Voice-gesprek starten",
-    "restart": "Nieuw gesprek starten",
-    "end": "Gesprek beëindigen"
-  },
-  "error": {
-    "start": "GPT-Live kon niet starten",
-    "session": "GPT-Live meldde een fout in de sessie",
-    "microphoneDenied": "Toegang tot de microfoon is geweigerd. Sta die toe in Systeeminstellingen en probeer het opnieuw.",
-    "microphoneMissing": "Er is geen microfoon gevonden.",
-    "microphoneFailed": "De microfoon kon niet worden geopend.",
-    "microphoneDisabled": "Toegang tot de microfoon staat uit in Systeeminstellingen",
-    "microphoneStopped": "De microfoontest is gestopt",
-    "noAudioTrack": "Er was geen audiospoor van de microfoon beschikbaar",
-    "noSession": "Ruimte kon geen microfoonsessie opzetten"
-  },
-  "microphone": {
-    "default": "Standaardmicrofoon"
-  },
-  "untitledProject": "Naamloos project",
-  "waveformLines": "Jouw stem boven de lijn en Voice eronder"
+    "title": "Voice Control",
+    "button": "Voice Control",
+    "close": "Voice Control sluiten",
+    "waveform": "Geluid van het gesprek",
+    "phase": {
+        "idle": "Klaar",
+        "connecting": "Verbinden…",
+        "listening": "Luistert",
+        "closing": "Stoppen…",
+        "error": "Vraagt aandacht",
+        "live": "Live · {{elapsed}}"
+    },
+    "speaker": {
+        "assistant": "Voice Control",
+        "person": "Jij",
+        "interrupted": "Onderbroken"
+    },
+    "empty": {
+        "listening": "Luistert…",
+        "title": "Praat met je werkruimte",
+        "description": "Vraag wat er op het scherm staat, ga naar een andere weergave, maak een notitie of open een terminal."
+    },
+    "actions": {
+        "undo": "Actie ongedaan maken",
+        "undoGroup_one": "{{count}} notitie-actie ongedaan maken",
+        "undoGroup_other": "{{count}} notitie-acties ongedaan maken",
+        "collapse": "Notitie-acties inklappen",
+        "expand": "Notitie-acties uitklappen",
+        "notesAdded_one": "{{count}} notitie toegevoegd",
+        "notesAdded_other": "{{count}} notities toegevoegd"
+    },
+    "conversation": {
+        "start": "Voice Control starten",
+        "restart": "Nieuw gesprek starten",
+        "end": "Gesprek beëindigen"
+    },
+    "error": {
+        "start": "GPT-Live kon niet starten",
+        "session": "GPT-Live meldde een fout in de sessie",
+        "microphoneDenied": "Toegang tot de microfoon is geweigerd. Sta die toe in Systeeminstellingen en probeer het opnieuw.",
+        "microphoneMissing": "Er is geen microfoon gevonden.",
+        "microphoneFailed": "De microfoon kon niet worden geopend.",
+        "noSession": "Ruimte kon geen microfoonsessie opzetten"
+    },
+    "untitledProject": "Naamloos project",
+    "waveformLines": "Jouw stem boven de lijn en Voice Control eronder",
+    "dictation": {
+        "title": "Speech to Text",
+        "description": "Dicteer in een tekstveld en zie de woorden terwijl je spreekt. Herkenning gebeurt op deze computer; je audio wordt nooit verstuurd of opgeslagen.",
+        "enable": "Speech to Text inschakelen",
+        "downloadHint": "Downloadt bij het eerste gebruik een model van ongeveer 2,6 GB. Geen account of API-sleutel nodig. Uitschakelen bewaart het model voor later.",
+        "desktopOnly": "Speech to Text is beschikbaar in de desktop-app.",
+        "unavailable": "De spraakhelper ontbreekt. Bouw of update de desktop-app.",
+        "download": "Spraakmodel downloaden",
+        "verifying": "Spraakmodel controleren…",
+        "progress": "{{received}} / {{total}} MB gedownload",
+        "cancelDownload": "Download annuleren",
+        "retry": "Download opnieuw proberen",
+        "remove": "Model verwijderen",
+        "start": "Dicteren starten",
+        "stop": "Dicteren stoppen",
+        "cancel": "Dictatie weggooien",
+        "starting": "Microfoon voorbereiden…",
+        "listening": "Luisteren…",
+        "finishing": "Afronden…",
+        "idle": "Gereed",
+        "error": "Dictatie gestopt",
+        "preview": "Live transcriptie",
+        "failed": "Speech to Text kon niet starten",
+        "unsupportedLanguage": "Speech to Text ondersteunt deze taal niet. Kies een andere taal in de Voice-instellingen.",
+        "targetChanged": "Het tekstveld is gewijzigd. Dicteer opnieuw.",
+        "terminalDraft": "Tekst om in de terminal te plakken",
+        "paste": "In terminal plakken",
+        "discard": "Weggooien",
+        "noEnter": "Plakt tekst zonder op Enter te drukken."
+    }
 }

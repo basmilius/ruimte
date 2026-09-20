@@ -1,3 +1,5 @@
+import { DictationControl } from '@/dictation/DictationControl';
+import i18next from 'i18next';
 import { useEffect, useRef, useState } from 'react';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
 import { ClipboardPaste, Copy, Scan, Scissors } from 'lucide-react';
@@ -19,6 +21,7 @@ export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
     const canvasStore = useCanvasStore();
     const body = useCanvas((s) => s.nodes[id]?.body ?? '');
     const ref = useRef<HTMLTextAreaElement>(null);
+    const dictationRoot = useRef<HTMLDivElement>(null);
     // What was selected in the field when its menu opened; a textarea keeps that to itself, so the
     // rows work on the value and put the caret back themselves.
     const [range, setRange] = useState<[number, number]>([0, 0]);
@@ -53,14 +56,41 @@ export function NoteNode({ id, focused }: { id: string; focused: boolean }) {
                 }}
             >
                 <ContextMenu.Trigger className="h-full w-full">
-                    <textarea
-                        ref={ref}
-                        value={body}
-                        placeholder={t('note.placeholder')}
-                        spellCheck={false}
-                        className="h-full w-full resize-none bg-transparent px-3 py-2.5 font-sans text-sm leading-normal text-text outline-none placeholder:text-text-faint"
-                        onChange={(e) => canvasStore.getState().updateNode(id, { body: e.target.value })}
-                    />
+                    <div ref={dictationRoot} className="flex h-full min-h-0 flex-col">
+                        <textarea
+                            ref={ref}
+                            value={body}
+                            placeholder={t('note.placeholder')}
+                            spellCheck={false}
+                            className="min-h-0 w-full flex-1 resize-none bg-transparent px-3 py-2.5 font-sans text-sm leading-normal text-text outline-none placeholder:text-text-faint"
+                            onChange={(e) => canvasStore.getState().updateNode(id, { body: e.target.value })}
+                        />
+                        <DictationControl
+                            targetRef={dictationRoot}
+                            capture={() => {
+                                const field = ref.current;
+                                if (!field) {
+                                    return null;
+                                }
+                                const before = field.value;
+                                const from = field.selectionStart;
+                                const to = field.selectionEnd;
+                                return {
+                                    insert: (text) => {
+                                        if (ref.current !== field || field.value !== before) {
+                                            throw new Error(i18next.t('voice:dictation.targetChanged'));
+                                        }
+                                        canvasStore.getState().updateNode(id, { body: `${before.slice(0, from)}${text}${before.slice(to)}` }, true);
+                                        requestAnimationFrame(() => {
+                                            if (ref.current === field) {
+                                                field.setSelectionRange(from + text.length, from + text.length);
+                                            }
+                                        });
+                                    }
+                                };
+                            }}
+                        />
+                    </div>
                 </ContextMenu.Trigger>
                 <ContextMenu.Portal>
                     <ContextMenu.Positioner className="z-(--z-popup)">

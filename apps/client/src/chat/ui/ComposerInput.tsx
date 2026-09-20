@@ -1,3 +1,5 @@
+import { DictationControl } from '@/dictation/DictationControl';
+import { captureEditor, dictationPreview, dictationRange } from '@/dictation/editor';
 import { useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from 'react';
 import { Compartment, EditorState, Prec, Transaction, type Extension } from '@codemirror/state';
 import { EditorView, placeholder as placeholderText } from '@codemirror/view';
@@ -16,6 +18,7 @@ export interface InputSelection {
 
 interface ComposerInputProps {
     ref?: Ref<ComposerInputHandle>;
+    dictationToolbar?: HTMLElement | null;
     value: string;
     placeholder: string;
     disabled: boolean;
@@ -39,8 +42,19 @@ const NO_EXTENSIONS: Extension = [];
  * itself, so a decoration may change a font or add padding without walking the caret off its
  * character, which a textarea with a painted layer behind it could not.
  */
-export function ComposerInput({ ref, value, placeholder, disabled, tabbable, className, extensions = NO_EXTENSIONS, ...handlers }: ComposerInputProps) {
+export function ComposerInput({
+    ref,
+    value,
+    placeholder,
+    disabled,
+    tabbable,
+    className,
+    dictationToolbar,
+    extensions = NO_EXTENSIONS,
+    ...handlers
+}: ComposerInputProps) {
     const hostRef = useRef<HTMLDivElement>(null);
+    const targetRef = useRef<HTMLDivElement>(null);
     const viewRef = useRef<EditorView | null>(null);
     const [compartments] = useState(() => ({
         attributes: new Compartment(),
@@ -69,6 +83,8 @@ export function ComposerInput({ ref, value, placeholder, disabled, tabbable, cla
                 selection: { anchor: initial.length },
                 extensions: [
                     composerEditorExtensions(),
+                    dictationRange,
+                    dictationPreview,
                     compartments.attributes.of([]),
                     compartments.editable.of([]),
                     compartments.placeholder.of([]),
@@ -151,5 +167,16 @@ export function ComposerInput({ ref, value, placeholder, disabled, tabbable, cla
         []
     );
 
-    return <div ref={hostRef} className={className} />;
+    return (
+        <div ref={targetRef} className="min-w-0">
+            <div ref={hostRef} className={className} />
+            <DictationControl
+                inlinePreview
+                buttonContainer={dictationToolbar}
+                targetRef={targetRef}
+                disabled={disabled}
+                capture={() => (viewRef.current ? captureEditor(viewRef.current) : null)}
+            />
+        </div>
+    );
 }

@@ -1,689 +1,694 @@
 {
-  "appearance": {
-    "theme": {
-      "title": "Theme",
-      "label": "Theme",
-      "description": "System follows your OS.",
-      "options": {
-        "system": "System",
-        "light": "Light",
-        "dark": "Dark"
-      }
-    },
-    "accent": {
-      "label": "Accent",
-      "description": "Selection rings, focus and the terminal cursor.",
-      "more": "More colors"
-    },
-    "interface": {
-      "title": "Interface",
-      "fontSize": {
-        "label": "Interface font size",
-        "description": "Scales text and spacing everywhere except terminals and code."
-      },
-      "dock": {
-        "label": "Hide the dock",
-        "description": "The bar under a canvas or drawing hides until the pointer nears the bottom edge."
-      }
-    },
-    "language": {
-      "label": "Language",
-      "description": "System follows your OS, and falls back to English for a language Ruimte does not speak yet.",
-      "system": "System"
-    },
-    "region": {
-      "label": "Region",
-      "description": "Dates and numbers read as {{example}}.",
-      "language": "Follow language",
-      "system": "System"
-    },
-    "terminal": {
-      "title": "Terminal",
-      "font": {
-        "label": "Font",
-        "description": "Falls back to the system font if it is not installed.",
-        "system": "System"
-      },
-      "fontSize": {
-        "label": "Font size"
-      }
-    }
-  },
-  "sections": {
-    "title": "Settings sections",
     "appearance": {
-      "label": "Appearance",
-      "description": "Theme, accent, the terminal font and the region numbers and dates are written in."
+        "theme": {
+            "title": "Theme",
+            "label": "Theme",
+            "description": "System follows your OS.",
+            "options": {
+                "system": "System",
+                "light": "Light",
+                "dark": "Dark"
+            }
+        },
+        "accent": {
+            "label": "Accent",
+            "description": "Selection rings, focus and the terminal cursor.",
+            "more": "More colors"
+        },
+        "interface": {
+            "title": "Interface",
+            "fontSize": {
+                "label": "Interface font size",
+                "description": "Scales text and spacing everywhere except terminals and code."
+            },
+            "dock": {
+                "label": "Hide the dock",
+                "description": "The bar under a canvas or drawing hides until the pointer nears the bottom edge."
+            }
+        },
+        "language": {
+            "label": "Language",
+            "description": "System follows your OS, and falls back to English for a language Ruimte does not speak yet.",
+            "system": "System"
+        },
+        "region": {
+            "label": "Region",
+            "description": "Dates and numbers read as {{example}}.",
+            "language": "Follow language",
+            "system": "System"
+        },
+        "terminal": {
+            "title": "Terminal",
+            "font": {
+                "label": "Font",
+                "description": "Falls back to the system font if it is not installed.",
+                "system": "System"
+            },
+            "fontSize": {
+                "label": "Font size"
+            }
+        }
     },
-    "keyboard": {
-      "label": "Keyboard",
-      "description": "Every keyboard shortcut."
+    "sections": {
+        "title": "Settings sections",
+        "appearance": {
+            "label": "Appearance",
+            "description": "Theme, accent, the terminal font and the region numbers and dates are written in."
+        },
+        "keyboard": {
+            "label": "Keyboard",
+            "description": "Every keyboard shortcut."
+        },
+        "views": {
+            "label": "Views",
+            "description": "How drawings and browser pages behave."
+        },
+        "files": {
+            "label": "Files and Git",
+            "description": "What the Files and Git panels show, and where browsing for a folder starts."
+        },
+        "agents": {
+            "label": "Agents",
+            "description": "Defaults, permissions and notifications for agents."
+        },
+        "usage": {
+            "label": "Usage",
+            "description": "The currency of the usage page."
+        },
+        "voice": {
+            "label": "Voice",
+            "description": "Microphone, dictation and Voice Control"
+        },
+        "machines": {
+            "label": "Remote",
+            "description": "Your machines, the account they share, and how each one is reached."
+        },
+        "about": {
+            "label": "About",
+            "description": "Version, machine details and links."
+        }
     },
-    "views": {
-      "label": "Views",
-      "description": "How drawings and browser pages behave."
-    },
-    "files": {
-      "label": "Files and Git",
-      "description": "What the Files and Git panels show, and where browsing for a folder starts."
-    },
-    "agents": {
-      "label": "Agents",
-      "description": "Defaults, permissions and notifications for agents."
+    "controls": {
+        "stepper": {
+            "smaller": "Smaller",
+            "larger": "Larger",
+            "smallerFor": "{{label}}: smaller",
+            "largerFor": "{{label}}: larger"
+        }
     },
     "usage": {
-      "label": "Usage",
-      "description": "The currency of the usage page."
-    },
-    "voice": {
-      "label": "Voice",
-      "description": "GPT-Live access and speech settings."
-    },
-    "machines": {
-      "label": "Remote",
-      "description": "Your machines, the account they share, and how each one is reached."
-    },
-    "about": {
-      "label": "About",
-      "description": "Version, machine details and links."
-    }
-  },
-  "controls": {
-    "stepper": {
-      "smaller": "Smaller",
-      "larger": "Larger",
-      "smallerFor": "{{label}}: smaller",
-      "largerFor": "{{label}}: larger"
-    }
-  },
-  "usage": {
-    "title": "Usage",
-    "currency": {
-      "label": "Currency",
-      "dollars": "Prices as published, in dollars.",
-      "noRate": "No exchange rate yet. The page shows dollars until there is one.",
-      "converted": "Converted at the ECB reference rate of {{date}}.",
-      "options": {
-        "USD": "Dollars",
-        "EUR": "Euros"
-      }
-    }
-  },
-  "gesture": {
-    "drag": "drag",
-    "scroll": "scroll",
-    "click": "click"
-  },
-  "views": {
-    "drawing": {
-      "title": "Drawing",
-      "snap": {
-        "label": "Snap to the grid",
-        "description": "Shapes land on the 8 unit grid when you draw, move or resize them. Freehand strokes never snap."
-      }
-    },
-    "browser": {
-      "title": "Browser",
-      "swipe": {
-        "label": "Swipe between pages",
-        "description": "Two fingers left or right on the trackpad go back or forward in a browser node or view. A page that scrolls sideways itself keeps the gesture."
-      }
-    }
-  },
-  "files": {
-    "files": {
-      "title": "Files",
-      "openFiles": {
-        "label": "Open files",
-        "description": "Past this number, the oldest unpinned tab closes. Double-click a tab to pin it."
-      },
-      "hidden": {
-        "label": "Show hidden files",
-        "description": "Dotfiles and dot folders."
-      },
-      "browseStart": {
-        "label": "Start browsing in",
-        "description": "The folder the command palette starts in when you browse. Applies to every machine. Empty or missing falls back to the home folder."
-      }
-    },
-    "git": {
-      "title": "Git",
-      "layout": {
-        "label": "Diff layout",
-        "description": "Stacked shows one column. Split puts the old and new versions side by side.",
-        "options": {
-          "stacked": "Stacked",
-          "split": "Split"
+        "title": "Usage",
+        "currency": {
+            "label": "Currency",
+            "dollars": "Prices as published, in dollars.",
+            "noRate": "No exchange rate yet. The page shows dollars until there is one.",
+            "converted": "Converted at the ECB reference rate of {{date}}.",
+            "options": {
+                "USD": "Dollars",
+                "EUR": "Euros"
+            }
         }
-      },
-      "whitespace": {
-        "label": "Show whitespace changes",
-        "description": "Off hides changes that only touch whitespace, in the diff and in the counts."
-      }
-    }
-  },
-  "shortcuts": {
-    "commands": {
-      "title": "Commands"
     },
-    "canvas": {
-      "title": "Canvas",
-      "palette": "Command palette",
-      "findInFiles": "Find in files",
-      "pan": "Pan the canvas",
-      "zoomPointer": "Zoom around the pointer",
-      "zoomIn": "Zoom in",
-      "zoomOut": "Zoom out",
-      "undo": "Undo",
-      "redo": "Redo"
-    },
-    "selection": {
-      "title": "Selection",
-      "selectAll": "Select everything",
-      "add": "Add to the selection",
-      "delete": "Delete the selection",
-      "escape": "Clear the selection, or leave the node you are in"
+    "gesture": {
+        "drag": "drag",
+        "scroll": "scroll",
+        "click": "click"
     },
     "views": {
-      "title": "Views",
-      "goTo": "Go to view 1 to 9",
-      "previous": "Previous view",
-      "next": "Next view",
-      "new": "New canvas view",
-      "rename": "Rename a node, or open the settings of a view"
-    },
-    "split": {
-      "title": "Split",
-      "right": "Split the cell to the right",
-      "down": "Split the cell down",
-      "focusNeighbor": "Focus the neighboring cell (any arrow key)",
-      "close": "Close the focused cell"
-    },
-    "drawing": {
-      "title": "Drawing",
-      "select": "Select (1)",
-      "hand": "Pan (hand)",
-      "rectangle": "Rectangle (2)",
-      "diamond": "Diamond (3)",
-      "ellipse": "Ellipse (4)",
-      "arrow": "Arrow (5)",
-      "line": "Line (6)",
-      "freehand": "Freehand (7)",
-      "text": "Text (8)",
-      "eraser": "Eraser (0)",
-      "keepTool": "Keep the tool selected after drawing",
-      "lock": "Lock or unlock the selection",
-      "duplicate": "Duplicate the selection",
-      "bringToFront": "Bring to front",
-      "sendToBack": "Send to back",
-      "snap": "Toggle grid snapping while dragging",
-      "copy": "Copy the selection",
-      "paste": "Paste into the drawing"
-    },
-    "panels": {
-      "title": "Panels",
-      "toggle": "Toggle the last open panel"
-    },
-    "prompts": {
-      "title": "Prompts",
-      "answerFront": "Answer the front prompt of the canvas",
-      "primary": "Allow, Next or Answer",
-      "previous": "Previous prompt in the stack",
-      "next": "Next prompt in the stack",
-      "escape": "Back to where you were"
-    },
-    "chat": {
-      "title": "Chat",
-      "previousMessage": "Previous message you sent",
-      "nextMessage": "Next message you sent"
-    },
-    "browser": {
-      "title": "Browser",
-      "back": "Back",
-      "forward": "Forward"
-    },
-    "nodes": {
-      "title": "Nodes",
-      "nextNode": "Move focus to the next node",
-      "select": "Select the node the keyboard is on",
-      "escape": "Clear the selection (a terminal passes Escape to its program)",
-      "leave": "Leave a terminal node"
-    },
-    "terminal": {
-      "title": "Terminal",
-      "clear": "Clear the screen and the scrollback",
-      "lineStart": "Move to the beginning of the line",
-      "lineEnd": "Move to the end of the line",
-      "wordBack": "Move back one word",
-      "wordForward": "Move forward one word",
-      "deleteToLineStart": "Delete to the beginning of the line"
-    }
-  },
-  "keyboard": {
-    "search": "Search shortcuts",
-    "clearSearch": "Clear search",
-    "noMatch": "Nothing matches \"{{query}}\".",
-    "browserNote": "In a browser tab, {{newView}} and {{closeCell}} belong to the browser."
-  },
-  "backgroundService": {
-    "title": "When Ruimte quits",
-    "keepRunning": {
-      "label": "Keep this machine running when Ruimte quits",
-      "description": "Sessions and agents keep working in the background, so this machine stays reachable from your other clients and the web."
-    },
-    "unavailable": {
-      "dev": "The dev app always runs a machine of its own and stops it when it quits.",
-      "windows": "Not available on Windows yet, so this machine stops when Ruimte quits.",
-      "appimage": "Not available for the AppImage, which is gone once Ruimte quits. Install the deb or rpm package to keep this machine running."
-    },
-    "pending": {
-      "takeOver": "Ruimte runs this machine itself right now. It keeps running from the next time Ruimte quits.",
-      "handBack": "This machine stops when Ruimte quits, and Ruimte runs it itself from the next start."
-    },
-    "restart": {
-      "label": "Restart to finish the update",
-      "action": "Restart"
-    },
-    "failure": "The background service did not run this machine: {{reason}}",
-    "linger": {
-      "label": "Keep running after you log out",
-      "on": "Lingering is on, so this machine keeps running after you log out.",
-      "off": "Without it, this machine stops when you log out of your desktop session.",
-      "action": "Allow"
-    },
-    "stop": {
-      "label": "Stop the machine",
-      "description": "Ends every session here and quits Ruimte. The machine starts again the next time you open Ruimte.",
-      "action": "Stop"
-    },
-    "confirmStop": {
-      "title": "Stop this machine and quit Ruimte?",
-      "description": "Every terminal and agent on this machine ends, and no other client can reach it until you open Ruimte again.",
-      "action": "Stop and quit"
-    },
-    "confirmRestart": {
-      "title": "Restart this machine now?",
-      "description": "Every terminal and agent on this machine ends, and it comes back on the updated version.",
-      "action": "Restart now"
-    },
-    "confirmLinger": {
-      "title": "Keep running after you log out?",
-      "description": "Ruimte runs loginctl enable-linger for your user, so your user services keep running without a session. Undo it with loginctl disable-linger.",
-      "action": "Allow"
-    }
-  },
-  "reach": {
-    "thisMachine": "This machine",
-    "paired": "Paired",
-    "onAccount": "On your account",
-    "openedThroughAccount": "Opened through your account"
-  },
-  "agents": {
-    "deleteAnyView": {
-      "title": "What an agent may delete",
-      "sectionDescription": "Saved per machine. Applies to every client connected to it.",
-      "rowLabel": "Agents on {{machine}} may delete any view or node",
-      "description": "Off, an agent only deletes views and nodes it created. On, it can delete any view or node in any project there, including yours.",
-      "notConnected": "Not connected. Change this from the machine's dialog under Remote, or while a project on it is open."
-    },
-    "defaults": {
-      "title": "Defaults for new agents",
-      "description": "Picking a model in a chat also changes its default here.",
-      "noChatCli": "No agent CLI with chat support found on this machine.",
-      "usesCliDefault": "Uses the CLI's own default model.",
-      "modelFor": "Default model for {{provider}}",
-      "providerDefault": "Provider default",
-      "legacyModel": "{{name}} (legacy)",
-      "permissions": "Permissions",
-      "terminalMode": "Terminal agents start in"
-    },
-    "here": {
-      "title": "What an agent may do here",
-      "description": "These settings apply to this client only.",
-      "approvals": {
-        "label": "Ask me for permission in the node",
-        "description": "Permission requests from terminal agents appear in the node header, and the first answer wins. With this window in the background you also get a notification, since a request expires after a few minutes. Off, you answer in the terminal."
-      },
-      "showViews": {
-        "label": "Let an agent show you a view",
-        "description": "On, a view an agent opens replaces the one you are working in, and a banner takes you back. Off, the banner offers a button to go there."
-      }
-    },
-    "working": {
-      "title": "While an agent works",
-      "description": "These settings apply to this computer only.",
-      "turnNotify": {
-        "label": "Tell me when a turn ends",
-        "description": "Sends a notification when an agent finishes while this window is in the background."
-      },
-      "sound": {
-        "label": "Play a sound with a notification",
-        "description": "Applies to every agent notification."
-      },
-      "keepAwake": {
-        "label": "Keep this computer awake",
-        "description": "Keeps the computer awake while an agent works, since sleep pauses the agent. The display can still turn off.",
-        "toggle": "Keep this computer awake while an agent works"
-      }
-    },
-    "chats": {
-      "title": "Chats",
-      "streaming": {
-        "label": "Show replies",
-        "words": {
-          "label": "Word by word",
-          "description": "Follows the agent as it writes."
+        "drawing": {
+            "title": "Drawing",
+            "snap": {
+                "label": "Snap to the grid",
+                "description": "Shapes land on the 8 unit grid when you draw, move or resize them. Freehand strokes never snap."
+            }
         },
-        "blocks": {
-          "label": "Paragraph by paragraph",
-          "description": "Shows each paragraph once it is complete."
-        },
-        "whole": {
-          "label": "When complete",
-          "description": "Waits until the reply is done."
+        "browser": {
+            "title": "Browser",
+            "swipe": {
+                "label": "Swipe between pages",
+                "description": "Two fingers left or right on the trackpad go back or forward in a browser node or view. A page that scrolls sideways itself keeps the gesture."
+            }
         }
-      }
     },
-    "providers": {
-      "title": "Providers",
-      "description": "Agent CLIs found on the machine's PATH. To add one, install it and restart Ruimte on that machine.",
-      "none": "No providers found",
-      "version": "Version {{version}}.",
-      "chatAndTerminal": "Chat and terminal.",
-      "terminalOnly": "Terminal only.",
-      "reportsStatus": "Reports agent status.",
-      "noStatus": "Does not report agent status.",
-      "installed": "Installed",
-      "missing": "Missing"
-    }
-  },
-  "about": {
-    "tagline": "Space for AI Engineering.",
-    "version": "Version {{version}}",
-    "unknownVersion": "unknown",
-    "details": {
-      "title": "Details",
-      "copy": "Copy details",
-      "notConnected": "Not connected",
-      "unknown": "Unknown",
-      "machine": {
-        "label": "Machine",
-        "description": "The machine of the current workspace, and its version."
-      },
-      "platform": "Platform",
-      "dataFolder": {
-        "label": "Data folder",
-        "description": "Where the machine stores sessions, chats and worktrees."
-      }
+    "files": {
+        "files": {
+            "title": "Files",
+            "openFiles": {
+                "label": "Open files",
+                "description": "Past this number, the oldest unpinned tab closes. Double-click a tab to pin it."
+            },
+            "hidden": {
+                "label": "Show hidden files",
+                "description": "Dotfiles and dot folders."
+            },
+            "browseStart": {
+                "label": "Start browsing in",
+                "description": "The folder the command palette starts in when you browse. Applies to every machine. Empty or missing falls back to the home folder."
+            }
+        },
+        "git": {
+            "title": "Git",
+            "layout": {
+                "label": "Diff layout",
+                "description": "Stacked shows one column. Split puts the old and new versions side by side.",
+                "options": {
+                    "stacked": "Stacked",
+                    "split": "Split"
+                }
+            },
+            "whitespace": {
+                "label": "Show whitespace changes",
+                "description": "Off hides changes that only touch whitespace, in the diff and in the counts."
+            }
+        }
     },
-    "updates": {
-      "title": "Updates",
-      "description": "Installing always waits for you.",
-      "auto": {
-        "label": "Download updates automatically",
-        "description": "On, new versions download in the background. Off, you start each download yourself."
-      },
-      "check": "Check for updates",
-      "checking": "Checking",
-      "download": "Download",
-      "install": "Restart to install"
+    "shortcuts": {
+        "commands": {
+            "title": "Commands"
+        },
+        "canvas": {
+            "title": "Canvas",
+            "palette": "Command palette",
+            "findInFiles": "Find in files",
+            "pan": "Pan the canvas",
+            "zoomPointer": "Zoom around the pointer",
+            "zoomIn": "Zoom in",
+            "zoomOut": "Zoom out",
+            "undo": "Undo",
+            "redo": "Redo"
+        },
+        "selection": {
+            "title": "Selection",
+            "selectAll": "Select everything",
+            "add": "Add to the selection",
+            "delete": "Delete the selection",
+            "escape": "Clear the selection, or leave the node you are in"
+        },
+        "views": {
+            "title": "Views",
+            "goTo": "Go to view 1 to 9",
+            "previous": "Previous view",
+            "next": "Next view",
+            "new": "New canvas view",
+            "rename": "Rename a node, or open the settings of a view"
+        },
+        "split": {
+            "title": "Split",
+            "right": "Split the cell to the right",
+            "down": "Split the cell down",
+            "focusNeighbor": "Focus the neighboring cell (any arrow key)",
+            "close": "Close the focused cell"
+        },
+        "drawing": {
+            "title": "Drawing",
+            "select": "Select (1)",
+            "hand": "Pan (hand)",
+            "rectangle": "Rectangle (2)",
+            "diamond": "Diamond (3)",
+            "ellipse": "Ellipse (4)",
+            "arrow": "Arrow (5)",
+            "line": "Line (6)",
+            "freehand": "Freehand (7)",
+            "text": "Text (8)",
+            "eraser": "Eraser (0)",
+            "keepTool": "Keep the tool selected after drawing",
+            "lock": "Lock or unlock the selection",
+            "duplicate": "Duplicate the selection",
+            "bringToFront": "Bring to front",
+            "sendToBack": "Send to back",
+            "snap": "Toggle grid snapping while dragging",
+            "copy": "Copy the selection",
+            "paste": "Paste into the drawing"
+        },
+        "panels": {
+            "title": "Panels",
+            "toggle": "Toggle the last open panel"
+        },
+        "prompts": {
+            "title": "Prompts",
+            "answerFront": "Answer the front prompt of the canvas",
+            "primary": "Allow, Next or Answer",
+            "previous": "Previous prompt in the stack",
+            "next": "Next prompt in the stack",
+            "escape": "Back to where you were"
+        },
+        "chat": {
+            "title": "Chat",
+            "previousMessage": "Previous message you sent",
+            "nextMessage": "Next message you sent",
+            "dictation": "Dictate: tap to toggle, hold to talk"
+        },
+        "browser": {
+            "title": "Browser",
+            "back": "Back",
+            "forward": "Forward"
+        },
+        "nodes": {
+            "title": "Nodes",
+            "nextNode": "Move focus to the next node",
+            "select": "Select the node the keyboard is on",
+            "escape": "Clear the selection (a terminal passes Escape to its program)",
+            "leave": "Leave a terminal node"
+        },
+        "terminal": {
+            "title": "Terminal",
+            "clear": "Clear the screen and the scrollback",
+            "lineStart": "Move to the beginning of the line",
+            "lineEnd": "Move to the end of the line",
+            "wordBack": "Move back one word",
+            "wordForward": "Move forward one word",
+            "deleteToLineStart": "Delete to the beginning of the line"
+        }
     },
-    "links": {
-      "title": "Links",
-      "website": {
-        "label": "ruimte.app",
-        "description": "Website and downloads."
-      },
-      "source": {
-        "label": "Source on GitHub",
-        "description": "Source code and issues."
-      },
-      "report": {
-        "label": "Report a problem",
-        "description": "Describe what you saw and what you expected."
-      }
-    }
-  },
-  "voice": {
-    "key": {
-      "title": "OpenAI GPT-Live",
-      "sectionDescription": "A separate project key is recommended for tracking and revocation.",
-      "label": "API key",
-      "fieldLabel": "OpenAI API key",
-      "desktopOnly": "API keys can be configured in the Ruimte desktop app.",
-      "create": "Create API key",
-      "checking": "Checking the desktop keychain…",
-      "configured": "Configured",
-      "notConfigured": "Not configured",
-      "persistent": "Encrypted with this computer's keychain. Ruimte never shows the saved value again.",
-      "session": "Encryption is unavailable, so this key is kept only until Ruimte quits.",
-      "missing": "Required for GPT-Live. The key stays in the desktop shell and is never stored in a project.",
-      "replacePlaceholder": "Enter a replacement key",
-      "remove": "Remove saved API key",
-      "saveFailure": "The API key could not be saved.",
-      "readFailure": "The settings could not be read.",
-      "removeFailure": "The API key could not be removed."
+    "keyboard": {
+        "search": "Search shortcuts",
+        "clearSearch": "Clear search",
+        "noMatch": "Nothing matches \"{{query}}\".",
+        "browserNote": "In a browser tab, {{newView}} and {{closeCell}} belong to the browser."
     },
-    "toast": {
-      "readFailed": "Could not read GPT-Live settings",
-      "saved": "OpenAI API key saved",
-      "saveFailed": "Could not save the API key",
-      "removed": "Saved OpenAI API key removed",
-      "removeFailed": "Could not remove the API key"
+    "backgroundService": {
+        "title": "When Ruimte quits",
+        "keepRunning": {
+            "label": "Keep this machine running when Ruimte quits",
+            "description": "Sessions and agents keep working in the background, so this machine stays reachable from your other clients and the web."
+        },
+        "unavailable": {
+            "dev": "The dev app always runs a machine of its own and stops it when it quits.",
+            "windows": "Not available on Windows yet, so this machine stops when Ruimte quits.",
+            "appimage": "Not available for the AppImage, which is gone once Ruimte quits. Install the deb or rpm package to keep this machine running."
+        },
+        "pending": {
+            "takeOver": "Ruimte runs this machine itself right now. It keeps running from the next time Ruimte quits.",
+            "handBack": "This machine stops when Ruimte quits, and Ruimte runs it itself from the next start."
+        },
+        "restart": {
+            "label": "Restart to finish the update",
+            "action": "Restart"
+        },
+        "failure": "The background service did not run this machine: {{reason}}",
+        "linger": {
+            "label": "Keep running after you log out",
+            "on": "Lingering is on, so this machine keeps running after you log out.",
+            "off": "Without it, this machine stops when you log out of your desktop session.",
+            "action": "Allow"
+        },
+        "stop": {
+            "label": "Stop the machine",
+            "description": "Ends every session here and quits Ruimte. The machine starts again the next time you open Ruimte.",
+            "action": "Stop"
+        },
+        "confirmStop": {
+            "title": "Stop this machine and quit Ruimte?",
+            "description": "Every terminal and agent on this machine ends, and no other client can reach it until you open Ruimte again.",
+            "action": "Stop and quit"
+        },
+        "confirmRestart": {
+            "title": "Restart this machine now?",
+            "description": "Every terminal and agent on this machine ends, and it comes back on the updated version.",
+            "action": "Restart now"
+        },
+        "confirmLinger": {
+            "title": "Keep running after you log out?",
+            "description": "Ruimte runs loginctl enable-linger for your user, so your user services keep running without a session. Undo it with loginctl disable-linger.",
+            "action": "Allow"
+        }
     },
-    "microphone": {
-      "systemDefault": "System default",
-      "systemDefaultHint": "Follows the macOS input selection",
-      "unavailable": "Unavailable microphone",
-      "unavailableHint": "Uses the system default until it returns"
+    "reach": {
+        "thisMachine": "This machine",
+        "paired": "Paired",
+        "onAccount": "On your account",
+        "openedThroughAccount": "Opened through your account"
     },
-    "conversation": {
-      "title": "Conversation",
-      "description": "Changes apply when you start the next conversation. Only an active conversation sends microphone audio to OpenAI.",
-      "microphone": {
-        "label": "Microphone",
-        "description": "Input used for new conversations. Nearby iPhones appear when macOS makes them available.",
-        "unavailableDescription": "Microphones could not be listed. New conversations use the system default.",
-        "selectLabel": "Conversation microphone"
-      },
-      "language": {
-        "label": "Language",
-        "description": "The language Ruimte listens and replies in.",
-        "selectLabel": "Conversation language"
-      },
-      "voice": {
-        "label": "Voice",
-        "description": "OpenAI's built-in Live voices. Marin and Cedar are recommended.",
-        "selectLabel": "Conversation voice",
-        "default": "Default · recommended",
-        "recommended": "Recommended"
-      },
-      "confirm": {
-        "label": "Confirm deletions",
-        "description": "Ask before Voice deletes views or nodes. When off, spoken deletion requests run immediately.",
-        "toggle": "Confirm Voice deletions"
-      }
-    }
-  },
-  "identity": {
-    "name": "Name",
-    "nameLabel": "Machine name",
-    "nameHint": "Leave empty to use the default name.",
-    "gone": "That machine is no longer in the list",
-    "saveFailed": "The machine could not save the change"
-  },
-  "machine": {
-    "notAnswering": "Not answering. Change this once the machine is back.",
-    "unsupported": "This machine runs a version without this setting.",
-    "unsupportedReason": "This machine runs a version without this setting",
-    "toast": {
-      "saveFailed": "{{machine}} could not save the change",
-      "unchanged": "The setting is unchanged."
+    "agents": {
+        "deleteAnyView": {
+            "title": "What an agent may delete",
+            "sectionDescription": "Saved per machine. Applies to every client connected to it.",
+            "rowLabel": "Agents on {{machine}} may delete any view or node",
+            "description": "Off, an agent only deletes views and nodes it created. On, it can delete any view or node in any project there, including yours.",
+            "notConnected": "Not connected. Change this from the machine's dialog under Remote, or while a project on it is open."
+        },
+        "defaults": {
+            "title": "Defaults for new agents",
+            "description": "Picking a model in a chat also changes its default here.",
+            "noChatCli": "No agent CLI with chat support found on this machine.",
+            "usesCliDefault": "Uses the CLI's own default model.",
+            "modelFor": "Default model for {{provider}}",
+            "providerDefault": "Provider default",
+            "legacyModel": "{{name}} (legacy)",
+            "permissions": "Permissions",
+            "terminalMode": "Terminal agents start in"
+        },
+        "here": {
+            "title": "What an agent may do here",
+            "description": "These settings apply to this client only.",
+            "approvals": {
+                "label": "Ask me for permission in the node",
+                "description": "Permission requests from terminal agents appear in the node header, and the first answer wins. With this window in the background you also get a notification, since a request expires after a few minutes. Off, you answer in the terminal."
+            },
+            "showViews": {
+                "label": "Let an agent show you a view",
+                "description": "On, a view an agent opens replaces the one you are working in, and a banner takes you back. Off, the banner offers a button to go there."
+            }
+        },
+        "working": {
+            "title": "While an agent works",
+            "description": "These settings apply to this computer only.",
+            "turnNotify": {
+                "label": "Tell me when a turn ends",
+                "description": "Sends a notification when an agent finishes while this window is in the background."
+            },
+            "sound": {
+                "label": "Play a sound with a notification",
+                "description": "Applies to every agent notification."
+            },
+            "keepAwake": {
+                "label": "Keep this computer awake",
+                "description": "Keeps the computer awake while an agent works, since sleep pauses the agent. The display can still turn off.",
+                "toggle": "Keep this computer awake while an agent works"
+            }
+        },
+        "chats": {
+            "title": "Chats",
+            "streaming": {
+                "label": "Show replies",
+                "words": {
+                    "label": "Word by word",
+                    "description": "Follows the agent as it writes."
+                },
+                "blocks": {
+                    "label": "Paragraph by paragraph",
+                    "description": "Shows each paragraph once it is complete."
+                },
+                "whole": {
+                    "label": "When complete",
+                    "description": "Waits until the reply is done."
+                }
+            }
+        },
+        "providers": {
+            "title": "Providers",
+            "description": "Agent CLIs found on the machine's PATH. To add one, install it and restart Ruimte on that machine.",
+            "none": "No providers found",
+            "version": "Version {{version}}.",
+            "chatAndTerminal": "Chat and terminal.",
+            "terminalOnly": "Terminal only.",
+            "reportsStatus": "Reports agent status.",
+            "noStatus": "Does not report agent status.",
+            "installed": "Installed",
+            "missing": "Missing"
+        }
     },
-    "direct": {
-      "label": "Direct",
-      "brokerOnly": "Reached through the broker only, so this machine is always direct.",
-      "viaBroker": "Connect over WebRTC, found through the broker on {{host}} (experimental).",
-      "description": "Connect over WebRTC instead of the socket (experimental).",
-      "toggle": "Connect directly to {{machine}} (experimental)"
+    "about": {
+        "tagline": "Space for AI Engineering.",
+        "version": "Version {{version}}",
+        "unknownVersion": "unknown",
+        "details": {
+            "title": "Details",
+            "copy": "Copy details",
+            "notConnected": "Not connected",
+            "unknown": "Unknown",
+            "machine": {
+                "label": "Machine",
+                "description": "The machine of the current workspace, and its version."
+            },
+            "platform": "Platform",
+            "dataFolder": {
+                "label": "Data folder",
+                "description": "Where the machine stores sessions, chats and worktrees."
+            }
+        },
+        "updates": {
+            "title": "Updates",
+            "description": "Installing always waits for you.",
+            "auto": {
+                "label": "Download updates automatically",
+                "description": "On, new versions download in the background. Off, you start each download yourself."
+            },
+            "check": "Check for updates",
+            "checking": "Checking",
+            "download": "Download",
+            "install": "Restart to install"
+        },
+        "links": {
+            "title": "Links",
+            "website": {
+                "label": "ruimte.app",
+                "description": "Website and downloads."
+            },
+            "source": {
+                "label": "Source on GitHub",
+                "description": "Source code and issues."
+            },
+            "report": {
+                "label": "Report a problem",
+                "description": "Describe what you saw and what you expected."
+            }
+        }
     },
-    "broker": {
-      "label": "Broker",
-      "modes": {
-        "default": "Default",
-        "custom": "Custom",
-        "off": "Off"
-      },
-      "description": "How a signed-in client finds the machine without its address. {{where}}{{fixed}}",
-      "on": "On {{host}}.",
-      "none": "No broker.",
-      "fixed": " Set when the machine started, so this choice waits until it runs without that.",
-      "selectLabel": "Broker for {{machine}}",
-      "urlLabel": "Broker URL for {{machine}}"
-    },
-    "refuse": {
-      "label": "Refuse sign-in through an account",
-      "description": "On, only a pairing link lets a new client in. Off, a client signed in to an account this machine is on gets in, and shows up under Apps with access. Clients that already have access keep it.",
-      "toggle": "Refuse sign-in through an account on {{machine}}"
-    },
-    "streaming": {
-      "label": "Browser and device streaming",
-      "description": "Allow this machine to stream browser pages and device screens to clients without a native view of their own.",
-      "toggle": "Allow browser and device streaming from {{machine}}"
-    },
-    "access": {
-      "title": "Apps with access",
-      "description": "Browsers and apps paired with this machine.",
-      "showLink": "Show pairing link",
-      "listFailed": "Could not list paired clients",
-      "linkFailed": "Could not create a pairing link",
-      "empty": "Nothing else has access to this machine.",
-      "thisClient": "this client",
-      "revoke": "Revoke access",
-      "revokeOne": "Revoke {{label}}",
-      "session": "{{origin}} {{date}}, last seen {{ago}}",
-      "origin": {
-        "statement": "Signed in through an account",
-        "link": "Paired with a link"
-      },
-      "silent": {
-        "label": "Not answering",
-        "description": "The list loads once the machine is back."
-      },
-      "link": {
-        "label": "Pairing link",
-        "loopback": "This machine only accepts local connections. Start it with --host 0.0.0.0 so other machines can use the link.",
-        "description": "Paste it under Add a machine on the other device. It works once and expires after ten minutes.",
-        "copy": "Copy pairing link",
-        "copied": "Copied"
-      },
-      "confirm": {
-        "title": "Revoke {{label}}?",
-        "current": "This is the client you are using. It loses access to this machine and forgets it here. Pair again to regain access.",
-        "statement": "It loses access the next time it connects, and signing in through an account will not let it back in. Pairing again needs a link.",
-        "link": "It loses access the next time it connects. Pairing again needs a new link.",
-        "action": "Revoke"
-      }
-    }
-  },
-  "machineDialog": {
-    "availableWhenAnswering": "Available once the machine answers",
-    "openFailed": "{{machine}} could not be opened",
-    "addFailed": "{{machine}} was not added to your account",
-    "notOpened": {
-      "title": "Not opened on this client",
-      "label": "Open it to change its name, icon and connection",
-      "canOpen": "It connects through the broker, on the strength of your account.",
-      "noBroker": "This machine is not connected to a broker yet, so it can only be reached on its own network."
+    "voice": {
+        "key": {
+            "title": "Voice Control",
+            "sectionDescription": "Control your workspace by speaking. Uses OpenAI GPT-Live and sends audio to OpenAI only during an active conversation. Requires your own API key.",
+            "label": "API key",
+            "fieldLabel": "OpenAI API key",
+            "desktopOnly": "API keys can be configured in the Ruimte desktop app.",
+            "create": "Create API key",
+            "checking": "Checking the desktop keychain…",
+            "configured": "Configured",
+            "notConfigured": "Not configured",
+            "persistent": "Encrypted with this computer's keychain. Ruimte never shows the saved value again.",
+            "session": "Encryption is unavailable, so this key is kept only until Ruimte quits.",
+            "missing": "Required for GPT-Live. The key stays in the desktop shell and is never stored in a project.",
+            "replacePlaceholder": "Enter a replacement key",
+            "remove": "Remove saved API key",
+            "saveFailure": "The API key could not be saved.",
+            "readFailure": "The settings could not be read.",
+            "removeFailure": "The API key could not be removed."
+        },
+        "toast": {
+            "readFailed": "Could not read GPT-Live settings",
+            "saved": "OpenAI API key saved",
+            "saveFailed": "Could not save the API key",
+            "removed": "Saved OpenAI API key removed",
+            "removeFailed": "Could not remove the API key"
+        },
+        "microphone": {
+            "systemDefault": "System default",
+            "systemDefaultHint": "Follows the system input selection",
+            "unavailable": "Unavailable microphone",
+            "unavailableHint": "Uses the system default until it returns"
+        },
+        "conversation": {
+            "title": "Conversation",
+            "description": "Changes apply when you start the next conversation. Only an active conversation sends microphone audio to OpenAI.",
+            "microphone": {
+                "label": "Microphone",
+                "description": "Input used for dictation and Voice Control.",
+                "unavailableDescription": "Microphones could not be listed. The system default is used.",
+                "selectLabel": "Microphone"
+            },
+            "language": {
+                "label": "Language",
+                "description": "The language for dictation and Voice Control. Some languages are only available in Voice Control.",
+                "selectLabel": "Speech language"
+            },
+            "voice": {
+                "label": "Voice",
+                "description": "OpenAI's built-in Live voices. Marin and Cedar are recommended.",
+                "selectLabel": "Conversation voice",
+                "default": "Default · recommended",
+                "recommended": "Recommended"
+            },
+            "confirm": {
+                "label": "Confirm deletions",
+                "description": "Ask before Voice Control deletes views or nodes. When off, spoken deletion requests run immediately.",
+                "toggle": "Confirm Voice Control deletions"
+            }
+        },
+        "input": {
+            "title": "Microphone and language",
+            "description": "Shared by Speech to Text and Voice Control. Changes apply to the next recording."
+        }
     },
     "identity": {
-      "title": "Name and icon",
-      "description": "Every client that pairs with this machine sees these."
+        "name": "Name",
+        "nameLabel": "Machine name",
+        "nameHint": "Leave empty to use the default name.",
+        "gone": "That machine is no longer in the list",
+        "saveFailed": "The machine could not save the change"
     },
-    "connection": "Connection",
-    "streaming": "Streaming",
-    "account": {
-      "title": "Account",
-      "registrationFailure": "Could not update this machine on your account: {{reason}}",
-      "addAgain": {
-        "label": "Add to your account again",
-        "description": "Someone took this machine off your account, so it does not join on its own.",
-        "action": "Add"
-      }
+    "machine": {
+        "notAnswering": "Not answering. Change this once the machine is back.",
+        "unsupported": "This machine runs a version without this setting.",
+        "unsupportedReason": "This machine runs a version without this setting",
+        "toast": {
+            "saveFailed": "{{machine}} could not save the change",
+            "unchanged": "The setting is unchanged."
+        },
+        "direct": {
+            "label": "Direct",
+            "brokerOnly": "Reached through the broker only, so this machine is always direct.",
+            "viaBroker": "Connect over WebRTC, found through the broker on {{host}} (experimental).",
+            "description": "Connect over WebRTC instead of the socket (experimental).",
+            "toggle": "Connect directly to {{machine}} (experimental)"
+        },
+        "broker": {
+            "label": "Broker",
+            "modes": {
+                "default": "Default",
+                "custom": "Custom",
+                "off": "Off"
+            },
+            "description": "How a signed-in client finds the machine without its address. {{where}}{{fixed}}",
+            "on": "On {{host}}.",
+            "none": "No broker.",
+            "fixed": " Set when the machine started, so this choice waits until it runs without that.",
+            "selectLabel": "Broker for {{machine}}",
+            "urlLabel": "Broker URL for {{machine}}"
+        },
+        "refuse": {
+            "label": "Refuse sign-in through an account",
+            "description": "On, only a pairing link lets a new client in. Off, a client signed in to an account this machine is on gets in, and shows up under Apps with access. Clients that already have access keep it.",
+            "toggle": "Refuse sign-in through an account on {{machine}}"
+        },
+        "streaming": {
+            "label": "Browser and device streaming",
+            "description": "Allow this machine to stream browser pages and device screens to clients without a native view of their own.",
+            "toggle": "Allow browser and device streaming from {{machine}}"
+        },
+        "access": {
+            "title": "Apps with access",
+            "description": "Browsers and apps paired with this machine.",
+            "showLink": "Show pairing link",
+            "listFailed": "Could not list paired clients",
+            "linkFailed": "Could not create a pairing link",
+            "empty": "Nothing else has access to this machine.",
+            "thisClient": "this client",
+            "revoke": "Revoke access",
+            "revokeOne": "Revoke {{label}}",
+            "session": "{{origin}} {{date}}, last seen {{ago}}",
+            "origin": {
+                "statement": "Signed in through an account",
+                "link": "Paired with a link"
+            },
+            "silent": {
+                "label": "Not answering",
+                "description": "The list loads once the machine is back."
+            },
+            "link": {
+                "label": "Pairing link",
+                "loopback": "This machine only accepts local connections. Start it with --host 0.0.0.0 so other machines can use the link.",
+                "description": "Paste it under Add a machine on the other device. It works once and expires after ten minutes.",
+                "copy": "Copy pairing link",
+                "copied": "Copied"
+            },
+            "confirm": {
+                "title": "Revoke {{label}}?",
+                "current": "This is the client you are using. It loses access to this machine and forgets it here. Pair again to regain access.",
+                "statement": "It loses access the next time it connects, and signing in through an account will not let it back in. Pairing again needs a link.",
+                "link": "It loses access the next time it connects. Pairing again needs a new link.",
+                "action": "Revoke"
+            }
+        }
     },
-    "remove": {
-      "title": "Remove",
-      "forget": {
-        "label": "Forget on this client",
-        "description": "Drops the pairing and this machine's row here. The machine, your account and other clients keep theirs.",
-        "action": "Forget"
-      },
-      "account": {
-        "label": "Remove from account",
-        "local": "Every other client signed in to your account drops this machine. It stays here, since this app runs on it.",
-        "description": "Every client signed in to your account drops this machine, one that paired by link included. Pairing again by link puts it back.",
-        "action": "Remove"
-      }
+    "machineDialog": {
+        "availableWhenAnswering": "Available once the machine answers",
+        "openFailed": "{{machine}} could not be opened",
+        "addFailed": "{{machine}} was not added to your account",
+        "notOpened": {
+            "title": "Not opened on this client",
+            "label": "Open it to change its name, icon and connection",
+            "canOpen": "It connects through the broker, on the strength of your account.",
+            "noBroker": "This machine is not connected to a broker yet, so it can only be reached on its own network."
+        },
+        "identity": {
+            "title": "Name and icon",
+            "description": "Every client that pairs with this machine sees these."
+        },
+        "connection": "Connection",
+        "streaming": "Streaming",
+        "account": {
+            "title": "Account",
+            "registrationFailure": "Could not update this machine on your account: {{reason}}",
+            "addAgain": {
+                "label": "Add to your account again",
+                "description": "Someone took this machine off your account, so it does not join on its own.",
+                "action": "Add"
+            }
+        },
+        "remove": {
+            "title": "Remove",
+            "forget": {
+                "label": "Forget on this client",
+                "description": "Drops the pairing and this machine's row here. The machine, your account and other clients keep theirs.",
+                "action": "Forget"
+            },
+            "account": {
+                "label": "Remove from account",
+                "local": "Every other client signed in to your account drops this machine. It stays here, since this app runs on it.",
+                "description": "Every client signed in to your account drops this machine, one that paired by link included. Pairing again by link puts it back.",
+                "action": "Remove"
+            }
+        },
+        "confirmForget": {
+            "title": "Forget {{machine}} on this client?",
+            "description": "Its sessions and projects stay on the machine. To get it back here, pair again with a new link or open it from your account.",
+            "action": "Forget"
+        },
+        "confirmRemove": {
+            "title": "Remove {{machine}} from your account?",
+            "description": "Every client signed in to your account drops it the next time it refreshes, including a client that paired by link. Clients that are signed out keep it. The machine keeps its pairings.",
+            "action": "Remove"
+        }
     },
-    "confirmForget": {
-      "title": "Forget {{machine}} on this client?",
-      "description": "Its sessions and projects stay on the machine. To get it back here, pair again with a new link or open it from your account.",
-      "action": "Forget"
-    },
-    "confirmRemove": {
-      "title": "Remove {{machine}} from your account?",
-      "description": "Every client signed in to your account drops it the next time it refreshes, including a client that paired by link. Clients that are signed out keep it. The machine keeps its pairings.",
-      "action": "Remove"
+    "machines": {
+        "title": "Machines",
+        "description": "Each machine keeps its own sessions, projects and files. Open a project on it to work there.",
+        "empty": {
+            "label": "No machines yet",
+            "description": "Add one to open its projects, terminals and agents from here."
+        },
+        "notOpened": "Not opened on this client",
+        "notOpenedAria": "{{machine}}. Not opened on this client",
+        "mismatch": "A different machine answers at this address. Pair again to connect.",
+        "rowAria": "{{machine}}, {{reach}}",
+        "viaRelay": "{{reach}} · via relay",
+        "dot": {
+            "aria": "{{machine}}. {{status}}",
+            "brokerOnly": "Reached through the broker only",
+            "direct": "Direct connection (experimental)",
+            "directBroker": "Direct connection through the broker (experimental)"
+        },
+        "account": {
+            "title": "Account",
+            "description": "Machines on your account open from any client you sign in on.",
+            "unavailable": {
+                "label": "Signing in works in the desktop app and at station.ruimte.app.",
+                "description": "The account sends a sign-in back to those places only."
+            },
+            "signedOut": {
+                "label": "Not signed in",
+                "description": "Machines you reach while signed in join your account on their own, and its machines show up here."
+            },
+            "signingIn": {
+                "label": "Signing in",
+                "description": "Finish signing in in the browser, then come back here."
+            },
+            "signOut": "Sign out",
+            "onlyIdentity": "{{detail}}. The only way to sign in to this account, so it stays until you add another.",
+            "finishWith": "Finish signing in with {{provider}}, then come back here.",
+            "notAdded": "Not added. Add it to open this account with {{provider}} as well."
+        },
+        "add": {
+            "title": "Add a machine",
+            "description": "Paste a pairing link from the other machine.",
+            "linkLabel": "Pairing link",
+            "hint": "Find it under Show pairing link in that machine's dialog, or run `ruimte pair` there. A machine someone removed from your account goes back on it when you pair while signed in.",
+            "codeHint": "For a machine without the app that ran `ruimte login`",
+            "withCode": "Link a machine with a code",
+            "pair": "Pair",
+            "failed": "Pairing failed",
+            "reclaimFailed": "{{machine}} is paired, but not back on your account"
+        }
     }
-  },
-  "machines": {
-    "title": "Machines",
-    "description": "Each machine keeps its own sessions, projects and files. Open a project on it to work there.",
-    "empty": {
-      "label": "No machines yet",
-      "description": "Add one to open its projects, terminals and agents from here."
-    },
-    "notOpened": "Not opened on this client",
-    "notOpenedAria": "{{machine}}. Not opened on this client",
-    "mismatch": "A different machine answers at this address. Pair again to connect.",
-    "rowAria": "{{machine}}, {{reach}}",
-    "viaRelay": "{{reach}} · via relay",
-    "dot": {
-      "aria": "{{machine}}. {{status}}",
-      "brokerOnly": "Reached through the broker only",
-      "direct": "Direct connection (experimental)",
-      "directBroker": "Direct connection through the broker (experimental)"
-    },
-    "account": {
-      "title": "Account",
-      "description": "Machines on your account open from any client you sign in on.",
-      "unavailable": {
-        "label": "Signing in works in the desktop app and at station.ruimte.app.",
-        "description": "The account sends a sign-in back to those places only."
-      },
-      "signedOut": {
-        "label": "Not signed in",
-        "description": "Machines you reach while signed in join your account on their own, and its machines show up here."
-      },
-      "signingIn": {
-        "label": "Signing in",
-        "description": "Finish signing in in the browser, then come back here."
-      },
-      "signOut": "Sign out",
-      "onlyIdentity": "{{detail}}. The only way to sign in to this account, so it stays until you add another.",
-      "finishWith": "Finish signing in with {{provider}}, then come back here.",
-      "notAdded": "Not added. Add it to open this account with {{provider}} as well."
-    },
-    "add": {
-      "title": "Add a machine",
-      "description": "Paste a pairing link from the other machine.",
-      "linkLabel": "Pairing link",
-      "hint": "Find it under Show pairing link in that machine's dialog, or run `ruimte pair` there. A machine someone removed from your account goes back on it when you pair while signed in.",
-      "codeHint": "For a machine without the app that ran `ruimte login`",
-      "withCode": "Link a machine with a code",
-      "pair": "Pair",
-      "failed": "Pairing failed",
-      "reclaimFailed": "{{machine}} is paired, but not back on your account"
-    }
-  }
 }

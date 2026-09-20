@@ -1,5 +1,8 @@
 import i18next from 'i18next';
 import { desktop } from '@/desktop/bridge';
+import { WAVEFORM_BAND_COUNT, easeBands } from '@/audio/waveform';
+
+export { WAVEFORM_BAND_COUNT };
 
 export interface MicrophoneSnapshot {
     deviceName: string;
@@ -7,7 +10,6 @@ export interface MicrophoneSnapshot {
     trackStatus: 'live' | 'muted' | 'disabled' | 'ended';
 }
 
-export const WAVEFORM_BAND_COUNT = 40;
 export const DEFAULT_MICROPHONE_ID = 'default';
 
 export interface MicrophoneDevice {
@@ -118,11 +120,7 @@ export class WaveformMonitor {
                 }
                 return Math.min(1, Math.sqrt(squares / (end - start)) * 4);
             });
-            this.#levels = measured.map((level, index) => {
-                const previous = this.#levels[index] ?? 0;
-                const response = level > previous ? 0.38 : 0.16;
-                return previous + (level - previous) * response;
-            });
+            this.#levels = easeBands(this.#levels, measured);
             this.#onBands([...this.#levels]);
         }
         this.#frame = requestAnimationFrame((next) => this.#measure(next));
@@ -154,24 +152,24 @@ export class MicrophoneMonitor {
 
     async #open(): Promise<MediaStream> {
         if ((await desktop()?.requestMicrophoneAccess?.()) === false) {
-            throw new DOMException(i18next.t('voice:error.microphoneDisabled'), 'NotAllowedError');
+            throw new DOMException(i18next.t('common:microphone.error.disabled'), 'NotAllowedError');
         }
         const stream = await openMicrophoneStream(this.#deviceId);
         if (this.#stopped) {
             stream.getTracks().forEach((track) => track.stop());
-            throw new DOMException(i18next.t('voice:error.microphoneStopped'), 'AbortError');
+            throw new DOMException(i18next.t('common:microphone.error.stopped'), 'AbortError');
         }
         const track = stream.getAudioTracks()[0];
         if (!track) {
             stream.getTracks().forEach((candidate) => candidate.stop());
-            throw new Error(i18next.t('voice:error.noAudioTrack'));
+            throw new Error(i18next.t('common:microphone.error.noTrack'));
         }
         this.#stream = stream;
         this.#waveform = new WaveformMonitor((bands) => {
-            this.#onSnapshot({ deviceName: track.label || i18next.t('voice:microphone.default'), bands, trackStatus: this.#trackStatus(track) });
+            this.#onSnapshot({ deviceName: track.label || i18next.t('common:microphone.default'), bands, trackStatus: this.#trackStatus(track) });
         });
         this.#onSnapshot({
-            deviceName: track.label || i18next.t('voice:microphone.default'),
+            deviceName: track.label || i18next.t('common:microphone.default'),
             bands: Array(WAVEFORM_BAND_COUNT).fill(0),
             trackStatus: this.#trackStatus(track)
         });

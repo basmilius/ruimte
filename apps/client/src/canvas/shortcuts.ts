@@ -7,6 +7,7 @@ import { shortcut, type Shortcut } from '@/ui/shortcut';
  * pane and the terminal keymap can print or test them without loading the stores behind the handler.
  */
 export const CANVAS_SHORTCUTS = {
+    dictation: shortcut('Mod+Shift+D'),
     splitRight: shortcut('Mod+\\'),
     splitDown: shortcut('Mod+Shift+\\'),
     closeCell: shortcut('Mod+W'),

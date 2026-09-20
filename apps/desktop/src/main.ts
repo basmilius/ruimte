@@ -14,6 +14,8 @@ import { daemonServiceSpec, platformServiceManager, serviceDefinition as definit
 import { keepRunningSetting, serviceSupport } from './service/settings';
 import { fileSecretStore, type SecretStore } from './secret-store';
 import { createOpenAiLiveSession, parseOpenAiLivePreferences } from './openai-live';
+import { SpeechService, speechHelperPath } from './speech';
+import { SpeechModel } from './speech-model';
 
 // A plain require: the bundler's ESM interop copies enumerable keys, and electron's are getters.
 const { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, net, powerSaveBlocker, safeStorage, screen, session, shell, systemPreferences, webContents } =
@@ -759,6 +761,112 @@ ipcMain.handle('openai:create-live-session', async (event, sdp: unknown, prefere
         throw new Error('Add an OpenAI API key in Settings first');
     }
     return createOpenAiLiveSession((input, init) => net.fetch(input, init), apiKey, sdp, requested);
+});
+
+const speechHelper = speechHelperPath(app.isPackaged, join(process.resourcesPath, 'bin', 'ruimte'), repoRoot);
+const speechModel = new SpeechModel(
+    ruimteHome,
+    speechHelper,
+    (state) => {
+        if (mainWindow && !mainWindow.webContents.isDestroyed()) {
+            mainWindow.webContents.send('speech:state', state);
+        }
+    },
+    (input, init) => net.fetch(input instanceof URL ? input.toString() : input, init)
+);
+const speechService = new SpeechService(speechHelper, speechModel.directory, speechModel.cacheDirectory, (event) => {
+    if (mainWindow && !mainWindow.webContents.isDestroyed()) {
+        mainWindow.webContents.send('speech:event', event);
+    }
+});
+app.on('before-quit', () => {
+    speechService.dispose();
+    speechModel.dispose();
+});
+app.on('web-contents-created', (_event, contents) => {
+    contents.on('render-process-gone', () => {
+        if (contents === mainWindow?.webContents) {
+            speechService.dispose();
+        }
+    });
+    contents.on('did-start-navigation', (_event, _url, _inPlace, isMainFrame) => {
+        if (isMainFrame && contents === mainWindow?.webContents) {
+            speechService.dispose();
+        }
+    });
+    contents.on('destroyed', () => {
+        if (!mainWindow || contents === mainWindow.webContents) {
+            speechService.dispose();
+        }
+    });
+});
+ipcMain.handle('speech:state', async (event) => {
+    if (!fromAppWindow(event)) {
+        return refuseOtherPages();
+    }
+    await speechModel.initialized;
+    return speechModel.state;
+});
+ipcMain.handle('speech:enable', async (event, enabled: unknown) => {
+    if (!fromAppWindow(event)) {
+        return refuseOtherPages();
+    }
+    if (typeof enabled !== 'boolean') {
+        throw new Error('Invalid speech setting');
+    }
+    const state = await speechModel.setEnabled(enabled);
+    if (!enabled) {
+        speechService.dispose();
+    }
+    return state;
+});
+ipcMain.handle('speech:remove', async (event) => {
+    if (!fromAppWindow(event)) {
+        return refuseOtherPages();
+    }
+    await speechModel.setEnabled(false);
+    speechService.dispose();
+    return speechModel.remove();
+});
+ipcMain.handle('speech:start', async (event, id: unknown, language: unknown) => {
+    if (!fromAppWindow(event)) {
+        return refuseOtherPages();
+    }
+    await speechModel.initialized;
+    if (!speechModel.state.enabled || speechModel.state.phase !== 'ready') {
+        throw new Error('Enable speech to text in Settings first');
+    }
+    if (typeof id !== 'string' || typeof language !== 'string') {
+        throw new Error('Invalid dictation request');
+    }
+    return speechService.start(id, language);
+});
+ipcMain.handle('speech:samples', async (event, id: unknown, samples: unknown) => {
+    if (!fromAppWindow(event)) {
+        return refuseOtherPages();
+    }
+    if (typeof id !== 'string') {
+        throw new Error('Invalid dictation request');
+    }
+    return speechService.samples(id, samples);
+});
+ipcMain.handle('speech:stop', async (event, id: unknown) => {
+    if (!fromAppWindow(event)) {
+        return refuseOtherPages();
+    }
+    if (typeof id !== 'string') {
+        throw new Error('Invalid dictation request');
+    }
+    return speechService.stop(id);
+});
+ipcMain.handle('speech:cancel', (event, id: unknown) => {
+    if (!fromAppWindow(event)) {
+        return refuseOtherPages();
+    }
+    if (typeof id !== 'string') {
+        throw new Error('Invalid dictation request');
+    }
+    speechService.cancel(id);
 });
 
 ipcMain.handle('media:request-microphone', async (event) => {

@@ -44,5 +44,13 @@
         "cancelled": "cancelled"
     },
     "taskMark": "Task: {{title}} ({{status}})",
-    "unseen": "Finished while you were away"
+    "unseen": "Finished while you were away",
+    "microphone": {
+        "default": "Default microphone",
+        "error": {
+            "disabled": "Microphone access is disabled in System Settings",
+            "noTrack": "No microphone audio track was available",
+            "stopped": "The microphone test was stopped"
+        }
+    }
 }

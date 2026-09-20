@@ -1,3 +1,4 @@
+import { cancelDictation, stopDictation, toggleFocusedDictation, useDictation } from '@/dictation/controller';
 import { useEffect } from 'react';
 import { isCanvasView, isDiagramView } from '@ruimte/contracts';
 import { browserRegistry } from '@/browser/registry';
@@ -81,6 +82,11 @@ export const isSpaceDown = (): boolean => spaceDown;
 /* Bind once per workspace so a split grid does not run the same project shortcut in every canvas. */
 export const useCanvasShortcuts = (): void => {
     useEffect(() => {
+        let dictationPress: number | null = null;
+        const onBlur = (): void => {
+            dictationPress = null;
+            cancelDictation();
+        };
         const onKeyDown = (e: KeyboardEvent): void => {
             const s = focusedCanvas().getState();
             if (e.code === 'Space' && !isTypingTarget(e.target)) {
@@ -257,6 +263,27 @@ export const useCanvasShortcuts = (): void => {
          * listen on the window too, and only stopping the key here keeps them from also acting on it.
          */
         const onEscapeCapture = (e: KeyboardEvent): void => {
+            if (!e.isComposing && !isInFloatingLayer(e.target) && matchesShortcut(CANVAS_SHORTCUTS.dictation, e, isApplePlatform())) {
+                if (e.repeat) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                }
+                const starting = useDictation.getState().phase === 'idle' || useDictation.getState().phase === 'error';
+                if (toggleFocusedDictation()) {
+                    dictationPress = starting ? e.timeStamp : null;
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                return;
+            }
+            if (e.key === 'Escape' && useDictation.getState().targetId !== null) {
+                cancelDictation();
+                dictationPress = null;
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
             if (e.key !== 'Escape' || e.metaKey || e.ctrlKey || e.altKey || e.isComposing) {
                 return;
             }
@@ -280,17 +307,26 @@ export const useCanvasShortcuts = (): void => {
             }
         };
         const onKeyUp = (e: KeyboardEvent): void => {
+            if (dictationPress !== null && (e.code === 'KeyD' || e.key === 'Meta' || e.key === 'Control' || e.key === 'Shift')) {
+                if (e.timeStamp - dictationPress >= 400) {
+                    stopDictation();
+                }
+                dictationPress = null;
+            }
             if (e.code === 'Space') {
                 spaceDown = false;
             }
         };
         window.addEventListener('keydown', onEscapeCapture, true);
         window.addEventListener('keydown', onKeyDown);
-        window.addEventListener('keyup', onKeyUp);
+        window.addEventListener('keyup', onKeyUp, true);
+        window.addEventListener('blur', onBlur);
         return () => {
             window.removeEventListener('keydown', onEscapeCapture, true);
             window.removeEventListener('keydown', onKeyDown);
-            window.removeEventListener('keyup', onKeyUp);
+            window.removeEventListener('keyup', onKeyUp, true);
+            window.removeEventListener('blur', onBlur);
+            cancelDictation();
         };
     }, []);
 };

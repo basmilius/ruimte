@@ -66,6 +66,9 @@ Decisions the code cannot show. Do not reverse one without asking Bas.
 - A page never sees a refresh token, a daemon never holds an account token, and accounts are never merged.
 - A zustand selector that builds a new array or object per call loops forever under `useShallow`: select the object and derive with `useMemo`.
 
+- Speech to Text is optional and off by default. Enabling downloads one verified local streaming model; it never opens the microphone. Audio is never uploaded or saved. Voice Control is the separate cloud-backed feature; both share the microphone and language settings and never record together.
+- Dictation previews text and inserts only after stopping. A terminal receives an editable draft and only an explicit paste writes sanitized text without Enter. Agents cannot start dictation.
+
 ## Conventions
 
 - TypeScript in the Bun workspaces, Swift in `apps/ios`. 4 spaces, LF; `.editorconfig` is the rule.

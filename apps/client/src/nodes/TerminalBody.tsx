@@ -1,3 +1,4 @@
+import { TerminalDictation } from '@/dictation/TerminalDictation';
 import { useEffect, useRef, useState } from 'react';
 import i18next from 'i18next';
 import { ContextMenu } from '@base-ui-components/react/context-menu';
@@ -82,6 +83,7 @@ export function TerminalPlate({ id }: { id: string }) {
 export function TerminalBody({ id, focused }: { id: string; focused: boolean }) {
     const { t } = useTranslation('canvas');
     const hostRef = useRef<HTMLDivElement>(null);
+    const dictationRoot = useRef<HTMLDivElement>(null);
     const termRef = useRef<Terminal | null>(null);
     const fitRef = useRef<FitAddon | null>(null);
     /* Bumped by Restart: the whole terminal is rebuilt around a fresh session. */
@@ -309,34 +311,48 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     return (
         <ContextMenu.Root onOpenChange={(open) => setSelected(open && (termRef.current?.hasSelection() ?? false))}>
             <ContextMenu.Trigger className="absolute inset-0 bg-term-bg">
-                <div ref={hostRef} className="term-host" />
-                {status !== 'open' && <NodeNotice>{status === 'closed' ? t('notice.reconnecting') : t('notice.connecting')}</NodeNotice>}
-                {failure && (
-                    <NodeNotice tone="error" onRetry={rebuild}>
-                        {failure}
-                    </NodeNotice>
-                )}
-                {exited !== undefined && (
-                    <div className="absolute inset-x-0 bottom-0 z-10 flex items-center gap-2 border-t border-border bg-surface-raised/90 px-3 py-1.5 font-mono text-xs text-term-dim">
-                        {/* A shell that ended on its own reads as a footnote; a non-zero code is news. */}
-                        {resumable ? (
-                            <span className="grow">{t('terminal.sessionEnded')}</span>
-                        ) : (
-                            <span className={clsx('grow', exited !== 0 && 'text-status-error')}>{t('terminal.exited', { code: exited })}</span>
+                <div ref={dictationRoot} className="absolute inset-0 flex min-h-0 flex-col">
+                    <div className="relative min-h-0 flex-1">
+                        <div ref={hostRef} className="term-host" />
+                        {status !== 'open' && <NodeNotice>{status === 'closed' ? t('notice.reconnecting') : t('notice.connecting')}</NodeNotice>}
+                        {failure && (
+                            <NodeNotice tone="error" onRetry={rebuild}>
+                                {failure}
+                            </NodeNotice>
                         )}
-                        {resumable && (
-                            <Button size="sm" onClick={() => void resume()}>
-                                <Icon icon={Play} size={12} /> {t('terminal.resume')}
-                            </Button>
+                        {exited !== undefined && (
+                            <div className="absolute inset-x-0 bottom-0 z-10 flex items-center gap-2 border-t border-border bg-surface-raised/90 px-3 py-1.5 font-mono text-xs text-term-dim">
+                                {/* A shell that ended on its own reads as a footnote; a non-zero code is news. */}
+                                {resumable ? (
+                                    <span className="grow">{t('terminal.sessionEnded')}</span>
+                                ) : (
+                                    <span className={clsx('grow', exited !== 0 && 'text-status-error')}>{t('terminal.exited', { code: exited })}</span>
+                                )}
+                                {resumable && (
+                                    <Button size="sm" onClick={() => void resume()}>
+                                        <Icon icon={Play} size={12} /> {t('terminal.resume')}
+                                    </Button>
+                                )}
+                                <Button size="sm" variant="secondary" onClick={() => void restart()}>
+                                    <Icon icon={RotateCw} size={12} /> {t('terminal.restart')}
+                                </Button>
+                                <Button size="sm" onClick={close}>
+                                    {t('common:action.close')}
+                                </Button>
+                            </div>
                         )}
-                        <Button size="sm" variant="secondary" onClick={() => void restart()}>
-                            <Icon icon={RotateCw} size={12} /> {t('terminal.restart')}
-                        </Button>
-                        <Button size="sm" onClick={close}>
-                            {t('common:action.close')}
-                        </Button>
                     </div>
-                )}
+                    <TerminalDictation
+                        terminalId={id}
+                        key={generation}
+                        targetRef={dictationRoot}
+                        disabled={status !== 'open' || exited !== undefined || failure !== null}
+                        paste={(text) => {
+                            termRef.current?.paste(text);
+                            termRef.current?.focus();
+                        }}
+                    />
+                </div>
             </ContextMenu.Trigger>
             <ContextMenu.Portal>
                 <ContextMenu.Positioner className="z-(--z-popup)">

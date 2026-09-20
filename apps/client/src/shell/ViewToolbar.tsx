@@ -1,3 +1,5 @@
+import { TerminalDictationButton } from '@/dictation/TerminalDictationButton';
+import { useDictation } from '@/dictation/controller';
 import type { RuntimeMode } from '@ruimte/contracts';
 import { isCanvasView, type ProjectView, type ProjectViewKind } from '@ruimte/contracts';
 import { RUNTIME_MODES, runtimeModeHint, runtimeModeLabel } from '@/chat/runtime-modes';
@@ -24,6 +26,7 @@ const modeOf = (host: NodeHost | null): RuntimeMode | undefined => RUNTIME_MODES
 /* Whether a view has content for the bar, which is what the separators around it wait for. */
 export const useHasViewToolbar = (view: ProjectView | null): boolean => {
     const host = useNodeHost(view && !isCanvasView(view) ? view.id : '');
+    const dictationEnabled = useDictation((state) => state.model?.enabled === true);
     const subagents = useHasSubagentControls(view?.kind === 'chat' ? view.id : '');
     const forked = useIsFork(view);
     const planned = useHasPlans(view?.kind === 'chat' ? view.id : '');
@@ -33,7 +36,14 @@ export const useHasViewToolbar = (view: ProjectView | null): boolean => {
     if (view.kind === 'chat') {
         return subagents || forked || planned;
     }
-    return view.kind === 'browser' || view.kind === 'device' || view.kind === 'file' || view.kind === 'diagram' || modeOf(host) !== undefined;
+    return (
+        (view.kind === 'terminal' && dictationEnabled) ||
+        view.kind === 'browser' ||
+        view.kind === 'device' ||
+        view.kind === 'file' ||
+        view.kind === 'diagram' ||
+        modeOf(host) !== undefined
+    );
 };
 
 /* The kinds whose controls begin right where the name ends. The rest hang their buttons on the right
@@ -69,6 +79,7 @@ export function ViewToolbar({
 }) {
     const host = useNodeHost(view && !isCanvasView(view) ? view.id : '');
     const { mount } = useFileToolbarSlot();
+    const dictationEnabled = useDictation((state) => state.model?.enabled === true);
     const hasSubagents = useHasSubagentControls(view?.kind === 'chat' ? view.id : '');
     const forked = useIsFork(view);
     const planned = useHasPlans(view?.kind === 'chat' ? view.id : '');
@@ -112,14 +123,19 @@ export function ViewToolbar({
         );
     }
     const mode = modeOf(host);
-    if (!mode) {
+    if (!mode && !dictationEnabled) {
         return null;
     }
     return (
         <div className="flex min-w-0 grow items-center gap-1.5">
-            <Tooltip label={runtimeModeHint(mode)}>
-                <Pill>{runtimeModeLabel(mode)}</Pill>
-            </Tooltip>
+            {mode && (
+                <Tooltip label={runtimeModeHint(mode)}>
+                    <Pill>{runtimeModeLabel(mode)}</Pill>
+                </Tooltip>
+            )}
+            <div className="ml-auto flex shrink-0 items-center">
+                <TerminalDictationButton terminalId={view.id} />
+            </div>
         </div>
     );
 }

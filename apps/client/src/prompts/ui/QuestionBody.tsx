@@ -1,3 +1,4 @@
+import { DictationTextarea } from '@/dictation/DictationTextarea';
 import { useEffect, useRef, type KeyboardEvent } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
@@ -133,7 +134,7 @@ export function QuestionBody({
                         }}
                     >
                         <Icon icon={answer.custom ? CircleCheck : Circle} size={16} className="mt-0.5 shrink-0" />
-                        <textarea
+                        <DictationTextarea
                             ref={(element) => {
                                 items.current[question.choices.length] = element;
                             }}
@@ -152,7 +153,7 @@ export function QuestionBody({
                 </div>
             )}
             {question.choices.length === 0 && (
-                <textarea
+                <DictationTextarea
                     ref={(element) => {
                         items.current[0] = element;
                     }}
