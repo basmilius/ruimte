@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Code, Eye } from 'lucide-react';
 import type { FsReadText } from '@ruimte/contracts';
-import { Markdown } from '@/chat/ui/Markdown';
+import { FileMarkdown } from '@/shell/panels/FileMarkdown';
 import { CodeFile } from '@/shell/panels/CodeFile';
 import { FileLinkContext } from '@/shell/panels/file-links';
 import { FileScroll } from '@/shell/panels/FileScroll';
@@ -45,7 +45,7 @@ export function MarkdownFile({ path, name, read }: { path: string; name: string;
                     {/* A link in a document counts from the folder that document sits in, the way it
                         would on a forge. */}
                     <FileLinkContext.Provider value={dirnameOf(path)}>
-                        <Markdown text={read.text} />
+                        <FileMarkdown text={read.text} />
                     </FileLinkContext.Provider>
                 </div>
             </FileScroll>

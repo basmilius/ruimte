@@ -127,6 +127,10 @@
     "view": {
       "preview": "Voorbeeld",
       "source": "Broncode"
+    },
+    "markdown": {
+      "frontmatter": "Frontmatter",
+      "invalidFrontmatter": "De frontmatter kon niet als YAML worden gelezen. Hieronder staat de oorspronkelijke tekst."
     }
   },
   "files": {

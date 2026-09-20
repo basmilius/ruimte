@@ -127,6 +127,10 @@
     "view": {
       "preview": "Preview",
       "source": "Source"
+    },
+    "markdown": {
+      "frontmatter": "Frontmatter",
+      "invalidFrontmatter": "Frontmatter could not be read as YAML. The original text is shown below."
     }
   },
   "files": {

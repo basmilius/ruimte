@@ -993,3 +993,13 @@
 .composer-input .cm-content .cm-line.cm-md-fence { padding: 0 8px; background: var(--surface-sunken); font-family: var(--font-mono); font-size: var(--text-code); }
 .composer-input .cm-content .cm-line.cm-md-fence-start { padding-top: 4px; border-top-left-radius: 6px; border-top-right-radius: 6px; }
 .composer-input .cm-content .cm-line.cm-md-fence-end { padding-bottom: 4px; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
+
+.file-markdown .chat-markdown img { display: inline-block; max-width: 100%; height: auto; margin-block: 0.5em; vertical-align: middle; }
+.file-markdown .chat-markdown [align="center"] { text-align: center; }
+.file-markdown .chat-markdown [align="right"] { text-align: right; }
+.file-markdown .chat-markdown [align="left"] { text-align: left; }
+.file-markdown .chat-markdown :is(th, td) { text-align: left !important; vertical-align: top; }
+.file-markdown .chat-markdown :is(th, td) button { text-align: left; }
+.file-markdown .chat-markdown :is(th, td) :is(code, button[data-file-path]) { white-space: nowrap; }
+.file-markdown .chat-markdown details { margin-block: 1em; }
+.file-markdown .chat-markdown summary { cursor: pointer; font-weight: 500; }

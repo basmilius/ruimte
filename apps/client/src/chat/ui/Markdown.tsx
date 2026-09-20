@@ -1,7 +1,7 @@
 import { memo, useMemo, type ReactNode } from 'react';
 import clsx from 'clsx';
 import { Zap } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { type Components, type Options } from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
 import { CHIP_IN_MESSAGE, MENTION_TONE, SKILL_TONE } from '@/chat/ui/chips';
@@ -234,10 +234,23 @@ export const MessageMarkdown = memo(function MessageMarkdown({ text, mentions, s
 });
 
 /* `breaks` is for person-authored notes; applying it to CLI markdown would change its layout. */
-export const Markdown = memo(function Markdown({ text, breaks = false, fileLinks = true }: { text: string; breaks?: boolean; fileLinks?: boolean }) {
+export const Markdown = memo(function Markdown({
+    text,
+    breaks = false,
+    fileLinks = true,
+    rehypePlugins,
+    componentOverrides
+}: {
+    text: string;
+    breaks?: boolean;
+    fileLinks?: boolean;
+    rehypePlugins?: Options['rehypePlugins'];
+    componentOverrides?: Components;
+}) {
+    const renderComponents = useMemo(() => ({ ...(fileLinks ? components : plainComponents), ...componentOverrides }), [fileLinks, componentOverrides]);
     return (
         <div className="chat-markdown prose prose-sm max-w-none text-sm">
-            <ReactMarkdown remarkPlugins={breaks ? PLUGINS_WITH_BREAKS : PLUGINS} components={fileLinks ? components : plainComponents}>
+            <ReactMarkdown remarkPlugins={breaks ? PLUGINS_WITH_BREAKS : PLUGINS} rehypePlugins={rehypePlugins} components={renderComponents}>
                 {text}
             </ReactMarkdown>
         </div>
