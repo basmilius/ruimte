@@ -258,7 +258,7 @@ export class ProjectClient {
         this.scheduleSave();
     }
 
-    /* An emoji or a Lucide name goes into the shared file; null means "use what the folder declares". */
+    /* A Lucide name goes into the shared file; null means "use what the folder declares". */
     async setChosenIcon(icon: ProjectIconChoice | null): Promise<void> {
         const current = this.sink.getState().current;
         if (!current) {

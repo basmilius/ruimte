@@ -2005,14 +2005,15 @@ describe('view rename', () => {
 });
 
 describe('view icon', () => {
-    test('takes a Lucide name from the closed set and an emoji', async () => {
+    test('takes a Lucide name from the closed set', async () => {
         expect((await post('view', ['icon', 'board', 'rocket'])).lines).toEqual(['board\tcanvas\tlucide\trocket']);
         expect(await viewOnDisk('board')).toMatchObject({ icon: { kind: 'lucide', value: 'rocket' } });
-        expect((await post('view', ['icon', 'board', '\u{1f680}'])).lines).toEqual(['board\tcanvas\temoji\t\u{1f680}']);
-        expect(await viewOnDisk('board')).toMatchObject({ icon: { kind: 'emoji', value: '\u{1f680}' } });
     });
 
-    test('a name that is not one of them is a typo, not an emoji, so it is refused with the set', async () => {
+    test('a mark a person typed is refused with the set, and so is a typo', async () => {
+        expect((await post('view', ['icon', 'board', '\u{1f680}'])).lines[0]).toBe(
+            `refused\tunknown-icon\t\u{1f680} is not one of the ${PROJECT_ICON_NAMES.length} Lucide names a view picks from`
+        );
         const { status, lines } = await post('view', ['icon', 'board', 'rockett']);
         expect(status).toBe(422);
         expect(lines[0]).toBe(`refused\tunknown-icon\trockett is not one of the ${PROJECT_ICON_NAMES.length} Lucide names a view picks from`);

@@ -167,11 +167,11 @@ describe('project identity', () => {
         const { summary } = await request<{ summary: { name: string; icon: { kind: string; value: string }; lastOpenedAt: number } }>(
             clients.a,
             'project.setIdentity',
-            { projectId, name: 'Renamed', icon: { kind: 'emoji', value: '🚀' } }
+            { projectId, name: 'Renamed', icon: { kind: 'lucide', value: 'rocket' } }
         );
 
-        expect(summary).toMatchObject({ name: 'Renamed', icon: { kind: 'emoji', value: '🚀' }, lastOpenedAt });
+        expect(summary).toMatchObject({ name: 'Renamed', icon: { kind: 'lucide', value: 'rocket' }, lastOpenedAt });
         expect(store.openProjectIds()).toEqual([]);
-        expect(changesIn(clients.a.channel).at(-1)).toMatchObject({ name: 'Renamed', icon: { kind: 'emoji', value: '🚀' } });
+        expect(changesIn(clients.a.channel).at(-1)).toMatchObject({ name: 'Renamed', icon: { kind: 'lucide', value: 'rocket' } });
     });
 });

@@ -6,7 +6,6 @@ struct ViewIconPicker: View {
     let item: JSONValue
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
-    @State private var emoji = ""
     @State private var saving = false
 
     // The project protocol accepts this same closed set in contracts/src/project.ts.
@@ -77,14 +76,6 @@ struct ViewIconPicker: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    HStack {
-                        TextField("Emoji", text: $emoji)
-                            .textInputAutocapitalization(.never).autocorrectionDisabled()
-                        Button("Use emoji") { save(.object(["kind": .string("emoji"), "value": .string(emoji)])) }
-                            .disabled(
-                                emoji.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || emoji.utf16.count > 16)
-                    }
-                    .padding(14).background(.quaternary, in: RoundedRectangle(cornerRadius: 16))
                     Button("Use default icon") { save(nil) }
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 52))], spacing: 12) {
                         ForEach(
@@ -113,7 +104,6 @@ struct ViewIconPicker: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             }
-            .onAppear { if item["icon"]?.text("kind") == "emoji" { emoji = item["icon"]?.text("value") ?? "" } }
         }.tint(MobileStyle.accent)
     }
 

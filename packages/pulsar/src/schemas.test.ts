@@ -157,7 +157,7 @@ describe('address book', () => {
         const registration = {
             id: 'machine-1',
             name: 'Studio',
-            icon: { kind: 'emoji' as const, value: 'S' },
+            icon: { kind: 'lucide' as const, value: 'monitor' },
             brokerUrl: 'wss://broker.ruimte.app',
             publicKey: key,
             issuedAt: 1_800_000_000_000,

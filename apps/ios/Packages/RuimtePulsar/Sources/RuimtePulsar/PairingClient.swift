@@ -118,9 +118,6 @@ extension PairResultEndpoint {
 
     private var machineIcon: MachineIcon? {
         guard case .value(let icon) = icon else { return nil }
-        switch icon {
-        case .emoji(let emoji): return MachineIcon(kind: .emoji, value: emoji.value)
-        case .lucide(let lucide): return MachineIcon(kind: .lucide, value: lucide.value.rawValue)
-        }
+        return MachineIcon(value: icon.value.rawValue)
     }
 }

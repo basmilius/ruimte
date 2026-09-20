@@ -24,13 +24,6 @@ export function ProjectGlyph({ projectId, endpointId, icon, color, size = 16, cl
     if (icon.kind === 'lucide') {
         return <Icon icon={PROJECT_ICON_GLYPHS[icon.value]} size={size} className={clsx('shrink-0', className)} />;
     }
-    if (icon.kind === 'emoji') {
-        return (
-            <span aria-hidden className={clsx('flex shrink-0 items-center justify-center leading-none', className)} style={{ ...box, fontSize: size - 2 }}>
-                {icon.value}
-            </span>
-        );
-    }
     if (icon.kind === 'image') {
         // The box holds its place while the bytes are on their way, so the name beside it does not jump.
         if (image.url === null) {

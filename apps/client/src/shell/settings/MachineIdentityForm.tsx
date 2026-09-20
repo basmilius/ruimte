@@ -79,7 +79,7 @@ export function MachineIdentityForm({ endpointId, label, disabledReason }: Machi
             />
             <p className="mt-1.5 text-xs text-text-faint">{t('identity.nameHint')}</p>
 
-            <IconPicker value={icon} disabled={disabled} emojiPlaceholder="🖥️" onChange={setIcon} onClear={() => setIcon(null)} />
+            <IconPicker value={icon} disabled={disabled} onChange={setIcon} onClear={() => setIcon(null)} />
 
             {failure && (
                 <p className="mt-3 text-xs break-words text-status-error" role="alert">

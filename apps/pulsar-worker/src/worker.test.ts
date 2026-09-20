@@ -739,7 +739,7 @@ describe('machines', () => {
         const renamed = {
             id: 'laptop',
             name: 'Laptop',
-            icon: { kind: 'emoji', value: '💻' },
+            icon: { kind: 'lucide', value: 'laptop' },
             brokerUrl: 'wss://other-broker.ruimte.test',
             publicKey: machine.publicKey,
             issuedAt,
@@ -749,7 +749,7 @@ describe('machines', () => {
         expect((await dispatch('/v1/machines', { method: 'POST', headers: bearer(session), body: renamed })).status).toBe(200);
         let list = (await (await dispatch('/v1/machines', { headers: bearer(session) })).json()) as MachineListResult;
         expect(list.machines).toEqual([
-            expect.objectContaining({ id: 'laptop', name: 'Laptop', icon: { kind: 'emoji', value: '💻' }, brokerUrl: 'wss://other-broker.ruimte.test' })
+            expect.objectContaining({ id: 'laptop', name: 'Laptop', icon: { kind: 'lucide', value: 'laptop' }, brokerUrl: 'wss://other-broker.ruimte.test' })
         ]);
 
         const intruder = newKeyPair();

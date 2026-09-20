@@ -313,11 +313,12 @@ describe('project', () => {
         expect(document([view, { kind: 'separator' }]).success).toBe(false);
     });
 
-    test('a view may overrule the mark of its kind, with the same two kinds a project picks from', () => {
+    test('a view may overrule the mark of its kind, from the same set a project picks from', () => {
         const view = { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [], texts: [], edges: [] };
         const document = (views: unknown[]) => ProjectDocumentSchema.safeParse({ version: 3, rev: 1, name: 'p', color: 'violet', views });
         expect(document([{ ...view, icon: { kind: 'lucide', value: 'rocket' } }]).success).toBe(true);
-        expect(document([{ ...view, icon: { kind: 'emoji', value: '\u{1f680}' } }]).success).toBe(true);
+        // A mark is a Lucide name and nothing else, so what a person typed themselves is refused.
+        expect(document([{ ...view, icon: { kind: 'emoji', value: '\u{1f680}' } }]).success).toBe(false);
         // No icon at all is the default: the row wears the mark of what it is.
         const bare = document([view]);
         expect(bare.success && bare.data.views[0]!.kind === 'canvas' && bare.data.views[0]!.icon).toBeUndefined();
@@ -328,7 +329,7 @@ describe('project', () => {
         expect(withSeparator.success && withSeparator.data.views[1]).toEqual({ kind: 'separator', id: 's1' });
     });
 
-    test('a canvas file without an icon parses, and only the two kinds a person picks are allowed', () => {
+    test('a canvas file without an icon parses, and only a name from the closed list is allowed', () => {
         const view = { kind: 'canvas', id: 'main', name: 'Canvas', nodes: [], texts: [], edges: [] };
         const before = { version: 3, rev: 4, name: 'p', color: 'violet', views: [view] };
         const parsed = ProjectDocumentSchema.safeParse(before);
@@ -336,12 +337,11 @@ describe('project', () => {
         expect(parsed.success && parsed.data.icon).toBeUndefined();
         expect(parsed.success && parsed.data.views[0]!.kind === 'canvas' && parsed.data.views[0]!.layouts).toEqual([]);
 
-        expect(ProjectDocumentSchema.safeParse({ ...before, icon: { kind: 'emoji', value: '\u{1f680}' } }).success).toBe(true);
         expect(ProjectDocumentSchema.safeParse({ ...before, icon: { kind: 'lucide', value: 'rocket' } }).success).toBe(true);
-        // Only the closed list, and never an image blob in the shared file.
+        // Only the closed list, never an image blob in the shared file and never a mark of one's own.
         expect(ProjectDocumentSchema.safeParse({ ...before, icon: { kind: 'lucide', value: 'unicorn' } }).success).toBe(false);
         expect(ProjectDocumentSchema.safeParse({ ...before, icon: { kind: 'image', value: 'data:image/png;base64,AA' } }).success).toBe(false);
-        expect(ProjectDocumentSchema.safeParse({ ...before, icon: { kind: 'emoji', value: 'x'.repeat(17) } }).success).toBe(false);
+        expect(ProjectDocumentSchema.safeParse({ ...before, icon: { kind: 'emoji', value: '\u{1f680}' } }).success).toBe(false);
     });
 
     test('a summary carries the resolved icon and where the name came from', () => {

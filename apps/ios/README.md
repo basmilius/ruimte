@@ -12,7 +12,7 @@ and size. Browser pages use an isolated WKWebView without a machine bridge.
   TURN is a fallback. The relay-only switch is confined to connection diagnostics.
 - Project creation and navigation, view ordering and names, local camera/selection, and
   three-way merges with explicit conflict resolution. Unknown view/node kinds survive saves.
-  Separators group the view list into sections; rows show the name and desktop Lucide or chosen emoji icon.
+  Separators group the view list into sections; rows show the name and the Lucide mark the desktop gives them.
   Projects use native grouped lists with a separate recently closed page. Custom image icons,
   including `.idea/icon.svg`, use the existing authenticated `projectIcon` byte resource and dark variant.
   A cold start reopens the project you left open; if that fails, the list says why and offers Try again.

@@ -74,7 +74,7 @@ describe('AutoRegistrar', () => {
     test('a changed name, icon, broker or key registers again exactly once', async () => {
         const changes: Partial<MachineRecord>[] = [
             { name: 'Studio 2' },
-            { icon: { kind: 'emoji', value: '🎛️' } },
+            { icon: { kind: 'lucide', value: 'monitor' } },
             { brokerUrl: 'wss://broker.ruimte.test' },
             { publicKey: 'B'.repeat(43) }
         ];

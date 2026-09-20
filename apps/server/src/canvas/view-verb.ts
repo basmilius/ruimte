@@ -1,5 +1,4 @@
 import {
-    PROJECT_ICON_EMOJI_MAX,
     PROJECT_ICON_NAMES,
     PROJECT_VIEW_KINDS,
     emptyCanvasView,
@@ -78,22 +77,13 @@ const ICON_NAME_LINES = Array.from({ length: Math.ceil(PROJECT_ICON_NAMES.length
     ['icons', ...PROJECT_ICON_NAMES.slice(row * 10, row * 10 + 10)].join('\t')
 );
 
-/*
- * A Lucide name from the closed set, or an emoji. A value that reads like a name (letters, digits
- * and dashes) and is not in the set is a typo rather than a mark, so it is refused with the set
- * instead of being written into the file as an emoji nothing can draw.
- */
+/* A Lucide name from the closed set. Anything else is refused with the set, which is the answer to
+   both a typo and a mark of one's own: a view wears one of these names or the mark of its kind. */
 const iconChoice = (value: string): ProjectIconChoice => {
     if ((PROJECT_ICON_NAMES as readonly string[]).includes(value)) {
         return { kind: 'lucide', value: value as (typeof PROJECT_ICON_NAMES)[number] };
     }
-    if (/^[a-zA-Z0-9-]+$/.test(value)) {
-        throw new VerbRefusal('unknown-icon', `${value} is not one of the ${PROJECT_ICON_NAMES.length} Lucide names a view picks from`, ICON_NAME_LINES);
-    }
-    if ([...value].length > PROJECT_ICON_EMOJI_MAX) {
-        throw new VerbRefusal('unknown-icon', `That emoji is ${[...value].length} code points and at most ${PROJECT_ICON_EMOJI_MAX} fit in the mark of a view`);
-    }
-    return { kind: 'emoji', value };
+    throw new VerbRefusal('unknown-icon', `${value} is not one of the ${PROJECT_ICON_NAMES.length} Lucide names a view picks from`, ICON_NAME_LINES);
 };
 
 /* The view an id names, refused with the list when it names none: the views are a closed set. */
@@ -234,19 +224,17 @@ const renameSub = defineAction('view', {
 
 const iconSub = defineAction('view', {
     name: 'icon',
-    usage: '<viewId> <lucide-name|emoji>',
+    usage: '<viewId> <lucide-name>',
     summary: 'Gives a view a mark of its own and prints id, kind, icon kind, icon',
     detail: [
         'argument\t<viewId>\trequired\tThe view to mark, by id; ruimte-context view list lists them',
-        'argument\t<mark>\trequired\tA Lucide name from the set the picker has, or an emoji',
-        'prints\tid\tkind\tlucide|emoji\tthe mark the view now wears',
+        'argument\t<mark>\trequired\tA Lucide name from the set the picker has',
+        'prints\tid\tkind\tlucide\tthe mark the view now wears',
         `names\t${PROJECT_ICON_NAMES.length} Lucide names; a refusal prints all of them`,
-        `emoji\tAt most ${PROJECT_ICON_EMOJI_MAX} code points`,
         'note\tA separator is a line in the sidebar and has no room for a mark'
     ],
-    positionals: z.tuple([z.string().min(1, 'view icon needs the id of a view'), z.string().min(1, 'view icon needs a Lucide name or an emoji')], {
-        error: (issue) =>
-            issue.code === 'too_big' ? 'view icon takes a view id and one mark' : 'view icon needs the id of a view and a Lucide name or an emoji'
+    positionals: z.tuple([z.string().min(1, 'view icon needs the id of a view'), z.string().min(1, 'view icon needs a Lucide name')], {
+        error: (issue) => (issue.code === 'too_big' ? 'view icon takes a view id and one mark' : 'view icon needs the id of a view and a Lucide name')
     }),
     flags: z.object({}),
     async run({ positionals: [id, value] }, call) {

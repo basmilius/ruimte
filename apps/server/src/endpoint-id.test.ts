@@ -92,7 +92,7 @@ describe('readOrCreateEndpointIdentity', () => {
 
     test('clearing the name hands the machine back to the one it starts with', async () => {
         const identity = await readOrCreateEndpointIdentity(home, 'the-hostname');
-        await identity.setIdentity('Studio', { kind: 'emoji', value: '\u{1F5A5}\u{FE0F}' });
+        await identity.setIdentity('Studio', { kind: 'lucide', value: 'monitor' });
         await identity.setIdentity(null, null);
         expect(identity.label).toBe('the-hostname');
         expect(identity.nameSource).toBe('default');

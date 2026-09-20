@@ -21,7 +21,7 @@ final class ProjectArtworkTests: XCTestCase {
                 machineID: "machine", publicKey: "key",
                 project: .object([
                     "projectId": .string("project"),
-                    "icon": .object(["kind": .string("emoji"), "value": .string("🚀")]),
+                    "icon": .object(["kind": .string("lucide"), "value": .string("rocket")]),
                 ]), dark: false))
     }
 

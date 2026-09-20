@@ -8,7 +8,7 @@ private func pairedEndpoint(_ changes: [String: Any] = [:]) -> [String: Any] {
         "id": "machine-1", "label": "Mac", "platform": "darwin", "version": "1.0",
         "protocol": WireConstants.protocolVersion, "reachability": "public", "authenticated": true,
         "publicKey": String(repeating: "A", count: 43), "brokerUrl": "wss://broker.example",
-        "icon": ["kind": "emoji", "value": "🚀"],
+        "icon": ["kind": "lucide", "value": "rocket"],
     ]
     return endpoint.merging(changes) { _, replacement in replacement }
 }
@@ -64,7 +64,7 @@ private func answer(_ body: [String: Any], status: Int = 200) throws -> PairingC
         #expect(machine.id == "machine-1")
         #expect(machine.name == "Mac")
         #expect(machine.brokerUrl == "wss://broker.example")
-        #expect(machine.icon == MachineIcon(kind: .emoji, value: "🚀"))
+        #expect(machine.icon == MachineIcon(value: "rocket"))
         #expect(machine.lastSeenAt == nil)
     }
 

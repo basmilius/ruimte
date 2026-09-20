@@ -1,49 +1,48 @@
 {
-  "action": {
-    "cancel": "Annuleren",
-    "close": "Sluiten",
-    "confirm": "Bevestigen",
-    "copy": "Kopiëren",
-    "copyError": "Fout kopiëren",
-    "delete": "Verwijderen",
-    "dismiss": "Sluiten",
-    "done": "Klaar",
-    "edit": "Bewerken",
-    "more": "Meer",
-    "open": "Openen",
-    "redo": "Opnieuw",
-    "reload": "Herladen",
-    "remove": "Verwijderen",
-    "rename": "Hernoemen",
-    "retry": "Opnieuw proberen",
-    "save": "Opslaan",
-    "search": "Zoeken",
-    "select": "Selecteren",
-    "selectAll": "Alles selecteren",
-    "undo": "Ongedaan maken"
-  },
-  "state": {
-    "loading": "Laden",
-    "empty": "Hier staat nog niets",
-    "error": "Er ging iets mis",
-    "sidebarFailed": "De sidebar kon niet worden getekend"
-  },
-  "answer": {
-    "yes": "Ja",
-    "no": "Nee"
-  },
-  "icon": {
-    "emoji": "Emoji",
-    "useEmoji": "Emoji gebruiken",
-    "label": "Icoon",
-    "none": "Geen icoon"
-  },
-  "status": {
-    "running": "bezig",
-    "done": "klaar",
-    "failed": "mislukt",
-    "cancelled": "geannuleerd"
-  },
-  "taskMark": "Taak: {{title}} ({{status}})",
-  "unseen": "Klaar terwijl je weg was"
+    "action": {
+        "cancel": "Annuleren",
+        "close": "Sluiten",
+        "confirm": "Bevestigen",
+        "copy": "Kopiëren",
+        "copyError": "Fout kopiëren",
+        "delete": "Verwijderen",
+        "dismiss": "Sluiten",
+        "done": "Klaar",
+        "edit": "Bewerken",
+        "more": "Meer",
+        "open": "Openen",
+        "redo": "Opnieuw",
+        "reload": "Herladen",
+        "remove": "Verwijderen",
+        "rename": "Hernoemen",
+        "retry": "Opnieuw proberen",
+        "save": "Opslaan",
+        "search": "Zoeken",
+        "select": "Selecteren",
+        "selectAll": "Alles selecteren",
+        "undo": "Ongedaan maken"
+    },
+    "state": {
+        "loading": "Laden",
+        "empty": "Hier staat nog niets",
+        "error": "Er ging iets mis",
+        "sidebarFailed": "De sidebar kon niet worden getekend"
+    },
+    "answer": {
+        "yes": "Ja",
+        "no": "Nee"
+    },
+    "icon": {
+        "label": "Icoon",
+        "symbol": "Symbool",
+        "none": "Geen icoon"
+    },
+    "status": {
+        "running": "bezig",
+        "done": "klaar",
+        "failed": "mislukt",
+        "cancelled": "geannuleerd"
+    },
+    "taskMark": "Taak: {{title}} ({{status}})",
+    "unseen": "Klaar terwijl je weg was"
 }

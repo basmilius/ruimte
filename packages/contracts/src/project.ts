@@ -283,15 +283,11 @@ export const PROJECT_ICON_NAMES = [
     'coffee'
 ] as const;
 
-// An emoji is a few code points at most; the cap keeps a pasted paragraph out of the file.
-export const PROJECT_ICON_EMOJI_MAX = 16;
-
-// What a person picked, in the shared file next to the name. An image is never a blob here:
-// it is a file at `.ruimte/icon.<ext>`, which the derived chain finds on its own.
-export const ProjectIconChoiceSchema = z.discriminatedUnion('kind', [
-    z.object({ kind: z.literal('emoji'), value: z.string().min(1).max(PROJECT_ICON_EMOJI_MAX) }),
-    z.object({ kind: z.literal('lucide'), value: z.enum(PROJECT_ICON_NAMES) })
-]);
+// What a person picked, in the shared file next to the name. One of the Lucide names and nothing
+// else: a mark is drawn beside a name at 14 pixels, where the app's own line weight is what makes a
+// row of them read as a list. An image is never a blob here: it is a file at `.ruimte/icon.<ext>`,
+// which the derived chain finds on its own.
+export const ProjectIconChoiceSchema = z.object({ kind: z.literal('lucide'), value: z.enum(PROJECT_ICON_NAMES) });
 export type ProjectIconChoice = z.infer<typeof ProjectIconChoiceSchema>;
 
 /*
@@ -300,7 +296,6 @@ export type ProjectIconChoice = z.infer<typeof ProjectIconChoiceSchema>;
  * from `GET /projects/<id>/icon?v=<version>` and the browser cache can hold them forever.
  */
 export const ProjectIconSchema = z.discriminatedUnion('kind', [
-    z.object({ kind: z.literal('emoji'), value: z.string() }),
     z.object({ kind: z.literal('lucide'), value: z.enum(PROJECT_ICON_NAMES) }),
     z.object({ kind: z.literal('image'), value: z.string(), version: z.string() }),
     z.object({ kind: z.literal('initial'), value: z.string() })

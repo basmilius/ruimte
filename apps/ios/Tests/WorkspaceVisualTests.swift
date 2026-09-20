@@ -125,7 +125,7 @@ final class WorkspaceVisualTests: XCTestCase {
             .object([
                 "id": .string("notes"), "kind": .string("file"), "name": .string("Device acceptance checklist"),
                 "path": .string("docs/ios.md"),
-                "icon": .object(["kind": .string("emoji"), "value": .string("📋")]),
+                "icon": .object(["kind": .string("lucide"), "value": .string("bookmark")]),
             ]),
             .object([
                 "id": .string("diagram"), "kind": .string("diagram"), "name": .string("Connection flow"),

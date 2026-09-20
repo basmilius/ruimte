@@ -1,5 +1,6 @@
 import {
     MACHINE_REGISTRATION_MAX_SKEW_MS,
+    MachineIconSchema,
     MachineIdSchema,
     RegisterMachinePayloadSchema,
     machineRegistrationMessage,
@@ -21,10 +22,17 @@ interface MachineRow {
     last_seen_at: number | null;
 }
 
+/* A mark stored by a build that wrote other kinds of mark is decoration nobody can draw any more.
+   It comes back as no mark, because a row nobody can validate is still a machine to connect to. */
+const iconOf = (stored: string): MachineIcon | null => {
+    const parsed = MachineIconSchema.safeParse(JSON.parse(stored) as unknown);
+    return parsed.success ? parsed.data : null;
+};
+
 const machineOf = (row: MachineRow): Machine => ({
     id: row.id,
     name: row.name,
-    icon: row.icon ? (JSON.parse(row.icon) as MachineIcon) : null,
+    icon: row.icon ? iconOf(row.icon) : null,
     publicKey: row.public_key,
     brokerUrl: row.broker_url,
     lastSeenAt: row.last_seen_at

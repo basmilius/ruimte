@@ -231,8 +231,8 @@ describe('auth handlers', () => {
             return (frame.result as { registration: { name: string; icon: unknown } }).registration;
         };
         expect(await sign()).toMatchObject({ name: 'box', icon: null });
-        await identity.setIdentity('Studio', { kind: 'emoji', value: '🎛️' });
-        expect(await sign()).toMatchObject({ name: 'Studio', icon: { kind: 'emoji', value: '🎛️' } });
+        await identity.setIdentity('Studio', { kind: 'lucide', value: 'monitor' });
+        expect(await sign()).toMatchObject({ name: 'Studio', icon: { kind: 'lucide', value: 'monitor' } });
         await identity.setIdentity(null, null);
         expect(await sign()).toMatchObject({ name: 'box', icon: null });
     });

@@ -21,8 +21,6 @@ struct ProjectArtwork: View {
         Group {
             if let image {
                 Image(uiImage: image).renderingMode(.original).resizable().scaledToFit().padding(4)
-            } else if project["icon"]?.text("kind") == "emoji" {
-                Text(project["icon"]?.text("value") ?? "").font(.system(size: (size * 0.65).rounded()))
             } else if project["icon"]?.text("kind") == "lucide" {
                 LucideIcon(name: project["icon"]?.text("value") ?? "folder", size: (size * 0.55).rounded())
                     .foregroundStyle(MobileStyle.accent)

@@ -48,7 +48,7 @@ final class MachineIconTests: XCTestCase {
 
     @MainActor func testRequestFailureKeepsFallbackAndStopDropsLateUpdates() async throws {
         let client = IconMachine()
-        let fallback = MachineIcon(kind: .emoji, value: "🚀")
+        let fallback = MachineIcon(value: "rocket")
         let state = MachineIconState(client: client, fallback: fallback)
         state.start()
         await client.waitForRequest(1)

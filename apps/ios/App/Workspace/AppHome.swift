@@ -538,13 +538,7 @@ private struct ProjectMachineGlyph: View {
     @ScaledMetric(relativeTo: .caption) private var size = 12.0
 
     var body: some View {
-        Group {
-            if let icon, icon.kind == .emoji {
-                Text(icon.value).font(.system(size: size - 2)).frame(width: size, height: size)
-            } else {
-                LucideIcon(name: icon?.value ?? "server", size: size)
-            }
-        }.accessibilityHidden(true)
+        LucideIcon(name: icon?.value ?? "server", size: size).accessibilityHidden(true)
     }
 }
 
@@ -556,9 +550,7 @@ private struct ProjectHomeGlyph: View {
     }
     var body: some View {
         Group {
-            if summary["icon"]?.text("kind") == "emoji" {
-                Text(summary["icon"]!.text("value")).font(.title2)
-            } else if summary["icon"]?.text("kind") == "lucide" {
+            if summary["icon"]?.text("kind") == "lucide" {
                 LucideIcon(name: summary["icon"]!.text("value"), size: 20)
                     .foregroundStyle(MobileStyle.accent)
             } else {

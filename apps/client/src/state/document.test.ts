@@ -231,7 +231,7 @@ describe('changing the list of views', () => {
         const before = useDocument.getState().edits;
         useDocument.getState().setViewIcon('a', null);
         expect(useDocument.getState().edits).toBe(before);
-        useDocument.getState().setViewIcon('a', { kind: 'emoji', value: '\u{1f680}' });
+        useDocument.getState().setViewIcon('a', { kind: 'lucide', value: 'rocket' });
         expect(useDocument.getState().edits).toBe(before + 1);
     });
 

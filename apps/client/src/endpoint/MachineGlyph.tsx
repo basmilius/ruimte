@@ -17,16 +17,5 @@ export function MachineGlyph({ icon, size = 16, className }: MachineGlyphProps) 
     if (icon?.kind === 'lucide') {
         return <Icon icon={PROJECT_ICON_GLYPHS[icon.value]} size={size} className={clsx('shrink-0', className)} />;
     }
-    if (icon?.kind === 'emoji') {
-        return (
-            <span
-                aria-hidden
-                className={clsx('flex shrink-0 items-center justify-center leading-none', className)}
-                style={{ width: size, height: size, fontSize: size - 2 }}
-            >
-                {icon.value}
-            </span>
-        );
-    }
     return <Icon icon={Server} size={size} className={clsx('shrink-0', className)} />;
 }

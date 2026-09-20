@@ -75,14 +75,7 @@ struct WorkspaceViewIcon: View {
     var size: CGFloat = 20
 
     var body: some View {
-        Group {
-            if item.text("kind") != "unknown", let icon = item["icon"], icon.text("kind") == "emoji" {
-                Text(icon.text("value")).font(.system(size: size - 2))
-                    .frame(width: size, height: size)
-            } else {
-                LucideIcon(name: Self.name(for: item), size: size)
-            }
-        }.accessibilityHidden(true)
+        LucideIcon(name: Self.name(for: item), size: size).accessibilityHidden(true)
     }
 
     static func name(for item: JSONValue) -> String {

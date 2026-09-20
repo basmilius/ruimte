@@ -100,7 +100,7 @@ describe('kinds this version does not know', () => {
         expect(view).toMatchObject({ kind: 'unknown', id: 'timeline-1', name: 'Flow', createdBy: 'term' });
         expect(isOpenableView(view)).toBe(false);
         expect(withRenamedView(document.views, 'timeline-1', 'Other')).toBeNull();
-        expect(withViewIcon(document.views, 'timeline-1', { kind: 'emoji', value: 'x' })).toBeNull();
+        expect(withViewIcon(document.views, 'timeline-1', { kind: 'lucide', value: 'rocket' })).toBeNull();
         expect(withDuplicatedView(document.views, 'timeline-1', (prefix) => `${prefix}-copy`)).toBeNull();
     });
 

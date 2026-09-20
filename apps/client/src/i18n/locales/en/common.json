@@ -1,49 +1,48 @@
 {
-  "action": {
-    "cancel": "Cancel",
-    "close": "Close",
-    "confirm": "Confirm",
-    "copy": "Copy",
-    "copyError": "Copy error",
-    "delete": "Delete",
-    "dismiss": "Dismiss",
-    "done": "Done",
-    "edit": "Edit",
-    "more": "More",
-    "open": "Open",
-    "redo": "Redo",
-    "reload": "Reload",
-    "remove": "Remove",
-    "rename": "Rename",
-    "retry": "Try again",
-    "save": "Save",
-    "search": "Search",
-    "select": "Select",
-    "selectAll": "Select all",
-    "undo": "Undo"
-  },
-  "state": {
-    "loading": "Loading",
-    "empty": "Nothing here yet",
-    "error": "Something went wrong",
-    "sidebarFailed": "The sidebar failed to render"
-  },
-  "answer": {
-    "yes": "Yes",
-    "no": "No"
-  },
-  "icon": {
-    "emoji": "Emoji",
-    "useEmoji": "Use emoji",
-    "label": "Icon",
-    "none": "No icon"
-  },
-  "status": {
-    "running": "running",
-    "done": "done",
-    "failed": "failed",
-    "cancelled": "cancelled"
-  },
-  "taskMark": "Task: {{title}} ({{status}})",
-  "unseen": "Finished while you were away"
+    "action": {
+        "cancel": "Cancel",
+        "close": "Close",
+        "confirm": "Confirm",
+        "copy": "Copy",
+        "copyError": "Copy error",
+        "delete": "Delete",
+        "dismiss": "Dismiss",
+        "done": "Done",
+        "edit": "Edit",
+        "more": "More",
+        "open": "Open",
+        "redo": "Redo",
+        "reload": "Reload",
+        "remove": "Remove",
+        "rename": "Rename",
+        "retry": "Try again",
+        "save": "Save",
+        "search": "Search",
+        "select": "Select",
+        "selectAll": "Select all",
+        "undo": "Undo"
+    },
+    "state": {
+        "loading": "Loading",
+        "empty": "Nothing here yet",
+        "error": "Something went wrong",
+        "sidebarFailed": "The sidebar failed to render"
+    },
+    "answer": {
+        "yes": "Yes",
+        "no": "No"
+    },
+    "icon": {
+        "label": "Icon",
+        "symbol": "Symbol",
+        "none": "No icon"
+    },
+    "status": {
+        "running": "running",
+        "done": "done",
+        "failed": "failed",
+        "cancelled": "cancelled"
+    },
+    "taskMark": "Task: {{title}} ({{status}})",
+    "unseen": "Finished while you were away"
 }

@@ -207,7 +207,7 @@ export type SessionResult = z.infer<typeof SessionResultSchema>;
 const MachineNameSchema = z.string().min(1).max(80);
 
 // The daemon's `ProjectIconChoice` as it travels in `endpoint.info`, checked by the client that draws it.
-export const MachineIconSchema = z.object({ kind: z.enum(['emoji', 'lucide']), value: z.string().min(1).max(64) });
+export const MachineIconSchema = z.object({ kind: z.literal('lucide'), value: z.string().min(1).max(64) });
 export type MachineIcon = z.infer<typeof MachineIconSchema>;
 
 // The broker a machine announces itself to, as it hands the URL to its clients.

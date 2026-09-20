@@ -354,10 +354,10 @@ public struct IdentityLinkStartResult: Codable, Sendable, Equatable {
 }
 
 public struct MachineIcon: Codable, Sendable, Equatable {
-    public let `kind`: MachineIconKind
+    public let `kind`: String
     public let `value`: String
 
-    public init(`kind`: MachineIconKind, `value`: String) {
+    public init(`kind`: String = "lucide", `value`: String) {
         self.`kind` = `kind`
         self.`value` = `value`
     }
@@ -365,7 +365,7 @@ public struct MachineIcon: Codable, Sendable, Equatable {
     public init(from decoder: Decoder) throws {
         _ = try WireSchema.validate("MachineIconSchema", JSONValue(from: decoder))
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        `kind` = try container.decode(MachineIconKind.self, forKey: .`kind`)
+        `kind` = try container.decode(String.self, forKey: .`kind`)
         `value` = try container.decode(String.self, forKey: .`value`)
     }
 
@@ -379,11 +379,6 @@ public struct MachineIcon: Codable, Sendable, Equatable {
         case `kind` = "kind"
         case `value` = "value"
     }
-}
-
-public enum MachineIconKind: String, CaseIterable, Codable, Sendable, Equatable {
-    case `emoji` = "emoji"
-    case `lucide` = "lucide"
 }
 
 public struct MachineListResult: Codable, Sendable, Equatable {
@@ -3102,34 +3097,11 @@ public enum PairResultEndpointNameSource: String, CaseIterable, Codable, Sendabl
     case `default` = "default"
 }
 
-public enum PairResultEndpointIcon: Codable, Sendable, Equatable {
-    case `emoji`(PairResultEndpointIconVariant0)
-    case `lucide`(PairResultEndpointIconVariant1)
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: Tag.self)
-        switch try container.decode(String.self, forKey: .value) {
-        case "emoji": self = .`emoji`(try PairResultEndpointIconVariant0(from: decoder))
-        case "lucide": self = .`lucide`(try PairResultEndpointIconVariant1(from: decoder))
-        default: throw WireValidationError.invalid("Unknown PairResultEndpointIcon tag")
-        }
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        switch self {
-        case .`emoji`(let value): try value.encode(to: encoder)
-        case .`lucide`(let value): try value.encode(to: encoder)
-        }
-    }
-
-    private enum Tag: String, CodingKey { case value = "kind" }
-}
-
-public struct PairResultEndpointIconVariant0: Codable, Sendable, Equatable {
+public struct PairResultEndpointIcon: Codable, Sendable, Equatable {
     public let `kind`: String
-    public let `value`: String
+    public let `value`: PairResultEndpointIconValue
 
-    public init(`kind`: String = "emoji", `value`: String) {
+    public init(`kind`: String = "lucide", `value`: PairResultEndpointIconValue) {
         self.`kind` = `kind`
         self.`value` = `value`
     }
@@ -3137,7 +3109,7 @@ public struct PairResultEndpointIconVariant0: Codable, Sendable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         `kind` = try container.decode(String.self, forKey: .`kind`)
-        `value` = try container.decode(String.self, forKey: .`value`)
+        `value` = try container.decode(PairResultEndpointIconValue.self, forKey: .`value`)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -3152,34 +3124,7 @@ public struct PairResultEndpointIconVariant0: Codable, Sendable, Equatable {
     }
 }
 
-public struct PairResultEndpointIconVariant1: Codable, Sendable, Equatable {
-    public let `kind`: String
-    public let `value`: PairResultEndpointIconVariant1Value
-
-    public init(`kind`: String = "lucide", `value`: PairResultEndpointIconVariant1Value) {
-        self.`kind` = `kind`
-        self.`value` = `value`
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        `kind` = try container.decode(String.self, forKey: .`kind`)
-        `value` = try container.decode(PairResultEndpointIconVariant1Value.self, forKey: .`value`)
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(`kind`, forKey: .`kind`)
-        try container.encode(`value`, forKey: .`value`)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case `kind` = "kind"
-        case `value` = "value"
-    }
-}
-
-public enum PairResultEndpointIconVariant1Value: String, CaseIterable, Codable, Sendable, Equatable {
+public enum PairResultEndpointIconValue: String, CaseIterable, Codable, Sendable, Equatable {
     case `box` = "box"
     case `boxes` = "boxes"
     case `package` = "package"
