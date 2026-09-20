@@ -18019,6 +18019,11 @@
                 "exclusiveMinimum": 0,
                 "maximum": 9007199254740991
               },
+              "flowWidth": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
               "tabs": {
                 "type": "array",
                 "items": {
@@ -20132,6 +20137,11 @@
                 ]
               },
               "planWidth": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "flowWidth": {
                 "type": "integer",
                 "exclusiveMinimum": 0,
                 "maximum": 9007199254740991
@@ -24511,202 +24521,7 @@
           "enabled": {
             "type": "boolean"
           },
-          "ceiling": {
-            "type": "string",
-            "enum": [
-              "supervised",
-              "auto-accept-edits",
-              "auto",
-              "full-access"
-            ]
-          },
-          "budget": {
-            "type": "number",
-            "minimum": 0
-          },
-          "enabledBy": {
-            "type": "string"
-          },
-          "enabledAt": {
-            "type": "number"
-          },
-          "recipeHash": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "enabled"
-        ]
-      },
-      "runs": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "minLength": 1
-            },
-            "trigger": {
-              "type": "string",
-              "minLength": 1
-            },
-            "startedAt": {
-              "type": "number"
-            },
-            "endedAt": {
-              "type": "number"
-            },
-            "outcome": {
-              "type": "string",
-              "enum": [
-                "running",
-                "done",
-                "refused",
-                "skipped",
-                "missed"
-              ]
-            },
-            "note": {
-              "type": "string"
-            },
-            "depth": {
-              "type": "integer",
-              "exclusiveMinimum": 0,
-              "maximum": 9007199254740991
-            },
-            "steps": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "cardId": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "at": {
-                    "type": "number"
-                  },
-                  "port": {
-                    "type": "string",
-                    "enum": [
-                      "done",
-                      "error",
-                      "true",
-                      "false"
-                    ]
-                  },
-                  "note": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "cardId",
-                  "at"
-                ]
-              }
-            },
-            "settled": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "enum": [
-                      "done",
-                      "error",
-                      "true",
-                      "false"
-                    ]
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              }
-            },
-            "waiting": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "tokens": {
-              "type": "object",
-              "propertyNames": {
-                "type": "string"
-              },
-              "additionalProperties": {
-                "type": [
-                  "string",
-                  "number",
-                  "boolean"
-                ]
-              }
-            }
-          },
-          "required": [
-            "id",
-            "startedAt",
-            "outcome",
-            "steps",
-            "tokens"
-          ]
-        }
-      }
-    },
-    "required": [
-      "switch",
-      "runs"
-    ]
-  },
-  "request.flow.enable.payload": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "projectId": {
-        "type": "string",
-        "minLength": 1
-      },
-      "viewId": {
-        "type": "string",
-        "minLength": 1
-      },
-      "enabled": {
-        "type": "boolean"
-      },
-      "ceiling": {
-        "type": "string",
-        "enum": [
-          "supervised",
-          "auto-accept-edits",
-          "auto",
-          "full-access"
-        ]
-      },
-      "budget": {
-        "type": "number",
-        "minimum": 0
-      }
-    },
-    "required": [
-      "projectId",
-      "viewId",
-      "enabled"
-    ]
-  },
-  "request.flow.enable.result": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "type": "object",
-    "properties": {
-      "switch": {
-        "type": "object",
-        "properties": {
-          "enabled": {
+          "watching": {
             "type": "boolean"
           },
           "ceiling": {
@@ -24796,6 +24611,10 @@
                   },
                   "note": {
                     "type": "string"
+                  },
+                  "dry": {
+                    "type": "boolean",
+                    "const": true
                   }
                 },
                 "required": [
@@ -24845,6 +24664,33 @@
                   "boolean"
                 ]
               }
+            },
+            "dry": {
+              "type": "boolean",
+              "const": true
+            },
+            "test": {
+              "type": "object",
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "scope": {
+                  "type": "string",
+                  "enum": [
+                    "graph",
+                    "card"
+                  ]
+                },
+                "by": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "from",
+                "scope"
+              ]
             }
           },
           "required": [
@@ -24855,6 +24701,983 @@
             "tokens"
           ]
         }
+      },
+      "armed": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "graph",
+              "card"
+            ]
+          },
+          "dry": {
+            "type": "boolean"
+          },
+          "by": {
+            "type": "string"
+          },
+          "armedAt": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "from",
+          "scope",
+          "dry"
+        ]
+      }
+    },
+    "required": [
+      "switch",
+      "runs"
+    ]
+  },
+  "request.flow.enable.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "enabled": {
+        "type": "boolean"
+      },
+      "watching": {
+        "type": "boolean"
+      },
+      "ceiling": {
+        "type": "string",
+        "enum": [
+          "supervised",
+          "auto-accept-edits",
+          "auto",
+          "full-access"
+        ]
+      },
+      "budget": {
+        "type": "number",
+        "minimum": 0
+      }
+    },
+    "required": [
+      "projectId",
+      "viewId",
+      "enabled"
+    ]
+  },
+  "request.flow.enable.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "switch": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "watching": {
+            "type": "boolean"
+          },
+          "ceiling": {
+            "type": "string",
+            "enum": [
+              "supervised",
+              "auto-accept-edits",
+              "auto",
+              "full-access"
+            ]
+          },
+          "budget": {
+            "type": "number",
+            "minimum": 0
+          },
+          "enabledBy": {
+            "type": "string"
+          },
+          "enabledAt": {
+            "type": "number"
+          },
+          "recipeHash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "runs": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "trigger": {
+              "type": "string",
+              "minLength": 1
+            },
+            "startedAt": {
+              "type": "number"
+            },
+            "endedAt": {
+              "type": "number"
+            },
+            "outcome": {
+              "type": "string",
+              "enum": [
+                "running",
+                "done",
+                "refused",
+                "skipped",
+                "missed"
+              ]
+            },
+            "note": {
+              "type": "string"
+            },
+            "depth": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "cardId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "at": {
+                    "type": "number"
+                  },
+                  "port": {
+                    "type": "string",
+                    "enum": [
+                      "done",
+                      "error",
+                      "true",
+                      "false"
+                    ]
+                  },
+                  "note": {
+                    "type": "string"
+                  },
+                  "dry": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                },
+                "required": [
+                  "cardId",
+                  "at"
+                ]
+              }
+            },
+            "settled": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "done",
+                      "error",
+                      "true",
+                      "false"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "waiting": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "tokens": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ]
+              }
+            },
+            "dry": {
+              "type": "boolean",
+              "const": true
+            },
+            "test": {
+              "type": "object",
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "scope": {
+                  "type": "string",
+                  "enum": [
+                    "graph",
+                    "card"
+                  ]
+                },
+                "by": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "from",
+                "scope"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "startedAt",
+            "outcome",
+            "steps",
+            "tokens"
+          ]
+        }
+      },
+      "armed": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "graph",
+              "card"
+            ]
+          },
+          "dry": {
+            "type": "boolean"
+          },
+          "by": {
+            "type": "string"
+          },
+          "armedAt": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "from",
+          "scope",
+          "dry"
+        ]
+      }
+    },
+    "required": [
+      "switch",
+      "runs"
+    ]
+  },
+  "request.flow.start.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "cardId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "viewId",
+      "cardId"
+    ]
+  },
+  "request.flow.start.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "run": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "trigger": {
+                "type": "string",
+                "minLength": 1
+              },
+              "startedAt": {
+                "type": "number"
+              },
+              "endedAt": {
+                "type": "number"
+              },
+              "outcome": {
+                "type": "string",
+                "enum": [
+                  "running",
+                  "done",
+                  "refused",
+                  "skipped",
+                  "missed"
+                ]
+              },
+              "note": {
+                "type": "string"
+              },
+              "depth": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "steps": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "cardId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "at": {
+                      "type": "number"
+                    },
+                    "port": {
+                      "type": "string",
+                      "enum": [
+                        "done",
+                        "error",
+                        "true",
+                        "false"
+                      ]
+                    },
+                    "note": {
+                      "type": "string"
+                    },
+                    "dry": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "cardId",
+                    "at"
+                  ]
+                }
+              },
+              "settled": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "done",
+                        "error",
+                        "true",
+                        "false"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "waiting": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "tokens": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "dry": {
+                "type": "boolean",
+                "const": true
+              },
+              "test": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "graph",
+                      "card"
+                    ]
+                  },
+                  "by": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "from",
+                  "scope"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "startedAt",
+              "outcome",
+              "steps",
+              "tokens"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "run"
+    ]
+  },
+  "request.flow.test.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "from": {
+        "type": "string",
+        "minLength": 1
+      },
+      "scope": {
+        "type": "string",
+        "enum": [
+          "graph",
+          "card"
+        ]
+      },
+      "dry": {
+        "type": "boolean"
+      },
+      "tokens": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": [
+            "string",
+            "number",
+            "boolean"
+          ]
+        }
+      }
+    },
+    "required": [
+      "projectId",
+      "viewId",
+      "from",
+      "scope",
+      "dry"
+    ]
+  },
+  "request.flow.test.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "run": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "trigger": {
+                "type": "string",
+                "minLength": 1
+              },
+              "startedAt": {
+                "type": "number"
+              },
+              "endedAt": {
+                "type": "number"
+              },
+              "outcome": {
+                "type": "string",
+                "enum": [
+                  "running",
+                  "done",
+                  "refused",
+                  "skipped",
+                  "missed"
+                ]
+              },
+              "note": {
+                "type": "string"
+              },
+              "depth": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "steps": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "cardId": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "at": {
+                      "type": "number"
+                    },
+                    "port": {
+                      "type": "string",
+                      "enum": [
+                        "done",
+                        "error",
+                        "true",
+                        "false"
+                      ]
+                    },
+                    "note": {
+                      "type": "string"
+                    },
+                    "dry": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "cardId",
+                    "at"
+                  ]
+                }
+              },
+              "settled": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "done",
+                        "error",
+                        "true",
+                        "false"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "waiting": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "tokens": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "dry": {
+                "type": "boolean",
+                "const": true
+              },
+              "test": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "graph",
+                      "card"
+                    ]
+                  },
+                  "by": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "from",
+                  "scope"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "startedAt",
+              "outcome",
+              "steps",
+              "tokens"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "run"
+    ]
+  },
+  "request.flow.arm.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "test": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string",
+                "minLength": 1
+              },
+              "scope": {
+                "type": "string",
+                "enum": [
+                  "graph",
+                  "card"
+                ]
+              },
+              "dry": {
+                "type": "boolean"
+              },
+              "by": {
+                "type": "string"
+              },
+              "armedAt": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "from",
+              "scope",
+              "dry"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "required": [
+      "projectId",
+      "viewId",
+      "test"
+    ]
+  },
+  "request.flow.arm.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "switch": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "watching": {
+            "type": "boolean"
+          },
+          "ceiling": {
+            "type": "string",
+            "enum": [
+              "supervised",
+              "auto-accept-edits",
+              "auto",
+              "full-access"
+            ]
+          },
+          "budget": {
+            "type": "number",
+            "minimum": 0
+          },
+          "enabledBy": {
+            "type": "string"
+          },
+          "enabledAt": {
+            "type": "number"
+          },
+          "recipeHash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "runs": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "trigger": {
+              "type": "string",
+              "minLength": 1
+            },
+            "startedAt": {
+              "type": "number"
+            },
+            "endedAt": {
+              "type": "number"
+            },
+            "outcome": {
+              "type": "string",
+              "enum": [
+                "running",
+                "done",
+                "refused",
+                "skipped",
+                "missed"
+              ]
+            },
+            "note": {
+              "type": "string"
+            },
+            "depth": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "cardId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "at": {
+                    "type": "number"
+                  },
+                  "port": {
+                    "type": "string",
+                    "enum": [
+                      "done",
+                      "error",
+                      "true",
+                      "false"
+                    ]
+                  },
+                  "note": {
+                    "type": "string"
+                  },
+                  "dry": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                },
+                "required": [
+                  "cardId",
+                  "at"
+                ]
+              }
+            },
+            "settled": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "done",
+                      "error",
+                      "true",
+                      "false"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "waiting": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "tokens": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ]
+              }
+            },
+            "dry": {
+              "type": "boolean",
+              "const": true
+            },
+            "test": {
+              "type": "object",
+              "properties": {
+                "from": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "scope": {
+                  "type": "string",
+                  "enum": [
+                    "graph",
+                    "card"
+                  ]
+                },
+                "by": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "from",
+                "scope"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "startedAt",
+            "outcome",
+            "steps",
+            "tokens"
+          ]
+        }
+      },
+      "armed": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "graph",
+              "card"
+            ]
+          },
+          "dry": {
+            "type": "boolean"
+          },
+          "by": {
+            "type": "string"
+          },
+          "armedAt": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "from",
+          "scope",
+          "dry"
+        ]
       }
     },
     "required": [
@@ -36602,6 +37425,9 @@
           "enabled": {
             "type": "boolean"
           },
+          "watching": {
+            "type": "boolean"
+          },
           "ceiling": {
             "type": "string",
             "enum": [
@@ -36706,6 +37532,10 @@
                 },
                 "note": {
                   "type": "string"
+                },
+                "dry": {
+                  "type": "boolean",
+                  "const": true
                 }
               },
               "required": [
@@ -36755,6 +37585,33 @@
                 "boolean"
               ]
             }
+          },
+          "dry": {
+            "type": "boolean",
+            "const": true
+          },
+          "test": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string",
+                "minLength": 1
+              },
+              "scope": {
+                "type": "string",
+                "enum": [
+                  "graph",
+                  "card"
+                ]
+              },
+              "by": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "from",
+              "scope"
+            ]
           }
         },
         "required": [
@@ -36770,6 +37627,93 @@
       "projectId",
       "viewId",
       "run"
+    ]
+  },
+  "event.flow.step": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "viewId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "runId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "step": {
+        "type": "object",
+        "properties": {
+          "cardId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "at": {
+            "type": "number"
+          },
+          "port": {
+            "type": "string",
+            "enum": [
+              "done",
+              "error",
+              "true",
+              "false"
+            ]
+          },
+          "note": {
+            "type": "string"
+          },
+          "dry": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "cardId",
+          "at"
+        ]
+      },
+      "settled": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "done",
+                "error",
+                "true",
+                "false"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "waiting": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "required": [
+      "projectId",
+      "viewId",
+      "runId",
+      "step",
+      "settled",
+      "waiting"
     ]
   },
   "event.flow.notice": {

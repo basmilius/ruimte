@@ -55,6 +55,12 @@ export interface FlowCardDefinition {
      * itself is written down rather than carried out, which is the safe way round.
      */
     test?: 'real' | 'skip';
+    /*
+     * Whether this card acts with the permission of the person who turned the flow on. Such a card
+     * refuses in a run that has no ceiling on it, so trying one out is not a way round the question
+     * that turning a flow on asks.
+     */
+    needsCeiling?: true;
 }
 
 /*

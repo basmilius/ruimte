@@ -147,7 +147,18 @@ import {
     FlowSaveResultSchema,
     FlowTargetPayloadSchema
 } from './flow.ts';
-import { FlowEnablePayloadSchema, FlowNoticeEventSchema, FlowRunEventSchema, FlowStateResultSchema, FlowSwitchedEventSchema } from './flow-run.ts';
+import {
+    FlowArmPayloadSchema,
+    FlowEnablePayloadSchema,
+    FlowNoticeEventSchema,
+    FlowRunEventSchema,
+    FlowRunResultSchema,
+    FlowStartPayloadSchema,
+    FlowStateResultSchema,
+    FlowStepEventSchema,
+    FlowSwitchedEventSchema,
+    FlowTestPayloadSchema
+} from './flow-run.ts';
 import {
     DiagramChangedEventSchema,
     DiagramCopyPayloadSchema,
@@ -339,6 +350,10 @@ export const REQUEST_SCHEMAS = {
     // Whether the flow runs here, and what it did: the switch and the timeline of one flow.
     'flow.state': { payload: FlowTargetPayloadSchema, result: FlowStateResultSchema },
     'flow.enable': { payload: FlowEnablePayloadSchema, result: FlowStateResultSchema },
+    // Running one by hand, from a card a run can begin at, so nobody waits for a trigger to come round.
+    'flow.start': { payload: FlowStartPayloadSchema, result: FlowRunResultSchema },
+    'flow.test': { payload: FlowTestPayloadSchema, result: FlowRunResultSchema },
+    'flow.arm': { payload: FlowArmPayloadSchema, result: FlowStateResultSchema },
     'fs.browse': { payload: FsBrowsePayloadSchema, result: FsBrowseResultSchema },
     'fs.reveal': { payload: FsRevealPayloadSchema, result: EmptySchema },
     'fs.search': { payload: FsSearchPayloadSchema, result: FsSearchResultSchema },
@@ -423,6 +438,7 @@ export const EVENT_SCHEMAS = {
     'flow.changed': FlowChangedEventSchema,
     'flow.switched': FlowSwitchedEventSchema,
     'flow.run': FlowRunEventSchema,
+    'flow.step': FlowStepEventSchema,
     'flow.notice': FlowNoticeEventSchema,
     'fs.changed': FsChangedEventSchema,
     'git.status': GitStatusEventSchema,

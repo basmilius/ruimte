@@ -4,6 +4,7 @@ import { missingArgsOf, portForOutcome, portsOf, defaultArgsOf } from './cards.t
 import { recipeFingerprint } from './fingerprint.ts';
 import { flowProblemIn, triggerIdsIn } from './graph.ts';
 import { beginCard, readyCards, runFinished, settleCard, startRun, type FlowRunState } from './run.ts';
+import { cardsInTest, downstreamOf, neededTokens, runsForReal, skippedWhenDry } from './test-run.ts';
 import { brokenTokenRefsIn, fillTokens, tokenRef, visibleTokens } from './tokens.ts';
 
 const card = (kind: FlowCardKind, over: Partial<FlowCard> = {}): FlowCard => ({ kind, args: {}, x: 0, y: 0, ...over });
@@ -306,5 +307,57 @@ describe('the fingerprint the switch hangs on', () => {
             links: [...base.links]
         };
         expect(recipeFingerprint(shuffled)).toBe(recipeFingerprint(base));
+    });
+});
+
+describe('what a test has to be given before it can start', () => {
+    /* A trigger, a condition on its text and an action that repeats it: three steps, two of them
+       reaching for something the one above published. */
+    const content = flow(
+        {
+            trigger: card('trigger', { card: 'files.changed', args: { path: 'README.md' } }),
+            check: card('condition', { card: 'text.contains', args: { text: tokenRef('trigger', 'content'), value: 'Ruimte', mode: 'contains' } }),
+            shout: card('action', { card: 'person.notify', args: { text: `saw ${tokenRef('trigger', 'path')}` } })
+        },
+        [link('trigger', 'done', 'check'), link('check', 'true', 'shout')]
+    );
+
+    test('a test from the trigger asks for nothing', () => {
+        expect(neededTokens(content, 'trigger', 'graph')).toEqual([]);
+    });
+
+    test('a test halfway down asks for what the cards above it would have published', () => {
+        expect(neededTokens(content, 'check', 'graph').map((entry) => `${entry.cardId}.${entry.token.name}`)).toEqual(['trigger.path', 'trigger.content']);
+    });
+
+    test('one card on its own only asks for what that card reaches for', () => {
+        expect(neededTokens(content, 'check', 'card').map((entry) => entry.token.name)).toEqual(['content']);
+        expect(cardsInTest(content, 'check', 'card')).toEqual(new Set(['check']));
+    });
+
+    test('everything after a card is what a test from it runs', () => {
+        expect(downstreamOf(content, 'trigger')).toEqual(new Set(['check', 'shout']));
+        expect(cardsInTest(content, 'check', 'graph')).toEqual(new Set(['check', 'shout']));
+    });
+});
+
+describe('what a dry test carries out and what it only writes down', () => {
+    test('a condition runs for real, so a dry test takes the path the real run would', () => {
+        expect(runsForReal(card('condition', { card: 'text.contains' }), true)).toBe(true);
+    });
+
+    test('a card that says nothing about itself is written down rather than carried out', () => {
+        expect(runsForReal(card('action', { card: 'chat.message' }), true)).toBe(false);
+        // The whole question a test answers about a notification is whether its text reads right.
+        expect(runsForReal(card('action', { card: 'person.notify' }), true)).toBe(true);
+    });
+
+    test('nothing is dry in a run that is not dry', () => {
+        expect(runsForReal(card('action', { card: 'chat.message' }), false)).toBe(true);
+        expect(skippedWhenDry(card('delay'), false)).toBe(false);
+    });
+
+    test('a wait is walked straight past, because a test of thirty minutes is not a test', () => {
+        expect(skippedWhenDry(card('delay'), true)).toBe(true);
     });
 });
