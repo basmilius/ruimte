@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { withClientClosedProject } from '@/project/closed-projects';
 import type { ProjectSummary } from '@ruimte/contracts';
 
 /*
@@ -30,11 +31,15 @@ export const useProjectList = create<ProjectListStore>((set, get) => ({
     projects: [],
     setProjects(endpointId, summaries) {
         const others = get().projects.filter((row) => row.endpointId !== endpointId);
-        set({ projects: [...others, ...summaries.map((summary) => ({ endpointId, summary }))] });
+        set({ projects: [...others, ...summaries.map((summary) => ({ endpointId, summary: withClientClosedProject(endpointId, summary) }))] });
     },
     patchProject(endpointId, summary) {
         set({
-            projects: get().projects.map((row) => (row.endpointId === endpointId && row.summary.projectId === summary.projectId ? { ...row, summary } : row))
+            projects: get().projects.map((row) =>
+                row.endpointId === endpointId && row.summary.projectId === summary.projectId
+                    ? { ...row, summary: withClientClosedProject(endpointId, summary) }
+                    : row
+            )
         });
     },
     forgetProjects(endpointId) {

@@ -2,6 +2,8 @@ import { isRecentProject, type ProjectSummary } from '@ruimte/contracts';
 import { useEndpoints, type Endpoint } from '@/state/endpoints';
 import { useProjectList, type ProjectRow } from '@/state/project-list';
 import { pool, transportFor, type ConnectionState } from '@/transport';
+import { rememberClosedProject } from './closed-projects';
+import { readLastProject, rememberProject } from './last-project';
 
 const CACHE_PREFIX = 'ruimte.projects.';
 /* Enough to hold every project a machine is likely to have; a list this long is scrolled, not read. */
@@ -46,6 +48,20 @@ export const forgetCachedList = (endpointId: string, storage: ListStorage | null
 export const foldList = (endpointId: string, summaries: ProjectSummary[]): void => {
     useProjectList.getState().setProjects(endpointId, summaries);
     writeCachedList(endpointId, summaries);
+};
+
+export const closeListedProjectLocally = (endpointId: string, summary: ProjectSummary): void => {
+    rememberClosedProject(endpointId, summary.projectId);
+    useProjectList.getState().patchProject(endpointId, { ...summary, closedAt: Date.now() });
+    const projects = useProjectList
+        .getState()
+        .projects.filter((row) => row.endpointId === endpointId)
+        .map((row) => row.summary);
+    writeCachedList(endpointId, projects);
+    const last = readLastProject(browserStorage());
+    if (last?.endpointId === endpointId && last.projectId === summary.projectId) {
+        rememberProject(endpointId, null);
+    }
 };
 
 /* `project.list` on one endpoint over the link it already has, folded into the union. A machine without one lists nothing new. */

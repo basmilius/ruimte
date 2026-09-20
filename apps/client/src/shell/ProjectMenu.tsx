@@ -5,7 +5,7 @@ import { Menu } from '@base-ui-components/react/menu';
 import { ChevronDown, ChevronRight, ExternalLink, FolderOpen, History, MoreHorizontal, Plus, Settings2, X } from 'lucide-react';
 import { MachineGlyph } from '@/endpoint/MachineGlyph';
 import { projectClient } from '@/project';
-import { menuProjects, openableRows, type ProjectMenuRow } from '@/project/list';
+import { closeListedProjectLocally, menuProjects, openableRows, type ProjectMenuRow } from '@/project/list';
 import { closeProject, createProjectOn, openProject } from '@/project/open';
 import { closeWarning, sessionNodesOf } from '@/project/project-sessions';
 import { ProjectGlyph } from '@/project/ProjectGlyph';
@@ -212,6 +212,13 @@ export function ProjectMenu() {
               };
 
     const askClose = async (row: ProjectMenuRow): Promise<void> => {
+        if (transportFor(row.endpointId)?.status !== 'open') {
+            closeListedProjectLocally(row.endpointId, row.summary);
+            if (isCurrent(row)) {
+                await closeProject();
+            }
+            return;
+        }
         if (!(await activate(row))) {
             return;
         }

@@ -5,6 +5,7 @@ import { useEndpoints, type Endpoint } from '../state/endpoints';
 import { useProjectList } from '../state/project-list';
 import { pool } from '../transport';
 import {
+    closeListedProjectLocally,
     listProjects,
     menuProjects,
     openableRows,
@@ -222,6 +223,17 @@ const fakeLinks = () => {
 };
 
 describe('the list and the links', () => {
+    test('closing a cached project needs no link and leaves other projects in the switcher', () => {
+        useProjectList.getState().setProjects('offline-vps', [summary('p1'), summary('p2')]);
+        useProjectList.getState().setProjects('other', [summary('p1')]);
+        closeListedProjectLocally('offline-vps', summary('p1'));
+        const endpoints = [endpoint('offline-vps', 'VPS'), endpoint('other', 'Other')];
+        const lists = menuProjects(useProjectList.getState().projects, endpoints, []);
+        expect(lists.open.map((row) => `${row.endpointId}:${row.summary.projectId}`)).toEqual(['offline-vps:p2', 'other:p1']);
+        expect(lists.recent.map((row) => `${row.endpointId}:${row.summary.projectId}`)).toEqual(['offline-vps:p1']);
+        expect(pool.peek('offline-vps')).toBeNull();
+    });
+
     test('listing a machine without a link asks nothing and opens no link', async () => {
         useEndpoints.setState({ endpoints: [endpoint('daemon-idle', 'Idle')], activeId: 'daemon-idle' });
         expect(await listProjects('daemon-idle')).toEqual([]);

@@ -692,6 +692,24 @@ describe('ProjectClient', () => {
         dispose();
     });
 
+    test('closing offline clears the workspace without requesting the daemon or ending sessions', async () => {
+        const { state, client, transport, ended, dispose } = setup();
+        await tick();
+        transport.setStatus('closed');
+        focusedCanvas().getState().addNode('terminal', { x: 0, y: 0 });
+        await client.closeProject();
+        expect(state.current).toBeNull();
+        expect(focusedCanvas().getState().order).toEqual([]);
+        expect(transport.of('project.close')).toEqual([]);
+        expect(ended).toEqual([]);
+        const opens = transport.of('project.open').length;
+        transport.setStatus('open');
+        await tick();
+        expect(transport.of('project.open')).toHaveLength(opens);
+        expect(transport.of('project.close')).toEqual([]);
+        dispose();
+    });
+
     test('closing ends every session the project holds, on the machine it was opened on', async () => {
         const { client, ended, dispose } = setup();
         await tick();

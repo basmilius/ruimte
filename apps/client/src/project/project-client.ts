@@ -3,6 +3,7 @@ import type { ProjectContent, ProjectDocument, ProjectIconChoice, ProjectLocal, 
 import type { StoreApi } from 'zustand';
 import { LOCAL_ENDPOINT_ID } from '@/state/endpoints';
 import { isConnectionError, TransportError, type Transport, type TransportStatus } from '../transport/transport';
+import { forgetClosedProject, rememberClosedProject } from './closed-projects';
 import { overlayLocal, readClientLocal, withoutClientBrowserState, writeClientLocal } from './client-local';
 import { browserStorage, rememberProject, type LastProjectStorage } from './last-project';
 import { mergeProject, type CanvasPatch } from './merge';
@@ -227,18 +228,22 @@ export class ProjectClient {
         }
     }
 
-    /*
-     * Puts the project away. The sessions of its nodes end on the machine and the canvas is left
-     * empty. What is on screen is saved first, so a session goes only after the file it belongs to
-     * is on disk, and the views are read before the stores are emptied a few lines down.
-     */
+    // Save before ending sessions when connected; offline closing only dismisses the project locally.
     async closeProject(): Promise<void> {
         const current = this.sink.getState().current;
         await this.flush();
         this.flushLocal();
-        this.endSessions(this.endpointId(), this.documents.getState().exportViews());
+        if (this.transport.status === 'open') {
+            this.endSessions(this.endpointId(), this.documents.getState().exportViews());
+            if (current) {
+                await this.transport.request('project.close', { projectId: current.projectId }).catch(() => undefined);
+            }
+        }
         if (current) {
-            await this.transport.request('project.close', { projectId: current.projectId }).catch(() => undefined);
+            if (this.transport.status !== 'open') {
+                rememberClosedProject(this.endpointId(), current.projectId, this.storage);
+            }
+            this.sink.patchProject({ ...current, closedAt: Date.now() });
         }
         this.remember(null);
         this.opened = false;
@@ -355,6 +360,7 @@ export class ProjectClient {
         this.sink.setSwitching(true);
         try {
             const result = await this.transport.request('project.open', payload);
+            forgetClosedProject(this.endpointId(), result.summary.projectId, this.storage);
             this.base = contentOf(result.document);
             const local = overlayLocal(result.local, readClientLocal(this.storage, this.endpointId(), result.summary.projectId));
             this.onLoad();
