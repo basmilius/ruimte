@@ -1,0 +1,915 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Flows</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #353e53;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--reference); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#kern">Naar de kern</a>
+<header>
+  <p class="eyebrow">Ruimte / Ontwerp in uitvoering / 19 september 2026</p>
+  <h1>Flows</h1>
+  <p class="intro">Naast een canvas komt er een tweede soort oppervlak: een flow. Een flow is een automatisering die je tekent als een graaf van <strong>Als</strong>-, <strong>En</strong>- en <strong>Dan</strong>-kaarten, in de vorm van Homey’s Advanced Flow. Ruimte heeft al bijna alles wat zo'n ding nodig heeft, en het enige dat niemand anders kan bouwen zit in de Als: een trigger die weet wanneer een agent klaar is, vastzit of op je wacht.</p>
+  <p class="status">Fase 1 tot en met 3 staan op main sinds 20 september; fase 4 tot en met 7 zijn nog ontwerp</p>
+  <p class="caption">Werkdocument, bijgewerkt op 20 september 2026 nadat de eerste drie fasen gebouwd zijn; het revisielog staat onderaan. Gelezen op main, commit 1bbf73cc. Het model is gelezen uit vier echte Advanced Flows in Bas’ eigen Homey (Avondstand, Brandalarm, Thuiskomen, Claude Task). Bronnen voor de haakpunten: <code>packages/actions</code>, <code>apps/server/src/outbox</code>, <code>apps/server/src/agents</code>, <code>apps/server/src/tasks</code>, <code>apps/pulsar-worker</code>, <code>docs/NEXT.md</code>.</p>
+  <nav aria-label="Inhoud">
+    <a href="#kern">De kern</a>
+    <a href="#stand">Stand van zaken</a>
+    <a href="#waarom">Waarom hier</a>
+    <a href="#anatomie">Een run</a>
+    <a href="#model">Het model</a>
+    <a href="#als">Als</a>
+    <a href="#en">En</a>
+    <a href="#dan">Dan</a>
+    <a href="#tokens">Tokens</a>
+    <a href="#wonen">Waar een flow woont</a>
+    <a href="#email">E-mail</a>
+    <a href="#timeline">De timeline</a>
+    <a href="#testen">Testen</a>
+    <a href="#rem">Rem en budget</a>
+    <a href="#tekenen">De kaarten</a>
+    <a href="#voorbeelden">Tien flows</a>
+    <a href="#raakt">Wat dit raakt</a>
+    <a href="#plan">Plan</a>
+    <a href="#open">Open vragen</a>
+    <a href="#log">Revisielog</a>
+  </nav>
+</header>
+<main>
+  <section id="kern" class="recommendation">
+    <h2>De kern</h2>
+    <p>Een AI Engineer met vijf sessies open doet de hele dag hetzelfde handwerk. Kijken of er eentje klaar is. De tests draaien over wat hij opleverde. Hem terugsturen als ze rood zijn. De worktree mergen als ze groen zijn. Kijken of er iemand in je inbox iets kapot meldt. Dat is geen denkwerk, dat is een wachtrij afwerken met je ogen.</p>
+    <p>Een flow is dat handwerk, opgeschreven. Bas' voorbeeld is de eenvoudigste vorm. Als <code>README.md</code> verandert en de inhoud bevat "Ruimte", toon dan een melding. De interessante versie ligt één stap verder. Als een turn klaar is en <code>bun run check</code> faalt, stuur de agent de foutmelding terug. Als hij daarna groen is en de diff is kleiner dan vijftig regels, vraag het mij op mijn telefoon en merge de worktree zodra ik op ja druk.</p>
+    <p>De reden om dit in Ruimte te bouwen en niet in n8n of Zapier staat in die ene zin: "als een turn klaar is". Ruimte zit al in de hooks van Claude Code en Codex (<code>apps/server/src/agents</code>) en is de enige plek waar dat signaal getypeerd binnenkomt zonder output te parsen. De rest van een flow-engine is bekend terrein. Die triggers zijn het niet.</p>
+    <p>Wat ik hier voorstel: <strong>59 kaartjes</strong> met een bron en <strong>zes</strong> die alleen over de graaf gaan, op een werkblad in de vorm van Homey's Advanced Flow, een pure package voor het model, de daemon als enige runner, en een harde scheiding tussen het recept en de schakelaar. Het recept is een bestand in <code>.ruimte</code> dat mee mag in git en waar een agent aan mag werken. De schakelaar staat onder <code>$RUIMTE_HOME</code>, per machine, en komt alleen van een mens.</p>
+    <p>Dat laatste is niet meer mijn eigen constructie. Het delen-ontwerp van vandaag (<a href="2026-09-19-delen.html">2026-09-19-delen.html</a>) is vastgesteld en legt de lagen zo neer dat flows er zonder uitzondering in passen. Dit rapport is daarop aangepast: de importstap die hier eerst stond is vervallen, en een flow is daarmee ook een view geworden en geen node.</p>
+    <div class="stats">
+      <div><strong>59</strong><span>kaartjes met een bron</span></div>
+      <div><strong>6</strong><span>ingebouwde kaarten</span></div>
+      <div><strong>7</strong><span>fasen in het plan</span></div>
+      <div><strong>8</strong><span>vragen voor Bas</span></div>
+    </div>
+  </section>
+
+  <section id="stand">
+    <h2>Stand van zaken</h2>
+    <p>Het levende deel van dit rapport. Een regel gaat op besloten zodra Bas hem bevestigt, en de datum erbij.</p>
+    <div class="table" role="region" aria-label="Stand per ontwerpbeslissing" tabindex="0">
+      <table class="wide">
+        <caption>Ontwerpbeslissingen, 19 september 2026</caption>
+        <thead>
+          <tr><th style="width:34%">Beslissing</th><th style="width:16%">Stand</th><th>Voorstel of uitkomst</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>De vorm</td><td><span class="badge confirmed">Besloten</span></td><td>Advanced Flow: een werkblad met kaarten en lijnen, meerdere triggers per flow, losse eilanden toegestaan. Bas, 19 september.</td></tr>
+          <tr><td>Drie soorten kaartjes</td><td><span class="badge confirmed">Besloten</span></td><td>Als, En, Dan, plus de ingebouwde kaarten die alleen over de graaf gaan. Gebouwd op 20 september; de scriptkaart komt mee met de commandoactie in een latere fase. Zie <a href="#tekenen">De kaarten</a>.</td></tr>
+          <tr><td>Waar een flow woont</td><td><span class="badge confirmed">Besloten</span></td><td>Het recept in <code>.ruimte/flows</code> of <code>.ruimte/private/flows</code>, de schakelaar onder <code>$RUIMTE_HOME</code>. Volgt uit het delen-ontwerp, 19 september. Zie <a href="#wonen">Waar een flow woont</a>.</td></tr>
+          <tr><td>Een flow is een view</td><td><span class="badge confirmed">Besloten</span></td><td>Geen node op een canvas. De eenheid van delen is een view, en een flow moet deelbaar zijn zonder het deelgedrag van een canvas te erven.</td></tr>
+          <tr><td>Wie een flow mag aanzetten</td><td><span class="badge confirmed">Besloten</span></td><td>Alleen een mens. Een agent mag er wel een schrijven en voorstellen. Afgedwongen door de vingerafdruk op de schakelaar, 20 september.</td></tr>
+          <tr><td>Verbindingen in de opslag</td><td><span class="badge confirmed">Besloten</span></td><td>Een eigen lijst met <code>{ from, fromPort, to }</code>, niet als arrays op de kaart. Gebouwd op 20 september. Zie <a href="#model">Het model</a>.</td></tr>
+          <tr><td>E-mail als trigger</td><td><span class="badge warning">Open</span></td><td>Voorstel: een adres per project via de pulsar-worker, geen IMAP-wachtwoord in Ruimte. Zie <a href="#email">E-mail</a>.</td></tr>
+          <tr><td>Tokens</td><td><span class="badge confirmed">Besloten</span></td><td>Verwijzen op kaart-id, elke kaart publiceert, en de notatie is <code>@[&lt;cardId&gt;.&lt;token&gt;]</code>. Gebouwd op 20 september. Zie <a href="#tokens">Tokens</a>.</td></tr>
+          <tr><td>Wat draait een flow</td><td><span class="badge confirmed">Besloten</span></td><td>De daemon, op de outbox. Een client kijkt alleen mee. Gebouwd op 20 september.</td></tr>
+          <tr><td>Gemiste triggers</td><td><span class="badge confirmed">Besloten</span></td><td>Een moment gaat verloren, met een regel in de timeline; gebouwd op 20 september. Dat een bericht wordt ingehaald hoort bij e-mail en de webhook, en staat nog open. Zie <a href="#rem">Rem en budget</a>.</td></tr>
+          <tr><td>Testen</td><td><span class="badge info">Voorstel</span></td><td>Play op een Als-kaart, "testen vanaf hier" op elke andere, en een popup voor de ontbrekende tokens. Droog is de standaard. Bas, 19 september. Zie <a href="#testen">Testen</a>.</td></tr>
+          <tr><td>Budget per flow</td><td><span class="badge info">Voorstel</span></td><td>Verplicht zodra een flow een agent start. Op is uit, met een melding. Het veld staat sinds 20 september in de schakelaar; niets leest het tot fase 5.</td></tr>
+          <tr><td>Een foutpoort, geen fouttoken</td><td><span class="badge confirmed">Besloten</span></td><td>Een actie die echt kan falen krijgt naast <code>done</code> een <code>error</code>-poort, de rest alleen <code>done</code>. Of een kaart kan falen staat in zijn eigen schema. Bas, 20 september.</td></tr>
+          <tr><td>Hoe streng een wijziging de schakelaar breekt</td><td><span class="badge confirmed">Besloten</span></td><td>Een hash over alles behalve <code>x</code> en <code>y</code>: elke inhoudelijke wijziging zet de flow uit en vraagt opnieuw, verplaatsen niet. Bas, 20 september.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="waarom">
+    <h2>Waarom dit in Ruimte hoort en niet in n8n</h2>
+    <p>Dit is de vraag die het ontwerp moet overleven, want er staan al twintig van deze editors op het internet en de meeste zijn beter in webhooks dan Ruimte ooit wordt. Het antwoord heeft drie delen en ze zijn allemaal iets dat buiten Ruimte niet bestaat.</p>
+    <div class="split">
+      <div class="panel">
+        <h3>De triggers zitten al binnen</h3>
+        <p>Agentstatus komt uit de hooks van de CLI's, nooit uit geparste output. Dat contract staat en het is precies wat een trigger nodig heeft: klaar, wacht op input, vroeg toestemming, liep stuk. Een externe engine ziet daar niets van. Die kan hoogstens een logbestand tailen en gokken.</p>
+      </div>
+      <div class="panel">
+        <h3>De acties staan al in een catalogus</h3>
+        <p><code>packages/actions</code> is een getypeerde catalogus van wat een persoon kan doen, met een actor op elke aanroep, en <code>automation</code> is al een van de actorwaarden. De Dan-kant van een flow is grotendeels een adapter op iets dat er staat, niet een nieuwe laag.</p>
+      </div>
+      <div class="panel">
+        <h3>De runner staat al</h3>
+        <p>De outbox is een duurzame wachtrij die een herstart overleeft en die al agents start en taken laat settelen. Een flow-run is dezelfde soort entry. Er hoeft geen tweede schedulingmechanisme naast te komen.</p>
+      </div>
+      <div class="panel">
+        <h3>Wat Ruimte niet moet worden</h3>
+        <p>Een integratieplatform. Geen 400 connectoren, geen OAuth-dansjes met Salesforce. De kaartjes die er komen gaan over code, agents, machines en de mensen die ernaar kijken. Alles daarbuiten loopt via een webhook of via een commando in een terminal, en dat is genoeg.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="anatomie">
+    <h2>Hoe een run door de graaf loopt</h2>
+    <p>Er is geen kolom met drie stapels. Een flow is een werkblad met kaarten erop, en de rol van een kaart volgt uit zijn soort en uit waar hij staat. Een triggerkaart start een run. Vanaf daar loopt de run over de lijnen, en elke kaart stuurt door via de poort die bij zijn uitkomst hoort.</p>
+    <figure>
+      <svg class="diagram" viewBox="0 0 680 250" role="img" aria-labelledby="run-titel run-desc" width="680" height="250">
+        <title id="run-titel">Een run die zich splitst en weer samenkomt</title>
+        <desc id="run-desc">Een trigger gaat naar twee kaarten tegelijk. De ene tak loopt door een conditie, de andere door een wachtkaart naar dezelfde conditie. Een alle-kaart wacht op beide takken en gaat dan door naar een actie.</desc>
+        <defs>
+          <marker id="run-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker>
+        </defs>
+        <rect class="node" x="1" y="88" width="118" height="46" rx="10"/>
+        <text x="60" y="108" text-anchor="middle" font-size="14">Als</text>
+        <text class="label" x="60" y="124" text-anchor="middle" font-size="12">turn is klaar</text>
+        <path class="edge" d="M119 111 C 145 111, 145 42, 171 42" marker-end="url(#run-arrow)"/>
+        <path class="edge" d="M119 111 C 145 111, 145 180, 171 180" marker-end="url(#run-arrow)"/>
+        <rect class="node" x="179" y="19" width="128" height="46" rx="10"/>
+        <text x="243" y="39" text-anchor="middle" font-size="14">En</text>
+        <text class="label" x="243" y="55" text-anchor="middle" font-size="12">check faalt</text>
+        <rect class="node" x="179" y="157" width="128" height="46" rx="10"/>
+        <text x="243" y="177" text-anchor="middle" font-size="14">Wacht</text>
+        <text class="label" x="243" y="193" text-anchor="middle" font-size="12">30 seconden</text>
+        <path class="edge" d="M307 42 H 353" marker-end="url(#run-arrow)"/>
+        <path class="edge" d="M307 180 H 353" marker-end="url(#run-arrow)"/>
+        <rect class="node" x="361" y="19" width="128" height="46" rx="10"/>
+        <text x="425" y="39" text-anchor="middle" font-size="14">En</text>
+        <text class="label" x="425" y="55" text-anchor="middle" font-size="12">diff onder 50</text>
+        <rect class="node" x="361" y="157" width="128" height="46" rx="10"/>
+        <text x="425" y="177" text-anchor="middle" font-size="14">En</text>
+        <text class="label" x="425" y="193" text-anchor="middle" font-size="12">ik zeg ja</text>
+        <path class="edge" d="M489 42 C 515 42, 515 100, 541 100" marker-end="url(#run-arrow)"/>
+        <path class="edge" d="M489 180 C 515 180, 515 122, 541 122" marker-end="url(#run-arrow)"/>
+        <rect class="node" x="549" y="88" width="118" height="46" rx="10"/>
+        <text x="608" y="108" text-anchor="middle" font-size="14">Alle</text>
+        <text class="label" x="608" y="124" text-anchor="middle" font-size="12">dan: merge</text>
+        <text class="label" x="340" y="232" text-anchor="middle">de onwaar-poorten hangen los, dus daar stopt de tak</text>
+      </svg>
+      <figcaption>Twee takken uit één trigger, en een alle-kaart die pas doorgaat als ze allebei aankwamen. Dit patroon staat in Bas' eigen Thuiskomen-flow en een kolom kan het niet tekenen.</figcaption>
+    </figure>
+    <p>De regels die ik daarbij voorstel, allemaal overgenomen of afgeleid uit hoe Advanced Flow zich gedraagt:</p>
+    <ul>
+      <li>Een tak die bij een poort komt die nergens heen gaat, stopt. Dat is geen fout en het komt in de timeline te staan.</li>
+      <li>Takken lopen naast elkaar, niet op volgorde. Twee lijnen uit dezelfde poort betekent twee takken die tegelijk beginnen.</li>
+      <li>Een <strong>alle</strong>-kaart gaat door zodra elke tak die erop uitkomt is aangekomen of doodgelopen. Een <strong>een van</strong>-kaart gaat door bij de eerste.</li>
+      <li>Een kaart die twee keer in dezelfde run wordt bereikt, draait één keer. Anders loopt een graaf met een samenkomst dubbel.</li>
+      <li>Een run is klaar als er geen enkele tak meer loopt, en pas dan staat er iets definitiefs in de timeline.</li>
+    </ul>
+    <div class="note">
+      <p>Wat een run <em>niet</em> doet: wachten op een agent. Een kaart die een agent start is klaar zodra de outbox de entry aannam. Wil je op zijn resultaat reageren, dan is dat een tweede trigger, in dezelfde flow of in een andere. Dat is dezelfde discipline die de rest van de daemon aanhoudt: een observer tekent aan, alleen de outbox handelt. Een run die een uur op een agent zit te wachten is een run die een herstart niet overleeft.</p>
+      <p>Voor <strong>wacht</strong> en voor <strong>ik zeg ja</strong> geldt dat niet, want die zijn ontworpen om te duren. Allebei zijn ze een outbox-entry met een tijdstip erop, geen timer in het geheugen.</p>
+    </div>
+  </section>
+
+  <section id="model">
+    <h2>Het model, gelezen uit echte flows</h2>
+    <p>Ik heb vier Advanced Flows uit Bas' eigen Homey opgehaald en hun opslag gelezen (Avondstand, Brandalarm, Thuiskomen en Claude Task). Dat is een beter uitgangspunt dan een schermafdruk, want het laat zien welke keuzes er onder de tekening liggen. Een kaart ziet er zo uit:</p>
+<pre><code>"a3e22c20-629f-44e7-b9cf-7f2c5b3f7e4e": {
+    "ownerUri": "homey:manager:cron",
+    "id": "homey:manager:cron:day_equals",
+    "args": { "day": "weekday" },
+    "type": "condition",
+    "x": 400, "y": 200,
+    "inverted": true,
+    "outputTrue": ["24e1863a-26b4-4261-aa13-91f642d974a7"]
+}</code></pre>
+    <p>Zeven dingen vallen op, en ze bepalen allemaal iets aan het Ruimte-ontwerp.</p>
+    <div class="table" role="region" aria-label="Wat er uit de Homey-opslag te leren valt" tabindex="0">
+      <table class="wide">
+        <caption>Geleerd uit de opslag van vier flows</caption>
+        <thead><tr><th style="width:30%">Wat Homey doet</th><th>Wat Ruimte ermee doet</th></tr></thead>
+        <tbody>
+          <tr><td>Kaarten zijn een map op id, elk met <code>x</code> en <code>y</code></td><td>Overnemen. Een kaart staat waar je hem neerzette, ook als hij nergens aan hangt.</td></tr>
+          <tr><td>Verbindingen staan als arrays op de kaart die ze uitstuurt: <code>outputSuccess</code>, <code>outputTrue</code>, <code>outputFalse</code></td><td>Niet overnemen. Zie hieronder; de <code>all</code>-kaart laat zien waarom dit knelt.</td></tr>
+          <tr><td>Een conditie heeft <code>inverted</code></td><td>Overnemen. Scheelt een NIET-kaartje en het is één vlag op de kaart die je toch al leest.</td></tr>
+          <tr><td>Een ongebruikte poort staat niet in de opslag</td><td>Overnemen. Een lege poort is de afwezigheid van een verbinding, geen lege lijst.</td></tr>
+          <tr><td>Eén flow heeft meerdere triggers</td><td>Overnemen, en dit is het sterkste argument voor de graaf. Avondstand heeft er vijf.</td></tr>
+          <tr><td>Eén flow heeft losse eilanden</td><td>Overnemen. Brandalarm is drie losse ketens op één werkblad, bij elkaar omdat ze bij elkaar horen en niet omdat ze verbonden zijn.</td></tr>
+          <tr><td>Tokens verwijzen met <code>[[trigger::&lt;kaartid&gt;::question]]</code></td><td>Grotendeels overnemen. De verwijzing is een kaart-id, niet een naam, en dat is precies goed.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Waar ik van Homey afwijk: de verbindingen</h3>
+    <p>In Homey woont een verbinding op de kaart die hem uitstuurt. Dat werkt tot je een <code>all</code>-kaart neerzet, want die moet weten op welke takken hij wacht. En dan staat er ineens dit in de opslag van Thuiskomen:</p>
+<pre><code>"f7676ac0-f5d9-4c66-bdb7-2d3a95cb61ee": {
+    "type": "all",
+    "x": 960, "y": 20,
+    "input": ["e6ca5291-dbbe-4502-a2c7-37340cb9056e::outputTrue",
+              "77a9ba95-360a-450b-acb3-46b3e549d3fb::outputTrue"],
+    "outputSuccess": ["cfb19c00-dfb0-4936-9ed9-ec8f568b642a"]
+}</code></pre>
+    <p>Dezelfde twee verbindingen staan nu twee keer in het bestand: als uitgang bij de bron en als ingang bij de <code>all</code>. Die moeten kloppend blijven bij elke wijziging, en dat is de soort dubbele boekhouding waar je een jaar later een bug in vindt.</p>
+    <p>Ruimte heeft een beter antwoord al liggen. Een lijn hoort bij het canvas en niet bij een node; die invariant staat in <code>CLAUDE.md</code> en de routering eromheen staat in <code>edge-route.ts</code>. Dus: een flow heeft een lijst kaarten en een lijst verbindingen, elk <code>{ from, fromPort, to }</code>. Beide richtingen zijn dan afleidbaar, een <code>all</code>-kaart hoeft niets extra's op te slaan, en de tekenlaag is hergebruik in plaats van nieuw werk.</p>
+    <p>Eén verschil met het projectcanvas: daar is een poort optioneel en blijft een uiteinde dat niemand ergens uit trok vrij. Op een flow is de bronpoort de betekenis van de lijn, dus daar is hij verplicht. Aan de doelkant is er precies één ingang, dus die hoeft niet opgeschreven te worden.</p>
+
+    <h3>Het voorstel</h3>
+<pre><code>{
+    id, name, folder?, rev,
+    enabled: false,
+    cards: {
+        "&lt;cardId&gt;": {
+            kind: 'trigger' | 'condition' | 'action'
+                | 'start' | 'delay' | 'any' | 'all' | 'note',
+            card?: 'agent.turn-finished',   // uit de catalogus, leeg bij een ingebouwde
+            args: { ... },
+            inverted?: true,                // alleen bij een conditie
+            x, y
+        }
+    },
+    links: [
+        { from: '&lt;cardId&gt;', fromPort: 'true' | 'false' | 'done' | 'error', to: '&lt;cardId&gt;' }
+    ]
+}</code></pre>
+    <p>De <code>rev</code> is dezelfde monotone teller als bij een project, met dezelfde conflictbehandeling. Twee mensen die tegelijk aan een flow tekenen krijgen <code>rev-conflict</code> en niet de helft van elkaars werk.</p>
+  </section>
+  <section id="als">
+    <h2>De Als-kaartjes</h2>
+    <p>Zevenentwintig triggers, gegroepeerd naar waar het signaal vandaan komt. Ze staan niet in een kolom: een werkblad mag er meerdere hebben, en dat is precies wat Avondstand doet met vijf stuks. De eerste groep is de reden dat deze feature bestaat; de rest is de omgeving waarin die eerste groep bruikbaar wordt. Elk kaartje publiceert tokens, en die staan erbij, want een trigger zonder tokens is een wekker.</p>
+
+    <h3>Agents en chats</h3>
+    <div class="table" role="region" aria-label="Als-kaartjes voor agents en chats" tabindex="0">
+      <table class="wide">
+        <caption>Uit de hooks van de CLI's en uit de chatlog</caption>
+        <thead><tr><th style="width:30%">Kaartje</th><th style="width:36%">Tokens</th><th>Waarom een AI Engineer dit wil</th></tr></thead>
+        <tbody>
+          <tr><td>Een turn is klaar</td><td>chat, agent, duur, kosten, aantal gewijzigde bestanden, samenvatting</td><td>De hoeksteen. Alles wat je nu handmatig na een sessie doet hangt hieraan.</td></tr>
+          <tr><td>Een agent wacht op mij</td><td>chat, de vraag, hoe lang hij al wacht</td><td>Een agent die om 23:40 stilvalt op een ja-of-nee kost je de hele nacht.</td></tr>
+          <tr><td>Een agent vraagt toestemming</td><td>chat, wat hij wil doen, de waarschuwingstekst van de CLI</td><td>Sommige toestemmingen zijn altijd goed. Die mag een flow beantwoorden, binnen een mode die jij zette.</td></tr>
+          <tr><td>Een turn liep stuk</td><td>chat, foutmelding, laatste bericht</td><td>Rate limit, crash, netwerk. Eén keer opnieuw proberen is bijna altijd het juiste.</td></tr>
+          <tr><td>Een taak is klaar</td><td>ouderchat, kindchat, resultaat, batch</td><td>Haakt op <code>apps/server/src/tasks</code>, dat al op een batch settlet.</td></tr>
+          <tr><td>Een agent stelde een plan voor</td><td>chat, het plan, aantal items</td><td>Een plan met meer dan tien items wil je zien voordat hij begint.</td></tr>
+          <tr><td>Een plan-item ging op klaar</td><td>chat, item, resterende items</td><td>Voortgang naar buiten, zonder dat de agent daar iets voor hoeft te doen.</td></tr>
+          <tr><td>Een agent zit stil</td><td>chat, hoe lang, laatste output</td><td>Een vastgelopen proces krijgt een waarschuwing, nooit een signaal. Die productregel blijft staan.</td></tr>
+          <tr><td>Het contextvenster loopt vol</td><td>chat, percentage</td><td>Compacteren voor het misgaat. Sluit aan op het compaction-ontwerp dat er al ligt.</td></tr>
+          <tr><td>Een agent schreef iets dat matcht</td><td>chat, de zin, de match</td><td>"Ik kan dit niet oplossen" of "moet ik doorgaan" zijn zinnen waar je op wilt kunnen reageren.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Bestanden en git</h3>
+    <div class="table" role="region" aria-label="Als-kaartjes voor bestanden en git" tabindex="0">
+      <table class="wide">
+        <thead><tr><th style="width:30%">Kaartje</th><th style="width:36%">Tokens</th><th>Opmerking</th></tr></thead>
+        <tbody>
+          <tr><td>Een bestand veranderde</td><td>pad, diff, inhoud, wie het schreef</td><td>Bas' voorbeeld. Die laatste token is wat Ruimte apart maakt: de daemon weet of een agent of een mens die schrijf deed.</td></tr>
+          <tr><td>Een commit landde</td><td>sha, bericht, auteur, bestanden, branch</td><td>Een watch op <code>.git</code>, geen poll.</td></tr>
+          <tr><td>Een worktree is klaar</td><td>worktree, branch, diff, tree schoon ja of nee</td><td>De helft van een automatische merge. De andere helft is een En-kaartje en een mens.</td></tr>
+          <tr><td>Een merge gaf conflict</td><td>bestanden, doelbranch</td><td>Een conflict wordt nu al teruggegeven aan de agent. Een flow kan er een chat bij openen.</td></tr>
+          <tr><td>Een branch werd gepusht</td><td>branch, remote, sha</td><td>Het haakpunt voor CI zonder een GitHub-integratie te bouwen.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Terminals en processen</h3>
+    <div class="table" role="region" aria-label="Als-kaartjes voor terminals en processen" tabindex="0">
+      <table class="wide">
+        <thead><tr><th style="width:30%">Kaartje</th><th style="width:36%">Tokens</th><th>Opmerking</th></tr></thead>
+        <tbody>
+          <tr><td>Een commando eindigde</td><td>node, commando, exit code, laatste regels</td><td>Vraagt om een shell-integratie die het einde van een commando meldt. Vandaag weet de daemon dat niet.</td></tr>
+          <tr><td>Een poort ging open</td><td>poort, proces, node</td><td>Port discovery staat al in <code>docs/NEXT.md</code> punt 6. Als dat er komt, is deze trigger gratis.</td></tr>
+          <tr><td>Een proces loopt uit de klauwen</td><td>node, cpu, geheugen</td><td>Het processenpaneel meet dit al.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Tijd en mens</h3>
+    <div class="table" role="region" aria-label="Als-kaartjes voor tijd en aanwezigheid" tabindex="0">
+      <table class="wide">
+        <thead><tr><th style="width:30%">Kaartje</th><th style="width:36%">Tokens</th><th>Opmerking</th></tr></thead>
+        <tbody>
+          <tr><td>Op een tijdstip</td><td>tijd, dag</td><td>Elke dag om, elke N minuten, of een cron-regel voor wie dat wil.</td></tr>
+          <tr><td>Ik ben weg</td><td>hoe lang weg</td><td>Aanwezigheid is er half: <code>state/attention.ts</code> telt al wat aandacht vraagt. Een flow mag zich anders gedragen als je er niet bent.</td></tr>
+          <tr><td>Ik ben terug</td><td>hoe lang weg geweest, wat er ondertussen gebeurde</td><td>De ochtendbriefing van je eigen machine.</td></tr>
+          <tr><td>Ik start hem zelf</td><td>wat ik meegaf</td><td>Dan is een flow een macro. Aanroepbaar uit het palet, met een sneltoets, met stem, en door een agent via <code>ruimte-context</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Van buiten en geld</h3>
+    <div class="table" role="region" aria-label="Als-kaartjes van buiten de machine" tabindex="0">
+      <table class="wide">
+        <thead><tr><th style="width:30%">Kaartje</th><th style="width:36%">Tokens</th><th>Opmerking</th></tr></thead>
+        <tbody>
+          <tr><td>Een e-mail kwam binnen</td><td>afzender, onderwerp, tekst, bijlagen, of de handtekening klopte</td><td>Een eigen hoofdstuk verderop. De aantrekkelijkste en de gevaarlijkste van de 27.</td></tr>
+          <tr><td>Een webhook kwam binnen</td><td>body, headers, pad</td><td>Via de pulsar-worker, zodat er geen poort op je laptop open hoeft.</td></tr>
+          <tr><td>Een machine kwam online</td><td>machine, sinds wanneer weg</td><td>Pairing bestaat al. Werk op de bouwmachine starten zodra die wakker wordt.</td></tr>
+          <tr><td>Een node kwam erbij op het canvas</td><td>node, soort, wie hem maakte</td><td>Handig voor conventies: elke nieuwe chat krijgt automatisch een contextlijn naar de notitie met de huisregels.</td></tr>
+          <tr><td>Boven het budget</td><td>bedrag, periode, provider</td><td>De usage-pagina telt dit al op.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="en">
+    <h2>De En-kaartjes</h2>
+    <p>Dertien condities. Ze lezen tokens en de wereld, en ze veranderen niets. Dat is de regel waar geen uitzondering op komt, want een conditie die iets verandert maakt een droogdraaiing waardeloos.</p>
+    <div class="table" role="region" aria-label="En-kaartjes" tabindex="0">
+      <table class="wide">
+        <caption>Condities, met een blik op wat ze mogen aanraken</caption>
+        <thead><tr><th style="width:32%">Kaartje</th><th>Wat het doet</th></tr></thead>
+        <tbody>
+          <tr><td>Tekst bevat of matcht</td><td>Op elk token. Bas' <code>#Content bevat 'Ruimte'</code>. Met een regex-variant voor wie dat wil.</td></tr>
+          <tr><td>Een getal ligt boven of onder</td><td>Kosten, duur, regels in de diff, percentage context.</td></tr>
+          <tr><td>Het is werktijd</td><td>Tussen twee tijden, op gekozen dagen. Een flow die om 02:00 een agent start is een andere flow dan dezelfde om 14:00.</td></tr>
+          <tr><td>Een commando slaagt</td><td>Exit 0. Dit is het krachtigste kaartje van de dertien en het enige dat een proces start. Cwd blijft binnen de projectmap of een worktree, dezelfde grens die een agent heeft.</td></tr>
+          <tr><td>De working tree is schoon</td><td>Geen merge zonder dit kaartje. De worktree-merge eist het al.</td></tr>
+          <tr><td>De branch is</td><td>Voorkomt dat een nachtflow op main losgaat.</td></tr>
+          <tr><td>De diff is kleiner dan</td><td>Regels of bestanden. De grens tussen "dit mag door" en "hier kijk ik zelf naar".</td></tr>
+          <tr><td>Er draait geen agent op dit canvas</td><td>De rem tegen vijf agents die tegelijk in dezelfde map schrijven.</td></tr>
+          <tr><td>Deze flow liep niet in de laatste N minuten</td><td>Throttle, in het model in plaats van in je hoofd.</td></tr>
+          <tr><td>Een bestand bestaat</td><td>Saai en onmisbaar.</td></tr>
+          <tr><td>De machine is</td><td>Voor een flow die op je laptop iets anders moet doen dan op de bouwmachine.</td></tr>
+          <tr><td>Een model zegt ja</td><td>Een classificatie met een klein model op een token. "Gaat deze mail over een storing?" Zie hieronder.</td></tr>
+          <tr><td>Ik zeg ja</td><td>Een melding met twee knoppen, op je scherm en op je telefoon. De flow wacht tot je drukt of tot hij verloopt. Zie hieronder.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="split">
+      <div class="panel">
+        <h3>Een model zegt ja</h3>
+        <p>De conditie die dit een AI-product maakt in plaats van een automatiseringsdingetje. Je geeft een vraag en een token, en een klein model antwoordt waar of onwaar. Daarmee wordt "als er een mail binnenkomt die over een storing gaat" een kaartje in plaats van een regex die op het verkeerde woord matcht.</p>
+        <p>De prijs is dat een flow niet meer deterministisch is, en dat moet je zien. Mijn voorstel: de timeline bewaart de vraag, het antwoord en welk model het gaf, de uitkomst wordt vijf minuten gecachet op dezelfde invoer, en het kaartje telt mee in het budget van de flow. Daarnaast een harde ondergrens op het model, want een classificatie hoort een halve cent te kosten, niet een dubbeltje.</p>
+      </div>
+      <div class="panel">
+        <h3>Ik zeg ja</h3>
+        <p>Een conditie die wacht op een mens. Dat klinkt tegenstrijdig in een automatisering en het is juist het kaartje dat de rest bruikbaar maakt. Je laat een flow alles doen tot aan het punt waar het eng wordt, en daar staat een vraag op je telefoon met twee knoppen.</p>
+        <p>Technisch is dit een run die pauzeert, dus een outbox-entry met een verlooptijd. Geen antwoord binnen de tijd betekent onwaar, en de reden staat in de timeline. Ruimte heeft de push-kant al, dus dit is minder werk dan het lijkt.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="dan">
+    <h2>De Dan-kaartjes</h2>
+    <p>Negentien acties. De meeste zijn een adapter op iets dat al bestaat, en dat is geen toeval: de actieregistratie uit <code>packages/actions</code> is precies voor dit soort hergebruik gebouwd en heeft <code>automation</code> al als actor.</p>
+    <div class="table" role="region" aria-label="Dan-kaartjes" tabindex="0">
+      <table class="wide">
+        <caption>Acties, met waar ze vandaan komen</caption>
+        <thead><tr><th style="width:30%">Kaartje</th><th style="width:22%">Komt uit</th><th>Opmerking</th></tr></thead>
+        <tbody>
+          <tr><td>Start een agent</td><td>outbox, <code>start-agent</code></td><td>Met een prompt, een CLI, een canvas en optioneel een worktree. Het modeplafond komt van de persoon die de flow aanzette, nooit uit de flow zelf.</td></tr>
+          <tr><td>Stuur een bericht naar een chat</td><td>action registry</td><td>De terugkoppeling. "Check faalde, hier is de output."</td></tr>
+          <tr><td>Vuur een prompt uit de stapel</td><td>promptstapel</td><td>Verbindt twee features: de kaartenstapel boven de dock wordt aanroepbaar vanuit een flow.</td></tr>
+          <tr><td>Stop een agent</td><td>outbox, <code>end-children</code></td><td>Een agent die drie uur draait op een taak van tien minuten.</td></tr>
+          <tr><td>Fork een chat</td><td><code>chat.fork</code></td><td>Twee aanpakken naast elkaar proberen, automatisch, elk in een eigen worktree.</td></tr>
+          <tr><td>Draai een commando</td><td>pty</td><td>In een bestaande terminalnode of in een nieuwe. Output wordt een token.</td></tr>
+          <tr><td>Merge een worktree</td><td><code>worktree-merge.ts</code></td><td>De bestaande regels blijven staan: alleen in een checkout zonder wijzigingen, nooit een stash, een conflict gaat terug.</td></tr>
+          <tr><td>Commit en push</td><td>git</td><td>Met een bericht dat een token mag bevatten.</td></tr>
+          <tr><td>Maak een PR</td><td><code>gh</code></td><td>Via de CLI, niet via een eigen GitHub-koppeling.</td></tr>
+          <tr><td>Toon een melding</td><td>client</td><td>Bas' voorbeeld eindigt hier. Toast, of een notitie op het canvas.</td></tr>
+          <tr><td>Stuur een push</td><td>pulsar</td><td>Naar je telefoon. De iOS-app heeft dit al.</td></tr>
+          <tr><td>Stuur een e-mail</td><td>pulsar-worker</td><td>De andere kant van het e-mailhoofdstuk. Een nachtelijke samenvatting in je inbox.</td></tr>
+          <tr><td>Maak een node of een view</td><td>action registry</td><td>Alles wat de catalogus al kan: een chat, een terminal, een browser, een notitie, een groep.</td></tr>
+          <tr><td>Schrijf naar een bestand</td><td>fs</td><td>Toevoegen of overschrijven, binnen de projectmap.</td></tr>
+          <tr><td>Zet een variabele</td><td>flowstore</td><td>Blijft staan tussen runs. Een teller, een laatst geziene sha, een vlag.</td></tr>
+          <tr><td>Wacht</td><td>ingebouwd</td><td>Geen Dan-kaartje maar een kaart over de graaf zelf, zie <a href="#tekenen">De kaarten</a>. Blijft een outbox-entry met een tijdstip.</td></tr>
+          <tr><td>Start een andere flow</td><td>flowrunner</td><td>Met een diepteplafond, zie <a href="#rem">Rem en budget</a>.</td></tr>
+          <tr><td>Vink een plan-item af</td><td>plan-store</td><td>Met de bestaande regel eroverheen: een status die een mens zette wordt nooit overschreven.</td></tr>
+          <tr><td>Vraag een model om tekst</td><td>chatbackend</td><td>Samenvatten, een commitbericht schrijven, een mail opstellen. Het resultaat is een token voor de volgende actie.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      <p>Vier dingen die een flow <strong>niet</strong> mag, en die volgen rechtstreeks uit de bestaande productregels. Typen in de sessie van een node die hij niet opende. Een browser besturen. Een worktree opruimen. Een proces een signaal geven dat een mens niet indrukte. Dat een flow door een mens is aangezet verandert daar niets aan, want de flow die hij aanzette kan een agent geschreven hebben.</p>
+    </div>
+  </section>
+
+  <section id="tokens">
+    <h2>Tokens</h2>
+    <p>Bas schreef <code>#Content</code> in zijn voorbeeld, en Homey doet hetzelfde met een langere notatie. Uit de opslag van de Claude Task-flow:</p>
+<pre><code>"text": "Het antwoord op [[trigger::3ee4d58d-675d-444d-b5bd-4c2e32d16f00::question]]
+         was: [[trigger::3ee4d58d-675d-444d-b5bd-4c2e32d16f00::answer]]"</code></pre>
+    <p>Dat is een string met verwijzingen erin, en de verwijzing is een <strong>kaart-id</strong> plus een tokennaam. Dat laatste is het belangrijke deel. Mijn eerste voorstel was strenger, met segmenten in plaats van een string, maar de winst zat in de id en niet in de vorm. Een verwijzing op id overleeft hernoemen, en een kaart die weg is levert een zichtbaar kapotte verwijzing in plaats van een lege plek. Homey heeft daar zelfs een vlag voor op de flow: <code>broken</code>.</p>
+    <p>Ik neem die notatie over, met twee aanpassingen. De <code>[[...]]</code> wordt iets dat niet met markdown vecht, want in Ruimte gaat een token vaak een prompt in en daar is dubbele accolade of dubbele haak al bezet. En de editor toont een chip, nooit de ruwe tekst, zodat je een token invoegt en niet typt.</p>
+
+    <h3>Elke kaart publiceert, niet alleen een trigger</h3>
+    <p>In Claude Task staat <code>[[action::9a982036-...::id]]</code>: een actiekaart die een vraag stelde, publiceert de id van die vraag, en een latere kaart gebruikt hem om de vraag weer weg te halen. Dat is precies wat Ruimte nodig heeft. Een kaart die een commando draait publiceert zijn output en zijn exit code. Een kaart die een agent start publiceert de chat-id. Een kaart die een model bevraagt publiceert het antwoord. Zonder dat is de tweede helft van elke flow onmogelijk.</p>
+    <p>Wat elke kaart publiceert hoort in <code>packages/contracts</code>, getypeerd, want dat is de enige plek waar een vorm op de draad gedefinieerd mag worden. De editor leest de keuzelijst uit die schema's, en de iOS-app kan een flow tonen zonder de lijst nog een keer te kennen.</p>
+
+    <h3>Welke tokens mag deze kaart zien</h3>
+    <p>Dit is de vraag die in een kolom niet bestaat en in een graaf het lastigst is. Het antwoord dat ik voorstel: een kaart mag de tokens gebruiken van elke kaart die op <strong>elk</strong> pad naar hem toe ligt. Een doorsnede dus, niet een vereniging.</p>
+    <p>Dat klinkt streng en het is het enige dat klopt. Een kaart die via twee takken bereikbaar is en een token gebruikt dat maar op één van die takken bestaat, is een kaart die de helft van de tijd een lege waarde krijgt. Die doorsnede is statisch uit te rekenen, dus de editor kan hem als keuzelijst tonen en een verwijzing die door een nieuwe lijn ongeldig wordt meteen rood maken. Beter dat, dan een lege string om vier uur 's nachts.</p>
+    <p>Eén soort waarde past niet in een tekst: een afbeelding, een diff van vierduizend regels, een bestand. Homey hangt die als apart veld aan de kaart (<code>droptoken</code>) in plaats van in de string. Datzelfde onderscheid wil ik hier: een token is tekst of het is een verwijzing naar bytes, en een veld accepteert het een of het ander. Daarbij een handvol vaste bewerkingen (eerste N regels, laatste N regels, kort tot N tekens, alleen het domein) en geen expressietaal, want een expressietaal in een flow-editor is het moment waarop je een programmeertaal aan het uitvinden bent zonder debugger.</p>
+  </section>
+  <section id="wonen">
+    <h2>Waar een flow woont</h2>
+    <p>Dit hoofdstuk stond twee keer eerder verkeerd in dit rapport, en het delen-ontwerp van vandaag (<a href="2026-09-19-delen.html">2026-09-19-delen.html</a>, vastgesteld) lost het op met een onderscheid dat scherper is dan wat ik had. Een flow is een <strong>recept</strong> en een aangezette flow is een <strong>afspraak</strong>. Het recept is inhoud en mag reizen. De afspraak is een handeling van een persoon op een machine en mag dat nooit.</p>
+    <div class="table" role="region" aria-label="Recept en schakelaar" tabindex="0">
+      <table class="wide">
+        <caption>Twee dingen, twee plekken</caption>
+        <thead><tr><th style="width:18%">Wat</th><th style="width:34%">Waar</th><th>Inhoud</th></tr></thead>
+        <tbody>
+          <tr><td>Het recept</td><td><code>.ruimte/flows/&lt;id&gt;.json</code> als je hem deelt, <code>.ruimte/private/flows/&lt;id&gt;.json</code> als hij van jou is</td><td>De kaarten, de lijnen, de posities, de argumenten, de naam. Een agent mag dit schrijven, want er staat niets in dat iets afdwingt.</td></tr>
+          <tr><td>De schakelaar</td><td><code>$RUIMTE_HOME</code>, altijd, per machine</td><td>Staat hij aan, in welke modus mag hij agents starten, welk budget, wie hem aanzette en wanneer, en de hash van het recept waarop dat sloeg.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Wat hiermee vervalt is de importstap uit de eerste versie van dit rapport: een bestand in de repo dat niets deed tot een mens het binnenhaalde en er een modus bij koos. Die dialoog was een nabouw van iets dat nu gewoon volgt uit hoe de lagen liggen. Een gedeelde flow verschijnt in je lijst, uit, met een knop ernaast en een zin over wat hij doet. Verandert het recept na een pull, dan valt de schakelaar terug op uit en vraagt opnieuw.</p>
+    <p>Het scheelt ook een derde soort opslag. In het oorspronkelijke voorstel kregen flows hun eigen map onder <code>$RUIMTE_HOME</code>, met een eigen <code>rev</code>, een eigen watcher en een eigen conflictbehandeling. Nu zijn ze een bestand in <code>.ruimte</code> zoals een tekening en een diagram, met dezelfde discipline en dezelfde code eromheen. Alleen de schakelaar is een klein bestand apart.</p>
+
+    <h3>Dus een flow is een view</h3>
+    <p>Dat volgt eruit en het beantwoordt een vraag die eerder in dit rapport nog openstond. De eenheid van delen is een view, in zijn geheel, en een tekening of diagram volgt zijn view naar de gedeelde map of naar de privémap. Een flow die deelbaar moet zijn en die dezelfde opslagvorm krijgt, hoort dan aan een view te hangen en niet als node op een canvas te zweven. Een flow als node zou betekenen dat hij het deelgedrag van zijn canvas erft, en dan deel je een flow per ongeluk mee met een plattegrond.</p>
+
+    <h3>Wat er in een gedeelde flow niet thuishoort</h3>
+    <p>Een gedeeld canvas heeft een overlay voor de velden die niet mee mogen: <code>resume</code>, <code>runtimeMode</code>, een worktree, een absoluut pad. Een flow heeft dezelfde soort velden, maar ik zou er geen overlay voor bouwen. Twee eenvoudiger regels doen hetzelfde werk.</p>
+    <ul>
+      <li><strong>Een pad volgt de regel die er al is.</strong> Relatief aan de projectmap gaat mee, absoluut blijft. Dat is precies wat een <code>cwd</code> op een node al doet, en een flow hoeft daar geen uitzondering op te zijn.</li>
+      <li><strong>Een kaart die een persoon aanwijst, wijst niemand aan.</strong> Een push-kaart in een gedeelde flow hoort niet naar Bas te sturen, hij hoort te sturen naar <em>wie deze flow aanzette</em>. Dat is één waarde in het argument in plaats van een naam, en Homey doet iets soortgelijks met <code>{"user": {"id": "__all__"}}</code>. Daarmee blijft het recept volledig deelbaar en wordt het pas persoonlijk op het moment dat het draait.</li>
+    </ul>
+    <p>Blijft over een kaart die een echt adres of een echte sleutel bevat. Die hoort niet in een gedeelde flow en ook niet in een overlay; die hoort in een privé-flow. Dat is geen beperking maar de juiste plek.</p>
+
+    <h3>Mag een agent een flow maken</h3>
+    <p>Ja, en dat is een van de leukere mogelijkheden van de hele feature. "Maak een flow die me waarschuwt als de e2e-tests langer dan tien minuten draaien" is een prima opdracht, en <code>ruimte-context flow new</code> past naast de verbs die er al zijn. Dat een agent daarmee in een gedeeld bestand schrijft is geen gat: git is de grens en de commit is de handeling van een mens.</p>
+    <p>Aanzetten komt uit op nee. Wat een agent oplevert is een flow die uit staat, met een knop ernaast. Dat is dezelfde grens die het delen-ontwerp voor de derde keer trekt, en daarmee is het een principe in plaats van een regel: bij een device mag een agent linken en niet aanmaken, bij een view mag hij hem maken en niet delen, bij een flow mag hij hem schrijven en niet aanzetten. In alle drie de gevallen staat het resultaat klaar met een knop ernaast.</p>
+    <div class="table" role="region" aria-label="Wie wat mag met een flow" tabindex="0">
+      <table class="wide">
+        <caption>Bevoegdheden per actor</caption>
+        <thead><tr><th>Actor</th><th>Tekenen</th><th>Wijzigen</th><th>Delen</th><th>Aanzetten</th><th>Handmatig draaien</th></tr></thead>
+        <tbody>
+          <tr><td>Persoon</td><td>ja</td><td>ja</td><td>ja</td><td>ja</td><td>ja</td></tr>
+          <tr><td>Stem</td><td>ja</td><td>ja</td><td>nee</td><td>ja, met bevestiging</td><td>ja</td></tr>
+          <tr><td>Agent</td><td>ja, uit</td><td>ja, en de schakelaar valt terug op uit</td><td>nee</td><td>nee</td><td>ja, binnen zijn eigen modus</td></tr>
+          <tr><td>Een andere flow</td><td>nee</td><td>nee</td><td>nee</td><td>nee</td><td>ja, tot de diepte op is</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="email">
+    <h2>E-mail</h2>
+    <p>Bas noemde dit expliciet en hij heeft gelijk dat het aantrekkelijk is. E-mail is waar de rest van de wereld een AI Engineer bereikt. Sentry die een storing meldt, een deploy die faalde, App Store Connect die een review afkeurde, Xcode Cloud met een gebroken build, een klant die iets stuurt. Dat zijn allemaal momenten waarop je nu handmatig een sessie opent en een prompt typt die je al twintig keer eerder typte.</p>
+
+    <h3>Niet via IMAP</h3>
+    <p>De eerste gedachte is een IMAP-verbinding op je eigen mailbox. Daar ben ik tegen, om twee redenen die allebei zwaar wegen. Ruimte heeft geen geheimenkluis, en de eerste die erbij komt moet niet het wachtwoord van iemands hoofdmailbox bewaren. En de productregel dat een daemon nooit een accounttoken vasthoudt bestaat niet voor niets; een mailboxwachtwoord is erger dan een accounttoken.</p>
+
+    <h3>Wel een adres per project</h3>
+    <p>Cloudflare, waar de pulsar-worker al draait, kan inkomende mail op een domein naar een Worker sturen. Daarmee krijgt een project een adres als <code>&lt;iets-onraadbaars&gt;@in.ruimte.app</code>. Je stuurt er iets naartoe, of je zet in Gmail een filter dat de mails van Sentry doorstuurt. Ruimte weet je wachtwoord niet, er hoeft geen poort open op je laptop, en de route die het bericht naar je machine brengt bestaat al: het is dezelfde broker waar pushberichten en signalering overheen gaan.</p>
+    <figure>
+      <svg class="diagram" viewBox="0 0 680 150" role="img" aria-labelledby="email-titel email-desc" width="680" height="150">
+        <title id="email-titel">De route van een e-mail naar een flow</title>
+        <desc id="email-desc">Een afzender stuurt naar het projectadres. De Email Worker controleert SPF en DKIM en de afzenderlijst. De pulsar-worker zet het bericht klaar, de broker levert het aan de daemon, de daemon vuurt de trigger.</desc>
+        <defs><marker id="mail-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker></defs>
+        <rect class="node" x="1" y="40" width="104" height="48" rx="10"/>
+        <text x="53" y="62" text-anchor="middle" font-size="14">Afzender</text>
+        <text class="label" x="53" y="79" text-anchor="middle" font-size="12">Sentry, mens</text>
+        <path class="edge" d="M105 64 H143" marker-end="url(#mail-arrow)"/>
+        <rect class="node" x="151" y="40" width="124" height="48" rx="10"/>
+        <text x="213" y="62" text-anchor="middle" font-size="14">Email Worker</text>
+        <text class="label" x="213" y="79" text-anchor="middle" font-size="12">SPF, DKIM, lijst</text>
+        <path class="edge" d="M275 64 H313" marker-end="url(#mail-arrow)"/>
+        <rect class="node" x="321" y="40" width="124" height="48" rx="10"/>
+        <text x="383" y="62" text-anchor="middle" font-size="14">pulsar-worker</text>
+        <text class="label" x="383" y="79" text-anchor="middle" font-size="12">wacht op ophalen</text>
+        <path class="edge" d="M445 64 H483" marker-end="url(#mail-arrow)"/>
+        <rect class="node" x="491" y="40" width="124" height="48" rx="10"/>
+        <text x="553" y="62" text-anchor="middle" font-size="14">Daemon</text>
+        <text class="label" x="553" y="79" text-anchor="middle" font-size="12">trigger vuurt</text>
+        <text class="label" x="213" y="120" text-anchor="middle">niet op de lijst? weg, met een teller</text>
+      </svg>
+      <figcaption>De mail wordt versleuteld bewaard tot de machine hem ophaalt, en daarna weggegooid. Een laptop die dicht staat mist niets; dit is een bericht en geen moment.</figcaption>
+    </figure>
+
+    <h3>Dit is het grootste risico in het hele ontwerp</h3>
+    <p>Een e-mailadres is openbaar zodra het één keer ergens staat. Iedereen die het kent kan de trigger laten vuren, en aan het eind van de flow staat een agent met schrijfrechten in een git-repo. Dat is een groter aanvalsoppervlak dan alles wat Ruimte vandaag heeft, en promptinjectie is hier geen theorie: een storingsmail waarvan de tekst regelrecht een prompt in loopt is precies het soort bericht dat een aanvaller kan sturen.</p>
+    <p>Vier regels, en ik zou geen van de vier laten vallen:</p>
+    <ol>
+      <li><strong>Een lijst met afzenders, verplicht.</strong> Leeg is uit. Een adres of een domein, en de Worker controleert SPF en DKIM voordat hij iets doorlaat.</li>
+      <li><strong>De tekst van een mail is nooit een prompt.</strong> Hij wordt een token, en een token gaat als geciteerde tekst een prompt in, met de instructie eromheen die de persoon in de flow schreef. Het verschil tussen "doe wat hier staat" en "hier is een melding, kijk of je hem herkent".</li>
+      <li><strong>Een flow met een e-mailtrigger kan zijn agents hoogstens de modus geven die de persoon bij het aanzetten koos</strong>, en de ruimste modus is bij deze trigger niet beschikbaar. Lezen en voorstellen mag, ongevraagd schrijven niet.</li>
+      <li><strong>Elke mail die iets deed staat in de timeline</strong>, met de volledige tekst, de afzender en of de handtekening klopte.</li>
+    </ol>
+
+    <h3>De andere kant op</h3>
+    <p>Mail versturen is eenvoudiger en bijna net zo nuttig. Een nachtploeg die om 07:00 een samenvatting in je inbox zet van wat er liep, wat er faalde en wat er op je wacht. Geen nieuwe app, geen notificatie die je wegveegt, gewoon iets dat er staat als je gaat zitten. Dat is een Dan-kaartje en een uitgaande route via dezelfde Worker.</p>
+  </section>
+
+  <section id="timeline">
+    <h2>De timeline, en waarom die er meteen moet zijn</h2>
+    <p>Iedereen die ooit een automatisering heeft gebouwd kent het moment: hij deed niets, en je hebt geen idee waarom. Vuurde de trigger niet? Was een conditie onwaar? Welke? Met welke waarde? Een flow-engine zonder inzicht in wat er gebeurde is een engine die je na twee weken uitzet.</p>
+    <p>Dus de timeline is geen fase vier. Hij hoort bij de eerste versie die iemand aanzet, en hij bewaart per run de trigger met zijn tokens, elke conditie met haar uitkomst en de waarden waarop ze die baseerde, elke actie met wat eruit kwam, en de reden dat de run eindigde. Zeven dagen bewaren lijkt me genoeg, of de laatste honderd runs per flow.</p>
+    <p>Hij is ook het fundament onder het hoofdstuk hieronder. Testen vanaf een kaart in het midden van een graaf kan alleen als er ergens tokens liggen om mee te beginnen, en de timeline is de plek waar die vanzelf al staan.</p>
+    <div class="split">
+      <div class="panel">
+        <h3>Opnieuw draaien met dezelfde tokens</h3>
+        <p>Je past een conditie aan en draait de run van gisteravond over, met precies de tokens die hij toen kreeg. Dat is de debug-loop, en zonder die knop ben je aan het wachten tot de trigger toevallig nog eens vuurt.</p>
+      </div>
+      <div class="panel">
+        <h3>Meekijken zonder te doen</h3>
+        <p>Je zet een flow in de stand waarin hij wel vuurt maar niets uitvoert, laat hem een dag lopen, en kijkt naar de lijst met runs die hij zou hebben gedaan. Pas daarna zet je hem echt aan. Voor een flow die agents start en dus geld kost, is dat het verschil tussen durven en niet durven.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="testen">
+    <h2>Testen</h2>
+    <p>Een flow die je niet kunt testen is een flow die je pas vertrouwt nadat hij drie keer per ongeluk goed ging. Dat duurt bij een lamp een avond en bij een agent die om 02:00 een worktree merget een week, en in die week staat hij uit. Testen is hier dus geen comfort, het is het verschil tussen een flow die aan gaat en een flow die je blijft uitstellen.</p>
+    <p>Homey heeft een play-knop op een flow. Wat Bas voorstelt gaat een stap verder en ik zou het allemaal bouwen: een play op elke Als-kaart, en <strong>testen vanaf hier</strong> op elke andere kaart.</p>
+    <div class="table" role="region" aria-label="De drie manieren om te testen" tabindex="0">
+      <table class="wide">
+        <caption>Wat elke knop doet</caption>
+        <thead><tr><th style="width:24%">Knop</th><th style="width:24%">Zit op</th><th>Wat er draait</th></tr></thead>
+        <tbody>
+          <tr><td>Play</td><td>Een Als-kaart</td><td>Doe alsof deze trigger vuurde. De hele graaf stroomafwaarts loopt, precies zoals bij het echte werk.</td></tr>
+          <tr><td>Testen vanaf hier</td><td>Elke kaart</td><td>Deze kaart en alles erna. Wat ervoor ligt draait niet, dus de tokens daarvan moeten ergens vandaan komen.</td></tr>
+          <tr><td>Alleen deze kaart</td><td>Elke kaart</td><td>Eén kaart, geen lijnen. Voor de vraag "wat geeft deze conditie nu terug" of "klopt de tekst van deze melding".</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Waar de tokens vandaan komen</h3>
+    <p>Dit is het echte probleem dat Bas aanwijst. Test je vanaf de vierde kaart, dan bestaan de tokens van de eerste drie niet. Een popup die erom vraagt is het juiste antwoord, en er zijn vier bronnen om hem mee te vullen. Ik zou ze alle vier maken, in deze volgorde van voorkeur.</p>
+    <div class="table" role="region" aria-label="Vier manieren om aan testtokens te komen" tabindex="0">
+      <table class="wide">
+        <thead><tr><th style="width:26%">Bron</th><th>Hoe</th></tr></thead>
+        <tbody>
+          <tr><td>De volgende echte keer</td><td>Je drukt op "wacht op het echte ding". De flow blijft uit, maar de eerstvolgende keer dat de trigger echt vuurt, draait de test met de echte tokens. Voor een trigger als "een turn is klaar" is dat een kwestie van minuten, en het lost het probleem definitief op: je verzint niet wat erin zit, je krijgt het.</td></tr>
+          <tr><td>Een eerdere run</td><td>De timeline bewaart de tokens van elke run. "Test vanaf hier met de tokens van gisteren 23:04." Echte data, en het is precies de run waar je iets aan wilt veranderen.</td></tr>
+          <tr><td>Het voorbeeld uit het schema</td><td>Elk token is een zod-schema in <code>packages/contracts</code>, en daar kan een voorbeeldwaarde bij. Dan is de popup voorgevuld en druk je op enter. Dit is bijna gratis en het maakt het verschil tussen een popup die je invult en een popup die je wegklikt.</td></tr>
+          <tr><td>Met de hand</td><td>Een veld per ontbrekend token, met zijn type ernaast. De vangnetvariant, en voor een token als "de tekst van de mail" is het gewoon de juiste manier.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>De popup vraagt alleen wat er echt nodig is. Dat is bekend, want de doorsnede die bepaalt welke tokens een kaart mag zien is dezelfde berekening die bepaalt welke er ontbreken. Gebruikt de test geen enkel token stroomopwaarts, dan is er geen popup en draait hij meteen.</p>
+
+    <h3>Wat er tijdens een test echt gebeurt</h3>
+    <p>Hier wijkt Ruimte af van een domoticasysteem, en het is geen detail. Een testlamp gaat aan en weer uit. Een testagent kost geld en schrijft in je repo. Een testmail is verstuurd.</p>
+    <p>Dus een test heeft twee standen, echt en droog, en droog is de standaard. In een droge test schrijft elke actie in de timeline wat hij gedaan zou hebben, met de ingevulde tokens erin, zodat je de tekst van die melding en het commando van die shellactie echt kunt lezen. Maar een paar kaarten zijn onschadelijk, en die wil je juist wel echt zien gebeuren.</p>
+    <div class="table" role="region" aria-label="Wat een kaart doet in een droge test" tabindex="0">
+      <table class="wide">
+        <caption>Droge test, per soort actie</caption>
+        <thead><tr><th style="width:34%">Kaart</th><th style="width:16%">Droog</th><th>Waarom</th></tr></thead>
+        <tbody>
+          <tr><td>Toon een melding</td><td><span class="badge confirmed">echt</span></td><td>Onschadelijk, en de hele vraag is of de tekst klopt.</td></tr>
+          <tr><td>Stuur een push</td><td><span class="badge confirmed">echt</span></td><td>Zelfde, met "test" ervoor in de melding.</td></tr>
+          <tr><td>Vraag een model</td><td><span class="badge confirmed">echt</span></td><td>Anders test je de conditie eronder niet. Telt mee in het budget van de flow.</td></tr>
+          <tr><td>Ik zeg ja</td><td><span class="badge confirmed">echt</span></td><td>De vraag verschijnt meteen op je scherm in plaats van te wachten tot je hem ziet.</td></tr>
+          <tr><td>Wacht</td><td><span class="badge info">overslaan</span></td><td>Een test van dertig minuten is geen test. In de timeline staat hoe lang hij echt gewacht zou hebben.</td></tr>
+          <tr><td>Start een agent</td><td><span class="badge warning">droog</span></td><td>Kost geld en begint te schrijven. In plaats daarvan de prompt met ingevulde tokens, zodat je hem kunt lezen.</td></tr>
+          <tr><td>Draai een commando</td><td><span class="badge warning">droog</span></td><td>Kan van alles doen. De regel met ingevulde tokens komt in de timeline.</td></tr>
+          <tr><td>Commit, push, merge, PR</td><td><span class="badge danger">droog</span></td><td>Onomkeerbaar en naar buiten.</td></tr>
+          <tr><td>Stuur een e-mail</td><td><span class="badge danger">droog</span></td><td>Zelfde, en het gaat naar iemand anders.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Die indeling hoort bij het kaartje zelf in de catalogus, als een vlag naast zijn schema, en niet in een lijst ergens anders in de daemon. Een lijst elders raakt achter zodra iemand een kaartje toevoegt, en dan doet een droge test een keer iets echts. Een vlag op het kaartje kan niet vergeten worden, want zonder vlag is het antwoord droog.</p>
+    <p>Een conditie mag nooit iets veranderen, en dat is precies waarom die regel eerder in dit rapport zo hard staat. Alleen daardoor is de droge test eerlijk: alle condities draaien echt, dus het pad dat de test neemt is het pad dat de echte run zou nemen.</p>
+
+    <h3>Wat je ziet terwijl het loopt</h3>
+    <p>De graaf licht op. Een kaart die draait krijgt een puls, een lijn waar de run overheen gaat wordt even dik, een tak die doodloopt zakt weg naar grijs. Dat is de reden dat mensen Advanced Flow leuk vinden en het is hier geen versiering: bij een graaf met twintig kaarten is "welk pad nam hij" de vraag die je stelt, en een animatie beantwoordt die sneller dan een lijst.</p>
+    <p>Technisch is dat een stroom events van de daemon naar de client tijdens de run, en dat is dezelfde vorm als een chat die binnenkomt. De tekenlaag ligt er al: lijnen worden al geroutineerd en getekend in de laag onder de nodes.</p>
+
+    <h3>Regels voor een testrun</h3>
+    <ul>
+      <li><strong>Een test maakt geen andere flow wakker.</strong> Wat een testrun doet telt niet als gebeurtenis, ook niet in de echte stand. Anders test je één flow en start je een keten.</li>
+      <li><strong>Een testrun staat apart in de timeline</strong>, met wie hem startte en vanaf welke kaart. Anders vervuil je de geschiedenis waar je juist naar kijkt.</li>
+      <li><strong>Een test telt mee in het budget</strong> en in de snelheidsrem. Twintig testruns die elk een model bevragen is gewoon geld.</li>
+      <li><strong>Een uitgezette flow kan getest worden.</strong> Dat is de hele bedoeling: je bouwt hem, je test hem, en dan pas zet je hem aan.</li>
+      <li><strong>Een test met agentacties in de echte stand vraagt het modeplafond</strong>, precies zoals aanzetten dat doet. Testen mag geen achterdeur om die vraag heen zijn.</li>
+    </ul>
+
+    <h3>Een tokenset bewaren</h3>
+    <p>Als je een set tokens eenmaal hebt, is hem een naam geven bijna gratis. "De storingsmail van Sentry", "een turn die faalde op een rate limit". Dan test je een flow na elke wijziging tegen dezelfde drie gevallen in plaats van tegen wat je je herinnert.</p>
+    <p>Dat is de rand van wat deze feature moet zijn, en ik zou het niet in de eerste versie bouwen. Maar het is de moeite waard om het model er niet voor dicht te timmeren, want een bewaarde tokenset is niets anders dan een rij uit de timeline met een naam eraan.</p>
+  </section>
+
+  <section id="rem">
+    <h2>Rem, budget en gemiste triggers</h2>
+    <p>Dit hoofdstuk is de reden dat een flow-engine in een AI-product anders is dan eentje in een domoticasysteem. Een lampje dat per ongeluk twintig keer aangaat is vervelend. Twintig agents die per ongeluk starten kosten geld en schrijven in je repo.</p>
+    <div class="table" role="region" aria-label="Remmen en hun grens" tabindex="0">
+      <table class="wide">
+        <caption>Wat er tegenhoudt, en waar de grens ligt</caption>
+        <thead><tr><th style="width:26%">Rem</th><th style="width:22%">Voorstel</th><th>Waarom</th></tr></thead>
+        <tbody>
+          <tr><td>Diepte van een keten</td><td>3</td><td>Een flow start een agent, die wijzigt een bestand, dat vuurt een flow. Elke run draagt zijn herkomst, en op diepte 3 stopt het. Zelfde geest als de regel dat een bericht één stap diep gaat.</td></tr>
+          <tr><td>Snelheid</td><td>10 runs per minuut per flow</td><td>Daarboven slaapt de flow en zet een melding neer. Een bestandswatch op een buildmap doet er anders duizend in tien seconden.</td></tr>
+          <tr><td>Geld</td><td>Verplicht bedrag per dag</td><td>Zodra een flow een agent start of een model bevraagt. Op is uit, met een melding, en aanzetten is een handeling van een mens.</td></tr>
+          <tr><td>Gelijktijdigheid</td><td>1 run per flow, tenzij anders gezet</td><td>Een tweede trigger terwijl de eerste run nog loopt wordt overgeslagen, met de reden in de timeline.</td></tr>
+          <tr><td>Permissiemodus</td><td>Het plafond dat de persoon koos</td><td>Rijdt mee op elke <code>start-agent</code>, zoals dat nu al gaat bij een kindagent.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>Gemiste triggers</h3>
+    <p>Homey staat altijd aan. Een laptop klapt dicht. Wat gebeurt er met de flow van 08:00 als je machine tot 11:00 sliep? Mijn voorstel is een onderscheid dat de gebruiker intuïtief al maakt.</p>
+    <p>Een <strong>moment</strong> gaat verloren. Een tijdstip, een bestandswijziging, een agent die klaar was: die zijn voorbij, en ze inhalen levert een storm van runs op over een wereld die intussen veranderd is. In de timeline komt te staan dat ze gemist zijn.</p>
+    <p>Een <strong>bericht</strong> wordt ingehaald. Een e-mail en een webhook liggen ergens klaar, ze zijn niet voorbij, en ze zijn precies waarom je ze aan een adres hing. Die worden geleverd zodra de machine weer praat, met de tijd van binnenkomst erbij zodat een conditie op werktijd de juiste tijd leest.</p>
+  </section>
+
+  <section id="tekenen">
+    <h2>Hoe een kaart eruitziet</h2>
+    <p>De schermafdruk die Bas stuurde laat een kaart zien met een rond gekleurd icoon links, een kleine grijze regel erboven met de eigenaar (het device, de app) en daaronder de zin met de ingevulde waarden vet. Rechts de poortstipjes: gekleurd als er een lijn aan hangt, grijs als hij leeg is. Dat is een goede vorm en ik zou hem grotendeels aanhouden.</p>
+    <div class="split">
+      <div class="panel">
+        <h3>Wat rechtstreeks over kan</h3>
+        <p>De bovenregel met de eigenaar wordt bij Ruimte de bron: Agent, Git, Bestanden, Terminal, E-mail, Tijd. De zin eronder met de ingevulde argumenten vet, zodat je een flow leest in plaats van ontcijfert. Poorten aan de rand, gevuld of leeg. Een lijn die uit een poort komt en aan de andere kant bij de ingang aankomt.</p>
+      </div>
+      <div class="panel">
+        <h3>Wat niet over kan</h3>
+        <p>De kleuren. Bij Homey heeft elke app zijn eigen kleur en dat werkt daar, want een kaart van Philips Hue hoort herkenbaar te zijn. Ruimte heeft een harde regel: alleen semantische tokens uit <code>styles.css</code>, nergens een ruwe kleur. Twintig bronkleuren toevoegen om een flow leesbaar te maken is die regel omzeilen met een omweg.</p>
+      </div>
+    </div>
+    <h3>Dus: vorm in plaats van kleur</h3>
+    <p>Een trigger, een conditie en een actie horen op een vol werkblad uit elkaar te houden zijn zonder dat je de tekst leest. Dat kan met de vorm van de kaart en met het aantal poorten, en dat werkt ook voor wie kleuren slecht ziet. Een trigger heeft geen ingang en één uitgang. Een conditie heeft er twee. Een actie heeft er een, of twee als hij kan falen. De iconen zijn Lucide door <code>Icon</code>, in de gewone tekstkleur.</p>
+    <p>Voor de lijnen ligt het anders, want daar moet je op een meter afstand zien welke tak de waar-tak is. Homey doet dat met blauw en geel. Ruimte heeft al een precedent: contextlijnen en taaklijnen zijn gestippeld, en dat staat in het vorige rapport. Mijn voorstel is dat de waar-tak doorgetrokken is en de onwaar-tak gestreept, met de kleur als extra en niet als drager. Dan leest een flow ook in een schermafdruk en in print.</p>
+    <p>Eén ding uit de afdruk wil ik expliciet overnemen: het kruisje dat op een lijn verschijnt als je erboven hangt. Een lijn weghalen in een graafeditor is normaal een gevecht met een klikgebied van drie pixels, en dat knopje lost het op.</p>
+
+    <h3>Ingebouwde kaarten</h3>
+    <p>Naast de kaarten uit de catalogus zijn er kaarten zonder bron, die alleen over de graaf zelf gaan. Homey heeft er zes en ze zijn alle zes nuttig hier.</p>
+    <div class="table" role="region" aria-label="Ingebouwde kaarten" tabindex="0">
+      <table class="wide">
+        <thead><tr><th style="width:20%">Kaart</th><th style="width:26%">Poorten</th><th>Wat hij doet</th></tr></thead>
+        <tbody>
+          <tr><td>Start</td><td>uit: klaar</td><td>Handmatig, uit het palet, met een sneltoets, met stem, of door een agent. Homey geeft hem een vaste id en zet <code>triggerable</code> op de flow; datzelfde werkt hier.</td></tr>
+          <tr><td>Wacht</td><td>in, uit: klaar</td><td>Een getal en een eenheid. Als outbox-entry, dus een herstart om 03:02 breekt hem niet.</td></tr>
+          <tr><td>Alle</td><td>in (meerdere), uit: klaar</td><td>Gaat door als elke tak die erop uitkomt klaar is.</td></tr>
+          <tr><td>Een van</td><td>in (meerdere), uit: klaar</td><td>Gaat door bij de eerste tak die aankomt.</td></tr>
+          <tr><td>Notitie</td><td>geen</td><td>Een gele plak op het werkblad. Klinkt overbodig tot je een flow van dertig kaarten terugleest die je zes maanden geleden tekende.</td></tr>
+          <tr><td>Script</td><td>in, uit: klaar, fout</td><td>Homey heeft HomeyScript dat een getal, tekst of booleaanse waarde teruggeeft als token. Bij Ruimte is dat een commando in de projectmap, met exit code en output als token. Dat kaartje staat al in de Dan-lijst; hier krijgt het ook een foutpoort.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section id="voorbeelden">
+    <h2>Tien flows die ik zelf zou aanzetten</h2>
+    <p>De kaartjeslijst hierboven is abstract. Dit is waar hij voor is. Elke regel gebruikt alleen kaartjes uit dit rapport.</p>
+    <div class="table" role="region" aria-label="Tien voorbeeldflows" tabindex="0">
+      <table class="wide">
+        <caption>Van saai naar ambitieus</caption>
+        <thead><tr><th style="width:23%">Naam</th><th style="width:24%">Als</th><th style="width:24%">En</th><th>Dan</th></tr></thead>
+        <tbody>
+          <tr><td>Groen of terug</td><td>Een turn is klaar</td><td><code>bun run check</code> faalt</td><td>Stuur de output terug naar de chat</td></tr>
+          <tr><td>Wakker maken</td><td>Een agent wacht op mij</td><td>Ik ben meer dan 5 minuten weg</td><td>Stuur een push met zijn vraag</td></tr>
+          <tr><td>Eén keer opnieuw</td><td>Een turn liep stuk</td><td>De fout bevat "rate limit" en deze flow liep niet in 10 minuten</td><td>Wacht 2 minuten, stuur "ga verder"</td></tr>
+          <tr><td>Kleine merge</td><td>Een worktree is klaar</td><td>Tree schoon, diff kleiner dan 50 regels, en ik zeg ja</td><td>Merge de worktree</td></tr>
+          <tr><td>Nachtploeg</td><td>Elke dag om 02:00</td><td>Er draait geen agent en het budget is niet op</td><td>Start een agent op de openstaande issues, in een worktree</td></tr>
+          <tr><td>Ochtendbrief</td><td>Elke werkdag om 07:00</td><td>Er gebeurde iets vannacht</td><td>Vraag een model om een samenvatting, mail hem</td></tr>
+          <tr><td>Storing binnen</td><td>Een e-mail kwam binnen</td><td>Afzender is Sentry en een model zegt dat het over een storing gaat</td><td>Maak een chat met de mail als geciteerde context, in leesmodus</td></tr>
+          <tr><td>Rem erop</td><td>Boven het budget</td><td>Het is na 18:00</td><td>Stop de agents op dit canvas, stuur een push</td></tr>
+          <tr><td>Volle context</td><td>Contextvenster boven 80%</td><td>De agent draait niet</td><td>Toon een melding met "compacteren"</td></tr>
+          <tr><td>Twee wegen</td><td>Ik start hem zelf</td><td>Tree schoon</td><td>Fork de chat twee keer, elk in een eigen worktree, met een andere aanpak in de prompt</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>De laatste is degene die me het meest interesseert. Twee forks op dezelfde vraag, allebei in hun eigen worktree, en over een half uur kijk je welke aanpak beter uitpakte. Dat kan vandaag met de hand, en bijna niemand doet het, omdat het vier handelingen kost op het moment dat je aan het denken bent over iets anders. Als het één kaartje is, doe je het wel.</p>
+  </section>
+
+  <section id="raakt">
+    <h2>Wat dit raakt</h2>
+    <p>Op hoofdlijnen, want dit is een ontwerprapport en niet het bouwplan. Wat opvalt is hoeveel van de lijst al bestaat en hoe weinig nieuw is.</p>
+    <div class="table" role="region" aria-label="Wat er nieuw is en wat er aangepast wordt" tabindex="0">
+      <table class="wide">
+        <thead><tr><th style="width:28%">Plek</th><th style="width:16%">Soort</th><th>Wat</th></tr></thead>
+        <tbody>
+          <tr><td><code>packages/flow</code></td><td><span class="badge">nieuw</span></td><td>Het pure deel: het model, de tokens, de evaluatie van condities, de validatie. Geen DOM, geen daemon, net als <code>packages/plan</code> en <code>packages/drawing</code>. Hier zitten ook de tests van de meeste logica.</td></tr>
+          <tr><td><code>packages/contracts</code></td><td><span class="badge info">uitbreiden</span></td><td>De tokensets per trigger, de requests en de events. Alleen optionele velden en nieuwe requests, zoals de regel voorschrijft.</td></tr>
+          <tr><td><code>apps/server/src/flows</code></td><td><span class="badge">nieuw</span></td><td>De runner, de timeline, de bronnen die triggers voeden, en het schakelaarbestand onder <code>$RUIMTE_HOME</code>. Geen eigen store meer: het recept gaat door de projectbestandenlaag die na het delen-werk toch al twee mappen kent.</td></tr>
+          <tr><td><code>apps/server/src/projects</code></td><td><span class="badge info">uitbreiden</span></td><td>Een vierde soort bestand in <code>.ruimte</code> naast tekeningen en diagrammen, dat zijn view volgt naar de gedeelde map of de privemap.</td></tr>
+          <tr><td><code>apps/server/src/outbox</code></td><td><span class="badge info">uitbreiden</span></td><td>Entries voor een lopende run, voor wachten en voor een conditie die op een mens wacht.</td></tr>
+          <tr><td><code>packages/actions</code></td><td><span class="badge info">uitbreiden</span></td><td>De Dan-kant leunt hierop. Het werk uit <code>docs/NEXT.md</code> punt 9 om de rest van de UI op de registratie te zetten wordt hierdoor meer waard.</td></tr>
+          <tr><td><code>apps/client/src/flow</code></td><td><span class="badge">nieuw</span></td><td>De editor als view-soort, de kaartjes, de tokenchips, de timeline.</td></tr>
+          <tr><td><code>apps/pulsar-worker</code></td><td><span class="badge info">uitbreiden</span></td><td>Het projectadres, de Email Worker, de wachtrij voor berichten die een slapende machine nog moet ophalen, en de uitgaande mail.</td></tr>
+          <tr><td><code>apps/ios</code></td><td><span class="badge info">uitbreiden</span></td><td>Flows lezen, aan en uit zetten, handmatig draaien, en de twee knoppen onder "ik zeg ja". Bewerken kan later.</td></tr>
+          <tr><td>Shell-integratie</td><td><span class="badge warning">ontbreekt</span></td><td>De trigger "een commando eindigde" kan niet zonder dat de daemon het einde van een commando ziet. Dat is werk op zichzelf en het staat niet in <code>docs/NEXT.md</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="plan">
+    <h2>Plan</h2>
+    <p>Zeven fasen. De eerste vier leveren samen iets dat aan staat en waar je op durft te vertrouwen; daarna wordt het pas interessant. Elke fase hoort op zichzelf af te zijn, want een half afgemaakte flow-engine is erger dan geen.</p>
+    <ol class="steps">
+      <li class="step">
+        <h3>Het model</h3>
+        <p><code>packages/flow</code> met de kaarten, de lijnen, de tokens en het doorlopen van de graaf als pure functies, inclusief de doorsnede die bepaalt welke tokens een kaart mag zien. De tokensets in <code>packages/contracts</code>. Geen UI, geen daemon, wel tests. Aan het eind staat vast wat een flow <em>is</em>, en dat is het stuk waar een verkeerde keuze het duurst is.</p>
+      </li>
+      <li class="step">
+        <h3>De runner, met twee triggers en twee acties</h3>
+        <p>Het recept als bestand in <code>.ruimte/flows</code>, de schakelaar onder <code>$RUIMTE_HOME</code>, de runner op de outbox, de timeline. Triggers: op een tijdstip en een bestand veranderde. Acties: toon een melding en stuur een bericht naar een chat. Daarmee draait Bas' voorbeeld end to end en staat het skelet er.</p>
+        <p>Deze fase wacht op fase 2 van het delen-plan, want die legt de privemap aan en leert de daemon twee mappen lezen. Begin je eerder, dan bouw je een opslag die daarna weer weg moet.</p>
+      </li>
+      <li class="step">
+        <h3>De editor</h3>
+        <p>Het werkblad als view-soort, op de bestaande canvaslaag: <code>edge-route.ts</code> voor de lijnen, <code>PortHints</code> voor de poorten, dezelfde selectie en camera. Plus de kaartvorm, de tokenchips en de keuzelijst die uit de schema's komt. Aan het eind kan een mens een flow tekenen zonder JSON te schrijven.</p>
+      </li>
+      <li class="step">
+        <h3>Testen en inzicht</h3>
+        <p>De timeline in beeld, de drie testknoppen, de tokenpopup met voorbeelden uit de schema's, de droge stand met de vlag per kaartsoort, en de graaf die oplicht terwijl een run loopt. Plus opnieuw draaien met de tokens van een eerdere run en de meekijkstand. Dit is de fase die je wilt overslaan en waar je later spijt van krijgt, en het is ook de fase die bepaalt of iemand fase 5 ooit aandurft.</p>
+      </li>
+      <li class="step">
+        <h3>De agenttriggers en de agentacties</h3>
+        <p>De hele eerste tabel uit het Als-hoofdstuk, plus start een agent, stuur een bericht en merge een worktree. Het modeplafond, het budget en de diepterem gaan tegelijk mee, niet erna. Hier wordt de feature pas de reden om hem te bouwen.</p>
+      </li>
+      <li class="step">
+        <h3>E-mail, beide kanten op</h3>
+        <p>Het projectadres, de Email Worker met de afzenderlijst en de handtekeningcontrole, de wachtrij voor een slapende machine, en het versturen. De vier regels uit het e-mailhoofdstuk horen bij deze fase en niet bij een latere.</p>
+      </li>
+      <li class="step">
+        <h3>Overal aanroepbaar</h3>
+        <p><code>ruimte-context flow</code> voor agents, flows in het palet en met een sneltoets, met stem, en op de iPhone. Plus de twee condities die buiten de gewone vorm vallen: een model zegt ja en ik zeg ja.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section id="open">
+    <h2>Open vragen voor Bas</h2>
+    <ol>
+      <li><strong>Waar horen flows die nergens bij een project horen?</strong> Met de tekening in <code>.ruimte/flows</code> is een flow per project, en dat is voor bijna alles goed. Maar "elke ochtend om 07:00 een overzicht van al mijn machines" hoort nergens bij een project. Voorstel: dat kan later, in een tweede plek onder <code>$RUIMTE_HOME</code>, en dat hoeft nu niet opgelost.</li>
+      <li><strong>Krijgen flows mappen?</strong> Homey heeft <code>folder</code> op een flow en Bas gebruikt dat: Avondstand zit in een map, Claude Task niet. Bij dertig flows wil je die indeling. De vraag is of het bij de eerste versie hoort of dat platte lijst met zoeken voorlopig genoeg is.</li>
+      <li><strong>Een foutpoort of een fouttoken?</strong> In de vier flows die ik las komt geen foutuitgang voor, en Homey's eigen documentatie zegt dat een fout in een Error-token terechtkomt. Dat is een derde antwoord dat ik niet had: geen tweede poort, maar een token dat gevuld is als het misging. Voor Ruimte lijkt een poort me beter, want "de agent startte niet" hoort een ander pad te nemen en niet een tekstveld te vullen. Maar dan wel alleen op de acties die echt kunnen falen, anders staat elk werkblad twee keer zo vol.</li>
+      <li><strong>E-mail via een Ruimte-adres of via de mailbox van de gebruiker?</strong> Het adres is veiliger en kost een stuk Worker. IMAP is vertrouwder voor een gebruiker en vraagt een geheimenkluis die er niet is.</li>
+      <li><strong>Mag een flow een agent starten zonder dat een mens per run bevestigt?</strong> Ik zeg ja, met een plafond en een budget, anders is de nachtploeg onmogelijk. Maar het is de beslissing waar het meeste aan hangt en het is niet aan mij.</li>
+      <li><strong>Hoe streng breekt een wijziging de schakelaar?</strong> Het delen-ontwerp zegt dat hij terugvalt op uit als het recept verandert, maar niet hoe fijn dat gemeten wordt. Mijn voorstel is een hash over alles behalve <code>x</code> en <code>y</code>, dus elke inhoudelijke wijziging zet de flow uit. Dat is veilig en het is ook irritant bij het bouwen. Het alternatief vraagt per kaartsoort een oordeel over wat betekenisvol is, en die lijst wordt een keer verkeerd ingevuld.</li>
+      <li><strong>Hoort "wacht op de echte trigger" in de eerste versie?</strong> Het is mijn beste antwoord op het tokenprobleem, want je krijgt echte waarden in plaats van verzonnen waarden. Maar het betekent wel dat een flow die uit staat toch op zijn trigger luistert, en dat is een half tweede pad door de runner. De goedkope variant is beginnen met de andere drie bronnen en dit erbij bouwen zodra blijkt dat de popup te vaak wordt weggeklikt.</li>
+      <li><strong>Krijgt een kaart die een persoon aanwijst de waarde "wie deze flow aanzette"?</strong> Dat is mijn antwoord op de vraag hoe een push-kaart in een gedeelde flow bij de juiste persoon terechtkomt, en het scheelt een overlay zoals een gedeeld canvas die heeft. Het kan ook andersom: zo'n kaart maakt een flow ondeelbaar en hij hoort dus in de privemap. Dat is strenger en minder bruikbaar.</li>
+    </ol>
+  </section>
+
+  <section id="log">
+    <h2>Revisielog</h2>
+    <div class="table" role="region" aria-label="Wijzigingen aan dit rapport" tabindex="0">
+      <table>
+        <thead><tr><th style="width:20%">Datum</th><th style="width:22%">Stand</th><th>Wat</th></tr></thead>
+        <tbody>
+          <tr><td>19 september 2026</td><td><span class="badge info">Eerste versie</span></td><td>Het ontwerp, de 59 kaartjes, het e-mailvoorstel en zes open vragen. Aanbeveling was de kolomvorm.</td></tr>
+          <tr><td>20 september 2026</td><td><span class="badge confirmed">Gebouwd, fase 1 tot en met 3</span></td><td>Het model (<code>packages/flow</code>), de runner op de outbox en het werkblad staan op main. Drie dingen die het rapport openliet zijn onderweg beslist: de notatie van een tokenverwijzing is <code>@[&lt;cardId&gt;.&lt;token&gt;]</code> geworden, een actie die kan falen krijgt een <code>error</code>-poort naast <code>done</code>, en de schakelaar breekt op een hash over alles behalve <code>x</code> en <code>y</code>. Vier dingen liepen anders dan het plan zei. De tekstconditie moest mee in fase 2, want zonder haar draait het voorbeeld uit dit rapport niet end to end. Het kaartje "een bestand veranderde" publiceert zijn pad en de tekst van het bestand, nog niet de diff of wie de schrijf deed: dat vraagt git en de hooks, en die horen bij fase 5. De scriptkaart uit de ingebouwde zes is er nog niet, omdat hij hetzelfde is als de commandoactie die later komt. En de timeline staat er wel, op schijf en met een event per run, maar nog zonder scherm: dat is fase 4. Onderweg kreeg <code>ProjectStore.place</code> er de gedeelde lijst bij, zodat de runner het recept van een gesloten project aan de juiste kant vindt, en kreeg een outbox-entry een <code>notBefore</code>, wat een wacht en een tijdstip allebei dragen.</td></tr>
+          <tr><td>19 september 2026</td><td><span class="badge confirmed">Vierde ronde</span></td><td>Aangepast op het vastgestelde delen-ontwerp. Het recept woont in <code>.ruimte/flows</code> en de schakelaar onder <code>$RUIMTE_HOME</code>, dus de importstap is vervallen en de eigen flowstore ook. Een flow is daarmee een view en geen node, wat een open vraag sluit. Nieuw: hoe een gedeelde flow omgaat met paden en met een kaart die een persoon aanwijst. Fase 2 hangt nu aan fase 2 van het delen-plan.</td></tr>
+          <tr><td>19 september 2026</td><td><span class="badge confirmed">Derde ronde</span></td><td>Bas vroeg om testen. Nieuw hoofdstuk: play op een Als-kaart, "testen vanaf hier" op elke kaart, vier bronnen voor de ontbrekende tokens, droog als standaard met een vlag per kaartsoort, en de graaf die oplicht. De timeline is ingekort omdat een deel ervan hier hoort. Open vraag over de foutpoort bijgewerkt met Homey's Error-token.</td></tr>
+          <tr><td>19 september 2026</td><td><span class="badge confirmed">Tweede ronde</span></td><td>Bas koos de Advanced Flow-vorm en meldde dat <code>project.json</code> gesplitst wordt. Herschreven: het uitvoeringsmodel van de graaf, een nieuw hoofdstuk over het datamodel gelezen uit vier echte Homey-flows, de kaartvorm, de opslag in drie plekken, en tokens die op kaart-id verwijzen. Twee vragen gesloten, drie nieuwe erbij.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<footer>
+  <p>Dit rapport was ontwerp en is sinds 20 september voor een deel verslag: wat er van fase 1 tot en met 3 staat en wat er anders liep, staat in het revisielog. Fase 4 tot en met 7 zijn nog ontwerp, en er is niets gemeten. Het Advanced Flow-model is niet uit documentatie overgenomen maar gelezen uit de opslag van vier flows in Bas' eigen Homey: Avondstand (vijf triggers, twee <code>any</code>-kaarten, <code>inverted</code> op condities), Brandalarm (drie losse ketens op een werkblad), Thuiskomen (een <code>all</code>-kaart met een eigen <code>input</code>-lijst en twee <code>delay</code>-kaarten) en Claude Task (de <code>start</code>-kaart, tokens als <code>[[trigger::&lt;id&gt;::naam]]</code>, een <code>droptoken</code> voor een afbeelding). Dat de <code>any</code>-, <code>all</code>-, <code>delay</code>-, <code>note</code>- en scriptkaart de ingebouwde kaarten zijn, staat op Homey's eigen featurepagina. Alles over waar een flow woont komt uit <a href="2026-09-19-delen.html">het delen-ontwerp</a>, dat op 19 september is vastgesteld; dit rapport neemt daar geen eigen standpunt meer over in en volgt de lagen die daar liggen. Wat verder geverifieerd is: dat <code>packages/actions</code> een actor per aanroep draagt en <code>automation</code> al kent, dat agentstatus uit de hooks komt en niet uit output, dat de outbox duurzaam is en een herstart overleeft, dat een kindagent een modeplafond meekrijgt op zijn <code>start-agent</code>, dat een plan onder <code>$RUIMTE_HOME</code> woont en niet in <code>project.json</code>, en dat port discovery en de actieregistratie als open werk in <code>docs/NEXT.md</code> staan. Gelezen op main, commit 1bbf73cc.</p>
+  <p>Niet geverifieerd, en het uitzoeken waard voordat er iets gebouwd wordt: of Cloudflare Email Routing binnen de grenzen van de bestaande Worker past en wat het met bijlagen doet, of een bestandswatch op een grote repo goedkoop genoeg is om altijd aan te staan, en wat er nodig is om het einde van een commando in een PTY te zien zonder de shell van de gebruiker over te nemen. Die drie bepalen of respectievelijk fase 6, fase 2 en een trigger uit fase 5 haalbaar zijn. Ook niet geverifieerd: of <code>edge-route.ts</code> zonder aanpassing een graaf met vijftig kaarten aankan, en of een actiekaart in Advanced Flow een foutuitgang heeft; in de vier gelezen flows komt er geen <code>outputError</code> voor, maar dat bewijst niets.</p>
+</footer>
+</body>
+</html>

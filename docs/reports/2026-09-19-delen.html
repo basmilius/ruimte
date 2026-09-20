@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Delen</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #353e53;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--reference); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#kern">Naar de kern</a>
+<header>
+  <p class="eyebrow">Ruimte / Ontwerp in uitvoering / 19 september 2026</p>
+  <h1>Delen</h1>
+  <p class="intro">De <code>.ruimte</code>-map is vandaag een privézaak die toevallig in de repo ligt. Dit rapport maakt er een bewuste tweedeling van: wat je met je team deelt gaat in git, wat van jou is blijft eruit, en niets gaat mee tenzij je het aanwijst. Het raakt vier bestanden, één versienummer en één merge-controle die hierdoor stukgaat.</p>
+  <p class="status">Gebouwd op 19 september, vier fasen, op main</p>
+  <p class="caption">Werkdocument, aanleiding is Bas' voorstel van vandaag. Gelezen op main, commit <code>1bbf73cc</code>. Bronnen: <code>packages/contracts/src/project.ts</code>, <code>apps/server/src/projects</code>, <code>apps/server/src/git</code>, <code>apps/client/src/project</code>, <code>docs/reports/2026-09-19-flows.html</code>.</p>
+  <nav aria-label="Inhoud">
+    <a href="#kern">De kern</a>
+    <a href="#vandaag">Vandaag</a>
+    <a href="#werkplek">Een werkplek</a>
+    <a href="#lagen">Vier lagen</a>
+    <a href="#map">De map</a>
+    <a href="#velden">Welk veld</a>
+    <a href="#eenheid">Eenheid van delen</a>
+    <a href="#wire">Over de wire</a>
+    <a href="#diff">Leesbaar voor git</a>
+    <a href="#worktree">De merge die breekt</a>
+    <a href="#ui">Het menu</a>
+    <a href="#agents">Wat een agent mag</a>
+    <a href="#flows">Flows</a>
+    <a href="#migratie">Migratie</a>
+    <a href="#raakt">Wat dit raakt</a>
+    <a href="#plan">Plan</a>
+    <a href="#besloten">Besloten</a>
+    <a href="#prompt">Startprompt</a>
+    <a href="#log">Revisielog</a>
+  </nav>
+</header>
+<main>
+  <section id="kern" class="recommendation">
+    <h2>De kern</h2>
+    <p>Bas vraagt vier dingen: een <code>.gitignore</code> in <code>.ruimte</code>, een splitsing van <code>project.json</code>, delen per view via het contextmenu, en een vorm waar Flows straks op past. Het zijn geen vier problemen. Het is er één, en de rest volgt eruit zodra je hem goed stelt.</p>
+    <p>Die vraag is: <strong>wat is een canvas eigenlijk, als twee mensen ernaar kijken?</strong> Mijn antwoord is dat een canvas een indeling is en geen inhoud. Waar de nodes staan, hoe ze heten, welke lijnen ertussen lopen en welke agent op welke plek hoort, dat is de plattegrond van je werk en die is precies wat je wilt delen. Het gesprek in die chat, de sessie in die terminal, de worktree waar hij in draait: dat is van jou en dat blijft van jou. Ruimte is daar al op gebouwd, want de inhoud staat allang buiten <code>project.json</code>.</p>
+    <p>Concreet stel ik voor: één map <code>.ruimte/private/</code> die de spiegel is van <code>.ruimte/</code> zelf, één regel in een <code>.gitignore</code> die Ruimte zelf schrijft, en op de wire precies één nieuw veld. Niets is standaard gedeeld. Delen is een menu-item op een rij in de zijbalk, en het schrijft een entry van het ene bestand naar het andere. Voor Flows lost dit de patstelling uit <a href="2026-09-19-flows.html">het flow-rapport</a> op: het recept mag in git, de schakelaar nooit.</p>
+    <p>De prijs staat eerlijk in dit rapport. Het bestandsformaat gaat naar versie 3, en een oudere Ruimte hernoemt zo'n bestand vandaag naar <code>.corrupt</code> en zet er een leeg canvas voor in de plaats. Bas maakt die sprong in één release, dus wie achterloopt ziet zijn project niet opengaan. Wat wel eerst moet: zodra <code>.ruimte/project.json</code> in git staat, weigert elke worktree-merge van een agent, omdat de controle op een schone doelmap dan altijd afgaat.</p>
+    <div class="stats">
+      <div><strong>27</strong><span>views in dit project, waarvan 12 chats</span></div>
+      <div><strong>5</strong><span>soorten bestanden die Ruimte in <code>.ruimte</code> schrijft</span></div>
+      <div><strong>0</strong><span>plekken die vandaag een <code>.gitignore</code> schrijven</span></div>
+      <div><strong>1</strong><span>bestaande controle die hierdoor breekt</span></div>
+    </div>
+  </section>
+
+  <section id="vandaag">
+    <h2>Wat er vandaag staat</h2>
+    <p>Ruimte schrijft vijf soorten bestanden in de projectmap, en alle vijf horen bij elkaar in één map die niemand ooit een status heeft gegeven.</p>
+    <div class="table" role="region" aria-label="Wat Ruimte in de projectmap schrijft" tabindex="0">
+      <table>
+        <thead><tr><th style="width:34%">Pad</th><th style="width:22%">Wanneer geschreven</th><th>Wat erin staat</th></tr></thead>
+        <tbody>
+          <tr><td><code>.ruimte/project.json</code></td><td>Bij openen als hij ontbreekt, daarna bij elke bewerking</td><td>Naam, kleur, icoon en alle views met hun nodes, teksten, lijnen en arrangementen</td></tr>
+          <tr><td><code>.ruimte/settings.json</code></td><td>Alleen als je gedeelde worktree-paden instelt</td><td><code>worktrees.share</code>, de paden die in elke worktree gelinkt worden</td></tr>
+          <tr><td><code>.ruimte/icon.&lt;ext&gt;</code></td><td>Alleen als je een icoon kiest</td><td>De afbeelding zelf</td></tr>
+          <tr><td><code>.ruimte/drawings/&lt;viewId&gt;.json</code></td><td>Bij elke tekenhandeling</td><td>De elementen van één tekening, één per regel</td></tr>
+          <tr><td><code>.ruimte/diagrams/&lt;viewId&gt;.json</code></td><td>Bij elke diagramwijziging</td><td>De graaf van één diagram, één element per regel</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Wat er nadrukkelijk <em>niet</em> in staat is net zo belangrijk. Chattranscripten, plannen, taken, afstamming, wachtende prompts, de outbox en de worktrees zitten allemaal onder <code>$RUIMTE_HOME</code>. Camera, zoom, panelen, tabbladen en de rasterindeling staan in <code>$RUIMTE_HOME/projects/&lt;id&gt;.local.json</code> per machine en in <code>localStorage</code> onder <code>ruimte.local</code> per client. De scheiding tussen "het project" en "hoe ik ernaar kijk" is dus al getrokken. Wat ontbreekt is de scheiding tussen "het project" en "mijn werk erin".</p>
+    <p>Er is geen enkele plek in de codebase die een <code>.gitignore</code> in <code>.ruimte</code> schrijft of leest. Wat wel bestaat: <code>apps/server/src/git/ignore.ts</code> kan git vragen of een pad genegeerd wordt, en de worktree-code schrijft regels in <code>.git/info/exclude</code> voor gedeelde paden. Het gevolg is dat <code>.ruimte</code> vandaag als untracked map in het git-paneel verschijnt, en dat iedereen daar zelf iets van moet vinden.</p>
+    <p class="note">Ruimte's eigen repository heeft <code>.ruimte/</code> op regel 8 van de root-<code>.gitignore</code> staan. Bas deelt zijn eigen canvas dus met niemand, ook niet met zichzelf in een worktree. Dat is de eerlijkste samenvatting van de huidige stand: het bestand is ontworpen om in git te leven, en in de praktijk houdt iedereen het eruit omdat er geen regel is die zegt wat er wel en niet in hoort.</p>
+  </section>
+
+  <section id="werkplek">
+    <h2>Wat je deelt is een werkplek, geen gesprek</h2>
+    <p>Dit is het idee waar de rest uit volgt, dus het verdient een eigen paragraaf.</p>
+    <p>Een node-id is tegelijk een sessie-id. Staat er een chat-node met id <code>01K7...</code> op het canvas, dan hoort daar bij mij <code>$RUIMTE_HOME/chats/01K7....json</code> bij. Deel ik dat canvas met een collega, dan krijgt hij dezelfde node met hetzelfde id, en bij hem bestaat dat chatbestand niet. Hij klikt erop en krijgt een leeg gesprek met dezelfde opzet: dezelfde CLI, dezelfde map, dezelfde titel.</p>
+    <p>Dat klinkt eerst als een gebrek. Het is het model. Een gedeeld canvas is een kantoorplattegrond, geen kantoor. Jullie hebben hetzelfde bureau op dezelfde plek staan met hetzelfde bordje erop, en wat er in de la ligt is van de persoon die eraan zit. Twee mensen die allebei "Release checken" op hun eigen manier draaien op een canvas dat zegt waar dat hoort te gebeuren, dat is precies wat een team van AI Engineers nodig heeft. Een gedeeld gesprek is dat niet, en het zou ook niet kunnen: twee CLI's die in dezelfde transcriptie schrijven leveren rommel op.</p>
+    <p>Daarmee ligt de scheidslijn vanzelf. Alles wat zegt <em>wat er hoort te gebeuren en waar</em> mag in git. Alles wat zegt <em>hoe ver ik ben</em> blijft eruit.</p>
+  </section>
+
+  <section id="lagen">
+    <h2>Vier lagen</h2>
+    <p>Er zijn er straks vier, en twee daarvan bestaan al en veranderen niet.</p>
+    <div class="table" role="region" aria-label="De vier lagen state" tabindex="0">
+      <table>
+        <thead><tr><th style="width:18%">Laag</th><th style="width:30%">Waar</th><th style="width:14%">In git</th><th>Wat erin hoort</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Team</strong></td><td><code>.ruimte/</code></td><td><span class="badge confirmed">ja</span></td><td>De views die je aanwees, met hun nodes, teksten, lijnen en tekeningen. Naam, kleur, icoon, worktree-instellingen.</td></tr>
+          <tr><td><strong>Persoon</strong></td><td><code>.ruimte/private/</code></td><td><span class="badge danger">nee</span></td><td>Je eigen views, je eigen nodes op een gedeeld canvas, en per gedeelde node de velden die niet mee mogen.</td></tr>
+          <tr><td><strong>Machine</strong></td><td><code>$RUIMTE_HOME/projects/&lt;id&gt;.local.json</code></td><td><span class="badge info">n.v.t.</span></td><td>Bestaat al. Camera per view, actieve view, panelen, tabbladen, rasterindeling.</td></tr>
+          <tr><td><strong>Client</strong></td><td><code>localStorage: ruimte.local</code></td><td><span class="badge info">n.v.t.</span></td><td>Bestaat al. Hetzelfde als de machinelaag, maar dan van dit venster, gelegd over de machinelaag heen.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>De vraag waarom de persoonslaag in de projectmap staat en niet onder <code>$RUIMTE_HOME</code> is terecht. Twee redenen. Hij hoort bij de map: kopieer je het project naar een andere schijf, dan gaat je eigen canvas mee. En hij volgt dezelfde revisiediscipline en dezelfde watcher als het gedeelde bestand, wat een hoop code scheelt ten opzichte van een derde opslagplek met eigen regels.</p>
+    <p>Wat er nadrukkelijk <em>niet</em> in de persoonslaag hoort: alles wat de daemon tegen een agent afdwingt. Diepte, afstamming, taken en het permissieplafond blijven onder <code>$RUIMTE_HOME</code>, want een agent met een shell kan elk bestand in de projectmap herschrijven. Die regel staat al in <code>CLAUDE.md</code> en dit voorstel verandert er niets aan. De persoonslaag is privé in de zin van "niet met je team", niet in de zin van "beveiligd".</p>
+  </section>
+
+  <section id="map">
+    <h2>De map, en waarom het een map is</h2>
+    <p>Bas stelde <code>project.json</code> naast <code>project.private.json</code> voor en koos daarna voor de map. Terecht, want het paar breekt bij het eerste volgende bestand. Een tekening op een privé-view moet ook buiten git blijven, en dan krijg je <code>drawings/</code> naast <code>drawings.private/</code>, en straks hetzelfde voor diagrammen en flows. Vier paren in een <code>.gitignore</code> die iemand moet onderhouden. Eén map met dezelfde indeling erin kost één regel en schaalt vanzelf mee.</p>
+<pre><code>.ruimte/
+    .gitignore              in git, geschreven door Ruimte
+    project.json            in git: de views die je deelt
+    settings.json           in git: worktrees.share
+    icon.png                in git
+    drawings/&lt;id&gt;.json      in git: tekeningen van gedeelde views
+    diagrams/&lt;id&gt;.json      in git
+    flows/&lt;id&gt;.json         in git, straks
+    private/                nooit in git
+        project.json        je eigen views, je overlays, de rev
+        drawings/&lt;id&gt;.json
+        diagrams/&lt;id&gt;.json
+        flows/&lt;id&gt;.json</code></pre>
+    <p>De <code>.gitignore</code> die Ruimte schrijft, en die zelf wel in git gaat:</p>
+<pre><code># Ruimte writes this folder. Everything here is meant to be committed,
+# except what belongs to one person or to one machine.
+private/
+*.corrupt-*
+*.tmp</code></pre>
+    <p>De laatste twee regels gaan over rommel. Ruimte hernoemt een onleesbaar bestand naar <code>&lt;naam&gt;.corrupt-&lt;tijdstip&gt;</code> en schrijft elke wijziging eerst naar <code>&lt;naam&gt;.&lt;pid&gt;-&lt;n&gt;.tmp</code> voordat hij hem op zijn plek schuift. Het tijdelijke bestand leeft normaal een paar milliseconden, maar een crash laat er een liggen en die hoort niet in een commit.</p>
+    <p>Ruimte schrijft deze <code>.gitignore</code> één keer, bij het openen van een project waar hij ontbreekt, en raakt hem daarna nooit meer aan. Iemand die de regels aanpast houdt zijn aanpassing. Dat is dezelfde afspraak die <code>settings.json</code> al volgt: onbekende sleutels blijven staan.</p>
+    <p>De inhoud van <code>private/project.json</code> heeft dezelfde vorm als het gedeelde bestand, met twee dingen erbij:</p>
+<pre><code>{
+    "version": 1,
+    "rev": 87,
+    "views": [
+        { "kind": "chat", "id": "01J7QK...", "name": "Auth opruimen",
+          "node": { "provider": "claude", "resume": "9f2c1a..." } }
+    ],
+    "order": ["main", "01J7QK...", "release"],
+    "overlay": {
+        "main": {
+            "01K3VP...": { "resume": "a31f09...", "runtimeMode": "acceptEdits" },
+            "01M8ZR...": { "worktree": { "path": "/Users/bas/.ruimte/worktrees/ruimte/feat-x",
+                                         "branch": "feat/x" } }
+        }
+    }
+}</code></pre>
+    <p>De <code>overlay</code> draagt per gedeeld canvas, per node, de velden die niet mee mogen. Bij het lezen legt de daemon ze over de gedeelde entry en levert één document af. De client merkt van de hele splitsing niets. Een node die je collega ophaalt heeft geen <code>resume</code>, dus hij krijgt dezelfde werkplek met een leeg gesprek erachter.</p>
+    <p><code>order</code> is de volgorde van de zijbalk over beide bestanden heen. Een id uit het gedeelde bestand dat hier ontbreekt, valt op zijn plek uit dat bestand: achter zijn voorganger. Zo schuift een view die je collega toevoegde vanzelf op de goede plek in jouw lijst, zonder dat iemand een volgorde hoeft te mergen.</p>
+  </section>
+
+  <section id="velden">
+    <h2>Welk veld gaat mee</h2>
+    <p>Een node heeft twintig velden en ze vallen in drie groepen. Deze tabel is de hele schoning.</p>
+    <div class="table wide" role="region" aria-label="Per veld: gedeeld of privé" tabindex="0">
+      <table>
+        <thead><tr><th style="width:20%">Veld</th><th style="width:14%">Waar</th><th>Waarom</th></tr></thead>
+        <tbody>
+          <tr><td><code>id</code>, <code>kind</code>, <code>title</code>, <code>titleSource</code></td><td><span class="badge confirmed">team</span></td><td>De plattegrond. Let op: een titel met <code>titleSource: 'auto'</code> heeft de CLI geschreven naar je eerste prompt, dus die zin gaat mee de repo in.</td></tr>
+          <tr><td><code>x</code>, <code>y</code>, <code>w</code>, <code>h</code>, <code>accent</code></td><td><span class="badge confirmed">team</span></td><td>Waar het ding staat. Dit is waar delen over gaat.</td></tr>
+          <tr><td><code>command</code></td><td><span class="badge confirmed">team</span></td><td>"Hier draait <code>bun dev</code>" is teamkennis.</td></tr>
+          <tr><td><code>provider</code>, <code>providerFixed</code></td><td><span class="badge confirmed">team</span></td><td>Welke CLI op deze plek hoort.</td></tr>
+          <tr><td><code>body</code>, <code>color</code></td><td><span class="badge confirmed">team</span></td><td>Een note is een briefje op de plattegrond en deel je bewust.</td></tr>
+          <tr><td><code>collapsed</code>, <code>memberIds</code>, <code>expandedHeight</code></td><td><span class="badge confirmed">team</span></td><td>De vorm van een groep hoort bij de indeling.</td></tr>
+          <tr><td><code>url</code></td><td><span class="badge confirmed">team</span></td><td>Een pagina die bij het project hoort. Wel het vermelden waard in de bevestiging, want een URL kan een token bevatten.</td></tr>
+          <tr><td><code>device</code></td><td><span class="badge confirmed">team</span></td><td>Het schema is al een draagbare identiteit; het oplossen naar een simulator hier is al lokaal.</td></tr>
+          <tr><td><code>viewId</code>, <code>raw</code></td><td><span class="badge confirmed">team</span></td><td>De verwijzing naar een tekening of diagram, en een entry van een nieuwere Ruimte die je ongewijzigd doorgeeft.</td></tr>
+          <tr><td><code>cwd</code>, <code>path</code></td><td><span class="badge warning">hangt ervan af</span></td><td>Relatief aan de projectmap gaat mee. Absoluut betekent "op mijn schijf" en blijft. Ruimte maakt paden binnen de map al relatief bij het schrijven.</td></tr>
+          <tr><td><code>resume</code></td><td><span class="badge danger">persoon</span></td><td>Het sessie-id van een CLI op jouw machine. Bij een ander wijst het nergens naar.</td></tr>
+          <tr><td><code>runtimeMode</code></td><td><span class="badge danger">persoon</span></td><td>Een permissieplafond. Niemand anders bepaalt in welke modus jouw agent start, ook niet per ongeluk via een pull.</td></tr>
+          <tr><td><code>worktree</code></td><td><span class="badge danger">persoon</span></td><td>Een absoluut pad onder <code>$RUIMTE_HOME/worktrees</code> plus een branch. Het pad bestaat alleen bij jou.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Twee regels erbij die de tabel niet kan zeggen. Een absoluut pad in een <code>cwd</code> of op een file-node gaat naar de overlay en de node gaat mee zonder dat veld; bij je collega valt hij terug op de projectmap of staat er een bestand dat hij niet heeft. Voor een file-<em>view</em> kan dat niet, want daar is het pad de hele view, dus zo'n view bied je niet aan om te delen.</p>
+    <p>Voor lijnen en arrangementen is geen keuze meer nodig sinds een canvas in zijn geheel gaat. Ze horen bij hun canvas en volgen het. Dat Ruimte vandaag al stil de lijnen weglaat die buiten hun canvas wijzen blijft een nuttige vangnetregel voor een pull die halverwege is.</p>
+  </section>
+
+  <section id="eenheid">
+    <h2>De eenheid van delen</h2>
+    <p>Je deelt een view, in zijn geheel of niet. Dat is Bas' keuze en het is de goede: een canvas half delen zou betekenen dat je collega lijnen krijgt naar nodes die er bij hem niet zijn, en dat je bij elke node opnieuw een beslissing neemt die je na een week niet meer overziet.</p>
+    <p>Het scheelt ook aan de binnenkant meer dan je zou denken. Een lijn is gedeeld zodra zijn canvas dat is, dus daar hoeft niets gekozen of geschoond te worden. Een arrangement noemt alleen nog ids die bestaan. De <code>shared</code>-lijst op de wire bevat alleen view-ids. En de overlay draagt geen hele nodes meer, alleen velden, wat hem terugbrengt tot wat hij echt is: een klein setje sessiehaken.</p>
+    <p>De prijs is dat je eigen terminal met je eigen logs niet op een teamcanvas kan staan. Die zet je op een view ernaast. Dat is een echt gemis en het is het waard, want het alternatief is dat iedereen naar hetzelfde canvas kijkt en iets anders ziet.</p>
+    <p>Wat een view ook niet kan: gedeeld zijn met één persoon. Er is geen toegangsbeheer, er is alleen git. Wie de repo kan lezen ziet wat je deelde. Dat is de goede afweging, want alles wat fijnmaziger is vraagt om een server die weet wie wie is, en Ruimte heeft die bewust niet in het pad tussen twee mensen.</p>
+    <p class="note">In een project dat niet in een git-repo ligt is delen betekenisloos. Ruimte weet dat: <code>git.capabilities</code> staat al op de wire. Zonder repo verdwijnt het menu-item en blijft alles in de persoonslaag. Het gedeelde bestand wordt dan nog steeds geschreven, want naam, kleur en icoon horen erin, maar het blijft verder leeg.</p>
+  </section>
+  <section id="wire">
+    <h2>Wat er over de wire verandert</h2>
+    <p>Bijna niets, en dat is het punt. De client blijft één document lezen en één document schrijven. De daemon splitst bij het schrijven en voegt samen bij het lezen.</p>
+    <figure>
+      <svg class="diagram" viewBox="0 0 680 250" role="img" aria-labelledby="wire-titel wire-desc" width="680" height="250">
+        <title id="wire-titel">Eén document op de wire, twee bestanden op schijf</title>
+        <desc id="wire-desc">De client stuurt één document naar de daemon. De daemon schrijft de gedeelde entries naar punt ruimte slash project punt json, die in git gaat en bij een collega terechtkomt, en de rest naar punt ruimte slash private, die nooit in git gaat.</desc>
+        <defs>
+          <marker id="wire-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker>
+        </defs>
+        <rect class="node" x="1" y="95" width="112" height="54" rx="10"/>
+        <text x="57" y="118" text-anchor="middle" font-size="14">Client</text>
+        <text class="label" x="57" y="136" text-anchor="middle" font-size="12">één document</text>
+        <path class="edge" d="M113 122 H 145" marker-end="url(#wire-arrow)"/>
+        <rect class="node" x="153" y="95" width="130" height="54" rx="10"/>
+        <text x="218" y="118" text-anchor="middle" font-size="14">Daemon</text>
+        <text class="label" x="218" y="136" text-anchor="middle" font-size="12">splitst en voegt samen</text>
+        <path class="edge" d="M283 122 C 305 122, 305 52, 323 52" marker-end="url(#wire-arrow)"/>
+        <path class="edge" d="M283 122 C 305 122, 305 192, 323 192" marker-end="url(#wire-arrow)"/>
+        <rect class="node" x="331" y="25" width="164" height="54" rx="10"/>
+        <text x="413" y="48" text-anchor="middle" font-size="13">.ruimte/project.json</text>
+        <text class="label" x="413" y="66" text-anchor="middle" font-size="12">in git</text>
+        <rect class="node" x="331" y="165" width="164" height="54" rx="10"/>
+        <text x="413" y="188" text-anchor="middle" font-size="13">.ruimte/private/</text>
+        <text class="label" x="413" y="206" text-anchor="middle" font-size="12">nooit in git</text>
+        <path class="edge" d="M495 52 H 527" marker-end="url(#wire-arrow)"/>
+        <text class="label" x="511" y="42" text-anchor="middle" font-size="11">push</text>
+        <rect class="node" x="535" y="25" width="144" height="54" rx="10"/>
+        <text x="607" y="48" text-anchor="middle" font-size="14">Je collega</text>
+        <text class="label" x="607" y="66" text-anchor="middle" font-size="12">zelfde plattegrond</text>
+        <text class="reference" x="413" y="243" text-anchor="middle" font-size="12">de rev leeft links van deze streep</text>
+      </svg>
+      <figcaption>De splitsing zit in de daemon. Voor de client is een gedeelde view een view met een vinkje.</figcaption>
+    </figure>
+    <p>Het ene nieuwe veld is <code>shared: string[]</code> op het document: de view-ids die in het gedeelde bestand staan. Omdat een canvas in zijn geheel gaat, staat er nooit een node in en blijft het een korte lijst.</p>
+    <p>Die lijst wordt nergens opgeslagen. Hij volgt uit welk bestand een entry in stond, en bij het schrijven bepaalt hij waar hij heen gaat. Er is dus niets dat uit de pas kan lopen en niets dat kan conflicteren. Delen is: een id aan de lijst toevoegen en opslaan.</p>
+    <p>De <code>rev</code> blijft één getal voor het hele document en verhuist naar het privébestand. Dat is geen detail. Vandaag staat <code>"rev": 44</code> op regel drie van <code>project.json</code> en gaat hij omhoog bij elke schrijfactie, dus bij elke pull met werk van een ander conflicteert precies die regel. Eén onoplosbare merge-conflict per samenwerking is genoeg om de hele feature te laten mislukken. De rev hoort bij "wie schreef het laatst op deze machine" en niet bij de inhoud, dus hij hoort thuis in het bestand dat niet reist.</p>
+    <p>Dat de client dit aankan is al gebouwd. <code>apps/client/src/project/merge.ts</code> is 426 regels drieweg-merge per canvas, met een basis, een patch per view en een conflictbanner voor wat niet lukt. Die code is geschreven voor een <code>project.changed</code> na een git pull en heeft nooit een echte pull gezien. Dit voorstel is het eerste dat hem gebruikt waarvoor hij bedoeld is.</p>
+  </section>
+
+  <section id="diff">
+    <h2>Het bestand leesbaar houden voor git</h2>
+    <p><code>project.json</code> gaat vandaag door <code>JSON.stringify(content, null, 2)</code>. Eén node kost dan twintig regels, en twee mensen die ieder een andere node verplaatsen raken elkaars regels niet, dus dat gaat goed. Waar het misgaat is aan het eind van een array: twee mensen die ieder een node toevoegen schrijven allebei op dezelfde plek, en git ziet een conflict.</p>
+    <p>Ruimte heeft de oplossing al twee keer geschreven. <code>serializeDrawing</code> en <code>serializeDiagram</code> in <code>apps/server/src/projects/project-files.ts</code> zetten elk element op één regel, precies om een diff leesbaar te houden. Doe hetzelfde voor <code>project.json</code>: één node, één tekst, één lijn per regel. Dan is een node verplaatsen één gewijzigde regel, en een node toevoegen één regel erbij.</p>
+    <div class="split">
+      <div class="panel">
+        <h3>Vandaag</h3>
+        <p>Een node verplaatsen levert een diff van twee regels binnen een blok van twintig. Een node toevoegen zet twintig regels aan het eind van een array. Twee mensen die dat tegelijk doen krijgen een conflict dat met de hand opgelost moet worden.</p>
+      </div>
+      <div class="panel">
+        <h3>Met één regel per entry</h3>
+        <p>Een node verplaatsen is één regel. Een node toevoegen is één regel. Twee mensen die ieder een andere node toevoegen krijgen twee regels op elkaar en dat is het enige geval dat git nog aan de gebruiker voorlegt.</p>
+      </div>
+    </div>
+    <p>Of de nodes op id gesorteerd moeten worden in plaats van op stapelvolgorde heb ik overwogen en verworpen. De volgorde van de array <em>is</em> de z-index. Sorteren op id zou een apart veld vragen, en dan schrijf je een getal dat verandert zodra iemand iets naar voren haalt. De huidige vorm is eerlijker.</p>
+  </section>
+
+  <section id="worktree">
+    <h2>Wat dit kapotmaakt, en dat is niet niks</h2>
+    <p>Dit is de enige echte regressie in het voorstel en hij is scherp. <code>apps/server/src/git/worktree-merge.ts</code> weigert een merge als de doel-checkout eigen wijzigingen heeft:</p>
+<pre><code>// Untracked files do not count: git refuses a merge that would overwrite one,
+// and the project's own .ruimte folder is often one.
+if (limits.cleanTarget === true &amp;&amp;
+    (await git(['status', '--porcelain', '--untracked-files=no'], target.path))?.trim() !== '') {
+    throw new GitError('target-dirty', ...);
+}</code></pre>
+    <p>Lees het commentaar nog eens. Die controle klopt vandaag <em>omdat</em> <code>.ruimte</code> untracked is. Zet <code>.ruimte/project.json</code> in git en de zin klopt niet meer: elke node die je verplaatst maakt de hoofdmap vuil, en <code>cleanTarget</code> geldt voor agents. Het gevolg is dat vanaf dat moment elke worktree-merge door een agent weigert met <code>target-dirty</code>, de hele dag, zonder dat iemand begrijpt waarom.</p>
+    <p>De fix is één pathspec: sluit <code>.ruimte</code> uit van die controle. Wat er in de projectmap aan Ruimte's eigen bestanden verandert gaat nooit over de code die gemerged wordt, en een merge overschrijft ze ook niet.</p>
+<pre><code>git status --porcelain --untracked-files=no -- . ':(exclude).ruimte'</code></pre>
+    <p>Er is nog een tweede gevolg dat minder erg is maar wel uitgelegd moet worden. Een worktree is een gewone checkout, dus zodra <code>.ruimte/project.json</code> gecommit is krijgt elke worktree er een kopie van. Niemand schrijft erin, want een agent in een worktree muteert de <code>project.json</code> van de hoofdmap. Het bestand ligt daar dus stil en veroorzaakt geen conflict. Het wordt pas iets als iemand een worktree als los project opent, en dan heb je twee projecten op twee branches die hetzelfde bestand op verschillende versies hebben. Dat is vandaag ook al mogelijk en het is de moeite waard om het bij de eerste gelegenheid te blokkeren.</p>
+  </section>
+
+  <section id="ui">
+    <h2>Het menu, en wat je ziet</h2>
+    <p>Delen is één item op een plek die al bestaat. <code>apps/client/src/shell/ViewMenuItems.tsx</code> vult zowel het contextmenu van een rij in de zijbalk als dat van een celbalk, dus één item erbij verschijnt meteen op beide plekken. Nodes krijgen niets, want een node is geen eenheid meer.</p>
+    <div class="table" role="region" aria-label="De menu-items" tabindex="0">
+      <table>
+        <thead><tr><th style="width:30%">Item</th><th>Wanneer zichtbaar</th></tr></thead>
+        <tbody>
+          <tr><td>Delen met je team</td><td>Project in een git-repo, view staat nog niet in git</td></tr>
+          <tr><td>Uit git halen</td><td>View staat in git</td></tr>
+          <tr><td><em>geen van beide</em></td><td>Een file-view die naar een pad buiten het project wijst. Dat pad bestaat bij niemand anders, en zonder pad is de view leeg.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Een gedeelde rij krijgt een merk, en alleen een gedeelde: privé is de standaard en de standaard verdient geen icoon. Een Lucide <code>users</code> naast de naam, in de rustige kleur van de zijbalk en nooit in het accent, want de gridregel over het accent geldt hier net zo goed. In een repo waar het team veel deelt staat dat merk dan overal, en dat is goed: dan is dit een teamproject en zie je dat.</p>
+    <p>Geen dialoog. Bas' punt is dat dit onder engineers speelt, en hij heeft gelijk: er staat niets in git tot iemand commit, dus er valt weinig te bevestigen. Delen doet het meteen en zegt achteraf wat er gebeurde, met een ongedaan-maken ernaast. Eén zin volstaat, en hij noemt het aantal, want dat aantal is het enige dat je niet zag aankomen: <span class="caption">Release staat nu in git, met 12 nodes. Je gesprekken en sessies blijven hier.</span></p>
+    <p>De titels zijn de enige echte verrassing in het rijtje en die verdwijnt niet met een dialoog. Een chat-node heet "Auth opruimen voor de Acme-demo" omdat de CLI hem naar je eerste prompt noemde, en die zin gaat de repo in. Dat hoort in de documentatie en in de tekst van het menu-item, niet in een venster dat je wegklikt.</p>
+    <p>Ruimte commit niets. Het schrijft de bestanden en de wijziging verschijnt in het git-paneel dat er al staat, waar je hem samen met je code commit. Een aparte knop "deel en push" is verleidelijk en verkeerd: dan is Ruimte ineens een git-client met een mening.</p>
+    <p class="note">Teksten horen in <code>apps/client/src/i18n/locales/{en,nl}/shell.json</code>, met Engels als bron. In UI-taal heet dit "je team" en niet "git": git is hoe het werkt, niet wat het is. De machine-regel uit <code>CLAUDE.md</code> heeft precies dezelfde vorm.</p>
+  </section>
+
+  <section id="agents">
+    <h2>Wat een agent mag</h2>
+    <p>Zeven verbs schrijven vandaag in <code>project.json</code>: <code>agent</code>, <code>team</code>, <code>node new</code>, <code>node group</code>, <code>link new</code>, <code>view new</code> en <code>view diagram</code>, plus de bewerkende varianten daarvan. Aan de verbs zelf verandert niets. Wat een agent maakt komt in de view waarin hij werkt, en die view is gedeeld of niet.</p>
+    <p>Dat betekent dat een agent op een gedeeld canvas wél iets in de repo schrijft. Dat is geen gat in de regel, het is waar de regel over gaat. Een agent schrijft de hele dag in je working tree; hij schrijft code. Wat hem van de buitenwereld scheidt is de commit, en die doe jij. Git is de grens, niet het bestand. En het is een canvas dat je zelf hebt aangewezen als gedeeld, dus werk dat daar verschijnt hoort daar: dat is waarvoor je het deelde.</p>
+    <p>Wat een agent niet mag is de status van een view omzetten. Dat is de derde keer dat dezelfde grens getrokken wordt en dat maakt het een principe in plaats van een regel: <strong>een agent mag maken, een mens brengt naar buiten.</strong> Bij een device mag hij linken en niet aanmaken. Bij een flow mag hij schrijven en niet aanzetten. Bij een view mag hij hem maken en niet delen. In alle drie de gevallen staat het resultaat er klaar met een knop ernaast.</p>
+    <p>Een verb die om delen vraagt, iets als <code>ruimte-context view share</code> dat alleen een knop bij jou neerlegt, blijft achterwege. Een agent die iets deelbaars maakt kan het net zo goed zeggen.</p>
+  </section>
+
+  <section id="flows">
+    <h2>Wat dit voor Flows betekent</h2>
+    <p>Hier wordt het interessant, want dit voorstel haalt een knoop uit <a href="2026-09-19-flows.html">het flow-rapport</a> die daar met een noodgreep werd opgelost.</p>
+    <p>Dat rapport redeneerde zo. Een flow mag niet in <code>project.json</code>, want een flow start agents met een permissiemodus en zo'n plafond hoort niet in een bestand dat een agent met een shell kan herschrijven. Dus: <code>$RUIMTE_HOME/flows/&lt;id&gt;.json</code>. En dan kun je een flow niet delen, wat een echt verlies is voor een team dat dezelfde controle op elke PR wil. De uitweg was een importstap: een bestand in de repo dat niets doet tot een mens het binnenhaalt en er zelf een modus bij kiest.</p>
+    <p>Die redenering gooide twee dingen op één hoop. Een flow is een recept en een aangezette flow is een afspraak. Het recept is inhoud en mag reizen. De afspraak is een handeling van een persoon op een machine en mag dat nooit.</p>
+    <div class="split">
+      <div class="panel">
+        <h3>Het recept</h3>
+        <p><code>.ruimte/flows/&lt;id&gt;.json</code> als je hem deelt, <code>.ruimte/private/flows/&lt;id&gt;.json</code> als hij van jou is. De kaarten, de voorwaarden, de acties. Een agent mag hem schrijven, want er staat niets in dat iets afdwingt.</p>
+      </div>
+      <div class="panel">
+        <h3>De schakelaar</h3>
+        <p><code>$RUIMTE_HOME</code>, altijd, per machine. Staat hij aan, en in welke modus mag hij agents starten. Alleen een mens zet hem om. Verandert het recept na een pull, dan valt hij terug op uit en vraagt opnieuw.</p>
+      </div>
+    </div>
+    <p>Daarmee vervalt de importstap. Een gedeelde flow verschijnt gewoon in je lijst, uitgeschakeld, met een knop en een zin over wat hij doet. Dat is precies het gedrag dat het flow-rapport nabouwde met een dialoog, en nu is het gewoon hoe de lagen liggen.</p>
+    <p>Het scheelt ook een derde soort opslag. Flows zouden onder <code>$RUIMTE_HOME/flows</code> hun eigen map, eigen rev en eigen watcher krijgen. Nu zijn ze een bestand in <code>.ruimte</code> als alle andere, met dezelfde discipline en dezelfde code eromheen. Alleen de schakelaar is een klein bestand onder <code>$RUIMTE_HOME</code>, en dat is een regel of tien.</p>
+  </section>
+  <section id="migratie">
+    <h2>De migratie</h2>
+    <p>Het gedeelde bestand gaat naar versie 3. Dat kan niet anders, want de <code>rev</code> verdwijnt eruit en de views-lijst mag leeg zijn, en allebei die dingen weigert het huidige schema.</p>
+    <p>Wat een oudere Ruimte met zo'n bestand doet is geen theorie. <code>migrateDocument</code> geeft <code>null</code> voor elke versie die hij niet kent, <code>readDocument</code> hernoemt het bestand dan naar <code>project.json.corrupt-&lt;tijdstip&gt;</code>, en <code>openProject</code> maakt een nieuw leeg canvas. In een gedeeld bestand is dat geen kleine ergernis. De ene collega werkt een versie achter, opent het project, en zijn Ruimte schrijft een leeg canvas over de plattegrond van het team heen. Git houdt het tegen als hij niet commit, maar daar wil je niet op leunen.</p>
+    <p>Die reparatie staat in fase 1, en Bas' keuze om versie 3 in één release uit te brengen betekent dat hij deze keer nog niets goedmaakt: wie achterloopt heeft hem nog niet. Hij is er voor de volgende bump, en voor iedereen die twee machines op verschillende versies heeft staan. Een bestand met een hogere versie is niet kapot, het is te nieuw, en dat verdient een eigen antwoord: het project gaat niet open, er staat een zin op het scherm die zegt dat dit project met een nieuwere Ruimte gemaakt is, en er wordt niets hernoemd en niets overschreven. Dat is dezelfde afspraak die <code>CLAUDE.md</code> al maakt over nieuwe soorten nodes en views, alleen dan op documentniveau.</p>
+    <div class="steps">
+      <div class="step">
+        <h3>Lees het bestand zoals nu</h3>
+        <p>Versie 1 of 2, door de bestaande migratie heen, met de vaste id <code>main</code> voor het ene canvas dat een versie-1-bestand had. Daar verandert niets aan.</p>
+      </div>
+      <div class="step">
+        <h3>Vraag git of dit bestand al gedeeld werd</h3>
+        <p>Eén aanroep in de projectmap. Is <code>.ruimte/project.json</code> getrackt, dan deelde iemand hem al bewust en blijven alle views gedeeld. Is hij dat niet, en dat is bijna altijd, dan wordt alles privé. Wie niets deelde, deelt na de migratie niets.</p>
+      </div>
+      <div class="step">
+        <h3>Splits en schrijf</h3>
+        <p>De gedeelde views naar <code>.ruimte/project.json</code> op versie 3, zonder <code>rev</code>, met één entry per regel. De rest naar <code>.ruimte/private/project.json</code>, met de rev en de volgorde. Van een gedeelde node gaan <code>resume</code>, <code>runtimeMode</code>, <code>worktree</code> en elk absoluut pad naar de overlay.</p>
+      </div>
+      <div class="step">
+        <h3>Verplaats wat bij een privé-view hoort</h3>
+        <p>Tekeningen en diagrammen van views die privé werden verhuizen naar <code>.ruimte/private/drawings/</code> en <code>.ruimte/private/diagrams/</code>. Dit is de enige stap die bestanden verplaatst, dus hij gaat als laatste en hij logt wat hij deed.</p>
+      </div>
+      <div class="step">
+        <h3>Schrijf de .gitignore</h3>
+        <p>Alleen als hij ontbreekt. Bestaat hij al, dan blijft hij zoals hij is, ook als iemand er iets aan veranderd heeft.</p>
+      </div>
+    </div>
+    <p>De migratie draait bij het openen van het project en is idempotent: een tweede keer draaien vindt niets te doen. Zoals elke schrijfactie in Ruimte gaat hij via een atomische write, dus een crash halverwege laat een oud bestand achter en geen half bestand.</p>
+    <p class="note">Vergeet de lezers die geen Ruimte zijn niet. Een <code>project.json</code> in git is een bestand dat mensen in een pull request onder ogen krijgen, en dat een bot straks misschien leest. Eén entry per regel helpt ze allebei. Een <code>rev</code> die bij elke pull conflicteert zou ze allebei in de weg zitten.</p>
+  </section>
+
+  <section id="raakt">
+    <h2>Wat dit raakt</h2>
+    <div class="table wide" role="region" aria-label="Bestanden die dit voorstel raakt" tabindex="0">
+      <table>
+        <thead><tr><th style="width:38%">Bestand</th><th style="width:14%">Fase</th><th>Wat</th></tr></thead>
+        <tbody>
+          <tr><td><code>packages/contracts/src/project.ts</code></td><td>2, 3</td><td>Versie 3, <code>rev</code> uit het gedeelde schema, <code>views</code> mag leeg, de vorm van het privébestand, <code>shared</code> op het document</td></tr>
+          <tr><td><code>packages/contracts/src/project-migrate.ts</code></td><td>1, 2</td><td>Versie 2 naar 3, en een te hoge versie onderscheiden van een kapot bestand</td></tr>
+          <tr><td><code>apps/server/src/projects/project-files.ts</code></td><td>1, 2</td><td>Paden voor de privémap, splitsen en samenvoegen, de serializer met één entry per regel, niet meer hernoemen bij een te nieuwe versie</td></tr>
+          <tr><td><code>apps/server/src/projects/project-store.ts</code></td><td>2</td><td>Twee bestanden lezen en schrijven onder dezelfde lock, de watcher op beide, de rev uit het privébestand</td></tr>
+          <tr><td><code>apps/server/src/projects/drawing-store.ts</code>, <code>diagram-store.ts</code></td><td>4</td><td>Een tekening volgt zijn view naar de andere map</td></tr>
+          <tr><td><code>apps/server/src/git/worktree-merge.ts</code></td><td>1</td><td>De pathspec die <code>.ruimte</code> uitsluit van de controle op een schone doelmap</td></tr>
+          <tr><td><code>apps/client/src/project/project-client.ts</code></td><td>3</td><td><code>shared</code> meesturen bij het opslaan</td></tr>
+          <tr><td><code>apps/client/src/state/document.ts</code></td><td>3</td><td>Weten welke views gedeeld zijn, en het omzetten</td></tr>
+          <tr><td><code>apps/client/src/shell/ViewMenuItems.tsx</code></td><td>3</td><td>Het menu-item en het omzetten</td></tr>
+          <tr><td><code>apps/client/src/shell/Sidebar.tsx</code></td><td>3</td><td>Het merk op een gedeelde rij</td></tr>
+          <tr><td><code>apps/client/src/i18n/locales/{en,nl}/*.json</code></td><td>3</td><td>De teksten, Engels als bron</td></tr>
+          <tr><td><code>apps/server/README.md</code>, <code>CLAUDE.md</code></td><td>2, 3</td><td>De indeling van <code>.ruimte</code> en de nieuwe invariant over waar wat woont</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>De iPhone-app blijft buiten schot zolang hij geen project bewerkt. Zodra hij dat wel doet gelden dezelfde regels, en dan is <code>shared</code> een optioneel veld dat hij mag negeren.</p>
+  </section>
+
+  <section id="plan">
+    <h2>Plan</h2>
+    <div class="steps">
+      <div class="step">
+        <h3>Twee reparaties vooraf</h3>
+        <p>Een te nieuwe versie weigeren zonder iets te hernoemen, en <code>.ruimte</code> uitsluiten van de controle op een schone doelmap bij een worktree-merge. Beide staan los van de rest en breken niets. De tweede moet er zijn voordat iemand voor het eerst deelt, de eerste is er voor de volgende keer dat het formaat verspringt. <strong>Klaar als</strong> een handmatig op <code>version: 9</code> gezet bestand het project dicht houdt met een leesbare zin en het bestand onaangeroerd laat, en een agent-merge slaagt terwijl er een gewijzigde <code>.ruimte/project.json</code> in de doelmap ligt.</p>
+      </div>
+      <div class="step">
+        <h3>De opslag en de migratie</h3>
+        <p>De privémap, de <code>.gitignore</code>, versie 3, het splitsen en samenvoegen in de daemon, de serializer met één entry per regel en de migratie. Geen UI: alles wordt privé en er verandert voor een gebruiker niets zichtbaars. <strong>Klaar als</strong> een bestaand project na openen twee bestanden heeft, precies hetzelfde toont als ervoor, en een tweede keer openen niets meer verandert.</p>
+      </div>
+      <div class="step">
+        <h3>De wire en het menu</h3>
+        <p><code>shared</code> op het document, het menu-item, het merk in de zijbalk en de melding achteraf. <strong>Klaar als</strong> een view delen hem in <code>.ruimte/project.json</code> zet, het git-paneel de wijziging toont, en een tweede checkout van dezelfde repo die view in de zijbalk heeft staan met een lege chat erachter.</p>
+      </div>
+      <div class="step">
+        <h3>Tekeningen, diagrammen en de weg vrij</h3>
+        <p>Een tekening of diagram volgt zijn view bij het delen. Daarna ligt de vorm er waar Flows op kan landen: een recept in <code>.ruimte/flows</code> en een schakelaar onder <code>$RUIMTE_HOME</code>. <strong>Klaar als</strong> een gedeelde tekening bij een collega opengaat en een privé-tekening nergens in <code>git status</code> opduikt.</p>
+      </div>
+    </div>
+    <p>Fase 1 kan vandaag. Fase 2 is het meeste werk en het minst zichtbaar, wat betekent dat hij alleen door tests bewaakt wordt en niet door proberen. Fase 3 is klein zodra 2 staat.</p>
+  </section>
+
+  <section id="besloten">
+    <h2>Besloten</h2>
+    <p>Bas beantwoordde de zes open vragen op 19 september. Ze staan hier met wat ze voor het ontwerp betekenen, zodat niemand ze opnieuw hoeft te stellen.</p>
+    <div class="table wide" role="region" aria-label="De zes beslissingen" tabindex="0">
+      <table>
+        <thead><tr><th style="width:30%">Vraag</th><th style="width:22%">Besluit</th><th>Gevolg</th></tr></thead>
+        <tbody>
+          <tr><td>Een map of twee losse bestanden</td><td><span class="badge confirmed">de map</span></td><td><code>.ruimte/private/</code> spiegelt <code>.ruimte/</code>. Eén regel in de <code>.gitignore</code>, en flows passen er straks zonder discussie in.</td></tr>
+          <tr><td>Mag een losse node privé blijven op een gedeeld canvas</td><td><span class="badge confirmed">nee</span></td><td>Het hele canvas of niets. De overlay draagt alleen nog velden, de <code>shared</code>-lijst alleen view-ids, en het node-contextmenu krijgt niets. Je eigen terminal zet je op een view ernaast.</td></tr>
+          <tr><td>Een project waarvan <code>project.json</code> al in git staat</td><td><span class="badge confirmed">gedeeld houden</span></td><td>De migratie vraagt git of het bestand getrackt is. Wie het committe wilde het delen, en die houdt zijn teamcanvas.</td></tr>
+          <tr><td>Versie 3 in één release of in twee</td><td><span class="badge confirmed">in één</span></td><td>Wie een versie achterloopt ziet het project niet opengaan. De reparatie die een te nieuw bestand netjes weigert gaat mee in dezelfde release en werkt dus pas bij de volgende bump.</td></tr>
+          <tr><td>Hoe streng de bevestiging bij delen is</td><td><span class="badge confirmed">niet</span></td><td>Geen dialoog. Delen doet het meteen en zegt achteraf wat er gebeurde, met een ongedaan-maken.</td></tr>
+          <tr><td>Mag een agent om delen vragen</td><td><span class="badge confirmed">nu niet</span></td><td>Geen nieuw verb. Een agent die iets deelbaars maakt zegt het gewoon.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Wat daarmee open blijft is klein en het antwoord komt uit het bouwen. Hoeveel van <code>merge.ts</code> overeind blijft wanneer views uit twee bestanden komen. Wat een watcher op twee bestanden onder één lock doet bij een pull die ze allebei raakt. En of een tweede checkout van dezelfde repo als los project openen nu al problemen geeft of pas hierna.</p>
+  </section>
+
+  <section id="prompt">
+    <h2>Startprompt voor een schone sessie</h2>
+    <p>Plak dit in een nieuwe sessie in deze repo. Hij verwijst naar dit rapport en herhaalt alleen wat een agent nodig heeft om niet opnieuw te gaan ontwerpen.</p>
+    <pre id="startprompt"><code>Lees docs/reports/2026-09-19-delen.html helemaal. Dat is het ontwerp voor het
+splitsen van de .ruimte-map in een gedeeld deel dat in git gaat en een privedeel
+dat eruit blijft, zodat een team een canvas kan delen zonder elkaars sessies te
+erven. Het ontwerp is vastgesteld, de zes vragen zijn beantwoord in de sectie
+"Besloten". Ga niet opnieuw ontwerpen.
+
+Wat vaststaat:
+- .ruimte/private/ is de spiegel van .ruimte/ en is de enige regel in een
+  .gitignore die Ruimte zelf schrijft, eenmalig, en daarna nooit meer aanraakt.
+- De eenheid van delen is een view, in zijn geheel. Een losse node kan niet
+  prive blijven op een gedeeld canvas.
+- Het privebestand draagt je eigen views, de volgorde van de zijbalk, de rev,
+  en per gedeeld canvas per node de velden die niet mee mogen: resume,
+  runtimeMode, worktree en elk absoluut pad.
+- Niets is standaard gedeeld. Een mens deelt, een agent zet de status nooit om.
+  Dat een agent op een gedeeld canvas werkt is prima: git is de grens en de
+  commit is de handeling van een mens.
+- Op de wire komt er een veld bij: shared: string[] met view-ids. Het wordt
+  afgeleid uit welk bestand een view in stond en nergens opgeslagen.
+- De rev van het document verhuist naar het privebestand, want in git
+  conflicteert die regel bij elke pull.
+- Het gedeelde bestand krijgt een entry per regel, zoals serializeDrawing en
+  serializeDiagram dat al doen.
+
+Bouw fase 1 en fase 2 uit het rapport en stop daarna, zodat ik het kan proberen.
+
+Fase 1, los van de rest en breekt niets:
+- Een project.json met een hogere versie weigeren met een leesbare fout, in
+  plaats van hem naar .corrupt te hernoemen en een leeg canvas te maken.
+- In apps/server/src/git/worktree-merge.ts de controle op een schone doelmap
+  .ruimte laten overslaan met een pathspec, anders weigert elke agent-merge
+  zodra .ruimte/project.json getrackt is.
+
+Fase 2, de opslag:
+- De privemap, de .gitignore, versie 3 van het documentschema, splitsen en
+  samenvoegen in de daemon, de serializer, en de migratie van 2 naar 3.
+- Bij de migratie: is .ruimte/project.json getrackt in git, dan blijven de views
+  gedeeld; anders wordt alles prive.
+- Nog geen UI. Na deze fase ziet een gebruiker hetzelfde als ervoor.
+
+Werkwijze: maak eerst een plan in de chat en wacht op ja. Tests naast de code,
+geen test in de standaardrun die op een echte shell, klok of watcher leunt.
+bun run format en bun run check groen voor elke commit. Conventional commits,
+geen attributie in de commit message.</code></pre>
+    <p><button type="button" id="copy-prompt" data-static>Kopieer de prompt</button> <span id="copy-said" class="caption" role="status"></span></p>
+  </section>
+
+  <section id="log">
+    <h2>Revisielog</h2>
+    <div class="table" role="region" aria-label="Wijzigingen aan dit rapport" tabindex="0">
+      <table>
+        <thead><tr><th style="width:20%">Datum</th><th style="width:22%">Stand</th><th>Wat</th></tr></thead>
+        <tbody>
+          <tr><td>19 september 2026</td><td><span class="badge confirmed">Gebouwd</span></td><td>Alle vier de fasen staan op main. Drie dingen liepen anders dan hier beschreven. Het menu-item wordt altijd aangeboden, ook buiten een git-repo, omdat uitzoeken of een map een repo is een git-watch start en een menu dat niet hoort te doen. Een pull zet de rev van deze machine één op in plaats van een getal uit het bestand over te nemen, want dat getal is er niet meer. En beide mappen van een tekening worden bewaakt, niet alleen de gedeelde, zodat een eigen editor ook gezien wordt.</td></tr>
+          <tr><td>19 september 2026</td><td><span class="badge confirmed">Vastgesteld</span></td><td>Bas beantwoordde de zes vragen. Een canvas gaat voortaan in zijn geheel, dus het node-contextmenu, de hele-node-overlay en de node-ids in de <code>shared</code>-lijst zijn uit het ontwerp verdwenen. Versie 3 gaat in één release. De bevestiging bij delen werd een melding achteraf. Vastgelegd dat een agent die op een gedeeld canvas werkt geen probleem is: dat canvas is aangewezen om te delen.</td></tr>
+          <tr><td>19 september 2026</td><td><span class="badge info">Eerste versie</span></td><td>Het ontwerp met de privémap, de veldentabel, de gevolgen voor de worktree-merge en de plek van Flows. Zes open vragen.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+<footer>
+  <p>Dit rapport is ontwerp, geen verslag. Wat wel nagekeken is in de code: dat Ruimte vijf soorten bestanden in <code>.ruimte</code> schrijft en nergens een <code>.gitignore</code> aanmaakt, dat <code>.ruimte/</code> op regel 8 van Ruimte's eigen root-<code>.gitignore</code> staat, dat een documentversie die de migratie niet kent tot een hernoeming naar <code>.corrupt</code> en een leeg canvas leidt, dat de controle op een schone doelmap bij een worktree-merge op <code>--untracked-files=no</code> draait en dat het commentaar erboven <code>.ruimte</code> expliciet als untracked noemt, dat view-ids en node-ids één naamruimte delen, dat tekeningen en diagrammen al een serializer met één element per regel hebben, en dat de client al 426 regels drieweg-merge heeft die op een git pull wacht. Gelezen op main, commit <code>1bbf73cc</code>.</p>
+  <p>De drie dingen die niet nagekeken zijn en die het bouwen zelf moet uitwijzen, staan onder <a href="#besloten">Besloten</a>. Ze blokkeren fase 1 niet en ze bepalen wel hoeveel werk fase 2 wordt.</p>
+</footer>
+<script>
+document.getElementById('copy-prompt').addEventListener('click', async () => {
+    const said = document.getElementById('copy-said');
+    try {
+        await navigator.clipboard.writeText(document.getElementById('startprompt').innerText);
+        said.textContent = 'Gekopieerd';
+    } catch {
+        said.textContent = 'Kopiëren lukte niet, selecteer de tekst hierboven';
+    }
+});
+</script>
+</body>
+</html>
