@@ -1,12 +1,12 @@
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
 import { isCanvasView, type FlowArgDefinition, type FlowCard, type FlowContent, type ProjectView } from '@ruimte/contracts';
 import { argApplies, argsOf, brokenTokenRefsIn, textArg, tokenRef, visibleTokens } from '@ruimte/flow';
-import { argLabel, cardLabel, choiceLabel, tokenLabel } from '@/flow/labels';
+import { FlowTestBar } from '@/flow/FlowTestBar';
+import { argLabel, choiceLabel, tokenLabel } from '@/flow/labels';
+import type { FlowStateHandle } from '@/flow/use-flow-state';
 import { useDocument } from '@/state/document';
-import { useFlow, useFlowStore } from '@/state/flow';
-import { FLOAT } from '@/ui/classes';
+import { useFlowStore } from '@/state/flow';
 import { Select } from '@/ui/Select';
 
 /* Every chat in the project, wherever it stands, for a card that has to name one. */
@@ -104,26 +104,14 @@ function Field({ id, card, content, arg }: { id: string; card: FlowCard; content
  * to the schemas gets its fields here without a line of interface behind it, and the tokens it may
  * use are the ones every path to it passes.
  */
-export function FlowInspector() {
+export function FlowInspector({ id, card, content, flow }: { id: string; card: FlowCard; content: FlowContent; flow: FlowStateHandle }) {
     const { t } = useTranslation('flow');
     const store = useFlowStore();
-    const content = useFlow((s) => s.content);
-    const selection = useFlow((s) => s.selection);
-    const id = selection.length === 1 ? (selection[0] as string) : null;
-    const card = id === null ? undefined : content.cards[id];
-    if (id === null || card === undefined) {
-        return null;
-    }
     const fields = argsOf(card).filter((arg) => argApplies(card, arg));
     const broken = brokenTokenRefsIn(content).filter((ref) => ref.on === id);
 
     return (
-        <aside
-            data-flow-chrome
-            className={clsx(FLOAT, 'absolute top-3 right-3 bottom-20 flex w-72 flex-col gap-3 overflow-y-auto rounded-xl p-3')}
-            aria-label={t('inspector.title')}
-        >
-            <div className="text-sm font-medium text-text">{cardLabel(t, card)}</div>
+        <div className="flex flex-col gap-3 p-3">
             {fields.map((arg) => (
                 <Field key={arg.name} id={id} card={card} content={content} arg={arg} />
             ))}
@@ -139,6 +127,7 @@ export function FlowInspector() {
                 </label>
             )}
             {broken.length > 0 && <p className="text-xs/[inherit] text-status-error">{t('inspector.broken')}</p>}
-        </aside>
+            <FlowTestBar id={id} card={card} content={content} flow={flow} />
+        </div>
     );
 }

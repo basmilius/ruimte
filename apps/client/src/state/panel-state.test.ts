@@ -9,6 +9,7 @@ const defaults: PanelsState = {
     previewWidth: null,
     planAnchor: null,
     planWidth: null,
+    flowWidth: null,
     tabs: [],
     active: null,
     expandedDirs: [],
@@ -26,6 +27,7 @@ const full: PanelsState = {
     previewWidth: 640,
     planAnchor: { chatId: 'chat-1', planId: 'plan-1', dismissed: true },
     planWidth: 400,
+    flowWidth: 400,
     tabs: [
         { key: '/repo/readme.md', path: '/repo/readme.md', pinned: true, dirty: false },
         { key: '/repo/src/main.ts', path: '/repo/src/main.ts', pinned: false, dirty: false },

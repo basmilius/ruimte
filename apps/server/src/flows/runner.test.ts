@@ -427,7 +427,7 @@ describe('running a flow by hand', () => {
     test('runs it now, for real, without waiting for the trigger to come round', async () => {
         await write(byHand());
         await turnOn();
-        await flows.runner.start({ projectId, viewId: VIEW, cardId: 'trigger' }, 'bas');
+        await flows.runner.start({ projectId, viewId: VIEW, cardId: 'trigger' });
         await worker.settled();
 
         expect(notices()).toEqual(['it ran']);
@@ -439,7 +439,7 @@ describe('running a flow by hand', () => {
 
     test('a flow that is off is not started by hand, since that is what a test is for', async () => {
         await write(byHand());
-        const run = await flows.runner.start({ projectId, viewId: VIEW, cardId: 'trigger' }, 'bas');
+        const run = await flows.runner.start({ projectId, viewId: VIEW, cardId: 'trigger' });
         await worker.settled();
 
         expect(run).toBeNull();
@@ -456,7 +456,7 @@ describe('running a flow by hand', () => {
             links: [{ from: 'trigger', fromPort: 'done', to: 'shout' }]
         });
         await turnOn();
-        await flows.runner.start({ projectId, viewId: VIEW, cardId: 'trigger' }, 'bas');
+        await flows.runner.start({ projectId, viewId: VIEW, cardId: 'trigger' });
         await worker.settled();
 
         // The clock of this test, not the card: by hand is now, and 08:00 is when it would have fired.
@@ -467,7 +467,7 @@ describe('running a flow by hand', () => {
         await write(byHand());
         await turnOn();
 
-        await expect(flows.runner.start({ projectId, viewId: VIEW, cardId: 'shout' }, 'bas')).rejects.toThrow('begin at');
+        await expect(flows.runner.start({ projectId, viewId: VIEW, cardId: 'shout' })).rejects.toThrow('begin at');
     });
 });
 

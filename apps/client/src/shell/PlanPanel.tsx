@@ -42,7 +42,7 @@ export function PlanPanel() {
     const { t } = useTranslation('shell');
     const anchor = useUi((s) => s.planAnchor);
     const open = useUi((s) => s.planOpen);
-    const rightOfIt = useUi((s) => s.preview.open || s.panel.open);
+    const rightOfIt = useUi((s) => s.flowPanel.open || s.preview.open || s.panel.open);
     const stored = useUi((s) => s.planWidth);
     const endpointId = useEndpointId();
     const plans = useChatPlans(anchor?.chatId ?? '');

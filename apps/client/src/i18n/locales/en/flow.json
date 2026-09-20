@@ -3,7 +3,10 @@
         "description": "A flow is a worksheet of cards: something that happens, something that has to be true, and something to do about it. Add a card to begin."
     },
     "dock": {
-        "add": "Add a card"
+        "add": "Add a card",
+        "run": "Run this flow now",
+        "runHint": "Pick the trigger to run from first",
+        "runs": "What this flow has done"
     },
     "kinds": {
         "trigger": "When",
@@ -29,10 +32,12 @@
         "remove": "Remove this line"
     },
     "switch": {
-        "on": "On",
         "off": "Off",
-        "onHint": "Run this flow on this machine",
-        "offHint": "Stop running this flow"
+        "offHint": "This flow does not run on this machine",
+        "watching": "Watching",
+        "watchingHint": "Runs on its triggers and carries nothing out, so you can read what it would have done",
+        "on": "On",
+        "onHint": "Runs on this machine and does what it says"
     },
     "inspector": {
         "title": "The card you picked",
@@ -155,5 +160,62 @@
             },
             "tokens": {}
         }
+    },
+    "panel": {
+        "close": "Close this column",
+        "failed": "This column failed to draw"
+    },
+    "runs": {
+        "title": "Runs",
+        "empty": "Nothing has run yet. Turn the flow on, or try a card out.",
+        "noTrigger": "Never started",
+        "goneCard": "a card that is gone",
+        "noSteps": "No card ran.",
+        "wentNowhere": "went nowhere",
+        "test": "test",
+        "dry": "dry",
+        "again": "Run again with these values",
+        "outcome": {
+            "running": "Running",
+            "done": "Done",
+            "refused": "Refused",
+            "skipped": "Skipped",
+            "missed": "Missed"
+        },
+        "startedFrom": {
+            "graph": "Started at {{card}} and everything after it",
+            "card": "Started at {{card}}, that card on its own"
+        }
+    },
+    "test": {
+        "title": "Try it out",
+        "play": "As if it fired",
+        "fromHere": "From here",
+        "onlyThis": "This card only",
+        "dry": "Write it down instead of doing it",
+        "dryHint": "Every card writes down what it would have done, with the values filled in.",
+        "realHint": "Every card does what it says, for real.",
+        "waiting": "Waiting for this trigger to fire for real",
+        "stopWaiting": "Stop waiting",
+        "tokens": {
+            "title": "Values this test needs",
+            "description": "The cards above this one do not run, so what they would have handed on has to come from somewhere.",
+            "waitForReal": "Wait for the real thing",
+            "useExamples": "Use the examples",
+            "fromRun": "From an earlier run",
+            "run": "Run the test",
+            "type": {
+                "text": "text",
+                "number": "number",
+                "boolean": "true or false"
+            }
+        }
+    },
+    "picker": {
+        "title": "Pick a card",
+        "search": "Search cards",
+        "searchHint": "Searches the name of a card, what it says and where it comes from.",
+        "results": "Cards",
+        "noMatch": "No card matches that."
     }
 }

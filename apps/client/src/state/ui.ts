@@ -48,6 +48,18 @@ export type PlanAnchor = NonNullable<ProjectPanels['plan']>;
 const CLOSED_PANEL: PanelState = { open: false, kind: 'files' };
 const CLOSED_PREVIEW: PreviewState = { open: false };
 
+/*
+ * The column beside a worksheet. `runs` is a standing wish rather than what is drawn: with one card
+ * picked the column shows that card either way, and letting the card go comes back to the runs for
+ * whoever asked for them.
+ */
+export interface FlowPanelState {
+    open: boolean;
+    runs: boolean;
+}
+
+const CLOSED_FLOW_PANEL: FlowPanelState = { open: false, runs: false };
+
 /* The kind on its own for an open panel, `closed:` in front for one that is not, so a toggle still
    knows which panel it reopens. The shape the legacy key was written in. */
 export const parsePanel = (raw: string | null): PanelState => {
@@ -82,6 +94,7 @@ export interface PanelDefaults {
     previewWidth: number | null;
     planAnchor: PlanAnchor | null;
     planWidth: number | null;
+    flowWidth: number | null;
 }
 
 /* What a project whose local file says nothing about the panels opens with. */
@@ -91,7 +104,8 @@ export const PANEL_DEFAULTS: PanelDefaults = {
     panelWidth: parseWidth(readLegacy(LEGACY_PANEL_WIDTH_KEY)),
     previewWidth: parseWidth(readLegacy(LEGACY_PREVIEW_WIDTH_KEY)),
     planAnchor: null,
-    planWidth: null
+    planWidth: null,
+    flowWidth: null
 };
 
 interface SettingsState {
@@ -156,6 +170,10 @@ interface UiStore {
     planAnchor: PlanAnchor | null;
     planOpen: boolean;
     planWidth: number | null;
+    /* The column beside a flow. The worksheet decides when it is up, so the project's file only
+       remembers how wide a person dragged it. */
+    flowPanel: FlowPanelState;
+    flowWidth: number | null;
     /* Whether the columns around the canvas show what was stored rather than what a person did.
        True from startup and again for every project that opens, false from the first change made
        here by hand. A column only slides when it is false, so a restore lands at its width. */
@@ -203,6 +221,9 @@ interface UiStore {
     setPreviewWidth(width: number): void;
     setPlanPanel(state: { anchor: PlanAnchor | null; open: boolean }): void;
     setPlanWidth(width: number): void;
+    /* Only the worksheet calls this: the column follows what is picked on it. */
+    setFlowPanel(state: FlowPanelState): void;
+    setFlowWidth(width: number): void;
     /* Puts a project's panels on screen in one go, when it opens; they land without sliding. */
     setPanels(state: PanelDefaults): void;
     setSidebarExpanded(ids: string[] | null): void;
@@ -230,6 +251,8 @@ export const useUi = create<UiStore>((set, get) => ({
     planAnchor: null,
     planOpen: false,
     planWidth: null,
+    flowPanel: CLOSED_FLOW_PANEL,
+    flowWidth: null,
     panelsRestoring: true,
     layoutDialogOpen: false,
     worktreeDialogFor: null,
@@ -328,6 +351,16 @@ export const useUi = create<UiStore>((set, get) => ({
     setPlanWidth(width) {
         set({ planWidth: width, panelsRestoring: false });
     },
+    setFlowPanel(state) {
+        const current = get().flowPanel;
+        if (current.open === state.open && current.runs === state.runs) {
+            return;
+        }
+        set({ flowPanel: state, panelsRestoring: false });
+    },
+    setFlowWidth(width) {
+        set({ flowWidth: width, panelsRestoring: false });
+    },
     setSidebarExpanded(ids) {
         set({ sidebarExpanded: ids });
     },
@@ -343,6 +376,9 @@ export const useUi = create<UiStore>((set, get) => ({
             // Closed until the chat is on screen: the rules open it, never the file.
             planOpen: false,
             planWidth: state.planWidth,
+            // Closed until a worksheet is on screen with one card picked; the file never opens it.
+            flowPanel: CLOSED_FLOW_PANEL,
+            flowWidth: state.flowWidth,
             panelsRestoring: true
         });
     }

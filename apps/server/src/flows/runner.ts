@@ -269,9 +269,10 @@ export class FlowRunner {
     /*
      * A person runs the flow now, without waiting for a trigger to come round. It is the real thing:
      * the same guards as a firing, the switch included, so a flow that is off cannot be run this way.
-     * Trying an off flow is what a test is for.
+     * Trying an off flow is what a test is for. Who pressed it is not written down: a run by hand is
+     * the flow doing its own work, and the timeline has nowhere to put a person on one.
      */
-    async start(payload: FlowStartPayload, _by: string): Promise<FlowRun | null> {
+    async start(payload: FlowStartPayload): Promise<FlowRun | null> {
         const { projectId, viewId, cardId } = payload;
         const document = await this.deps.read(projectId, viewId);
         const card = document?.cards[cardId];

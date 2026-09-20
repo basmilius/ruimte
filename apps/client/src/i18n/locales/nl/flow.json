@@ -3,7 +3,10 @@
         "description": "Een flow is een werkblad met kaarten: iets dat gebeurt, iets dat waar moet zijn, en iets dat je daaraan doet. Voeg een kaart toe om te beginnen."
     },
     "dock": {
-        "add": "Kaart toevoegen"
+        "add": "Kaart toevoegen",
+        "run": "Deze flow nu draaien",
+        "runHint": "Kies eerst de trigger om vanaf te draaien",
+        "runs": "Wat deze flow gedaan heeft"
     },
     "kinds": {
         "trigger": "Als",
@@ -29,10 +32,12 @@
         "remove": "Deze lijn weghalen"
     },
     "switch": {
-        "on": "Aan",
         "off": "Uit",
-        "onHint": "Deze flow op deze machine laten draaien",
-        "offHint": "Deze flow niet meer laten draaien"
+        "offHint": "Deze flow draait niet op deze machine",
+        "watching": "Meekijken",
+        "watchingHint": "Draait op zijn triggers en voert niets uit, zodat je kunt lezen wat hij gedaan zou hebben",
+        "on": "Aan",
+        "onHint": "Draait op deze machine en doet wat er staat"
     },
     "inspector": {
         "title": "De kaart die je koos",
@@ -155,5 +160,62 @@
             },
             "tokens": {}
         }
+    },
+    "panel": {
+        "close": "Deze kolom sluiten",
+        "failed": "Deze kolom kon niet getekend worden"
+    },
+    "runs": {
+        "title": "Runs",
+        "empty": "Er is nog niets gedraaid. Zet de flow aan, of probeer een kaart uit.",
+        "noTrigger": "Nooit begonnen",
+        "goneCard": "een kaart die weg is",
+        "noSteps": "Er draaide geen enkele kaart.",
+        "wentNowhere": "ging nergens heen",
+        "test": "test",
+        "dry": "droog",
+        "again": "Opnieuw draaien met deze waarden",
+        "outcome": {
+            "running": "Loopt",
+            "done": "Klaar",
+            "refused": "Geweigerd",
+            "skipped": "Overgeslagen",
+            "missed": "Gemist"
+        },
+        "startedFrom": {
+            "graph": "Begon bij {{card}} en alles erna",
+            "card": "Begon bij {{card}}, die kaart alleen"
+        }
+    },
+    "test": {
+        "title": "Uitproberen",
+        "play": "Alsof hij vuurde",
+        "fromHere": "Vanaf hier",
+        "onlyThis": "Alleen deze kaart",
+        "dry": "Opschrijven in plaats van doen",
+        "dryHint": "Elke kaart schrijft op wat hij gedaan zou hebben, met de waarden ingevuld.",
+        "realHint": "Elke kaart doet echt wat er staat.",
+        "waiting": "Wacht tot deze trigger echt vuurt",
+        "stopWaiting": "Niet meer wachten",
+        "tokens": {
+            "title": "Waarden die deze test nodig heeft",
+            "description": "De kaarten hierboven draaien niet, dus wat zij zouden doorgeven moet ergens vandaan komen.",
+            "waitForReal": "Wacht op het echte ding",
+            "useExamples": "Neem de voorbeelden",
+            "fromRun": "Uit een eerdere run",
+            "run": "Test draaien",
+            "type": {
+                "text": "tekst",
+                "number": "getal",
+                "boolean": "waar of onwaar"
+            }
+        }
+    },
+    "picker": {
+        "title": "Kies een kaart",
+        "search": "Zoek kaarten",
+        "searchHint": "Zoekt in de naam van een kaart, wat erop staat en waar hij vandaan komt.",
+        "results": "Kaarten",
+        "noMatch": "Geen kaart past daarbij."
     }
 }

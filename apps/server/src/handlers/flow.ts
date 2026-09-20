@@ -23,7 +23,7 @@ export const registerFlowHandlers = (dispatcher: Dispatcher, store: FlowStore, f
      * daemon draws around a device it may link and a view it may make.
      */
     dispatcher.register('flow.enable', (payload, client) => translate(() => flows.enable(payload, client?.id ?? 'someone')));
-    dispatcher.register('flow.start', (payload, client) => translate(async () => ({ run: await flows.runner.start(payload, client?.id ?? 'someone') })));
+    dispatcher.register('flow.start', (payload) => translate(async () => ({ run: await flows.runner.start(payload) })));
     dispatcher.register('flow.test', (payload, client) => translate(async () => ({ run: await flows.runner.test(payload, client?.id ?? 'someone') })));
     dispatcher.register('flow.arm', (payload, client) => translate(() => flows.runner.armTest(payload, client?.id ?? 'someone')));
 };
