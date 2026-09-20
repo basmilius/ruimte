@@ -72,21 +72,21 @@ describe('buildSidebar', () => {
         expect(sections.map((section) => section.kind)).toEqual(['views']);
     });
 
-    test('a folded canvas keeps its count and the heaviest status of what it holds', () => {
+    test('a folded canvas keeps the heaviest status of what it holds', () => {
         const [, list] = build([backend, frontend], 'frontend', ['frontend']);
-        expect(list!.rows[0]).toMatchObject({ rowId: 'view:backend', expanded: false, expandable: true, count: 3, status: 'needs-you' });
+        expect(list!.rows[0]).toMatchObject({ rowId: 'view:backend', expanded: false, expandable: true, status: 'needs-you' });
         expect(list!.rows[0]).toMatchObject({ active: false });
         expect(list!.rows[1]).toMatchObject({ rowId: 'view:frontend', active: true, expanded: true });
     });
 
     test('an empty canvas has nothing to unfold', () => {
         const [list] = build([view('empty')], 'empty', ['empty']);
-        expect(list!.rows[0]).toMatchObject({ expandable: false, expanded: false, count: 0, status: null });
+        expect(list!.rows[0]).toMatchObject({ expandable: false, expanded: false, status: null });
     });
 
     test('a separator is a row with nothing behind it, and never the current one', () => {
         const [list] = build([separator('gap'), frontend], 'frontend', ['frontend']);
-        expect(list!.rows[0]).toMatchObject({ rowId: 'view:gap', index: 0, active: false, expandable: false, count: 0, status: null, draft: false });
+        expect(list!.rows[0]).toMatchObject({ rowId: 'view:gap', index: 0, active: false, expandable: false, status: null, draft: false });
         expect(list!.rows[1]).toMatchObject({ rowId: 'view:frontend', index: 1, active: true });
     });
 
@@ -99,7 +99,7 @@ describe('buildSidebar', () => {
     test('a view that is one node carries that node on its own row and never unfolds', () => {
         const [needs, list] = build([standalone('auth', 'needs-you'), frontend], 'frontend', ['frontend']);
         expect(needs!.rows[0]).toMatchObject({ rowId: 'needs:auth', viewName: 'auth' });
-        expect(list!.rows[0]).toMatchObject({ rowId: 'view:auth', expandable: false, count: 0, status: 'needs-you', draft: true });
+        expect(list!.rows[0]).toMatchObject({ rowId: 'view:auth', expandable: false, status: 'needs-you', draft: true });
     });
 });
 
@@ -158,7 +158,7 @@ describe('a drawing row', () => {
     test('it folds open on nothing and carries no status: a drawing is a file, not a session', () => {
         const [list] = build([drawing('sketch')], 'sketch', ['sketch']);
         expect(list!.rows).toHaveLength(1);
-        expect(list!.rows[0]).toMatchObject({ type: 'view', expandable: false, expanded: false, status: null, draft: false, count: 0, active: true });
+        expect(list!.rows[0]).toMatchObject({ type: 'view', expandable: false, expanded: false, status: null, draft: false, active: true });
     });
 });
 

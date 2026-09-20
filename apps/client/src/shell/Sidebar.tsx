@@ -431,7 +431,6 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
                     cell is not the same as one that is closed. */}
                 {row.beside && <span className="sr-only">{t('sidebar.openInAnotherCell')}</span>}
                 <span className="grow" />
-                {row.count > 0 && <span className="shrink-0 text-xs tabular-nums text-text-faint">{row.count}</span>}
                 {row.draft && (
                     <Tooltip label={t('sidebar.unsentDraft')}>
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-text-faint" />

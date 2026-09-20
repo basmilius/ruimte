@@ -55,7 +55,6 @@ export interface SidebarViewRow {
     status: AgentStatus | null;
     /* A standalone chat with an unsent prompt; a canvas keeps that dot on the node's own row. */
     draft: boolean;
-    count: number;
 }
 
 export interface SidebarNodeRow {
@@ -140,8 +139,7 @@ export const buildSidebar = ({ project, expandedIds }: SidebarInput): SidebarSec
             expandable,
             expanded,
             status: view.self ? view.self.status : heaviestStatus(view.nodes),
-            draft: view.self?.draft ?? false,
-            count: view.nodes.length
+            draft: view.self?.draft ?? false
         });
         if (!expanded) {
             continue;
