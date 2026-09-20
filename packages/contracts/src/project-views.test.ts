@@ -146,15 +146,14 @@ describe('deleting', () => {
         expect(withoutView([canvas('a')], 'gone')).toBeNull();
     });
 
-    test('taking the last view leaves an empty canvas behind, because a project always has one', () => {
+    test('taking the last view leaves an empty project', () => {
         const result = withoutView([canvas('a')], 'a')!;
-        expect(result.views).toHaveLength(1);
-        expect(result.views[0]).toMatchObject({ kind: 'canvas', id: 'main', name: 'Canvas', nodes: [] });
+        expect(result.views).toEqual([]);
     });
 
-    test('separators alone are a list of lines with nowhere to go', () => {
+    test('taking the last openable view preserves the sidebar dividers', () => {
         const result = withoutView([canvas('a'), { kind: 'separator', id: 'sep' }, { kind: 'subheader', id: 'h1', name: 'Agents' }], 'a')!;
-        expect(result.views.map((view) => view.kind)).toEqual(['separator', 'subheader', 'canvas']);
+        expect(result.views.map((view) => view.kind)).toEqual(['separator', 'subheader']);
     });
 });
 

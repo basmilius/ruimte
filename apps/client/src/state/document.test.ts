@@ -216,11 +216,27 @@ describe('changing the list of views', () => {
         expect(focusedCanvas().getState().order).toEqual(['n2']);
     });
 
-    test('deleting the last view leaves an empty canvas behind, because a project always has one', () => {
+    test('deleting the last view leaves an empty project with no active cell', () => {
         useDocument.getState().deleteView('a');
         useDocument.getState().deleteView('b');
-        expect(useDocument.getState().views).toHaveLength(1);
-        expect(canvasAt(0)).toMatchObject({ id: 'main', name: 'Canvas', nodes: [] });
+        expect(useDocument.getState().views).toEqual([]);
+        expect(useDocument.getState().activeViewId).toBeNull();
+        expect(useDocument.getState().layout).toBeNull();
+        const local = useDocument.getState().exportLocal();
+        useDocument.getState().load({ ...document([]), views: useDocument.getState().exportViews() }, local);
+        expect(useDocument.getState().views).toEqual([]);
+        expect(useDocument.getState().layout).toBeNull();
+    });
+
+    test('deleting the last openable view keeps dividers without creating a replacement canvas', () => {
+        useDocument.getState().load({ ...document([view('a')]), views: [view('a'), { kind: 'subheader', id: 'heading', name: 'Agents' }] }, null);
+        useDocument.getState().deleteView('a');
+        expect(useDocument.getState().views).toEqual([{ kind: 'subheader', id: 'heading', name: 'Agents' }]);
+        expect(useDocument.getState().activeViewId).toBeNull();
+        expect(useDocument.getState().layout).toBeNull();
+
+        const id = useDocument.getState().addCanvasView('Canvas');
+        expect(useDocument.getState().activeViewId).toBe(id);
     });
 
     test('a duplicate lands next to its original with new ids and no session to resume', () => {

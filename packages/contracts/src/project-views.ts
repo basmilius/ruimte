@@ -1,12 +1,9 @@
 import { NODE_SIZE } from './node-defaults.ts';
 import {
-    MAIN_VIEW_ID,
-    MAIN_VIEW_NAME,
     isCanvasView,
     isDiagramView,
     isDividerView,
     isDrawingView,
-    isOpenableView,
     isSessionView,
     isUnknownView,
     type NodeTitleSource,
@@ -18,7 +15,7 @@ import {
 
 /*
  * Shared view-list rules used by the client and canvas verbs. Viewport state stays client-side;
- * these functions only preserve project-wide ids, edges and the requirement for an openable view.
+ * these functions preserve project-wide ids and edges.
  */
 
 export const emptyCanvasView = (id: string, name: string): ProjectCanvasView => ({
@@ -141,18 +138,14 @@ const copyOfCanvas = (view: ProjectCanvasView, name: string, nextId: (prefix: st
     };
 };
 
-/*
- * The list without one view, and the view that left. A project always has a view to open, so taking
- * the last one leaves an empty canvas behind: dividers alone are a list of headings with nowhere
- * to go. Null for an id the project does not have.
- */
+/* Null for an id the project does not have. */
 export const withoutView = (views: readonly ProjectView[], id: string): { views: ProjectView[]; removed: ProjectView } | null => {
     const removed = views.find((view) => view.id === id);
     if (!removed) {
         return null;
     }
     const rest = views.filter((view) => view.id !== id);
-    return { views: rest.some(isOpenableView) ? rest : [...rest, emptyCanvasView(MAIN_VIEW_ID, MAIN_VIEW_NAME)], removed };
+    return { views: rest, removed };
 };
 
 /*

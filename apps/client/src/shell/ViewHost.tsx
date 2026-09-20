@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { isCanvasView, isFileView, type ProjectView } from '@ruimte/contracts';
+import { isCanvasView, isFileView, isOpenableView, type ProjectView } from '@ruimte/contracts';
 import { Canvas } from '@/canvas/Canvas';
 import { ProjectStartScreen } from '@/shell/ProjectStartScreen';
 import { SplitGrid } from '@/shell/SplitGrid';
@@ -112,7 +112,7 @@ export function ViewSurface({ view }: { view: ProjectView }) {
 /* The main column: the grid of cells of the open project. */
 export function ViewHost() {
     const { t } = useTranslation('shell');
-    const empty = useDocument((s) => s.views.length === 0);
+    const empty = useDocument((s) => !s.views.some(isOpenableView));
     const projectId = useProject((s) => s.current?.projectId);
     return empty ? (
         <ErrorBoundary label={t('projectStart.failed')} resetKeys={[projectId]}>

@@ -568,8 +568,8 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 }
                 /* The cell it stood in falls away and the neighbors grow into it. Only when it was
                    the last cell is a view picked: the nearest one under it, or the last one over it. */
-                const next = views.slice(at).find(isOpenableView) ?? views.filter(isOpenableView).at(-1)!;
-                commit(closeCell(state.layout, standing) ?? singleLayout(next.id));
+                const next = views.slice(at).find(isOpenableView) ?? views.filter(isOpenableView).at(-1);
+                commit(closeCell(state.layout, standing) ?? (next ? singleLayout(next.id) : null));
             },
 
             duplicateView(id) {
