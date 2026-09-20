@@ -1,4 +1,4 @@
-import { snapToGrid, type Rect } from '@/canvas/math';
+import { GRID, snapToGrid, type Rect } from '@/canvas/math';
 
 export interface ResizeModifiers {
     centered?: boolean;
@@ -16,7 +16,7 @@ export function resizedRect(rect: Rect, edge: string, dx: number, dy: number, mo
 
     if (modifiers.proportional) {
         const horizontalDriver = horizontal !== 0 && (vertical === 0 || Math.abs(dx / rect.w) >= Math.abs(dy / rect.h));
-        // Snap only the driving edge: independently rounding both dimensions changes the aspect ratio.
+        // Derive the ratio before snapping both dimensions; the grid takes precedence over an exact ratio.
         const scale = Math.max(horizontalDriver ? width / rect.w : height / rect.h, minimum.w / rect.w, minimum.h / rect.h);
         width = rect.w * scale;
         height = rect.h * scale;
@@ -25,9 +25,12 @@ export function resizedRect(rect: Rect, edge: string, dx: number, dy: number, mo
         height = vertical === 0 ? rect.h : Math.max(minimum.h, height);
     }
 
+    width = Math.max(Math.ceil(minimum.w / GRID) * GRID, snapToGrid(width));
+    height = Math.max(Math.ceil(minimum.h / GRID) * GRID, snapToGrid(height));
+
     return {
-        x: modifiers.centered || horizontal === 0 ? rect.x + (rect.w - width) / 2 : horizontal === -1 ? rect.x + rect.w - width : rect.x,
-        y: modifiers.centered || vertical === 0 ? rect.y + (rect.h - height) / 2 : vertical === -1 ? rect.y + rect.h - height : rect.y,
+        x: snapToGrid(modifiers.centered || horizontal === 0 ? rect.x + (rect.w - width) / 2 : horizontal === -1 ? rect.x + rect.w - width : rect.x),
+        y: snapToGrid(modifiers.centered || vertical === 0 ? rect.y + (rect.h - height) / 2 : vertical === -1 ? rect.y + rect.h - height : rect.y),
         w: width,
         h: height
     };

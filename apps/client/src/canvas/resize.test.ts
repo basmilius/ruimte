@@ -36,18 +36,18 @@ describe('canvas resize', () => {
         expect(resizedRect(rect, 'e', 26, 0, { centered: true })).toEqual({ x: 56, y: 160, w: 528, h: 320 });
     });
 
-    test('Shift preserves the ratio for every handle', () => {
+    test('Shift preserves the ratio within grid rounding for every handle', () => {
         for (const edge of edges) {
             const result = resizedRect(rect, edge, 42, 19, { proportional: true });
-            expect(result.w / result.h).toBeCloseTo(rect.w / rect.h, 12);
+            expect(Math.abs(result.h - result.w / (rect.w / rect.h))).toBeLessThanOrEqual(GRID / 2);
         }
     });
 
-    test('Shift snaps the driving edge without rounding the derived dimension', () => {
+    test('Shift snaps both the driving and derived dimensions to the grid', () => {
         const result = resizedRect(rect, 'se', 42, 3, { proportional: true });
         expect((result.x + result.w) % GRID).toBe(0);
         expect(result.w).toBe(520);
-        expect(result.h).toBeCloseTo(520 / 1.5, 12);
+        expect(result.h).toBe(344);
         expect(result.x).toBe(rect.x);
         expect(result.y).toBe(rect.y);
     });
@@ -55,18 +55,54 @@ describe('canvas resize', () => {
     test('Shift on a side grows the other dimension around its center', () => {
         const result = resizedRect(rect, 'w', -42, 0, { proportional: true });
         expect(result.x + result.w).toBe(rect.x + rect.w);
-        expect(center(result).y).toBe(center(rect).y);
+        expect(Math.abs(center(result).y - center(rect).y)).toBeLessThanOrEqual(GRID / 2);
     });
 
-    test('Alt and Shift keep both center and ratio, including at minimum size', () => {
+    test('Alt and Shift keep center and ratio within grid rounding, including at minimum size', () => {
         for (const edge of edges) {
             for (const delta of [27, -2000, 2000]) {
                 const result = resizedRect(rect, edge, delta, delta, { centered: true, proportional: true });
-                expect(center(result).x).toBeCloseTo(center(rect).x, 10);
-                expect(center(result).y).toBeCloseTo(center(rect).y, 10);
-                expect(result.w / result.h).toBeCloseTo(rect.w / rect.h, 12);
+                expect(Math.abs(center(result).x - center(rect).x)).toBeLessThanOrEqual(GRID / 2);
+                expect(Math.abs(center(result).y - center(rect).y)).toBeLessThanOrEqual(GRID / 2);
+                expect(Math.abs(result.h - result.w / (rect.w / rect.h))).toBeLessThanOrEqual(GRID / 2);
                 expect(result.w).toBeGreaterThanOrEqual(240);
                 expect(result.h).toBeGreaterThanOrEqual(160);
+            }
+        }
+    });
+
+    test('fractional starting dimensions never leak into resized dimensions', () => {
+        const fractional = { x: 78, y: 166, w: 402, h: 306.00000006 };
+        for (const edge of edges) {
+            for (const centered of [false, true]) {
+                for (const proportional of [false, true]) {
+                    const result = resizedRect(fractional, edge, 24, 24, { centered, proportional });
+                    expect(Number.isInteger(result.w)).toBe(true);
+                    expect(Number.isInteger(result.h)).toBe(true);
+                    if (centered) {
+                        expect(Math.abs(center(result).x - center(fractional).x)).toBeLessThanOrEqual(GRID / 2);
+                        expect(Math.abs(center(result).y - center(fractional).y)).toBeLessThanOrEqual(GRID / 2);
+                    }
+                }
+            }
+        }
+    });
+
+    test('every position and dimension stays on the grid for all modifier combinations', () => {
+        for (const initial of [rect, { x: 78.5, y: 165, w: 402, h: 306.00000006 }]) {
+            for (const edge of edges) {
+                for (const centered of [false, true]) {
+                    for (const proportional of [false, true]) {
+                        for (const delta of [-2000, -33.75, 0, 27.5, 2000]) {
+                            const result = resizedRect(initial, edge, delta, delta / 3, { centered, proportional });
+                            for (const value of Object.values(result)) {
+                                expect(value / GRID).toBe(Math.round(value / GRID));
+                            }
+                            expect(result.w).toBeGreaterThanOrEqual(240);
+                            expect(result.h).toBeGreaterThanOrEqual(160);
+                        }
+                    }
+                }
             }
         }
     });

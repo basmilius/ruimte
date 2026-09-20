@@ -396,7 +396,7 @@ export const NodeFrame = memo(function NodeFrame({ id, z }: { id: string; z: num
                     RESIZE_EDGES.map((edge) => <div key={edge} data-resize={edge} className={clsx('absolute z-10', EDGE_STYLE[edge])} />)}
                 {resizing && (
                     <div className="pointer-events-none absolute bottom-2 right-2 rounded-md bg-accent px-2 py-0.5 font-mono text-xs tabular-nums text-accent-text shadow-float">
-                        {node.w} × {node.h}
+                        {Math.round(node.w)} × {Math.round(node.h)}
                     </div>
                 )}
             </ContextMenu.Trigger>
