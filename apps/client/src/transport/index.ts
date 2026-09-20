@@ -68,7 +68,7 @@ export const connectionAddressFor = (endpointId: string): Promise<string> => {
 /*
  * One connection per daemon, each with its own reconnect loop; nothing here opens one until it is
  * held. The address is worked out per attempt, because every connection signs for its own ticket.
- * On the web client the row of this machine opens nothing: no daemon answers on the page's own origin.
+ * On the web client the row of this machine opens nothing, since no daemon answers on the page's own origin.
  */
 export const pool = new TransportPool({
     open: (endpoint: Endpoint, currentId: () => string) =>
@@ -90,7 +90,7 @@ export const transport: Transport = new ActiveTransport({
 });
 
 /*
- * The link of one machine by id if this client has one, and null otherwise. It never opens one: a
+ * The link of one machine by id if this client has one, and null otherwise. It never opens one. A
  * link opens only for a hold (a workspace with a project, a dialog about the machine) or through
  * `ensureMachine`, so a call site that means to reach a machine takes one of those first.
  */

@@ -54,10 +54,10 @@ export interface AddNodeOptions {
 /* A label on the canvas. Style belongs to the whole element; the text itself holds no runs. */
 export type TextElement = ProjectText;
 
-/* The box a label takes up, guessed from its size: a text is measured by the browser, never here. */
+/* The box a label takes up, guessed from its size, since a text is measured by the browser, never here. */
 const textRect = (text: TextElement): Rect => ({ x: text.x, y: text.y, w: text.size * 12, h: text.size * 1.4 });
 
-/* A line as the project file holds it, extra fields and all: a shape of its own here would drop
+/* A line as the project file holds it, extra fields and all, since a shape of its own here would drop
    whatever a newer Ruimte wrote on an edge the moment this store handed the canvas back. */
 export type Edge = ProjectEdge;
 
@@ -162,12 +162,12 @@ export interface CanvasState extends CameraSlice {
     bringToFront(id: string): void;
     setNodeAccent(id: string, accent: string | null): void;
     /* A rename is a person's unless the session that named itself says otherwise. */
-    /* A null source unnames the node: nothing named it, so its own source may name it again. */
+    /* A null source unnames the node, since nothing named it, so its own source may name it again. */
     renameNode(id: string, title: string, source?: NodeTitleSource | null): void;
     /* Changes what a node carries (its page, its folder) without touching its placement. */
     updateNode(id: string, patch: Partial<Pick<CanvasNode, 'url' | 'cwd' | 'command' | 'resume' | 'body' | 'color' | 'provider'>>): void;
     duplicateNode(id: string): void;
-    /* Null with no view under the canvas: nothing in the project file could hold such a node. */
+    /* Null with no view under the canvas, since nothing in the project file could hold such a node. */
     addNode(kind: NodeKind, at: Point, options?: AddNodeOptions): string | null;
     /* Wraps the selected nodes in a group; answers null when nothing is selected. */
     groupSelection(): string | null;
@@ -325,7 +325,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
             }
             const next = cameraCenteredOn(node, viewport, Math.max(camera.zoom, 0.75));
             /* Revealing a node on another view switches to it first, which makes the editor this
-               runs on one frame old: it waits for the size rather than landing in the corner. */
+               runs on one frame old, so it waits for the size rather than landing in the corner. */
             set({
                 ...(next === null ? { pendingCamera: { kind: 'node', id } } : { camera: next, pendingCamera: null }),
                 selection: [id]
@@ -410,7 +410,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         renameNode(id, title, source = 'user') {
             set((s) => {
                 const node = s.nodes[id];
-                // A rename that changes nothing claims nothing: the editor closes on a blur either way.
+                // A rename that changes nothing claims nothing, since the editor closes on a blur either way.
                 if (!node || isUnknownNode(node) || (node.title === title && (node.titleSource ?? null) === source)) {
                     return {};
                 }
@@ -664,13 +664,13 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
                 set(camera === null ? { pendingCamera: { kind: 'view', view: stored } } : { camera });
             }
             set({ loading: false });
-            // No camera for this view on this machine: it opens on everything it holds, once there is room.
+            // No camera for this view on this machine, so it opens on everything it holds, once there is room.
             if (stored === null) {
                 get().fitAll();
             }
         },
         applyExternal(patch) {
-            // Marked as a load, like a project swapping in: all of it is already on disk, so none of it is an edit.
+            // Marked as a load, like a project swapping in, since all of it is already on disk, so none of it is an edit.
             set((s) => {
                 const gone = new Set([...patch.removed.nodes, ...patch.removed.texts, ...patch.removed.edges]);
                 const nodes: Record<string, CanvasNode> = { ...s.nodes };

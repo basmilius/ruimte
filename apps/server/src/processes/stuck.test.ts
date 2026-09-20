@@ -98,7 +98,7 @@ describe('silent while working', () => {
 
     test('the idle baseline of the node itself sets how quiet silent is', () => {
         const judge = new StuckJudge();
-        // Idle at 8% for twenty minutes: above the default floor, so 9% while running still reads as silent.
+        // Idle at 8% for twenty minutes, above the default floor, so 9% while running still reads as silent.
         series(judge, T0, T0 + 20 * MINUTE, MINUTE, () => [group([shell(), claude({ cpu: 8 })], agent('idle', T0 - MINUTE))]);
         const start = T0 + 20 * MINUTE;
         let alerts = judge.observe(observation(start + MINUTE, MINUTE, [group([shell(), claude({ cpu: 9 })], agent('running', start))]));

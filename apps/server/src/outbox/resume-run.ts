@@ -16,7 +16,7 @@ export interface OweResumeDeps {
 }
 
 /*
- * Owes the resume of a turn the daemon went down in, once per turn and attempt: loading the chat
+ * Owes the resume of a turn the daemon went down in, once per turn and attempt. Loading the chat
  * again from the handler asks the same question and finds it owed. Only writes to the outbox, so
  * the chat that asks never runs the resume in its own call stack.
  */

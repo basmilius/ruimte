@@ -20,7 +20,7 @@ import { PROJECT_ICON_GLYPHS } from '@/project/project-icons';
 import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
 
-/* What a view wears when nobody picked anything: the mark of what it is. */
+/* The default mark for a view, when nobody picked an icon. */
 const VIEW_KIND_GLYPHS: Record<ProjectViewKind, LucideIcon> = {
     canvas: Frame,
     chat: MessageSquare,

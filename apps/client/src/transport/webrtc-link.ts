@@ -168,7 +168,7 @@ export const webRtcLink =
                 if (binding === null) {
                     throw new Error(i18next.t('machines:direct.channelEarly'));
                 }
-                // Checked before anything is proved: a machine on another wire could not read what follows anyway.
+                // Checked before anything is proved, since a machine on another wire could not read what follows anyway.
                 const mismatch = protocolMismatch(challenge.data.protocol);
                 if (mismatch !== null) {
                     end(protocolRefusal(mismatch));

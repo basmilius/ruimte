@@ -115,7 +115,6 @@ export class TaskStore {
         }
     }
 
-    /* Settled tasks of this parent that it has not been woken about yet, oldest first. */
     pendingWake(parentId: string): Task[] {
         return this.ofParent(parentId).filter((task) => task.status !== 'open' && task.wake === 'pending');
     }

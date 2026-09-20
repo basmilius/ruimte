@@ -35,9 +35,9 @@ export class MachineTransports {
     }
 
     /*
-     * A row that learned its daemon id. Called before the pool moves the link: the pool's own word
-     * about the move is what makes the transport look again, and by then the link is under the new
-     * id, so the clients on it never see it close.
+     * A row that learned its daemon id. Called before the pool moves the link, since the pool's own
+     * word about the move is what makes the transport look again, and by then the link is under the
+     * new id, so the clients on it never see it close.
      */
     rekey(oldId: string, newId: string): void {
         const followed = this.byId.get(oldId);

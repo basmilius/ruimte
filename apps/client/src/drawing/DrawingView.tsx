@@ -60,8 +60,6 @@ type Gesture =
     | { kind: 'rotate'; center: Point; id: string; first: boolean }
     | { kind: 'erase' };
 
-/* The wheel settles on a whole percent this long after the last tick, as the canvas does. */
-
 /* The letters of the tools a first stroke usually starts with, as the keys in `use-drawing-keys.ts` read them. */
 const FIRST_TOOLS: readonly { key: string; name: string }[] = [
     { key: 'R', name: 'rectangle' },

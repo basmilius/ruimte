@@ -1,6 +1,6 @@
 /*
- * Whether a run of wheel samples from a page is a two-finger swipe back or forward. Pure: the
- * registry feeds it what the guest preload reports and acts on what comes out, so every threshold
+ * Whether a run of wheel samples from a page is a two-finger swipe back or forward. Pure, so the
+ * registry feeds it what the guest preload reports and acts on what comes out; every threshold
  * is pinned in `swipe.test.ts` without a trackpad.
  */
 
@@ -11,7 +11,7 @@ export interface WheelSample {
     momentum: boolean;
     /* The page called `preventDefault`, which is how a map says the gesture is its own. */
     handled: boolean;
-    /* Ctrl was held, which is how Chromium reports a pinch: no swipe is involved. */
+    /* Ctrl was held, which is how Chromium reports a pinch. No swipe is involved. */
     pinch: boolean;
     /* Something under the pointer can still scroll this way, claims its overscroll, or is zoomed in and can still pan. */
     pageTakes: boolean;
@@ -39,10 +39,10 @@ export type SwipeOutcome = { kind: 'none' } | { kind: 'progress'; side: SwipeSid
 
 /*
  * Net horizontal travel that navigates, in the page's CSS pixels. The host is scaled by the camera
- * zoom on a canvas, and whether Chromium scales a guest's wheel deltas with that transform is not
- * measured: the reading of the source is that it moves the point and leaves the deltas alone, so
- * the travel is the finger's whatever the zoom. If it turns out otherwise, this is the one number
- * to divide by the zoom.
+ * zoom on a canvas, and whether Chromium also scales a guest's wheel deltas with that transform has
+ * not been measured. Reading the source suggests it moves the point and leaves the deltas alone, so
+ * the travel is the finger's whatever the zoom. If that turns out wrong, this is the one number to
+ * divide by the zoom.
  */
 export const SWIPE_THRESHOLD_PX = 150;
 /* Horizontal has to outweigh vertical this many times over the gesture. */
@@ -113,8 +113,8 @@ export const feedWheel = (state: SwipeState, sample: WheelSample, history: Swipe
     if (current.phase === 'held') {
         return { state: current, outcome: NONE };
     }
-    // A page that handles the wheel owns the whole gesture, and so does one that can still scroll
-    // the way it starts: a carousel keeps the swipe until the gesture ends.
+    // A page that handles the wheel owns the whole gesture, as does one that can still scroll the
+    // way it starts; a carousel keeps the swipe until the gesture ends.
     const firstHorizontal = !current.checked && sample.deltaX !== 0;
     if (sample.handled || (firstHorizontal && sample.pageTakes)) {
         return { state: { ...current, phase: 'held' }, outcome: NONE };

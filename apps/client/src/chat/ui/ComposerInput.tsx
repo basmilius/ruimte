@@ -19,10 +19,9 @@ interface ComposerInputProps {
     value: string;
     placeholder: string;
     disabled: boolean;
-    /* Whether the editor is in the tab order. */
     tabbable: boolean;
     className?: string;
-    /* Keep the reference stable: a new one reconfigures the editor. */
+    /* Keep the reference stable. A new one reconfigures the editor. */
     extensions?: Extension;
     onChange(text: string, selection: InputSelection, state: EditorState): void;
     onSelectionChange?(text: string, selection: InputSelection, state: EditorState): void;

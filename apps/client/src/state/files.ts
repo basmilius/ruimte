@@ -51,7 +51,7 @@ export const openTab = (state: TabState, path: string, limit: number, view?: Fil
     const key = tabKey(path, view);
     const open = state.tabs.find((tab) => tab.key === key);
     if (open) {
-        // A diff tab that is open again asks for another scope: the tab follows, it is not opened twice.
+        // A diff tab that is open again asks for another scope, so the tab follows, it is not opened twice.
         const tabs = view === undefined ? state.tabs : state.tabs.map((tab) => (tab.key === key ? { ...tab, view } : tab));
         return { tabs, active: key };
     }
@@ -181,7 +181,7 @@ export const useFiles = create<FilesStore>((set, get) => ({
             useUi.getState().setPreviewOpen(false);
         }
     },
-    /* A pinned tab goes with the rest: the person asked for this one file and nothing else. */
+    /* A pinned tab goes with the rest, since the person asked for this one file and nothing else. */
     closeOthers(key) {
         for (const tab of get().tabs) {
             if (tab.key !== key) {

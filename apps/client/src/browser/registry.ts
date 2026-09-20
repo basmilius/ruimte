@@ -30,7 +30,7 @@ export interface BrowserState {
 }
 
 interface BrowserStore {
-    /* Keyed with `endpointKey`: two projects on two machines never share a page. */
+    /* Keyed with `endpointKey`, so two projects on two machines never share a page. */
     byKey: Record<string, BrowserState>;
     patch(key: string, patch: Partial<BrowserState>): void;
     forget(key: string): void;
@@ -73,7 +73,7 @@ export const useBrowserRow = <T>(nodeId: string, select: (row: BrowserState | un
     return useBrowser((s) => select(s.byKey[endpointKey(endpointId, nodeId)]));
 };
 
-/* What this client keeps of the pages: one icon per node of this endpoint, and only the ones there are. */
+/* What this client keeps of the pages, one icon per node of this endpoint, only the ones there are. */
 export const faviconsOfProject = (byKey: Record<string, BrowserState>, endpointId: string): Record<string, string> => {
     const favicons: Record<string, string> = {};
     for (const [key, state] of Object.entries(byKey)) {
@@ -133,7 +133,7 @@ const isWheelSample = (value: unknown): value is WheelSample => {
     );
 };
 
-/* Whether pages report their wheel at all: the setting, on the one platform the gesture belongs to. */
+/* Whether pages report their wheel at all, the setting on the one platform the gesture belongs to. */
 const swipesOn = (): boolean => canSwipeBetweenPages() && useSettings.getState().browserSwipe;
 
 /* The site a page belongs to, or the address itself when it has no host to compare. */
@@ -174,13 +174,13 @@ export const setInitialWebviewUrl = (element: Pick<HTMLElement, 'setAttribute'>,
 };
 
 /*
- * The webview elements, one per browser node, created once and never re-parented: Chromium
+ * The webview elements, one per browser node, created once and never re-parented. Chromium
  * throws the page away when a <webview> leaves the DOM, so a project switch, a view switch and a
  * page that scrolls off the canvas all hide it instead. `WebviewParking` holds and places the
  * hosts they sit in; this registry owns the elements.
  */
 class BrowserRegistry {
-    /* Keyed with `endpointKey`, the way the store above is: a page belongs to a node of one machine. */
+    /* Keyed with `endpointKey`, the way the store above is, since a page belongs to a node of one machine. */
     private readonly elements = new Map<string, WebviewElement>();
     private readonly swipes = new Map<string, SwipeState>();
     private readonly settleTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -200,8 +200,8 @@ class BrowserRegistry {
             return null;
         }
         const element = document.createElement('webview') as WebviewElement;
-        // Only settings that turn something on: an Electron webview attribute counts as set the moment
-        // it is there, so `allowpopups="false"` would be popups switched on. A page here opens nothing.
+        // Only sets attributes that turn something on. An Electron webview attribute counts as set the
+        // moment it is there, so `allowpopups="false"` would turn popups on. A page here opens nothing.
         element.setAttribute('partition', 'persist:ruimte');
         element.style.width = '100%';
         element.style.height = '100%';

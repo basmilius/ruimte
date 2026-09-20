@@ -30,8 +30,8 @@ const decodeBase64 = (data: string): Uint8Array<ArrayBuffer> => {
 
 /*
  * A resource's bytes over the wire, one piece per request. The client asks for the next piece only
- * once the one before arrived, which is the backpressure: the daemon never has more than one piece
- * of this resource on its way, and each is one frame that the channel splits further.
+ * once the one before arrived, so the daemon never has more than one piece of this resource on its
+ * way; each piece is one frame that the channel splits further.
  */
 export const readResource = async (read: ReadPiece, resource: ByteResource, options: ReadResourceOptions = {}): Promise<Blob> => {
     const chunkBytes = Math.min(options.chunkBytes ?? BYTES_CHUNK_MAX, BYTES_CHUNK_MAX);

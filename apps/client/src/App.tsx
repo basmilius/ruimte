@@ -48,7 +48,7 @@ import { stopVoice } from '@/voice/controller';
  * from here instead of from "the active endpoint", which a switch moves before the project follows.
  */
 function WorkspaceShell({ workspace }: { workspace: Workspace }) {
-    /* Once for the whole project rather than once per cell: a grid draws up to nine canvases. */
+    /* Once for the whole project rather than once per cell, since a grid draws up to nine canvases. */
     useCanvasShortcuts();
     /* The window's toolbar is where a file view puts its controls, and the body that draws them sits
        under the same column, so the element they portal into is held here. */
@@ -107,7 +107,7 @@ function WindowContent() {
     );
 }
 
-/* The approval a `/link` address opened, outside every workspace: the web client shows it before a machine is picked. */
+/* The approval a `/link` address opened, outside every workspace. The web client shows it before a machine is picked. */
 function LinkRequestDialog() {
     const open = useLinkRequest((s) => s.open);
     const code = useLinkRequest((s) => s.code);
@@ -123,7 +123,7 @@ export function App() {
         document.title = name ? `${name} - Ruimte` : 'Ruimte';
     }, [name]);
 
-    // Once, with the preference as it stands: the shell reads it again from About.
+    // Once, with the preference as it stands. The shell reads it again from About.
     useEffect(() => startUpdates(useSettings.getState().updatesAutoDownload) ?? undefined, []);
 
     // The macOS application menu names a pane, and switches to it when the dialog is already open.

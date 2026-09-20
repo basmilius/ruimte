@@ -4,8 +4,8 @@ import { availableParallelism, totalmem } from 'node:os';
 import { identityOf, parseProcArgs, ticksToNs, type CommandLine, type ProcessSampler, type RawProcess, type RawSample } from './sampler.ts';
 
 /*
- * libproc and the Mach host calls through `bun:ffi`: the whole process table in a couple of
- * milliseconds, without `ps`, a native addon or a helper process. The struct offsets below are from
+ * libproc and the Mach host calls through `bun:ffi` read the whole process table in a couple of
+ * milliseconds, without `ps`, a native addon or a helper process. The struct offsets below come from
  * the macOS SDK headers (`sys/proc_info.h`, `sys/resource.h`, `mach/vm_statistics.h`); the test
  * holds them against `ps`.
  */
@@ -58,7 +58,7 @@ const cString = (bytes: Uint8Array, offset: number, length: number): string => {
     return decoder.decode(end === -1 ? slice : slice.subarray(0, end));
 };
 
-/* Two 32 bit halves rather than a BigInt: at 1,500 processes a BigInt per counter is most of the cost. */
+/* Two 32 bit halves instead of a BigInt, since a BigInt per counter is most of the cost at 1,500 processes. */
 const u64 = (view: DataView, offset: number): number => view.getUint32(offset, true) + view.getUint32(offset + 4, true) * 2 ** 32;
 
 interface Described {
@@ -73,7 +73,7 @@ export class DarwinSampler implements ProcessSampler {
     private readonly numer: number;
     private readonly denom: number;
     private readonly pageSize: number;
-    // One port for the life of the daemon: every call to `mach_host_self` hands out another send right.
+    // One port for the life of the daemon, since every call to `mach_host_self` hands out another send right.
     private readonly host: number;
     private pids = new Int32Array(4096);
     private readonly bsd = new Uint8Array(PROC_BSDINFO_SIZE);
@@ -228,7 +228,6 @@ export class DarwinSampler implements ProcessSampler {
         let cpuTotal: number | null = null;
         const cpuCount = new Uint32Array([4]);
         if (this.system.symbols.host_statistics(this.host, HOST_CPU_LOAD_INFO, ptr(this.cpuLoad), ptr(cpuCount)) === 0) {
-            // user, system, idle, nice
             const [user = 0, system = 0, idle = 0, nice = 0] = this.cpuLoad;
             cpuBusy = user + system + nice;
             cpuTotal = cpuBusy + idle;

@@ -40,13 +40,13 @@ const asLabel = (text: string): string => {
     return line.length > 24 ? `${line.slice(0, 24)}...` : line;
 };
 
-// http(s) only, for the same reason the window open handler refuses the rest: a link the page
-// carries itself (file:, data:) is nothing to hand to a new node or to the system browser.
+// http(s) only, matching the window open handler's rule. A link the page carries itself (file:,
+// data:) is nothing to hand to a new node or the system browser.
 const isWebUrl = (url: string): boolean => /^https?:\/\//i.test(url);
 
 /*
- * The rows behind a right-click in a page, in groups a separator sits between. Pure on purpose:
- * what the click landed on decides the whole menu, and that is what the test drives.
+ * The rows behind a right-click in a page, in groups with a separator between them. Pure on
+ * purpose, since what the click landed on decides the whole menu, and that is what the test drives.
  */
 export const buildBrowserMenu = (input: BrowserMenuInput): BrowserMenuItem[][] => {
     // The shell keeps an editable click and pops a native menu over it, so macOS can hang AutoFill,

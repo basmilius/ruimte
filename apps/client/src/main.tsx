@@ -48,7 +48,7 @@ void bootWindow();
 startShowViewWatch();
 startInputModality();
 startKeepAwake();
-/* Before the account: a `/link` address leaves the address bar and waits for whoever signs in. */
+/* Before the account, since a `/link` address must leave the address bar and wait for whoever signs in. */
 startLinkRequest();
 void startPulsarAccount();
 startAutoRegistration();
@@ -75,7 +75,7 @@ if (import.meta.env.DEV) {
     exposeTerminalTestHooks();
 }
 
-/* The words come first: a screen drawn before its language is in is a screen in the wrong one,
+/* The words come first. A screen drawn before its language is in is a screen in the wrong one,
    and swapping it under a person is worse than the moment it takes to load. */
 await initI18n();
 

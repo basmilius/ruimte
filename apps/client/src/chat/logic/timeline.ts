@@ -48,7 +48,6 @@ interface TimelineOptions {
     activeTurnId: string | null;
 }
 
-/* "Read 4 files", "Ran 2 commands", or "12 tool calls" when the run mixes kinds. */
 /*
  * A turn runs in two rhythms. The tool lines are a list and read as one when they sit tight
  * against each other; prose and cards are blocks and need room around them. Where the two meet,
@@ -58,6 +57,7 @@ const BLOCK_KINDS = new Set<TimelineRow['kind']>(['assistant', 'report', 'thinki
 
 export const isBlock = (row: TimelineRow): boolean => BLOCK_KINDS.has(row.kind);
 
+/* "Read 4 files", "Ran 2 commands", or "12 tool calls" when the run mixes kinds. */
 export const summarizeGroup = (tools: ChatToolItem[]): string => {
     const names = new Set(tools.map((tool) => tool.name));
     const only = names.size === 1 ? tools[0]!.name : null;

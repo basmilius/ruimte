@@ -58,7 +58,7 @@ export class PushAttentionSync {
             .finally(() => this.pending.delete(key));
     }
 
-    /* The nodes the machine holds something unread for: a turn that ended or a task that failed, whether or not a client was there. */
+    /* The nodes the machine holds something unread for. A turn that ended or a task that failed, whether or not a client was there. */
     unread(): string[] {
         const from = this.marksFrom;
         if (from === null) {

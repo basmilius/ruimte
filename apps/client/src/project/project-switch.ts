@@ -114,7 +114,7 @@ export class ProjectSwitch {
         return entry !== null && state.kind === 'failed' ? this.start(entry.target, entry.make) : null;
     }
 
-    /* The way back from a failure: undo what the run moved, then leave the screen to what is open. */
+    /* The way back from a failure. It undoes what the run moved, then leaves the screen to what is open. */
     async back(): Promise<void> {
         const { entry, state } = this;
         if (entry === null || state.kind !== 'failed') {
@@ -146,7 +146,7 @@ export class ProjectSwitch {
             if (signal.reason === 'replaced' || this.entry !== entry) {
                 return 'replaced';
             }
-            // Only after the run stopped: what it had on the wire would otherwise land on top of the way back.
+            // Only after the run stopped, since what it had on the wire would otherwise land on top of the way back.
             await entry.run.back().catch(() => undefined);
             this.finish(entry);
             return 'cancelled';

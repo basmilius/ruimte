@@ -92,7 +92,7 @@ export interface Settings {
        Off to start with: a laptop that never sleeps is not something to arrange behind someone. */
     agentsKeepAwake: boolean;
     /* Whether a turn that ends while this window is not the one in front says so, as a notification
-       of the operating system. On: the point of the whole thing is the moment somebody walked away,
+       of the operating system. On. The point of the whole thing is the moment somebody walked away,
        and it never fires while the window is in front, so it cannot land on top of what you are doing. */
     agentsTurnNotify: boolean;
     /* Whether those notifications make a sound. Off, because a sound arrives in whatever the person
@@ -104,10 +104,10 @@ export interface Settings {
     /* The STUN servers a direct connection asks for this client's public address, separated by spaces.
        Empty offers the addresses of this machine's own interfaces only, which is enough on one network. */
     directStunServers: string;
-    /* Which language the interface is written in: `system` is whatever the operating system asks
+    /* Which language the interface is written in. `system` is whatever the operating system asks
        for, and one of `APP_LANGUAGES` overrules it. */
     language: string;
-    /* Which region writes the numbers, dates and times: `language` follows whatever the interface
+    /* Which region writes the numbers, dates and times. `language` follows whatever the interface
        is written in, `system` follows the operating system, and a tag from `FORMAT_REGIONS`
        overrules both. The two are apart because a person can read one language in another country's
        notation, which is what an English app on a Dutch Mac already was. */
@@ -156,14 +156,14 @@ const DEFAULT_SETTINGS: Settings = {
     formatRegion: FORMAT_LANGUAGE
 };
 
-// Rounded as well as clamped: the stepper used to move in halves, so a browser can still hand back
+// Rounded as well as clamped. The stepper used to move in halves, so a browser can still hand back
 // a half pixel from before, and both text and the terminal render sharpest on a whole one.
 const clampSize = (value: unknown, range: { min: number; max: number }, fallback: number): number => {
     const size = typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : fallback;
     return Math.min(range.max, Math.max(range.min, size));
 };
 
-/* What a stored blob means, key by key: everything a client wrote before a setting existed, or wrote
+/* What a stored blob means, key by key. Everything a client wrote before a setting existed, or wrote
    as something else, reads as what a fresh client gets. */
 export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     ...DEFAULT_SETTINGS,
@@ -177,7 +177,7 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     accent: NODE_ACCENTS.find((entry) => entry.id === stored.accent)?.id ?? DEFAULT_SETTINGS.accent,
     // Nothing moves a person's eyes unless that person said so, so only a stored `true` turns it on.
     agentsShowViews: stored.agentsShowViews === true,
-    // Same rule: nothing keeps a laptop from sleeping unless a stored `true` asked for it.
+    // Same rule. Nothing keeps a laptop from sleeping unless a stored `true` asked for it.
     agentsKeepAwake: stored.agentsKeepAwake === true,
     // The two that start on, so only a stored `false` turns either of them off.
     agentsApprovals: stored.agentsApprovals !== false,
@@ -194,7 +194,7 @@ export const settingsFrom = (stored: Partial<Settings>): Settings => ({
             ? stored.voiceInputDeviceId
             : DEFAULT_SETTINGS.voiceInputDeviceId,
     voiceConfirmDestructiveActions: stored.voiceConfirmDestructiveActions !== false,
-    // Same rule as the block: nothing makes a sound unless a stored `true` asked for it.
+    // Same rule as the block. Nothing makes a sound unless a stored `true` asked for it.
     agentsTurnSound: stored.agentsTurnSound === true,
     browserSwipe: stored.browserSwipe !== false,
     worktreeMergeStrategy: WORKTREE_MERGE_STRATEGIES.find((strategy) => strategy === stored.worktreeMergeStrategy) ?? DEFAULT_SETTINGS.worktreeMergeStrategy,
@@ -214,7 +214,7 @@ const read = (): Settings => {
     }
 };
 
-/* The accent as channels: a token that needs it with an alpha writes `rgb(var(--accent-rgb) / a)`,
+/* The accent as channels. A token that needs it with an alpha writes `rgb(var(--accent-rgb) / a)`,
    which still computes to a literal color for the reader that wants one, the terminal above all. */
 const channelsOf = (hex: string): string => {
     const value = Number.parseInt(hex.slice(1), 16);

@@ -9,7 +9,7 @@ import { windowWorkspace } from '@/state/window';
  */
 export const endpointKey = (endpointId: string, id: string): string => `${endpointId}:${id}`;
 
-/* The first colon wins: an endpoint id is base64url or the literal `local`, and neither carries one. */
+/* The first colon wins, since an endpoint id is base64url or the literal `local`, and neither carries one. */
 export const splitKey = (key: string): { endpointId: string; id: string } => {
     const at = key.indexOf(':');
     if (at === -1) {

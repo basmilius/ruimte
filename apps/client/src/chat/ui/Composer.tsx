@@ -75,7 +75,7 @@ interface ComposerProps {
     /* On a canvas, whose prompt stack may be where this chat's prompts are answered. */
     onCanvas: boolean;
     disabled: boolean;
-    /* Opened for one CLI from a menu: the model is the remembered one and there is nothing to pick. */
+    /* Opened for one CLI from a menu. The model is the remembered one and there is nothing to pick. */
     providerFixed: boolean;
     onSend(text: string, extras: ChatSendExtras): void;
     /* Another provider's model was picked before the first message; the node has to follow. */
@@ -83,7 +83,7 @@ interface ComposerProps {
 }
 
 const usePendingRequests = (chatId: string) => {
-    // The structure, which a delta leaves alone: the prompts and the requests are items of their own.
+    // The structure, which a delta leaves alone. The prompts and the requests are items of their own.
     const items = useChatRow(chatId, (row) => row?.structure);
     const order = useChatRow(chatId, (row) => row?.order);
     return useMemo(() => {
@@ -127,7 +127,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     const providers = useProviders((s) => s.providers);
     const { approvals, questions } = usePendingRequests(chatId);
     const order = useChatRow(chatId, (row) => row?.order);
-    // The structure, which a delta leaves alone: the prompts and the requests are items of their own.
+    // The structure, which a delta leaves alone. The prompts and the requests are items of their own.
     const items = useChatRow(chatId, (row) => row?.structure);
 
     const pending = useMemo(() => [...approvals, ...questions], [approvals, questions]);
@@ -143,7 +143,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     const started = info.agentSessionId !== null || info.usage.turns > 0;
     /*
      * A chat that has started keeps its provider (the CLI holds the thread), and one opened for a
-     * named CLI was never going to change it. Either way the models stay switchable: the CLI takes
+     * named CLI was never going to change it. Either way the models stay switchable. The CLI takes
      * the new one on the restart the next send does anyway. With one provider in the list the
      * picker drops its group headers on its own, so it reads as that CLI's own catalog.
      */
@@ -196,7 +196,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                 })
                 .catch(() => undefined);
         };
-        // A bare `@` is not a keystroke in a query: it opens the list of what is there, at once.
+        // A bare `@` is not a keystroke in a query. It opens the list of what is there, at once.
         if (mention.query === '') {
             search();
             return () => {

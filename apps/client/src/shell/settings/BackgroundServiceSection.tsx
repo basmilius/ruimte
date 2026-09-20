@@ -14,7 +14,7 @@ import { Icon } from '@/ui/Icon';
 type Confirming = 'stop' | 'linger' | 'restart' | null;
 
 /*
- * Whether This machine outlives the app. Drawn only where the shell carries the bridge for it, so a
+ * Whether "This machine" outlives the app. Drawn only where the shell carries the bridge for it, so a
  * browser tab and the web client never see a switch they cannot honor.
  */
 export function BackgroundServiceSection() {

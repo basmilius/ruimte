@@ -34,7 +34,7 @@ export const showView = (id: string): void => {
 
 /*
  * Opens a view the machine writes (a fork) once it is in the document, which may be before or after
- * the answer to the request that made it: the next `project.changed` is what carries it.
+ * the answer to the request that made it. The next `project.changed` is what carries it.
  */
 export const showViewWhenItLands = (id: string): void => {
     if (useDocument.getState().views.some((view) => view.id === id)) {
@@ -51,7 +51,7 @@ export const showViewWhenItLands = (id: string): void => {
 };
 
 /*
- * The view a split puts in the cell it makes: the first one that is not standing anywhere yet, from
+ * The view a split puts in the cell it makes. The first one that is not standing anywhere yet, from
  * the focused view down the list and around. A view lives in at most one cell, so with every view
  * already up there is nothing to put beside them and the split does not happen.
  */
@@ -68,7 +68,7 @@ export const freeViewFor = (state: Pick<DocumentState, 'views' | 'layout' | 'act
     return null;
 };
 
-/* Splitting the focused cell, from a shortcut or from a menu: the grid decides, this picks the view. */
+/* Splitting the focused cell, from a shortcut or from a menu. The grid decides, this picks the view. */
 export const splitFocusedCell = (direction: SplitDirection): void => {
     const state = useDocument.getState();
     const viewId = freeViewFor(state);
@@ -86,7 +86,7 @@ export const revealNode = (nodeId: string): void => {
     focusedCanvas().getState().goToNode(nodeId);
 };
 
-/* "Canvas", then "Canvas 2": a new view is named after what it is until someone renames it. */
+/* A new view is named after what it is, "Canvas", then "Canvas 2", until someone renames it. */
 const freeName = (views: readonly ProjectView[], base: string): string => {
     const taken = new Set(views.flatMap((view) => (view.name === undefined ? [] : [view.name])));
     if (!taken.has(base)) {
@@ -101,14 +101,14 @@ const freeName = (views: readonly ProjectView[], base: string): string => {
 
 export const newCanvasView = (): string | null => useDocument.getState().addCanvasView(freeName(useDocument.getState().views, MAIN_VIEW_NAME));
 
-/* A shell of its own, with no agent in it: the plain Terminal beside the agent submenus. */
+/* A shell of its own, with no agent in it. The plain Terminal beside the agent submenus. */
 export const newTerminalView = (): string | null =>
     useDocument.getState().addStandaloneView({ kind: 'terminal', name: freeName(useDocument.getState().views, 'Terminal'), node: {} });
 
 export const newSeparatorView = (): string | null => useDocument.getState().addSeparatorView();
 
-/* A heading over the rows under it. It lands with a name it can be read by and the sidebar puts the
-   caret in it at once: a heading is nothing but what it says, so typing is the first thing to do. */
+/* A heading over the rows under it. It lands with a name it can be read by, and the sidebar puts the
+   caret in it at once, since a heading is nothing but what it says. */
 export const newSubheaderView = (): string | null => {
     const id = useDocument.getState().addSubheaderView(freeName(useDocument.getState().views, 'Section'));
     useUi.getState().setRenamingViewId(id);
@@ -121,7 +121,7 @@ export const newDiagramView = (): string | null => useDocument.getState().addDia
 
 /*
  * Puts a mirror of a drawing or a diagram view on the canvas that was open last. The view itself
- * stays a view of its own: the node reads the same file and opens the view on a double-click.
+ * stays a view of its own. The node reads the same file and opens the view on a double-click.
  */
 export const showOnCanvas = (viewId: string): string | null => {
     const document = useDocument.getState();
@@ -181,7 +181,7 @@ const storedFilePath = (path: string): string => storedPathOf(useProject.getStat
  * A file as a node on the canvas. The path may be absolute on the daemon's machine or already
  * stored the way a node holds one; both come out the same, since shortening a stored path is a
  * no-op. `at` says where the node's middle goes, in world units, which a drop knows and a menu does
- * not: without one it lands in the middle of the view and the camera travels to it.
+ * not. Without one it lands in the middle of the view and the camera travels to it.
  */
 export const showFileOnCanvas = (path: string, at?: Point): string | null => {
     const canvasViewId = canvasForFile();
@@ -203,7 +203,7 @@ export const newFileView = (path: string): string | null => useDocument.getState
 
 /*
  * Puts a view in the shared file, or takes it back out, and says what happened with a way back. No
- * dialog: nothing reaches anyone until the person commits, so there is nothing here to confirm. The
+ * dialog. Nothing reaches anyone until the person commits, so there is nothing here to confirm. The
  * line names the count, which is the one thing a person did not see coming; the titles ride along
  * with it, and a chat titles itself after its first prompt.
  */
@@ -256,7 +256,7 @@ export const duplicateViewOf = (id: string): string | null => {
     const source = useDocument.getState().views.find((view) => view.id === id);
     const copyId = useDocument.getState().duplicateView(id);
     if (copyId && source && isDrawingView(source)) {
-        // Loaded here rather than at the top: this module is the actions, and importing the clients
+        // Loaded here rather than at the top. This module is the actions, and importing the clients
         // would pull the transport into everything that only wants to know what a view holds.
         void import('@/project').then(({ drawingClient }) => drawingClient.copy(id, copyId));
     }
@@ -346,7 +346,7 @@ export const askOpenAsView = (nodeId: string): void => {
     useDocument.getState().openAsView(nodeId);
 };
 
-/* The other way: the view becomes a node again, on the canvas that was up last. */
+/* The other way. The view becomes a node again, on the canvas that was up last. */
 export const putOnCanvas = (viewId: string): boolean => {
     const { views, lastCanvasViewId } = useDocument.getState();
     const target = views.find((view) => view.id === lastCanvasViewId && isCanvasView(view)) ?? views.find(isCanvasView);

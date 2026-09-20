@@ -46,7 +46,7 @@ afterEach(async () => {
     await rm(root, { recursive: true, force: true });
 });
 
-/* Two clients of one daemon: a socket and, beside it, a channel that got in the way a direct connection does. */
+/* Two clients of one daemon. A socket and, beside it, a channel that got in the way a direct connection does. */
 const twoClients = () => {
     const dispatcher = new Dispatcher();
     registerProjectHandlers(dispatcher, store);

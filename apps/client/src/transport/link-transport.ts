@@ -92,9 +92,9 @@ export class LinkTransport implements PooledTransport {
     }
 
     /*
-     * Says where the next connection goes without touching the one that is open. What a socket that
-     * moved to another endpoint id needs: the machine did not change, only what this client calls it,
-     * and closing would drop every session attached to it.
+     * Says where the next connection goes without touching the one that is open. A socket that moved to
+     * another endpoint id needs exactly this, since the machine did not change, only what this client
+     * calls it, and closing would drop every session attached to it.
      */
     retarget(address: SocketAddress): void {
         this.address = address;

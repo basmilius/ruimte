@@ -27,7 +27,7 @@ const START: View = { scale: 1, x: 0, y: 0 };
 
 /*
  * Zooms around a point, which is what makes a wheel over a detail feel like a magnifier instead of
- * a slider: the pixel under the pointer stays where it is while everything else moves away from it.
+ * a slider. The pixel under the pointer stays where it is while everything else moves away from it.
  * `x` and `y` are offsets from the middle of the frame, so a scale of 1 is always centered.
  */
 const zoomed = (view: View, factor: number, pointX: number, pointY: number): View => {
@@ -70,7 +70,7 @@ function Lightbox({ src, alt, open, onOpenChange }: { src: string; alt: string; 
         <Dialog.Root open={open} onOpenChange={onOpenChange}>
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop lightbox-backdrop" />
-                {/* Nothing here sets a size: the picture takes the room `.lightbox-frame` allows it and the popup follows. */}
+                {/* Nothing here sets a size. The picture takes the room `.lightbox-frame` allows it, and the popup follows. */}
                 <Dialog.Popup className="dialog-popup flex min-w-72 flex-col">
                     <Dialog.Title className="sr-only">{alt}</Dialog.Title>
                     <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border pr-2 pl-3">

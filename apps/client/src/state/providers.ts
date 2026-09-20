@@ -13,7 +13,6 @@ const NONE: ProvidersRow = { providers: [], loaded: false };
 interface ProvidersStore {
     byEndpoint: Record<string, ProvidersRow>;
     setProviders(endpointId: string, providers: ProviderInfo[]): void;
-    /* A machine that is forgotten takes its list of CLIs with it. */
     forget(endpointId: string): void;
 }
 

@@ -11,7 +11,7 @@ import {
 } from '@ruimte/contracts';
 import type { TimelineRow } from '@/chat/logic/timeline';
 
-/* The providers whose chat a machine can fork, and go on with in a fork: the ones with a conversation the CLI keeps. */
+/* The providers whose chat a machine can fork, and go on with in a fork, are the ones with a conversation the CLI keeps. */
 export const FORKABLE_PROVIDERS: ReadonlySet<string> = new Set(['claude', 'codex']);
 
 /* Where a fork goes on after, as the dialog words it. */

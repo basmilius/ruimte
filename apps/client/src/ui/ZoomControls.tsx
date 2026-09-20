@@ -16,7 +16,7 @@ interface ZoomSelection {
 }
 
 /*
- * The words, from the caller. A dock reads its own namespace: the canvas has these sentences under
+ * The words, from the caller. A dock reads its own namespace. The canvas has these sentences under
  * `shell:dock`, where the command palette reads two of them, and a drawing under `drawing:zoom`,
  * where its right-click menu reads two more, so neither set can move without leaving a reader behind.
  */

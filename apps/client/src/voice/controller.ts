@@ -36,8 +36,8 @@ const microphoneFailureText = (error: unknown): string => {
 };
 
 /*
- * Not a line a person reads, so it is not written by `format/`: it is context for the speech model,
- * and a fixed `en-GB` is what keeps the date unambiguous whatever the interface is set to.
+ * This context is for the speech model, not something a person reads, so it skips `format/`. A fixed
+ * `en-GB` keeps the date unambiguous whatever the interface language is set to.
  */
 const temporalContext = (): string => {
     const now = new Date();

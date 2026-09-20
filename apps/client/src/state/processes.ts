@@ -58,7 +58,7 @@ interface ProcessesStore extends Preferences {
     setScope(scope: ProcessScope): void;
     setSort(sort: ProcessSort): void;
     receive(endpointId: string, result: ProcessesSubscribeResult): void;
-    /* `current` is false for a sample of the scope or sort before the one just asked for: its points count, its rows do not. */
+    /* `current` is false for a sample of the scope or sort before the one just asked for. Its points count, its rows do not. */
     applySample(endpointId: string, sample: ProcessesSampleEvent, current: boolean): void;
     forget(endpointId: string): void;
 }
@@ -104,7 +104,7 @@ interface WarningsStore {
 }
 
 /*
- * The warnings apart from the samples: they reach every client, panel open or not, and the sidebar
+ * The warnings apart from the samples. They reach every client, panel open or not, and the sidebar
  * and the nodes that draw them should not redraw on every sample of a panel somewhere.
  */
 export const useProcessWarnings = create<WarningsStore>((set, get) => ({

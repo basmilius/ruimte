@@ -13,7 +13,7 @@ interface FileIconProps {
 
 /*
  * The icon a file gets in the tree, drawn anywhere else the same file's name shows up. It is the
- * one place the app steps outside Lucide: the glyphs are the `@pierre/trees` set, and their colors
+ * one place the app steps outside Lucide. The glyphs are the `@pierre/trees` set, and their colors
  * are the set's own, because a TypeScript blue or a Vue green is the mark of the file type, not a
  * theme choice. Decorative like every other icon here, so the name beside it does the reading.
  */

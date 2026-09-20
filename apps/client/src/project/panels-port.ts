@@ -42,7 +42,7 @@ const read = (): PanelsState => {
 /*
  * The panels on one side, the project's machine-local file on the other. It puts a project's panels
  * on screen the moment it opens and reports every change made after that, so the client can write
- * it. What it applies itself is never reported: opening a project would otherwise save it back.
+ * it. What it applies itself is never reported, since opening a project would otherwise save it back.
  */
 export class PanelsPort {
     private readonly listeners = new Set<() => void>();

@@ -9,7 +9,7 @@ interface Watch {
     ready: Promise<void>;
 }
 
-/* Keyed on the endpoint as well: the same absolute path on two machines is two checkouts. */
+/* Keyed on the endpoint as well, since the same absolute path on two machines is two checkouts. */
 const watches = new Map<string, Watch>();
 
 /*

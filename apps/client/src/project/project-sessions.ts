@@ -10,8 +10,8 @@ import { sessionNodesOfView, type ProjectView, type ViewSessionNode } from '@rui
 export const sessionNodesOf = (views: readonly ProjectView[]): ViewSessionNode[] => views.flatMap(sessionNodesOfView);
 
 /*
- * What the confirmation says before a project closes. It counts rather than hedges: a person who is
- * about to lose an agent mid-run wants to read how many, and the scrollback of a terminal is gone
+ * What the confirmation says before a project closes. It counts rather than hedges, since a person
+ * about to lose an agent mid-run wants to know how many, and the scrollback of a terminal is gone
  * with the session, which is the part that cannot be undone.
  */
 export const closeWarning = (sessions: number): string =>

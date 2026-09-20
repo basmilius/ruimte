@@ -22,7 +22,6 @@ const identity = {
     sign: (message: string) => signMessage(daemon.privateKey, message)
 };
 
-/* What a client does: take the nonce, sign what the contract says, hand it back. */
 const signIn = async (key: { publicKey: string; privateKey: string }, daemonId = DAEMON_ID) => {
     const { challenge } = handshake.challenge();
     return handshake.redeem({

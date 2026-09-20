@@ -36,7 +36,7 @@ export interface RawSample {
     at: number;
     /* A clock that stops while the machine sleeps; every elapsed time is measured on it. */
     awakeMs: number;
-    /* The boot clock minus the awake clock: it only grows while the machine sleeps. */
+    /* The boot clock minus the awake clock. It only grows while the machine sleeps. */
     asleepMs: number;
     processes: RawProcess[];
     machine: MachineCounters;
@@ -76,19 +76,19 @@ export const SLEEP_TOLERANCE_MS = 2000;
 
 export const identityOf = (pid: number, startTime: number): string => `${pid}:${startTime}`;
 
-/* Mach ticks to nanoseconds. On Apple silicon a tick is 125/3 ns, so the raw number reads 40 times too low. */
+/* On Apple silicon a tick is 125/3 ns, so the raw number reads 40 times too low. */
 export const ticksToNs = (ticks: number, numer: number, denom: number): number => (ticks * numer) / denom;
 
-/* Whether the machine slept between two readings. How long the gap was says nothing: a closed panel samples every five minutes. */
+/* How long the gap was says nothing, since a closed panel samples every five minutes. */
 export const sleptBetween = (before: RawSample, after: RawSample): boolean => after.asleepMs - before.asleepMs > SLEEP_TOLERANCE_MS;
 
 const perSecond = (now: number | null, then: number | null, elapsedMs: number): number | null =>
     now === null || then === null ? null : (Math.max(0, now - then) * 1000) / elapsedMs;
 
 /*
- * The rate of every process over the time since `before`. A process that started after `before` was
- * taken spent all its counters inside the interval, so it has a rate on its first sight too; one
- * that was already running but not in `before` has none yet, because nothing says when it spent them.
+ * A process that started after `before` was taken spent all its counters inside the interval, so it
+ * has a rate on its first sight too; one that was already running but not in `before` has none yet,
+ * because nothing says when it spent them.
  */
 export const processRates = (before: RawSample | null, after: RawSample): Map<string, ProcessRate> => {
     const rates = new Map<string, ProcessRate>();

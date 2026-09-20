@@ -20,7 +20,7 @@ interface CanvasSlice {
 }
 
 /*
- * Every canvas on screen, not the one that has the focus: with a grid of cells a save has to follow
+ * Every canvas on screen, not the one that has the focus. With a grid of cells a save has to follow
  * an edit in any of them. The registry names the view an edit happened in, which the client does not
  * need to know, because what it saves is the whole document either way.
  */
@@ -68,7 +68,7 @@ export interface ProjectSink {
     };
 }
 
-/* The slice of a drawing editor the client watches: its camera is local state like the canvas's. */
+/* The slice of a drawing editor the client watches. Its camera is local state like the canvas's. */
 interface DrawingSlice {
     camera: { x: number; y: number; zoom: number };
     loading: boolean;
@@ -93,7 +93,7 @@ interface ProjectClientOptions {
     onLoad?: () => void;
     /*
      * Ends what the views still hold on the machine they were opened on. Only a person closing a
-     * project reaches this: switching away releases the project and leaves its sessions running.
+     * project reaches this. Switching away releases the project and leaves its sessions running.
      */
     endSessions?: (endpointId: string, views: readonly ProjectView[]) => void;
     /* Runs once the project is open on the daemon again after the link came back, so the drawings on screen can follow. */
@@ -102,7 +102,7 @@ interface ProjectClientOptions {
     window?: Pick<Window, 'addEventListener' | 'removeEventListener'> | null;
 }
 
-/* A document without what wraps it: the version and the rev are the daemon's, not the person's. */
+/* A document without what wraps it. The version and the rev are the daemon's, not the person's. */
 const contentOf = (document: ProjectDocument): ProjectContent => {
     const { version: _version, rev: _rev, ...content } = document;
     return content;
@@ -202,7 +202,7 @@ export class ProjectClient {
         await this.open({ projectId });
     }
 
-    /* Creating is browse mode's business: everywhere else a folder that is gone stays gone. */
+    /* Creating is browse mode's business. Everywhere else a folder that is gone stays gone. */
     async openFolder(folder: string, createFolder = false): Promise<void> {
         await this.open({ folder, createFolder });
     }
@@ -212,7 +212,7 @@ export class ProjectClient {
     }
 
     /*
-     * Lets go of the project for another one: what is on screen is written first, and the daemon is told
+     * Lets go of the project for another one. What is on screen is written first, and the daemon is told
      * the project is released rather than closed, since switching away does not put it under Recent.
      * The stores keep what they hold, for the next client to load over.
      */
@@ -228,7 +228,7 @@ export class ProjectClient {
     }
 
     /*
-     * Puts the project away: the sessions of its nodes end on the machine and the canvas is left
+     * Puts the project away. The sessions of its nodes end on the machine and the canvas is left
      * empty. What is on screen is saved first, so a session goes only after the file it belongs to
      * is on disk, and the views are read before the stores are emptied a few lines down.
      */
@@ -330,7 +330,7 @@ export class ProjectClient {
         }
     }
 
-    /* Lets go of the machine: no more events, and no timer that would write to a daemon the client left. */
+    /* Lets go of the machine. No more events, and no timer that would write to a daemon the client left. */
     dispose(): void {
         for (const off of this.unsubscribe) {
             off();
@@ -439,7 +439,7 @@ export class ProjectClient {
             return;
         }
         const local = this.localOfScreen();
-        // This client's own copy first: the machine only has to be where a client that never saw the project starts.
+        // This client's own copy first, so the machine only has to be where a client that never saw the project starts.
         writeClientLocal(this.storage, this.endpointId(), current.projectId, local);
         if (this.transport.status === 'open') {
             void this.transport.request('project.save-local', { projectId: current.projectId, local: withoutClientBrowserState(local) }).catch(() => undefined);
@@ -498,7 +498,7 @@ export class ProjectClient {
         if (!this.opened || !current || current.projectId !== projectId) {
             return;
         }
-        /* Merged first on a clean screen too: a load swaps every editor out and blanks the canvas
+        /* Merged first on a clean screen too. A load swaps every editor out and blanks the canvas
            until it is measured, which a view renamed in another client should not cost. */
         if (this.adopt(document)) {
             return;
@@ -514,7 +514,7 @@ export class ProjectClient {
     }
 
     /*
-     * Takes in what another writer changed, beside this client's own edits: an agent adding a node or
+     * Takes in what another writer changed, beside this client's own edits. An agent adding a node or
      * a second client moving one is not something to ask a person about. The rev goes along, so the
      * next save is made against the file as it now stands; a real conflict answers false and gets the
      * dialog (or, on a clean screen, the whole document).
@@ -532,7 +532,7 @@ export class ProjectClient {
         this.refusal = null;
         this.base = contentOf(document);
         this.sink.setRev(document.rev);
-        /* Which file a view is in is the folder's answer and not this screen's: a colleague's pull
+        /* Which file a view is in is the folder's answer and not this screen's. A colleague's pull
            can share one, and nothing here may argue with what the daemon just read off disk. */
         this.documents.getState().applyMerge(merge.content.views, merge.changes.canvases, document.shared ?? []);
         return true;

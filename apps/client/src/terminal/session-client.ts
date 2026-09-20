@@ -81,9 +81,8 @@ export class SessionClient {
     }
 
     /**
-     * What a node does on mount: register, create if needed, attach. Answers null when the
-     * transport is not connected; the session stays registered and `onScreen` fires once the
-     * reconnect has attached it.
+     * On mount a node registers, creates if needed, and attaches. Answers null when the transport is
+     * not connected; the session stays registered and `onScreen` fires once the reconnect has attached it.
      */
     async open(nodeId: string, options: OpenOptions, cols: number, rows: number): Promise<SessionAttachResult | null> {
         this.mounted.set(nodeId, { ...options, cols, rows, attached: false });
@@ -177,7 +176,7 @@ export class SessionClient {
 
     /*
      * Answers a permission request the agent in this shell is waiting on. False when it was already
-     * settled: another client was first, the person answered in the CLI's own prompt, or it expired.
+     * settled, another client was first, the person answered in the CLI's own prompt, or it expired.
      * The daemon's `session.approvals` is what takes the row off the screen either way.
      */
     async answerApproval(nodeId: string, requestId: string, choiceId: string): Promise<boolean> {
@@ -216,7 +215,7 @@ export class SessionClient {
         return this.mounted.has(nodeId);
     }
 
-    /* Lets go of the machine, which is not the same as ending its sessions: they keep running, the
+    /* Lets go of the machine, which is not the same as ending its sessions. They keep running; the
        daemon only stops streaming their output to a socket this client no longer reads. */
     dispose(): void {
         for (const off of this.unsubscribe) {

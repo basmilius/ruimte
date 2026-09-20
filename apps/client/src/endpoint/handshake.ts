@@ -74,9 +74,9 @@ const reportImposter = (endpoint: Endpoint): void => {
 };
 
 /*
- * The address a socket for this machine opens on, credential and all. Run before every connection
- * and every reconnect: the ticket it signs for is good for that connection, so nothing that lives
- * longer than a connection ends up in a URL, a log or a process list.
+ * The address a socket for this machine opens on, credential and all. This runs before every
+ * connection and every reconnect, because the ticket it signs for is good for that connection only,
+ * so nothing that lives longer than a connection ends up in a URL, a log or a process list.
  */
 export const socketAddressFor = async (endpointId: string): Promise<string> => {
     const endpoint = useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId);
@@ -94,6 +94,6 @@ export const socketAddressFor = async (endpointId: string): Promise<string> => {
     if (key) {
         await signIn(endpoint, key);
     }
-    // Read again: signing in remembers a ticket and may have dropped the token, and the row is what says which to send.
+    // Read again, since signing in remembers a ticket and may have dropped the token; the row says which to send.
     return socketUrlFor(useEndpoints.getState().endpoints.find((entry) => entry.id === endpointId) ?? endpoint);
 };

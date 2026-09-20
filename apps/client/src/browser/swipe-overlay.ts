@@ -17,7 +17,7 @@ interface SwipeOverlayStore {
 }
 
 /*
- * A store of its own rather than a field of `useBrowser`: a swipe writes a sample every 16 ms, and
+ * A store of its own, not a field of `useBrowser`. A swipe writes a sample every 16 ms, and
  * `WebviewParking` places every page whenever the browser store moves. Only the arrow of the page
  * being swiped reads a row here.
  */

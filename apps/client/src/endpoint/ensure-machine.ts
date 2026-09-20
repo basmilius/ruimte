@@ -20,13 +20,6 @@ export interface MachineLinkDeps {
     timeoutMs?: number;
 }
 
-/*
- * Brings a machine's link up on demand, whichever way in asked: the palette, a project in the
- * switcher, a folder, the welcome screen of the web client. A machine this client has no row for
- * yet gets one here, the way the account list makes one. The wait ends on the first attempt that
- * fails, with its reason, rather than sitting through the reconnect loop behind it; that loop keeps
- * running, so the machine may still come up later without anyone asking again.
- */
 /* The one error a wait ends on when the person who asked stopped waiting, so a caller can tell it from a failure. */
 export class MachineWaitCancelled extends Error {
     constructor() {
@@ -44,6 +37,13 @@ interface Attempt {
     pinned: boolean;
 }
 
+/*
+ * Brings a machine's link up on demand, whichever way in asked: the palette, a project in the
+ * switcher, a folder, the welcome screen of the web client. A machine this client has no row for
+ * yet gets one here, the way the account list makes one. The wait ends on the first attempt that
+ * fails, with its reason, rather than sitting through the reconnect loop behind it; that loop keeps
+ * running, so the machine may still come up later without anyone asking again.
+ */
 export class MachineLinks {
     private readonly deps: MachineLinkDeps;
     private readonly attempts = new Map<string, Attempt>();
@@ -167,7 +167,7 @@ export class MachineLinks {
             const timer = setTimeout(() => finish(i18next.t('machines:link.silent')), deps.timeoutMs ?? ENSURE_TIMEOUT_MS);
             signal.addEventListener('abort', onAbort, { once: true });
             off = deps.subscribe(endpointId, check);
-            // A link waiting out its backoff is tried now: a person just asked for this machine.
+            // A link waiting out its backoff is tried now, because a person just asked for this machine.
             if (deps.connection(endpointId).status === 'closed') {
                 deps.reconnect(endpointId);
             }

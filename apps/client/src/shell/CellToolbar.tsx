@@ -21,15 +21,13 @@ import { useBrowserDisplayTitle } from '@/browser/title';
 /* What the bar holds that is not the bar: a press on one of these is not the start of a drag. */
 const CONTROLS = 'input, textarea, select, button, a, [contenteditable=""], [contenteditable="true"], [role="button"]';
 
-/* How much wider the bar has to get than where it folded before the actions come back. Without the
-   margin a bar right at the edge would fold and unfold on every pixel of a splitter drag. */
+/* Without this margin, a bar right at the fold point would fold and unfold on every pixel of a splitter drag. */
 const UNFOLD_MARGIN = 24;
 
 /*
- * Whether the view's actions are folded into the overflow menu. The title gives way first, down to
- * its glyph; only when the actions at their smallest still do not fit beside it do they fold. The
- * width at which that happened is remembered, since once folded the bar fits by definition and can
- * no longer tell by overflowing when there is room again.
+ * Whether the view's actions are folded into the overflow menu: only once the title has shrunk to
+ * its glyph and the actions still do not fit. The width where that happened is remembered, since a
+ * folded bar fits by definition and can no longer tell by overflowing when there is room again.
  */
 const useFolded = (bar: React.RefObject<HTMLElement | null>, actions: React.RefObject<HTMLElement | null>, enabled: boolean): boolean => {
     const [foldedAt, setFoldedAt] = useState<number | null>(null);

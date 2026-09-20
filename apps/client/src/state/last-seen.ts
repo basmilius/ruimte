@@ -32,8 +32,8 @@ const write = (byEndpoint: Record<string, number>): void => {
 };
 
 /*
- * A machine that is not connected is no longer a failure to report: most machines are closed most of
- * the time. When it last answered is what a person can still use, so it is kept across reloads.
+ * A machine that is not connected is no longer a failure to report, since most machines are closed
+ * most of the time. When it last answered is what a person can still use, so it is kept across reloads.
  */
 export const useLastSeen = create<LastSeenState>((set, get) => ({
     byEndpoint: readStored(browserStorage()),

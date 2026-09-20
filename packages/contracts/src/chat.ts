@@ -519,7 +519,6 @@ export const ChatSubagentResultSchema = z.object({
 });
 export type ChatSubagentResult = z.infer<typeof ChatSubagentResultSchema>;
 
-// Carries nothing of the conversation: a client that holds it asks for the newest page again.
 /*
  * The status of one chat, sent to every client on this machine rather than only to the ones
  * attached to it. A thread's events are only worth streaming to whoever reads them, but what a chat
@@ -529,6 +528,7 @@ export type ChatSubagentResult = z.infer<typeof ChatSubagentResultSchema>;
 export const ChatStatusEventSchema = z.object({ chatId: ChatIdSchema, info: ChatInfoSchema });
 export type ChatStatusEvent = z.infer<typeof ChatStatusEventSchema>;
 
+// Carries nothing of the conversation: a client that holds it asks for the newest page again.
 export const ChatSubagentChangedEventSchema = z.object({ chatId: ChatIdSchema, toolUseId: z.string() });
 export type ChatSubagentChangedEvent = z.infer<typeof ChatSubagentChangedEventSchema>;
 

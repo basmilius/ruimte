@@ -49,7 +49,7 @@ const withItem = (state: ChatState, item: ChatItem): ChatState => {
     return { ...state, items, structure: items };
 };
 
-/* Cheap enough: a status only arrives when the daemon saw one change, never on a streamed word. */
+/* Cheap enough, since a status only arrives when the daemon saw one change, never on a streamed word. */
 const sameInfo = (left: ChatInfo, right: ChatInfo): boolean => JSON.stringify(left) === JSON.stringify(right);
 
 export const applyEvent = (state: ChatState, event: ChatEvent): ChatState => {
@@ -62,7 +62,7 @@ export const applyEvent = (state: ChatState, event: ChatEvent): ChatState => {
             const item = state.items[event.itemId];
             if (item?.kind === 'assistant' || item?.kind === 'thinking') {
                 const grown = { ...item, text: item.text + event.text };
-                // The first text is structure after all: an empty reply that is not streaming has no row.
+                // The first text is structure after all, since an empty reply that is not streaming has no row.
                 // A sub-agent's text is drawn from inside its parent's row, which only the rows carry.
                 if (item.text === '' || (item.kind === 'assistant' && item.parentToolUseId)) {
                     return withItem(state, grown);
@@ -103,7 +103,7 @@ export const useChats = create<ChatsStore>((set) => ({
     },
     /*
      * The status of a chat this window is not reading, which the daemon sends for every chat it has
-     * loaded. The thread stays empty until somebody attaches: this is what a node header, the
+     * loaded. The thread stays empty until somebody attaches, since this is what a node header, the
      * sidebar and the counters need, and they ask the info and never the items.
      */
     status(key, info) {

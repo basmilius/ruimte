@@ -326,7 +326,7 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
 
     /*
      * Inside the container every request comes from loopback, which is what a tunnel or a reverse
-     * proxy in front of a daemon looks like. Without the local secret none of it opens: `pair()`
+     * proxy in front of a daemon looks like. Without the local secret none of it opens. `pair()`
      * above is the same request with the secret, read from the home the way `ruimte pair` reads it.
      */
     test('loopback without the local secret gets through no door', async () => {
@@ -375,7 +375,7 @@ describe.skipIf(!ENABLED)('the daemon in the Linux container', () => {
             });
             expect(heard.at(-1)).toMatchObject({ id: named.id, label: 'The box downstairs', nameSource: 'chosen' });
 
-            // It is the machine's, not the connection's: it sits in the home next to the id.
+            // It is the machine's, not the connection's. It sits in the home next to the id.
             const written = JSON.parse(await inContainer(['cat', `${HOME}/endpoint.json`])) as { version: number; name: string };
             expect(written.version).toBe(1);
             expect(written.name).toBe('The box downstairs');
@@ -576,7 +576,7 @@ describe.skipIf(!ENABLED)('signing in instead of carrying a token', () => {
         await waitUntil('the socket of a revoked client to close', () => signed.closed);
 
         expect((await fetch(`${BASE_URL}/ws?token=${ticket}`)).status).toBe(401);
-        // Signing again is no way back in either: the key went with the session.
+        // Signing again is no way back in either. The key went with the session.
         expect((await signIn(key, daemonId)).status).toBe(401);
         other.close();
     });
@@ -602,8 +602,8 @@ describe.skipIf(!ENABLED)('signing in instead of carrying a token', () => {
 
 /*
  * The wire over a WebRTC DataChannel instead of the socket. The signals ride over a socket to the
- * container because there is no broker yet, and that socket is closed the moment the channel is up:
- * everything after it, the terminal included, travels over UDP through the ports the compose file
+ * container because there is no broker yet, and that socket is closed the moment the channel is up.
+ * Everything after it, the terminal included, travels over UDP through the ports the compose file
  * publishes, on the access the channel's own handshake gave it.
  */
 describe.skipIf(!ENABLED)('a direct connection to the daemon in the container', () => {
@@ -720,7 +720,7 @@ describe.skipIf(!ENABLED)('a direct connection to the daemon in the container', 
         client.onLost(() => {
             lostAt = Date.now();
         });
-        // Frozen rather than stopped: no process on the other end gets to say goodbye, like a machine that lost its network.
+        // Frozen rather than stopped. No process on the other end gets to say goodbye, like a machine that lost its network.
         await docker(['pause', CONTAINER]);
         const pausedAt = Date.now();
         let iceAtLoss = '';
@@ -791,14 +791,14 @@ describe.skipIf(!ENABLED)('two daemons at the same time', () => {
 
     beforeAll(async () => {
         home = await mkdtemp(join(tmpdir(), 'ruimte-pool-'));
-        // Its own home and no hooks: a test daemon must leave this machine's state and CLI settings alone.
+        // Its own home and no hooks. A test daemon must leave this machine's state and CLI settings alone.
         daemon = Bun.spawn(
             ['bun', join(import.meta.dir, '../main.ts'), '--host', '127.0.0.1', '--port', String(LOCAL_PORT), '--no-hooks', '--no-price-fetch'],
             { env: { ...process.env, RUIMTE_HOME: home }, stdout: 'ignore', stderr: 'inherit' }
         );
         await waitUntil(`a second daemon on ${LOCAL_URL}`, () => answers(LOCAL_URL));
         await waitUntil(`the container on ${BASE_URL}`, () => answers(BASE_URL), 5_000);
-        // Being on this machine is not enough for the daemon here either: the secret of its home is what gets in.
+        // Being on this machine is not enough for the daemon here either. The secret of its home is what gets in.
         await expect(RemoteClient.connect(null, LOCAL_PORT)).rejects.toThrow();
         here = await RemoteClient.connect(await readLocalSecret(home), LOCAL_PORT);
         there = await RemoteClient.connect((await pair()).sessionToken!);
@@ -874,7 +874,7 @@ describe.skipIf(!ENABLED)('two daemons at the same time', () => {
     }, 60_000);
 
     /*
-     * What the project menu does with a machine that is not there: the union is per machine, so the
+     * What the project menu does with a machine that is not there. The union is per machine, so the
      * one that is up keeps listing and opening its own projects while the other one is away.
      */
     test('a project on the machine that is up opens while the other one is gone', async () => {
@@ -1048,7 +1048,7 @@ describe.skipIf(!ENABLED)('one id on two machines', () => {
 
         there.takeOutput();
         /*
-         * By its path in the image, not by its name: Debian's `/etc/profile` writes PATH from
+         * By its path in the image, not by its name. Debian's `/etc/profile` writes PATH from
          * scratch, so the directory the daemon puts in front of it is gone by the first prompt of a
          * login shell. The script itself is what this is about, and it reads the address and the
          * token out of the session's environment either way.
@@ -1067,7 +1067,7 @@ describe.skipIf(!ENABLED)('one id on two machines', () => {
     /*
      * The two halves of the union. A project id is minted by the daemon that owns it, so one folder
      * on two machines is two projects, and neither daemon knows anything of the other's list. Last
-     * of this block: opening a project writes into the folder the git tests above read.
+     * of this block. Opening a project writes into the folder the git tests above read.
      */
     test('one folder on both machines is two projects, and neither list holds the other', async () => {
         const [mine, theirs] = await Promise.all([
@@ -1149,7 +1149,7 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
 
     afterAll(async () => {
         await here?.request('project.delete', { projectId: mine, removeFiles: true }).catch(() => undefined);
-        // The last test stops the container, so it is put back here rather than there: a failure must not leave it down.
+        // The last test stops the container, so it is put back here rather than there. A failure must not leave it down.
         await docker(['start', CONTAINER]).catch(() => undefined);
         await waitUntil(`the container on ${BASE_URL} again`, () => answers(BASE_URL), 60_000).catch(() => undefined);
         // Its socket went with the stop, so what it opened is cleared from inside it.
@@ -1239,12 +1239,12 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
         const theirsBytes = await fetch(`${BASE_URL}/fs/file?path=${encodeURIComponent(`${REPO}/there.gif`)}&v=1-1&token=${encodeURIComponent(sessionToken)}`);
         expect(Buffer.from(await theirsBytes.arrayBuffer()).toString('base64')).toBe(there_gif);
 
-        // The same URL without this machine's token: a workspace only reaches the daemon it paired with.
+        // The same URL without this machine's token. A workspace only reaches the daemon it paired with.
         const withoutToken = await fetch(`${BASE_URL}/fs/file?path=${encodeURIComponent(`${REPO}/there.gif`)}&v=1-1`);
         expect(withoutToken.status).toBe(401);
     }, 30_000);
 
-    /* Last of this block: the container goes down and only comes back for the tests after it. */
+    /* Last of this block. The container goes down and only comes back for the tests after it. */
     test('the container going down leaves the other workspace saving', async () => {
         await docker(['stop', '--time', '5', CONTAINER]);
         await waitUntil('the socket to the container to notice', () => there.closed);
@@ -1264,7 +1264,7 @@ describe.skipIf(!ENABLED)('two projects side by side', () => {
 /*
  * The same channel with no socket to the container at all. A broker runs on this machine, the
  * container dials it at `host.docker.internal` (`compose.yml`), and a client here signals through it
- * alone: port 4320 is used for pairing and nothing after it. Stopping the broker afterwards shows
+ * alone. Port 4320 is used for pairing and nothing after it. Stopping the broker afterwards shows
  * that a channel that is in never needed it again.
  */
 describe.skipIf(!ENABLED)('a direct connection signaled through the broker', () => {
@@ -1396,7 +1396,7 @@ describe.skipIf(!ENABLED)('a direct connection signaled through the broker', () 
             }
         });
         await client.open();
-        // Like the app: the broker socket is only for the signals.
+        // Like the app, the broker socket is only for the signals.
         onTheBroker.socket.close();
         expect((await client.request<EndpointInfo>('endpoint.info', {})).authenticated).toBe(true);
         console.log(`direct channel through the broker: open after ${client.timings.channelOpenMs} ms, signed in after ${client.timings.authenticatedMs} ms`);

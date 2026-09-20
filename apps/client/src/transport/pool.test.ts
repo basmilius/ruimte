@@ -84,7 +84,7 @@ const setup = (idleMs = 1) => {
     return { pool, opened };
 };
 
-// Fake timers leave setImmediate alone: each step runs the timers due in that millisecond, then every promise they started.
+// Fake timers leave setImmediate alone. Each step runs the timers due in that millisecond, then every promise they started.
 const idle = async (): Promise<void> => {
     for (let i = 0; i < 10; i++) {
         jest.advanceTimersByTime(1);

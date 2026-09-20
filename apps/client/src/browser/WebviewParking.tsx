@@ -19,7 +19,7 @@ export function WebviewParking() {
 }
 
 function DesktopWebviewParking() {
-    // Selecting the object and deriving the keys: a selector that builds an array loops forever.
+    // Selects the object and derives the keys separately, since a selector that builds a new array loops forever.
     const byKey = useBrowser((s) => s.byKey);
     const keys = useMemo(() => Object.keys(byKey), [byKey]);
     const hosts = useRef(new Map<string, HTMLDivElement>());
@@ -28,10 +28,10 @@ function DesktopWebviewParking() {
 
     useEffect(() => {
         /*
-         * Every page is placed against the cell of the view it belongs to, not against the one that
-         * has the focus: with the views side by side a page on a canvas two cells over still has to
-         * land on that canvas. The clip box is the cell, so a node scrolled past the cell's edge is
-         * cut off by it rather than drawn over the cell beside it.
+         * Every page is placed against the cell of the view it belongs to, not the focused one. With
+         * the views side by side, a page on a canvas two cells over still has to land on that canvas.
+         * The clip box is the cell, so a node scrolled past the cell's edge is cut off by it rather
+         * than drawn over the cell beside it.
          */
         const place = (): void => {
             const { views, layout } = useDocument.getState();
@@ -48,7 +48,7 @@ function DesktopWebviewParking() {
                 );
                 const cell = view && open.includes(view.id) ? cellElement(view.id) : null;
                 if (!view || cell === null) {
-                    // Both boxes: a child that says `visible` shows through a parent that says `hidden`.
+                    // Both boxes are hidden here; a child marked visible would still show through a parent marked hidden.
                     clip.style.visibility = 'hidden';
                     host.style.visibility = 'hidden';
                     host.style.pointerEvents = 'none';
@@ -101,7 +101,6 @@ function DesktopWebviewParking() {
         };
     }, [keys]);
 
-    /* A page taking the focus moves it to the cell of the view the page belongs to. */
     useEffect(() => {
         const offs: Array<() => void> = [];
         for (const key of keys) {
@@ -142,9 +141,9 @@ function DesktopWebviewParking() {
             {keys.length > 0 && (
                 <div ref={root} className="pointer-events-none absolute inset-0 overflow-hidden">
                     {keys.map((key) => (
-                        /* Two boxes per page: the outer one is the cell, which clips, and the inner
-                           one is the node inside it. The outer never changes parent, so a page that
-                           moves to another cell keeps its session instead of reloading. */
+                        /* Two boxes per page. The outer one is the cell and clips; the inner one is
+                           the node. The outer box never changes parent, so a page that moves to
+                           another cell keeps its session instead of reloading. */
                         <div
                             key={key}
                             ref={(clip) => {
@@ -168,8 +167,8 @@ function DesktopWebviewParking() {
                     ))}
                 </div>
             )}
-            {/* One menu for every page: a right-click in a page reaches the app as an event of the
-                shell's, never as a click in this tree, so there is nothing per host to hang it on. */}
+            {/* One menu for every page. A right-click in a page reaches the app as an event from the
+                shell, not a click in this tree, so there is nothing per host to hang a menu on. */}
             <BrowserContextMenu />
         </>
     );

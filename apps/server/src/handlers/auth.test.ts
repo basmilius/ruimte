@@ -68,7 +68,7 @@ describe('auth handlers', () => {
 
         const remote = await ask({ reachability: 'lan', sessionId: 's1' }, 'auth.pairingToken');
         expect(remote).toMatchObject({ ok: false, error: { code: 'forbidden' } });
-        // Paired, but arriving through a tunnel on this machine: the address is loopback and still grants nothing.
+        // Paired, but arriving through a tunnel on this machine. The address is loopback and still grants nothing.
         const tunneled = await ask({ reachability: 'loopback', sessionId: 's1' }, 'auth.pairingToken');
         expect(tunneled).toMatchObject({ ok: false, error: { code: 'forbidden' } });
         expect(await ask(undefined, 'auth.pairingToken')).toMatchObject({ ok: false, error: { code: 'forbidden' } });

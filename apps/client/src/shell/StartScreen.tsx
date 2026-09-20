@@ -60,8 +60,7 @@ function MachineRow({ entry }: { entry: MachineEntry }) {
     const icon = useMachineIcon(entry);
     const link = machineLink(entry, connection, null);
     const hint = linkHint(link);
-    /* No menu of its own: browsing its folders is the only thing this row does, and the click
-       already does that. */
+    /* No menu of its own: browsing its folders is the only thing this row does. */
     return (
         <button className={ROW} onClick={() => useUi.getState().openFolderBrowser(endpointId)}>
             <MachineGlyph icon={icon} size={16} className="shrink-0 text-text-muted" />
@@ -183,7 +182,7 @@ function SignInCard({ description }: { description: string }) {
 
 const FOOTER_BUTTON = 'flex items-center gap-1.5 rounded-sm hover:text-text';
 
-/* The keys that work from here, and which Ruimte this is. It stays at the bottom, and what scrolls under it fades out. */
+/* The keys that work from here, and which Ruimte this is. */
 function Footer() {
     const { t } = useTranslation('shell');
     const currentVersion = useUpdates((s) => s.currentVersion);

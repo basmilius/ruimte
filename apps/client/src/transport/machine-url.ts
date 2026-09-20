@@ -30,7 +30,7 @@ const NOTHING: MachineUrl = { url: null, failure: null };
  * The HTTP route for the bytes, with the machine's credential in the URL the way the socket carries it,
  * since an `<img>` cannot send a header. The version is in the URL too, which is what lets the browser
  * keep the answer for good. The machine is the one the thing on screen belongs to, never simply the
- * active one: a second workspace or a list that spans machines would otherwise ask the wrong daemon.
+ * active one. A second workspace or a list that spans machines would otherwise ask the wrong daemon.
  */
 export const httpUrlFor = (endpointId: string, resource: MachineResource): string => {
     const endpoint = endpointById(endpointId) ?? activeEndpoint();
@@ -75,9 +75,9 @@ export const machineResourceKey = (endpointId: string, resource: MachineResource
 /*
  * The one way something on screen turns bytes on a machine into a URL. Over a socket that is the HTTP
  * route. Over a direct connection there is no HTTP to count on, even where the address happens to
- * answer, because across two networks it will not: the bytes come over the channel and the URL is a
- * blob URL from a cache shared by everything on screen. A load that failed is tried again when the
- * connection opens, since the usual reason is that it was not open.
+ * answer, because across two networks it will not. The bytes come over the channel instead, and the
+ * URL is a blob URL from a cache shared by everything on screen. A load that failed is tried again
+ * when the connection opens, since the usual reason is that it was not open.
  */
 export const useMachineUrl = (resource: MachineResource | null, endpointId?: string): MachineUrl => {
     const activeId = useEndpoints((s) => s.activeId);
@@ -85,7 +85,7 @@ export const useMachineUrl = (resource: MachineResource | null, endpointId?: str
     const direct = useEndpoints((s) => s.endpoints.find((entry) => entry.id === machineId)?.direct === true);
     const open = useEndpointConnection(machineId).status === 'open';
     const key = resource === null ? null : machineResourceKey(machineId, resource);
-    // What the request asks for, as a string: a stable dependency where `resource` is a new object on every render.
+    // What the request asks for, as a string, so the dependency is stable where `resource` is a new object on every render.
     const wire = resource === null ? null : JSON.stringify(wireResourceOf(resource));
     const [held, setHeld] = useState<{ key: string; lease: BlobLease; state: MachineUrl } | null>(null);
 

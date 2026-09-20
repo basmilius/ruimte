@@ -60,7 +60,7 @@ export const parseFrontmatter = (text: string): Record<string, string> => {
 
 /*
  * The folders from `cwd` up to and including the repository root, closest first. The home folder
- * itself is not one of them: its `.claude/skills` is already the user root.
+ * itself is not one of them, since its `.claude/skills` is already the user root.
  */
 const projectDirs = (cwd: string, home: string): string[] => {
     const dirs: string[] = [];

@@ -39,7 +39,7 @@ export class TransportError extends Error {
 
 /*
  * Whether a request failed because the link was down rather than because the machine refused it.
- * Only the transport throws these two, so only the transport gets to say which they are: a client
+ * Only the transport throws these two, so only the transport gets to say which they are. A client
  * that asked while the socket was gone waits for the reconnect and asks again, and tells nobody.
  */
 export const isConnectionError = (error: unknown): boolean =>

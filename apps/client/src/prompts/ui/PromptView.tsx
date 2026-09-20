@@ -71,7 +71,7 @@ export function PromptView({ subject, draft, onDraft, onAction, more, hasDraft, 
     const question = item.kind === 'question' ? item.questions[Math.min(draft.index, item.questions.length - 1)]! : null;
     const answer = question ? questionAnswer(draft, question) : null;
     const last = item.kind === 'question' && draft.index === item.questions.length - 1;
-    // Whether Next or Answer may go with this draft: the keys ask it as well as the button.
+    // Whether Next or Answer may go with this draft. The keys ask it as well as the button.
     const readyWith = (next: PromptDraft): boolean =>
         item.kind === 'question' && !!question && !!answerValue(questionAnswer(next, question)) && !(last && !promptAnswers(item, next));
     const commit = (next: PromptDraft) => {

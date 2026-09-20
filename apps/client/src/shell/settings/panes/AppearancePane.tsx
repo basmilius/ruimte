@@ -114,14 +114,14 @@ function LanguageRow() {
 }
 
 /*
- * Which region writes the numbers, dates and times, which is not the same question as the language:
- * an English interface on a Dutch machine still writes `08:05` and `1.234,5`. The example is the
+ * Which region writes the numbers, dates and times, a different question from the language. An
+ * English interface on a Dutch machine still writes `08:05` and `1.234,5`. The example is the
  * setting, read back, so the choice is made on what it does and not on the name of a country.
  */
 function RegionRow() {
     const { t, i18n } = useTranslation('settings');
     const region = useSettings((s) => s.formatRegion);
-    // Subscribing is the point: the example below redraws when the region changes under it.
+    // Subscribing is the point. The example below redraws when the region changes under it.
     useFormatLocale();
     const countries = new Intl.DisplayNames([i18n.language], { type: 'region' });
     const label = (choice: string): string => {

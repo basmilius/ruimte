@@ -26,5 +26,4 @@ export const takeoverWarning = (providers: readonly ProviderId[]): string => {
     return i18next.t('machines:account.takeover.warning', { names: names.join(` ${i18next.t('machines:account.takeover.or')} `) });
 };
 
-/* The providers an address book offers that this client knows, in drawing order. */
 export const offeredProviders = (listed: readonly string[]): ProviderId[] => PROVIDER_ORDER.filter((provider) => listed.includes(provider));

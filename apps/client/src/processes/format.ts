@@ -70,7 +70,6 @@ export const alertActions = (alert: ProcessAlert): AlertAction[] => {
 
 export const actionLabel = (action: AlertAction): string => i18next.t(`processes:action.${action}`);
 
-/* What a group is called: the title of its node when this project has it, the kind otherwise. */
 export const groupTitle = (group: ProcessGroup, titles: ReadonlyMap<string, string>): { title: string; known: boolean } => {
     const title = group.nodeId === null ? undefined : titles.get(group.nodeId);
     return title === undefined ? { title: i18next.t(`processes:group.${group.kind}`), known: group.nodeId === null } : { title, known: true };

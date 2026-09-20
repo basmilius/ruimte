@@ -85,7 +85,7 @@ export interface ProjectMenuRow {
     endpointId: string;
     /* What the machine this project sits on is called; a flat list puts it behind the name. */
     machineLabel: string;
-    /* False when this client has no open socket to that machine: the row is what it last answered. */
+    /* False when this client has no open socket to that machine; the row is what it last answered. */
     connected: boolean;
     summary: ProjectSummary;
 }
@@ -109,7 +109,6 @@ const knownRows = (rows: ProjectRow[], endpoints: Endpoint[], connected: readonl
     });
 };
 
-// Flatten machines into one list, sorting active projects by last open and recent ones by close time.
 export const menuProjects = (rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRows => {
     const listed = knownRows(rows, endpoints, connected);
     return {
@@ -118,17 +117,17 @@ export const menuProjects = (rows: ProjectRow[], endpoints: Endpoint[], connecte
     };
 };
 
-/* When a project was last touched: opened, or closed after that. */
+/* The last time a project was touched, either when it opened or, if later, when it closed. */
 const touchedAt = (summary: ProjectSummary): number => Math.max(summary.lastOpenedAt, summary.closedAt ?? 0);
 
 /*
- * The start screen's one list: open and closed projects together, newest touch first, so the project
+ * The start screen's one list, open and closed projects together, newest touch first, so the project
  * that was just closed sits on top and a wrong click is one click back.
  */
 export const recentProjects = (rows: ProjectRow[], endpoints: Endpoint[], connected: readonly string[]): ProjectMenuRow[] =>
     knownRows(rows, endpoints, connected).sort((a, b) => touchedAt(b.summary) - touchedAt(a.summary));
 
-/* The rows worth offering: a project whose file its machine no longer finds cannot be opened. The
+/* The rows worth offering. A project whose file its machine no longer finds cannot be opened. The
    one that is open keeps its row, or its settings and the way to close it would go with it. */
 export const openableRows = (rows: readonly ProjectMenuRow[], currentKey: string | null = null): ProjectMenuRow[] =>
     rows.filter((row) => row.summary.available || `${row.endpointId}:${row.summary.projectId}` === currentKey);
@@ -141,8 +140,8 @@ export interface OpenListSource {
 }
 
 /*
- * Asks again whenever the set of open links changes. It only reads the pool: a machine without a link
- * keeps the list it last answered, and is asked the moment its link opens for any other reason.
+ * Asks again whenever the set of open links changes. It only reads the pool, so a machine without a
+ * link keeps the list it last answered, and gets asked the moment its link opens for any other reason.
  */
 export const watchOpenLists = (source: OpenListSource, refresh: () => void): (() => void) => {
     const openOf = (): string =>
@@ -163,7 +162,7 @@ export const watchOpenLists = (source: OpenListSource, refresh: () => void): (()
 };
 
 /*
- * Keeps the union in step with the machines that are up: a link that opens answers with its list,
+ * Keeps the union in step with the machines that are up. A link that opens answers with its list;
  * one that closes leaves the rows it last gave behind, dimmed. Nothing here opens a link.
  */
 export const startProjectList = (): (() => void) => {

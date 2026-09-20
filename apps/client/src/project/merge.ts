@@ -43,7 +43,7 @@ type ElementsMerge<T> = { ok: true; elements: T[]; put: T[]; removed: string[] }
 const refuse = (reason: string): { ok: false; reason: string } => ({ ok: false, reason });
 
 /*
- * Deep equality that reads a missing key and an undefined one as the same thing: what this client
+ * Deep equality that reads a missing key and an undefined one as the same thing. What this client
  * holds went through the stores, what the daemon sent went through JSON, and only one of the two
  * can carry an `undefined`.
  */
@@ -78,7 +78,7 @@ const EDGE_FIELDS: FieldGroups = { ends: ['from', 'to', 'fromSide', 'toSide'] };
 type FieldsMerge<T> = { ok: true; merged: T; took: boolean } | { ok: false; field: string };
 
 /*
- * The three-way rule for one entry both sides still have, per field: a side that left a field as
+ * The three-way rule for one entry both sides still have, per field. A side that left a field as
  * `base` had it takes the other side's. Only a field both sides changed to different values is a
  * conflict, unless `keepMine` says this client's value stands for it anyway.
  */
@@ -175,7 +175,7 @@ const sameOrder = (left: readonly string[], right: readonly string[]): boolean =
  * The stacking order of the merged nodes. When only the other side moved the nodes both sides have
  * (a node brought to the front there), those take its order in the places they already hold here;
  * otherwise this client's order stands, both moving included. Stacking is the one field where both
- * sides changing it is no conflict: a click into a node brings it to the front, and a dialog for two
+ * sides changing it is no conflict. A click into a node brings it to the front, and a dialog for two
  * people clicking would be the dialog on every other save.
  */
 const stackingOf = (base: readonly ProjectNode[], mine: readonly ProjectNode[], theirs: readonly ProjectNode[], merged: ProjectNode[]): ProjectNode[] => {
@@ -210,7 +210,7 @@ const mergeCanvas = (base: ProjectCanvasView, mine: ProjectCanvasView, theirs: P
 
     /*
      * A node under the person's hand keeps the frame it has here, even where the other side moved it
-     * too: a dialog in the middle of a drag is worse than either answer, and the save that follows the
+     * too. A dialog in the middle of a drag is worse than either answer, and the save that follows the
      * drag is made against the rev taken in here, so the file ends where the person let go.
      */
     const nodes = mergeElements('node', base.nodes, mine.nodes, theirs.nodes, NODE_FIELDS, (id, field) => field === 'frame' && held.has(id));
@@ -283,7 +283,7 @@ const withoutLabels = (view: ProjectView): Record<string, unknown> => {
 };
 
 /*
- * Three-way per label: a side that left the name or the icon alone takes the other side's, so a
+ * Three-way per label. A side that left the name or the icon alone takes the other side's, so a
  * rename in another client lands beside an edit here. Only the same label changed differently on
  * both sides is a conflict.
  */
@@ -328,7 +328,7 @@ const idsOf = (views: readonly ProjectView[], within: ReadonlySet<string>): stri
 /*
  * `primary` in its own order, with every id of `secondary` that is missing from it put right after
  * the nearest id before it in `secondary` that already stands, or first when there is none. Only
- * ids in `present` take part: a view deleted on one side has no place to keep.
+ * ids in `present` take part. A view deleted on one side has no place to keep.
  */
 const interleave = (primary: readonly string[], secondary: readonly string[], present: ReadonlySet<string>): string[] => {
     const order = primary.filter((id) => present.has(id));
@@ -381,7 +381,7 @@ export const mergeProject = (base: ProjectContent, mine: ProjectContent, theirs:
             continue;
         }
         if (!standing) {
-            // Deleted here and untouched there: this client's deletion stands, and takes it with it.
+            // Deleted here and untouched there. This client's deletion stands, and takes it with it.
             if (!same(before, view)) {
                 return refuse(`the view ${view.id} changed after this client removed it`);
             }

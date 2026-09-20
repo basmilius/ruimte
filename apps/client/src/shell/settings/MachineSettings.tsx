@@ -76,9 +76,9 @@ const saveMachineSetting = async (
 };
 
 /*
- * The experiment, per machine: its wire over a WebRTC DataChannel instead of the socket. Switching
- * reconnects straight away, and a direct connection that does not come up stays one that failed,
- * with the reason on the row, rather than quietly turning back into a socket.
+ * The per-machine experiment of running the wire over a WebRTC DataChannel instead of the socket.
+ * Switching reconnects immediately, and a direct connection that fails stays failed, with the reason
+ * shown on the row, rather than silently falling back to the socket.
  */
 export function DirectRow({ endpoint, available }: { endpoint: Endpoint; available: boolean }) {
     const { t } = useTranslation('settings');
@@ -358,8 +358,8 @@ export function MachineAccess({ endpoint }: { endpoint: Endpoint }) {
 
     /*
      * On this machine your own client needs no pairing to get in, so a row for it adds nothing to a
-     * list of what else has access. On a machine you paired with it stays: revoking it there is the
-     * one way to hand your own access back to that daemon.
+     * list of what else has access. On a machine you paired with, it stays, since revoking it there is
+     * the one way to hand your own access back to that daemon.
      */
     const listed = reachability === 'loopback' ? (sessions?.filter((session) => !session.current) ?? null) : sessions;
 

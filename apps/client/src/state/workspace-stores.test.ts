@@ -16,7 +16,7 @@ describe('which editor a cell resolves to', () => {
         expect(resolveEditor(registry, 'right')).toBe(registry.peek('right')!);
     });
 
-    /* The bug this answers: a component drawn in one cell wrote into the cell that had the focus,
+    /* The bug this answers. A component drawn in one cell wrote into the cell that had the focus,
        so two drawings side by side edited the same elements. Naming the cell is what settles it. */
     test('two cells resolve to two editors, and neither is the other', () => {
         const registry = createEditorRegistry(createCanvasStore);
@@ -45,7 +45,7 @@ describe('which editor a cell resolves to', () => {
         registry.of('canvas');
         registry.focus('canvas');
 
-        // A chat cell asking for a canvas: there is none, and the blank editor is what it reads.
+        // A chat cell asking for a canvas. There is none, and the blank editor is what it reads.
         expect(resolveEditor(registry, 'chat')).toBe(registry.blank);
         registry.focus(null);
         expect(resolveEditor(registry, null)).toBe(registry.blank);

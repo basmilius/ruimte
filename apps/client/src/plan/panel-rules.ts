@@ -1,6 +1,6 @@
 import type { PlanAnchor } from '@/state/ui';
 
-/* How long the anchor's chat stays out of sight before the panel closes: a pan past it leaves the panel up. */
+/* How long the anchor's chat stays out of sight before the panel closes. A pan past it leaves the panel up. */
 export const PLAN_CLOSE_DELAY_MS = 250;
 
 export interface PlanPanelState {
@@ -56,7 +56,7 @@ export class PlanPanelRules {
         this.anchorOn(chatId, planId);
     }
 
-    /* A plan picked in the panel's own header: the same chat, so nothing about open or closed changes. */
+    /* A plan picked in the panel's own header is the same chat, so nothing about open or closed changes. */
     pick(planId: string): void {
         const { anchor, open } = this.io.get();
         if (anchor !== null && anchor.planId !== planId) {
@@ -64,14 +64,12 @@ export class PlanPanelRules {
         }
     }
 
-    /* A person closed the panel. */
     close(): void {
         const { anchor } = this.io.get();
         this.cancel();
         this.io.set({ anchor: anchor === null ? null : { ...anchor, dismissed: true }, open: false });
     }
 
-    /* The anchor's chat or plan is gone. */
     gone(): void {
         this.cancel();
         this.io.set({ anchor: null, open: false });

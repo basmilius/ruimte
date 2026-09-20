@@ -5,7 +5,6 @@ import type { ChatManager } from '../chat/chat-manager.ts';
 import type { ProviderRegistry } from '../providers/registry.ts';
 import type { BeforeKill } from './session.ts';
 
-/* What a machine that forks chats answers with. */
 export interface ChatForkHandlers {
     fork(payload: ChatForkPayload): Promise<ChatForkResult>;
     info(payload: ChatForkInfoPayload): Promise<ChatForkInfoResult>;

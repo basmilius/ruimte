@@ -23,7 +23,7 @@ export function QuestionBody({
     locked: boolean;
 }) {
     const { t } = useTranslation('prompts');
-    // The choices, then the "Something else…" field: one list with a single tab stop.
+    // The choices, then the "Something else…" field form one list with a single tab stop.
     const items = useRef<(HTMLElement | null)[]>([]);
     const shownQuestion = useRef(question.id);
     const count = question.choices.length + 1;

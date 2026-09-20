@@ -32,7 +32,7 @@ export const SETTINGS_SECTIONS: readonly (readonly SettingsSectionMeta[])[] = [
 
 export const ALL_SETTINGS_SECTIONS: readonly SettingsSectionMeta[] = SETTINGS_SECTIONS.flat();
 
-/* Read when a section is drawn, never at module level: the translations are not in yet while this file loads. */
+/* Read when a section is drawn, never at module level. The translations are not in yet while this file loads. */
 export const sectionLabel = (id: SettingsSectionId): string => i18next.t(`settings:sections.${id}.label`);
 
 /* One line under the pane title that says what the pane is about. */

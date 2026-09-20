@@ -5,7 +5,6 @@ import { isNotFound, writeAtomic } from '../fs.ts';
 
 export const LOCAL_SECRET_FILE = 'local.key';
 
-/** Where the local secret of a home lives. */
 export const localSecretPath = (home: string): string => join(home, LOCAL_SECRET_FILE);
 
 /*

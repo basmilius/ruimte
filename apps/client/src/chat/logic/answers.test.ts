@@ -11,7 +11,7 @@ describe('toggleChoice', () => {
         expect(toggleChoice(['Blue', 'Green'], 'Blue')).toEqual(['Green']);
     });
 
-    // The bug this file exists for: a label with the separator in it used to stop matching itself.
+    // Regression test. A label holding the separator used to stop matching itself once picked.
     test('a label that holds the separator toggles like any other', () => {
         const label = 'Toolbar once, Dock per cell';
         const picked = toggleChoice([], label);

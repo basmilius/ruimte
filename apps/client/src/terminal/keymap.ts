@@ -24,7 +24,7 @@ export const isLeaveNodeShortcut = (event: KeyLike, apple: boolean): boolean => 
 export const isClearShortcut = (event: KeyLike, apple: boolean): boolean => matchesShortcut(platformShortcut(CLEAR_SHORTCUT, apple), event, apple);
 
 /*
- * The shortcuts a focused terminal hands back to the app: the ones that move between views, cells, panels
+ * The shortcuts a focused terminal hands back to the app, the ones that move between views, cells, panels
  * and settings, so you never have to leave the terminal to reach another view. Every other shortcut is the
  * program's, which is why Cmd+K clears the screen here instead of opening the palette.
  */
@@ -43,8 +43,8 @@ export const TERMINAL_HANDED_BACK: readonly Shortcut[] = [
     APP_SHORTCUTS.sidebar
 ];
 
-/* Off macOS these are control characters a program reads: Ctrl+B the tmux prefix, Ctrl+W delete-word,
-   Ctrl+T transpose, Ctrl+\ SIGQUIT. There the terminal keeps them. */
+/* Off macOS these are control characters a program reads (Ctrl+B the tmux prefix, Ctrl+W delete-word,
+   Ctrl+T transpose, Ctrl+\ SIGQUIT), so the terminal keeps them there. */
 const PTY_CONTROL_SHORTCUTS: readonly Shortcut[] = [APP_SHORTCUTS.sidebar, CANVAS_SHORTCUTS.newView, CANVAS_SHORTCUTS.splitRight, CANVAS_SHORTCUTS.closeCell];
 
 const matchesAny = (shortcuts: readonly Shortcut[], event: KeyLike, apple: boolean): boolean =>
@@ -54,7 +54,7 @@ export const isAppShortcut = (event: KeyLike, apple: boolean): boolean =>
     TERMINAL_HANDED_BACK.some((candidate) => (apple || !PTY_CONTROL_SHORTCUTS.includes(candidate)) && matchesShortcut(candidate, event, apple));
 
 /*
- * What a text field that stops its own keys (the chat composer) hands back: everything a terminal
+ * What a text field that stops its own keys (the chat composer) hands back, everything a terminal
  * does, the Ctrl shortcuts a terminal keeps off macOS (a text field has no program behind it), and the
  * palette and find in files. Ctrl+B stays out of it off macOS, as it always has.
  */
@@ -77,7 +77,7 @@ const WORD_FORWARD = '\x1bf';
 const KILL_LINE_BACK = '\x15';
 
 /**
- * The line and word motions macOS gives every native terminal and xterm does not: Cmd is the start
+ * The line and word motions macOS gives every native terminal that xterm does not. Cmd is the start
  * or the end of the line, Option a word, Cmd+Backspace kills back to the start. Returns the bytes to
  * write, or null when the shortcut is none of them and xterm should handle the key itself.
  */

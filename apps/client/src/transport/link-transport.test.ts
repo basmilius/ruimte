@@ -24,7 +24,7 @@ class FakeLink implements Link {
     }
 }
 
-// Fake timers leave setImmediate alone: each step runs the timers due in that millisecond, then every promise they started.
+// Fake timers leave setImmediate alone. Each step runs the timers due in that millisecond, then every promise they started.
 const tick = async (ms = 0): Promise<void> => {
     for (let i = 0; i < ms; i++) {
         jest.advanceTimersByTime(1);

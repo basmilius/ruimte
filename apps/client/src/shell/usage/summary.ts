@@ -2,7 +2,7 @@ import type { UsageProvider, UsageSummaryResult, UsageTotals } from '@ruimte/con
 import type { UsageMetric } from '@/state/usage';
 import { EMPTY_TOTALS, USAGE_PROVIDERS, addTotals, totalTokensOf } from '@ruimte/contracts';
 
-/* One bar of the chart: what each provider put in this slot, and the height of the stack. */
+/* One bar of the chart, what each provider put in this slot, and the height of the stack. */
 export interface ChartSlot {
     slot: string;
     byProvider: Partial<Record<UsageProvider, number>>;
@@ -51,7 +51,7 @@ export const enumerateSlots = (summary: Pick<UsageSummaryResult, 'from' | 'to' |
     const slots: string[] = [];
     const at = new Date(`${summary.from}T00:00:00`);
     const end = new Date(`${summary.to}T00:00:00`);
-    // A calendar loop rather than adding milliseconds: a day is 23 or 25 hours long twice a year.
+    // A calendar loop rather than adding milliseconds, since a day is 23 or 25 hours long twice a year.
     while (at <= end && slots.length < 400) {
         slots.push(`${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`);
         at.setDate(at.getDate() + 1);
@@ -103,7 +103,7 @@ export const deriveUsage = (summary: UsageSummaryResult, metric: UsageMetric): D
     };
 };
 
-/* One row of the Day table: what each provider cost that day, and what the day moved in all. */
+/* One row of the Day table, what each provider cost that day, and what the day moved in all. */
 export interface UsageDay {
     /* `YYYY-MM-DD`, always a calendar day, whatever resolution the chart above it is drawn at. */
     slot: string;
@@ -115,8 +115,8 @@ export interface UsageDay {
 /*
  * The same buckets the chart draws, written out as a table of calendar days, newest first. Today is
  * drawn per hour but read per day, so an hour slot is folded onto the date it names. A day nothing
- * happened in is left out: the chart already shows the gap, and a quiet fortnight would otherwise be
- * fourteen rows of zeroes between the days worth reading.
+ * happened in is left out, since the chart already shows the gap, and a quiet fortnight would otherwise
+ * be fourteen rows of zeroes between the days worth reading.
  */
 export const deriveDays = (summary: UsageSummaryResult): UsageDay[] => {
     const rows = new Map<string, UsageDay>();

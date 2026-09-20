@@ -102,7 +102,7 @@ interface SettingsState {
 
 export type ViewDialog =
     | { kind: 'settings' | 'delete'; viewId: string }
-    /* Promoting a node that has lines drawn into it: those lines do not survive the move. */
+    /* Promoting a node that has lines drawn into it. Those lines do not survive the move. */
     | { kind: 'promote'; nodeId: string }
     | { kind: 'new-browser' }
     | null;
@@ -136,7 +136,7 @@ interface UiStore {
     sidebarExpanded: string[] | null;
     /* Text the palette opens with; a path puts it straight into folder browsing. */
     paletteSeed: string;
-    /* How often the folder browser has been asked for. A count and not a flag: the command can be
+    /* How often the folder browser has been asked for. A count and not a flag. The command can be
        chosen while the palette is already open, which changes nothing else about this store, and
        choosing it twice in a row has to start browsing twice. Which step browsing is on after that
        is the palette's own business. */
@@ -171,7 +171,7 @@ interface UiStore {
     forkDialog: { chatId: string; turnId: string } | null;
     /* What a view is being asked about, from the sidebar, the breadcrumb or the palette alike. */
     viewDialog: ViewDialog;
-    /* The row the sidebar puts the caret in, which is how a new heading opens: it is nothing but
+    /* The row the sidebar puts the caret in, which is how a new heading opens. It is nothing but
        what it says, so it is typed where it stands rather than in a dialog. */
     renamingViewId: string | null;
     setUsageOpen(open: boolean): void;
@@ -187,7 +187,7 @@ interface UiStore {
     /* The palette in its find-in-files mode, from the palette itself or from the files panel. */
     openFindInFiles(seed?: string): void;
     /* The palette browsing folders, from its own command or from the project menu. Nothing is
-       typed: with one machine it opens on that machine's start folder, with more on the machines. */
+       typed. With one machine it opens on that machine's start folder, with more on the machines. */
     openFolderBrowser(machineId?: string): void;
     /* The palette listing the files of the open folder, to make one of them a node or a view. */
     openFilePicker(pick: FilePick): void;
@@ -197,7 +197,7 @@ interface UiStore {
     setSettings(patch: Partial<SettingsState>): void;
     setPanel(patch: Partial<PanelState>): void;
     togglePanel(kind?: PanelKind): void;
-    /* Only the file tabs call this: the preview is up exactly while a file is open. */
+    /* Only the file tabs call this. The preview is up exactly while a file is open. */
     setPreviewOpen(open: boolean): void;
     setPanelWidth(width: number): void;
     setPreviewWidth(width: number): void;
@@ -208,8 +208,8 @@ interface UiStore {
     setSidebarExpanded(ids: string[] | null): void;
 }
 
-/* Which app-level dialog is up; nothing here belongs to a node. The panels do belong to a project:
-   they are loaded from and saved to its machine-local file by `project/panels-port.ts`. */
+/* Which app-level dialog is up; nothing here belongs to a node. The panels do belong to a project.
+   They are loaded from and saved to its machine-local file by `project/panels-port.ts`. */
 export const useUi = create<UiStore>((set, get) => ({
     paletteOpen: false,
     paletteMode: 'default',
@@ -221,7 +221,7 @@ export const useUi = create<UiStore>((set, get) => ({
     sidebarOpen: readSidebarOpen(),
     sidebarExpanded: null,
     settings: { open: false, section: 'appearance' },
-    /* Closed until a project says otherwise: the panels belong to a project and there is none
+    /* Closed until a project says otherwise. The panels belong to a project and there is none
        yet, so the first paint of a reload cannot flash open a panel the project has closed. */
     panel: CLOSED_PANEL,
     preview: CLOSED_PREVIEW,
@@ -332,7 +332,7 @@ export const useUi = create<UiStore>((set, get) => ({
         set({ sidebarExpanded: ids });
     },
     setPanels(state) {
-        /* One update, so a panel and the width it opens at reach the DOM together: two would put a
+        /* One update, so a panel and the width it opens at reach the DOM together. Two would put a
            frame with the default width in between, and that frame is a slide. */
         set({
             panel: state.panel,
@@ -340,7 +340,7 @@ export const useUi = create<UiStore>((set, get) => ({
             panelWidth: state.panelWidth,
             previewWidth: state.previewWidth,
             planAnchor: state.planAnchor,
-            // Closed until the chat is on screen: the rules open it, never the file.
+            // Closed until the chat is on screen. The rules open it, never the file.
             planOpen: false,
             planWidth: state.planWidth,
             panelsRestoring: true

@@ -119,8 +119,7 @@ const walk = async (root: string): Promise<{ files: string[]; truncated: boolean
     return { files, truncated: false };
 };
 
-/* The files a search of this folder walks: what git tracks, or the walk that stands in for it,
-   cached because every keystroke asks again and the listing is the expensive half. */
+/* The files a search of this folder walks: what git tracks, or the walk that stands in for it. */
 export const listSearchableFiles = async (cwd: string): Promise<{ files: string[]; truncated: boolean }> => {
     const cached = cache.get(cwd);
     if (cached && Date.now() - cached.at < CACHE_TTL_MS) {

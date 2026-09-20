@@ -2,7 +2,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import type { Terminal } from '@xterm/xterm';
 import { DEFAULT_WEBGL_CONTEXTS, WebglSlots, type SlotChange } from '@/terminal/webgl-slots';
 
-/* Flip while working on the budget itself; a build logs nothing. */
+/* Flip to true while debugging the budget; false logs nothing. */
 const DEBUG: boolean = false;
 
 const debug = (message: string, id: string): void => {
@@ -90,7 +90,7 @@ class WebglBudget {
     }
 
     private apply(change: SlotChange): void {
-        // Free first: the browser has to be back under its own limit before the next context exists.
+        // Free first, the browser has to be back under its own limit before the next context exists.
         for (const id of change.revoked) {
             this.unload(id);
         }
@@ -133,7 +133,7 @@ class WebglBudget {
     private handleLoss(id: string): void {
         debug('context lost', id);
         this.unload(id);
-        // Not gone for good: the terminal waits in line and takes a context again when it is focused.
+        // Not gone for good, the terminal waits in line and takes a context again when it is focused.
         this.apply(this.slots.lost(id));
     }
 

@@ -9,7 +9,7 @@ import type { SpawnChatProcess } from './chat-process.ts';
  */
 
 export interface BackendLaunch {
-    // The executable and its leading arguments; a test points this at a fake CLI.
+    // A test points this at a fake CLI.
     command: string[];
     cwd: string;
     env: Record<string, string>;
@@ -51,7 +51,7 @@ export type BackendEvent =
     // The CLI renamed its thread, for a protocol that says so.
     | { type: 'title'; title: string }
     | { type: 'text.delta'; ref: string; text: string }
-    // `parentRef` is set for text a subagent wrote: it belongs to that agent's row, not to the thread.
+    // `parentRef` is set for text a subagent wrote; it belongs to that agent's row, not to the thread.
     | { type: 'text.done'; ref: string; text: string; parentRef?: string | null }
     // What the model thought before it answered; consecutive blocks become one thinking item.
     | { type: 'thinking.delta'; ref: string; text: string }

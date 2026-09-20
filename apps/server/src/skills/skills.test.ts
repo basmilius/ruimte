@@ -20,7 +20,7 @@ beforeAll(async () => {
 
     await writeSkill(join(home, '.claude', 'skills'), 'unslop', '---\nname: unslop\ndescription: Edit prose.\n---\n\nBody.\n');
     await writeSkill(join(home, '.claude', 'skills'), 'folded', '---\nname: folded\ndescription: >-\n  A long one\n  over two lines.\n---\n');
-    // No front matter name: the folder names the skill.
+    // No front matter name, so the folder names the skill.
     await writeSkill(join(home, '.claude', 'skills'), 'nameless', '# Nameless\n');
     await writeSkill(join(project, '.claude', 'skills'), 'deploy', '---\nname: deploy\ndescription: Ship it.\n---\n');
     await writeSkill(join(home, '.agents', 'skills'), 'oklch', '---\nname: oklch\ndescription: Colors.\n---\n');

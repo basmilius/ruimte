@@ -18,7 +18,7 @@ interface DockShellProps extends HTMLAttributes<HTMLDivElement> {
  * The floating bar at the bottom of a canvas or a drawing, and the one place that knows how to get
  * out of the way. With "Hide the dock" on it waits below the edge until the pointer comes down to
  * it, an open menu keeps it up (it would take its own popup with it), and a keyboard reaches it by
- * tabbing: the buttons stay in the tab order while it is out of sight, so focus brings it back.
+ * tabbing. The buttons stay in the tab order while it is out of sight, so focus brings it back.
  */
 export function DockShell({ children, className, barClassName, onHiddenChange, ...rest }: DockShellProps) {
     const autoHide = useSettings((s) => s.dockAutoHide);

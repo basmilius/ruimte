@@ -19,7 +19,7 @@ const base64url = (bytes: ArrayBuffer): string =>
         .replaceAll('/', '_')
         .replace(/=+$/, '');
 
-/* A stand-in for the daemon: one key pair, and the two answers the handshake asks it for. */
+/* A stand-in for the daemon, with one key pair and the two answers the handshake asks it for. */
 const makeDaemon = async (id = DAEMON_ID) => {
     const pair = (await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify'])) as CryptoKeyPair;
     const publicKey = base64url(await crypto.subtle.exportKey('raw', pair.publicKey));
@@ -154,7 +154,7 @@ describe('signing in with a key pair', () => {
         useEndpoints.setState({ endpoints: [endpoint] });
 
         expect(await signIn(endpoint, key)).toBeNull();
-        // Nothing is dropped on the way out: the token is the only thing that still opens that socket.
+        // Nothing is dropped on the way out. The token is the only thing that still opens that socket.
         expect(useEndpoints.getState().endpoints[0]!.token).toBe('an old session token');
     });
 

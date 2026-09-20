@@ -22,15 +22,15 @@ export const callerName = (views: readonly ProjectView[], by: string): string | 
 };
 
 export interface ShowViewNotice {
-    /* One line, because the banner is one row: what is left to say the buttons say. */
+    /* One line, because the banner is one row. The buttons already say the rest. */
     message: string;
     /* The way out it offers: over to the view, back out of the one that was shown, or nothing at all. */
     action: 'go' | 'back' | null;
 }
 
 /*
- * What an agent's `view open` says, in all three cases. Every one of them is the banner over the views:
- * whether the view moved or not, it is the same agent speaking about the same thing, and a message
+ * What an agent's `view open` says, in all three cases. Every one of them is the banner over the views.
+ * Whether the view moved or not, it is the same agent speaking about the same thing, and a message
  * that changes place with a setting is two features to learn instead of one. `alreadyThere` is asked
  * before anything moves, since offering a way back to where the person is standing reads as a bug.
  */

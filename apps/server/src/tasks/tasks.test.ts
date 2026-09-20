@@ -67,7 +67,6 @@ const boot = async (): Promise<Daemon> => {
 
 const verb = runVerb;
 
-/* Opens a child with a task and answers its id and the id of the task. */
 const delegate = async (daemon: Daemon, title: string, prompt: string, chat = true): Promise<{ childId: string; taskId: string }> => {
     const [line] = await verb(daemon, 'chat-lead', 'agent', ['claude', ...(chat ? [] : ['--terminal']), '--task', title, '--prompt', prompt]);
     const fields = line!.split('\t');
@@ -75,7 +74,7 @@ const delegate = async (daemon: Daemon, title: string, prompt: string, chat = tr
     return { childId: fields[0]!, taskId: fields[5]! };
 };
 
-/* Opens a team of terminal roles with --task, which settle only when each calls done, and answers each role's node and task. */
+/* Opens a team of terminal roles with --task, each settling only once it calls done. */
 const delegateTeam = async (daemon: Daemon, titles: readonly string[]): Promise<Array<{ childId: string; taskId: string }>> => {
     const roles = titles.map((title) => ({ title, prompt: `work on ${title}`, provider: 'claude', terminal: true }));
     const lines = await verb(daemon, 'chat-lead', 'team', ['--label', 'Crew', '--task', '--roles', JSON.stringify(roles)]);

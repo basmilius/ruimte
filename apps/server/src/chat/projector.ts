@@ -48,10 +48,9 @@ const NO_OUTPUT = '(Subagent completed but returned no output.)';
 const MAX_SUMMARY_CHARS = 80;
 
 /*
- * One line about what a background subagent came back with, for the header of the turn it wakes.
- * The CLI is free to hand its whole report as the summary, and a wall of markdown is not a header,
- * so this takes the first line that says something and cuts it at a length a row can show. The
- * report itself stays where it belongs, on the subagent's own row.
+ * One line for the header of the turn a background subagent wakes. The CLI may hand its whole
+ * report as the summary, so this takes the first line that says something, cut to a length a
+ * header can show; the full report itself stays on the subagent's own row.
  */
 export const summaryLine = (summary: string): string => {
     const first = summary.split('\n').find((line) => line.trim() !== '') ?? '';
@@ -88,9 +87,8 @@ interface ProjectorOptions {
 
 /*
  * The only place that turns what a CLI said into thread items. It reads and writes one `ChatThread`
- * and answers the events to broadcast; it never talks to a process, so a test can feed it by hand.
- * Item ids carry the process generation: a resumed CLI numbers its messages from the start again,
- * and an old item must not be overwritten by a new one that happens to share a key.
+ * and never talks to a process, so a test can feed it by hand. Item ids carry the process generation,
+ * since a resumed CLI numbers its messages from the start again and must not overwrite an old item.
  */
 export class ThreadProjector {
     private readonly thread: ChatThread;

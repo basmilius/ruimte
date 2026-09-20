@@ -20,7 +20,7 @@ export class MountedRegistry<T extends MountedEntry> extends Map<string, T> {
     /*
      * One pass over what is mounted but not attached, in the order it was mounted. The list is
      * copied first, because attaching mounts and unmounts as it goes, and an entry that went in the
-     * meantime is left alone: a node may leave the canvas while its attach is still on the wire.
+     * meantime is left alone, since a node may leave the canvas while its attach is still on the wire.
      */
     async reattachAll(reattach: (id: string, entry: T) => Promise<void>): Promise<void> {
         for (const [id, entry] of [...this]) {

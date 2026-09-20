@@ -93,7 +93,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
     const endpointId = useEndpointId();
     const exited = useSessionRow(id, (row) => row?.exited);
     const agentRecord = useSessionRow(id, (row) => row?.agent);
-    // Only Claude Code writes a name down; the daemon sends none for the other CLIs either way.
+    // Claude Code and Codex write a name down; the daemon sends none for Gemini or Copilot.
     useSuggestedTitle(id, agentRecord?.kind === 'claude' || agentRecord?.kind === 'codex' ? agentRecord.suggestedTitle : undefined);
     const resolvedTheme = useTheme((t) => t.resolved);
     const settingsVersion = useSettings((s) => s.version);
@@ -299,7 +299,6 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
         await restart();
     };
 
-    /* xterm keeps its selection to itself, so the rows ask the terminal instead of the document. */
     const paste = async (): Promise<void> => {
         const text = await readClipboardText();
         if (text !== '') {
@@ -342,6 +341,7 @@ export function TerminalBody({ id, focused }: { id: string; focused: boolean }) 
             <ContextMenu.Portal>
                 <ContextMenu.Positioner className="z-(--z-popup)">
                     <ContextMenu.Popup className="menu-popup">
+                        {/* xterm keeps its selection to itself, so this asks the terminal instead of the document. */}
                         <ContextMenu.Item className="menu-item" disabled={!selected} onClick={() => copyText(termRef.current?.getSelection() ?? '')}>
                             <Icon icon={Copy} size={14} /> {t('common:action.copy')}
                         </ContextMenu.Item>

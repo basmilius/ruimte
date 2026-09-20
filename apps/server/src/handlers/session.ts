@@ -58,7 +58,7 @@ export const registerSessionHandlers = (dispatcher: Dispatcher, manager: Session
         })
     );
 
-    // Answering a request that is already settled is not an error: a second client is simply late.
+    // Answering a request that is already settled is not an error. A second client is simply late.
     dispatcher.register('agent.answerApproval', (payload) => ({
         accepted: manager.answerApproval(payload.sessionId, payload.requestId, payload.choiceId)
     }));

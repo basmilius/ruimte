@@ -19,7 +19,7 @@ import { EDIT_SHORTCUTS } from '@/ui/shortcut';
 import { Kbd } from '@/ui/Kbd';
 
 /*
- * The menu behind a right-click in a thread. Copy is the reason it exists: everything in a thread
+ * The menu behind a right-click in a thread. Copy is the reason it exists. Everything in a thread
  * is text a person may want out of it, and a whole message, a code block or the markdown an answer
  * was written in are each a different amount of that.
  */

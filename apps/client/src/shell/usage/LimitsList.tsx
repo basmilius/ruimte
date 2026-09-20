@@ -85,7 +85,7 @@ function WindowBar({ window, now, compact }: { window: UsageWindow; now: number;
                     {bar}
                 </Tooltip>
             )}
-            {/* Under the bar rather than beside the label: a weekday and a countdown are too long to
+            {/* Under the bar rather than beside the label. A weekday and a countdown are too long to
                 share that line, and a reset that wrapped would read as two of them. */}
             {resetsAt !== null && (
                 <p className="text-xs whitespace-nowrap text-text-faint">
@@ -113,7 +113,7 @@ const explain = (provider: UsageLimitsProvider): string | null => {
 interface LimitsListProps {
     limits: UsageLimitsSnapshot;
     now: number;
-    /* Shorter bars, and no tooltip of their own: what a list that is itself a hover card needs. */
+    /* Shorter bars, and no tooltip of their own, what a list that is itself a hover card needs. */
     compact?: boolean;
 }
 

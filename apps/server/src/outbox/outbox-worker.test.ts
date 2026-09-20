@@ -246,7 +246,7 @@ test('an entry that waits keeps its file, costs no attempt, holds no lane and ru
     expect(runs).toEqual(['task-1', 'resume turn-1']);
     expect(store.list().map((entry) => [entry.kind, entry.attempts])).toEqual([['wake-parent', 0]]);
 
-    // No clock brings it back: only a wake of its own target does.
+    // No clock brings it back. Only a wake of its own target does.
     clock.advance(RETRY_DELAYS_MS.at(-1)! * 10);
     worker.wake('chat-2');
     await worker.settled();

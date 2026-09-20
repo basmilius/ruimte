@@ -105,7 +105,7 @@ export class ActiveTransport implements Transport {
         return target.on(registration.event, registration.handler as (payload: EventMap[EventType]) => void);
     }
 
-    /* Only a real change goes out: another machine's socket flapping is not this one's news. */
+    /* Only a real change goes out. Another machine's socket flapping is not this one's news. */
     private announce(): void {
         const status = this.status;
         if (status === this.announced) {

@@ -61,7 +61,7 @@ function EmptyThread({ chatId }: { chatId: string }) {
 export function Timeline({ chatId, composer }: { chatId: string; composer?: ReactNode }) {
     const { t } = useTranslation('chat');
     const order = useChatRow(chatId, (row) => row?.order);
-    // The structure, not the items: a delta growing a reply must not derive every row again.
+    // The structure, not the items. A delta growing a reply must not derive every row again.
     const items = useChatRow(chatId, (row) => row?.structure);
     const activeTurnId = useChatRow(chatId, (row) => row?.info.activeTurnId ?? null);
     const info = useChatRow(chatId, (row) => row?.info ?? null);
@@ -180,7 +180,7 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
 
     // A sub-agent in the thread's place hides the thread, and the strip and the keyboard go with it.
     const onMainAgent = trail.length === 0;
-    // A node on a canvas has no strip: it is too narrow to give up a column of its width.
+    // A node on a canvas has no strip. It is too narrow to give up a column of its width.
     const showsScrubber = frame.column && onMainAgent && ticks.length >= SCRUBBER_MIN_TICKS;
     const paddingLeft = threadPaddingLeft(frame.width, showsScrubber);
 
@@ -234,12 +234,12 @@ export function Timeline({ chatId, composer }: { chatId: string; composer?: Reac
     };
     useEffect(() => registerMessageStepper(endpointKey(endpointId, chatId), (direction) => stepRef.current(direction)), [endpointId, chatId]);
 
-    /* The whole of what a sub-agent did, in the thread's place: its row only keeps the beginning. */
+    /* The whole of what a sub-agent did, in the thread's place. Its row only keeps the beginning. */
     const openConversation = (item: ChatSubagentItem): void => {
         show(openFromMain(crumbOf(item)));
     };
 
-    /* The header of a turn a sub-agent woke: it points at the row that agent worked in. */
+    /* The header of a turn a sub-agent woke. It points at the row that agent worked in. */
     const openSubagent = (toolUseId: string): void => {
         const index = rows.findIndex((row) => row.kind === 'subagent' && row.item.toolUseId === toolUseId);
         const row = rows[index];

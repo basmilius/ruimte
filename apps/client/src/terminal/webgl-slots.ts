@@ -1,9 +1,8 @@
 /* How many terminals may hold a WebGL renderer at the same time. A browser keeps about 16 live
    contexts per page and silently drops the oldest, so the budget stays well under that and leaves
-   room for the browser nodes. Becomes a setting later. */
+   room for the browser nodes. */
 export const DEFAULT_WEBGL_CONTEXTS = 10;
 
-/* Which terminals gained and which lost a context in one decision. */
 export interface SlotChange {
     granted: string[];
     revoked: string[];
@@ -20,7 +19,7 @@ interface Member {
 const nothing = (): SlotChange => ({ granted: [], revoked: [] });
 
 /**
- * Hands a fixed number of WebGL contexts to the terminals that deserve them most: the focused one
+ * Hands a fixed number of WebGL contexts to the terminals that deserve them most, the focused one
  * first, then the ones most recently focused or written to. Knows nothing about xterm or the DOM;
  * the coordinator turns a `SlotChange` into addons that are loaded and disposed.
  */
@@ -101,7 +100,7 @@ export class WebglSlots {
         return member.holding ? nothing() : this.reconcile();
     }
 
-    /* The browser reported a context loss: free the slot and wait for a focus before asking again. */
+    /* The browser reported a context loss, free the slot and wait for a focus before asking again. */
     lost(id: string): SlotChange {
         const member = this.members.get(id);
         if (!member) {

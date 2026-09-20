@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { createClientKeyLoader, type KeyStore } from './client-key';
 
-/* What IndexedDB does for the page, without one: hold on to the pair the browser generated. */
+/* Does what IndexedDB would for the page, minus the IndexedDB, by holding the pair in memory. */
 const memoryStore = (): KeyStore & { writes: number } => {
     let held: CryptoKeyPair | null = null;
     return {
@@ -33,7 +33,7 @@ describe('the client key pair', () => {
     test('generates once and answers with the same key after a reload', async () => {
         const store = memoryStore();
         const first = (await createClientKeyLoader(store)())!;
-        // A second loader is what a reload builds: the store is all that carries over.
+        // A second loader is what a reload builds, since the store is all that carries over.
         const second = (await createClientKeyLoader(store)())!;
         expect(second.publicKey).toBe(first.publicKey);
         expect(store.writes).toBe(1);

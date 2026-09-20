@@ -15,14 +15,14 @@ export type {
 } from '@ruimte/desktop-bridge';
 
 /*
- * What the shell forwards when a page asks for a context menu: Electron's own params, trimmed to
+ * What the shell forwards when a page asks for a context menu. Electron's own params, trimmed to
  * what a row needs, plus the guest that asked. The menu itself is drawn by the client, except over
- * an editable field: that click stays in the shell, which pops a native menu, so `isEditable` is
- * false in everything that arrives here.
+ * an editable field, where that click stays in the shell and pops a native menu, so `isEditable`
+ * is false in everything that arrives here.
  */
 export interface BrowserContextParams {
     webContentsId: number;
-    /* Where the click landed, in the window's coordinates: Chromium maps a guest's point into the embedder before the event leaves. */
+    /* Where the click landed, in the window's coordinates. Chromium maps a guest's point into the embedder before the event leaves. */
     x: number;
     y: number;
     linkURL: string;
@@ -46,7 +46,7 @@ export interface BrowserContextAction {
 
 /*
  * Signing in to the Pulsar address book, the part only the shell can do. Mirrors `pulsar` in
- * `apps/desktop/src/preload.ts`. The answers are unknown on purpose: they crossed a process boundary,
+ * `apps/desktop/src/preload.ts`. The answers are unknown on purpose. They crossed a process boundary,
  * and `pulsar/desktop.ts` parses each one.
  */
 export interface PulsarBridge {
@@ -98,7 +98,7 @@ export interface DesktopBridge {
        `onBrowserContextMenu` is. */
     versions?: { electron: string; chrome: string; node: string };
     /* The region the operating system writes numbers and dates in, which Chromium's own locale is
-       not: that one is the language of the app bundle, and the bundle names one language.
+       not. That one is the language of the app bundle, and the bundle names one language.
        Read once, when the window opened, so a region changed since then lands on the next start. */
     systemLocale?: string;
     /* The languages the operating system asks for, best first, read the same way and at the same
@@ -107,9 +107,9 @@ export interface DesktopBridge {
     pickFolder(initialPath?: string): Promise<string | null>;
     openExternal(url: string): Promise<void>;
     openGuestDevTools(webContentsId: number): void;
-    /* A right-click inside a page: the shell says what the click landed on, the client draws the
-       menu. Optional: a shell that is already running carries the preload it started with, so a
-       method added since then is missing until it restarts. */
+    /* A right-click inside a page. The shell says what the click landed on, the client draws the
+       menu. Optional, because a shell that is already running carries the preload it started with,
+       so a method added since then is missing until it restarts. */
     onBrowserContextMenu?(listener: (params: BrowserContextParams) => void): () => void;
     /* The row that was picked, for the part of it the client cannot do itself. */
     browserContextAction?(action: BrowserContextAction): void;
@@ -133,7 +133,7 @@ export interface DesktopBridge {
        so; the shell holds the block and drops it on a reload or when the window goes. Optional for
        the same reason `onBrowserContextMenu` is; without it the setting is not offered. */
     setKeepAwake?(keep: boolean): void;
-    /* How much of the work still wants a person. The client counts it (`state/attention.ts`): only
+    /* How much of the work still wants a person. The client counts it (`state/attention.ts`). Only
        it knows which node holds an agent and which holds a shell somebody left attached. The shell
        badges the dock with `attention` and asks before quitting on `working`. Optional for the same
        reason `onBrowserContextMenu` is; without it there is no badge and no question at quit. */
@@ -142,7 +142,7 @@ export interface DesktopBridge {
        reason `onBrowserContextMenu` is; without it the client falls back to a browser download. */
     saveFile?(suggestedName: string, bytes: Uint8Array, mime: string): Promise<string | null>;
     /* Updating, which only the shell can do. Optional for the same reason `onBrowserContextMenu`
-       is: a shell that is already running carries the preload it started with. Without them the
+       is. A shell that is already running carries the preload it started with. Without them the
        client shows no update button and About says where updates come from instead. */
     updateState?(): Promise<UpdateState>;
     onUpdateState?(listener: (state: UpdateState) => void): () => void;
@@ -156,7 +156,7 @@ export interface DesktopBridge {
        Optional for the same reason `onBrowserContextMenu` is; without it About offers no notes. */
     releaseNotes?(refresh?: boolean): Promise<ReleaseNotesState>;
     /* The secret in the home of the daemon this app started, which the local row presents instead of
-       pairing: a loopback address is no proof of anything. Null while the daemon has not written it.
+       pairing. A loopback address is no proof of anything. Null while the daemon has not written it.
        Optional for the same reason `onBrowserContextMenu` is; without it the local row has to pair. */
     localSecret?(): Promise<string | null>;
     /* macOS owns the application-level microphone grant; the shell asks while the renderer only
@@ -187,8 +187,8 @@ export const isDesktop = (): boolean => desktop() !== null;
    there rather than shown as a switch that promises something the page has no way to do. */
 export const canKeepAwake = (): boolean => typeof desktop()?.setKeepAwake === 'function';
 
-/* True where a two-finger swipe goes back and forward in a page: the desktop app on macOS. Elsewhere
-   a mouse's side buttons are how that is done, and they work on every platform. */
+/* True only in the desktop app on macOS, where a two-finger swipe goes back and forward in a page.
+   Elsewhere a mouse's side buttons do the same thing, and they work on every platform. */
 export const canSwipeBetweenPages = (): boolean => desktop()?.platform === 'darwin';
 
 /* True when the window chrome leaves room for the traffic lights, which only macOS does. */
@@ -198,7 +198,7 @@ export const hasTrafficLights = (): boolean => desktop()?.platform === 'darwin';
    shell), and the first control starts 20px after that, so the lights read as their own group. */
 export const TRAFFIC_LIGHTS_INSET_PX = 84;
 
-/* True on macOS, in the desktop app and in a browser tab alike. Shortcuts differ there: Ctrl+B is
+/* True on macOS, in the desktop app and in a browser tab alike. Shortcuts differ there. Ctrl+B is
    readline's backward-char and tmux's prefix, while Cmd+B is free. */
 export const isApplePlatform = (): boolean => {
     const bridge = desktop();
@@ -212,7 +212,7 @@ export const isApplePlatform = (): boolean => {
     return applePlatformFrom(hints?.platform || navigator.platform);
 };
 
-/* Never the daemon's platform: the keyboard in question is the one in front of this page. */
+/* Never the daemon's platform. The keyboard in question is the one in front of this page. */
 export const applePlatformFrom = (platform: string | undefined): boolean => /mac|iphone|ipad/i.test(platform ?? '');
 
 /* True when the window controls sit over the top right of the window, which Windows and Linux do. */

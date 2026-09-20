@@ -6,7 +6,7 @@ import { webglBudget } from '@/terminal/webgl-budget';
 
 /*
  * Live xterm instances, and the last screen of the ones that were unmounted. Keyed on the machine
- * as well as the node: a terminal of one daemon must never repaint with another daemon's screen.
+ * as well as the node, so a terminal of one daemon never repaints with another daemon's screen.
  */
 const live = new Map<string, Terminal>();
 const lastScreens = new Map<string, string[]>();

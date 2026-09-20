@@ -8,7 +8,7 @@ export type ResetKeys = readonly unknown[];
 
 /*
  * Whether a boundary that holds an error should draw its children again. Only a boundary that
- * failed resets: comparing keys while the children are fine would remount a terminal or a page on
+ * failed resets. Comparing keys while the children are fine would remount a terminal or a page on
  * every save.
  */
 export const shouldReset = (failed: boolean, previous: ResetKeys, next: ResetKeys): boolean => {

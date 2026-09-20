@@ -23,7 +23,7 @@ export interface WorkspaceStores {
 
 /*
  * The view a cell of the split shows. Null outside a cell, where a reader means the cell that has
- * the focus: that is what a dialog, a panel and everything outside the grid are asking about.
+ * the focus. That is what a dialog, a panel and everything outside the grid are asking about.
  */
 export const CellViewContext = createContext<string | null>(null);
 
@@ -57,12 +57,12 @@ export const resolveEditor = <T>(registry: EditorRegistry<T>, cell: string | nul
  */
 export const useEditorStoreOf = <T>(registry: EditorRegistry<T>): StoreApi<T> => {
     const cell = useContext(CellViewContext);
-    // The shape rather than the contents: which editor this is changes far less often than what is in it.
+    // The shape rather than the contents. Which editor this is changes far less often than what is in it.
     return useSyncExternalStore(registry.subscribeShape, () => resolveEditor(registry, cell));
 };
 
 /*
- * A hook over one editor and nothing else. It is deliberately not a store: `useCanvas.getState()`
+ * A hook over one editor and nothing else. It is deliberately not a store. `useCanvas.getState()`
  * used to read whichever cell had the focus, while `useCanvas(selector)` two lines above it read the
  * cell the component was drawn in, so a drawing beside another one wrote into its neighbor. Without
  * the store half the two cannot disagree, and a reader who really means the focused cell has to

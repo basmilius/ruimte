@@ -69,7 +69,7 @@ const OutboxEntrySchema = z.intersection(
     z.object({
         id: z.string().min(1),
         projectId: z.string().min(1),
-        // The node the work is about: entries for one target run one at a time, and it goes with the node.
+        // The node the work is about. Entries for one target run one at a time, and it goes with the node.
         target: z.string().min(1),
         createdAt: z.number(),
         attempts: z.number().int().nonnegative(),
@@ -87,12 +87,12 @@ export type DeliverMessageEntry = Extract<OutboxEntry, { kind: 'deliver-message'
 export type EndChildrenEntry = Extract<OutboxEntry, { kind: 'end-children' }>;
 export type DeliverSummaryEntry = Extract<OutboxEntry, { kind: 'deliver-summary' }>;
 
-/* The nodes an entry is about: work on any of them waits while it runs. Ending children holds their lanes too, so no start or resume of one runs beside it. */
+/* The nodes an entry is about. Work on any of them waits while it runs. Ending children holds their lanes too, so no start or resume of one runs beside it. */
 export const lanesOf = (entry: OutboxEntry): string[] => (entry.kind === 'end-children' ? [entry.target, ...entry.payload.nodeIds] : [entry.target]);
 
 /*
  * Work the daemon still owes, one file per entry under `$RUIMTE_HOME/outbox`, removed once it is
- * done. On disk because the owing outlives the process: a node written a moment before a restart
+ * done. On disk because the owing outlives the process. A node written a moment before a restart
  * still has its agent started after it. Only a verb or a restart puts something here, never a clock.
  */
 export class OutboxStore {
@@ -145,7 +145,7 @@ export class OutboxStore {
     }
 
     /*
-     * Drops what this project owed for ids it no longer has: nothing is started for a node that was
+     * Drops what this project owed for ids it no longer has. Nothing is started for a node that was
      * deleted. Ending the children of a deleted node is owed exactly because it is gone, so that stays.
      */
     prune(projectId: string, ids: ReadonlySet<string>): Promise<void> {

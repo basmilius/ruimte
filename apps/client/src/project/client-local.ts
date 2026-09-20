@@ -126,7 +126,7 @@ export const rekeyClientLocal = (storage: ClientLocalStorage | null, oldId: stri
     const next: ClientLocalRows = {};
     for (const [key, row] of Object.entries(rows)) {
         if (isOfEndpoint(key, oldId)) {
-            // Sliced rather than split: an id from before daemon ids was an address, colon and all.
+            // Sliced rather than split, since an id from before daemon ids was an address, colon and all.
             next[endpointKey(newId, key.slice(oldId.length + 1))] = row;
             moved = true;
         } else {

@@ -239,7 +239,7 @@ export class FileEditorClient<TState extends FileEditorState<TDocument, TContent
     private onDocument(state: ReturnType<DocumentAccess['getState']>, previous: ReturnType<DocumentAccess['getState']>): void {
         const gone = [...this.open.keys()].some((viewId) => !state.views.some((view) => view.id === viewId && this.channel.isView(view)));
         const wanted = this.wantedIn(state);
-        // The ids rather than the layout itself: a project read again from disk is a new layout
+        // The ids rather than the layout itself, since a project read again from disk is a new layout
         // object holding the same views, and that is a reconnect, not a change to the grid.
         const settled = wanted.length === this.open.size && wanted.every((viewId) => this.open.has(viewId));
         if (!settled || gone) {
@@ -247,7 +247,7 @@ export class FileEditorClient<TState extends FileEditorState<TDocument, TContent
             return;
         }
         // The project was read again after the socket came back, so the daemon is ready to be asked
-        // about these files: a restarted daemon knows no rev for one until it is opened.
+        // about these files, since a restarted daemon knows no rev for one until it is opened.
         if (this.reconnecting && this.open.size > 0 && state.views !== previous.views) {
             this.reconnecting = false;
             void Promise.all([...this.open.values()].map((file) => this.reopen(file)));
@@ -255,7 +255,7 @@ export class FileEditorClient<TState extends FileEditorState<TDocument, TContent
     }
 
     /*
-     * A project arriving is what a reload looks like from here: the document store already holds
+     * A project arriving is what a reload looks like from here, since the document store already holds
      * the view, so nothing else would ever ask for its file.
      */
     private onProject(state: ReturnType<ProjectAccess['getState']>, previous: ReturnType<ProjectAccess['getState']>): void {
@@ -273,7 +273,7 @@ export class FileEditorClient<TState extends FileEditorState<TDocument, TContent
     /*
      * Brings the open files in step with the grid: every view of this kind on screen is open, and
      * nothing else is. `dropped` says a view is gone from the project, in which case what it held
-     * may not be written: the save would resurrect the file as an orphan.
+     * may not be written, since the save would resurrect the file as an orphan.
      */
     private async sync(dropped = false): Promise<void> {
         const { current, switching } = this.projects.getState();
@@ -303,8 +303,8 @@ export class FileEditorClient<TState extends FileEditorState<TDocument, TContent
         } else {
             await this.flushOne(file);
         }
-        // Taken out first: emptying the editor is a change like any other, and `onEditor` reads this
-        // map to tell an edit from the view being taken off screen.
+        // Taken out first, since emptying the editor is a change like any other, and `onEditor` reads
+        // this map to tell an edit from the view being taken off screen.
         this.open.delete(file.viewId);
         file.store.getState().unload();
         this.editors.release(file.viewId);
@@ -420,7 +420,7 @@ export class FileEditorClient<TState extends FileEditorState<TDocument, TContent
                 file.store.getState().setDirty(true);
                 if (e instanceof TransportError && e.code === 'rev-conflict') {
                     // Our own write never reaches the watcher, so the newer document has to be asked
-                    // for: without this a daemon that forgot the file leaves the work unsaved.
+                    // for, since without this a daemon that forgot the file leaves the work unsaved.
                     stale = true;
                     return;
                 }

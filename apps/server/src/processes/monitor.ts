@@ -66,7 +66,7 @@ interface Latest {
  * The process table of this machine, for the panel and for the warnings. With a panel open anywhere
  * it reads every two seconds; with none it reads every five minutes, which is enough for the
  * warnings and for a day of coarse history, plus a reading out of rhythm whenever a turn ends, a
- * shell exits or a session is killed. Nothing is written to disk: after a restart the history is empty.
+ * shell exits or a session is killed. Nothing is written to disk, so after a restart the history is empty.
  */
 export class ProcessMonitor {
     private readonly options: ProcessMonitorOptions;
@@ -83,7 +83,7 @@ export class ProcessMonitor {
     private coarsePrevious: RawSample | null = null;
     private latest: Latest | null = null;
     private published: ProcessAlert[] = [];
-    // Arguments and environments by identity: read once per process, since neither changes.
+    // Arguments and environments by identity, read once per process since neither changes.
     private commandLines = new Map<string, CommandLine | null>();
     private timer: ReturnType<typeof setTimeout> | null = null;
     private nudgeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -123,7 +123,7 @@ export class ProcessMonitor {
         }
     }
 
-    /* A panel opened (or changed its scope or sort): the tempo goes up and the history comes back at once. */
+    /* A panel opened, or changed its scope or sort. The tempo goes up and the history comes back at once. */
     follow(clientId: string, payload: ProcessesSubscribePayload): ProcessesSubscribeResult {
         const wasIdle = this.followers.size === 0;
         this.followers.set(clientId, payload);
@@ -180,7 +180,7 @@ export class ProcessMonitor {
         }, NUDGE_DELAY_MS);
     }
 
-    /* Right before a session is killed: this reading is the last one that sees what was inside it. */
+    /* Right before a session is killed. This reading is the last one that sees what was inside it. */
     beforeKill(): void {
         if (this.running) {
             this.sampleNow(false);

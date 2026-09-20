@@ -433,14 +433,11 @@ export class ChatSession {
     }
 
     /*
-     * Opens a turn nobody typed a prompt for (tasks that settled, a message another node left), with
-     * the turn carrying what woke it: the task ids, or the nodes the messages came from, which is
-     * what keeps a turn a message opened from waking anyone itself. A caller whose news is not in
-     * the thread yet passes a `note` saying what woke the chat; one whose news was written there as
-     * it landed leaves it out rather than saying it twice.
-     * Checked and opened in one step, so null means a turn is in the way (or the daemon is going
-     * down) and nothing happened. Never through `send`: that steps on a turn with `origin: 'agent'`,
-     * so a second wake would close the first.
+     * Opens a turn nobody typed a prompt for (a settled task, a message left by another node), with the
+     * turn carrying what woke it, so a turn it opens cannot itself wake anyone. A caller passes `note`
+     * only when its news is not already written in the thread. Checked and opened in one step, so null
+     * means a turn (or a shutdown) was in the way. Never through `send`, which would step on a turn
+     * with `origin: 'agent'` and close the wake it just made.
      */
     wake(wake: { text: string; label: string; note?: string; taskIds: string[]; summaryFor?: string; messageFrom?: string[] }): string | null {
         if (this.frozen || this.thread.info.activeTurnId !== null) {
@@ -611,11 +608,6 @@ export class ChatSession {
         return await this.options.checkpoints.diff(this.thread.info.cwd, turn.checkpoint);
     }
 
-    /*
-     * What this chat's CLI would run as a skill. A running backend that answers the question itself
-     * (Codex) is the authority; otherwise the daemon's own scan is, narrowed to what the CLI's init
-     * frame said it has, so a skill turned off in its settings drops out after the first message.
-     */
     /* A page of a thread the CLI keeps, through the process that runs now; null when none runs that can answer. */
     listThreadItems(params: { threadId: string; cursor?: string; limit: number; sortDirection: 'asc' | 'desc' }): Promise<unknown> | null {
         const backend = this.backend;
@@ -704,6 +696,11 @@ export class ChatSession {
         this.options.persistSoon();
     }
 
+    /*
+     * What this chat's CLI would run as a skill. A running backend that answers the question itself
+     * (Codex) is the authority; otherwise the daemon's own scan is, narrowed to what the CLI's init
+     * frame said it has, so a skill turned off in its settings drops out after the first message.
+     */
     async skills(scan: () => Promise<ChatSkill[]>): Promise<ChatSkill[]> {
         const backend = this.backend;
         if (backend?.running === true && backend.listSkills) {

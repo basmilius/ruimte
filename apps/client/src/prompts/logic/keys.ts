@@ -1,8 +1,8 @@
 import { matchesShortcut, shortcut, type KeyLike } from '@/ui/shortcut';
 
 /*
- * The keys inside a prompt card. Bare keys are allowed here and nowhere else on a canvas, because a card
- * is a widget the keyboard is already in: they only mean something while the focus is inside one.
+ * The keys inside a prompt card. Bare keys are allowed here and nowhere else on a canvas because a card
+ * is a widget the keyboard is already in. They only mean something while the focus is inside one.
  */
 export const PROMPT_SHORTCUTS = {
     primary: shortcut('Mod+Enter'),

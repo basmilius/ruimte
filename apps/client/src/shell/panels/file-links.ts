@@ -90,7 +90,6 @@ const FILE_EXTENSIONS = new Set([
     'zsh'
 ]);
 
-/* The files a project names without an extension at all. */
 const EXTENSIONLESS_FILES = new Set(['changelog', 'dockerfile', 'gemfile', 'justfile', 'license', 'makefile', 'procfile', 'readme']);
 
 /* Characters no path a person means carries; a glob or a sentence fragment ends here. */

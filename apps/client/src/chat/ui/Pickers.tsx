@@ -296,7 +296,7 @@ export function OptionsPicker({
 }
 
 /*
- * Prompts put aside with Cmd+S. The shelf is the whole app's, not this chat's: on a canvas a
+ * Prompts put aside with Cmd+S. The shelf is the whole app's, not this chat's. On a canvas a
  * stashed prompt usually moves to another node, which is the reason to put it away in the first
  * place. Restoring drops the text, the mentions and the skills into this composer; the files a
  * draft held are named on the row but not kept, because their bytes never go to storage.

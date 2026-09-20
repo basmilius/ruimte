@@ -73,7 +73,7 @@ const verb = runVerb;
 const turnsOf = (daemon: Daemon, chatId: string): ChatTurnItem[] =>
     (daemon.chats.get(chatId)?.thread.list() ?? []).filter((item): item is ChatTurnItem => item.kind === 'turn');
 
-/* The turns a task opened or a wake opened, per task id, which is how a turn says what it is for. */
+/* The turns naming this task id, which is how a turn says what it is for. */
 const turnsFor = (daemon: Daemon, chatId: string, taskId: string): ChatTurnItem[] =>
     turnsOf(daemon, chatId).filter((turn) => (turn.taskIds ?? []).includes(taskId));
 
@@ -92,7 +92,6 @@ const opened = async (daemon: Daemon, prompt: string, terminal = false): Promise
     return childId;
 };
 
-/* The lines of `task new`, and the id of the task it opened. */
 const give = async (daemon: Daemon, childId: string, argv: string[]): Promise<{ lines: string[]; taskId: string }> => {
     const lines = await verb(daemon, 'chat-lead', 'task', ['new', childId, ...argv]);
     return { lines, taskId: lines[0]!.split('\t')[1]! };

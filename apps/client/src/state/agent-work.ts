@@ -3,7 +3,7 @@ import { endpointKey } from '@/state/keys';
 import type { SessionState, SessionsByKey, StatusOf } from '@/state/sessions';
 
 /*
- * Whether a session has an agent in the middle of a turn. Not `nodeStatus`: that calls a terminal
+ * Whether a session has an agent in the middle of a turn. Not `nodeStatus`, which calls a terminal
  * running the moment it is attached, which every open terminal is, so a shell waiting at its prompt
  * would count as work. A session counts only through the agent its hooks reported, and only while
  * that agent is `live`, since a record left behind by a CLI that went down with its shell keeps
@@ -19,8 +19,8 @@ export const agentsWorking = (sessions: SessionsByKey, chats: ChatsById): boolea
     Object.values(sessions).some(sessionWorking) || Object.values(chats).some(chatWorking);
 
 /*
- * Whether this node is the one with the working agent in it. Only a terminal and a chat can be:
- * everything else on a canvas carries a status no CLI ever reported.
+ * Whether this node is the one with the working agent in it. Only a terminal and a chat can be,
+ * since everything else on a canvas carries a status no CLI ever reported.
  */
 export const nodeWorking = (node: StatusOf, sessions: SessionsByKey, chats: ChatsById, endpointId: string): boolean => {
     if (node.kind === 'terminal') {

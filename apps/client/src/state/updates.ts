@@ -29,7 +29,7 @@ export const useUpdates = create<UpdatesStore>(() => ({
     }
 }));
 
-/* The green button in the toolbar: there is something to do, and one click leads to it. */
+/* The green button in the toolbar. There is something to do, and one click leads to it. */
 export const hasUpdate = (state: UpdateState): boolean => state.status === 'available' || state.status === 'downloading' || state.status === 'ready';
 
 /* The line About leads with. The detail is empty where the headline says it all. */
@@ -63,7 +63,7 @@ export const setAutoDownload = async (autoDownload: boolean): Promise<void> => {
     await desktop()?.configureUpdates?.(autoDownload);
 };
 
-// Not a setting: the settings store travels with everything that reads and writes preferences.
+// Not a setting. The settings store travels with everything that reads and writes preferences.
 const SEEN_VERSION_KEY = 'ruimte.seenVersion';
 
 export type VersionChange = 'first' | 'updated' | 'same' | 'older';
@@ -121,7 +121,7 @@ export const noteVersionChange = (current: string, storage: SeenVersionStorage |
 };
 
 /*
- * Wires the store to the shell: the state it already has and every change after it. The first check
+ * Wires the store to the shell. The state it already has and every change after it. The first check
  * waits until the auto-download preference has landed, so nothing downloads behind the back of
  * someone who turned it off. Returns the unsubscribe, or null where there is no shell to talk to.
  */

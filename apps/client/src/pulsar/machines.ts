@@ -74,7 +74,6 @@ export const removeMachineFromAccount = async (machineId: string): Promise<void>
     await refreshAccountMachines();
 };
 
-/* Adds the row that reaches a machine from the account list, or answers the one this client already has. */
 export const openAccountMachine = (machine: Machine): Endpoint => {
     const known = rowForAccountMachine(machine.id, useEndpoints.getState().endpoints);
     if (known) {

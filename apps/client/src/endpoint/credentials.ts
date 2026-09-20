@@ -1,8 +1,8 @@
 /*
- * The credential this client sends to a daemon right now, per machine. A ticket comes out of the
- * handshake and rotates on every connection; it lives in memory only, because writing it down is
- * the thing this replaces. The session token underneath it is what a client paired with before
- * there were key pairs still carries, and it is dropped as soon as a ticket proves it is not needed.
+ * A ticket comes out of the handshake and rotates on every connection; it lives in memory only,
+ * because writing it down is the thing this replaces. The session token underneath it is what a
+ * client paired with before there were key pairs still carries, dropped as soon as a ticket proves
+ * it is not needed.
  */
 const tickets = new Map<string, string>();
 
@@ -42,9 +42,9 @@ export const rememberLocalSecret = (endpointId: string, secret: string | null): 
 export const localSecretOf = (endpointId: string): string | null => localSecrets.get(endpointId) ?? null;
 
 /*
- * What goes in the `token` query of a socket URL or of a URL an `<img>` fetches. The name stayed:
- * the daemon takes a ticket, a session token and the local secret in the same place, which is what keeps a client of
- * either kind talking to a daemon of either kind.
+ * What goes in the `token` query of a socket URL or of a URL an `<img>` fetches. The name stayed
+ * because the daemon takes a ticket, a session token and the local secret in the same place, which
+ * is what keeps a client of either kind talking to a daemon of either kind.
  */
 export const credentialFor = (endpoint: { id: string; token: string | null }): string | null =>
     tickets.get(endpoint.id) ?? endpoint.token ?? localSecrets.get(endpoint.id) ?? null;

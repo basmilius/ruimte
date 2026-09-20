@@ -16,7 +16,7 @@ interface GitStore {
     /* Whole pixels the commit log takes; it travels with the project like the widths beside it. */
     logHeight: number;
     /* The commit message being written, per checkout, so switching panels does not throw it away.
-       It stays in memory: a half-written message is not something to find back after a reload. */
+       It stays in memory, since a half-written message is not something to find back after a reload. */
     messages: Record<string, string>;
     setScope(scope: GitDiffScope): void;
     setLogHeight(height: number): void;

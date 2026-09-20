@@ -8,7 +8,7 @@ import { NO_REPLY_NOTICE } from './notices.ts';
 import { ProjectStore } from '../projects/project-store.ts';
 import { bootTestDaemon, runVerb, type TestDaemon } from '../tasks/test-daemon.ts';
 
-/* Two chats a person opened beside each other, a shell and a note: a message travels only along a line. */
+/* Two chats a person opened beside each other, plus a note nothing links to: a message travels only along a line. */
 const content = (): ProjectContent => ({
     name: 'repo',
     color: '#123456',

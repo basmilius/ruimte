@@ -36,7 +36,7 @@ interface StepOptions {
 
 type Step = (phase: GitActionPhase, args: string[], options?: StepOptions) => Promise<string>;
 
-/* What git wrote, with the empty lines gone: the message of a failure and the body of a copy. */
+/* What git wrote, trimmed: the message of a failure and the body of a copy. */
 const textOf = (stdout: string, stderr: string): string => `${stdout}${stderr}`.trim();
 
 const summaryOf = (output: string, fallback: string): string => {
@@ -52,7 +52,6 @@ const summaryOf = (output: string, fallback: string): string => {
 export class GitActions {
     private readonly running = new Map<string, Job>();
 
-    /* Ends the git of an action that is still going; a cancel for one that is over does nothing. */
     cancel(actionId: string): void {
         this.running.get(actionId)?.cancel();
     }
@@ -229,7 +228,6 @@ export class GitActions {
         return upstream === null ? `Published ${branch} to origin.` : `Pushed ${branch}.`;
     }
 
-    /* Stage what was asked for, then write the commit and read back what git made of it. */
     private async commit(payload: GitActionPayload, step: Step, top: string): Promise<{ hash: string; subject: string }> {
         if (payload.stageAll === true) {
             await step('stage', ['add', '--all']);

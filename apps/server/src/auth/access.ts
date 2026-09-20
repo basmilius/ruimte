@@ -10,7 +10,6 @@ const isLoopbackHost = (host: string): boolean => LOOPBACK.has(host.replace(/^\[
 
 const isPrivateAddress = (address: string): boolean => /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|fe80:|fd)/i.test(address.replace(/^::ffff:/, ''));
 
-/* What a connection's address says about how far away the client is. */
 export const reachabilityOf = (address: string): Reachability => (isLoopbackAddress(address) ? 'loopback' : isPrivateAddress(address) ? 'lan' : 'public');
 
 /*

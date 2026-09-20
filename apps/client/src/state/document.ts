@@ -54,7 +54,7 @@ import {
 import { CellViewContext, storeHook } from '@/state/workspace-stores';
 
 export interface DocumentState {
-    /* In sidebar order. The active canvas view is stale here: the canvas store is the editor of that one. */
+    /* In sidebar order. The active canvas view is stale here, since the canvas store is the editor of that one. */
     views: ProjectView[];
     /*
      * The view of the cell that has the focus. It is derived from the layout and kept beside it,
@@ -345,7 +345,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 const settled = settledOn(views, viewLocal, layout, { lastCanvasViewId: views.find(isCanvasView)?.id ?? null });
                 // Another project is another set of views, so a banner about the one that just left goes with it.
                 set({ ...settled, viewNotice: null, loading: true, edits: 0, shared: document?.shared ?? [] });
-                // The project that was here goes first, editors and all: nothing of it may show through.
+                // The project that was here goes first, editors and all, so nothing of it may show through.
                 peers.canvases.keep([]);
                 openEditors(views, viewLocal, layout === null ? [] : viewIdsIn(layout), settled.activeViewId, peers);
                 set({ loading: false });
@@ -452,7 +452,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 if (state.layout === null) {
                     return;
                 }
-                // The last cell stays: a project always has a view open, and an empty grid is not a state.
+                // The last cell stays, since a project always has a view open, and an empty grid is not a state.
                 const next = closeCell(state.layout, at);
                 if (next !== null) {
                     commit(next);
@@ -462,7 +462,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
             focusCellAt(at) {
                 const state = get();
                 // Asked on every press and every focus inside a cell, so the cell that already has it
-                // costs nothing: a commit writes every editor back.
+                // costs nothing, since a commit writes every editor back.
                 if (state.layout !== null && cellAt(state.layout, at) !== null && !isSameCell(state.layout.focus, at)) {
                     commit(focusCell(state.layout, at));
                 }
@@ -475,7 +475,7 @@ export const createDocumentStore = (peers: DocumentPeers): StoreApi<DocumentStat
                 }
             },
 
-            /* A drag is not a move of the grid: no editor opens or closes, so it sets the sizes alone. */
+            /* A drag is not a move of the grid, since no editor opens or closes, so it sets the sizes alone. */
             resizeColumns(at, before, after) {
                 set((state) => {
                     if (state.layout === null || at <= 0 || at >= state.layout.columns.length) {

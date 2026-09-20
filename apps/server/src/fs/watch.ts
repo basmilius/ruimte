@@ -23,8 +23,7 @@ interface Watch {
 
 /*
  * Folders a client is looking at, watched for as long as it looks. Every batch is one `fs.changed`
- * naming the directories that moved, so the client re-lists only what it has loaded. A watch is per
- * client, like a session attach: two windows on the same folder each get their own.
+ * naming the directories that moved, so the client re-lists only what it has loaded.
  */
 export class FolderWatcher {
     private readonly sinks = new ClientSinks();

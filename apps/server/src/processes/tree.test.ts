@@ -107,7 +107,7 @@ describe('the tree of Ruimte', () => {
     test('"All" adds the rest of the machine: the top readable ones plus every AI process', () => {
         const groups = groupsFor(index, rates({ 12: 99, 10: 3 }), 'all', 'cpu', 1);
         const other = groups.find((group) => group.kind === 'other')!;
-        // 40 is the Claude that started the app: outside Ruimte's tree, so it is listed with the rest.
+        // 40 is the Claude that started the app, outside Ruimte's tree, so it is listed with the rest.
         expect(other.processes.map((row) => row.pid)).toEqual([10, 40, 11]);
         expect(other.hidden).toBe(2);
     });

@@ -7,7 +7,6 @@ import type { EndpointIdentity } from '../endpoint-id.ts';
 import type { BrokerDescription } from '../pulsar/broker-switch.ts';
 
 interface EndpointHost {
-    /* The machine itself: its id, its key pair and what it calls itself right now. */
     identity: EndpointIdentity;
     version: string;
     // The broker clients are told to dial right now (null when this machine announces itself to none), and whether a flag decides it.
@@ -23,7 +22,7 @@ interface EndpointHost {
 export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, host: EndpointHost): void => {
     const { identity } = host;
 
-    // Built per client: what the machine is called travels with what this connection is allowed.
+    // Built per client, so what the machine is called travels alongside what this connection is allowed.
     const info = (access: ClientAccess | undefined) => ({
         id: identity.id,
         label: identity.label,
@@ -45,7 +44,7 @@ export const registerAuthHandlers = (dispatcher: Dispatcher, store: AuthStore, h
     dispatcher.register('endpoint.info', (_payload, client) => info(client.access));
 
     /*
-     * Any client that paired may name the machine: a name and an icon are how a person tells two
+     * Any client that paired may name the machine. A name and an icon are how a person tells two
      * machines apart, so they belong to the machine and not to whichever client typed them.
      */
     dispatcher.register('endpoint.setIdentity', async (payload, client) => {

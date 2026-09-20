@@ -74,7 +74,7 @@ describe('ui', () => {
         expect(parsePanel('closed:terminal')).toEqual({ open: false, kind: 'files' });
     });
 
-    /* The columns may not animate while they are showing what was stored: on a cold load the panels
+    /* The columns may not animate while they are showing what was stored. On a cold load the panels
        are closed until the project's local file arrives, and that arrival is a width change of its
        own. `panelsRestoring` is what `useInstantWidth` reads, so this is the whole sequence that
        has to land at once, and the first change made by hand is where the sliding starts. */

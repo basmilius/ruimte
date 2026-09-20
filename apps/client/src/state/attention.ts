@@ -95,17 +95,15 @@ export interface AttentionPass {
 
 /*
  * Which turns ended between the pass before and this one. A turn that stopped to ask something did
- * not end: that is a person's turn and the needs-you count is already about it. A node that left the
- * project did not end a turn either, it went.
+ * not end, since that is a person's turn and the needs-you count is already about it. A node that left
+ * the project did not end a turn either, it went.
  */
 export const settledSince = (pass: AttentionPass): string[] =>
     [...pass.previous].filter((key) => !pass.working.has(key) && !pass.needsYou.has(key) && pass.known.has(key));
 
 /*
- * The marks after this pass: what was marked plus what just ended, minus everything in front of a
- * person right now, minus anything that went back to working or to asking, minus what left the
- * project. Marking and clearing are the same rule read twice, which is why looking at a node while
- * its turn ends never leaves a mark behind and looking at a marked node always takes it off.
+ * Marking and clearing are the same rule read twice, which is why looking at a node while its turn
+ * ends never leaves a mark behind, and looking at a marked node always takes it off.
  */
 export const nextUnseen = (pass: AttentionPass): Set<string> => {
     const next = new Set<string>();
@@ -151,7 +149,7 @@ export const groupAttention = (
     return groups;
 };
 
-/* One number for the dock badge: everything a person still has to come back to. */
+/* One number for the dock badge, everything a person still has to come back to. */
 export const attentionTotal = (groups: AttentionGroups): number => groups.needsYou.length + groups.finished.length;
 
 interface AttentionStore {
@@ -186,7 +184,6 @@ export const useAttention = create<AttentionStore>((set) => ({
 export const isUnseen = (unseen: Readonly<Record<string, true>>, endpointId: string, nodeId: string): boolean =>
     unseen[endpointKey(endpointId, nodeId)] === true;
 
-/* Whether this node's turn ended while nobody was looking. What a node header draws its mark from. */
 export const useUnseen = (nodeId: string): boolean => {
     const endpointId = useEndpointId();
     return useAttention((s) => isUnseen(s.unseen, endpointId, nodeId));
@@ -225,7 +222,7 @@ export const startAttentionWatch = (): (() => void) => {
             previous,
             needsYou: new Set(groups.needsYou.map(keyOf)),
             seen: new Set([...visible].map(keyOf)),
-            // The machine's own unread entries count too: a turn that ended while no client was connected still leaves its mark.
+            // The machine's own unread entries count too, since a turn that ended while no client was connected still leaves its mark.
             unseen: new Set([...Object.keys(useAttention.getState().unseen), ...unreadOnMachine(endpointId).map(keyOf)]),
             known: new Set(nodes.map((node) => keyOf(node.id)))
         };
@@ -234,7 +231,7 @@ export const startAttentionWatch = (): (() => void) => {
         previous = result.working;
         useAttention.getState().setUnseen(marks);
         // A mark is exactly "this ended and nobody saw it", which is what deserves a notification. The
-        // window being in front says nothing about it: the node may sit on a view behind the one up.
+        // window being in front says nothing about it, since the node may sit on a view behind the one up.
         for (const key of settled) {
             const node = marks.has(key) ? nodes.find((candidate) => keyOf(candidate.id) === key) : undefined;
             if (node) {
@@ -252,8 +249,8 @@ export const startAttentionWatch = (): (() => void) => {
 
     /*
      * A canvas changes on every pointer move of a pan, and the answer only matters once a frame.
-     * The stores the hooks write into are never throttled: a turn that ends in a window nobody is
-     * looking at has to be noticed, and a hidden window is given no frames at all.
+     * The stores the hooks write into are never throttled, since a turn that ends in a window nobody
+     * is looking at has to be noticed, and a hidden window is given no frames at all.
      */
     let queued = false;
     const schedule = (): void => {

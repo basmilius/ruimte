@@ -75,7 +75,7 @@ const useSummary = (endpointId: string, transport: Transport | null, period: Usa
         if (transport.status === 'open') {
             subscribe();
         }
-        // A daemon knows its followers per socket, so every connection has to be told again: a reconnect, and the move to another machine.
+        // A daemon knows its followers per socket, so every connection has to be told again, on a reconnect and on a move to another machine.
         const off = transport.subscribeStatus((status) => {
             if (status === 'open') {
                 subscribe();
@@ -239,7 +239,7 @@ function Page({ endpointId }: { endpointId: string }) {
     const asked = useUsage((s) => s.asked);
     const loading = useUsage((s) => s.loading);
     const endpoint = useEndpoints((s) => s.endpoints.find((entry) => entry.id === endpointId) ?? null);
-    // Held while the dialog shows this machine, like its dialog in the Machines pane: asking for its numbers is an explicit action.
+    // Held while the dialog shows this machine, like its dialog in the Machines pane. Asking for its numbers is an explicit action.
     useMachineHold(endpoint);
     const transport = useMemo(() => machineTransport(endpointId), [endpointId]);
     const reload = useSummary(endpointId, transport, period);
@@ -340,7 +340,7 @@ function Body() {
     );
 }
 
-/* Larger than the settings: the chart and the breakdown need the width. The body mounts only while open, so nothing is scanned behind a closed dialog. */
+/* Larger than the settings, since the chart and the breakdown need the width. The body mounts only while open, so nothing is scanned behind a closed dialog. */
 export function UsageDialog() {
     const open = useUi((s) => s.usageOpen);
     return (

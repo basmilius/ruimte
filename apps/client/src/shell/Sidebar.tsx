@@ -507,7 +507,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
                     )}
                 </span>
                 <span className="min-w-0 truncate">{view.kind === 'browser' ? title : view.name}</span>
-                {/* Colour alone would say nothing to a screen reader, and a view standing in another
+                {/* Color alone would say nothing to a screen reader, and a view standing in another
                     cell is not the same as one that is closed. */}
                 {row.beside && <span className="sr-only">{t('sidebar.openInAnotherCell')}</span>}
                 <span className="grow" />

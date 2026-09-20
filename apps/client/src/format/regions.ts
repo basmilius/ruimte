@@ -1,6 +1,6 @@
 /*
  * The regions a person can read this app in, beside the one its language comes with and the one the
- * operating system was set to. The list is short on purpose: it is here for a machine whose region
+ * operating system was set to. The list is short on purpose. It is here for a machine whose region
  * reads nothing like the person in front of it, not as a country picker.
  */
 export const FORMAT_LANGUAGE = 'language';

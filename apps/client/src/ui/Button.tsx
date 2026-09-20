@@ -5,13 +5,13 @@ type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'positive' |
 type ButtonSize = 'sm' | 'md';
 
 const VARIANT: Record<ButtonVariant, string> = {
-    // A filled button darkens under the pointer: its color is the meaning, so no token of its own for hover.
+    // A filled button darkens under the pointer. Its color is the meaning, so no token of its own for hover.
     primary: 'bg-accent text-accent-text hover:brightness-90 disabled:hover:brightness-100',
     secondary: 'border border-border bg-surface-raised text-text hover:bg-surface-hover disabled:hover:bg-surface-raised',
     ghost: 'text-text-muted hover:bg-surface-hover hover:text-text',
     danger: 'bg-status-error text-accent-text hover:brightness-90 disabled:hover:brightness-100',
     positive: 'bg-positive text-positive-text hover:brightness-90 disabled:hover:brightness-100',
-    // Dark on a light theme and light on a dark one: what Apple's and GitHub's sign-in buttons ask for.
+    // Dark on a light theme, light on a dark one, matching what Apple's and GitHub's sign-in buttons ask for.
     inverse: 'bg-text text-bg hover:opacity-90 disabled:hover:opacity-100'
 };
 
@@ -24,7 +24,7 @@ const SIZE: Record<ButtonSize, string> = {
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: ButtonVariant;
     size?: ButtonSize;
-    /* Makes it a link that looks like a button: a real anchor, so it opens the way links open. */
+    /* Makes it a link that looks like a button, a real anchor, so it opens the way links open. */
     href?: string;
 }
 

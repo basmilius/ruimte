@@ -22,8 +22,8 @@ export const useOffersFork = (chatId: string): boolean => {
 };
 
 /*
- * "Fork conversation..." in the menu of a chat node or a chat view: a fork after the last turn that
- * ended. A chat that is a fork adds the way back: asking it for a summary for its original, and the
+ * "Fork conversation..." in the menu of a chat node or a chat view, offered as a fork after the last
+ * turn that ended. A chat that is a fork adds the way back: asking it for a summary for its original, and the
  * original itself.
  */
 export function ForkMenuItem({ chatId }: { chatId: string }) {

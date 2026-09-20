@@ -39,14 +39,14 @@ import { ChatError } from './errors.ts';
 import { handoffText } from './handoff.ts';
 import { errorText } from '../error-text.ts';
 
-/* Where a Codex fork goes on after: the turn Codex named, the n-th turn when it named none, or all of it. */
+/* Where a Codex fork goes on after (the turn Codex named, the n-th turn when it named none, or all of it). */
 export type ThreadCutPoint = { turnId: string } | { turns: number } | null;
 
 export interface ChatForkDeps {
     /* The chat as it stands, loaded or on disk; null when this machine has no such chat. */
     source(chatId: string): Promise<{ info: ChatInfo; items: ChatItem[] } | null>;
     installed(): Promise<AgentKind[]>;
-    /* The model and mode a chat of this CLI starts with: the one named, else the newest composer pick. */
+    /* The model and mode a chat of this CLI starts with (the one named, else the newest composer pick). */
     startingPoint(provider: AgentKind, selection?: ModelSelection): { selection: ModelSelection; runtimeMode?: RuntimeMode; contextWindow: number | null };
     locate(id: string): IndexedPlace | null;
     titleFor(id: string): string | null;
@@ -76,7 +76,7 @@ export interface ChatForkDeps {
 
 const MAX_TITLE = 120;
 
-/* The items up to and including a turn: its own and those of every turn before it, plus what belonged to no turn before its end. */
+/* The items up to and including a turn (its own and those of every turn before it), plus what belonged to no turn before its end. */
 export const itemsThrough = (items: readonly ChatItem[], turnId: string): ChatItem[] => {
     const kept = new Set<string>();
     let end = -1;
@@ -100,7 +100,7 @@ interface Cut {
     exact: boolean;
 }
 
-/* Where the fork's files come from: the original's folder, or a worktree of its own that starts after the turn or from HEAD. */
+/* Where the fork's files come from (the original's folder, or a worktree of its own that starts after the turn or from HEAD). */
 export type ForkFiles = { kind: 'shared'; repository: boolean } | { kind: 'worktree'; path: string; branch: string; afterTurn: boolean };
 
 /* What the person reads under the copied history, and what the agent is told in front of its first prompt. */
@@ -153,7 +153,7 @@ export const switchNote = (cut: Cut, original: { title: string }, files: ForkFil
 const cliRefusal = (error: unknown): ChatError => (error instanceof ChatError ? error : new ChatError('fork-failed', errorText(error)));
 
 /*
- * The tree of the files after a turn: the one taken when it settled, else the one the next turn
+ * The tree of the files after a turn, the one taken when it settled, else the one the next turn
  * started from (the same folder, unless a person changed it in between). Null when neither was taken.
  */
 export const treeAfterTurn = (turns: readonly ChatTurnItem[], index: number): string | null =>
@@ -396,8 +396,8 @@ export const forkChat = async (deps: ChatForkDeps, payload: ChatForkPayload): Pr
 };
 
 /*
- * The tree a worktree fork puts its files to, checked before anything is made: the files after the
- * turn, or the folder as it is now for a last turn whose tree was never taken. A tree git collected
+ * The tree a worktree fork puts its files to, checked before anything is made (the files after the
+ * turn, or the folder as it is now for a last turn whose tree was never taken). A tree git collected
  * is refused, so the dialog can offer the fork from HEAD instead.
  */
 const filesTree = async (deps: ChatForkDeps, cwd: string, turns: readonly ChatTurnItem[], index: number): Promise<string | null> => {
@@ -414,7 +414,7 @@ const filesTree = async (deps: ChatForkDeps, cwd: string, turns: readonly ChatTu
     return tree;
 };
 
-/* The view a fork that is a view is listed after: the original itself, or the canvas the original stands on. */
+/* The view a fork that is a view is listed after (the original itself, or the canvas the original stands on). */
 const originViewOf = (content: ProjectContent, place: IndexedPlace, chatId: string): string => {
     const id = place.canvasId ?? chatId;
     const view = content.views.find((candidate) => candidate.id === id);
@@ -425,7 +425,7 @@ const originViewOf = (content: ProjectContent, place: IndexedPlace, chatId: stri
     return id;
 };
 
-/* The canvas the fork lands on: the one the original stands on, else the one the payload names for a chat that is a view. */
+/* The canvas the fork lands on (the one the original stands on, else the one the payload names for a chat that is a view). */
 const forkCanvas = (content: ProjectContent, place: IndexedPlace, payload: ChatForkPayload): ProjectCanvasView => {
     const id = place.canvasId ?? payload.viewId;
     const canvas = content.views.find((view) => view.id === id);

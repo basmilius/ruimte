@@ -1,7 +1,7 @@
 /*
  * The text selection, as a context menu has to read it. The app has one selection at a time and a
- * menu belongs to the surface the click landed on, so both of these are scoped to an element:
- * a selection somewhere else is no selection this menu can copy.
+ * menu belongs to the surface the click landed on, so both of these are scoped to an element.
+ * A selection somewhere else is no selection this menu can copy.
  */
 
 export const selectionWithin = (element: HTMLElement | null): string => {

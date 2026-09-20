@@ -4,7 +4,6 @@ import type { IndexedPlace } from '../projects/project-index.ts';
 export interface ForkOriginReaders {
     /* The chat this one was forked from, or null when it is no fork. */
     forkedFrom(id: string): string | null;
-    /* The forks made from this chat. */
     forksOf(id: string): string[];
     locate(id: string): IndexedPlace | null;
     titleFor(id: string): string | null;

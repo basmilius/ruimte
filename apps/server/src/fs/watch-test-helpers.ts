@@ -57,7 +57,6 @@ export class FakeWatch implements WatchSeams {
         return this.due.size;
     }
 
-    /* The open watchers on `path`. */
     openOn(path: string): FakeDirectoryWatcher[] {
         return this.watchers.filter((watcher) => watcher.path === path && !watcher.closed);
     }

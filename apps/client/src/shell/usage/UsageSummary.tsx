@@ -26,7 +26,7 @@ export function UsageSummary({ metric, costUsd, totals, sessions, providers }: U
         <div className="flex flex-col gap-4">
             <div>
                 <p className="text-4xl font-semibold tabular-nums">{metric === 'cost' ? money(costUsd) : formatTokens(totalTokensOf(totals))}</p>
-                {/* A subscription is not billed per call, so the figure says what it is: API rates. */}
+                {/* A subscription is not billed per call, so the label spells out that these are API rates. */}
                 <p className="mt-1 text-xs text-text-muted">
                     {t('summary.sessions', { count: sessions, sessions: formatCount(sessions) })} ·{' '}
                     {t('summary.calls', { count: totals.calls, calls: formatCount(totals.calls) })} · {t('summary.apiRates')}

@@ -80,7 +80,7 @@ describe('ChatManager', () => {
 
         await manager.send('chat-1', 'hello there');
         expect(manager.get('chat-1')?.running).toBe(true);
-        // A send while the turn runs queues instead of failing; this test wants the queue empty again.
+        // A send while a turn runs queues instead of failing, so the test unqueues it to reach idle.
         expect(await manager.send('chat-1', 'again')).toMatchObject({ queued: true });
         manager.unqueue('chat-1', manager.get('chat-1')!.info.queue![0]!.id);
         await recorder.until(idle);
@@ -244,7 +244,7 @@ describe('ChatManager', () => {
             runtimeMode: 'supervised',
             usage: { contextWindow: 1000000 }
         });
-        // Same again is a no-op and does not schedule a restart.
+        // Configuring the same values again is a no-op, so it does not schedule another restart.
         expect(manager.configure({ chatId: 'chat-c', runtimeMode: 'supervised' })).toBe(info);
 
         await manager.send('chat-c', 'argv?');
@@ -288,7 +288,7 @@ describe('ChatManager', () => {
         await manager.send('chat-5', 'first');
         await recorder.until(idle);
         const sessionId = recorder.info?.agentSessionId;
-        // Shutting down writes every thread and waits for it.
+        // Shutdown persists every thread, so the manager built next reads it back.
         await manager.shutdown();
 
         const again = makeManager();
@@ -391,7 +391,7 @@ describe('ChatManager', () => {
         const turn = recorder.ofKind('turn')[0];
         expect(turn?.checkpoint).toBe(tree);
         expect(turn?.checkpointDiff).toEqual(diff);
-        // The same answer over the request.
+        // turnDiff answers with the same diff already carried on the turn.
         expect(await manager.turnDiff('chat-diff', turn!.id)).toEqual(diff);
     });
 
@@ -402,7 +402,7 @@ describe('ChatManager', () => {
         await recorder.until(idle);
         expect(recorder.ofKind('turn')).toHaveLength(1);
 
-        // Nothing is sent from here: the CLI wakes the agent itself once the task settles.
+        // Nothing is sent from here, since the CLI wakes the agent itself once the task settles.
         claude.started[0]!.runLater();
         await recorder.until(() => recorder.ofKind('turn').length === 2);
         const agentTurn = recorder.ofKind('turn')[1]!;
@@ -425,7 +425,6 @@ describe('ChatManager', () => {
         expect(answers.map((item) => item.text)).toEqual(['I will report back', 'the subagent says: report written']);
         expect(answers[1]?.turnId).toBe(agentTurn.id);
 
-        // The subagent has a row of its own: its work, its report and what it spent.
         const subagent = recorder.ofKind('subagent')[0]!;
         expect(subagent).toMatchObject({
             toolUseId: 'toolu_agent',
@@ -958,15 +957,14 @@ describe("stopping a subagent of the CLI's own", () => {
         expect(recorder.ofKind('note').map((note) => note.text)).toContain(
             '"Review the branch" was marked as stopped. Claude Code cannot stop one sub-agent on its own, so it may keep working until the chat\'s process ends.'
         );
-        // A second stop, or a row that is not there, changes nothing or says so.
         await manager.stopSubagent('chat-stop', 'toolu_bg');
         await expect(manager.stopSubagent('chat-stop', 'toolu_none')).rejects.toMatchObject({ code: 'subagent-not-found' });
     });
 });
 /*
- * A message another node left, which reaches two readers: a person reads it in the thread the moment
- * it lands, and the model hears it once, in front of its next prompt. Wired the way the daemon wires
- * it, so the test says what a person and an agent really get.
+ * A message another node left reaches two readers, a person in the thread the moment it lands and
+ * the model once, in front of its next prompt. Wired the way the daemon wires it, so the test says
+ * what a person and an agent really get.
  */
 describe('a message another node left', () => {
     let notices: NoticeStore;
@@ -1011,7 +1009,7 @@ describe('a message another node left', () => {
 
         await notify('chat-msg', 'the build is green');
         await recorder.until(() => recorder.ofKind('note').length === 1);
-        // Outside any turn: nothing the model did put it there.
+        // Outside any turn, since nothing the model did put it there.
         expect(recorder.ofKind('note')[0]).toMatchObject({ level: 'info', turnId: null, text: read });
 
         await manager.send('chat-msg', 'second');
@@ -1019,10 +1017,9 @@ describe('a message another node left', () => {
         await manager.send('chat-msg', 'third');
         await recorder.until(() => recorder.info?.usage.turns === 3 && idle());
 
-        // The fake echoes its prompt, so the reply shows what the CLI was given.
         expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: first', `echo: ${heard}\n\nsecond`, 'echo: third']);
         /* One line for a person, written when the message landed. The turn that carried it to the
-           model adds none of its own: a preamble that only repeats what the thread already says. */
+           model adds none of its own, since its preamble only repeats what the thread already says. */
         expect(recorder.ofKind('note')).toHaveLength(1);
     });
 

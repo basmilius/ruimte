@@ -77,7 +77,7 @@ describe('feedWheel', () => {
     });
 
     test('the edge check runs on the first horizontal sample only', () => {
-        // The carousel reached its end halfway: the gesture was already the swipe's.
+        // The carousel reached its end halfway through the gesture, which was already the swipe's.
         const { outcomes } = run([
             sample(-20),
             sample(-20, 0, { pageTakes: true }),

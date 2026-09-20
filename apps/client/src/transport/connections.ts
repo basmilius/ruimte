@@ -28,7 +28,7 @@ import { LinkHold } from '@/transport/workspace-hold';
 
 /*
  * One daemon, as everything inside a workspace sees it. The address and the token are deliberately
- * not in here: they live on the endpoint row, which a re-pair rewrites, and a copy taken when a
+ * not in here. They live on the endpoint row, which a re-pair rewrites, and a copy taken when a
  * workspace was built would keep making URLs with a token that has been revoked since.
  */
 export interface Connection {
@@ -74,7 +74,7 @@ const connectionHolds = new WeakMap<Connection, LinkHold>();
 /* Connections whose clients are gone; the window may still show one while a switch replaces it. */
 const disposed = new WeakSet<Connection>();
 
-/* The store as a project client sees it: every write names the endpoint it came from. */
+/* The store as a project client sees it. Every write names the endpoint it came from. */
 const projectSink = (endpointId: () => string): ProjectSink => {
     const actions = stores.project.getState();
     return {
@@ -135,7 +135,7 @@ const machineOn = (endpoint: Endpoint): Machine => {
 /*
  * The sessions and the threads of one daemon, on that daemon's own socket. Every row they write
  * names their machine (`state/keys.ts`), so a second machine's clients paint nothing of this one's.
- * Null for a machine this client no longer knows: a request meant for a daemon that was forgotten
+ * Null for a machine this client no longer knows. A request meant for a daemon that was forgotten
  * must not land on whichever machine happens to be active.
  */
 export const machineFor = (endpointId: string): Machine | null => {
@@ -159,7 +159,7 @@ const activeMachine = (): Machine => machineFor(activeEndpoint().id)!;
  */
 const connect = (endpoint: Endpoint, onLoad: (connection: Connection) => void): Connection => {
     const transport = machineOn(endpoint).transport;
-    /* Asked again on every save: a row that learns its daemon's id renames the connection under the same clients. */
+    /* Asked again on every save. A row that learns its daemon's id renames the connection under the same clients. */
     const endpointId = (): string => connection.endpointId;
     const drawings = new DrawingClient(transport, stores.drawings, stores.document, stores.project, {
         flushProject: (): Promise<void> => projects.flush()
@@ -183,7 +183,7 @@ const connect = (endpoint: Endpoint, onLoad: (connection: Connection) => void): 
     const connection: Connection = {
         endpointId: endpoint.id,
         transport,
-        /* Asked for rather than held: the sessions and the threads belong to the machine, and a row
+        /* Asked for rather than held. The sessions and the threads belong to the machine, and a row
            that is forgotten drops them while this connection stays the same object. */
         get sessions(): SessionClient {
             return machineOn(endpointById(connection.endpointId) ?? endpoint).sessions;
@@ -258,7 +258,7 @@ export const enterWorkspace = async (endpointId: string, request: OpenRequest): 
 
 /*
  * Lets go of the open project for another one. The window keeps showing it until the next project
- * is in, and the stores keep what they hold, but nothing saves any more: the project client wrote
+ * is in, and the stores keep what they hold, but nothing saves any more. The project client wrote
  * what was pending and the daemon was told the project is released.
  */
 export const leaveWorkspace = async (): Promise<void> => {
@@ -303,7 +303,7 @@ export const useFocusedMachine = (): { endpointId: string; transport: Transport 
 /*
  * A stand-in for one of the workspace's clients, so a call site keeps reading as "the daemon this
  * project is on" and holds on to nothing that a switch replaced. Only a surface of the workspace may
- * call one: the start screen has nothing to act on.
+ * call one. The start screen has nothing to act on.
  */
 const workspaceClient = <T extends object>(pick: (connection: Connection) => T): T =>
     new Proxy({} as T, {
@@ -361,7 +361,7 @@ export const dropMachine = (endpointId: string): void => {
 };
 
 /*
- * A row that learned the id of its daemon is the same machine under another name: the transport and
+ * A row that learned the id of its daemon is the same machine under another name. The transport and
  * the link stayed put, so the workspace keeps its clients and only its name for the machine moves.
  */
 const followRekey = (): void => {
@@ -386,7 +386,7 @@ const followRekey = (): void => {
     useWindow.getState().show({ kind: 'workspace', workspace: { connection: renamed } });
 };
 
-/* The active machine's clients exist from the first frame: the attention, the plans and the sessions of that machine hang on them. */
+/* The active machine's clients exist from the first frame. The attention, the plans and the sessions of that machine hang on them. */
 export const startConnections = (): (() => void) => {
     activeMachine();
     const offEndpoints = useEndpoints.subscribe((state, before) => {

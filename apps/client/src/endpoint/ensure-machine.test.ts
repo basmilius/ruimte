@@ -18,7 +18,7 @@ const row = (id: string): Endpoint => ({
     needsStatement: true
 });
 
-/* A pool in memory: a link starts connecting when it is first held, and a test says how it ends. */
+/* A pool in memory. A link starts connecting when it is first held, and a test says how it ends. */
 const fakePool = (options: { rows?: Endpoint[]; account?: string[] } = {}) => {
     const rows = [...(options.rows ?? [])];
     const states = new Map<string, ConnectionState>();

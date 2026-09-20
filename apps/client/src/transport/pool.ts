@@ -37,7 +37,7 @@ interface Entry {
 
 /*
  * The sockets this client holds, one per daemon. A daemon is a socket, a socket is never shared,
- * and it never changes machines: picking another machine picks another entry. Only a daemon that
+ * and it never changes machines. Picking another machine picks another entry. Only a daemon that
  * answers on another address (a re-pair, a new port) moves the socket it already has.
  */
 export class TransportPool {
@@ -59,8 +59,8 @@ export class TransportPool {
     }
 
     /*
-     * Takes a hold, opening the socket when there is none: the only way a socket opens. It stays up
-     * until every holder releases it and the idle countdown after the last one runs out.
+     * Takes a hold, opening the socket when there is none. This is the only way a socket opens. It
+     * stays up until every holder releases it and the idle countdown after the last one runs out.
      */
     hold(endpoint: Endpoint): () => void {
         const entry = this.entryFor(endpoint);
@@ -89,7 +89,7 @@ export class TransportPool {
 
     /*
      * The daemon behind a row turned out to be one this client already knows under another id. The
-     * socket stays up and only learns where to come back: the address it was opened with is about
+     * socket stays up and only learns where to come back. The address it was opened with is about
      * the row it just left, and a reconnect would look for an endpoint that no longer exists.
      */
     rekey(oldId: string, newId: string, address: SocketAddress): void {

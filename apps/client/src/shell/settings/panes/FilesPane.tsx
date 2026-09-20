@@ -4,7 +4,7 @@ import { SettingsSection } from '@/shell/settings/SettingsSection';
 import { Segmented, Stepper, Toggle } from '@/shell/settings/controls';
 import { FILES_TAB_LIMIT_RANGE, useSettings } from '@/state/settings';
 
-/* The two panels beside the canvas: what the Files panel shows and keeps open, and how the Git panel lists what changed. */
+/* The two panels beside the canvas, what the Files panel shows and keeps open, and how the Git panel lists what changed. */
 export function FilesPane() {
     const { t } = useTranslation('settings');
     const filesTabLimit = useSettings((s) => s.filesTabLimit);

@@ -3,11 +3,8 @@ import { Globe } from 'lucide-react';
 import { useBrowserRow } from '@/browser/registry';
 import { Icon } from '@/ui/Icon';
 
-/*
- * The icon a browser node wears: the page's own favicon where there is one, the globe until then.
- * A file that fails to load falls back for good, so a row never shows a broken image; the url the
- * client-local project state remembers is what it draws before the page is back.
- */
+/* The page's own favicon where there is one, otherwise the globe. A URL that fails to load stays
+   failed, so the row never flashes a broken image. */
 export function Favicon({ id, size = 16 }: { id: string; size?: number }) {
     const url = useBrowserRow(id, (row) => row?.favicon ?? null);
     const [failed, setFailed] = useState<string | null>(null);

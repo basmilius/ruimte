@@ -20,10 +20,8 @@ export interface KeyStore {
 
 /*
  * IndexedDB, because a `CryptoKey` survives a structured clone and `localStorage` only holds
- * strings. That is the whole reason to prefer it: the pair is generated non-extractable, so the
- * private half exists only as a handle the browser signs with and no script can ever read the
- * bytes, not this code and not anything injected into the page. A session token in `localStorage`
- * is readable by every script that runs on the origin; this is not.
+ * strings. The pair is generated non-extractable, so the private half exists only as a handle
+ * the browser signs with, never a byte a script can read, unlike a session token in `localStorage`.
  */
 export const indexedDbKeyStore = (): KeyStore => {
     const open = (): Promise<IDBDatabase> =>
@@ -56,8 +54,8 @@ const toClientKey = async (pair: CryptoKeyPair): Promise<ClientKey> => ({
 });
 
 /*
- * One key pair for this client, not one per daemon: every daemon it pairs with is a machine of the
- * same person, and a key each would buy nothing but bookkeeping. Answers null where ed25519 or
+ * One key pair for this client, not one per daemon. Every daemon it pairs with is a machine of the
+ * same person, so a key each would buy nothing but bookkeeping. Answers null where ed25519 or
  * IndexedDB is missing, and the caller falls back to the session token it already has.
  */
 export const createClientKeyLoader = (store: KeyStore = indexedDbKeyStore()): (() => Promise<ClientKey | null>) => {

@@ -13,8 +13,8 @@ const node = (id: string, kind: ProjectNode['kind'], extra: Partial<ProjectNode>
     ...extra
 });
 
-/* The canvas of the session this all started in: a chat that opened two terminals, so both lines
-   run from the chat into a terminal and neither runs back. */
+/* The canvas of the session this all started in: one line runs from the chat into the terminal,
+   and every other node on it has none. */
 const canvas: ProjectCanvasView = {
     id: 'main',
     name: 'Canvas',

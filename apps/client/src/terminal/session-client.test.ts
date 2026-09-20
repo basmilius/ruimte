@@ -211,7 +211,7 @@ describe('SessionClient', () => {
         transport.setStatus('open');
         await flush();
 
-        // The agent rides along: a daemon that came back must start the CLI this node is, not a bare shell.
+        // The agent rides along, a daemon that came back must start the CLI this node is, not a bare shell.
         expect(transport.of('session.create').map((c) => c.payload)).toEqual([
             { sessionId: 'a', cwd: '/x', command: undefined, agent: { kind: 'claude' }, cols: 120, rows: 40 }
         ]);

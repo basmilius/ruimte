@@ -47,9 +47,9 @@ const DOT: Record<TransportStatus, string> = {
 };
 
 /*
- * The whole of a row's connection in one dot: whether the machine answers, and behind it the things
- * that only matter when it does not. The address sits in this tooltip because it is a hint about
- * where a machine last answered, not what the machine is.
+ * A row's connection in one dot, whether the machine answers plus what only matters when it does not.
+ * The address sits in the tooltip since it is a hint about where a machine last answered, not what
+ * the machine is.
  */
 function ConnectionDot({ endpoint }: { endpoint: Endpoint }) {
     const { t } = useTranslation('settings');
@@ -143,7 +143,7 @@ function MachineRow({ entry, onOpen }: { entry: MachineEntry; onOpen(): void }) 
     );
 }
 
-/* One way to sign in to the account: remove it while another remains, or add it when the address book offers it. */
+/* One way to sign in to the account. Remove it while another remains, or add it when the address book offers it. */
 function IdentityRow({ provider }: { provider: ProviderId }) {
     const { t } = useTranslation('settings');
     const identities = usePulsarAccount((s) => s.identities);
@@ -219,7 +219,7 @@ function AccountOutcome() {
     );
 }
 
-/* Signing in is what lets a client reach a machine it never paired with: the account vouches for this client's key. */
+/* Signing in is what lets a client reach a machine it never paired with. The account vouches for this client's key. */
 function AccountRows() {
     const { t } = useTranslation('settings');
     const status = usePulsarAccount((s) => s.status);
@@ -274,7 +274,7 @@ function AccountRows() {
 }
 
 /*
- * Adding a machine, in a dialog rather than a field that is always on screen: pairing happens once
+ * Adding a machine, in a dialog rather than a field that is always on screen. Pairing happens once
  * per machine and the list is what the pane is for. The dialog is about "a machine" rather than "a
  * pairing link", which leaves room for a second way in (a code for a phone) without renaming anything.
  */
@@ -363,7 +363,7 @@ export function AddMachineDialog({
 }
 
 /*
- * One list of machines: the rows of this client (this machine, and every machine paired by link)
+ * One list of machines, the rows of this client (this machine, and every machine paired by link)
  * joined with the machines on the account, one entry per machine id. Everything that can be done to
  * a machine lives in its dialog, so the list stays a list of machines rather than of controls.
  */

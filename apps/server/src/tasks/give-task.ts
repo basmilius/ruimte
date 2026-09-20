@@ -4,10 +4,10 @@ import type { OutboxOutcome } from '../outbox/outbox-worker.ts';
 import type { TaskStore } from './task-store.ts';
 import type { WakeChat } from './wake-parent.ts';
 
-/* The note above the turn a task opens, so a person reading the child sees who asked it for this. */
+/* The note above the turn a task opens, so whoever reads the child sees who asked for it. */
 export const taskNote = (from: string): string => `Task from ${from}`;
 
-/* What the child's CLI is sent: the assignment, with the same line under it a child opened with a task reads. */
+/* Sent to the child's CLI: the assignment plus the line a child opened with --task also gets. */
 export const taskText = (prompt: string): string => `${prompt}${taskBrief(true)}`;
 
 export interface GiveTaskDeps {
@@ -21,10 +21,9 @@ export interface GiveTaskDeps {
 }
 
 /*
- * Opens the turn that carries a task given to an agent that was already running. A turn in the way
- * makes it `wait`, which is what a person's own message does while a chat works: it goes out when
- * that turn ends, so nothing the daemon owes ever steps on what the agent is doing. The task is
- * never queued twice over, since one agent holds one task at a time.
+ * Opens the turn that carries a task given to an agent already running. A turn in the way makes this
+ * `wait`, the same as a person's own message, so nothing the daemon owes steps on what the agent is
+ * doing. One agent holds one task at a time, so the task is never queued twice.
  */
 export const giveTaskHandler =
     (deps: GiveTaskDeps) =>

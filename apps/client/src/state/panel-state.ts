@@ -38,7 +38,7 @@ export const parsePanels = (stored: ProjectPanels | undefined, defaults: PanelsS
     const active = tabs.some((tab) => tab.key === stored?.activeTab) ? (stored?.activeTab ?? null) : (tabs[0]?.key ?? null);
     return {
         panel: stored?.panel ?? defaults.panel,
-        /* The tabs decide, not what was stored: nothing else opens the preview, so a file that
+        /* The tabs decide, not what was stored, since nothing else opens the preview, so a file that
            stayed open behind a closed preview would have no way back on screen. */
         preview: { open: tabs.length > 0 },
         panelWidth: width(stored?.panelWidth, defaults.panelWidth),

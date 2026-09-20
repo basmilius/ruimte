@@ -12,7 +12,7 @@ export const FALLBACK_LOCALE = 'en-US';
    what a Dutch Mac running an English app should read like, and both halves are a person's to set. */
 export const wordLocale = (): string => activeLanguage();
 
-/* A tag `Intl` will take, or nothing: macOS hands out locales with overrides attached, and a
+/* A tag `Intl` will take, or nothing. macOS hands out locales with overrides attached, and a
    formatter built on one it does not know throws where a number was meant to go. */
 const usable = (tag: string | undefined): string | null => {
     if (tag === undefined || tag === '') {
@@ -43,7 +43,7 @@ export const systemLocale = (): string => {
 };
 
 /*
- * The region a language brings with it: the system's own when it already speaks that language, so
+ * The region a language brings with it. The system's own when it already speaks that language, so
  * Dutch in Belgium keeps writing dates the Belgian way, and the country the language is most spoken
  * in when it does not.
  */

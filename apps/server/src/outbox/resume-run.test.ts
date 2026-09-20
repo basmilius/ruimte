@@ -33,12 +33,12 @@ const content = (): ProjectContent => ({
             edges: [],
             layouts: []
         },
-        // A chat that is a view of its own rather than a node: the index places it the same way.
+        // A chat that is a view of its own rather than a node. The index places it the same way.
         { kind: 'chat', id: 'chat-view', name: 'Chat', node: { provider: 'claude' } }
     ]
 });
 
-/* One run of the daemon over a home: what it loads from disk, the chats and the outbox that owes their resumes. */
+/* One run of the daemon over a home. What it loads from disk, the chats and the outbox that owes their resumes. */
 interface Daemon {
     chats: ChatManager;
     outbox: OutboxStore;
@@ -133,7 +133,7 @@ const boot = async (spawn?: SpawnChatProcess): Promise<Daemon> => {
         until: (check) => (check() ? Promise.resolve() : new Promise((resolve) => waiters.push({ check, resolve }))),
         stop: async () => {
             worker.stop();
-            // The order the daemon's own shutdown takes: every thread down before anything is awaited.
+            // The order the daemon's own shutdown takes. Every thread down before anything is awaited.
             chats.persistAllSync();
             await chats.shutdown();
             for (const info of chats.list()) {
@@ -145,7 +145,7 @@ const boot = async (spawn?: SpawnChatProcess): Promise<Daemon> => {
     return daemon;
 };
 
-/* The first daemon: the child is in the middle of a turn when it goes down. */
+/* The first daemon. The child is in the middle of a turn when it goes down. */
 const interruptChild = async (provider: 'claude' | 'codex' = 'claude', chatId = 'chat-child'): Promise<{ turnId: string; agentSessionId: string }> => {
     const daemon = await boot();
     daemon.worker.start();
@@ -178,7 +178,7 @@ describe('resume-run', () => {
         const argv = daemon.claude.started[0]!.argv;
         expect(argv[argv.indexOf('--resume') + 1]).toBe(agentSessionId);
         const items = session.thread.list();
-        // No message of a person was made up: the prompt only went to the CLI, and the thread says why the turn went on.
+        // No message of a person was made up. The prompt only went to the CLI, and the thread says why the turn went on.
         expect(items.filter((item) => item.kind === 'user').map((item) => (item.kind === 'user' ? item.text : ''))).toEqual(['slow']);
         expect(items.filter((item) => item.kind === 'turn')).toHaveLength(1);
         expect(items.find((item) => item.kind === 'note')).toMatchObject({ turnId, level: 'info', text: 'Resumed after the machine restarted' });

@@ -6,7 +6,7 @@ import { pool, transportFor } from '@/transport';
 import { watchOpenMachines } from './open-machines';
 
 /*
- * Who the daemon is comes first and the rest waits for it: a row that was keyed on an address moves
+ * Who the daemon is comes first and the rest waits for it. A row that was keyed on an address moves
  * onto the daemon's own id here, and every store keyed on the endpoint would otherwise fill under
  * the id that row is about to leave.
  */

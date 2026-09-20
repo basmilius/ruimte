@@ -195,10 +195,6 @@ export const paintElements = (ctx: CanvasRenderingContext2D, elements: readonly 
     }
 };
 
-/*
- * Puts the camera on a context: world units in, device pixels out, so every element paints in the
- * coordinates it is stored in.
- */
 /* What the painter needs from the theme right now, for a caller that has no reason to know more. */
 export const paintOptions = (): Pick<PaintOptions, 'palette' | 'paper' | 'edge' | 'fonts'> => ({
     palette: readPalette(),
@@ -207,6 +203,10 @@ export const paintOptions = (): Pick<PaintOptions, 'palette' | 'paper' | 'edge' 
     fonts: readFontStacks()
 });
 
+/*
+ * Puts the camera on a context: world units in, device pixels out, so every element paints in the
+ * coordinates it is stored in.
+ */
 export const applyCamera = (ctx: CanvasRenderingContext2D, camera: { x: number; y: number; zoom: number }, dpr: number): void => {
     ctx.setTransform(camera.zoom * dpr, 0, 0, camera.zoom * dpr, camera.x * dpr, camera.y * dpr);
 };

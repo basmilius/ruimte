@@ -4,11 +4,11 @@ import { z } from 'zod';
 export const ACTION_ACTOR_KINDS = ['person', 'voice', 'agent', 'automation'] as const;
 export const ActionActorKindSchema = z.enum(ACTION_ACTOR_KINDS);
 
-/* Every kind a project knows, plus the one a newer Ruimte made: an action may name a view this version cannot open. */
+/* Every kind a project knows, plus the one a newer Ruimte made. An action may name a view this version cannot open. */
 export const ActionViewKindSchema = z.enum([...PROJECT_VIEW_KINDS, UNKNOWN_KIND]);
 export const VIEW_KINDS = ActionViewKindSchema.options;
 
-/* What an action may ask to be made, which is shorter than what it can name and this catalog's own decision. */
+/* What an action may ask to be made. Shorter than what it can name, and this catalog's own decision. */
 export const CREATABLE_VIEW_KINDS = ['canvas', 'drawing', 'diagram', 'terminal', 'browser', 'chat'] as const;
 export const ActionCreatableViewKindSchema = z.enum(CREATABLE_VIEW_KINDS);
 

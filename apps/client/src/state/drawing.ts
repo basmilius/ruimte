@@ -39,7 +39,7 @@ export interface DrawingStyle {
     /* Text size in whole pixels, world units like everything else. */
     textSize: number;
     align: DrawingAlign;
-    /* The paper of a sticky note, which is its own choice: a note is never filled like a shape. */
+    /* The paper of a sticky note, which is its own choice, since a note is never filled like a shape. */
     noteColor: DrawingColor;
 }
 
@@ -207,8 +207,8 @@ const withStyle = (element: DrawingElement, patch: Partial<DrawingStyle>): Drawi
 
 /*
  * The drawing on screen: its elements, what is selected, which tool is up and where the camera is.
- * Shaped after `useCanvas`, which it cannot reuse: that store is the editor of a canvas view and
- * the session lifecycle reads its nodes.
+ * Shaped after `useCanvas`, which it cannot reuse, since that store is the editor of a canvas view
+ * and the session lifecycle reads its nodes.
  */
 export const createDrawingStore = (): StoreApi<DrawingState> =>
     createStore<DrawingState>((set, get) => ({
@@ -322,7 +322,7 @@ export const createDrawingStore = (): StoreApi<DrawingState> =>
         },
         settleTool() {
             const { tool, toolLocked } = get();
-            // Freehand is the one tool that stays: a sketch is a run of strokes, not one.
+            // Freehand is the one tool that stays, since a sketch is a run of strokes, not one.
             if (!toolLocked && isShapeTool(tool) && tool !== 'freehand') {
                 set({ tool: 'select' });
             }
@@ -466,7 +466,7 @@ export const createDrawingStore = (): StoreApi<DrawingState> =>
                 return;
             }
             // An empty text is nothing at all, so it takes itself off the drawing. An empty note is
-            // still a sheet of paper: it stays, and waits for what is written on it later.
+            // still a sheet of paper, so it stays, and waits for what is written on it later.
             const gone = text.trim() === '' && element.kind === 'text';
             const elements = gone
                 ? state.elements.filter((candidate) => candidate.id !== id)

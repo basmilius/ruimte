@@ -3,7 +3,7 @@ import { desktop } from '@/desktop/bridge';
 import { locateView } from '@/shell/split';
 import { useDocument } from '@/state/document';
 
-/* A <webview> as far as this needs it: the id the shell knows its page by, once it has one. */
+/* Only the part of a `<webview>` this file needs, the id the shell knows its page by once it has one. */
 interface GuestElement extends HTMLElement {
     getWebContentsId?(): number;
 }

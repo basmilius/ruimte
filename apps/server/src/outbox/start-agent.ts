@@ -8,7 +8,7 @@ import type { OutboxWork, StartAgentEntry } from './outbox.ts';
 
 export interface NodeModeDeps {
     chatMode(nodeId: string): RuntimeMode | undefined;
-    /* The launch a terminal session was started with: null for a plain shell, undefined for no session at all. */
+    /* The launch a terminal session was started with. Null for a plain shell, undefined for no session at all. */
     launch(nodeId: string): AgentLaunch | null | undefined;
     /* The mode a terminal agent's hooks last reported; null or undefined while none did. */
     reportedMode(nodeId: string): RuntimeMode | null | undefined;
@@ -63,13 +63,13 @@ export interface StartAgentDeps {
     }): Promise<unknown>;
     killSession(sessionId: string): Promise<void>;
     log?: (line: string) => void;
-    /* A start that failed and will not be tried again: what was waiting on the agent hears it here. */
+    /* A start that failed and will not be tried again. What was waiting on the agent hears it here. */
     onGaveUp?: (entry: StartAgentEntry, error: unknown) => void;
 }
 
 /*
  * Starts the chat or the terminal of an agent node a verb wrote, the way a client mounting it would,
- * so a client that mounts it later attaches to what already runs. Nothing it does is retried: the
+ * so a client that mounts it later attaches to what already runs. Nothing it does is retried. The
  * create takes the node's first prompt before it spawns, and a second attempt would start the agent
  * without its task. A failure is logged and the node stays as it is, so a client that mounts it
  * tries again the way it always did.
@@ -123,7 +123,7 @@ export const startAgentHandler =
             deps.onGaveUp?.(entry, e);
             return;
         }
-        // Deleted while it was being started: whoever deleted it found nothing to end yet.
+        // Deleted while it was being started. Whoever deleted it found nothing to end yet.
         if (!deps.placed(nodeId)) {
             await (node === 'chat' ? deps.killChat(nodeId) : deps.killSession(nodeId)).catch(() => undefined);
         }

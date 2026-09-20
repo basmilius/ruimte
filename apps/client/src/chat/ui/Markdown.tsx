@@ -130,7 +130,7 @@ const plainComponents = {
 };
 
 // A reply sits under the heading of its message, an `h3`, so its own headings start one level below
-// that. Only `aria-level` moves: the tag stays, since the styles and a copy of the thread read it.
+// that. Only `aria-level` moves. The tag stays, since the styles and a copy of the thread read it.
 const REPLY_HEADING_OFFSET = 3;
 
 const replyHeading = (level: 1 | 2 | 3 | 4 | 5 | 6) => {
@@ -150,7 +150,7 @@ const replyComponents = {
     h6: replyHeading(6)
 };
 
-/* A picked file or skill in a sent message: the glyph stands in for the sigil the text still carries. */
+/* A picked file or skill in a sent message. The glyph stands in for the sigil the text still carries. */
 function Chip({ kind, value }: { kind: string; value: string }) {
     if (kind === 'skill') {
         return (
@@ -190,7 +190,7 @@ const NO_PLUGINS: typeof FADE_PLUGINS = [];
    direct children and keeps its first and last margins. */
 const ReplyBlock = memo(function ReplyBlock({ text, fade, open }: { text: string; fade: boolean; open: boolean }) {
     return (
-        // A context rather than a second set of components: a component that changed would mount the
+        // A context rather than a second set of components. A component that changed would mount the
         // code block again the moment its fence closes, and it would lose the lines it already has.
         <CodeStreamingContext.Provider value={open}>
             <ReactMarkdown remarkPlugins={PLUGINS} rehypePlugins={fade ? FADE_PLUGINS : NO_PLUGINS} components={replyComponents}>

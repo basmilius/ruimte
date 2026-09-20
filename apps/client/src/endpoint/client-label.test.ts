@@ -23,7 +23,7 @@ describe('the system a client runs on', () => {
         expect(systemName('')).toBeNull();
         expect(systemName(null)).toBeNull();
         expect(systemName('Haiku')).toBeNull();
-        // The trap the word boundary is there for: Node calls macOS `darwin`.
+        // This is the trap the word boundary guards against. Node calls macOS `darwin`.
         expect(systemName('darwin')).toBeNull();
     });
 });
@@ -33,7 +33,6 @@ describe('the browser a client is', () => {
         expect(brandName([{ brand: 'Not)A;Brand' }, { brand: 'Chromium' }, { brand: 'Google Chrome' }])).toBe('Chrome');
         expect(brandName([{ brand: 'Chromium' }, { brand: 'Microsoft Edge' }, { brand: 'Not_A Brand' }])).toBe('Edge');
         expect(brandName([{ brand: 'Chromium' }, { brand: 'Brave' }])).toBe('Brave');
-        // A browser that claims nothing but Chromium is Chromium.
         expect(brandName([{ brand: 'Not.A/Brand' }, { brand: 'Chromium' }])).toBe('Chromium');
         expect(brandName([])).toBeNull();
         expect(brandName(null)).toBeNull();

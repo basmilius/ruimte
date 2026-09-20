@@ -17,9 +17,8 @@ interface PermissionAsk {
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
 /*
- * The one line a person reads under the tool's name. A shell call is its command, a file tool its
- * path, and anything else falls back to the first string field the input has, because a CLI adds
- * tools faster than this list grows and an unnamed request is worse than a roughly named one.
+ * The line a person reads under a tool's name. Falls back to the first string field the input has
+ * when none of the named ones apply, since a CLI adds tools faster than this list grows.
  */
 const summarize = (toolName: string, input: unknown): string => {
     if (!isRecord(input)) {

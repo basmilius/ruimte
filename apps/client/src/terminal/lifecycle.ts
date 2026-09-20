@@ -26,7 +26,7 @@ export const startSessionLifecycle = (): (() => void) => watchNodes(end);
 
 /*
  * Ends every session a project holds, on the machine that project was opened on. The watcher above
- * cannot do this: it skips a document that is swapping out, which is exactly what closing a project
+ * cannot do this, it skips a document that is swapping out, which is exactly what closing a project
  * looks like to it, and a switch to another project has to leave the sessions where they are.
  */
 export const endProjectSessions = (endpointId: string, views: readonly ProjectView[]): void => {

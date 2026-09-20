@@ -19,18 +19,18 @@ import { deriveDays } from '@/shell/usage/summary';
 
 type Breakdown = 'models' | 'projects' | 'day';
 
-/* The row of every table: the same height and the same hover as a commit row in the git panel. */
+/* The row of every table, the same height and the same hover as a commit row in the git panel. */
 const ROW = 'flex h-8 items-center gap-2 rounded-md px-2 text-xs hover:bg-surface-hover';
 
 const HEAD = 'flex h-6 items-center gap-2 px-2 text-xs text-text-faint';
 
 /* A row is padded so its hover has room around the text, and the table pulls that padding back off
-   again: the first column then starts on the same line as every other section of the page. */
+   again. The first column then starts on the same line as every other section of the page. */
 const TABLE = '-mx-2 flex flex-col';
 
 const TABS: readonly Breakdown[] = ['models', 'projects', 'day'];
 
-/* A share of the biggest row, never under one pixel: a row that did something has to be visible. */
+/* A share of the biggest row, never under one pixel. A row that did something has to be visible. */
 const barWidth = (value: number, top: number): number => (value <= 0 || top <= 0 ? 0 : Math.max(1, Math.round((value / top) * 100)));
 
 function ProviderMark({ provider }: { provider: UsageProvider }) {

@@ -13,7 +13,7 @@ export interface ToastAction {
 export interface Toast {
     id: string;
     title: string;
-    /* The line under the title: the last thing git wrote, or why it stopped. */
+    /* The line under the title. The last thing git wrote, or why it stopped. */
     description?: string;
     kind: ToastKind;
     /* Everything the command wrote, behind the copy button of a failure. */

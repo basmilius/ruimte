@@ -32,7 +32,7 @@ const NUMERIC_DATE: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'nume
 /* `08:05`, or `08:05 AM` in a region that counts to twelve. */
 export const formatClock = (at: Date | number): string => formatDateTime(at, CLOCK);
 
-/* `Sat 08:05`: a time far enough off that the day it lands on is part of the answer. */
+/* A time far enough off that its day is part of the answer: `Sat 08:05`. */
 export const formatWeekdayClock = (at: Date | number): string => formatDateTime(at, WEEKDAY_CLOCK);
 
 /* An hour of the day on its own, for the foot of a chart: `08`, or `8 AM` where that is the clock. */
@@ -44,7 +44,7 @@ export const formatDay = (at: Date | number): string => formatDateTime(at, DAY);
 /* The same date with the year, for anything older than the one we are in. */
 export const formatDayWithYear = (at: Date | number): string => formatDateTime(at, DAY_WITH_YEAR);
 
-/* `Sat 19 Sep`, the label over a day in the usage chart. */
+/* `Sat 19 Sep`. */
 export const formatWeekdayDay = (at: Date | number): string => formatDateTime(at, WEEKDAY_DAY);
 
 /* `19 Sep, 08:05`: a moment that is not today, to the minute. */
@@ -60,5 +60,4 @@ export const isSameDay = (a: Date | number, b: Date | number): boolean => {
     return left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth() && left.getDate() === right.getDate();
 };
 
-/* The time when it happened today, the day and the time when it did not. */
 export const formatMoment = (at: Date | number, now: Date | number = Date.now()): string => (isSameDay(at, now) ? formatClock(at) : formatDayClock(at));

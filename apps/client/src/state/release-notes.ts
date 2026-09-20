@@ -92,7 +92,7 @@ export type NoteRole = 'upcoming' | 'installed' | 'older';
 export interface NoteEntry {
     release: Release;
     role: NoteRole;
-    /* What the version is to this machine: where the update stands, or that it runs. */
+    /* What the version is to this machine. Where the update stands, or that it runs. */
     badge: string | null;
     /* Above the version this client ran before the update it just had. */
     isNew: boolean;
@@ -135,7 +135,7 @@ export const notesView = (releases: Release[], currentVersion: string, updateSta
     let link: NotesView['link'] = null;
     if (updateState.status !== 'unsupported') {
         if (update !== null) {
-            // Always offered: a version the list does not know yet gets its refetch in the dialog.
+            // Always offered. A version the list does not know yet gets its refetch in the dialog.
             link = { label: `What's new in version ${update}`, version: update };
         } else if (releases.some((release) => release.version === currentVersion && release.body !== '')) {
             link = { label: "What's new", version: currentVersion };

@@ -7,8 +7,8 @@ import { splitKey } from '@/state/keys';
 const BESIDE_PX = 32;
 
 /*
- * "Open link in new browser node" in a page's own context menu. The shell knows the page that asked
- * by its web contents id and nothing else, so the choice of where the link lands is made here: on a
+ * "Open link in new browser node" from a page's own context menu. The shell knows the page that
+ * asked only by its web contents id, so the choice of where the link lands is made here. On a
  * canvas the new node sits beside the one the link came from, and a page that is a view of its own
  * opens another view, since there is no canvas under it to sit on.
  */

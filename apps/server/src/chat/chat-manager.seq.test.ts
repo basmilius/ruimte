@@ -78,7 +78,7 @@ describe('the stream of a chat', () => {
         expect(fresh.seq).toBe(numbered.at(-1)!.seq);
         expect(numbered.map((line) => line.seq)).toEqual(numbered.map((_, i) => i + 1));
         for (let since = 0; since <= fresh.seq!; since++) {
-            // The client as it stood at `since`: the thread it attached to with every event up to there applied.
+            // The client as it stood at `since`, the thread it attached to with every event up to there applied.
             const mirror = mirrorOf(start);
             for (const line of numbered.slice(0, since)) {
                 mirror.apply(line.event);

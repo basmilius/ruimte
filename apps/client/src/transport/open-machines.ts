@@ -11,9 +11,9 @@ export interface OpenMachineSource {
 
 /*
  * Calls `load` for every machine whose link opens, once per time it opens, and again whenever that
- * machine says it changed. Every open machine rather than the active one: what a machine says about
- * itself feeds lists of every machine (its icon, its broker, the key its account record is compared
- * on), and a machine that is not active would otherwise answer only after a switch to it.
+ * machine says it changed. Every open machine rather than the active one, since what a machine says
+ * about itself feeds lists of every machine (its icon, its broker, the key its account record is
+ * compared on), and a machine that is not active would otherwise answer only after a switch to it.
  */
 export const watchOpenMachines = (source: OpenMachineSource, load: (endpointId: string) => void): (() => void) => {
     const open = new Set<string>();

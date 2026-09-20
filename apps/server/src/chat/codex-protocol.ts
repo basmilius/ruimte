@@ -6,7 +6,7 @@ import { cleanTitle } from '../agents/title-file.ts';
 
 type CodexRpcId = number | string;
 
-/* How an answer reaches the app-server: as the reply to its request, or as a steer into the turn. */
+/* How an answer reaches the app-server, as the reply to its request or as a steer into the turn. */
 type CodexAnswer = { kind: 'respond'; rpcId: CodexRpcId; result: unknown } | { kind: 'steer'; text: string };
 
 type Frame = Record<string, unknown>;
@@ -127,8 +127,8 @@ type Pending =
     | { type: 'question'; rpcId: CodexRpcId | null; questionIds: string[] };
 
 /*
- * The `codex app-server` protocol, in and out: notifications and the server's own requests become
- * backend events, an answer becomes the reply or the steer that settles one. One instance belongs
+ * The `codex app-server` protocol, in and out. Notifications and the server's own requests become
+ * backend events, and an answer becomes the reply or the steer that settles one. One instance belongs
  * to one process; request ids start at 0 in every process, so they carry the generation.
  */
 export class CodexProtocol {
@@ -147,7 +147,7 @@ export class CodexProtocol {
         return this.codexTurnId;
     }
 
-    /* The result of `thread/start` or `thread/resume`: the thread id is what a terminal resumes. */
+    /* The result of `thread/start` or `thread/resume`. The thread id is what a terminal resumes. */
     threadReady(result: unknown): BackendEvent[] {
         const thread = isRecord(result) && isRecord(result.thread) ? result.thread : {};
         return [
@@ -284,7 +284,7 @@ export class CodexProtocol {
         return { rpcId: pending.rpcId, result: { decision: codexDecision(decision, pending) } };
     }
 
-    /* What answers a question: the reply to a blocking one, or the text that steers a running turn. */
+    /* What answers a question, the reply to a blocking one or the text that steers a running turn. */
     questionAnswer(requestId: string, answers: Record<string, string>): CodexAnswer | null {
         const pending = this.pending.get(requestId);
         if (pending?.type !== 'question') {
@@ -456,7 +456,7 @@ export class CodexProtocol {
                 return;
             }
             case 'collabAgentToolCall': {
-                // Codex's own multi-agent calls: spawning one is a delegation, the rest are what they are.
+                // Codex's own multi-agent calls; spawnAgent is the one handled as a delegation.
                 const tool = str(item.tool) ?? 'collabAgent';
                 const input = { tool, prompt: str(item.prompt) ?? undefined, model: str(item.model) ?? undefined, threads: item.receiverThreadIds ?? [] };
                 if (tool === 'spawnAgent') {
@@ -499,7 +499,7 @@ export class CodexProtocol {
 
     /*
      * An agent Codex spawned. It works in a thread of its own, so this row never grows children or a
-     * report: what there is to say about it is the state Codex keeps per agent it touched.
+     * report. What there is to say about it is the state Codex keeps per agent it touched.
      */
     private spawnedAgent(ref: string, item: Frame, input: unknown, events: BackendEvent[]): void {
         const status = str(item.status);

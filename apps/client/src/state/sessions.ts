@@ -111,7 +111,7 @@ const sessionStatus = (state: SessionState | undefined): AgentStatus | undefined
     return state.attached ? 'running' : undefined;
 };
 
-/* What a node needs to have a status: geometry says nothing about whether something is running. */
+/* What a node needs to have a status. Geometry says nothing about whether something is running. */
 export type StatusOf = Pick<CanvasNode, 'id' | 'kind' | 'status'>;
 
 /* A terminal's status comes from its session, a chat's from its thread; anything else still carries it on the node. */

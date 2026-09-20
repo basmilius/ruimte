@@ -42,9 +42,8 @@ export const agentsEndedWith = async (transport: Pick<Transport, 'request'> | nu
 };
 
 /*
- * Runs a delete at once when it ends no agent of the machine's and leaves no worktree behind, and
- * asks first when it does either: a worktree is never removed on its own, but the moment its node goes
- * is when a person sees that it stays.
+ * Asks first when the delete would end an agent or leave a worktree behind. A worktree is never
+ * removed on its own, so the moment its node goes is when a person sees that it stays.
  */
 export const askBeforeEndingAgents = async (
     transport: Pick<Transport, 'request'> | null,
@@ -68,7 +67,6 @@ export const askBeforeStoppingTask = async (transport: Pick<Transport, 'request'
     useEndingAgents.setState({ pending: { what, agents, action: 'stop', run } });
 };
 
-/* Stops a chat's turn with its sub-agents at once when that ends no agent the chat opened, and asks first when it does. */
 export const askBeforeStoppingSubagents = async (transport: Pick<Transport, 'request'> | null, chatId: string, run: () => void): Promise<void> => {
     const agents = await agentsEndedWith(transport, [chatId]);
     if (agents === 0) {

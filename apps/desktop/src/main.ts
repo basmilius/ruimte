@@ -1050,7 +1050,6 @@ if (!app.requestSingleInstanceLock()) {
         if (isPreviewGuest(contents)) {
             routePreviewLinks(contents);
         }
-        /* Only the pages of browser nodes get a menu. */
         if (!isBrowserGuest(contents)) {
             return;
         }

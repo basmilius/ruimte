@@ -9,11 +9,10 @@ import { currentEndpointId, endpointKey, splitKey } from '@/state/keys';
 export type NodeEnder = (endpointId: string, id: string, kind: CanvasNodeKind) => void;
 
 /*
- * Every node the project holds, on any view, keyed on the machine it runs on, with the kind that
- * says how to end it. A session dies
- * when its id leaves the document, never when it leaves the screen: a view switch takes nodes off
- * the canvas and they have to keep running. The canvas store edits one view at a time and says
- * which one, so its nodes win over the copy the document still holds of that view alone.
+ * Every node the project holds, on any view, keyed on the machine it runs on, with the kind that says
+ * how to end it. A session dies when its id leaves the document, not when it leaves the screen, since a
+ * view switch takes nodes off the canvas while they keep running. The canvas store edits one view at a
+ * time and says which one, so its nodes win over the document's own copy of that view.
  */
 const liveNodes = (): Map<string, CanvasNodeKind> => {
     const endpointId = currentEndpointId();
@@ -63,7 +62,7 @@ export const watchNodes = (end: NodeEnder): (() => void) => {
     const offDocument = useDocument.subscribe((state, before) =>
         step(state.views !== before.views || state.activeViewId !== before.activeViewId, state.loading || before.loading || canvasLoading())
     );
-    /* Another machine is another project on another daemon: what this one holds keeps running, and
+    /* Another machine is another project on another daemon. What this one holds keeps running, and
        what the next one holds was never this watcher's to end. */
     const offEndpoint = useEndpoints.subscribe((state, before) => {
         if (state.activeId !== before.activeId) {

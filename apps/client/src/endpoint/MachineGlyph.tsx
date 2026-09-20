@@ -11,8 +11,8 @@ interface MachineGlyphProps {
     className?: string;
 }
 
-/* A machine's icon at one size. It picks from the same set a project does, minus the image kind: a
-   machine has no folder to keep a file in, so there is nothing to fall back to but a server. */
+/* A machine's icon at one size. It picks from the same set a project does, minus the image kind.
+   A machine has no folder to keep a file in, so there is nothing to fall back to but a server. */
 export function MachineGlyph({ icon, size = 16, className }: MachineGlyphProps) {
     if (icon?.kind === 'lucide') {
         return <Icon icon={PROJECT_ICON_GLYPHS[icon.value]} size={size} className={clsx('shrink-0', className)} />;

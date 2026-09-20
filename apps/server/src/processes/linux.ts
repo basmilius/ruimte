@@ -51,7 +51,7 @@ export const parseKeyValues = (text: string): Map<string, number> => {
     return values;
 };
 
-/* The first line of `/proc/stat`: busy is everything but idle and iowait. */
+/* The first line of `/proc/stat`. Busy is everything but idle and iowait. */
 export const parseCpuLine = (text: string): { busy: number; total: number } | null => {
     const line = text.split('\n').find((entry) => entry.startsWith('cpu '));
     if (!line) {

@@ -4,7 +4,7 @@ import { PROTOCOL_VERSION, protocolMismatch, type EndpointInfo, type ProtocolMis
 /* What a row and a failed connection say about a machine on another wire version. */
 export const protocolRefusal = (mismatch: ProtocolMismatch): string => i18next.t(`machines:protocol.${mismatch}`);
 
-// A request id the transport never hands out: its own ids are numbers.
+// A request id the transport never hands out, since its own ids are numbers.
 const CHECK_ID = 'protocol';
 
 interface CheckFrame {

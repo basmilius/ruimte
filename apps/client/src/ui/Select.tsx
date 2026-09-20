@@ -70,7 +70,7 @@ function Row<T extends string>({ item }: { item: SelectItem<T> }) {
     );
 }
 
-/* The one select in the app: a Base UI `Select` in the popup style the menus use, so a settings
+/* The one select in the app. A Base UI `Select` in the popup style the menus use, so a settings
    field and a picker in the composer read the same. Base UI brings the keyboard along (arrows,
    Home and End, typeahead, Enter, Escape), which a hand-rolled listbox would have to repeat. */
 export function Select<T extends string>({

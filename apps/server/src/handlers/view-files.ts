@@ -15,12 +15,12 @@ interface ViewRef {
 
 /*
  * What a drawing request and the same diagram request do, which is the same thing under two names.
- * The names stay with the caller: `REQUEST_SCHEMAS` types every payload and every result on its own,
+ * The names stay with the caller. `REQUEST_SCHEMAS` types every payload and every result on its own,
  * and a handler that took the name as an argument could only satisfy that table by casting past it.
  */
 export const viewFileHandlers = <TDocument, TContent>(store: ViewFileRequests<TDocument, TContent>) => {
     return {
-        /* The document drawn for a client that paints it itself, rather than the document. */
+        /* The scene, already drawn, for a client with no renderer of its own; it paints the result, not the document. */
         scene: <TScene>(payload: ViewRef, render: (document: TDocument) => TScene): Promise<TScene> =>
             translate(async () => render(await store.open(payload.projectId, payload.viewId))),
 

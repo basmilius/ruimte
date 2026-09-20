@@ -71,7 +71,7 @@ export function AboutPane() {
     const update = useSettings((s) => s.update);
     const details = detailsOf(server);
     const { headline, detail } = describeUpdate(updates);
-    // A browser has no app version of its own: it runs the client the machine serves.
+    // A browser has no app version of its own. It runs the client the machine serves.
     const version = isDesktop() && updates.currentVersion ? updates.currentVersion : server?.version;
     const releases = useReleaseNotes((s) => s.notes?.releases);
     const previousSeen = useReleaseNotes((s) => s.previousSeen);

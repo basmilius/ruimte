@@ -23,7 +23,7 @@ const showInWorkspace = (payload: ProjectShowViewEvent): void => {
     /* The grid moves first, so the way back is recorded against the grid as it stands after the move
        and a second `view open` undoes the second one rather than the first. */
     const shown = notice.action === 'back' ? useDocument.getState().showView(payload.viewId) : null;
-    /* One banner: an agent that shows three views in a row leaves the last of them on
+    /* One banner. An agent that shows three views in a row leaves the last of them on
        screen, not a stack nobody asked for. Nothing to go back to when the grid was empty, which is a
        project whose views all went, so that one only reports. */
     useDocument.getState().showNotice({
@@ -42,7 +42,7 @@ const onShowView = (endpointId: string, payload: ProjectShowViewEvent): void => 
 /*
  * `ruimte-context view open` on any machine this client is holding a socket to. The daemon only sends it
  * to the clients that have that project open, and this side still checks it is about the project
- * on screen: the socket may outlive a switch to another project.
+ * on screen, since the socket may outlive a switch to another project.
  */
 export const startShowViewWatch = (): (() => void) =>
     watchPool((link, endpointId) => ({

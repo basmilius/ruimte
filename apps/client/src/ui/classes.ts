@@ -1,6 +1,6 @@
 /*
  * The utility strings more than a couple of call sites share. They live here and not in
- * `styles.css` because each one is only a bundle of utilities: the stylesheet keeps the tokens and
+ * `styles.css` because each one is only a bundle of utilities. The stylesheet keeps the tokens and
  * the rules utilities cannot write, and a shared string keeps a call site's own utility winning.
  * A label takes the line height of the row it sits in, which is why the sizes carry `/[inherit]`.
  */
@@ -23,7 +23,7 @@ export const MENU_HINT = 'ml-auto pl-3 text-xs/[inherit] text-text-faint';
 
 /* The hairline between two groups of menu rows. It runs the whole width of the popup, which is what
    the negative margin buys back from its 4px of padding, and it is softer than a border a surface
-   ends with: it divides rows that are already on one surface. */
+   ends with. It divides rows that are already on one surface. */
 export const MENU_SEPARATOR = '-mx-1 my-1 h-px bg-border-soft';
 
 /* A shortcut next to a label: in a tooltip, in the palette and on the buttons of a pending question. */

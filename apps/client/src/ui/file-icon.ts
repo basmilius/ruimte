@@ -81,10 +81,10 @@ export interface FileIcon {
 }
 
 /*
- * The icon the set gives a file. The path may be absolute or relative: only the last segment
+ * The icon the set gives a file. The path may be absolute or relative. Only the last segment
  * decides, first by exact name (`package.json`, `.gitignore`), then by the longest extension that
  * matches (`spec.ts` before `ts`). Anything the set does not know falls back to its generic file
- * icon, and so does a directory, because the set ships none: the tree marks a folder with the
+ * icon, and so does a directory, because the set ships none. The tree marks a folder with the
  * chevron that turns as it opens, not with a glyph of its own.
  */
 export const fileIconFor = (path: string): FileIcon => {

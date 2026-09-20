@@ -28,7 +28,7 @@ const BROWSER_SYSTEMS: [RegExp, string][] = [
     [/ipad/i, 'iPadOS'],
     [/android/i, 'Android'],
     [/mac/i, 'macOS'],
-    // The word boundary matters: without it Node's own `darwin` reads as Windows.
+    // The word boundary matters. Without it Node's own `darwin` reads as Windows.
     [/\bwin/i, 'Windows'],
     [/cros|chrome ?os/i, 'ChromeOS'],
     [/linux|x11/i, 'Linux']
@@ -75,7 +75,7 @@ export const brandName = (brands: readonly { readonly brand: string }[] | null |
 
 /*
  * The fallback for a browser without `userAgentData`, ordered so a browser that carries another's
- * token is caught before that other one: every Chromium browser says "Chrome" and "Safari" too.
+ * token is caught before that other one. Every Chromium browser says "Chrome" and "Safari" too.
  */
 const USER_AGENTS: [RegExp, string][] = [
     [/\bFirefox\//, 'Firefox'],

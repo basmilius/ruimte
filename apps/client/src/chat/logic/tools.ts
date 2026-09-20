@@ -17,7 +17,7 @@ export const toolSummary = (name: string, input: unknown): string => {
     }
     const known = toolEntry(name);
     if (known === undefined) {
-        // A tool nobody wrote down, an MCP one above all: the first string it was given is the best guess there is.
+        // A tool nobody wrote down, an MCP one above all, gets its best guess from the first string it was given.
         const first = Object.values(input).find((value) => typeof value === 'string');
         return typeof first === 'string' ? first : '';
     }

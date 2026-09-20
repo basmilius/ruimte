@@ -82,8 +82,9 @@ export const pairEndpoint = async (pairingUrl: string): Promise<Endpoint> => {
 };
 
 /*
- * Who answers at an address, asked before anything is spent: the challenge route is what a daemon
- * tells anybody. Null for a daemon from before that route, which is answered for after the pairing.
+ * Who answers at an address, asked before anything is spent, since the challenge route is open to
+ * anybody. Null for a daemon from before that route existed; identity is resolved after the
+ * pairing instead.
  */
 const daemonAt = async (httpBaseUrl: string): Promise<string | null> => {
     const answer = await fetch(`${httpBaseUrl}/auth/challenge`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })
@@ -95,10 +96,11 @@ const daemonAt = async (httpBaseUrl: string): Promise<string | null> => {
 
 /*
  * The one machine a pairing cannot add. The daemon that served this page is already in the list as
- * the local row, which reaches it over this page's own origin, with the secret the desktop shell hands over and without a
- * row that can be forgotten; a second row for it would carry the same sessions and projects under a
- * key of its own. Updating the local row with the pasted address is not it either: in dev that
- * origin is Vite, and the address it answers on is the way back to the daemon behind it.
+ * the local row. It reaches this machine over the page's own origin, with the secret the desktop
+ * shell hands over, and it is not a row that can be forgotten; a second row for it would carry the
+ * same sessions and projects under a key of its own. Updating the local row with the pasted address
+ * is not an option either, because in dev that origin is Vite, and the address it answers on is the
+ * way back to the daemon behind it.
  */
 const refuseOwnDaemon = (daemonId: string | null): void => {
     const known = daemonId === null ? null : endpointForDaemon(daemonId);

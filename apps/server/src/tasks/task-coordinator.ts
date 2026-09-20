@@ -55,11 +55,10 @@ export const resultOfTurn = (turn: ChatTurnItem, items: readonly ChatItem[], at:
 };
 
 /*
- * Settles tasks from what the children do, and does nothing else: it writes the task store and owes
- * wakes in the outbox, but never starts a turn, since it runs inside the broadcast of the child it
- * heard. A chat child settles when a turn of its ends with no task of its own still open or waiting
- * to wake it, which is its first turn unless it delegated in turn; a terminal child only with `done`,
- * or by failing when it leaves without one.
+ * Settles tasks from what children do and does nothing else: it writes the task store and owes wakes
+ * in the outbox, never starts a turn, since it runs inside the broadcast of the child it heard. A chat
+ * child settles when a turn ends with none of its own tasks still open or waiting to wake it; a
+ * terminal child settles only on `done`, or fails when it exits without one.
  */
 export class TaskCoordinator {
     private readonly deps: TaskCoordinatorDeps;
@@ -112,7 +111,6 @@ export class TaskCoordinator {
         });
     }
 
-    /* The agent of a child could not be started at all. */
     startFailed(childId: string, error: unknown): void {
         this.failed(childId, `The agent could not be started: ${errorText(error)}`);
     }
@@ -148,10 +146,10 @@ export class TaskCoordinator {
     }
 
     /*
-     * Whether this turn is the one the task's result comes from. A task given to an agent that was
-     * already working gets a turn of its own, which names it: the turn that was in its way answers
-     * the person who sent it, not the task, and while that turn is still owed nothing does. A child
-     * opened with its task has no turn of the kind, so its first turn settles it, as it always did.
+     * Whether this turn is the one the task's result comes from. A task given to an already-working agent
+     * gets a turn of its own that names it; the turn that was in its way answers the person who sent it,
+     * not the task, and nothing settles while that turn is still owed. A child opened with its task has no
+     * turn of that kind, so its first turn settles it, as it always did.
      */
     private answers(items: readonly ChatItem[], turn: ChatTurnItem, task: Task): boolean {
         if ((turn.taskIds ?? []).includes(task.id)) {

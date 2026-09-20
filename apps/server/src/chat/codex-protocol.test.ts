@@ -198,7 +198,6 @@ describe('CodexProtocol', () => {
             ok: true
         });
 
-        // The other collab calls are what they are: ordinary tool rows.
         const sendInput = { ...item, id: 'collab_2', tool: 'sendInput', status: 'completed' };
         expect(protocol.handle({ method: 'item/completed', params: { ...ids, item: sendInput } }).at(-1)).toMatchObject({
             type: 'tool.done',

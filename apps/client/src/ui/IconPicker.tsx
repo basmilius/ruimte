@@ -18,7 +18,7 @@ interface IconPickerProps {
     gridLabel?: string;
 }
 
-/* The mark a project, a machine or a view wears: one of the Lucide icons, and nothing else. */
+/* The mark a project, a machine or a view wears, one of the Lucide icons and nothing else. */
 export function IconPicker({ value, onChange, disabled = false, onClear, gridLabel }: IconPickerProps) {
     const { t } = useTranslation('common');
     return (

@@ -142,7 +142,7 @@ export const openFolderOn = (endpointId: string, folder: string, createFolder = 
 /* A project stored in the app rather than in a folder, on one machine. */
 export const createProjectOn = (endpointId: string, name: string): Promise<SwitchOutcome> => begin({ kind: 'new', endpointId, name });
 
-/* Puts the open project away and goes back to the start screen: its sessions end, and it moves to Recent. */
+/* Puts the open project away and goes back to the start screen. Its sessions end, and it moves to Recent. */
 export const closeProject = async (): Promise<void> => {
     const workspace = windowWorkspace();
     if (!workspace) {

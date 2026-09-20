@@ -9,7 +9,7 @@ import { ChatManager } from './chat-manager.ts';
 import { ChatRecorder } from './chat-test-helpers.ts';
 
 /*
- * The fakes as real child processes: what the in-process tests cannot show is that the frames
+ * The fakes run as real child processes here, since the in-process tests cannot show that frames
  * survive a pipe, split and joined on newlines, and that a crash comes back as the exit code.
  */
 

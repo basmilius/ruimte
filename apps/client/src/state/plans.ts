@@ -3,7 +3,7 @@ import type { Plan, PlanOfChat } from '@ruimte/contracts';
 import { dropEndpoint, endpointKey, isOfEndpoint, useEndpointId } from '@/state/keys';
 import type { Transport } from '@/transport/transport';
 
-/* A chat's plans, newest first: the panel and the pill show the first one unless a person picks another. */
+/* A chat's plans, newest first. The panel and the pill show the first one unless a person picks another. */
 export type ChatPlans = readonly Plan[];
 
 const NO_PLANS: ChatPlans = [];
@@ -14,7 +14,7 @@ const newestFirst = (plans: readonly Plan[]): Plan[] =>
 interface PlansStore {
     /* Keyed with `endpointKey(endpointId, chatId)`. */
     byChat: Readonly<Record<string, ChatPlans>>;
-    /* The machines that answered `plan.list`: before that, a plan missing here may just not have arrived. */
+    /* The machines that answered `plan.list`. Before that, a plan missing here may just not have arrived. */
     loaded: Readonly<Record<string, true>>;
     /* The chats with a plan made while nobody was looking at them, by chat key, with that plan's id. */
     unseen: Readonly<Record<string, string>>;

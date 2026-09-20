@@ -12,7 +12,7 @@ export const CONTEXT_PATH = '/context';
 // A screen is read live; this keeps a long scrollback from flooding an agent's context.
 export const MAX_SCREEN_LINES = 2000;
 
-/* The last `count` lines of a text, which is what `--tail` asks for. */
+/* What `--tail` asks for. */
 const lastLines = (text: string, count: number): string => {
     const lines = text.split('\n');
     return lines.slice(Math.max(0, lines.length - count)).join('\n');

@@ -310,7 +310,8 @@ function SwipeArrow({ id }: { id: string }) {
     );
 }
 
-/* What a browser shows where the page cannot be: a link out to the system browser. */
+/* What a browser draws under its own page: a streamed copy where there is no native <webview>, or an
+   empty placeholder where the desktop app's <webview> lands. */
 export function BrowserFallback({ id, className }: { id: string; className?: string }) {
     const saved = useNodeHost(id)?.url ?? DEFAULT_URL;
     if (!isDesktop()) {

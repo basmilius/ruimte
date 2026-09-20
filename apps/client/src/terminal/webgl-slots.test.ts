@@ -27,7 +27,7 @@ describe('WebglSlots', () => {
         const slots = new WebglSlots(2);
         requestAll(slots, ['a', 'b', 'c', 'd']);
         expect(slots.holders().sort()).toEqual(['c', 'd']);
-        // b outranks a: it asked later.
+        // b outranks a, it asked later.
         expect(slots.release('d')).toEqual({ granted: ['b'], revoked: [] });
         expect(slots.holders().sort()).toEqual(['b', 'c']);
     });

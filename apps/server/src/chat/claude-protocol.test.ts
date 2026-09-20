@@ -160,7 +160,6 @@ describe('ClaudeProtocol', () => {
         } finally {
             jest.useRealTimers();
         }
-        // A heartbeat without a usable number says nothing.
         expect(protocol.handle({ type: 'tool_progress', tool_use_id: 'toolu_2', elapsed_time_seconds: 'soon' })).toEqual([]);
         // A background subagent reports through task_progress instead.
         expect(protocol.handle({ type: 'system', subtype: 'task_progress', tool_use_id: 'toolu_3', description: 'Running Sleep for 20 seconds' })).toEqual([
@@ -248,7 +247,6 @@ describe('ClaudeProtocol', () => {
                 response: { behavior: 'allow', updatedInput: { command: 'date' }, toolUseID: 'toolu_9', updatedPermissions: suggestions }
             }
         });
-        // Answered once; a second answer finds nothing waiting.
         expect(protocol.approvalResponse('r1', 'allow')).toBeNull();
     });
 

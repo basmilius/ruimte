@@ -48,7 +48,7 @@ const content = (): ProjectContent => ({
     ]
 });
 
-/* One run of the daemon over a home: the stores read from disk, the managers empty, nothing kept from a run before. */
+/* One run of the daemon over a home. The stores read from disk, the managers empty, nothing kept from a run before. */
 interface Daemon {
     prompts: PendingPromptStore;
     outbox: OutboxStore;
@@ -80,7 +80,7 @@ beforeEach(async () => {
     const opened = await store.openProject({ folder });
     projectId = opened.summary.projectId;
     await store.save(projectId, opened.document.rev, content());
-    // Released: the view is open in no window, which is the case the daemon has to start agents for.
+    // Released. The view is open in no window, which is the case the daemon has to start agents for.
     store.release(projectId);
     running = [];
 });
@@ -255,7 +255,7 @@ describe('a team the daemon starts on its own', () => {
         const [lexer, parser, docs] = await openTeam(daemon);
         await daemon.worker.settled();
 
-        // Nobody is subscribed to either manager: no socket, no client, no mount.
+        // Nobody is subscribed to either manager. No socket, no client, no mount.
         expect(daemon.sessions.wantsApprovals()).toBe(false);
 
         // The terminal agent started at the headless size with its prompt on its launch line.
@@ -278,7 +278,7 @@ describe('a team the daemon starts on its own', () => {
         expect(daemon.outbox.list()).toEqual([]);
         expect(await readdir(join(home, 'prompts')).catch(() => [])).toEqual([]);
 
-        // A client opens the view: its mounts attach to what runs and deliver no second prompt.
+        // A client opens the view. Its mounts attach to what runs and deliver no second prompt.
         expect((await daemon.chats.create({ chatId: docs!, provider: 'claude', cwd: folder })).usage.turns).toBe(1);
         expect(userTexts(daemon.chats.attach(docs!, 'client-1').items)).toEqual(['write the docs']);
         expect(userTexts(daemon.chats.attach(parser!, 'client-1').items)).toEqual(['fix the parser']);
@@ -296,7 +296,7 @@ describe('a team the daemon starts on its own', () => {
 
     test('a daemon that restarts between the write and the start starts every agent exactly once', async () => {
         const before = await boot();
-        // The worker never got going: the daemon went down right after the verb wrote the team.
+        // The worker never got going. The daemon went down right after the verb wrote the team.
         const ids = await openTeam(before);
         await before.retire();
         expect(before.adapter.spawned).toEqual([]);
@@ -389,7 +389,7 @@ describe('the start of one agent node', () => {
     test('nothing a chat starts with is wider than the node that opened it, the composer preference included', async () => {
         const { calls, deps } = fakeDeps({ composerPreference: () => ({ runtimeMode: 'full-access' }) });
         const opened = entry('chat');
-        // Opened by a terminal agent in auto-accept-edits: the person's full access is narrowed to it.
+        // Opened by a terminal agent in auto-accept-edits. The person's full access is narrowed to it.
         await startAgentHandler(deps)({ ...opened, payload: { node: 'chat', provider: 'claude', cwd: '/work', ceiling: 'auto-accept-edits' } });
         // With no preference at all the default, full access, is narrowed the same way.
         const bare = fakeDeps();

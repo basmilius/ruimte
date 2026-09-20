@@ -134,7 +134,7 @@ export class StuckJudge {
         this.thresholds = thresholds;
     }
 
-    /* After a sleep: the series say nothing about the stretch the machine was away. What a node held still counts. */
+    /* After a sleep, the series say nothing about the stretch the machine was away. What a node held still counts. */
     reset(): void {
         this.nodeSeries.clear();
         this.idleSeries.clear();

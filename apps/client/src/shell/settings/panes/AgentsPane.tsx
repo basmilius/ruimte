@@ -27,7 +27,7 @@ const PROVIDER_DEFAULT = '';
 const runtimeModeItems = (): SelectItem<RuntimeMode>[] =>
     RUNTIME_MODES.map((mode) => ({ value: mode, label: runtimeModeLabel(mode), description: runtimeModeHint(mode) }));
 
-/* What a provider offers, in one sentence: where it can be opened and whether its hooks report status. */
+/* What a provider offers, in one sentence, where it can be opened and whether its hooks report status. */
 const providerAbilities = (provider: ProviderInfo): string => {
     const where = provider.capabilities.chat ? i18next.t('settings:agents.providers.chatAndTerminal') : i18next.t('settings:agents.providers.terminalOnly');
     const status = provider.capabilities.hooks ? i18next.t('settings:agents.providers.reportsStatus') : i18next.t('settings:agents.providers.noStatus');
@@ -191,7 +191,7 @@ export function AgentsPane() {
                         />
                     }
                 />
-                {/* Not hidden with the switch above it any more: a question and a permission notify
+                {/* No longer hidden behind the switch above it. A question and a permission notify
                     whatever that one says, so this is the only answer to "may this make noise". */}
                 <SettingsRow
                     label={t('agents.working.sound.label')}

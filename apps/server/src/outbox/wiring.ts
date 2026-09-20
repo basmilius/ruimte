@@ -25,7 +25,7 @@ export interface OutboxLinkOptions {
 }
 
 /*
- * The chat manager and the worker each need the other: a run a restart interrupted is owed a resume
+ * The chat manager and the worker each need the other. A run a restart interrupted is owed a resume
  * before the worker that would run it exists. Both sides hold this instead, and `wireOutbox` fills
  * it in once the worker is built.
  */
@@ -91,12 +91,12 @@ export interface OutboxWiring {
     tasks: TaskWiring;
     endChildren: EndChildrenWiring;
     summaries: SummaryWiring;
-    /* For `ProjectIndex.onPlaces`: everything a node that left the document takes along. */
+    /* For `ProjectIndex.onPlaces`. Everything a node that left the document takes along. */
     places(projectId: string, ids: ReadonlySet<string>): void;
 }
 
 /*
- * Everything the outbox drives, wired once for the daemon and the test daemon both: a handler that
+ * Everything the outbox drives, wired once for the daemon and the test daemon both. A handler that
  * only one of them knew would fail in production or in the tests, never in both.
  */
 export const wireOutbox = (deps: OutboxWiringDeps): OutboxWiring => {

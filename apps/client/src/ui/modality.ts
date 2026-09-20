@@ -11,7 +11,7 @@ const set = (modality: Modality): void => {
 };
 
 /* Which device the app was last driven with, on the root element as `data-modality`. A ring that
-   only belongs to keyboard navigation cannot ask `:focus-visible` alone: focus that a script moves
+   only belongs to keyboard navigation cannot ask `:focus-visible` alone. Focus that a script moves
    (Base UI does that for the hovered menu item) keeps matching it while the browser's own keyboard
    flag is up, which a single keystroke anywhere, a terminal included, leaves on. */
 export function startInputModality(): void {

@@ -11,7 +11,7 @@ interface UsageChartProps {
     slots: readonly ChartSlot[];
     providers: readonly UsageProvider[];
     format(value: number): string;
-    /* Which x labels to draw: every nth slot, so 24 hours and 90 days both stay readable. */
+    /* Which x labels to draw, every nth slot, so 24 hours and 90 days both stay readable. */
     labelEvery: number;
 }
 
@@ -21,8 +21,8 @@ const TOOLTIP_WIDTH = 168;
 const DIMMED = 0.55;
 
 /*
- * One stacked bar per slot, a segment per provider. Stacked rather than layered areas: the total of
- * a day is the height of its bar, and the smaller provider never disappears under the larger one.
+ * One stacked bar per slot, a segment per provider. Stacked rather than layered areas, since the total
+ * of a day is the height of its bar, and the smaller provider never disappears under the larger one.
  */
 export function UsageChart({ slots, providers, format, labelEvery }: UsageChartProps) {
     const { t } = useTranslation('usage');

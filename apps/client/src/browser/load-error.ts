@@ -6,7 +6,7 @@ export type LoadErrorKind = 'offline' | 'dns' | 'refused' | 'certificate' | 'tim
 
 export interface LoadError {
     kind: LoadErrorKind;
-    /* The heading of the plate: what happened, in the app's words. */
+    /* What happened, in the app's own words. */
     title: string;
     /* What to check, where there is anything to check. */
     hint: string | null;
@@ -22,8 +22,8 @@ interface Copy {
     retryable: boolean;
 }
 
-/* What a class is apart from its words: whether it has anything to check, and whether running the
-   same navigation again could end any differently. */
+/* What a class is apart from its words. Whether it has anything to check, and whether running the
+   same navigation again could end differently. */
 interface Shape {
     hint: boolean;
     retryable: boolean;
@@ -40,8 +40,8 @@ const SHAPE: Record<LoadErrorKind, Shape> = {
     other: { hint: false, retryable: true }
 };
 
-/* Read at the moment of the failure rather than kept in a table: words built at module level are
-   the language the window started in, and stay it after a person picks another one. */
+/* Read at the moment of the failure, not kept in a table. Words built at module level would be
+   the language the window started in, and stay that way after a person picks another one. */
 const copyOf = (kind: LoadErrorKind): Copy => ({
     title: i18next.t(`browser:error.${kind}.title`),
     hint: SHAPE[kind].hint ? i18next.t(`browser:error.${kind}.hint`) : null,
@@ -87,8 +87,8 @@ const kindOf = (code: number, symbol: string): LoadErrorKind => {
 };
 
 /*
- * What to say about a load that failed. Pure on purpose: the wording of every failure lives in one
- * place, so the node and the browser view read the same, and an unknown code falls back to the
+ * What to say about a load that failed. Pure on purpose, so the wording of every failure lives in
+ * one place and the node and the browser view read the same; an unknown code falls back to the
  * generic sentence plus Chromium's symbol instead of a guess.
  */
 export const classifyLoadError = (code: number, description: string): LoadError => {

@@ -25,7 +25,7 @@ const uiIo = (clock: PlanClock): PlanPanelIo => ({
 /* Rules that exist before the watch starts, for a press in a test or before boot; they see no chat in sight. */
 const activeRules = (): PlanPanelRules => (rules ??= new PlanPanelRules(uiIo(windowClock)));
 
-/* A press on a chat's pill: that plan in the panel, open, whatever was closed before. */
+/* A press on a chat's pill opens that plan in the panel, whatever was closed before. */
 export const openPlanFromPill = (chatId: string, planId: string): void => {
     usePlans.getState().markSeen(currentEndpointId(), chatId);
     activeRules().pill(chatId, planId);

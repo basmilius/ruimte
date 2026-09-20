@@ -265,7 +265,7 @@ export const ruimteTotals = (index: TreeIndex, rates: Map<string, ProcessRate>):
     };
 };
 
-/* Disk throughput of the whole machine as far as it can be read: the sum of every readable process. */
+/* Disk throughput of the whole machine as far as it can be read, the sum of every readable process. */
 export const machineDisk = (rates: Map<string, ProcessRate>): { read: number | null; write: number | null } => {
     const all = [...rates.values()];
     return { read: sum(all.map((rate) => rate.diskRead)), write: sum(all.map((rate) => rate.diskWrite)) };

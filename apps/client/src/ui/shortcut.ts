@@ -1,5 +1,5 @@
 /*
- * One shortcut, written once: the same value decides whether a key event is the shortcut and how the
+ * One shortcut, written once. The same value decides whether a key event is the shortcut and how the
  * shortcut is printed. `mod` is Cmd on macOS and Ctrl everywhere else; `ctrl` and `meta` name the
  * physical key and exist for the few shortcuts that differ per platform on purpose.
  */

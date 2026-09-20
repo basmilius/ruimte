@@ -33,7 +33,7 @@ export const registerProjectHandlers = (dispatcher: Dispatcher, store: ProjectSt
         })
     );
 
-    // Switching to another project on the same machine: the daemon lets go, the list does not move.
+    // Switching to another project on the same machine. The daemon lets go, but the list does not move.
     dispatcher.register('project.release', (payload, client) =>
         translate(() => {
             store.removeViewer(client.id, payload.projectId);

@@ -44,7 +44,7 @@ const newest = (tasks: TasksById | undefined, matches: (task: Task) => boolean):
 /* The task a node was opened with, for the mark on its header and on its sidebar row. */
 export const childTask = (tasks: TasksById | undefined, childId: string): Task | null => newest(tasks, (task) => task.childId === childId);
 
-/* The task a line stands for: the one its tail gave its head. */
+/* The task a line stands for, the one its tail gave its head. */
 export const edgeTask = (tasks: TasksById | undefined, from: string, to: string): Task | null =>
     newest(tasks, (task) => task.parentId === from && task.childId === to);
 

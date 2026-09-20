@@ -29,7 +29,7 @@ const local = (daemonId: string | null): Endpoint =>
 // Merging a row awaits nothing but promises that are already settled, and no timer of the code under test is due this soon.
 const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
-/* What a daemon answers `endpoint.info` with, without a public key: nothing here is about pinning. */
+/* What a daemon answers `endpoint.info` with, without a public key. Nothing here is about pinning. */
 const answers = (id: string): EndpointInfo => ({ id, label: id, platform: 'linux', version: '0.0.0', reachability: 'lan', authenticated: true });
 
 describe('a row that turns out to be a machine already in the list', () => {

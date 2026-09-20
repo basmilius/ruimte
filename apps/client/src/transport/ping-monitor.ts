@@ -13,7 +13,7 @@ export interface PingMonitorOptions {
 }
 
 /* Times `server.ping` on a timer while the caller keeps it running. It knows nothing about the
-   socket: the transport is one injected call, which is what makes the bookkeeping testable. */
+   socket. The transport is one injected call, which is what makes the bookkeeping testable. */
 export class PingMonitor {
     private readonly options: PingMonitorOptions;
     private timer: ReturnType<typeof setInterval> | null = null;
@@ -39,7 +39,7 @@ export class PingMonitor {
         void this.measure();
     }
 
-    /* Drops the last value too: a round trip measured before the socket dropped says nothing about the next one. */
+    /* Drops the last value too. A round trip measured before the socket dropped says nothing about the next one. */
     stop(): void {
         if (this.timer) {
             clearInterval(this.timer);

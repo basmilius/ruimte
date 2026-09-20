@@ -5,7 +5,7 @@ import { storeHook } from '@/state/workspace-stores';
 export type { ProjectRow } from '@/state/project-list';
 
 export interface ProjectState {
-    /* Null only while the window shows the start screen: the store outlives every workspace, so the watchers holding it never have to be told about a new one. */
+    /* Null only while the window shows the start screen. The store outlives every workspace, so the watchers holding it never have to be told about a new one. */
     current: ProjectSummary | null;
     /* Which daemon the open project came from; during an open it is not yet the active one. */
     currentEndpointId: string | null;

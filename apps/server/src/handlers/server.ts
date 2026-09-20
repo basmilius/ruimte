@@ -15,6 +15,6 @@ export const registerServerHandlers = (dispatcher: Dispatcher, options: ServerHa
         ...(options.model === null ? {} : { model: options.model })
     }));
 
-    // Nothing to compute: the round trip is the answer, and the client times it.
+    // There is nothing to compute. The round trip is the answer, and the client times it.
     dispatcher.register('server.ping', () => ({ time: Date.now() }));
 };

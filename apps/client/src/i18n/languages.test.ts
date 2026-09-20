@@ -24,8 +24,8 @@ describe('what the system asks for', () => {
         expect(languageOf(['de-DE', 'fr-FR', 'nl-NL'])).toBe('nl');
     });
 
-    // Half a translation reads worse than none, so a language we do not have is not answered with
-    // the nearest one: it is left to the fallback.
+    // Half a translation reads worse than none, so a language we do not have is left to the
+    // fallback rather than answered with the nearest one.
     test('is nothing when we speak none of them', () => {
         expect(languageOf(['de-DE', 'ja-JP'])).toBeNull();
         expect(languageOf([])).toBeNull();

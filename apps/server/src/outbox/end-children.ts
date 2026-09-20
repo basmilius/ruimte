@@ -26,10 +26,10 @@ export interface EndChildrenDeps {
 const REVIVING: ReadonlySet<OutboxEntry['kind']> = new Set(['start-agent', 'resume-run', 'wake-parent']);
 
 /*
- * Owes ending the agents a node opened, before the node itself is stopped or once it is deleted. On
- * disk first, so a restart between a person's confirmation and the children ending still ends them.
- * A second call for a node whose entry is still owed adds nothing: a delete from a client both kills
- * the node's session and removes it from the document, and each says so.
+ * Owes ending the agents a node opened, before the node itself is stopped or once it is deleted. Written
+ * to disk first, so a restart between a person's confirmation and the children ending still ends them.
+ * A second call for a node whose entry is still owed adds nothing. A delete from a client both kills the
+ * node's session and removes it from the document, and each says so.
  */
 export const oweEndChildren =
     (deps: EndChildrenDeps) =>
@@ -81,18 +81,18 @@ export interface EndChildrenWiringDeps {
 }
 
 export interface EndChildrenWiring {
-    /* For every kill of a node: owes ending the agents it opened, and answers how many that is. */
+    /* Called on every stop or delete of a node. Owes ending the agents it opened and answers how many that is. */
     owe(nodeId: string): Promise<number>;
     handler(entry: EndChildrenEntry): Promise<void>;
     /*
      * Stops one node the way a stop of its parent would, for a person who stops a task from the list of
-     * the chat that gave it: its open task is cancelled first, so nobody is woken, then its CLI or shell
+     * the chat that gave it. Its open task is cancelled first, so nobody is woken, then its CLI or shell
      * ends with its thread and screen kept, and the agents it opened are owed an end of their own.
      */
     stopNode(nodeId: string, reason: string): Promise<void>;
-    /* What `agent.children` answers: the agents stopping this node would end that still run. */
+    /* The agents stopping this node would end that still run; this is what `agent.children` answers. */
     children(nodeId: string): string[];
-    /* For `ProjectIndex.onPlaces`: a node that left the document takes its agents with it, however it left. */
+    /* For `ProjectIndex.onPlaces`. A node that left the document takes its agents with it, however it left. */
     places(projectId: string, ids: ReadonlySet<string>): void;
     /* From here on `places` owes at once; what the index said before (warming it at start) is looked at now. */
     start(): void;

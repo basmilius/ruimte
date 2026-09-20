@@ -36,7 +36,7 @@ export function EndChildrenDialog() {
     const pending = useEndingAgents((s) => s.pending);
     const transport = useTransport();
     const endpointId = useEndpointId();
-    // Off for every new question: removing a worktree is only ever what the person ticked this time.
+    // Off for every new question. Removing a worktree is only ever what the person ticked this time.
     const [removal, setRemoval] = useState<{ pending: PendingEnd | null; remove: boolean }>({ pending: null, remove: false });
     if (removal.pending !== pending) {
         setRemoval({ pending, remove: false });

@@ -81,8 +81,8 @@ export function BrowserStream({ id, initialUrl: savedUrl, className }: { id: str
         appliedScale.current = scaleRef.current;
         void client.open(id, initialUrl.current, width, height, direct ? 'events' : 'http', scaleRef.current).then(
             () => mounted && setReady(true),
-            /* i18next.t and not the hook's `t`: that one changes identity when the language does, and
-               this effect opens the page again every time it runs. */
+            /* Uses i18next.t, not the hook's `t`, which changes identity when the language does and
+               would reopen the page on every run of this effect. */
             (error) => mounted && setStreamError(error instanceof Error ? error.message : i18next.t('browser:stream.startFailed'))
         );
         const observer = new ResizeObserver(([entry]) => {

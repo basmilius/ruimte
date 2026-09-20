@@ -1,6 +1,6 @@
 import type { Endpoint } from '@/state/endpoints';
 
-/* One hold on one machine at a time: a workspace takes it when it is built and drops it when it goes. */
+/* One hold on one machine at a time. A workspace takes it when it is built and drops it when it goes. */
 export class LinkHold {
     private readonly take: (endpoint: Endpoint) => () => void;
     private heldId: string | null = null;

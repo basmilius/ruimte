@@ -15,7 +15,7 @@ export function ConnectionProvider({ connection, children }: { connection: Conne
 /* Null outside a workspace, which is where the palette, the settings and the toasts live. */
 export const useOptionalConnection = (): Connection | null => useContext(ConnectionContext);
 
-/* Throws outside a provider on purpose: a component that needs a daemon has to sit in a workspace. */
+/* Throws outside a provider on purpose. A component that needs a daemon has to sit in a workspace. */
 export const useConnection = (): Connection => {
     const connection = useContext(ConnectionContext);
     if (!connection) {

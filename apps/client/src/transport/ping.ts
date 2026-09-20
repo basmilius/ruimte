@@ -31,7 +31,7 @@ const start = (endpointId: string): void => {
     monitor.start();
 };
 
-/* One measurement loop per daemon that answers: a latency belongs to a machine, not to the client. */
+/* One measurement loop per daemon that answers. A latency belongs to a machine, not to the client. */
 const sync = (): void => {
     for (const [endpointId, monitor] of [...monitors]) {
         if (pool.statusOf(endpointId).status !== 'open') {
@@ -46,7 +46,7 @@ const sync = (): void => {
     }
 };
 
-/* Measures while a socket is open, and never while it is not: a closed socket has nothing to time. */
+/* Measures while a socket is open, and never while it is not. A closed socket has nothing to time. */
 export const startPing = (): (() => void) => {
     const unsubscribe = pool.subscribe(sync);
     sync();

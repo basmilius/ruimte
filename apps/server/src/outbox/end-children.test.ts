@@ -110,7 +110,7 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
         // What the confirmation counts before anything happens.
         expect(await daemon.request('agent.children', { nodeId: 'chat-lead' })).toMatchObject({ ok: true, result: { nodeIds: [chat, terminal] } });
 
-        // A client deletes the node: the document loses it and the watcher kills its chat.
+        // A client deletes the node. The document loses it and the watcher kills its chat.
         await store.mutate(projectId, withoutNode('chat-lead'));
         expect(await daemon.request('chat.kill', { chatId: 'chat-lead' })).toMatchObject({ ok: true });
         await daemon.worker.settled();
@@ -167,7 +167,7 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
         const { chat, terminal } = await twoRunningChildren(before);
         before.worker.stop();
 
-        // The person confirmed: the daemon owes the ending and kills the lead, and goes down before the worker ran it.
+        // The person confirmed. The daemon owes the ending and kills the lead, and goes down before the worker ran it.
         await store.mutate(projectId, withoutNode('chat-lead'));
         expect(await before.request('chat.kill', { chatId: 'chat-lead' })).toMatchObject({ ok: true });
         expect(before.outbox.list().map((entry) => entry.kind)).toEqual(['end-children']);
@@ -175,7 +175,7 @@ describe('stopping or deleting a parent ends the agents it opened', () => {
         running = running.filter((daemon) => daemon !== before);
 
         const after = await boot();
-        // Both halves of a start: the chats whose turn ran are loaded, and the worker takes up what is owed.
+        // Both halves of a start. The chats whose turn ran are loaded, and the worker takes up what is owed.
         after.worker.start();
         await after.chats.recoverInterrupted();
         await after.worker.settled();
@@ -362,7 +362,7 @@ describe('stopping one task from the list of the chat that gave it', () => {
         expect(daemon.chats.get('chat-lead')?.thread.get(`task-${task.id}`)).toMatchObject({ status: 'failed' });
         expect(daemon.sessions.get(terminal)?.exited).toBe(false);
 
-        // The lead ends its turn and is woken about nothing: the stopped task never wakes anyone.
+        // The lead ends its turn and is woken about nothing. The stopped task never wakes anyone.
         daemon.chats.cancel('chat-lead');
         await daemon.until(() => daemon.chats.get('chat-lead')?.info.activeTurnId === null);
         await daemon.worker.settled();
@@ -466,7 +466,7 @@ test('what the index says while it warms at start is owed only once the outbox c
             owed.push(target);
         }
     });
-    // The lead was deleted while the daemon was down: the warm index no longer places it.
+    // The lead was deleted while the daemon was down. The warm index no longer places it.
     wiring.places('project', new Set(['child']));
     expect(owed).toEqual([]);
     wiring.start();

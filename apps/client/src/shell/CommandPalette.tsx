@@ -791,10 +791,9 @@ export function CommandPalette() {
             <Dialog.Portal>
                 <Dialog.Backdrop className="dialog-backdrop" />
                 <Dialog.Popup
-                    /* Wider while searching in files: a hit is read in the lines around it, and those
-                       lines are source, which does not fold. */
-                    /* The one surface that does not sit in the middle: it grows and shrinks with
-                       every keystroke, and a centered list would walk up the screen while you type. */
+                    /* Wider while searching in files, since a hit is read in the lines around it and those
+                       lines are source, which does not fold. Never centered either: the popup grows and
+                       shrinks with every keystroke, and a centered list would walk up the screen as you type. */
                     className={clsx('dialog-popup top-[18vh] [translate:-50%_0]', grepping ? 'w-[760px]' : 'w-[576px]')}
                     initialFocus={inputRef}
                 >

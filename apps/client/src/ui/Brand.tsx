@@ -11,7 +11,7 @@ interface BrandSymbolProps {
     className?: string;
 }
 
-/* The app icon on its own, sized in whole pixels. It is decorative wherever it appears: the word next
+/* The app icon on its own, sized in whole pixels. It is decorative wherever it appears. The word next
    to it, or the label of the pane it sits in, is what a screen reader reads. */
 export function BrandSymbol({ size = 24, className }: BrandSymbolProps) {
     return (

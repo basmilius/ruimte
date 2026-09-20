@@ -112,7 +112,6 @@ describe('edges', () => {
         const edges = canvas().edges;
         expect(edges).toHaveLength(2);
         expect(edges[0]).toMatchObject({ id: id!, from: 'shell', to: 'talk', label: 'context', fromSide: 'right', toSide: 'left' });
-        // The line back reads the other way, is named the same and holds the same two ports.
         expect(edges[1]).toMatchObject({ from: 'talk', to: 'shell', label: 'context', fromSide: 'left', toSide: 'right' });
         // One handling, so one undo takes the whole pair away and neither line is left behind.
         canvas().undo();
@@ -166,7 +165,7 @@ describe('the camera of an editor that has not been measured', () => {
 
     /* A view that goes into a cell gets an editor a frame before the element holding it has a size,
        so revealing a node on another view lands here. Without the wait the node ends up in the
-       corner, which is the whole of the bug: the middle of a viewport of zero is (0, 0). */
+       corner, which is the whole of the bug, since the middle of a viewport of zero is (0, 0). */
     test('goToNode waits for the size instead of parking the node in the top left', () => {
         const store = createCanvasStore();
         store.getState().loadView(viewWith(node('a', 1000, 600)), { camera: { center: { x: 600, y: 400 }, zoom: 1 }, focusedNodeId: null });

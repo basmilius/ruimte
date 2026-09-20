@@ -38,7 +38,6 @@ class FakeTransport implements Transport {
         return {} as RequestMap[T]['result'];
     }
 
-    /* Lets everything that was held answer. */
     release(): void {
         this.hold = false;
         for (const resolve of this.held.splice(0)) {

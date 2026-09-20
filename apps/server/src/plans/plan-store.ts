@@ -31,10 +31,10 @@ export interface PlanCreateInput {
 }
 
 /*
- * The plans of every chat, one file per chat beside its record under `$RUIMTE_HOME/chats`. Not in
- * the record itself: that is rewritten on every turn and its schema strips what it does not know.
- * The daemon is the only writer, so there is no watcher, and one promise chain per chat puts a
- * person's click and an agent's verb after each other instead of beside each other.
+ * The plans of every chat, one file per chat beside its record under `$RUIMTE_HOME/chats`, not in
+ * the record itself, which is rewritten on every turn and strips what it does not know. The daemon
+ * is the only writer, so there is no watcher, and one promise chain per chat puts a person's click
+ * and an agent's verb after each other instead of beside each other.
  */
 export class PlanStore {
     readonly dir: string;
@@ -135,7 +135,7 @@ export class PlanStore {
         });
     }
 
-    /* The plans go with the chat. A file that no longer parses goes too: nothing could ever show it again. */
+    /* The plans go with the chat. A file that no longer parses goes too, since nothing could ever show it again. */
     removeChat(chatId: string): Promise<void> {
         return this.inChain(chatId, async () => {
             const plans = await this.readFile(chatId).catch(() => []);

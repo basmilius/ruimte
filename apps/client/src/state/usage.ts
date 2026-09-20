@@ -7,7 +7,7 @@ import type { UsageCurrency } from '@/shell/usage/format';
 export type UsagePeriod = 'today' | '7d' | '30d' | '90d';
 export type UsageMetric = 'cost' | 'tokens';
 
-/* Only the id and the length: a store has no words, so the page names a period in its own language. */
+/* Only the id and the length. A store has no words, so the page names a period in its own language. */
 export const USAGE_PERIODS: readonly { id: UsagePeriod; days: number }[] = [
     { id: 'today', days: 1 },
     { id: '7d', days: 7 },
@@ -92,7 +92,7 @@ interface UsageStore extends Preferences {
     byEndpoint: Record<string, UsageRow>;
     /*
      * The machine the usage page is showing, or null for the one its workspace is on. Deliberately
-     * not in `Preferences`, so it is not written to storage: a remembered machine outlives this
+     * not in `Preferences`, so it is not written to storage. A remembered machine outlives this
      * client's knowledge of it, and the numbers worth opening on are the ones of the machine you are
      * working on. It does survive closing the page, which is what makes browsing two machines bearable.
      */

@@ -21,9 +21,7 @@ const KINDS_WITH_TOOLBAR = new Set<ProjectViewKind>(['browser', 'device', 'termi
 
 const modeOf = (host: NodeHost | null): RuntimeMode | undefined => RUNTIME_MODES.find((mode) => mode === host?.runtimeMode);
 
-/* Whether a view has content for the bar, which is what the separators around it wait for. A browser
-   always brings its navigation, a file and a diagram their own controls, a terminal only the mode of an agent
-   running in it, a chat only its sub-agents once it has any, where it was forked from and its plans; a canvas brings nothing. */
+/* Whether a view has content for the bar, which is what the separators around it wait for. */
 export const useHasViewToolbar = (view: ProjectView | null): boolean => {
     const host = useNodeHost(view && !isCanvasView(view) ? view.id : '');
     const subagents = useHasSubagentControls(view?.kind === 'chat' ? view.id : '');
@@ -38,10 +36,9 @@ export const useHasViewToolbar = (view: ProjectView | null): boolean => {
     return view.kind === 'browser' || view.kind === 'device' || view.kind === 'file' || view.kind === 'diagram' || modeOf(host) !== undefined;
 };
 
-/* The kinds whose controls begin where the name ends: a page brings its address field, a chat its
-   crumbs and pills, a terminal the mode its agent runs in. The rest hang their buttons on the right
-   of the bar, against the panels, and a line beside the name would stand in empty space with the
-   thing it fences off half a window away. */
+/* The kinds whose controls begin right where the name ends. The rest hang their buttons on the right
+   of the bar, against the panels: a line beside the name would fence off empty space half a window
+   away from anything. */
 const LEADING_TOOLBAR_KINDS = new Set<ProjectViewKind>(['browser', 'chat', 'terminal']);
 
 /* Whether the line after the name has anything to fence off. The bar always closes the view's part

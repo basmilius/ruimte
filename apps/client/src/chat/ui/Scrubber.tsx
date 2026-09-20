@@ -26,7 +26,6 @@ interface CardAction {
     /* The key of its label in the `chat` namespace; the card reads the words where it draws them. */
     label: string;
     icon: LucideIcon;
-    /* Whether a tick of this kind offers the action. */
     offers(tick: ScrubberTick, chat: CardChat | null): boolean;
     run(tick: ScrubberTick, chat: CardChat | null): void;
 }
@@ -67,12 +66,12 @@ interface ScrubberProps {
  */
 export const Scrubber = memo(function Scrubber({ ticks, firstInView, lastInView, onPick, chat = null }: ScrubberProps) {
     const { t } = useTranslation('chat');
-    // State rather than a ref: the card's anchor is built during render and has to change when the strip does.
+    // State rather than a ref. The card's anchor is built during render and has to change when the strip does.
     const [strip, setStrip] = useState<HTMLDivElement | null>(null);
     const [height, setHeight] = useState(0);
     // The message the card is about; it stays while the card closes, so the card never empties as it fades.
     const [hovered, setHovered] = useState<number | null>(null);
-    // Apart from `hovered`, which outlives the pointer for the card's sake: the ticks shrink back the moment it leaves.
+    // Apart from `hovered`, which outlives the pointer for the card's sake. The ticks shrink back the moment it leaves.
     const [pointing, setPointing] = useState(false);
 
     useEffect(() => {

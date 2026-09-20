@@ -194,7 +194,7 @@ const makeSink = () => {
     return { sink, state };
 };
 
-// Fake timers leave setImmediate alone: each step runs the timers due in that millisecond, then every promise they started.
+// Fake timers leave setImmediate alone. Each step runs the timers due in that millisecond, then every promise they started.
 const tick = async (ms = 5): Promise<void> => {
     for (let i = 0; i < ms; i++) {
         jest.advanceTimersByTime(1);
@@ -600,7 +600,7 @@ describe('ProjectClient', () => {
         focusedCanvas().getState().addText({ x: 0, y: 0 });
         await client.leave();
         expect(transport.of('project.save')).toHaveLength(1);
-        // Released and not closed: the project switched away from stays in the list, not under Recent.
+        // Released and not closed, so the project switched away from stays in the list, not under Recent.
         expect(transport.of('project.release').map((call) => call.payload)).toEqual([{ projectId: 'p1' }]);
         expect(transport.of('project.close')).toEqual([]);
         expect(state.current?.projectId).toBe('p1');
@@ -826,11 +826,11 @@ describe('the project the window had open last', () => {
     });
 });
 
-/* Two clients on one project, the way two windows or two people have it: each on its own stores. */
+/* Two clients on one project, the way two windows or two people have it. Each on its own stores. */
 describe('the same project in two clients', () => {
     type Client = ReturnType<typeof setup>;
 
-    /* The daemon between them: a save that lands for `from` goes to `to` as `project.changed`, the way `ProjectStore.save` sends it. */
+    /* The daemon between them. A save that lands for `from` goes to `to` as `project.changed`, the way `ProjectStore.save` sends it. */
     const relay = (from: Client, to: Client): void => {
         const request = from.transport.request.bind(from.transport);
         from.transport.request = (async (type: RequestType, payload: never) => {

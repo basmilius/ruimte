@@ -12,10 +12,9 @@ import { transportFor } from '@/transport';
 import { useEndpointConnection } from '@/transport/status';
 
 /*
- * What an agent on one machine may take away. It is the machine's own setting, in `endpoint.json`
- * beside the name and the icon, because the daemon is what enforces it and a client's own switch
- * would hold nothing back. The wire takes name, icon and this together, so the row sends the name
- * and the icon the machine already carries back unchanged.
+ * What an agent on one machine may take away. It lives in the machine's own `endpoint.json`, since the
+ * daemon is what enforces it and a client-side switch would hold nothing back. The wire takes name, icon
+ * and this together, so the row sends back the name and icon the machine already carries.
  */
 function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
     const { t } = useTranslation('settings');
@@ -82,13 +81,13 @@ function DeleteAnyViewRow({ endpoint }: { endpoint: Endpoint }) {
 
 /*
  * One switch per machine, under the settings about what an agent may do rather than in the Machines
- * pane: the pane is about pairing a machine and whether it answers, and this is about an agent.
+ * pane. The pane is about pairing a machine and whether it answers; this is about an agent.
  */
 export function DeleteAnyViewSection() {
     const { t } = useTranslation('settings');
     const stored = useEndpoints((s) => s.endpoints);
     const endpoints = useMemo(() => listedEndpoints(stored), [stored]);
-    // Nothing here holds a link: opening settings must not connect to every machine, so a switch reads what a connected machine last said.
+    // Nothing here holds a link. Opening settings must not connect to every machine, so a switch reads what a connected machine last said.
 
     // This machine first, which is the one a person with a single machine is looking at.
     const ordered = [

@@ -64,7 +64,7 @@ test('what the machine holds unread is known the moment a socket opens, and a re
                       entries: [
                           { nodeId: 'finished-while-away', issuedAt: 100, readThrough: 0 },
                           { nodeId: 'already-seen', issuedAt: 90, readThrough: 90 },
-                          // Issued before the machine ran a version that marks nodes: it never becomes a mark.
+                          // Issued before the machine ran a version that marks nodes, so it never becomes a mark.
                           { nodeId: 'before-the-update', issuedAt: 40, readThrough: 0 }
                       ],
                       marksFrom: 50

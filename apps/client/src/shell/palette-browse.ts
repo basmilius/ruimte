@@ -75,7 +75,6 @@ export interface BrowseStart {
     home: string;
 }
 
-// Prefer the configured browse root, falling back to this machine's home when that path is absent.
 export const browseStart = (configured: string, home: string | null, sep: string): BrowseStart => {
     const homePath = `${home ?? '~'}${sep}`;
     const trimmed = configured.trim();
@@ -211,7 +210,7 @@ export const openBrowse = (activeId: string, machines: readonly { endpointId: st
 
 /*
  * A wait for a link that ended. Only the step still waiting on that machine takes it: a person who
- * went back or picked another machine cancelled the wait, not the attempt, which may still finish.
+ * went back or picked another machine canceled the wait, not the attempt, which may still finish.
  */
 export const settleLink = (step: BrowseStep | null, endpointId: string, failure: string | null): BrowseStep | null => {
     if (step === null || step.machines || step.endpointId !== endpointId || step.link?.state !== 'connecting') {

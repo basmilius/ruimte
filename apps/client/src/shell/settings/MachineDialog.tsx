@@ -32,7 +32,7 @@ type Confirming = 'forget' | 'remove' | null;
 
 function MachineDialogBody({ entry }: { entry: MachineEntry }) {
     const { t } = useTranslation('settings');
-    // The dialog is a person looking at this machine, the one place in the pane that connects to it: its name, broker and paired clients are live.
+    // The dialog is a person looking at this machine, the one place in the pane that connects to it. Its name, broker and paired clients are live.
     useMachineHold(entry.endpoint);
     const connection = useEndpointConnection(entry.endpoint?.id ?? entry.id);
     const signedIn = usePulsarAccount((s) => s.status === 'signed-in');

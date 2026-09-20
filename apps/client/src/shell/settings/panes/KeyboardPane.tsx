@@ -16,7 +16,7 @@ export function KeyboardPane() {
     const [query, setQuery] = useState('');
     const apple = isApplePlatform();
     // The command list depends on canvas state (layouts, locks), so it is read once per pane visit.
-    // The language is a dependency the linter cannot see: both lists read their words off i18next.
+    // The language is a dependency the linter cannot see. Both lists read their words off i18next.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
     const groups = useMemo(() => [commandShortcuts(appCommands()), ...shortcutGroups(apple)], [apple, i18n.language]);
     const visible = useMemo(() => filterShortcuts(groups, query, apple), [groups, query, apple]);

@@ -639,7 +639,7 @@ export class ChatManager {
         }
     }
 
-    /* What the chat's CLI would run as a skill, for the composer's `$` picker. */
+    /* What the chat's CLI would run as a skill. */
     skills(chatId: string): Promise<ChatSkill[]> {
         const session = this.require(chatId);
         return session.skills(() => this.skillIndex.list(session.info.provider, session.info.cwd));
@@ -998,7 +998,6 @@ export class ChatManager {
         return new ChatLog(path, { seq: left, resetSeq: left === 0 ? 0 : left + 1, lines: [] });
     }
 
-    /* The running turn of a stored chat, when it may be resumed and the resume is now owed; null otherwise. */
     /* Every reason says why in the words of the note the turn ends with, so a person can tell a skip from a failure. */
     private async owedResume(chatId: string, stored: ChatRecord): Promise<ResumeDecision> {
         const turn = interruptedTurn(stored);
@@ -1037,6 +1036,7 @@ export class ChatManager {
     }
 }
 
+/* The running turn of a stored chat, when it may be resumed and the resume is now owed; null otherwise. */
 const interruptedTurn = (record: { info: ChatInfo; items: ChatItem[] }): Extract<ChatItem, { kind: 'turn' }> | null => {
     const turnId = record.info.activeTurnId;
     const turn = turnId === null ? undefined : record.items.find((item) => item.id === turnId);

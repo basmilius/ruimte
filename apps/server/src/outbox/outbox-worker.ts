@@ -17,7 +17,7 @@ export const systemClock: OutboxClock = {
 };
 
 /*
- * `wait` keeps the entry without counting an attempt: the work cannot happen yet (a chat is still in
+ * `wait` keeps the entry without counting an attempt. The work cannot happen yet (a chat is still in
  * its turn) and runs again once `wake` names its target, never on a clock.
  */
 export type OutboxOutcome = void | 'wait';
@@ -80,7 +80,7 @@ export class OutboxWorker {
     }
 
     /*
-     * Something about this target changed (a chat ended its turn): whatever waited on it looks again.
+     * Something about this target changed (a chat ended its turn), so whatever waited on it looks again.
      * Deferred, so it never runs inside the broadcast of the chat that said so.
      */
     wake(target: string): void {
@@ -114,12 +114,12 @@ export class OutboxWorker {
         const busy = new Set(this.running);
         let nextDue: number | null = null;
         for (const entry of this.store.list()) {
-            // A waiting entry holds no lane: the resume of a chat must not queue behind a wake that waits for it.
+            // A waiting entry holds no lane. The resume of a chat must not queue behind a wake that waits for it.
             if (busy.has(entry.target) || this.waiting.has(entry.id)) {
                 continue;
             }
             const lanes = lanesOf(entry);
-            // Oldest first per target: a younger entry never overtakes one that waits out a retry.
+            // Oldest first per target. A younger entry never overtakes one that waits out a retry.
             for (const lane of lanes) {
                 busy.add(lane);
             }

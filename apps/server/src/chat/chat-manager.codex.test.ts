@@ -197,7 +197,7 @@ describe('ChatManager with Codex', () => {
         expect(codex.started).toHaveLength(0);
         await manager.send('chat-1', 'hello there');
         expect(manager.get('chat-1')?.running).toBe(true);
-        // A send while the turn runs queues instead of failing; this test wants the queue empty again.
+        // A send while a turn runs queues instead of failing, so the test unqueues it to reach idle.
         expect(await manager.send('chat-1', 'again')).toMatchObject({ queued: true });
         manager.unqueue('chat-1', manager.get('chat-1')!.info.queue![0]!.id);
         await recorder.until(idle);
@@ -210,7 +210,7 @@ describe('ChatManager with Codex', () => {
         const turn = recorder.ofKind('turn')[0];
         expect(turn).toMatchObject({ state: 'done' });
         expect(assistant[0]?.turnId).toBe(turn?.id ?? '');
-        // The fake echoes its start parameters as the model: full access is "never ask" in a sandbox with full access.
+        // Full access maps to a "never ask" sandbox with full access, which the fake echoes back as the model string.
         expect(recorder.info).toMatchObject({
             model: 'gpt-6-astra never danger-full-access',
             usage: { turns: 1, contextTokens: 25090, contextWindow: 258400 }
@@ -305,7 +305,7 @@ describe('ChatManager with Codex', () => {
         expect(asked.async).toBe(true);
         manager.dismiss('chat-d', asked.id);
         expect(recorder.items.get(asked.id)).toMatchObject({ state: 'dismissed' });
-        // The turn goes on: Codex asked beside it and never waits for the answer.
+        // The turn goes on, since Codex asked beside it and never waits for the answer.
         expect(recorder.info?.status).toBe('running');
         expect(() => manager.dismiss('chat-d', asked.id)).toThrow('No question to dismiss');
     });
@@ -348,13 +348,13 @@ describe('ChatManager with Codex', () => {
         await manager.send('chat-5', 'first');
         await recorder.until(idle);
         const threadId = recorder.info?.agentSessionId;
-        // Shutting down writes every thread and waits for it.
+        // Shutdown persists every thread, so the manager built next reads it back.
         await manager.shutdown();
 
         const again = makeManager();
         const other = new ChatRecorder();
         again.subscribe('c9', other.sink());
-        // Created without a provider: the record on disk says codex.
+        // Created without a provider, since the record on disk already says codex.
         const info = await again.create({ chatId: 'chat-5' });
         expect(info).toMatchObject({ provider: 'codex', agentSessionId: threadId, running: false, status: 'idle', usage: { turns: 1 } });
         again.attach('chat-5', 'c9');
@@ -575,7 +575,7 @@ describe('ChatManager with Codex', () => {
             expect(steps).toHaveLength(FAKE_CHILD_STEPS);
             expect(steps[0]).toMatchObject({ name: 'Bash', input: { command: 'echo 1' }, state: 'done' });
             expect(steps.at(-1)).toMatchObject({ output: `${FAKE_CHILD_STEPS}\n` });
-            // No second process: the chat's own answered every page.
+            // No second process, since the chat's own app-server answered every page.
             expect(codex.started).toHaveLength(1);
         });
 

@@ -7,7 +7,7 @@ import { TOOLTIP_KBD } from '@/ui/classes';
 
 type Side = 'top' | 'bottom' | 'left' | 'right';
 
-/* One provider per app: tooltips share a delay, so moving along a row of buttons feels instant. */
+/* One provider per app. Tooltips share a delay, so moving along a row of buttons feels instant. */
 export function TooltipProvider({ children }: { children: ReactNode }) {
     return (
         <BaseTooltip.Provider delay={150} closeDelay={0}>
