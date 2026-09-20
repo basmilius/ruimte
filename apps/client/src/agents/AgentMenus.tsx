@@ -68,15 +68,20 @@ export function ChatAgentSubmenu({ label, icon, onPick }: { label: string; icon:
     );
 }
 
+/* One target on its own, for a menu that puts its rows in an order of its own. */
+export function AgentSubmenu({ target, onPick }: { target: AgentTarget; onPick(target: AgentTarget, provider: ProviderInfo): void }) {
+    return (
+        <Submenu label={agentTargetLabel(target)} icon={<Icon icon={target === 'chat' ? MessageSquare : Bot} size={14} />}>
+            <AgentRows target={target} onPick={onPick} />
+        </Submenu>
+    );
+}
+
 export function AgentSubmenus({ onPick }: { onPick(target: AgentTarget, provider: ProviderInfo): void }) {
     return (
         <>
-            <Submenu label={agentTargetLabel('chat')} icon={<Icon icon={MessageSquare} size={14} />}>
-                <AgentRows target="chat" onPick={onPick} />
-            </Submenu>
-            <Submenu label={agentTargetLabel('terminal')} icon={<Icon icon={Bot} size={14} />}>
-                <AgentRows target="terminal" onPick={onPick} />
-            </Submenu>
+            <AgentSubmenu target="chat" onPick={onPick} />
+            <AgentSubmenu target="terminal" onPick={onPick} />
         </>
     );
 }

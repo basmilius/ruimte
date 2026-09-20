@@ -102,3 +102,21 @@ export const dateFormatter = (options: Intl.DateTimeFormatOptions): Intl.DateTim
    weekday, era and day period are lifted out of it. */
 export const wordFormatter = (options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat =>
     cacheFor(words, options, wordLocale(), (locale, spec) => new Intl.DateTimeFormat(locale, spec));
+
+const collators = new Map<string, Intl.Collator>();
+
+/*
+ * How two labels a person reads are put in order. Labels are words, so the language writes them and
+ * the language sorts them: Dutch puts Tekening after Terminal where English puts Drawing before it.
+ * Keyed on the locale rather than on an options object, since there are no options to key on.
+ */
+export const labelCollator = (): Intl.Collator => {
+    const locale = wordLocale();
+    const held = collators.get(locale);
+    if (held !== undefined) {
+        return held;
+    }
+    const collator = new Intl.Collator(locale, { sensitivity: 'base', numeric: true });
+    collators.set(locale, collator);
+    return collator;
+};
