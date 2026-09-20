@@ -1,56 +1,25 @@
 import { create } from 'zustand';
-import { isSessionView, isCanvasView, type ProjectView, type SplitLayout } from '@ruimte/contracts';
-import { READABLE_ZOOM } from '@/canvas/culling';
-import { intersects, isMeasured, visibleRect, type Camera, type Rect } from '@/canvas/math';
+import { isCanvasView, type ProjectView, type SplitLayout } from '@ruimte/contracts';
+import { intersects, isMeasured, visibleRect, type Rect } from '@/canvas/math';
 import { desktop } from '@/desktop/bridge';
 import { projectNodes } from '@/project/views';
 import { notifyTurnDone } from '@/shell/notifications';
 import { viewIdsIn } from '@/shell/split';
 import { nodeWorking } from '@/state/agent-work';
+import { nodesInSight, seenNodes, type CanvasSight } from '@/state/in-sight';
 import { seePushNotifications, clearPushNotification, subscribePushAttention, unreadOnMachine } from '@/state/push-attention';
-import { liveCanvas, subscribeCanvases, type CanvasState } from '@/state/canvas';
+import { liveCanvas, subscribeCanvases } from '@/state/canvas';
 import { useChats, type ChatsById } from '@/state/chats';
 import { useDocument } from '@/state/document';
 import { currentEndpointId, endpointKey, useEndpointId } from '@/state/keys';
 import { nodeStatus, useSessions, type SessionsByKey, type StatusOf } from '@/state/sessions';
 
+export { readableNodes, seenNodes, sightOf, visibleNodes, type CanvasSight } from '@/state/in-sight';
+
 /*
  * One source of unread and working counts for marks, badges, notifications and quit protection.
  * Endpoint-scoped keys preserve marks across machine switches and remove them with the machine.
  */
-
-/* One canvas as a question about sight: where the camera is and what stands in front of it. */
-export interface CanvasSight {
-    camera: Camera;
-    viewport: { w: number; h: number };
-    nodes: readonly (Rect & { id: string })[];
-    /* Node ids inside a collapsed group. They are in the project and on nobody's screen. */
-    hidden?: ReadonlySet<string>;
-}
-
-/*
- * The uncollapsed nodes inside the exact viewport, never the renderer's wider culling area. `readable`
- * also asks that the camera be close enough to read them, which is what "a person saw this" means and
- * so what attention counts. An agent asking what is on the canvas passes it false on purpose: it reads
- * the node's own title and content rather than the pixels, so a zoomed-out canvas is not blind to it.
- */
-export const visibleNodes = (canvas: CanvasSight, { readable }: { readable: boolean }): string[] => {
-    if (!isMeasured(canvas.viewport) || (readable && canvas.camera.zoom < READABLE_ZOOM)) {
-        return [];
-    }
-    const rect = visibleRect(canvas.camera, canvas.viewport);
-    return canvas.nodes.filter((node) => canvas.hidden?.has(node.id) !== true && intersects(node, rect)).map((node) => node.id);
-};
-
-export const readableNodes = (canvas: CanvasSight): string[] => visibleNodes(canvas, { readable: true });
-
-/* An open canvas as the question about sight: a store keys its nodes, a sight lists them in order. */
-export const sightOf = (canvas: CanvasState): CanvasSight => ({
-    camera: canvas.camera,
-    viewport: canvas.viewport,
-    nodes: canvas.order.map((id) => canvas.nodes[id]!),
-    hidden: canvas.hidden
-});
 
 /* One canvas as a question about which chats stand on it. */
 export interface ChatSightCanvas extends CanvasSight {
@@ -107,9 +76,6 @@ export const liveChatSight = (): ChatSightWorkspace => {
         }
     };
 };
-
-/* What the window has in front of a person: nothing at all while another window has the focus. */
-export const seenNodes = (windowFocused: boolean, perView: readonly (readonly string[])[]): Set<string> => new Set(windowFocused ? perView.flat() : []);
 
 /* Everything one pass of the watcher needs to decide, all of it keyed the same way. */
 export interface AttentionPass {
@@ -236,31 +202,6 @@ export const clearUnseen = (nodeId: string): void => {
     useAttention.getState().setUnseen(new Set(Object.keys(useAttention.getState().unseen).filter((entry) => entry !== key)));
 };
 
-/* True while this window has the keyboard. A window behind another one is not being looked at. */
-const windowFocused = (): boolean => typeof document !== 'undefined' && document.hasFocus();
-
-// All grid cells are visible; standalone sessions need no camera test, while canvases use `readableNodes`.
-const nodesInSight = (): string[][] => {
-    const { views, layout } = useDocument.getState();
-    const onScreen = new Set(layout === null ? [] : viewIdsIn(layout));
-    return views.flatMap((view) => {
-        if (!onScreen.has(view.id)) {
-            return [];
-        }
-        if (isSessionView(view)) {
-            return [[view.id]];
-        }
-        if (!isCanvasView(view)) {
-            return [];
-        }
-        const canvas = liveCanvas(view.id);
-        if (canvas === null) {
-            return [];
-        }
-        return [readableNodes(sightOf(canvas))];
-    });
-};
-
 /*
  * Keeps the marks, the counts and what the shell is told in step with the stores the hooks write
  * into. Every pass counts the project from scratch, so a subscription that misses a change only ever
@@ -277,8 +218,7 @@ export const startAttentionWatch = (): (() => void) => {
         const sessions = useSessions.getState().byKey;
         const chats = useChats.getState().byKey;
         const groups = groupAttention(nodes, sessions, chats, endpointId, useAttention.getState().unseen);
-        const focused = windowFocused();
-        const visible = seenNodes(focused, nodesInSight());
+        const visible = seenNodes(document.hasFocus(), nodesInSight());
         seePushNotifications(endpointId, visible);
         const result: AttentionPass = {
             working: new Set(groups.working.map(keyOf)),
@@ -293,12 +233,12 @@ export const startAttentionWatch = (): (() => void) => {
         const marks = nextUnseen(result);
         previous = result.working;
         useAttention.getState().setUnseen(marks);
-        if (!focused) {
-            for (const key of settled) {
-                const node = nodes.find((candidate) => keyOf(candidate.id) === key);
-                if (node) {
-                    notifyTurnDone(node.id, node.title);
-                }
+        // A mark is exactly "this ended and nobody saw it", which is what deserves a notification. The
+        // window being in front says nothing about it: the node may sit on a view behind the one up.
+        for (const key of settled) {
+            const node = marks.has(key) ? nodes.find((candidate) => keyOf(candidate.id) === key) : undefined;
+            if (node) {
+                notifyTurnDone(node.id, node.title);
             }
         }
         // The marks this pass just set are part of the badge, so it counts them and not the old ones.
@@ -331,7 +271,7 @@ export const startAttentionWatch = (): (() => void) => {
     const offChats = useChats.subscribe(pass);
     const offCanvases = subscribeCanvases(schedule);
     const offDocument = useDocument.subscribe(schedule);
-    const offPushAttention = subscribePushAttention(schedule);
+    const offPushAttention = subscribePushAttention(pass);
     window.addEventListener('focus', pass);
     window.addEventListener('blur', pass);
     pass();

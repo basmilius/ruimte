@@ -150,6 +150,24 @@ describe('ChatManager', () => {
         expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['done, remembered']);
     });
 
+    test('a client that never attached still hears what a chat is waiting on', async () => {
+        // The window has another view up, so nothing here reads the thread; the node still has to say it waits.
+        const bystander = new ChatRecorder();
+        manager.subscribe('c2', bystander.sink());
+        await manager.create({ chatId: 'chat-2a', cwd: home });
+        manager.attach('chat-2a', 'c1');
+
+        await manager.send('chat-2a', 'tool: date');
+        await bystander.until(() => bystander.statuses.at(-1)?.status === 'needs-you');
+        expect(bystander.events).toEqual([]);
+        expect(bystander.statuses.at(-1)).toMatchObject({ chatId: 'chat-2a', status: 'needs-you' });
+
+        manager.approve('chat-2a', 'req-1', 'allow');
+        await bystander.until(() => bystander.statuses.at(-1)?.status === 'idle');
+        // One per change and never one per info event, or a streamed reply would announce itself all the way down.
+        expect(bystander.statuses.map((info) => info.status)).toEqual(['running', 'needs-you', 'running', 'idle']);
+    });
+
     test('a running tool carries the progress the CLI reports until its result arrives', async () => {
         await manager.create({ chatId: 'chat-2b', cwd: home });
         manager.attach('chat-2b', 'c1');

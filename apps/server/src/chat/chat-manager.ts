@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { ChatAttachmentUploadsSchema } from '@ruimte/contracts';
 import type {
     AgentKind,
+    AgentStatus,
     ChatAttachment,
     ChatAttachResult,
     ChatHistoryResult,
@@ -133,6 +134,8 @@ export class ChatManager {
     private readonly sinks = new ClientSinks((clientId) => this.composerPreferences.forget(clientId));
     private readonly attached = new Map<string, Set<string>>();
     private readonly coalescers = new Map<string, DeltaCoalescer>();
+    // What `chat.status` last said about each chat, so the broadcast is one per change and not one per info event.
+    private readonly announced = new Map<string, AgentStatus>();
     private readonly logs = new Map<string, ChatLog>();
     private readonly tokens = new Map<string, string>();
     // How big each record was the last time it went to disk, and the writes waiting for a big one.
@@ -712,6 +715,7 @@ export class ChatManager {
         this.activity.delete(chatId);
         this.chats.delete(chatId);
         this.attached.delete(chatId);
+        this.announced.delete(chatId);
         for (const [token, id] of this.tokens) {
             if (id === chatId) {
                 this.tokens.delete(token);
@@ -954,13 +958,27 @@ export class ChatManager {
                 }
             }
         }
-        const clients = this.attached.get(chatId);
-        if (!clients) {
-            return;
-        }
-        for (const clientId of clients) {
+        for (const clientId of this.attached.get(chatId) ?? []) {
             this.sinks.to(clientId, { event: 'chat.event', payload });
         }
+        // After the thread, so a client reading it has already had this info and the status is a no-op there.
+        if (event.type === 'info' || event.type === 'reset') {
+            this.announceStatus(chatId, event.info);
+        }
+    }
+
+    /*
+     * What a chat is doing goes to every client on this machine, not only to the ones reading its
+     * thread: a node waiting on a person has to say so on a view nobody has open, and a terminal has
+     * said it this way all along (`session.status`). The thread itself stays with whoever attached,
+     * since it streams word by word. Only a change is sent; `chat.list` hands out the rest on connect.
+     */
+    private announceStatus(chatId: string, info: ChatInfo): void {
+        if (this.announced.get(chatId) === info.status) {
+            return;
+        }
+        this.announced.set(chatId, info.status);
+        this.sinks.emit({ event: 'chat.status', payload: { chatId, info } });
     }
 
     /*

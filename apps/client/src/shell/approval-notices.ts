@@ -104,16 +104,17 @@ export interface NoticeChanges {
 }
 
 /*
- * What to do with the notifications that stand. Withdrawing never asks whether this window may
- * raise: an answer from another client, from the CLI's own prompt or the hold running out takes the
+ * What to do with the notifications that stand. Withdrawing never asks whether this one may be
+ * raised: an answer from another client, from the CLI's own prompt or the hold running out takes the
  * notification back whatever the window is doing, and the window coming to the front is not an
- * answer to anything, so it leaves what stands alone.
+ * answer to anything, so it leaves what stands alone. Raising is asked per notice, since a person
+ * watching one node is not watching the one beside it.
  */
-export const noticeChanges = (shown: Iterable<string>, notices: readonly ApprovalNotice[], canRaise: boolean): NoticeChanges => {
+export const noticeChanges = (shown: Iterable<string>, notices: readonly ApprovalNotice[], canRaise: (notice: ApprovalNotice) => boolean): NoticeChanges => {
     const standing = new Set(shown);
     const keys = new Set(notices.map((notice) => notice.key));
     return {
-        raise: canRaise ? notices.filter((notice) => !standing.has(notice.key)) : [],
+        raise: notices.filter((notice) => !standing.has(notice.key) && canRaise(notice)),
         withdraw: [...standing].filter((key) => !keys.has(key))
     };
 };

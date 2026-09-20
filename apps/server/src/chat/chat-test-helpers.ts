@@ -12,11 +12,18 @@ type Check = () => boolean;
 export class ChatRecorder {
     readonly events: ChatEvent[] = [];
     readonly items = new Map<string, ChatItem>();
+    /* What `chat.status` told this client, which needs no attach at all. */
+    readonly statuses: ChatInfo[] = [];
     info: ChatInfo | null = null;
     private waiters: Array<{ check: Check; resolve(): void }> = [];
 
     sink() {
         return (event: SessionEvent): void => {
+            if (event.event === 'chat.status') {
+                this.statuses.push(event.payload.info);
+                this.recheck();
+                return;
+            }
             if (event.event !== 'chat.event') {
                 return;
             }

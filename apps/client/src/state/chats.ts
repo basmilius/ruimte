@@ -23,6 +23,8 @@ export type ChatsById = Record<string, ChatState>;
 export interface ChatSink {
     reset(chatId: string, info: ChatInfo, items: ChatItem[]): void;
     apply(chatId: string, event: ChatEvent): void;
+    /* What a chat is doing, for a thread nobody in this window has open. */
+    status(chatId: string, info: ChatInfo): void;
     forget(chatId: string): void;
 }
 
@@ -30,6 +32,7 @@ interface ChatsStore {
     byKey: ChatsById;
     reset(key: string, info: ChatInfo, items: ChatItem[]): void;
     apply(key: string, event: ChatEvent): void;
+    status(key: string, info: ChatInfo): void;
     forget(key: string): void;
     /* Drops one machine's threads. They keep running on the daemon; this client is done looking at them. */
     clear(endpointId: string): void;
@@ -45,6 +48,9 @@ const withItem = (state: ChatState, item: ChatItem): ChatState => {
     const items = { ...state.items, [item.id]: item };
     return { ...state, items, structure: items };
 };
+
+/* Cheap enough: a status only arrives when the daemon saw one change, never on a streamed word. */
+const sameInfo = (left: ChatInfo, right: ChatInfo): boolean => JSON.stringify(left) === JSON.stringify(right);
 
 export const applyEvent = (state: ChatState, event: ChatEvent): ChatState => {
     switch (event.type) {
@@ -95,6 +101,24 @@ export const useChats = create<ChatsStore>((set) => ({
             return { byKey: { ...s.byKey, [key]: applyEvent(current, event) } };
         });
     },
+    /*
+     * The status of a chat this window is not reading, which the daemon sends for every chat it has
+     * loaded. The thread stays empty until somebody attaches: this is what a node header, the
+     * sidebar and the counters need, and they ask the info and never the items.
+     */
+    status(key, info) {
+        set((s) => {
+            const current = s.byKey[key];
+            if (!current) {
+                return { byKey: { ...s.byKey, [key]: stateOf(info, []) } };
+            }
+            // An attached client already had this on `chat.event`; writing it again would redraw the thread.
+            if (sameInfo(current.info, info)) {
+                return {};
+            }
+            return { byKey: { ...s.byKey, [key]: { ...current, info } } };
+        });
+    },
     forget(key) {
         set((s) => {
             const next = { ...s.byKey };
@@ -111,6 +135,7 @@ export const useChats = create<ChatsStore>((set) => ({
 export const chatSinkFor = (endpointId: string): ChatSink => ({
     reset: (chatId, info, items) => useChats.getState().reset(endpointKey(endpointId, chatId), info, items),
     apply: (chatId, event) => useChats.getState().apply(endpointKey(endpointId, chatId), event),
+    status: (chatId, info) => useChats.getState().status(endpointKey(endpointId, chatId), info),
     forget: (chatId) => useChats.getState().forget(endpointKey(endpointId, chatId))
 });
 

@@ -5,13 +5,21 @@ import { bringPromptToFront } from '@/canvas/prompt-stack';
 import { projectNodes, revealNode } from '@/project/views';
 import { approvalNotices, nextExpiry, noticeChanges, type ApprovalNotice } from '@/shell/approval-notices';
 import { useChats, type ChatsById } from '@/state/chats';
+import { seenNodeIds } from '@/state/in-sight';
 import { LOCAL_ENDPOINT_ID, useEndpoints } from '@/state/endpoints';
 import { currentEndpointId, endpointKey } from '@/state/keys';
 import { nodeStatus, useSessions } from '@/state/sessions';
 import { useSettings } from '@/state/settings';
 
-/* Nothing is announced to somebody who is already looking: the node itself says it there. */
-const canNotify = (): boolean => !document.hasFocus() && 'Notification' in window && Notification.permission === 'granted';
+/* Whether this window may raise anything at all. What a person is looking at is asked per node. */
+const mayNotify = (): boolean => 'Notification' in window && Notification.permission === 'granted';
+
+/*
+ * Nothing is announced about a node somebody is already looking at: it says it there itself. A
+ * window has held several views since the grid, so the question is about the node and not about the
+ * window: a chat on a view behind the one you are reading is as unseen as one in a window behind it.
+ */
+const canNotify = (nodeId: string, seen: ReadonlySet<string>): boolean => mayNotify() && !seen.has(nodeId);
 
 /* Clicking any of these brings the window up and goes to the node, in whichever view it lives. */
 const notify = (nodeId: string, title: string, body: string, tag: string, silent: boolean): Notification => {
@@ -51,14 +59,15 @@ const turnBody = (nodeId: string): string => {
 };
 
 /*
- * A turn that ended while this window was not the one in front. `state/attention.ts` decides when a
- * turn ended and calls this, so what is announced, what is marked and what is counted are the same
- * event. Silent unless somebody asked for the sound: a notification arrives while a person is doing
+ * A turn that ended while nobody was looking at the node it ended in. `state/attention.ts` decides
+ * that and calls this, so what is announced, what is marked and what is counted are the same event.
+ * Silent unless somebody asked for the sound: a notification arrives while a person is doing
  * something else, and that is the moment to be quiet about it.
  */
 export const notifyTurnDone = (nodeId: string, title: string): void => {
     const { agentsTurnNotify, agentsTurnSound } = useSettings.getState();
-    if (!agentsTurnNotify || !canNotify()) {
+    // The watcher only calls this for a turn nobody watched end, so the node is unseen by construction.
+    if (!agentsTurnNotify || !mayNotify()) {
         return;
     }
     notify(nodeId, title, turnBody(nodeId), `ruimte-turn-${nodeId}`, !agentsTurnSound);
@@ -101,8 +110,8 @@ export const startAgentNotifications = (): (() => void) => {
         }
     };
 
-    const applyApprovals = (notices: readonly ApprovalNotice[], silent: boolean): void => {
-        const changes = noticeChanges(approvals.keys(), notices, canNotify());
+    const applyApprovals = (notices: readonly ApprovalNotice[], silent: boolean, seen: ReadonlySet<string>): void => {
+        const changes = noticeChanges(approvals.keys(), notices, (notice) => canNotify(notice.nodeId, seen));
         for (const key of changes.withdraw) {
             approvals.get(key)?.close();
             approvals.delete(key);
@@ -117,6 +126,7 @@ export const startAgentNotifications = (): (() => void) => {
 
     const check = (): void => {
         const nodes = projectNodes();
+        const seen = seenNodeIds();
         const endpointId = currentEndpointId();
         const sessions = useSessions.getState().byKey;
         const chats = useChats.getState().byKey;
@@ -137,14 +147,14 @@ export const startAgentNotifications = (): (() => void) => {
                 shown.delete(node.id);
                 continue;
             }
-            if (previous.get(node.id) === 'needs-you' || !canNotify()) {
+            if (previous.get(node.id) === 'needs-you' || !canNotify(node.id, seen)) {
                 continue;
             }
             shown.set(node.id, notify(node.id, node.title, i18next.t('shell:notifications.needsYou'), `ruimte-${node.id}`, !agentsTurnSound));
         }
         previous = current;
         // After the loop above, so the permission lands on a tag the plain wait has just let go of.
-        applyApprovals(notices, !agentsTurnSound);
+        applyApprovals(notices, !agentsTurnSound, seen);
     };
 
     const offSessions = useSessions.subscribe(check);

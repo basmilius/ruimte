@@ -143,6 +143,7 @@ public enum WireEvent: String, CaseIterable, Sendable {
     case `browserStatus` = "browser.status"
     case `deviceFrame` = "device.frame"
     case `chatEvent` = "chat.event"
+    case `chatStatus` = "chat.status"
     case `chatSubagentChanged` = "chat.subagentChanged"
     case `endpointChanged` = "endpoint.changed"
     case `directSignaled` = "direct.signaled"

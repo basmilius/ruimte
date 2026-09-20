@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { ChatInfo, ChatItem } from '@ruimte/contracts';
-import { applyEvent, type ChatState } from '@/state/chats';
+import { applyEvent, useChats, type ChatState } from '@/state/chats';
 
 const info = (patch: Partial<ChatInfo> = {}): ChatInfo => ({
     chatId: 'chat-1',
@@ -83,5 +83,41 @@ describe('applyEvent', () => {
             structure: { c: user('c', 'new') },
             order: ['c']
         });
+    });
+});
+
+describe('a status without an attach', () => {
+    test('the first one opens a row with the thread still empty', () => {
+        useChats.getState().status('local:chat-1', info({ status: 'needs-you' }));
+
+        expect(useChats.getState().byKey['local:chat-1']).toEqual({
+            info: info({ status: 'needs-you' }),
+            items: {},
+            structure: {},
+            order: []
+        });
+    });
+
+    test('a later one replaces the info and leaves the thread of an attached chat alone', () => {
+        const items = { a: user('a', 'hello') };
+        useChats.setState({ byKey: { 'local:chat-2': { info: info(), items, structure: items, order: ['a'] } } });
+
+        useChats.getState().status('local:chat-2', info({ status: 'running' }));
+
+        expect(useChats.getState().byKey['local:chat-2']).toEqual({
+            info: info({ status: 'running' }),
+            items,
+            structure: items,
+            order: ['a']
+        });
+    });
+
+    test('the same info again changes nothing, so an attached thread is not redrawn for it', () => {
+        useChats.setState({ byKey: { 'local:chat-3': { info: info(), items: {}, structure: {}, order: [] } } });
+        const before = useChats.getState().byKey;
+
+        useChats.getState().status('local:chat-3', info());
+
+        expect(useChats.getState().byKey).toBe(before);
     });
 });

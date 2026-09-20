@@ -231,6 +231,7 @@
     "browser.status",
     "device.frame",
     "chat.event",
+    "chat.status",
     "chat.subagentChanged",
     "endpoint.changed",
     "direct.signaled",

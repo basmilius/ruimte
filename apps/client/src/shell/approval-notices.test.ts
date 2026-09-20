@@ -93,18 +93,27 @@ describe('which permissions deserve one', () => {
 describe('raising and withdrawing', () => {
     const notice: ApprovalNotice = { key: 't1:r1', nodeId: 't1', title: 'api server needs permission', body: 'Bash (expires in 110s)', expiresAt: NOW };
 
+    const always = (): boolean => true;
+    const never = (): boolean => false;
+
     test('a request nobody has been told about is raised once', () => {
-        expect(noticeChanges([], [notice], true).raise.map((entry) => entry.key)).toEqual(['t1:r1']);
-        expect(noticeChanges(['t1:r1'], [notice], true).raise).toEqual([]);
+        expect(noticeChanges([], [notice], always).raise.map((entry) => entry.key)).toEqual(['t1:r1']);
+        expect(noticeChanges(['t1:r1'], [notice], always).raise).toEqual([]);
     });
 
     test('a request that is gone is withdrawn, whoever answered it', () => {
-        expect(noticeChanges(['t1:r1'], [], true).withdraw).toEqual(['t1:r1']);
+        expect(noticeChanges(['t1:r1'], [], always).withdraw).toEqual(['t1:r1']);
     });
 
-    test('a window in front raises nothing and still withdraws what stands', () => {
-        expect(noticeChanges([], [notice], false).raise).toEqual([]);
-        expect(noticeChanges(['t1:r1'], [], false).withdraw).toEqual(['t1:r1']);
+    test('a node in front raises nothing and still withdraws what stands', () => {
+        expect(noticeChanges([], [notice], never).raise).toEqual([]);
+        expect(noticeChanges(['t1:r1'], [], never).withdraw).toEqual(['t1:r1']);
+    });
+
+    test('a node a person is looking at is skipped while the one beside it is raised', () => {
+        const other: ApprovalNotice = { ...notice, key: 't2:r1', nodeId: 't2' };
+        const changes = noticeChanges([], [notice, other], (entry) => entry.nodeId !== 't1');
+        expect(changes.raise.map((entry) => entry.key)).toEqual(['t2:r1']);
     });
 
     test('the watcher looks again at the first hold that runs out', () => {

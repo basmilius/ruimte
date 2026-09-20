@@ -520,6 +520,15 @@ export const ChatSubagentResultSchema = z.object({
 export type ChatSubagentResult = z.infer<typeof ChatSubagentResultSchema>;
 
 // Carries nothing of the conversation: a client that holds it asks for the newest page again.
+/*
+ * The status of one chat, sent to every client on this machine rather than only to the ones
+ * attached to it. A thread's events are only worth streaming to whoever reads them, but what a chat
+ * is doing belongs to the whole project: a node waiting on a person has to say so on a view nobody
+ * has open. Terminals have said this all along through `session.status`.
+ */
+export const ChatStatusEventSchema = z.object({ chatId: ChatIdSchema, info: ChatInfoSchema });
+export type ChatStatusEvent = z.infer<typeof ChatStatusEventSchema>;
+
 export const ChatSubagentChangedEventSchema = z.object({ chatId: ChatIdSchema, toolUseId: z.string() });
 export type ChatSubagentChangedEvent = z.infer<typeof ChatSubagentChangedEventSchema>;
 

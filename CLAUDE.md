@@ -35,6 +35,7 @@ One WebSocket (or the same frames over a WebRTC DataChannel), JSON frames valida
 - `session.attach` answers with the serialized screen from `@xterm/headless`, then streams raw output. A client never replays history. A byte is in the screen or in the stream, never both.
 - Agent status comes from the CLIs' hooks only (`POST /hooks/<kind>`, `apps/server/src/agents`), never from parsing output. A chat is the CLI's stream-json protocol, no SDK.
 - Chat events carry a `seq` per chat and are logged (`apps/server/src/chat/chat-log.ts`), so `chat.attach` with `since` resumes.
+- A chat's thread goes to whoever attached to it, since it streams word by word; what the chat is *doing* goes to every client (`chat.status`, on a change only), the way a terminal's `session.status` always has. Without that a node waiting on a person says nothing on a view nobody has open. A client asks `chat.list` on every fresh socket for the standing answer.
 - Bytes for an `<img>` or `<video>` come only from `useMachineUrl` (`transport/machine-url.ts`). No draw site knows whether the link is a socket or a direct channel.
 - A direct connection that fails says why and never falls back to the socket.
 

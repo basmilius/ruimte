@@ -26,6 +26,8 @@ class FakeTransport implements Transport {
     status: TransportStatus = 'open';
     readonly calls: Call[] = [];
     items: ChatItem[] = [];
+    // What `chat.list` answers: every chat the daemon has loaded, attached here or not.
+    chats: ChatInfo[] = [];
     // What `chat.attach` answers when a test wants more than the thread, such as a seq or the events after `since`.
     attachResult: ((payload: RequestMap['chat.attach']['payload']) => Partial<RequestMap['chat.attach']['result']>) | null = null;
     private readonly statusHandlers = new Set<(status: TransportStatus) => void>();
@@ -50,6 +52,8 @@ class FakeTransport implements Transport {
                 return Promise.resolve({ ...info(chatId), runtimeMode: 'auto' } as RequestMap[T]['result']);
             case 'chat.send':
                 return Promise.resolve({ queued: false, turnId: 'turn-test' } as RequestMap[T]['result']);
+            case 'chat.list':
+                return Promise.resolve({ chats: this.chats } as RequestMap[T]['result']);
             case 'provider.list':
                 return Promise.resolve({
                     providers: [{ kind: 'claude', name: 'Claude Code', installed: true, version: '1', models: [], defaultModel: null }]
@@ -100,6 +104,7 @@ class FakeSink implements ChatSink {
     readonly resets: Array<{ chatId: string; items: ChatItem[] }> = [];
     readonly events: Array<{ chatId: string; event: ChatEvent }> = [];
     readonly forgotten: string[] = [];
+    readonly statuses: Array<{ chatId: string; info: ChatInfo }> = [];
 
     reset(chatId: string, _info: ChatInfo, items: ChatItem[]): void {
         this.resets.push({ chatId, items });
@@ -107,6 +112,10 @@ class FakeSink implements ChatSink {
 
     apply(chatId: string, event: ChatEvent): void {
         this.events.push({ chatId, event });
+    }
+
+    status(chatId: string, info: ChatInfo): void {
+        this.statuses.push({ chatId, info });
     }
 
     forget(chatId: string): void {
@@ -248,6 +257,26 @@ describe('ChatClient', () => {
         const info = await client.configure({ chatId: 'a', runtimeMode: 'auto' });
         expect(info.runtimeMode).toBe('auto');
         expect(sink.events.at(-1)).toEqual({ chatId: 'a', event: { type: 'info', info } });
+    });
+
+    test('a status event lands in the store for a chat this window never attached', async () => {
+        const { transport, sink } = setup();
+        transport.emit('chat.status', { chatId: 'elsewhere', info: { ...info('elsewhere'), status: 'needs-you' } });
+        expect(sink.statuses).toEqual([{ chatId: 'elsewhere', info: { ...info('elsewhere'), status: 'needs-you' } }]);
+    });
+
+    test('every chat on the machine is asked for on construction and again on every reconnect', async () => {
+        const transport = new FakeTransport();
+        transport.chats = [{ ...info('a'), status: 'running' }, info('b')];
+        const sink = new FakeSink();
+        new ChatClient(transport, sink);
+        await flush();
+        expect(sink.statuses.map((entry) => entry.chatId)).toEqual(['a', 'b']);
+
+        transport.setStatus('closed');
+        transport.setStatus('open');
+        await flush();
+        expect(sink.statuses.map((entry) => entry.chatId)).toEqual(['a', 'b', 'a', 'b']);
     });
 
     test('the provider list is loaded on construction and again on every reconnect', async () => {

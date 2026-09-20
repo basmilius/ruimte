@@ -69,10 +69,13 @@ export class ChatClient {
                     entry.seq = seq;
                 }
             }),
+            // Every chat on the machine, attached or not, so a node waiting on a person says so on a view nobody has open.
+            transport.on('chat.status', ({ chatId, info }) => this.sink.status(chatId, info)),
             transport.subscribeStatus((status) => this.onStatus(status))
         );
         if (transport.status === 'open') {
             void this.loadProviders();
+            void this.loadStatuses();
         }
     }
 
@@ -204,6 +207,21 @@ export class ChatClient {
         await this.transport.request('chat.kill', { chatId });
     }
 
+    /*
+     * What every chat on this machine is doing right now. `chat.status` only carries a change, so a
+     * window that just opened or came back from a lost socket asks for the standing answer.
+     */
+    async loadStatuses(): Promise<void> {
+        try {
+            const { chats } = await this.transport.request('chat.list', {});
+            for (const info of chats) {
+                this.sink.status(info.chatId, info);
+            }
+        } catch {
+            // The next status event says it instead; an older daemon never answers this at all.
+        }
+    }
+
     async loadProviders(): Promise<void> {
         if (!this.providers) {
             return;
@@ -275,6 +293,7 @@ export class ChatClient {
         if (status === 'open') {
             this.sendPreferences();
             void this.loadProviders();
+            void this.loadStatuses();
             void this.mounted.reattachAll((chatId) => this.attach(chatId).then(() => undefined));
             return;
         }
