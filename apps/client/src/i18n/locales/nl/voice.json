@@ -1,7 +1,9 @@
 {
     "title": "Voice Control",
     "button": "Voice Control",
-    "close": "Voice Control sluiten",
+    "shortcut": "Voice Control: druk om te schakelen, houd vast om te praten",
+    "displayFailed": "Voice Control kon niet worden weergegeven",
+    "close": "Voice Control verbergen",
     "waveform": "Geluid van het gesprek",
     "phase": {
         "idle": "Klaar",

@@ -280,7 +280,6 @@ function stopOutputWaveform(): void {
 }
 
 export function closeVoicePanel(): void {
-    stopVoice();
     useVoice.setState({ open: false });
 }
 

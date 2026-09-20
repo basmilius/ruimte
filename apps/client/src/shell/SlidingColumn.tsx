@@ -7,6 +7,8 @@ const TRANSITION_MS = 200;
 
 interface SlidingColumnProps {
     open: boolean;
+    /* Session-only panels do not participate in restoring the project layout. */
+    restoreWithProject?: boolean;
     /* Already clamped by the caller, which knows what has to stay beside it. */
     width: number;
     bounds: { min: number; max(): number };
@@ -30,10 +32,11 @@ interface SlidingColumnProps {
  * while it moves, and they stay mounted until the slide is over, so a close plays out. The left
  * edge is the drag handle.
  */
-export function SlidingColumn({ open, width, bounds, onWidth, columnRef, body, children }: SlidingColumnProps) {
+export function SlidingColumn({ open, restoreWithProject = true, width, bounds, onWidth, columnRef, body, children }: SlidingColumnProps) {
     /* Closed and done animating. Until then the contents stay mounted, so a close plays out. */
     const [settled, setSettled] = useState(!open);
-    const instant = useInstantWidth();
+    const restoring = useInstantWidth();
+    const instant = restoreWithProject && restoring;
     /* A width that lands without a transition fires no `transitionend`, so the motion it would have
        ended is over in the same commit that starts it. */
     if (instant && settled !== !open) {

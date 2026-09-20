@@ -8,6 +8,7 @@ import { shortcut, type Shortcut } from '@/ui/shortcut';
  */
 export const CANVAS_SHORTCUTS = {
     dictation: shortcut('Mod+Shift+D'),
+    voiceControl: shortcut('Mod+Shift+M'),
     splitRight: shortcut('Mod+\\'),
     splitDown: shortcut('Mod+Shift+\\'),
     closeCell: shortcut('Mod+W'),

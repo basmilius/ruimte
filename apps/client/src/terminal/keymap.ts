@@ -31,6 +31,7 @@ export const isClearShortcut = (event: KeyLike, apple: boolean): boolean => matc
 export const TERMINAL_HANDED_BACK: readonly Shortcut[] = [
     ...VIEW_SHORTCUTS,
     CANVAS_SHORTCUTS.dictation,
+    CANVAS_SHORTCUTS.voiceControl,
     CANVAS_SHORTCUTS.newView,
     CANVAS_SHORTCUTS.splitRight,
     CANVAS_SHORTCUTS.splitDown,

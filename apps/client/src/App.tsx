@@ -40,6 +40,7 @@ import type { Workspace } from '@/transport/connections';
 import { ConnectionProvider } from '@/transport/context';
 import { ErrorBoundary } from '@/ui/ErrorBoundary';
 import { TooltipProvider } from '@/ui/Tooltip';
+import { VoiceOverlay } from '@/voice/VoiceOverlay';
 import { VoicePanel } from '@/voice/VoicePanel';
 import { stopVoice } from '@/voice/controller';
 
@@ -80,6 +81,7 @@ function WorkspaceShell({ workspace }: { workspace: Workspace }) {
                     <VoicePanel />
                 </main>
             </div>
+            <VoiceOverlay />
             {/* About the project that is open, so they belong to its workspace and not to the shell. */}
             <LayoutDialog />
             <ViewDialogs />

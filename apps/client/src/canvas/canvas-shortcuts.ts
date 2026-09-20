@@ -1,3 +1,6 @@
+import { startVoice, stopVoice } from '@/voice/controller';
+import { createVoiceShortcut } from '@/voice/shortcut';
+import { useVoice } from '@/voice/state';
 import { cancelDictation, stopDictation, toggleFocusedDictation, useDictation } from '@/dictation/controller';
 import { useEffect } from 'react';
 import { isCanvasView, isDiagramView } from '@ruimte/contracts';
@@ -82,8 +85,17 @@ export const isSpaceDown = (): boolean => spaceDown;
 /* Bind once per workspace so a split grid does not run the same project shortcut in every canvas. */
 export const useCanvasShortcuts = (): void => {
     useEffect(() => {
+        const voiceShortcut = createVoiceShortcut({
+            available: () => useVoice.getState().credential?.configured === true,
+            active: () => ['connecting', 'listening', 'closing'].includes(useVoice.getState().phase),
+            start: () => {
+                void startVoice();
+            },
+            stop: stopVoice
+        });
         let dictationPress: number | null = null;
         const onBlur = (): void => {
+            voiceShortcut.blur();
             dictationPress = null;
             cancelDictation();
         };
@@ -263,6 +275,13 @@ export const useCanvasShortcuts = (): void => {
          * listen on the window too, and only stopping the key here keeps them from also acting on it.
          */
         const onEscapeCapture = (e: KeyboardEvent): void => {
+            if (!e.isComposing && !isInFloatingLayer(e.target) && matchesShortcut(CANVAS_SHORTCUTS.voiceControl, e, isApplePlatform())) {
+                if (voiceShortcut.press(e.timeStamp, e.repeat)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                return;
+            }
             if (!e.isComposing && !isInFloatingLayer(e.target) && matchesShortcut(CANVAS_SHORTCUTS.dictation, e, isApplePlatform())) {
                 if (e.repeat) {
                     e.preventDefault();
@@ -307,6 +326,7 @@ export const useCanvasShortcuts = (): void => {
             }
         };
         const onKeyUp = (e: KeyboardEvent): void => {
+            voiceShortcut.release(e);
             if (dictationPress !== null && (e.code === 'KeyD' || e.key === 'Meta' || e.key === 'Control' || e.key === 'Shift')) {
                 if (e.timeStamp - dictationPress >= 400) {
                     stopDictation();
@@ -326,6 +346,7 @@ export const useCanvasShortcuts = (): void => {
             window.removeEventListener('keydown', onKeyDown);
             window.removeEventListener('keyup', onKeyUp, true);
             window.removeEventListener('blur', onBlur);
+            voiceShortcut.blur();
             cancelDictation();
         };
     }, []);

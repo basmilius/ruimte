@@ -17,7 +17,7 @@ import { Icon } from '@/ui/Icon';
 import { Select } from '@/ui/Select';
 import { Tooltip } from '@/ui/Tooltip';
 import { useVoice } from '@/voice/state';
-import { closeVoicePanel } from '@/voice/controller';
+import { closeVoicePanel, stopVoice } from '@/voice/controller';
 import { VoiceInputSection } from './VoiceInputSection';
 
 const titleCase = (value: string): string => value[0]!.toUpperCase() + value.slice(1);
@@ -95,6 +95,7 @@ export function VoicePane() {
         setBusy(true);
         try {
             const next = await bridge.clearApiKey();
+            stopVoice();
             closeVoicePanel();
             setStatus(next);
             useVoice.getState().setCredential(next);

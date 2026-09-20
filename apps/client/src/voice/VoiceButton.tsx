@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Mic } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { CANVAS_SHORTCUTS } from '@/canvas/shortcuts';
 import { Icon } from '@/ui/Icon';
 import { Tooltip } from '@/ui/Tooltip';
 import { closeVoicePanel } from '@/voice/controller';
@@ -20,7 +21,7 @@ export function VoiceButton() {
         return null;
     }
     return (
-        <Tooltip label={t('button')} name>
+        <Tooltip label={t('shortcut')} kbd={CANVAS_SHORTCUTS.voiceControl} name>
             <button
                 className="icon-btn"
                 aria-pressed={open}

@@ -99,7 +99,10 @@ export const shortcutGroups = (apple: boolean): ShortcutGroup[] => [
     },
     {
         title: say('panels.title'),
-        shortcuts: [{ keys: CANVAS_SHORTCUTS.togglePanel, label: say('panels.toggle') }]
+        shortcuts: [
+            { keys: CANVAS_SHORTCUTS.togglePanel, label: say('panels.toggle') },
+            { keys: CANVAS_SHORTCUTS.voiceControl, label: i18next.t('voice:shortcut') }
+        ]
     },
     {
         title: say('prompts.title'),
