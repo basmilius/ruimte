@@ -9,7 +9,7 @@ import { ViewGlyph } from '@/project/ViewGlyph';
 import { FileToolbarSlotProvider } from '@/shell/panels/file-toolbar-slot';
 import { SubagentTitleCrumb } from '@/chat/ui/SubagentControls';
 import { SplitItems, ViewMenuItems } from '@/shell/ViewMenuItems';
-import { useHasViewToolbar, useShowsSubagents, ViewToolbar } from '@/shell/ViewToolbar';
+import { useHasViewToolbar, useShowsSubagents, useViewToolbarLeads, ViewToolbar } from '@/shell/ViewToolbar';
 import { setDragging, VIEW_DRAG_TYPE } from '@/shell/view-drag';
 import { useDocument } from '@/state/document';
 import { type CellAt } from '@/shell/split';
@@ -86,6 +86,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
     const bodyFocused = useDocument((s) => s.bodyFocused);
     const hasViewToolbar = useHasViewToolbar(view);
     const folded = useFolded(bar, actions, hasViewToolbar);
+    const leads = useViewToolbarLeads(view);
     const inSubagents = useShowsSubagents(view);
     const title = useBrowserDisplayTitle(view.id, view.name ?? '', 'titleSource' in view ? view.titleSource : undefined);
     const visibleTitle = view.kind === 'browser' ? title : view.name;
@@ -138,7 +139,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                     </span>
                     {hasViewToolbar && !folded && (
                         <>
-                            {!inSubagents && <Separator />}
+                            {leads && !inSubagents && <Separator />}
                             {/* At least as wide as the controls at their smallest, so a bar too narrow
                             for them overflows, and that is how it knows to fold. */}
                             <span ref={actions} className="flex min-w-min grow items-center">

@@ -38,6 +38,19 @@ export const useHasViewToolbar = (view: ProjectView | null): boolean => {
     return view.kind === 'browser' || view.kind === 'device' || view.kind === 'file' || view.kind === 'diagram' || modeOf(host) !== undefined;
 };
 
+/* The kinds whose controls begin where the name ends: a page brings its address field, a chat its
+   crumbs and pills, a terminal the mode its agent runs in. The rest hang their buttons on the right
+   of the bar, against the panels, and a line beside the name would stand in empty space with the
+   thing it fences off half a window away. */
+const LEADING_TOOLBAR_KINDS = new Set<ProjectViewKind>(['browser', 'chat', 'terminal']);
+
+/* Whether the line after the name has anything to fence off. The bar always closes the view's part
+   with one, since the panels are right there; this is about the one that opens it. */
+export const useViewToolbarLeads = (view: ProjectView | null): boolean => {
+    const has = useHasViewToolbar(view);
+    return has && view !== null && LEADING_TOOLBAR_KINDS.has(view.kind);
+};
+
 const useIsFork = (view: ProjectView | null): boolean => useChatRow(view?.kind === 'chat' ? view.id : '', (row) => row?.info.forkOf !== undefined);
 
 /* Whether a chat view shows its sub-agents in its place, where its title turns into the first crumb and needs no separator after it. */
