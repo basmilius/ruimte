@@ -1,16 +1,13 @@
 import { useTranslation } from 'react-i18next';
-import clsx from 'clsx';
 import type { FlowContent, FlowLink, FlowPort } from '@ruimte/contracts';
 import { portsOf } from '@ruimte/flow';
+import { flowLook } from '@/canvas/edge-look';
+import { DraftEdge, EdgePath } from '@/canvas/EdgePath';
 import { routeDraft, routeEdge, type EdgeRoute } from '@/canvas/edge-route';
+import { HINT_HOT, HINT_REACH, hintStrength } from '@/canvas/port-hints';
+import { PortDot } from '@/canvas/PortDot';
 import { bandOf, cardRect, obstaclesOf, portDot } from '@/flow/geometry';
 import type { Point } from '@/canvas/math';
-
-/* How close a pointer comes before a port opens up to be pulled from, in world units. */
-const PORT_REACH = 90;
-
-const PORT_R = 4.5;
-const PORT_R_NEAR = 7;
 
 export interface FlowDraft {
     from: string;
@@ -26,7 +23,10 @@ interface FlowLinkLayerProps {
     /* The line being pulled right now, drawn to wherever the pointer is. */
     draft: FlowDraft | null;
     hovered: string | null;
+    /* The line a person picked, by its key, which is what Delete acts on. */
+    selected: string | null;
     onHover(key: string | null): void;
+    onSelect(link: FlowLink): void;
     onRemove(link: FlowLink): void;
 }
 
@@ -46,10 +46,10 @@ export const linkKey = (link: FlowLink): string => `${link.from}:${link.fromPort
 
 /*
  * The lines and the ports, in the layer under the cards: a line belongs to the worksheet and never to
- * a card, which is the same rule a canvas keeps. The way out a run takes is drawn through, the way
- * it does not is dashed, and the color is only ever an extra: a flow has to read in a screenshot.
+ * a card, which is the same rule a canvas keeps. It is drawn with what the canvas draws with, down to
+ * the distance a port opens up over, so the two surfaces are one drawing with two tables of looks.
  */
-export function FlowLinkLayer({ content, zoom, pointer, draft, hovered, onHover, onRemove }: FlowLinkLayerProps) {
+export function FlowLinkLayer({ content, zoom, pointer, draft, hovered, selected, onHover, onSelect, onRemove }: FlowLinkLayerProps) {
     const { t } = useTranslation('flow');
     const taken = new Set(content.links.map((link) => `${link.from}:${link.fromPort}`));
     const obstacles = obstaclesOf(content);
@@ -63,6 +63,10 @@ export function FlowLinkLayer({ content, zoom, pointer, draft, hovered, onHover,
                   { fromSide: 'right' }
               );
 
+    /* A port opens up over the same distance as on a canvas, which is in screen pixels: how near the
+       pointer is to a dot is a thing of the screen, not of the worksheet under it. */
+    const reach = HINT_REACH / zoom;
+
     return (
         <g>
             {content.links.map((link) => {
@@ -71,69 +75,51 @@ export function FlowLinkLayer({ content, zoom, pointer, draft, hovered, onHover,
                     return null;
                 }
                 const key = linkKey(link);
-                const dashed = link.fromPort === 'false' || link.fromPort === 'error';
+                const active = hovered === key || selected === key;
                 return (
-                    <g key={key} className="pointer-events-auto" onPointerEnter={() => onHover(key)} onPointerLeave={() => onHover(null)}>
-                        {/* A line is three pixels wide and a pointer is not, so a wider path takes the presses. */}
-                        <path d={route.d} className="fill-none stroke-transparent" strokeWidth={14 / zoom} />
-                        <path
-                            d={route.d}
-                            className={clsx('fill-none', dashed ? 'stroke-text-faint' : 'stroke-accent', hovered === key && 'stroke-accent')}
-                            strokeWidth={2 / zoom}
-                            strokeLinecap="round"
-                            strokeDasharray={dashed ? `${6 / zoom} ${5 / zoom}` : undefined}
-                        />
-                        <circle cx={route.to.x} cy={route.to.y} r={PORT_R / zoom} className={dashed ? 'fill-text-faint' : 'fill-accent'} />
-                        {hovered === key && (
-                            <g
-                                className="cursor-pointer"
-                                role="button"
-                                aria-label={t('link.remove')}
-                                onPointerDown={(e) => {
-                                    e.stopPropagation();
-                                    onRemove(link);
-                                }}
-                            >
-                                <circle cx={route.mid.x} cy={route.mid.y} r={9 / zoom} className="fill-surface-raised stroke-border" strokeWidth={1 / zoom} />
-                                <path
-                                    d={`M${route.mid.x - 3.5 / zoom} ${route.mid.y - 3.5 / zoom}L${route.mid.x + 3.5 / zoom} ${route.mid.y + 3.5 / zoom}M${route.mid.x + 3.5 / zoom} ${route.mid.y - 3.5 / zoom}L${route.mid.x - 3.5 / zoom} ${route.mid.y + 3.5 / zoom}`}
-                                    className="fill-none stroke-text-muted"
-                                    strokeWidth={1.5 / zoom}
-                                    strokeLinecap="round"
-                                />
-                            </g>
-                        )}
-                    </g>
+                    <EdgePath
+                        key={key}
+                        route={route}
+                        look={flowLook(link.fromPort)}
+                        zoom={zoom}
+                        active={active}
+                        onEnter={() => onHover(key)}
+                        onLeave={() => onHover(null)}
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            onSelect(link);
+                        }}
+                        removeLabel={t('link.remove')}
+                        onRemove={() => onRemove(link)}
+                    />
                 );
             })}
 
-            {draftRoute !== null && (
-                <path d={draftRoute.d} className="fill-none stroke-accent" strokeWidth={2 / zoom} strokeDasharray={`${4 / zoom} ${4 / zoom}`} />
-            )}
+            {draftRoute !== null && <DraftEdge route={draftRoute} zoom={zoom} />}
 
-            {Object.entries(content.cards).flatMap(([id, card]) => {
-                return portsOf(card).map((port) => {
+            {Object.entries(content.cards).flatMap(([id, card]) =>
+                portsOf(card).map((port) => {
                     const at = portDot(card, port);
-                    const near = pointer !== null && Math.hypot(pointer.x - at.x, pointer.y - at.y) < PORT_REACH;
-                    const filled = taken.has(`${id}:${port}`);
+                    const distance = pointer === null ? Infinity : Math.hypot(pointer.x - at.x, pointer.y - at.y);
+                    const hot = distance * zoom <= HINT_HOT;
                     return (
-                        <circle
+                        <PortDot
                             key={`${id}:${port}`}
-                            data-flow-port={id}
-                            data-flow-port-side={port}
-                            cx={at.x}
-                            cy={at.y}
-                            r={(near ? PORT_R_NEAR : PORT_R) / zoom}
-                            strokeWidth={1.5 / zoom}
-                            className={clsx(
-                                'pointer-events-auto cursor-crosshair transition-[r]',
-                                filled ? 'fill-accent stroke-accent' : 'fill-surface-raised stroke-border-strong',
-                                near && 'stroke-accent'
-                            )}
+                            at={at}
+                            zoom={zoom}
+                            strength={hintStrength(distance, reach)}
+                            hot={hot}
+                            /* The line that leaves here draws its own dot on this spot, so the port
+                               only takes the press until the pointer is on it. */
+                            ring={!taken.has(`${id}:${port}`) || hot}
+                            /* Every port a card has is on show: which ways out it offers is what a
+                               person reads a worksheet by, before ever reaching for one. */
+                            rest={1}
+                            data={{ 'data-flow-port': id, 'data-flow-port-side': port }}
                         />
                     );
-                });
-            })}
+                })
+            )}
         </g>
     );
 }

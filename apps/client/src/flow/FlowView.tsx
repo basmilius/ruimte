@@ -5,8 +5,7 @@ import { GRID, snapToGrid, toWorld, type Point } from '@/canvas/math';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { FlowCardBox } from '@/flow/FlowCardBox';
 import { FlowDock } from '@/flow/FlowDock';
-import { FlowInspector } from '@/flow/FlowInspector';
-import { FlowLinkLayer, type FlowDraft } from '@/flow/FlowLinkLayer';
+import { FlowLinkLayer, linkKey, type FlowDraft } from '@/flow/FlowLinkLayer';
 import { cardRect } from '@/flow/geometry';
 import { useFlow, useFlowStore } from '@/state/flow';
 import { isInFloatingLayer } from '@/ui/floating';
@@ -56,6 +55,7 @@ export function FlowView({ id }: { id: string }) {
     const camera = useFlow((s) => s.camera);
     const content = useFlow((s) => s.content);
     const selection = useFlow((s) => s.selection);
+    const selectedLink = useFlow((s) => s.selectedLink);
     const viewId = useFlow((s) => s.viewId);
 
     useLayoutEffect(() => {
@@ -183,7 +183,9 @@ export function FlowView({ id }: { id: string }) {
                         pointer={pointer}
                         draft={draft}
                         hovered={hovered}
+                        selected={selectedLink === null ? null : linkKey(selectedLink)}
                         onHover={setHovered}
+                        onSelect={(link) => store.getState().selectLink(link)}
                         onRemove={(link) => store.getState().unlink(link.from, link.fromPort, link.to)}
                     />
                 </g>
@@ -203,7 +205,6 @@ export function FlowView({ id }: { id: string }) {
                 </div>
             )}
 
-            <FlowInspector />
             <FlowDock viewId={id} />
         </div>
     );

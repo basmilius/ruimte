@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type RefObject } from 'react';
 import { textRect } from '@/canvas/edge-lines';
 import { toWorld, type Point, type Rect } from '@/canvas/math';
 import { HINT_HOT, HINT_REACH, portHints, portKey, takenPorts } from '@/canvas/port-hints';
+import { PortDot } from '@/canvas/PortDot';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 
 /*
@@ -84,29 +85,16 @@ export function PortHints({ rootRef }: { rootRef: RefObject<HTMLDivElement | nul
                 const hot = hint.distance * zoom <= HINT_HOT;
                 const occupied = taken.has(portKey(hint.nodeId, hint.side));
                 return (
-                    <g key={`${hint.nodeId}:${hint.side}`} style={{ opacity: hint.strength }}>
-                        {/* The dot is small on purpose; what you aim at is this, which stays the same size at every zoom.
-                            It sits over the line that ends here, so a port is a port even where one already lands. */}
-                        <circle
-                            data-port={hint.nodeId}
-                            data-port-side={hint.side}
-                            cx={hint.at.x}
-                            cy={hint.at.y}
-                            r={12 / zoom}
-                            fill="transparent"
-                            className="pointer-events-auto cursor-crosshair"
-                        />
-                        {(!occupied || hot) && (
-                            <circle
-                                cx={hint.at.x}
-                                cy={hint.at.y}
-                                r="5"
-                                fill="var(--canvas-bg)"
-                                stroke={hot ? 'var(--accent)' : 'var(--edge-line)'}
-                                strokeWidth="2"
-                            />
-                        )}
-                    </g>
+                    <PortDot
+                        key={`${hint.nodeId}:${hint.side}`}
+                        at={hint.at}
+                        zoom={zoom}
+                        strength={hint.strength}
+                        hot={hot}
+                        ring={!occupied || hot}
+                        rest={0}
+                        data={{ 'data-port': hint.nodeId, 'data-port-side': hint.side }}
+                    />
                 );
             })}
         </svg>

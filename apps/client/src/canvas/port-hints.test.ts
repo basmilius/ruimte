@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { portHints, takenPorts } from './port-hints';
+import { hintStrength, portHints, takenPorts } from './port-hints';
 
 const node = (id: string, x: number, y: number) => ({ id, x, y, w: 100, h: 100 });
 const nodes = [node('a', 0, 0), node('b', 400, 0)];
@@ -46,5 +46,19 @@ describe('the sides a line already uses', () => {
 
     test('are none for an edge whose node is gone or hidden', () => {
         expect([...takenPorts([{ from: 'a', to: 'gone' }], rectOf)]).toEqual([]);
+    });
+});
+
+describe('how far a port has come for the pointer', () => {
+    test('is nothing at the reach and all the way in over the half of it', () => {
+        expect(hintStrength(56, 56)).toBe(0);
+        expect(hintStrength(42, 56)).toBeCloseTo(0.5);
+        expect(hintStrength(28, 56)).toBe(1);
+        expect(hintStrength(0, 56)).toBe(1);
+    });
+
+    test('stays in range for a pointer nowhere near, which is what a worksheet asks it', () => {
+        expect(hintStrength(400, 56)).toBe(0);
+        expect(hintStrength(Infinity, 56)).toBe(0);
     });
 });

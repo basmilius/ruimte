@@ -223,9 +223,16 @@ export const useCanvasShortcuts = (): void => {
                 } else if (is(CANVAS_SHORTCUTS.undo)) {
                     e.preventDefault();
                     flow.undo();
-                } else if ((e.key === 'Delete' || e.key === 'Backspace') && flow.selection.length > 0) {
-                    e.preventDefault();
-                    flow.removeCards(flow.selection);
+                } else if (e.key === 'Delete' || e.key === 'Backspace') {
+                    /* A line is picked the way a card is, so the same key removes whichever of the
+                       two a person has in hand. */
+                    if (flow.selectedLink !== null) {
+                        e.preventDefault();
+                        flow.unlink(flow.selectedLink.from, flow.selectedLink.fromPort, flow.selectedLink.to);
+                    } else if (flow.selection.length > 0) {
+                        e.preventDefault();
+                        flow.removeCards(flow.selection);
+                    }
                 } else if (is(CANVAS_SHORTCUTS.fitAll)) {
                     e.preventDefault();
                     flow.fitAll();

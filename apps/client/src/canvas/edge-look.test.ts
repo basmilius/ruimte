@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProjectEdge } from '@ruimte/contracts';
 import type { EdgeLine } from './edge-lines';
-import { edgeLook, lineRole, type EdgeLook } from './edge-look';
+import { edgeLook, edgeStroke, flowLook, lineRole, type EdgeLook } from './edge-look';
 
 const edgeOf = (from: string, to: string, role?: string): ProjectEdge => ({ id: `${from}-${to}`, from, to, ...(role === undefined ? {} : { role }) });
 
@@ -88,5 +88,41 @@ describe('edgeLook', () => {
 
     test('a plain line carries nothing, so neither end points anywhere', () => {
         expect(edgeLook('plain', solo)).toEqual({ tail: 'dot', head: 'dot', dashed: false, accent: false, width: 2 });
+    });
+});
+
+describe('flowLook', () => {
+    test('the way a run carries on is drawn through and carries something', () => {
+        expect(flowLook('done')).toEqual({ tail: 'dot', head: 'chevron', dashed: false, accent: true, width: 2 });
+        expect(flowLook('true')).toEqual(flowLook('done'));
+    });
+
+    test('the way out of a false answer or of something gone wrong is dashed and neutral', () => {
+        expect(flowLook('false')).toEqual({ tail: 'dot', head: 'chevron', dashed: true, accent: false, width: 2 });
+        expect(flowLook('error')).toEqual(flowLook('false'));
+    });
+
+    test('every line out of a card points into the card that runs next', () => {
+        for (const port of ['done', 'error', 'true', 'false'] as const) {
+            expect(flowLook(port).head).toBe('chevron');
+            expect(flowLook(port).tail).toBe('dot');
+        }
+    });
+});
+
+describe('edgeStroke', () => {
+    test('a line that carries something runs in the context color, and in the accent once it is active', () => {
+        expect(edgeStroke(edgeLook('context', solo), false)).toBe('var(--edge-context)');
+        expect(edgeStroke(edgeLook('context', solo), true)).toBe('var(--accent)');
+    });
+
+    test('every other line runs in the neutral, and lifts to the muted text once it is active', () => {
+        expect(edgeStroke(edgeLook('plain', solo), false)).toBe('var(--edge-line)');
+        expect(edgeStroke(edgeLook('plain', solo), true)).toBe('var(--text-muted)');
+    });
+
+    test('a worksheet reads from the same two pairs, so one line is one color wherever it is drawn', () => {
+        expect(edgeStroke(flowLook('true'), false)).toBe(edgeStroke(edgeLook('context', solo), false));
+        expect(edgeStroke(flowLook('false'), true)).toBe(edgeStroke(edgeLook('plain', solo), true));
     });
 });

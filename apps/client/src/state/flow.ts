@@ -6,6 +6,7 @@ import {
     type FlowCardKind,
     type FlowContent,
     type FlowDocument,
+    type FlowLink,
     type FlowPort,
     type ProjectViewLocal
 } from '@ruimte/contracts';
@@ -34,6 +35,9 @@ export interface FlowState extends CameraSlice {
     error: string | null;
     /* The cards a person picked, to move, to fill in or to remove. */
     selection: string[];
+    /* The line a person picked, which is what a key acting on the selection finds when no card is
+       picked. One line at a time, and never together with a card: the two answer the same keys. */
+    selectedLink: FlowLink | null;
 
     load(viewId: string, document: FlowDocument, local: ProjectViewLocal | null): void;
     unload(): void;
@@ -52,6 +56,7 @@ export interface FlowState extends CameraSlice {
     unlink(from: string, fromPort: FlowPort, to: string): void;
 
     select(ids: string[], additive?: boolean): void;
+    selectLink(link: FlowLink | null): void;
     undo(): void;
     redo(): void;
 
@@ -110,6 +115,7 @@ export const createFlowStore = (): StoreApi<FlowState> =>
         conflict: null,
         error: null,
         selection: [],
+        selectedLink: null,
 
         load(viewId, document, local) {
             set({
@@ -124,6 +130,7 @@ export const createFlowStore = (): StoreApi<FlowState> =>
                 conflict: null,
                 error: null,
                 selection: [],
+                selectedLink: null,
                 pendingCamera: null
             });
             const stored = local?.camera ?? null;
@@ -148,7 +155,8 @@ export const createFlowStore = (): StoreApi<FlowState> =>
                 future: [],
                 conflict: null,
                 error: null,
-                selection: []
+                selection: [],
+                selectedLink: null
             });
         },
 
@@ -218,7 +226,11 @@ export const createFlowStore = (): StoreApi<FlowState> =>
             const cards = Object.fromEntries(Object.entries(state.content.cards).filter(([id]) => !gone.has(id)));
             // A line without both its ends is not a line, so a card that goes takes them with it.
             const links = state.content.links.filter((link) => !gone.has(link.from) && !gone.has(link.to));
-            set({ ...changed(state, { ...state.content, cards, links }), selection: state.selection.filter((id) => !gone.has(id)) });
+            set({
+                ...changed(state, { ...state.content, cards, links }),
+                selection: state.selection.filter((id) => !gone.has(id)),
+                selectedLink: null
+            });
         },
 
         link(from, fromPort, to) {
@@ -238,12 +250,16 @@ export const createFlowStore = (): StoreApi<FlowState> =>
             const state = get();
             const links = state.content.links.filter((link) => !(link.from === from && link.fromPort === fromPort && link.to === to));
             if (links.length !== state.content.links.length) {
-                set(changed(state, { ...state.content, links }));
+                set({ ...changed(state, { ...state.content, links }), selectedLink: null });
             }
         },
 
         select(ids, additive = false) {
-            set((state) => ({ selection: mergeSelection(state.selection, ids, additive ? 'toggle' : 'replace') }));
+            set((state) => ({ selection: mergeSelection(state.selection, ids, additive ? 'toggle' : 'replace'), selectedLink: null }));
+        },
+
+        selectLink(link) {
+            set({ selectedLink: link, selection: [] });
         },
 
         undo() {
@@ -252,7 +268,7 @@ export const createFlowStore = (): StoreApi<FlowState> =>
             if (!previous) {
                 return;
             }
-            set({ content: previous, past: state.past.slice(0, -1), future: [state.content, ...state.future], edits: state.edits + 1 });
+            set({ content: previous, past: state.past.slice(0, -1), future: [state.content, ...state.future], edits: state.edits + 1, selectedLink: null });
         },
 
         redo() {
@@ -261,7 +277,7 @@ export const createFlowStore = (): StoreApi<FlowState> =>
             if (!next) {
                 return;
             }
-            set({ content: next, past: [...state.past, state.content], future: state.future.slice(1), edits: state.edits + 1 });
+            set({ content: next, past: [...state.past, state.content], future: state.future.slice(1), edits: state.edits + 1, selectedLink: null });
         },
 
         setRev(rev) {
@@ -278,7 +294,7 @@ export const createFlowStore = (): StoreApi<FlowState> =>
         },
         applyDocument(document) {
             // What is on disk now is another starting point, so the steps back from the old one are gone.
-            set({ loading: true, content: contentOf(document), rev: document.rev, dirty: false, conflict: null, past: [], future: [] });
+            set({ loading: true, content: contentOf(document), rev: document.rev, dirty: false, conflict: null, past: [], future: [], selectedLink: null });
             set({ loading: false });
         }
     }));

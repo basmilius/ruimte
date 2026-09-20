@@ -21,6 +21,10 @@ export interface PortHint {
 
 export const portKey = (nodeId: string, side: Side): string => `${nodeId}:${side}`;
 
+/* How far a port has come for a pointer this near: 0 where it starts to show, 1 close enough to aim
+   at, and the half of the reach nearest the port is where it is all the way in. */
+export const hintStrength = (distance: number, reach: number): number => Math.min(1, Math.max(0, (reach - distance) / (reach / 2)));
+
 /*
  * The ports to show for a pointer at `point`: the nearest side of every node within reach, one per
  * node, so walking along a row of nodes lights one dot at a time. A side a line already leaves from
@@ -36,7 +40,7 @@ export const portHints = (nodes: readonly (Rect & { id: string })[], point: Poin
             if (distance > reach || (nearest !== null && distance >= nearest.distance)) {
                 continue;
             }
-            nearest = { nodeId: node.id, side, at, distance, strength: Math.min(1, (reach - distance) / (reach / 2)) };
+            nearest = { nodeId: node.id, side, at, distance, strength: hintStrength(distance, reach) };
         }
         if (nearest !== null) {
             hints.push(nearest);

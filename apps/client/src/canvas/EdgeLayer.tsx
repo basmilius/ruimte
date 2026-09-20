@@ -2,29 +2,34 @@ import { useEffect, useMemo, useState } from 'react';
 import { isAgentKind, useCanvas, useCanvasStore } from '@/state/canvas';
 import { edgeLines, fixedSides, selectedLine, textRect } from '@/canvas/edge-lines';
 import { edgeLook, lineRole } from '@/canvas/edge-look';
-import { routeDraft, routeEdge, selfRoute, SIDE_NORMAL, type Obstacle, type Side } from '@/canvas/edge-route';
-import { markerPath, type MarkerShape } from '@/canvas/marker-path';
+import { DraftEdge, EdgePath } from '@/canvas/EdgePath';
+import { routeDraft, routeEdge, selfRoute, type Obstacle } from '@/canvas/edge-route';
 import type { Point, Rect } from '@/canvas/math';
 import { useEndpointId } from '@/state/keys';
 import { edgeTask, taskEdgeLabel, useTasks } from '@/state/tasks';
 
+/* The name a person wrote on a line. It rides on the line rather than on the canvas, so it keeps its
+   size on screen the way the line does and stays out of the cross beside it at every zoom. */
 function EdgeLabel({
     ids,
     label,
     at,
+    zoom,
     editing,
     onEdit
 }: {
     ids: string[];
     label: string | undefined;
     at: Point;
+    zoom: number;
     editing: boolean;
     onEdit(editing: boolean): void;
 }) {
     const canvasStore = useCanvasStore();
+    const place = `translate(${at.x} ${at.y}) scale(${1 / zoom})`;
     if (editing) {
         return (
-            <foreignObject x={at.x - 60} y={at.y - 14} width="120" height="28">
+            <foreignObject transform={place} x="-60" y="-14" width="120" height="28">
                 <input
                     autoFocus
                     defaultValue={label ?? ''}
@@ -53,7 +58,7 @@ function EdgeLabel({
     /* HTML, not `<text>` in a fixed 64 by 24 pill: the pill then grows with the label and with the
        interface font size, which an SVG rect of hard numbers cannot do. */
     return (
-        <foreignObject x={at.x - 100} y={at.y - 16} width="200" height="32" style={{ overflow: 'visible' }}>
+        <foreignObject transform={place} x="-100" y="-16" width="200" height="32" style={{ overflow: 'visible' }}>
             <div className="flex h-8 items-center justify-center" onDoubleClick={(e) => (e.stopPropagation(), onEdit(true))}>
                 <span className="pointer-events-auto cursor-text rounded-full border border-border bg-surface-raised px-2.5 py-0.5 text-xs whitespace-nowrap text-text-muted">
                     {label}
@@ -61,18 +66,6 @@ function EdgeLabel({
             </div>
         </foreignObject>
     );
-}
-
-/* Where a line meets a node: it stops a gap short and leaves its marker in the gap behind, rimmed in
-   its own color, so nothing is ever drawn against a node's border. An outline is filled with the
-   canvas, so the line ends inside it instead of running through it. */
-function EdgeMarker({ shape, at, side, stroke }: { shape: MarkerShape; at: Point; side: Side; stroke: string }) {
-    const path = markerPath(shape, at, SIDE_NORMAL[side]);
-    if (path === '') {
-        return null;
-    }
-    const fill = shape === 'chevron' ? 'none' : shape === 'arrow' ? stroke : 'var(--canvas-bg)';
-    return <path d={path} fill={fill} stroke={stroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />;
 }
 
 export function EdgeLayer() {
@@ -83,6 +76,7 @@ export function EdgeLayer() {
     const hidden = useCanvas((s) => s.hidden);
     const selection = useCanvas((s) => s.selection);
     const draft = useCanvas((s) => s.linkDraft);
+    const zoom = useCanvas((s) => s.camera.zoom);
     const [hovered, setHovered] = useState<string | null>(null);
     const [editing, setEditing] = useState<string | null>(null);
     const endpointId = useEndpointId();
@@ -166,54 +160,37 @@ export function EdgeLayer() {
                     pair: line.back !== null,
                     openTask: task !== null && task.status === 'open'
                 });
-                const stroke = look.accent ? (active ? 'var(--accent)' : 'var(--edge-context)') : active ? 'var(--text-muted)' : 'var(--edge-line)';
                 return (
-                    <g key={key} onPointerEnter={() => setHovered(key)} onPointerLeave={() => setHovered((h) => (h === key ? null : h))}>
-                        {/* A wide invisible stroke gives the thin line something to hover and click; a double-click names it. */}
-                        <path
-                            d={route.d}
-                            fill="none"
-                            stroke="transparent"
-                            strokeWidth="14"
-                            className="pointer-events-auto cursor-pointer"
-                            onPointerDown={(e) => {
-                                e.stopPropagation();
-                                // One line is one thing to click, so both of its directions are selected together.
-                                canvasStore.getState().select(line.ids, e.shiftKey);
-                            }}
-                            onDoubleClick={(e) => {
-                                e.stopPropagation();
-                                setEditing(key);
-                            }}
-                        />
-                        <path
-                            d={route.d}
-                            fill="none"
-                            stroke={stroke}
-                            strokeWidth={active ? look.width + 1 : look.width}
-                            strokeDasharray={look.dashed ? '6 6' : undefined}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        />
-                        <EdgeMarker shape={look.tail} at={route.from} side={route.fromSide} stroke={stroke} />
-                        <EdgeMarker shape={look.head} at={route.to} side={route.toSide} stroke={stroke} />
-                        <EdgeLabel ids={line.ids} label={label} at={mid} editing={editing === key} onEdit={(on) => setEditing(on ? key : null)} />
-                        {active && editing !== key && (
-                            <g
-                                transform={`translate(${mid.x + (label ? 40 : 0)}, ${mid.y})`}
-                                className="pointer-events-auto cursor-pointer"
-                                onPointerDown={(e) => {
-                                    e.stopPropagation();
-                                    for (const id of line.ids) {
-                                        canvasStore.getState().removeEdge(id);
-                                    }
-                                }}
-                            >
-                                <circle r="9" fill="var(--surface-raised)" stroke="var(--border-strong)" />
-                                <path d="M -3 -3 L 3 3 M 3 -3 L -3 3" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" />
-                            </g>
-                        )}
-                    </g>
+                    <EdgePath
+                        key={key}
+                        route={route}
+                        look={look}
+                        zoom={zoom}
+                        active={active}
+                        onEnter={() => setHovered(key)}
+                        onLeave={() => setHovered((current) => (current === key ? null : current))}
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            // One line is one thing to click, so both of its directions are selected together.
+                            canvasStore.getState().select(line.ids, e.shiftKey);
+                        }}
+                        onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            setEditing(key);
+                        }}
+                        removeOffset={label ? 40 : 0}
+                        onRemove={
+                            editing === key
+                                ? undefined
+                                : () => {
+                                      for (const id of line.ids) {
+                                          canvasStore.getState().removeEdge(id);
+                                      }
+                                  }
+                        }
+                    >
+                        <EdgeLabel ids={line.ids} label={label} at={mid} zoom={zoom} editing={editing === key} onEdit={(on) => setEditing(on ? key : null)} />
+                    </EdgePath>
                 );
             })}
             {draft &&
@@ -228,20 +205,7 @@ export function EdgeLayer() {
                         obstacles.filter((obstacle) => obstacle.id !== draft.from),
                         { fromSide: draft.fromSide }
                     );
-                    return (
-                        <>
-                            <path
-                                d={route.d}
-                                fill="none"
-                                stroke="var(--accent)"
-                                strokeWidth="2"
-                                strokeDasharray="4 4"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                            <EdgeMarker shape="dot" at={route.from} side={route.fromSide} stroke="var(--accent)" />
-                        </>
-                    );
+                    return <DraftEdge route={route} zoom={zoom} />;
                 })()}
         </svg>
     );
