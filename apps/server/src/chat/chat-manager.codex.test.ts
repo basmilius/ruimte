@@ -219,6 +219,28 @@ describe('ChatManager with Codex', () => {
         expect(manager.attach('chat-1', 'c2').items.map((item) => item.kind)).toEqual(['turn', 'user', 'assistant']);
     });
 
+    test('the window the CLI of the pick before reports does not land on a meter that already reads the new one', async () => {
+        await open('chat-window');
+        await manager.send('chat-window', 'tool: date');
+        await recorder.until(needsYou);
+        expect(recorder.info?.usage.contextWindow).toBe(258400);
+
+        expect(manager.configure({ chatId: 'chat-window', selection: { model: 'gpt-5.3-codex-spark', options: {} } })).toMatchObject({
+            usage: { contextWindow: 121600 }
+        });
+        // The turn in flight is the wider model's, and the usage it reports is that thread's.
+        manager.approve('chat-window', recorder.ofKind('approval')[0]!.requestId, 'allow');
+        await recorder.until(idle);
+        expect(recorder.info?.usage.contextWindow).toBe(121600);
+
+        // The restart runs on the new pick, so what it reports is the chat's own again.
+        const turns = recorder.info!.usage.turns;
+        await manager.send('chat-window', 'after');
+        await recorder.until(() => recorder.info?.usage.turns === turns + 1 && idle());
+        expect(recorder.info?.model).toContain('gpt-5.3-codex-spark');
+        expect(recorder.info?.usage.contextWindow).toBe(121600);
+    });
+
     test('a command approval becomes an approval card; allowing always sends the policy amendment', async () => {
         await open('chat-2');
         await manager.send('chat-2', 'tool: date');

@@ -293,15 +293,13 @@ describe('ClaudeProtocol', () => {
         expect(protocol.approvalResponse('r3', 'allow')).toBeNull();
     });
 
-    test('the result frame ends the turn with the cost and the context window', () => {
+    test('the result frame ends the turn with the cost, and the window it reports is left alone', () => {
         const protocol = new ClaudeProtocol();
         protocol.handle({ type: 'system', subtype: 'init', session_id: 'sid', model: 'm' });
+        // `modelUsage.contextWindow` is the model's maximum even on a run without `[1m]`, so nothing reads it.
         expect(
-            protocol.handle({ type: 'result', subtype: 'success', is_error: false, total_cost_usd: 0.02, modelUsage: { m: { contextWindow: 200000 } } })
-        ).toEqual([
-            { type: 'usage', contextWindow: 200000 },
-            { type: 'turn.done', state: 'done', costUsd: 0.02 }
-        ]);
+            protocol.handle({ type: 'result', subtype: 'success', is_error: false, total_cost_usd: 0.02, modelUsage: { m: { contextWindow: 1000000 } } })
+        ).toEqual([{ type: 'turn.done', state: 'done', costUsd: 0.02 }]);
         expect(protocol.handle({ type: 'result', subtype: 'error_during_execution', is_error: true, errors: ['out of tokens'] })).toEqual([
             { type: 'turn.done', state: 'error', costUsd: 0, error: 'out of tokens' }
         ]);

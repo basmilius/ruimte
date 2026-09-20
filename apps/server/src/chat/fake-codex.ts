@@ -69,7 +69,8 @@ export const fakeCodex: FakeCli = (io) => {
                     reasoningOutputTokens: 0
                 },
                 last: { totalTokens: 25090, inputTokens: 25085, cachedInputTokens: 12928, cacheWriteInputTokens: 0, outputTokens: 5, reasoningOutputTokens: 0 },
-                modelContextWindow: 258400
+                // Codex reports the window of the model the thread runs on, which spark makes smaller.
+                modelContextWindow: threadModel.includes('spark') ? 121600 : 258400
             }
         });
     };

@@ -80,7 +80,12 @@ export const CLAUDE_CAPABILITIES: ProviderCapabilities = {
     asyncQuestions: false,
     compaction: 'prompt',
     reportsCost: true,
-    reportsContextWindow: true,
+    /*
+     * The CLI's `modelUsage.contextWindow` is the model's maximum, not the window the process runs on:
+     * a run started without `[1m]` reports 1000000 too (measured on Claude Code 2.1.274). The catalog
+     * knows what the pick asked for, so the meter reads that and nothing here reports a window.
+     */
+    reportsContextWindow: false,
     reportsThinking: true,
     slashCommands: true
 };

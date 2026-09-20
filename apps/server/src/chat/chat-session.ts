@@ -371,8 +371,14 @@ export class ChatSession {
         }
         const info = this.thread.info;
         const patch: Partial<ChatInfo> = { selection, running: false, status: resumeTurnId === null ? 'idle' : 'running', activeTurnId: resumeTurnId };
+        // The window stored is whatever the session that went left behind; the next CLI starts on the pick.
+        const contextWindow = this.options.provider.catalog.contextWindowFor(selection);
+        if (contextWindow !== info.usage.contextWindow) {
+            patch.usage = { ...info.usage, contextWindow };
+        }
         if (
             JSON.stringify(selection) !== JSON.stringify(info.selection) ||
+            patch.usage !== undefined ||
             info.running ||
             info.status !== patch.status ||
             info.activeTurnId !== resumeTurnId

@@ -69,8 +69,8 @@ export const fakeClaude: FakeCli = (io) => {
             num_turns: 1,
             total_cost_usd: 0.01,
             usage,
-            // The window the CLI reports follows the `[1m]` it was started with, as the real one does.
-            modelUsage: { [model]: { contextWindow: model.endsWith('[1m]') ? 1000000 : 200000 } },
+            // The real CLI reports the model's maximum here whatever `[1m]` said, so the fake does too.
+            modelUsage: { [model]: { contextWindow: 1000000 } },
             session_id: sessionId
         });
     };

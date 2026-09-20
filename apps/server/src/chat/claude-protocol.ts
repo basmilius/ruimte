@@ -67,8 +67,6 @@ export class ClaudeProtocol {
     private readonly streamBlocks = new Map<number, string>();
     private readonly frameTextCount = new Map<string, number>();
     private readonly frameThinkingCount = new Map<string, number>();
-    // What the CLI called its model, which is the key its result frame reports usage under.
-    private model: string | null = null;
     // The uuid of the last main-chain assistant frame of the turn, which is the line of the transcript the turn ends on.
     private lastUuid: string | null = null;
 
@@ -178,7 +176,6 @@ export class ClaudeProtocol {
                 ? frame.slash_commands.filter((command): command is string => typeof command === 'string')
                 : [];
             const skills = Array.isArray(frame.skills) ? frame.skills.filter((skill): skill is string => typeof skill === 'string') : [];
-            this.model = str(frame.model) ?? this.model;
             events.push({ type: 'session', agentSessionId: str(frame.session_id), model: str(frame.model), slashCommands: commands, skills });
         } else if (frame.subtype === 'task_started') {
             const ref = str(frame.tool_use_id);
@@ -354,11 +351,6 @@ export class ClaudeProtocol {
     private handleResult(frame: Frame, events: BackendEvent[]): void {
         const failed = frame.is_error === true || (typeof frame.subtype === 'string' && frame.subtype.startsWith('error'));
         const errors = Array.isArray(frame.errors) ? frame.errors.filter((error): error is string => typeof error === 'string') : [];
-        const modelUsage = isRecord(frame.modelUsage) && this.model ? frame.modelUsage[this.model] : undefined;
-        const contextWindow = isRecord(modelUsage) ? num(modelUsage.contextWindow) : 0;
-        if (contextWindow > 0) {
-            events.push({ type: 'usage', contextWindow });
-        }
         const lastUuid = this.lastUuid;
         this.lastUuid = null;
         events.push({
