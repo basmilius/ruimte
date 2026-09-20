@@ -198,3 +198,34 @@ describe('a port a person drew from', () => {
         expect(held.to).toEqual(portPoint(target, 'bottom'));
     });
 });
+
+describe('a route past the two nodes it belongs to', () => {
+    test('does not count running beside its own ends as a squeeze', () => {
+        /* Two cards a short way apart, the way a worksheet stands. The line between them runs close
+           to both, which is what every line does, and it stays the plain channel rather than going
+           looking for a way round something that is not in the way. */
+        const from: Obstacle = { id: 'from', x: 0, y: 0, w: 340, h: 88 };
+        const to: Obstacle = { id: 'to', x: 420, y: 160, w: 340, h: 88 };
+        const route = routeEdge(from, to, [from, to]);
+        expect([route.fromSide, route.toSide]).toEqual(['right', 'left']);
+        // Out, along one rail and back in: three legs, which is the shortest an orthogonal line gets.
+        expect(turns(route.d)).toHaveLength(2);
+    });
+
+    test('still keeps clear of a node that really is in the way', () => {
+        const from: Obstacle = { id: 'from', x: 0, y: 0, w: 340, h: 88 };
+        const to: Obstacle = { id: 'to', x: 800, y: 0, w: 340, h: 88 };
+        const between = at(500, 0);
+        const route = routeEdge(from, to, [from, to, between]);
+        const legs = [{ x: route.from.x, y: route.from.y }, ...turns(route.d).map(([x, y]) => ({ x, y })), { x: route.to.x, y: route.to.y }];
+        for (const [index, point] of legs.slice(1).entries()) {
+            const previous = legs[index]!;
+            const through =
+                Math.min(previous.x, point.x) < between.x + between.w &&
+                Math.max(previous.x, point.x) > between.x &&
+                Math.min(previous.y, point.y) < between.y + between.h &&
+                Math.max(previous.y, point.y) > between.y;
+            expect(through).toBe(false);
+        }
+    });
+});

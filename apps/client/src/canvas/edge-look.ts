@@ -70,16 +70,17 @@ export const edgeLook = (role: LineRole, { pair, openTask }: { pair: boolean; op
  * The second table of the same kind, for a line leaving a flow card. The way a run carries on is
  * drawn through and in the context color, the way out it takes when something is false or went wrong
  * is dashed and neutral, so a worksheet reads in a screenshot and for anyone who reads color poorly.
- * A dot closes the line off at the port it leaves, a chevron points into the card that runs next.
+ * A dot closes the line off at both ends. The line already points somewhere by running there, and an
+ * arrow on top of that is a second way of saying it that only adds weight to a busy worksheet.
  */
 export const flowLook = (port: FlowPort): EdgeLook => {
     switch (port) {
         case 'done':
         case 'true':
-            return { tail: 'dot', head: 'chevron', dashed: false, accent: true, width: EDGE_WIDTH };
+            return { tail: 'dot', head: 'dot', dashed: false, accent: true, width: EDGE_WIDTH };
         case 'error':
         case 'false':
-            return { tail: 'dot', head: 'chevron', dashed: true, accent: false, width: EDGE_WIDTH };
+            return { tail: 'dot', head: 'dot', dashed: true, accent: false, width: EDGE_WIDTH };
     }
 };
 

@@ -88,6 +88,9 @@ const push = (point: Point, side: Side, distance: number): Point => ({
     y: point.y + SIDE_NORMAL[side].y * distance
 });
 
+/* Whether an obstacle stands for one of the two nodes a line belongs to. */
+const isRect = (one: Rect, other: Rect): boolean => one.x === other.x && one.y === other.y && one.w === other.w && one.h === other.h;
+
 const grow = (rect: Rect, margin: number): Bounds => ({
     minX: rect.x - margin,
     minY: rect.y - margin,
@@ -112,10 +115,15 @@ export const portPoint = (rect: Rect, side: Side): Point => push(sidePoint(rect,
  * line that has to go around a node reads better leaving over the top than squeezing past its side.
  */
 export const routeEdge = (a: Rect, b: Rect, obstacles: readonly Obstacle[] = [], fixed: FixedSides = {}): EdgeRoute => {
-    const blocked = obstacles.map((obstacle) => grow(obstacle, OBSTACLE_MARGIN));
-    /* The two nodes the line belongs to are in the way as much as any other: a route that leaves one
-       side and comes back over the node it just left is no route. They keep the gap as their margin,
-       so a leg may still run right beside the node it starts from. */
+    /*
+     * The two nodes the line belongs to are not among the ones it passes. Every line runs right up
+     * against the two it joins, and counting that as a squeeze made a route that had nothing wrong
+     * with it look like a detour, so the search took over and sent it round half the worksheet.
+     */
+    const blocked = obstacles.filter((obstacle) => !isRect(obstacle, a) && !isRect(obstacle, b)).map((obstacle) => grow(obstacle, OBSTACLE_MARGIN));
+    /* They are still in the way as much as any other: a route that leaves one side and comes back
+       over the node it just left is no route. They keep the gap as their margin, so a leg may still
+       run right beside the node it starts from. */
     const closed = [...blocked, grow(a, NODE_GAP), grow(b, NODE_GAP)];
     const candidates = sideCandidates(a, b, fixed);
     const facing = candidates[0]!;

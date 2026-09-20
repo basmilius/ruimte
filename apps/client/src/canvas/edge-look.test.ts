@@ -93,18 +93,18 @@ describe('edgeLook', () => {
 
 describe('flowLook', () => {
     test('the way a run carries on is drawn through and carries something', () => {
-        expect(flowLook('done')).toEqual({ tail: 'dot', head: 'chevron', dashed: false, accent: true, width: 2 });
+        expect(flowLook('done')).toEqual({ tail: 'dot', head: 'dot', dashed: false, accent: true, width: 2 });
         expect(flowLook('true')).toEqual(flowLook('done'));
     });
 
     test('the way out of a false answer or of something gone wrong is dashed and neutral', () => {
-        expect(flowLook('false')).toEqual({ tail: 'dot', head: 'chevron', dashed: true, accent: false, width: 2 });
+        expect(flowLook('false')).toEqual({ tail: 'dot', head: 'dot', dashed: true, accent: false, width: 2 });
         expect(flowLook('error')).toEqual(flowLook('false'));
     });
 
-    test('every line out of a card points into the card that runs next', () => {
+    test('every line out of a card is closed off at both ends, and points by running there', () => {
         for (const port of ['done', 'error', 'true', 'false'] as const) {
-            expect(flowLook(port).head).toBe('chevron');
+            expect(flowLook(port).head).toBe('dot');
             expect(flowLook(port).tail).toBe('dot');
         }
     });
