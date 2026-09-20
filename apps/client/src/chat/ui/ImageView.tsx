@@ -43,6 +43,9 @@ const zoomed = (view: View, factor: number, pointX: number, pointY: number): Vie
 function Lightbox({ src, alt, open, onOpenChange }: { src: string; alt: string; open: boolean; onOpenChange(open: boolean): void }) {
     const { t } = useTranslation('chat');
     const [view, setView] = useState<View>(START);
+    // The alt of an image an agent read is its path; the header shows the file and keeps the path on a tooltip.
+    const name = alt.slice(alt.lastIndexOf('/') + 1);
+    const title = <span className="min-w-0 truncate text-xs text-text">{name}</span>;
     const frameRef = useRef<HTMLDivElement>(null);
     const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
 
@@ -66,40 +69,40 @@ function Lightbox({ src, alt, open, onOpenChange }: { src: string; alt: string; 
     return (
         <Dialog.Root open={open} onOpenChange={onOpenChange}>
             <Dialog.Portal>
-                <Dialog.Backdrop className="dialog-backdrop" />
-                {/* The shared popup centers itself by translating half its width; a lightbox fills the window instead. */}
-                <Dialog.Popup className="dialog-popup inset-4 flex translate-none flex-col">
+                <Dialog.Backdrop className="dialog-backdrop lightbox-backdrop" />
+                {/* Nothing here sets a size: the picture takes the room `.lightbox-frame` allows it and the popup follows. */}
+                <Dialog.Popup className="dialog-popup flex min-w-72 flex-col">
                     <Dialog.Title className="sr-only">{alt}</Dialog.Title>
-                    <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-                        <span className="min-w-0 truncate text-xs text-text-muted">{alt}</span>
+                    <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border pr-2 pl-3">
+                        {name === alt ? title : <Tooltip label={alt}>{title}</Tooltip>}
                         <span className="grow" />
                         <span className="tabular-nums text-xs text-text-faint">{Math.round(view.scale * 100)}%</span>
                         <span className={BTN_GROUP}>
                             <Tooltip label={t('image.zoomOut')} name>
-                                <button className="icon-btn h-7 w-7 rounded" disabled={view.scale <= MIN_SCALE} onClick={() => zoomButton(1 / BUTTON_STEP)}>
+                                <button className="icon-btn size-7 rounded" disabled={view.scale <= MIN_SCALE} onClick={() => zoomButton(1 / BUTTON_STEP)}>
                                     <Icon icon={Minus} size={16} />
                                 </button>
                             </Tooltip>
                             <Tooltip label={t('image.zoomIn')} name>
-                                <button className="icon-btn h-7 w-7 rounded" disabled={view.scale >= MAX_SCALE} onClick={() => zoomButton(BUTTON_STEP)}>
+                                <button className="icon-btn size-7 rounded" disabled={view.scale >= MAX_SCALE} onClick={() => zoomButton(BUTTON_STEP)}>
                                     <Icon icon={Plus} size={16} />
                                 </button>
                             </Tooltip>
                             <Tooltip label={t('image.reset')} name>
-                                <button className="icon-btn h-7 w-7 rounded" disabled={view.scale === MIN_SCALE} onClick={() => setView(START)}>
+                                <button className="icon-btn size-7 rounded" disabled={view.scale === MIN_SCALE} onClick={() => setView(START)}>
                                     <Icon icon={RotateCcw} size={16} />
                                 </button>
                             </Tooltip>
                         </span>
                         <Tooltip label={t('common:action.close')} kbd="esc" name>
-                            <Dialog.Close className="icon-btn h-7 w-7 rounded">
+                            <Dialog.Close className="icon-btn ml-1 size-8 rounded-lg">
                                 <Icon icon={X} size={16} />
                             </Dialog.Close>
                         </Tooltip>
                     </div>
                     <div
                         ref={frameRef}
-                        className={clsx('grid min-h-0 grow place-items-center overflow-hidden bg-surface-sunken', view.scale > MIN_SCALE && 'cursor-grab')}
+                        className={clsx('lightbox-frame grid place-items-center overflow-hidden bg-surface-sunken', view.scale > MIN_SCALE && 'cursor-grab')}
                         onWheel={(e) => {
                             const point = pointIn(e);
                             setView((current) => zoomed(current, WHEEL_STEP ** -e.deltaY, point.x, point.y));
@@ -132,7 +135,7 @@ function Lightbox({ src, alt, open, onOpenChange }: { src: string; alt: string; 
                             src={src}
                             alt={alt}
                             draggable={false}
-                            className="max-h-full max-w-full select-none"
+                            className="select-none"
                             style={{ transform: `translate(${Math.round(view.x)}px, ${Math.round(view.y)}px) scale(${view.scale})` }}
                         />
                     </div>

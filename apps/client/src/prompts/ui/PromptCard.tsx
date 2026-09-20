@@ -63,7 +63,9 @@ export function PromptCard({ kind, heading, meta, top, actions, busy, disabled, 
     const { t } = useTranslation('prompts');
     const card = (
         <div className="prompt-card flex min-h-0 flex-col gap-2 p-3" role="group" aria-label={t(`card.${kind}`)} aria-busy={busy} onKeyDown={onCardKeyDown}>
-            <div className="max-h-[min(50dvh,480px)] overflow-auto overscroll-contain">
+            {/* The scroll box would clip the focus ring of whatever sits against its edge, so it carries the
+                room that ring needs and gives the same amount back to the card's own padding. */}
+            <div className="-m-1.5 max-h-[min(50dvh,480px)] overflow-auto overscroll-contain p-1.5">
                 <div className="flex flex-col gap-2">
                     <div className="flex items-start gap-2">
                         <Icon icon={ICONS[kind]} size={18} className="mt-0.5 shrink-0 text-status-needs-you" />

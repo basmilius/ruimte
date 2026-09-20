@@ -617,6 +617,20 @@
     .dialog-backdrop-nested { z-index: calc(var(--z-dialog) + 1); }
     .dialog-popup-nested { z-index: calc(var(--z-dialog) + 2); }
 
+    /* A lightbox is the picture and nothing else, so the popup takes the size the picture settles at
+       instead of filling the window. The margin keeps the window's own title bar, and the traffic
+       lights on it, in reach above a picture that is as large as it is allowed to get. */
+    .lightbox-frame {
+        --lightbox-margin: 64px;
+        --lightbox-header: 45px;
+    }
+    .lightbox-frame img {
+        max-width: calc(100vw - 2 * var(--lightbox-margin));
+        max-height: calc(100dvh - 2 * var(--lightbox-margin) - var(--lightbox-header));
+    }
+    /* A picture holds the eye better against a heavier dim than a dialog of controls needs. */
+    .lightbox-backdrop { background: color-mix(in srgb, var(--bg) 80%, transparent); }
+
     /* Tooltips. The positioner animates its position, so a tooltip slides to the next button
        instead of blinking; the popup fades and scales from its anchor side. Both drop the motion
        while Base UI says the tooltip is instant. */
