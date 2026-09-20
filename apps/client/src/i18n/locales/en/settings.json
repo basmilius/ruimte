@@ -47,6 +47,12 @@
             "fontSize": {
                 "label": "Font size"
             }
+        },
+        "sidebar": {
+            "label": "Sidebar",
+            "description": "Choose which projects appear in the sidebar and Needs attention, across all your machines.",
+            "current": "Current project",
+            "all-open": "All open projects"
         }
     },
     "sections": {

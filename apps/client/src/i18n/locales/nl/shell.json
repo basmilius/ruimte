@@ -11,7 +11,19 @@
         "usage": "Verbruik",
         "openInAnotherCell": ", open in een andere cel",
         "shared": "Gedeeld met je team",
-        "doubleClick": "dubbelklik"
+        "doubleClick": "dubbelklik",
+        "activeProject": "Actief",
+        "waitingCount": "{{count}} wachtend",
+        "newViewIn": "Nieuwe view in {{project}}",
+        "incomplete": "Needs attention is onvolledig.",
+        "targetGone": "Deze view of sessie bestaat niet meer.",
+        "source": {
+            "ready": "Actueel",
+            "loading": "Laden…",
+            "offline": "Niet verbonden",
+            "error": "Projectoverzicht kon niet worden geladen",
+            "unsupported": "Werk Ruimte op deze machine bij om de projecten te tonen"
+        }
     },
     "panel": {
         "fallback": "Paneel",

@@ -147,6 +147,7 @@
     "chat.stopSubagent",
     "skills.list",
     "provider.list",
+    "project.sidebar",
     "project.list",
     "project.open",
     "project.save",

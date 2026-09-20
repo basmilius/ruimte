@@ -1,6 +1,17 @@
 import { describe, expect, test } from 'bun:test';
 import type { AgentStatus, NodeKind } from '@ruimte/contracts';
-import { buildSidebar, heaviestStatus, isSessionKind, rowAfterArrow, rowOrder, type SidebarNode, type SidebarProject, type SidebarView } from './sidebar-rows';
+import {
+    buildCombinedSidebar,
+    type SidebarGroup,
+    buildSidebar,
+    heaviestStatus,
+    isSessionKind,
+    rowAfterArrow,
+    rowOrder,
+    type SidebarNode,
+    type SidebarProject,
+    type SidebarView
+} from './sidebar-rows';
 
 const node = (id: string, status: AgentStatus | null = null): SidebarNode => ({ id, title: id, kind: 'terminal', provider: null, status, draft: false });
 
@@ -179,5 +190,61 @@ describe('what counts as a session', () => {
         expect(kinds.every(isSessionKind)).toBe(true);
         const rest: NodeKind[] = ['group', 'note', 'drawing'];
         expect(rest.some(isSessionKind)).toBe(false);
+    });
+});
+
+const group = (endpointId: string, collapsed = false): SidebarGroup => ({
+    key: JSON.stringify([endpointId, 'project']),
+    endpointId,
+    summary: {
+        projectId: 'project',
+        name: endpointId,
+        color: '#123456',
+        folder: null,
+        lastOpenedAt: 0,
+        closedAt: null,
+        available: true,
+        icon: { kind: 'initial', value: 'P' },
+        nameSource: 'chosen'
+    },
+    machineLabel: endpointId,
+    active: false,
+    collapsed,
+    state: 'ready',
+    expandedIds: new Set(['main']),
+    project: { activeViewId: null, openViewIds: [], views: [view('main', [node('same-node', 'needs-you')])] }
+});
+
+describe('combined sidebar', () => {
+    test('collapsed projects still contribute to the single attention section', () => {
+        const sections = buildCombinedSidebar([group('one', true), group('two')]);
+        expect(sections.filter((section) => section.kind === 'needs-you')).toHaveLength(1);
+        expect(sections[0]!.rows).toHaveLength(2);
+        expect(sections[1]!.rows).toHaveLength(0);
+        expect(sections[2]!.rows).toHaveLength(2);
+        expect(rowOrder(sections)).toContain(`project:${group('one').key}`);
+    });
+
+    test('duplicate ids on separate machines have distinct row keys and destinations', () => {
+        const rows = buildCombinedSidebar([group('one'), group('two')]).flatMap((section) => section.rows);
+        expect(new Set(rows.map((row) => row.rowId)).size).toBe(rows.length);
+        expect(rows[0]!.target).toEqual({ endpointId: 'one', projectId: 'project', viewId: 'main', nodeId: 'same-node' });
+        expect(rows[1]!.target?.endpointId).toBe('two');
+        expect(rows[0]!.type === 'node' && rows[0]!.location).toContain('one');
+    });
+
+    test('offline and failed projects never count cached waiting statuses as current', () => {
+        const sections = buildCombinedSidebar([
+            { ...group('offline'), state: 'offline' },
+            { ...group('failed'), state: 'error' }
+        ]);
+        expect(sections.some((section) => section.kind === 'needs-you')).toBe(false);
+        expect(sections).toHaveLength(2);
+    });
+
+    test('errors, running sessions and completed sessions do not become attention items', () => {
+        const project = group('one');
+        project.project.views = [view('main', [node('error', 'error'), node('running', 'running'), node('done', 'idle')])];
+        expect(buildCombinedSidebar([project]).some((section) => section.kind === 'needs-you')).toBe(false);
     });
 });

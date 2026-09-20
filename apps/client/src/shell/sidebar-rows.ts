@@ -1,4 +1,6 @@
 import i18next from 'i18next';
+import type { SidebarTarget } from './sidebar-target';
+import type { ProjectSummary } from '@ruimte/contracts';
 import type { AgentKind, AgentStatus, CanvasNodeKind, NodeTitleSource, ProjectIconChoice, ProjectViewKind, Task } from '@ruimte/contracts';
 
 export interface SidebarNode {
@@ -40,6 +42,7 @@ export interface SidebarView {
 }
 
 export interface SidebarViewRow {
+    target?: SidebarTarget;
     type: 'view';
     rowId: string;
     view: SidebarView;
@@ -62,6 +65,8 @@ export interface SidebarViewRow {
 }
 
 export interface SidebarNodeRow {
+    target?: SidebarTarget;
+    location?: string;
     type: 'node';
     rowId: string;
     node: SidebarNode;
@@ -73,6 +78,7 @@ export interface SidebarNodeRow {
 export type SidebarRow = SidebarViewRow | SidebarNodeRow;
 
 export interface SidebarSection {
+    group?: SidebarGroup;
     id: string;
     kind: 'needs-you' | 'views';
     /* Null for the list of views, which is the only list of its kind and needs no heading. */
@@ -158,7 +164,8 @@ export const buildSidebar = ({ project, expandedIds }: SidebarInput): SidebarSec
 };
 
 /* The ids in the order the eye reads them, which is the order Up and Down have to walk. */
-export const rowOrder = (sections: readonly SidebarSection[]): string[] => sections.flatMap((section) => section.rows.map((row) => row.rowId));
+export const rowOrder = (sections: readonly SidebarSection[]): string[] =>
+    sections.flatMap((section) => [...(section.group ? [`project:${section.id}`] : []), ...section.rows.map((row) => row.rowId)]);
 
 /* The row an arrow key lands on. Without a row to move from, Down starts at the top and Up at the
    bottom; at either end it stays put, so a held key never wraps around behind your back. */
@@ -171,4 +178,49 @@ export const rowAfterArrow = (order: string[], current: string | null, delta: -1
         return delta === 1 ? order[0]! : order[order.length - 1]!;
     }
     return order[Math.min(order.length - 1, Math.max(0, at + delta))] ?? null;
+};
+
+export interface SidebarGroup {
+    key: string;
+    endpointId: string;
+    summary: ProjectSummary;
+    machineLabel: string;
+    project: SidebarProject;
+    active: boolean;
+    collapsed: boolean;
+    expandedIds: ReadonlySet<string>;
+    state: 'ready' | 'loading' | 'offline' | 'error' | 'unsupported';
+}
+
+export const buildCombinedSidebar = (groups: readonly SidebarGroup[]): SidebarSection[] => {
+    const waiting: SidebarRow[] = [];
+    const sections: SidebarSection[] = [];
+    for (const group of groups) {
+        const own = buildSidebar({ project: group.project, expandedIds: group.expandedIds });
+        const qualify = (row: SidebarRow): SidebarRow => ({
+            ...row,
+            rowId: `${group.key}:${row.rowId}`,
+            target: {
+                endpointId: group.endpointId,
+                projectId: group.summary.projectId,
+                viewId: row.type === 'view' ? row.view.id : row.viewId,
+                ...(row.type === 'node' ? { nodeId: row.node.id } : {})
+            },
+            ...(row.type === 'node' && row.viewName !== null ? { location: `${group.summary.name} · ${row.viewName} · ${group.machineLabel}` } : {})
+        });
+        if (group.state === 'ready') {
+            const seen = new Set<string>();
+            for (const row of own.find((section) => section.kind === 'needs-you')?.rows ?? []) {
+                if (row.type !== 'node' || seen.has(row.node.id)) continue;
+                seen.add(row.node.id);
+                waiting.push(qualify(row));
+            }
+        }
+        const views = own.find((section) => section.kind === 'views')!;
+        sections.push({ ...views, id: group.key, group, rows: group.collapsed ? [] : views.rows.map(qualify) });
+    }
+    return [
+        ...(waiting.length ? [{ id: 'needs-you', kind: 'needs-you' as const, label: i18next.t('shell:sidebar.needsYou'), rows: waiting, viewCount: 0 }] : []),
+        ...sections
+    ];
 };

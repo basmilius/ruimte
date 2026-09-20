@@ -158,6 +158,7 @@ export function AppearancePane() {
     const font = useSettings((s) => s.font);
     const fontSize = useSettings((s) => s.fontSize);
     const interfaceFontSize = useSettings((s) => s.interfaceFontSize);
+    const sidebarScope = useSettings((s) => s.sidebarScope);
     const dockAutoHide = useSettings((s) => s.dockAutoHide);
     const update = useSettings((s) => s.update);
 
@@ -179,6 +180,19 @@ export function AppearancePane() {
                 <SettingsRow label={t('appearance.accent.label')} description={t('appearance.accent.description')} control={<AccentSwatches />} />
             </SettingsSection>
             <SettingsSection title={t('appearance.interface.title')}>
+                <SettingsRow
+                    label={t('appearance.sidebar.label')}
+                    description={t('appearance.sidebar.description')}
+                    control={
+                        <Select
+                            value={sidebarScope}
+                            label={t('appearance.sidebar.label')}
+                            align="end"
+                            items={(['current', 'all-open'] as const).map((value) => ({ value, label: t(`appearance.sidebar.${value}`) }))}
+                            onValueChange={(value) => update({ sidebarScope: value })}
+                        />
+                    }
+                />
                 <LanguageRow />
                 <RegionRow />
                 <SettingsRow

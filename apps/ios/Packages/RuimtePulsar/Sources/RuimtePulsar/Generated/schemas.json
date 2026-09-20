@@ -15746,6 +15746,493 @@
       "providers"
     ]
   },
+  "request.project.sidebar.payload": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {}
+  },
+  "request.project.sidebar.result": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "projects": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "summary": {
+              "type": "object",
+              "properties": {
+                "projectId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "name": {
+                  "type": "string"
+                },
+                "color": {
+                  "type": "string"
+                },
+                "folder": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "lastOpenedAt": {
+                  "type": "number"
+                },
+                "closedAt": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "available": {
+                  "type": "boolean"
+                },
+                "icon": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "lucide"
+                        },
+                        "value": {
+                          "type": "string",
+                          "enum": [
+                            "box",
+                            "boxes",
+                            "package",
+                            "layers",
+                            "code",
+                            "terminal",
+                            "cpu",
+                            "circuit-board",
+                            "memory-stick",
+                            "pc-case",
+                            "laptop",
+                            "monitor",
+                            "smartphone",
+                            "tablet",
+                            "webcam",
+                            "printer",
+                            "hard-drive",
+                            "usb",
+                            "database",
+                            "server",
+                            "container",
+                            "network",
+                            "router",
+                            "ethernet-port",
+                            "cable",
+                            "plug",
+                            "wifi",
+                            "radio-tower",
+                            "satellite-dish",
+                            "cloud",
+                            "globe",
+                            "rocket",
+                            "zap",
+                            "flame",
+                            "sparkles",
+                            "star",
+                            "heart",
+                            "flag",
+                            "bookmark",
+                            "folder",
+                            "file-text",
+                            "book",
+                            "puzzle",
+                            "palette",
+                            "brush",
+                            "camera",
+                            "music",
+                            "video",
+                            "gamepad-2",
+                            "bot",
+                            "brain",
+                            "beaker",
+                            "wrench",
+                            "hammer",
+                            "shield",
+                            "key",
+                            "compass",
+                            "map",
+                            "leaf",
+                            "coffee"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "image"
+                        },
+                        "value": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value",
+                        "version"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "const": "initial"
+                        },
+                        "value": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "value"
+                      ]
+                    }
+                  ]
+                },
+                "nameSource": {
+                  "type": "string",
+                  "enum": [
+                    "chosen",
+                    "folder"
+                  ]
+                }
+              },
+              "required": [
+                "projectId",
+                "name",
+                "color",
+                "folder",
+                "lastOpenedAt",
+                "available",
+                "icon",
+                "nameSource"
+              ]
+            },
+            "views": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "titleSource": {
+                        "type": "string",
+                        "enum": [
+                          "auto",
+                          "user"
+                        ]
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "canvas",
+                          "terminal",
+                          "chat",
+                          "browser",
+                          "device",
+                          "drawing",
+                          "diagram",
+                          "file",
+                          "separator",
+                          "subheader",
+                          "unknown"
+                        ]
+                      },
+                      "icon": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "lucide"
+                              },
+                              "value": {
+                                "type": "string",
+                                "enum": [
+                                  "box",
+                                  "boxes",
+                                  "package",
+                                  "layers",
+                                  "code",
+                                  "terminal",
+                                  "cpu",
+                                  "circuit-board",
+                                  "memory-stick",
+                                  "pc-case",
+                                  "laptop",
+                                  "monitor",
+                                  "smartphone",
+                                  "tablet",
+                                  "webcam",
+                                  "printer",
+                                  "hard-drive",
+                                  "usb",
+                                  "database",
+                                  "server",
+                                  "container",
+                                  "network",
+                                  "router",
+                                  "ethernet-port",
+                                  "cable",
+                                  "plug",
+                                  "wifi",
+                                  "radio-tower",
+                                  "satellite-dish",
+                                  "cloud",
+                                  "globe",
+                                  "rocket",
+                                  "zap",
+                                  "flame",
+                                  "sparkles",
+                                  "star",
+                                  "heart",
+                                  "flag",
+                                  "bookmark",
+                                  "folder",
+                                  "file-text",
+                                  "book",
+                                  "puzzle",
+                                  "palette",
+                                  "brush",
+                                  "camera",
+                                  "music",
+                                  "video",
+                                  "gamepad-2",
+                                  "bot",
+                                  "brain",
+                                  "beaker",
+                                  "wrench",
+                                  "hammer",
+                                  "shield",
+                                  "key",
+                                  "compass",
+                                  "map",
+                                  "leaf",
+                                  "coffee"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "value"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "provider": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "claude",
+                              "codex",
+                              "gemini",
+                              "copilot"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "path": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "shared": {
+                        "type": "boolean"
+                      },
+                      "nodes": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "title": {
+                              "type": "string"
+                            },
+                            "titleSource": {
+                              "type": "string",
+                              "enum": [
+                                "auto",
+                                "user"
+                              ]
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "terminal",
+                                "chat",
+                                "browser",
+                                "device"
+                              ]
+                            },
+                            "provider": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "claude",
+                                    "codex",
+                                    "gemini",
+                                    "copilot"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "running",
+                                "needs-you",
+                                "idle",
+                                "error",
+                                "exited"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "title",
+                            "kind",
+                            "provider"
+                          ]
+                        }
+                      },
+                      "self": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "titleSource": {
+                                "type": "string",
+                                "enum": [
+                                  "auto",
+                                  "user"
+                                ]
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "terminal",
+                                  "chat",
+                                  "browser",
+                                  "device"
+                                ]
+                              },
+                              "provider": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "claude",
+                                      "codex",
+                                      "gemini",
+                                      "copilot"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "running",
+                                  "needs-you",
+                                  "idle",
+                                  "error",
+                                  "exited"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "title",
+                              "kind",
+                              "provider"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "kind",
+                      "icon",
+                      "provider",
+                      "path",
+                      "shared",
+                      "nodes",
+                      "self"
+                    ]
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "summary",
+            "views"
+          ]
+        }
+      }
+    },
+    "required": [
+      "projects"
+    ]
+  },
   "request.project.list.payload": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",

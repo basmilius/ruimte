@@ -3,6 +3,8 @@ import { mkdir, readFile, rm, rmdir, stat } from 'node:fs/promises';
 import { basename, dirname, join, resolve } from 'node:path';
 import {
     EMPTY_LOCAL,
+    projectSidebarViews,
+    type ProjectSidebarResult,
     EMPTY_PRIVATE_FILE,
     MAIN_VIEW_ID,
     PROJECT_PRIVATE_VERSION,
@@ -40,6 +42,7 @@ import {
     gitignorePathOf,
     fromPortable,
     parseSharedFile,
+    parsePrivateFile,
     privateDirOf,
     privatePathOf,
     readPrivateFile,
@@ -208,7 +211,8 @@ export class ProjectStore {
     private async loadFiles(
         path: string,
         entry: RegistryEntry,
-        read: { file: ProjectSharedFile; legacyRev: number | null } | null
+        read: { file: ProjectSharedFile; legacyRev: number | null } | null,
+        readOnly = false
     ): Promise<{ content: ProjectContent; shared: string[]; rev: number; privateText: string | null }> {
         const fallback = { name: entry.name, color: entry.color };
         if (read?.legacyRev !== null && read !== null) {
@@ -216,7 +220,7 @@ export class ProjectStore {
             const merged = mergeFiles(read.file, privateFileOf(shared.length > 0 ? [] : read.file.views, read.legacyRev), fallback);
             return { content: merged.content, shared, rev: read.legacyRev, privateText: null };
         }
-        const outcome = await readPrivateFile(privatePathOf(path));
+        const outcome = readOnly ? await this.readPrivateWithoutRepair(privatePathOf(path)) : await readPrivateFile(privatePathOf(path));
         if (outcome.kind === 'invalid' || outcome.kind === 'too-new') {
             const why = outcome.kind === 'invalid' ? outcome.message : tooNewMessage('private project file', outcome.version, PROJECT_PRIVATE_VERSION);
             throw new ProjectError('project-invalid', why);
@@ -224,6 +228,19 @@ export class ProjectStore {
         const file = outcome.kind === 'ok' ? outcome.document : EMPTY_PRIVATE_FILE;
         const merged = mergeFiles(read?.file ?? null, file, fallback);
         return { content: merged.content, shared: merged.shared, rev: file.rev, privateText: outcome.kind === 'ok' ? outcome.text : null };
+    }
+
+    private async readPrivateWithoutRepair(path: string) {
+        let text: string;
+        try {
+            text = await readFile(path, 'utf8');
+        } catch (error) {
+            if (isNotFound(error)) return { kind: 'missing' as const };
+            throw error;
+        }
+        const parsed = parsePrivateFile(text);
+        if (parsed.kind === 'unreadable') throw new ProjectError('project-invalid', `${path} does not parse as a private project file`);
+        return parsed.kind === 'ok' ? { ...parsed, text } : parsed;
     }
 
     /*
@@ -313,6 +330,23 @@ export class ProjectStore {
             icon,
             nameSource: nameSourceOf(entry.name, entry.folder)
         };
+    }
+
+    sidebar(): Promise<ProjectSidebarResult> {
+        return this.locked(async () => {
+            const summaries = (await this.list()).filter((summary) => summary.closedAt == null);
+            const projects = [];
+            for (const summary of summaries) {
+                try {
+                    const { content, shared } = await this.readCurrent(summary.projectId, true);
+                    projects.push({ summary, views: projectSidebarViews(content.views, shared) });
+                } catch {
+                    // One missing or newer project must not hide the other projects on this machine.
+                    projects.push({ summary, views: null });
+                }
+            }
+            return { projects };
+        });
     }
 
     openProject(payload: ProjectOpenPayload): Promise<ProjectOpenResult> {
@@ -586,7 +620,10 @@ export class ProjectStore {
     }
 
     /* Deliberately not `readSharedFile`: a verb that finds a broken file refuses, it does not move a person's file aside. */
-    private async readCurrent(projectId: string): Promise<{ entry: RegistryEntry; path: string; rev: number; content: ProjectContent; shared: string[] }> {
+    private async readCurrent(
+        projectId: string,
+        readOnly = false
+    ): Promise<{ entry: RegistryEntry; path: string; rev: number; content: ProjectContent; shared: string[] }> {
         const entry = (await this.loadRegistry()).find((candidate) => candidate.projectId === projectId);
         if (!entry) {
             throw new ProjectError('project-not-found', `No project ${projectId}`);
@@ -611,7 +648,7 @@ export class ProjectStore {
         if (parsed.kind !== 'ok') {
             throw new ProjectError('project-invalid', `${path} does not parse as a canvas`);
         }
-        const loaded = await this.loadFiles(path, entry, parsed.document);
+        const loaded = await this.loadFiles(path, entry, parsed.document, readOnly);
         return { entry, path, rev: loaded.rev, content: fromPortable(loaded.content, entry.folder), shared: loaded.shared };
     }
 

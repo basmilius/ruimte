@@ -3,6 +3,7 @@ import { readProjectSettings, sharedPathOf, updateProjectSettings } from '../pro
 import type { ProjectStore } from '../projects/project-store.ts';
 
 export const registerProjectHandlers = (dispatcher: Dispatcher, store: ProjectStore): void => {
+    dispatcher.register('project.sidebar', () => translate(() => store.sidebar()));
     dispatcher.register('project.list', () => translate(async () => ({ projects: await store.list() })));
 
     dispatcher.register('project.open', (payload, client) =>

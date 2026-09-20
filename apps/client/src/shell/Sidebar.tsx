@@ -73,6 +73,15 @@ import { useTrafficLightInset } from '@/desktop/useFullscreen';
 import { Icon } from '@/ui/Icon';
 import { MenuPopup } from '@/ui/MenuPopup';
 import { APP_SHORTCUTS } from '@/shell/shortcuts';
+import { useSettings } from '@/state/settings';
+import { useProject } from '@/state/project';
+import { ProjectGlyph } from '@/project/ProjectGlyph';
+import { MachineGlyph } from '@/endpoint/MachineGlyph';
+import { useServers } from '@/state/server';
+import { useSidebarGroups } from './sidebar-groups';
+import { useSidebarProjects } from './sidebar-projects';
+import { openSidebarTarget } from './sidebar-navigation';
+import { buildCombinedSidebar, type SidebarRow, type SidebarGroup } from './sidebar-rows';
 
 /* How wide the list is when it is open. The inner column keeps this width while the wrapper
    animates to zero, so nothing reflows on the way out. */
@@ -212,11 +221,12 @@ function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarN
             <ContextMenu.Trigger
                 render={<button />}
                 data-sidebar-row={row.rowId}
+                title={row.location}
                 aria-current={selected ? 'true' : undefined}
                 tabIndex={tabbable ? 0 : -1}
-                className={clsx(ROW, row.viewName === null && 'pl-6', selected ? ROW_SELECTED : ROW_PLAIN)}
+                className={clsx(ROW, row.viewName === null && 'pl-6', row.location && 'h-auto min-h-10', selected ? ROW_SELECTED : ROW_PLAIN)}
                 onFocus={onFocus}
-                onClick={() => revealNode(node.id)}
+                onClick={() => (row.target ? void openSidebarTarget(row.target) : revealNode(node.id))}
                 onDoubleClick={() => setRenaming(true)}
                 onKeyDown={(e) => {
                     arrowStep(e, onArrow);
@@ -229,9 +239,11 @@ function NodeRow({ row, tabbable, onFocus, onArrow }: RowProps & { row: SidebarN
                 <span className={ICON_SLOT}>
                     <RowIcon id={node.id} kind={node.kind} provider={node.provider} />
                 </span>
-                <span className="min-w-0 truncate">{node.kind === 'browser' ? title : node.title}</span>
-                {/* A row that stands outside its own view says where the node is, so the jump is no surprise. */}
-                {row.viewName && <span className="min-w-0 shrink truncate text-xs text-text-faint">{row.viewName}</span>}
+                <span className="min-w-0 truncate">
+                    <span className="block truncate">{node.kind === 'browser' ? title : node.title}</span>
+                    {row.location && <span className="block truncate text-xs text-text-faint">{row.location}</span>}
+                </span>
+                {!row.location && row.viewName && <span className="min-w-0 shrink truncate text-xs text-text-faint">{row.viewName}</span>}
                 <span className="grow" />
                 {node.draft && (
                     <Tooltip label={t('sidebar.unsentDraft')}>
@@ -458,7 +470,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
                 tabIndex={tabbable ? 0 : -1}
                 className={clsx(ROW, 'group font-medium', row.active ? ROW_SELECTED : row.beside ? ROW_BESIDE : ROW_PLAIN)}
                 onFocus={onFocus}
-                onClick={() => showView(view.id)}
+                onClick={() => (row.target ? void openSidebarTarget(row.target) : showView(view.id))}
                 onDoubleClick={() => setRenaming(true)}
                 onDragStart={(event) => onDrag(view.id, event.dataTransfer)}
                 onDragEnd={() => onDrag(null)}
@@ -539,9 +551,143 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
     );
 }
 
+function ProjectHeading({ group, tabbable, onFocus, onArrow }: RowProps & { group: SidebarGroup }) {
+    const { t } = useTranslation('shell');
+    const machineIcon = useServers((state) => state.byEndpoint[group.endpointId]?.icon ?? null);
+    const collapse = (value: boolean) => useSidebarProjects.getState().collapse(group.key, value);
+    const count = group.project.views
+        .flatMap((view) => [...view.nodes, ...(view.self ? [view.self] : [])])
+        .filter((node) => node.status === 'needs-you').length;
+    return (
+        <button
+            type="button"
+            data-sidebar-row={`project:${group.key}`}
+            tabIndex={tabbable ? 0 : -1}
+            aria-expanded={!group.collapsed}
+            aria-label={`${group.summary.name} · ${group.machineLabel}${group.active ? ` · ${t('sidebar.activeProject')}` : ''}`}
+            title={`${group.summary.name} · ${group.machineLabel}`}
+            onFocus={onFocus}
+            onClick={() => collapse(!group.collapsed)}
+            onKeyDown={(event) => {
+                arrowStep(event, onArrow);
+                if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                    event.preventDefault();
+                    collapse(event.key === 'ArrowLeft');
+                }
+            }}
+            className={clsx(ROW, 'group font-medium text-text hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-accent')}
+        >
+            <span className={clsx(ICON_SLOT, group.active && 'text-accent')}>
+                <ProjectGlyph
+                    projectId={group.summary.projectId}
+                    endpointId={group.endpointId}
+                    icon={group.summary.icon}
+                    size={14}
+                    color={group.active ? 'var(--accent)' : group.summary.color}
+                    className="col-start-1 row-start-1 group-hover:hidden group-focus-visible:hidden"
+                />
+                <Icon
+                    icon={ChevronRight}
+                    size={14}
+                    className={clsx('col-start-1 row-start-1 hidden group-hover:block group-focus-visible:block', !group.collapsed && 'rotate-90')}
+                />
+            </span>
+            <span className="min-w-0 grow truncate">{group.summary.name}</span>
+            <Tooltip label={group.machineLabel}>
+                <span className="grid h-8 w-6 shrink-0 place-items-center text-text-faint" aria-label={group.machineLabel}>
+                    <MachineGlyph icon={machineIcon} size={14} />
+                </span>
+            </Tooltip>
+            {group.state === 'ready' && count > 0 && (
+                <span className="tabular-nums text-status-needs-you" aria-label={t('sidebar.waitingCount', { count })}>
+                    {count}
+                </span>
+            )}
+        </button>
+    );
+}
+
+function BackgroundRow({ row, group, tabbable, onFocus, onArrow }: RowProps & { row: SidebarRow; group: SidebarGroup }) {
+    const { t } = useTranslation('shell');
+    const view = row.type === 'view' ? row.view : null;
+    const item = row.type === 'node' ? row.node : null;
+    const inert = view?.kind === 'separator' || view?.kind === 'subheader' || view?.kind === 'unknown' || !group.summary.available;
+    const toggle = () => {
+        if (row.type === 'view') useSidebarProjects.getState().expandView(group.key, row.view.id, !row.expanded);
+    };
+    const label = view?.name ?? item?.title ?? '';
+    const status = row.type === 'view' ? row.status : row.node.status;
+    return (
+        <button
+            type="button"
+            data-sidebar-row={row.rowId}
+            tabIndex={tabbable ? 0 : -1}
+            aria-disabled={inert || undefined}
+            aria-expanded={row.type === 'view' && row.expandable ? row.expanded : undefined}
+            title={row.type === 'node' ? row.location : label}
+            onFocus={onFocus}
+            onClick={() => {
+                if (!inert && row.target) void openSidebarTarget(row.target);
+            }}
+            onKeyDown={(event) => {
+                arrowStep(event, onArrow);
+                if (row.type === 'view' && row.expandable && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+                    event.preventDefault();
+                    if (row.expanded !== (event.key === 'ArrowRight')) toggle();
+                }
+            }}
+            className={clsx(
+                ROW,
+                'focus-visible:outline-2 focus-visible:outline-accent',
+                inert ? 'cursor-default text-text-faint' : ROW_PLAIN,
+                row.type === 'node' && row.viewName === null && 'pl-6',
+                row.type === 'node' && row.location && 'h-auto min-h-10'
+            )}
+        >
+            {view?.kind === 'separator' ? (
+                <span className="h-px w-full bg-border" />
+            ) : (
+                <>
+                    <span
+                        className={ICON_SLOT}
+                        onClick={(event) => {
+                            if (row.type === 'view' && row.expandable) {
+                                event.stopPropagation();
+                                toggle();
+                            }
+                        }}
+                    >
+                        {row.type === 'view' && row.expandable ? (
+                            <Icon icon={ChevronRight} size={14} className={clsx(row.expanded && 'rotate-90')} />
+                        ) : view ? (
+                            view.kind === 'browser' && !view.icon ? (
+                                <Icon icon={Globe} size={14} />
+                            ) : (
+                                <ViewGlyph id={view.id} kind={view.kind} icon={view.icon} provider={view.provider} path={view.path} />
+                            )
+                        ) : item?.kind === 'browser' ? (
+                            <Icon icon={Globe} size={14} />
+                        ) : item ? (
+                            <RowIcon id={item.id} kind={item.kind} provider={item.provider} />
+                        ) : null}
+                    </span>
+                    <span className="min-w-0 grow">
+                        <span className="block truncate">{label || t('sidebar.noViews')}</span>
+                        {row.type === 'node' && row.location && <span className="block truncate text-xs text-text-faint">{row.location}</span>}
+                    </span>
+                    {status && group.state === 'ready' && <StatusDot status={status} plain />}
+                    {view?.shared && <Icon icon={Users} size={12} className="shrink-0 text-text-faint" />}
+                </>
+            )}
+        </button>
+    );
+}
+
 export function Sidebar() {
     const { t } = useTranslation('shell');
     const source = useSidebarSource();
+    const combined = useSettings((s) => s.sidebarScope === 'all-open');
+    const currentProject = useProject((s) => s.current);
     const shared = useDocument(useShallow((state) => state.shared));
     const endpointId = useEndpointId();
     const sessions = useSessions((s) => s.byKey);
@@ -555,6 +701,7 @@ export function Sidebar() {
     const instant = useInstantWidth();
     const inset = useTrafficLightInset();
     const listRef = useRef<HTMLDivElement>(null);
+    const listHadFocus = useRef(false);
     /* Which row the arrows move from, and the only row Tab reaches. */
     const [rovingId, setRovingId] = useState<string | null>(null);
     /* The row being dragged and the list it came out of, so no other list draws a gap for it. */
@@ -567,9 +714,8 @@ export function Sidebar() {
             activeViewId: source.activeViewId,
             openViewIds: source.openViewIds,
             views: source.views.map((view) => {
-                // The canvas store owns the view it holds, so its nodes are the fresher ones. It pairs on
-                // the store's own view, not on the active one, which flips a tick before the canvas follows.
-                const live = isCanvasView(view) ? (view.id === source.canvasViewId ? source.order.map((id) => source.nodes[id]!) : view.nodes) : [];
+                const canvas = source.canvases[view.id];
+                const live = isCanvasView(view) ? (canvas ? canvas.order.flatMap((id) => (canvas.nodes[id] ? [canvas.nodes[id]!] : [])) : view.nodes) : [];
                 const asRow = (node: StatusOf & { title: string; titleSource?: SidebarNode['titleSource']; provider?: AgentKind }): SidebarNode => ({
                     id: node.id,
                     title: node.title,
@@ -611,10 +757,16 @@ export function Sidebar() {
             useUi.getState().setSidebarExpanded([activeViewId]);
         }
     }, [expanded, activeViewId]);
-    const sections = buildSidebar({ project, expandedIds });
+    const { groups, incomplete } = useSidebarGroups(combined, project, expandedIds);
+    const sections = combined ? buildCombinedSidebar(groups) : buildSidebar({ project, expandedIds });
     const rows = rowOrder(sections);
     const roving = rovingId !== null && rows.includes(rovingId) ? rovingId : (rows[0] ?? null);
-    const empty = project.views.length === 0;
+    const empty = !combined && project.views.length === 0;
+    useEffect(() => {
+        if (rovingId !== null && !rows.includes(rovingId) && roving !== null && listHadFocus.current && document.activeElement === document.body) {
+            listRef.current?.querySelector<HTMLElement>(`[data-sidebar-row="${CSS.escape(roving)}"]`)?.focus();
+        }
+    }, [rows, rovingId, roving]);
 
     /*
      * One gesture, two targets: a gap between two rows reorders the list, a cell of the grid opens
@@ -690,24 +842,46 @@ export function Sidebar() {
                     <SidebarToggle />
                 </div>
 
-                <div ref={listRef} className="mt-2 min-h-0 grow overflow-auto px-2">
+                <div
+                    ref={listRef}
+                    className="mt-2 min-h-0 grow overflow-auto px-2"
+                    onFocusCapture={() => {
+                        listHadFocus.current = true;
+                    }}
+                    onBlurCapture={(event) => {
+                        listHadFocus.current = event.currentTarget.contains(event.relatedTarget as Node | null);
+                    }}
+                >
+                    {combined && incomplete.length > 0 && (
+                        <div className="mb-3 px-2 text-xs text-text-muted" role="status">
+                            <p>{t('sidebar.incomplete')}</p>
+                            {incomplete.map(({ label, state }) => (
+                                <p key={label}>
+                                    {label}: {t(`sidebar.source.${state}`)}
+                                </p>
+                            ))}
+                        </div>
+                    )}
                     {empty ? (
                         <div className="flex flex-col gap-2 px-1 pt-2">
                             <p className="px-1 text-xs text-text-muted">{t('sidebar.noViews')}</p>
                             <NewViewTiles />
                         </div>
                     ) : (
-                        sections.map((section) => {
+                        sections.map((section, sectionIndex) => {
                             // Only the list of views takes a drop, and only the one the row came out of; the
                             // nodes under a canvas are not places a view can go.
-                            const reorderable = section.kind === 'views' && dragging?.sectionId === section.id;
+                            const reorderable =
+                                section.kind === 'views' &&
+                                dragging?.sectionId === section.id &&
+                                (!section.group || (section.group.active && !section.group.collapsed));
                             /* A file out of the files panel or off a preview tab lands here as a view
                                of its own; the waiting list is not a place in any project's file. */
-                            const takesDrop = reorderable || section.kind === 'views';
+                            const takesDrop = section.kind === 'views' && (!section.group || (section.group.active && !section.group.collapsed));
                             return (
                                 <div
                                     key={section.id}
-                                    className="mb-3 flex flex-col gap-px"
+                                    className={clsx('flex flex-col gap-px', section.group ? 'mb-px' : 'mb-3')}
                                     onDragOver={
                                         takesDrop
                                             ? (e) => {
@@ -720,7 +894,10 @@ export function Sidebar() {
                                                   }
                                                   setInsertAt(insertionIndex(e.currentTarget, e.clientY));
                                               }
-                                            : undefined
+                                            : (e) => {
+                                                  e.preventDefault();
+                                                  e.dataTransfer.dropEffect = 'none';
+                                              }
                                     }
                                     onDragLeave={
                                         takesDrop
@@ -743,9 +920,28 @@ export function Sidebar() {
                                                   }
                                                   dropFilesAt(index, e.dataTransfer);
                                               }
-                                            : undefined
+                                            : (e) => {
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                              }
                                     }
                                 >
+                                    {section.group && sections[sectionIndex - 1]?.group && (
+                                        <div role="separator" className="my-1 h-px shrink-0 bg-border-soft" />
+                                    )}
+                                    {section.group && (
+                                        <ProjectHeading
+                                            group={section.group}
+                                            tabbable={roving === `project:${section.id}`}
+                                            onFocus={() => setRovingId(`project:${section.id}`)}
+                                            onArrow={moveFocus}
+                                        />
+                                    )}
+                                    {section.group && !section.group.collapsed && (section.group.state !== 'ready' || section.rows.length === 0) && (
+                                        <p className="px-2 py-1 text-xs text-text-faint">
+                                            {section.group.state === 'ready' ? t('sidebar.noViews') : t(`sidebar.source.${section.group.state}`)}
+                                        </p>
+                                    )}
                                     {section.label !== null && (
                                         <div className={`${SECTION_LABEL} flex items-center gap-1.5 px-2 py-1`}>
                                             {section.kind === 'needs-you' && <StatusDot status="needs-you" plain />}
@@ -754,6 +950,23 @@ export function Sidebar() {
                                         </div>
                                     )}
                                     {section.rows.map((row) => {
+                                        const owner = row.target
+                                            ? groups.find(
+                                                  (group) => group.endpointId === row.target!.endpointId && group.summary.projectId === row.target!.projectId
+                                              )
+                                            : undefined;
+                                        if (owner && !owner.active) {
+                                            return (
+                                                <BackgroundRow
+                                                    key={row.rowId}
+                                                    row={row}
+                                                    group={owner}
+                                                    tabbable={row.rowId === roving}
+                                                    onFocus={() => setRovingId(row.rowId)}
+                                                    onArrow={moveFocus}
+                                                />
+                                            );
+                                        }
                                         if (row.type === 'node') {
                                             return (
                                                 <NodeRow
@@ -809,7 +1022,10 @@ export function Sidebar() {
 
                 <div className="flex shrink-0 items-center gap-1 border-t border-border p-2">
                     <Menu.Root>
-                        <Menu.Trigger className="flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-50 disabled:hover:bg-transparent data-[popup-open]:bg-surface-active">
+                        <Menu.Trigger
+                            title={combined ? t('sidebar.newViewIn', { project: currentProject?.name }) : undefined}
+                            className="flex h-8 grow items-center gap-2 rounded-md px-2 text-sm text-text-muted hover:bg-surface-hover hover:text-text disabled:opacity-50 disabled:hover:bg-transparent data-[popup-open]:bg-surface-active"
+                        >
                             <Icon icon={Plus} size={14} /> {t('viewMenu.newView')}
                         </Menu.Trigger>
                         <MenuPopup side="top" className="min-w-52">

@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ruimte · Eén sidebar voor open projecten</title>
+<style>
+:root {
+  color-scheme: light;
+  --brand: #285e91;
+  --accent: var(--brand);
+  --paper: #fff;
+  --page: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --ink: color-mix(in srgb, var(--accent) 28%, #252b29);
+  --muted: color-mix(in srgb, var(--accent) 24%, #626762);
+  --line: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --panel: color-mix(in srgb, var(--accent) 4%, var(--paper));
+  --highlight: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --focus: var(--accent);
+  --success: #236746;
+  --success-bg: #e7f0e0;
+  --warning: #765311;
+  --warning-bg: #f7f0e0;
+  --danger: #913f35;
+  --danger-bg: #f8e9e6;
+  --info: #365573;
+  --info-bg: #e8edf4;
+  --reference: color-mix(in srgb, var(--muted) 55%, var(--paper));
+  --image-outline: rgb(0 0 0 / 10%);
+  --shadow-border: 0 0 0 1px rgb(0 0 0 / 6%), 0 1px 2px -1px rgb(0 0 0 / 6%), 0 2px 4px rgb(0 0 0 / 4%);
+  --shadow-border-hover: 0 0 0 1px rgb(0 0 0 / 14%), 0 1px 2px -1px rgb(0 0 0 / 8%), 0 2px 4px rgb(0 0 0 / 6%);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  line-height: 1.65;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+header, main, footer { max-width: 1120px; margin: auto; padding: 32px; }
+header { padding-top: 64px; }
+h1 { font-size: clamp(36px, 5.5vw, 62px); line-height: 1.07; letter-spacing: -.04em; max-width: 850px; margin: 18px 0 24px; }
+h2 { font-size: 28px; line-height: 1.2; letter-spacing: -.025em; margin: 0 0 20px; }
+h3 { font-size: 19px; margin: 26px 0 10px; }
+h1, h2, h3 { text-wrap: balance; overflow-wrap: anywhere; }
+p { margin: 0 0 16px; text-wrap: pretty; }
+li, figcaption, blockquote { text-wrap: pretty; }
+.long-excerpt { text-wrap: wrap; }
+a { color: var(--accent); text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:focus-visible, summary:focus-visible, input:focus-visible, button:focus-visible, select:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+.intro { font-size: 21px; max-width: 850px; }
+.eyebrow, footer, .caption, figcaption { font-size: 13px; color: var(--muted); }
+.eyebrow { letter-spacing: .04em; }
+.status { display: inline-block; background: var(--highlight); padding: 7px 14px; border-radius: 20px; font-size: 14px; }
+nav { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 24px; }
+nav a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
+nav a:hover, summary:hover { background: var(--panel); }
+nav a:active, summary:active { background: var(--highlight); }
+section { padding: 32px; background: var(--paper); border: 1px solid var(--line); border-radius: 20px; margin-bottom: 24px; scroll-margin-top: 20px; }
+.recommendation { background: var(--highlight); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 24px; margin: 26px 0; padding: 24px 0; border-block: 1px solid var(--line); }
+.stats strong { display: block; color: var(--accent); font-size: 38px; line-height: 1.2; letter-spacing: -.03em; }
+.stats span { display: block; font-size: 13px; margin-top: 7px; }
+.stats strong, table, output, .bar-label { font-variant-numeric: tabular-nums; }
+.table { overflow-x: auto; margin: 20px 0; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+caption { text-align: left; margin-bottom: 12px; font-weight: 600; }
+th, td { padding: 13px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+th { background: var(--panel); }
+.wide { min-width: 680px; }
+li { margin-bottom: 10px; }
+ul, ol { padding-left: 23px; }
+.note { padding: 18px 20px; background: var(--warning-bg); border-left: 3px solid var(--warning); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.split > * { min-width: 0; }
+.panel { background: var(--panel); padding: 24px; border-radius: 12px; }
+.panel h3 { margin-top: 0; }
+.badge { display: inline-block; font-size: 12px; color: var(--muted); background: var(--panel); padding: 3px 8px; border-radius: 5px; }
+.badge.confirmed { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.danger { color: var(--danger); background: var(--danger-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+figure { margin: 20px 0; }
+.split > figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 8px; outline: 1px solid var(--image-outline); outline-offset: -1px; }
+figcaption { margin-top: 10px; }
+.diagram { display: block; max-width: 100%; height: auto; }
+.diagram text { font-family: inherit; fill: var(--ink); font-size: 16px; }
+.diagram .label { fill: var(--muted); font-size: 14px; }
+.diagram .reference { fill: var(--reference); }
+.diagram .node { fill: var(--highlight); stroke: var(--accent); }
+.diagram .edge, .diagram .axis { fill: none; stroke: var(--accent); stroke-width: 2; }
+.diagram .arrow, .diagram .series { fill: var(--accent); }
+.diagram .grid { stroke: var(--line); }
+.plot { max-width: none; }
+.steps { list-style: none; padding: 0; counter-reset: step; }
+.step { counter-increment: step; display: grid; grid-template-columns: 44px 1fr; gap: 16px; padding-top: 24px; border-top: 1px solid var(--line); margin-top: 24px; }
+.step::before { content: counter(step); font-size: 26px; color: var(--accent); }
+.step h3 { margin: 0 0 10px; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .88em; overflow-wrap: anywhere; }
+pre { overflow-x: auto; padding: 18px; background: var(--panel); border-radius: 8px; font-size: 12px; }
+pre code { overflow-wrap: normal; font-size: inherit; }
+details { border-top: 1px solid var(--line); margin-top: 16px; }
+summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accent); font-weight: 600; }
+label { display: block; font-weight: 600; }
+button, select { min-width: 44px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: var(--paper); font: inherit; }
+button { cursor: pointer; transition: background-color 120ms ease, scale 120ms ease; }
+button:hover:not(:disabled) { background: var(--highlight); }
+button:active:not(:disabled):not([data-static]) { scale: 0.96; }
+button:disabled, select:disabled { opacity: .6; cursor: not-allowed; }
+input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); }
+.bar { height: 26px; background: var(--line); border-radius: 5px; overflow: hidden; margin: 8px 0 18px; }
+.bar span { display: block; height: 100%; background: var(--accent); }
+.bar.reference span { background: var(--reference); }
+.bar-label { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; }
+.skip { position: absolute; left: 16px; top: -100px; padding: 12px; background: var(--paper); }
+.skip:focus { top: 16px; }
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --accent: oklch(from var(--brand) 0.78 calc(c * 1.2) h);
+    --paper: color-mix(in srgb, var(--accent) 6%, #1c1c1e);
+    --page: color-mix(in srgb, var(--accent) 4%, #121213);
+    --ink: color-mix(in srgb, var(--accent) 12%, #e8e8ea);
+    --muted: color-mix(in srgb, var(--accent) 16%, #a6a6aa);
+    --panel: color-mix(in srgb, var(--accent) 8%, var(--paper));
+    --highlight: color-mix(in srgb, var(--accent) 14%, var(--paper));
+    --reference: color-mix(in srgb, var(--muted) 60%, var(--paper));
+    --success: #8fd0a8;
+    --success-bg: #1c3326;
+    --warning: #e3bd6a;
+    --warning-bg: #3a2e14;
+    --danger: #f0a397;
+    --danger-bg: #3d211d;
+    --info: #9dbbe0;
+    --info-bg: #1f2a3a;
+    --image-outline: rgb(255 255 255 / 10%);
+    --shadow-border: 0 0 0 1px rgb(255 255 255 / 8%);
+    --shadow-border-hover: 0 0 0 1px rgb(255 255 255 / 13%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  button:active:not(:disabled):not([data-static]) { scale: none; }
+}
+@media (max-width: 700px) {
+  header, main, footer { padding: 24px 16px; }
+  header { padding-top: 40px; }
+  section { padding: 24px 18px; }
+  .split { grid-template-columns: 1fr; }
+  .stats { gap: 12px; }
+  .stats strong { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 30px 1fr; }
+}
+@media print {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  :root { background: var(--paper); }
+  header, main, footer { max-width: none; padding: 16px 0; }
+  nav, .skip, input[type="range"], .interactive-only { display: none; }
+  section { border-radius: 0; border: 0; border-top: 1px solid var(--line); padding: 24px 0; }
+  .table { overflow: visible; }
+  .wide { min-width: 0; }
+  .plot { max-width: 100%; }
+  th, td { overflow-wrap: anywhere; }
+  .split { grid-template-columns: 1fr; }
+  figure, tr, .panel { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .recommendation, .panel, .bar, .badge { print-color-adjust: exact; }
+}
+</style>
+<style>
+.example { border:1px solid var(--line); border-radius:12px; padding:20px; background:var(--panel); }
+.example p { margin:0; padding:9px 10px; border-bottom:1px solid var(--line); }
+.example .indent { padding-left:28px; }
+.example .active { background:var(--highlight); border-radius:6px; font-weight:600; }
+.example small { display:block; color:var(--muted); }
+.example .group { color:var(--accent); font-weight:650; margin-top:12px; }
+.tag { float:right; color:var(--muted); font-size:13px; font-weight:400; }
+.source { font-size:13px; color:var(--muted); }
+</style></head>
+<body>
+<a class="skip" href="#summary">Naar het voorstel</a>
+<header><p class="eyebrow">Ruimte / Functioneel en technisch voorstel / 20 september 2026</p>
+<h1>Eén sidebar voor open projecten</h1>
+<p class="intro">Voeg een opt-in toe waarmee de sidebar alle open projecten toont. Eén gezamenlijke groep Needs attention blijft bovenaan staan, ook als projecten zijn ingeklapt.</p>
+<p class="status">Voorstel ter bespreking · Geen applicatiecode gewijzigd</p>
+<p class="caption">Onderzocht in de lokale werkboom bij revisie <code>ddabff31</code>. Scope: de React-client en de benodigde gegevens uit de server. Native iOS valt buiten dit voorstel.</p>
+<nav aria-label="Inhoud"><a href="#summary">Voorstel</a><a href="#experience">Gedrag</a><a href="#findings">Huidige basis</a><a href="#technical">Uitwerking</a><a href="#acceptance">Acceptatie</a><a href="#decisions">Keuzes</a></nav></header>
+<main>
+<section id="summary" class="recommendation"><h2>De instelling bepaalt wat de sidebar omvat</h2>
+<p>Maak onder <strong>Instellingen → Weergave → Sidebar</strong> een keuze met twee waarden: <strong>Huidig project</strong> en <strong>Alle open projecten</strong>. De eerste blijft de standaard, ook voor bestaande installaties. De keuze geldt voor zowel de projectlijst als Needs attention.</p>
+<p>In de gecombineerde stand krijgt ieder project een eigen inklapbare kop. Een klik op een view activeert het bijbehorende project en opent die view. Een klik op een aandachtspunt brengt je rechtstreeks naar de betreffende sessie.</p>
+<p><span class="badge confirmed">Bevestigd</span> Bewaar de keuze als persoonlijke clientinstelling die bij projectwissels aan blijft. Neem open projecten op alle gekoppelde machines mee. Deze twee keuzes zijn bevestigd.</p>
+<p>Gebruik voor “open” dezelfde betekenis als het bestaande projectmenu: projecten die niet expliciet zijn gesloten. Alleen recente, gesloten projecten doen niet mee. “Open” betekent hier dus niet dat er nu een editor voor dat project op het scherm staat.</p>
+</section>
+<section id="experience"><h2>Zo leest de gecombineerde sidebar</h2>
+<div class="split"><div><div class="example" aria-label="Statische voorbeeldsidebar">
+<p><strong>Needs attention</strong><span class="tag">2</span></p>
+<p>Review goedkeuren<small>Ruimte · Ontwikkeling · Deze Mac</small></p>
+<p>Antwoord nodig<small>Website · Content · Werkstation</small></p>
+<p class="group">⌄ Ruimte <span class="tag">Actief</span></p>
+<p class="indent active">Ontwikkeling</p><p class="indent">Ontwerp</p>
+<p class="group">› Website <span class="tag">1 wacht</span></p>
+<p class="group">⌄ Documentatie</p><p class="indent">Handleiding</p>
+</div><p class="caption">Illustratie met fictieve namen en aantallen, geen screenshot. Website is ingeklapt; het aandachtspunt blijft bereikbaar.</p></div>
+<div><h3>Projectkoppen klappen alleen in en uit</h3><p>De hele kop bedient het inklappen. Het actieve project krijgt een zichtbare markering. De kop toont naam en projecticoon, met een machinelabel wanneer dat nodig is om projecten uit elkaar te houden.</p><p>De eerste keer staan de projecten open. Onthoud daarna de keuze per project en machine op deze client. Een gewone projectwissel verandert die keuze niet. Inklappen sluit geen project, view of sessie.</p>
+<h3>De lijst blijft op haar plek</h3><p>Start met de volgorde van het projectmenu, laatst geopend eerst. Houd die volgorde vervolgens stabiel zolang de gecombineerde stand actief is; een klik verplaatst geen project onder de cursor. Voeg een nieuw geopend project onderaan toe. Binnen een project blijft de bestaande viewvolgorde gelden.</p></div></div>
+<h3>Needs attention volgt de instelling</h3><p>In de standaardstand bevat de groep alleen het actieve project. In de gecombineerde stand bevat zij alle sessies met status <code>needs-you</code> uit de meegenomen projecten, ook uit ingeklapte projecten en canvassen. Behoud de huidige betekenis: fouten, lopende taken en ongelezen afgeronde antwoorden komen er niet automatisch bij.</p>
+<p>Toon bij elk aandachtspunt het project en de view, plus de machine als dat nodig is. Tel een sessie eenmaal in deze groep. Dat dezelfde sessie ook onder haar eigen view staat is nuttige navigatie, geen tweede aandachtspunt. Laat de groep weg als er geen actuele aandachtspunten zijn.</p>
+<h3>Navigeren zonder verrassingen</h3>
+<div class="table" role="region" aria-label="Interactieafspraken" tabindex="0"><table><thead><tr><th scope="col">Actie</th><th scope="col">Resultaat</th></tr></thead><tbody>
+<tr><td>View van het actieve project kiezen</td><td>Bestaand gedrag, inclusief focus op een view die al in een split staat.</td></tr>
+<tr><td>View van een ander project kiezen</td><td>Open dat project in hetzelfde venster. Toon de gekozen view zodra het juiste project geladen is.</td></tr>
+<tr><td>Aandachtspunt kiezen</td><td>Open project en view, focus vervolgens de sessie. Bij een canvas wordt de node in beeld gebracht.</td></tr>
+<tr><td>Projectkop bedienen</td><td>Klap de views in of uit. Het actieve project verandert niet.</td></tr>
+<tr><td>Project openen of sluiten</td><td>Voeg het toe of verwijder het uit beide lijsten zodra de verandering bevestigd is.</td></tr>
+<tr><td>Terug naar Huidig project</td><td>Toon direct de bestaande sidebar voor het actieve project. Bewaar de inklapkeuzes voor later.</td></tr>
+</tbody></table></div>
+<p>Een expliciete sprong vanuit Needs attention mag de doelprojectgroep en doelcanvas uitklappen, zodat zichtbaar is waar je bent geland. Een gewone projectwissel doet dat niet.</p>
+<p>“Nieuwe view” onderaan blijft bij het actieve project horen. Geef dat project in de toelichting aan. Verbindingsstatus en gebruik onderaan blijven eveneens bij hun huidige context; de nieuwe instelling bundelt de navigatielijst.</p>
+</section>
+<section id="findings"><h2>Wat de code al biedt</h2>
+<p><span class="badge confirmed">Vastgesteld</span> De sidebar bouwt één project op uit het actieve document en de canvasstores. De rijbouwer maakt daar eerst Needs attention en daarna de views van. Projectgroepen bestaan in dat model nog niet.</p>
+<p class="source">Bronnen: <a href="../../apps/client/src/shell/sidebar-source.ts">sidebar-source.ts</a>, <a href="../../apps/client/src/shell/sidebar-rows.ts">sidebar-rows.ts</a> en <a href="../../apps/client/src/shell/Sidebar.tsx">Sidebar.tsx</a>.</p>
+<p><span class="badge confirmed">Vastgesteld</span> De projectlijst bundelt al meerdere machines en onderscheidt open van recent gesloten projecten. De samenvatting bevat naam, icoon en beschikbaarheid, maar geen views. Een niet-verbonden machine houdt haar laatst bekende lijst.</p>
+<p class="source">Bronnen: <a href="../../apps/client/src/project/list.ts">project/list.ts</a>, <a href="../../apps/client/src/state/project-list.ts">state/project-list.ts</a> en <a href="../../packages/contracts/src/project.ts">ProjectSummarySchema en isRecentProject</a>.</p>
+<p><span class="badge confirmed">Vastgesteld</span> Eén venster heeft één actieve set projectstores. Projectwisseling kent al laden, annuleren, vervangen en fouten. Navigeren naar een view of node gebruikt nu de actieve stores.</p>
+<p class="source">Bronnen: <a href="../../apps/client/src/state/workspace-stores.ts">workspace-stores.ts</a>, <a href="../../apps/client/src/project/open.ts">project/open.ts</a>, <a href="../../apps/client/src/project/project-switch.ts">project-switch.ts</a> en <a href="../../apps/client/src/project/views.ts">project/views.ts</a>.</p>
+<p><span class="badge confirmed">Vastgesteld</span> Alleen lezen via <code>project.open</code> heeft bijwerkingen: het registreert een viewer en werkt de openstatus en laatst-geopend-tijd bij. De huidige projecthandlers bieden geen afzonderlijke leesroute voor een sidebaroverzicht.</p>
+<p class="source">Bronnen: <a href="../../apps/server/src/handlers/project.ts">handlers/project.ts</a> en <a href="../../apps/server/src/projects/project-store.ts">project-store.ts</a>.</p>
+</section>
+<section id="technical"><h2>Benodigde uitwerking</h2>
+<ol class="steps">
+<li class="step"><div><h3>Instelling en inklapkeuzes bewaren</h3><p>Voeg een gevalideerde waarde <code>current | all-open</code> toe aan de persoonlijke settings. Ontbrekende of ongeldige waarden vallen terug op <code>current</code>. Plaats de bediening in AppearancePane en voeg Nederlandse en Engelse labels toe.</p><p>Bewaar ingeklapte projecten apart van de huidige uitgeklapte canvasviews. Gebruik een sleutel met endpoint en project; zet deze persoonlijke keuze niet in het gedeelde projectbestand.</p><p class="source">Aansluiting: <a href="../../apps/client/src/state/settings.ts">state/settings.ts</a>, <a href="../../apps/client/src/state/ui.ts">state/ui.ts</a>, <a href="../../apps/client/src/shell/settings/panes/AppearancePane.tsx">AppearancePane.tsx</a>.</p></div></li>
+<li class="step"><div><h3>Een leesbron voor open projecten toevoegen</h3><p>Maak een beperkte, reactieve projectindex voor de sidebar met projectidentiteit, geordende views, sessieverwijzingen en relevante weergavegegevens. Gebruik de bestaande projectlijst als selectie. Lees de actuele editorgegevens voor het actieve project, zodat onopgeslagen wijzigingen zichtbaar blijven.</p><p>Voeg voor achtergrondprojecten een leesroute met updates toe die projecten niet activeert, geen sessies start en geen open-tijd wijzigt. Neem ook inhoud van ingeklapte projecten mee voor Needs attention. Een cache alleen is daarvoor onvoldoende.</p><p>Gebruik de bestaande statusclients per machine. De gecombineerde stand moet verbindingen naar de betrokken machines kunnen vasthouden zonder hun workspace te openen. Laat die extra verbindingen en abonnementen los bij uitschakelen; hergebruik verbindingen die elders nog nodig zijn.</p><p class="source">Aansluiting: <a href="../../apps/client/src/transport/connections.ts">transport/connections.ts</a>, <a href="../../apps/client/src/transport/workspace-hold.ts">workspace-hold.ts</a>, projecthandlers en <a href="../../packages/contracts/src/index.ts">protocolcontracten</a>. De precieze vorm van de nieuwe leesroute is nog een implementatiekeuze.</p></div></li>
+<li class="step"><div><h3>Iedere rij een expliciet doel geven</h3><p>Geef rijen en acties een endpoint, project, view en waar nodig node mee. Gebruik die samengestelde identiteit ook voor React-keys, focus, inklappen en drag-and-drop. Twee machines kunnen dezelfde lokale ids gebruiken.</p><p>Laat de rijbouwer één gezamenlijke Needs attention-groep en daaronder projectgroepen maken. Alleen de view van het actieve project kan actief gemarkeerd zijn. Blijf gericht op sidebarwijzigingen abonneren; canvaspannen en chattekst mogen niet de hele lijst opnieuw opbouwen.</p></div></li>
+<li class="step"><div><h3>Eerst het project, daarna de bestemming</h3><p>Hergebruik de bestaande projectwisselroute. Navigeer pas naar view of node als de wissel succesvol is afgerond én de aangevraagde bestemming nog bij het actieve project hoort. Een latere klik vervangt de eerdere navigatie volledig, inclusief de geplande viewfocus.</p><p>Behoud bestaande fout- en terugkeerbediening. Als de view ondertussen verwijderd is, meld dat en blijf in het succesvol geopende project. Een mislukt of geannuleerd verzoek mag nooit een gelijknamige view in een ander project selecteren.</p></div></li>
+<li class="step"><div><h3>Bestaande rijacties afbakenen</h3><p>Hernoemen, verwijderen, viewinstellingen en slepen gebruiken nu de actieve documentcontext. Voor de eerste versie blijven die acties alleen beschikbaar binnen het actieve project. Andere projecten bieden navigatie en inklappen; eerst openen maakt hun bestaande bewerkingen beschikbaar.</p><p>Sta herschikken en bestandsdrops alleen in het actieve project toe. Blokkeer verplaatsen tussen projecten en slepen van een achtergrondview naar de actieve split. Dit voorkomt dat een zichtbare rij onbedoeld het verkeerde document wijzigt.</p></div></li>
+</ol>
+<h3>Verbindingen en lege toestanden</h3><p>Toon bij een offline machine de laatst bekende projectkop met “Niet verbonden”. Eerder bekende views mogen zichtbaar blijven, maar markeer hun status als verouderd. Neem oude aandachtspunten niet op als actuele meldingen; vermeld naast de groep dat het overzicht onvolledig is. Een klik mag de normale verbindingsroute proberen.</p><p>Onderscheid “Laden”, “Geen views” en “Kan project niet laden”. Eén onbereikbaar project blokkeert de rest niet. Een verdwenen projectmap krijgt een onbeschikbare toestand, geen werkende navigatieknop. Updates over gesloten of verwijderde projecten ruimen hun rijen op.</p>
+<p>Een oudere server die de nieuwe leesroute niet ondersteunt, krijgt per machine een duidelijke melding. Toon waar mogelijk het actieve project; bied geen schijnbaar compleet overzicht van de overige projecten.</p>
+</section>
+<section id="acceptance"><h2>Wanneer is dit klaar?</h2>
+<p>Onderstaande controles horen bij de toekomstige implementatie. Ze zijn nu niet uitgevoerd.</p>
+<div class="table" role="region" aria-label="Acceptatiecriteria" tabindex="0"><table><thead><tr><th scope="col">Scenario</th><th scope="col">Verwacht resultaat</th></tr></thead><tbody>
+<tr><td>Nieuwe installatie of oude instellingen</td><td>Huidig project is geselecteerd; sidebar en aandachtspunten behouden het huidige bereik.</td></tr>
+<tr><td>Opt-in, daarna wisselen en herstarten</td><td>Alle open projecten blijft geselecteerd, volgens de gekozen persoonlijke opslag.</td></tr>
+<tr><td>Twee open en één gesloten project</td><td>Alleen de twee open projecten verschijnen, met hun eigen viewvolgorde.</td></tr>
+<tr><td>Project met wachtende sessie inklappen</td><td>Views verdwijnen, projectkop blijft; sessie en teller in Needs attention blijven zichtbaar.</td></tr>
+<tr><td>View of aandachtspunt in ander project kiezen</td><td>Het juiste project, de juiste view en waar nodig de juiste node worden actief.</td></tr>
+<tr><td>Twee snelle klikken, annulering of fout</td><td>Alleen de laatste geldige bestemming krijgt focus. Geen navigatie naar een oud doel na afloop.</td></tr>
+<tr><td>Gelijke ids op verschillende machines</td><td>Statussen, rijen, inklapkeuzes en acties blijven gescheiden.</td></tr>
+<tr><td>Achtergrondwijziging of opgelost aandachtspunt</td><td>Rijen en teller actualiseren zonder projectwissel of handmatig verversen.</td></tr>
+<tr><td>Onopgeslagen wijziging in actieve canvas</td><td>De sidebar blijft de lokale, nieuwste naam en nodes tonen.</td></tr>
+<tr><td>Machine offline, daarna weer verbonden</td><td>Onvolledigheid wordt vermeld; na herverbinden worden actuele gegevens geladen.</td></tr>
+<tr><td>Leeg actief project, ander project met views</td><td>De andere projectgroepen blijven zichtbaar; de globale lege toestand verschijnt niet.</td></tr>
+<tr><td>Toetsenbord en inklappen</td><td>Projectkoppen zijn bedienbaar; links/rechts klapt in/uit. Focus verdwijnt niet in verborgen rijen. De uitklapstatus is toegankelijk benoemd.</td></tr>
+<tr><td>Opt-in uitschakelen</td><td>Extra abonnementen worden opgeruimd; bestaande sessies lopen door.</td></tr>
+<tr><td>Herschikken, contextmenu en bestandsdrop</td><td>Geen actie kan naar een ander project schrijven dan het expliciete doel; achtergrondacties zijn in deze eerste versie begrensd.</td></tr>
+</tbody></table></div>
+<p>Breid de bestaande tests voor settings, sidebar-rows en projectwisseling uit. Voeg gerichte tests toe voor de leesroute zonder open-bijwerkingen, achtergrondupdates en opruimen van abonnementen. Controleer de daadwerkelijke navigatie, focus en drag-and-drop ook in de client.</p>
+</section>
+<section id="decisions"><h2>Keuzes voor de uitvoering</h2>
+<p><span class="badge confirmed">Gevraagd</span> Huidig project als standaard, alle open projecten als opt-in, een gezamenlijke Needs attention-groep, projectwisseling bij een viewklik en inklapbare projecten.</p>
+<p><span class="badge confirmed">Bevestigd</span> Eén persoonlijke instelling die blijft gelden bij projectwissels, met projecten van alle gekoppelde machines.</p>
+<p><span class="badge info">Ontwerpvoorstel</span> Stabiele projectvolgorde tijdens gebruik, nieuwe groepen aanvankelijk open, inklapkeuzes lokaal onthouden, projectkoppen uitsluitend voor inklappen en achtergrondprojecten aanvankelijk alleen voor navigatie.</p>
+<p>De grootste technische uitbreiding zit in het actueel lezen van achtergrondprojecten. Begin daar en bij de projectgebonden navigatie; bouw vervolgens de groepen en instelling erbovenop. Zo kan de interface vanaf het begin betrouwbare aandachtspunten tonen.</p>
+</section>
+</main><footer><p>Brononderzoek en statisch rapport, geen implementatie of uitgevoerde producttests. Het blauwe accent volgt de standaardaccentkleur van Ruimte. Het rapport gebruikt uitsluitend inline opmaak en systeemlettertypen.</p><p id="verification">Controle: 25 bronlinks en ankers gecontroleerd; geen placeholders of dubbele ankers. Lichte en donkere weergave gerenderd, plus een smalle weergave. Navigatielinks en focusstijlen statisch gecontroleerd. Printopmaak nagekeken in CSS; paginering en toetsenbordbediening niet handmatig getest.</p></footer>
+</body></html>

@@ -47,6 +47,12 @@
             "fontSize": {
                 "label": "Tekstgrootte"
             }
+        },
+        "sidebar": {
+            "label": "Sidebar",
+            "description": "Kies welke projecten de sidebar en Needs attention tonen, over al je machines.",
+            "current": "Huidig project",
+            "all-open": "Alle open projecten"
         }
     },
     "sections": {

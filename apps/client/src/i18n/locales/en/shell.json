@@ -11,7 +11,19 @@
         "usage": "Usage",
         "openInAnotherCell": ", open in another cell",
         "shared": "Shared with your team",
-        "doubleClick": "dbl-click"
+        "doubleClick": "dbl-click",
+        "activeProject": "Active",
+        "waitingCount": "{{count}} waiting",
+        "newViewIn": "New view in {{project}}",
+        "incomplete": "Needs attention is incomplete.",
+        "targetGone": "This view or session no longer exists.",
+        "source": {
+            "ready": "Up to date",
+            "loading": "Loading…",
+            "offline": "Not connected",
+            "error": "Could not load project overview",
+            "unsupported": "Update Ruimte on this machine to show its projects"
+        }
     },
     "panel": {
         "fallback": "Panel",

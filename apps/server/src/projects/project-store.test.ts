@@ -859,3 +859,45 @@ describe('kinds a newer Ruimte wrote', () => {
         expect(await unknownOnDisk()).toBe(UNKNOWN);
     });
 });
+
+describe('reading the combined sidebar', () => {
+    test('reads released projects without opening them, changing the registry or creating a watcher', async () => {
+        const first = await store.openProject({ folder });
+        const second = await store.openProject({ name: 'Second' });
+        store.release(first.summary.projectId);
+        store.release(second.summary.projectId);
+        const before = await store.list();
+        const watcherCount = fake.watchers.length;
+        const overview = await store.sidebar();
+        expect(overview.projects.map((entry) => entry.summary.projectId).sort()).toEqual(before.map((entry) => entry.projectId).sort());
+        expect(overview.projects[0]!.views?.[0]?.name).toBe('Canvas');
+        expect(await store.list()).toEqual(before);
+        expect(fake.watchers.length).toBe(watcherCount);
+        expect(overview.projects.flatMap((entry) => entry.views ?? []).every((view) => !('texts' in view) && !('edges' in view))).toBe(true);
+    });
+
+    test('excludes closed projects and isolates an unreadable project', async () => {
+        const broken = await store.openProject({ folder });
+        const closed = await store.openProject({ name: 'Closed' });
+        const healthy = await store.openProject({ name: 'Healthy' });
+        await store.closeProject(closed.summary.projectId);
+        store.release(broken.summary.projectId);
+        await writeFile(documentPathInFolder(folder), 'broken json');
+        const overview = await store.sidebar();
+        expect(overview.projects.map((entry) => entry.summary.projectId)).not.toContain(closed.summary.projectId);
+        expect(overview.projects.find((entry) => entry.summary.projectId === broken.summary.projectId)?.views).toBeNull();
+        expect(overview.projects.find((entry) => entry.summary.projectId === healthy.summary.projectId)?.views).toHaveLength(1);
+        expect(await readFile(documentPathInFolder(folder), 'utf8')).toBe('broken json');
+    });
+
+    test('a corrupt private file is not moved aside by a sidebar read', async () => {
+        await store.openProject({ folder });
+        const { privatePathOf } = await import('./project-files.ts');
+        const actual = privatePathOf(documentPathInFolder(folder));
+        await writeFile(actual, 'broken private json');
+        const before = await readdir(dirname(actual));
+        expect((await store.sidebar()).projects[0]?.views).toBeNull();
+        expect(await readFile(actual, 'utf8')).toBe('broken private json');
+        expect(await readdir(dirname(actual))).toEqual(before);
+    });
+});

@@ -39,6 +39,7 @@ export const INTERFACE_FONT_SIZE_RANGE = { min: 14, max: 24, step: 1 } as const;
 export const FILES_TAB_LIMIT_RANGE = { min: 1, max: 20, step: 1 } as const;
 
 export interface Settings {
+    sidebarScope: 'current' | 'all-open';
     /* One of the node accents. Blue is the brand's own and the one a fresh client starts on. */
     accent: AccentId;
     font: MonoFontId;
@@ -127,6 +128,7 @@ interface SettingsStore extends Settings {
 }
 
 const DEFAULT_SETTINGS: Settings = {
+    sidebarScope: 'current',
     accent: 'blue',
     font: 'system',
     fontSize: 13,
@@ -168,6 +170,7 @@ const clampSize = (value: unknown, range: { min: number; max: number }, fallback
 export const settingsFrom = (stored: Partial<Settings>): Settings => ({
     ...DEFAULT_SETTINGS,
     ...stored,
+    sidebarScope: stored.sidebarScope === 'all-open' ? 'all-open' : 'current',
     fontSize: clampSize(stored.fontSize, FONT_SIZE_RANGE, DEFAULT_SETTINGS.fontSize),
     interfaceFontSize: clampSize(stored.interfaceFontSize, INTERFACE_FONT_SIZE_RANGE, DEFAULT_SETTINGS.interfaceFontSize),
     filesTabLimit: clampSize(stored.filesTabLimit, FILES_TAB_LIMIT_RANGE, DEFAULT_SETTINGS.filesTabLimit),
@@ -252,6 +255,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
         version: 0,
         update(patch) {
             const {
+                sidebarScope,
                 accent,
                 font,
                 fontSize,
@@ -281,6 +285,7 @@ export const useSettings = create<SettingsStore>((set, get) => {
                 formatRegion
             } = get();
             const next: Settings = {
+                sidebarScope,
                 accent,
                 font,
                 fontSize,

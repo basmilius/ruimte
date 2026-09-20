@@ -158,3 +158,12 @@ describe('worktreeMergeStrategy', () => {
         expect(settingsFrom({ worktreeMergeStrategy: 'octopus' as unknown as 'merge' }).worktreeMergeStrategy).toBe('squash');
     });
 });
+
+describe('sidebar scope', () => {
+    test('requires an explicit opt-in, including when loading old or invalid settings', () => {
+        expect(settingsFrom({}).sidebarScope).toBe('current');
+        expect(settingsFrom({ sidebarScope: 'all-open' }).sidebarScope).toBe('all-open');
+        expect(settingsFrom({ sidebarScope: true as unknown as 'current' }).sidebarScope).toBe('current');
+        expect(settingsFrom({ sidebarScope: 'all' as 'current' }).sidebarScope).toBe('current');
+    });
+});

@@ -175,3 +175,14 @@ describe('project identity', () => {
         expect(changesIn(clients.a.channel).at(-1)).toMatchObject({ name: 'Renamed', icon: { kind: 'lucide', value: 'rocket' } });
     });
 });
+
+test('the sidebar request returns open projects without changing the registry', async () => {
+    const clients = twoClients();
+    const { projectId } = await openOnBoth(clients);
+    await request(clients.b, 'project.release', { projectId });
+    const before = await store.list();
+    const result = await request<import('@ruimte/contracts').ProjectSidebarResult>(clients.b, 'project.sidebar', {});
+    expect(result.projects.map((project) => project.summary.projectId)).toContain(projectId);
+    expect(result.projects.find((project) => project.summary.projectId === projectId)?.views?.map((view) => view.name)).toEqual(['Main', 'Notes']);
+    expect(await store.list()).toEqual(before);
+});

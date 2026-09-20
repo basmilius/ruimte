@@ -1,3 +1,4 @@
+import { ProjectSidebarResultSchema } from './project-sidebar.ts';
 import { z } from 'zod';
 import {
     BrowserCommandPayloadSchema,
@@ -226,6 +227,7 @@ export * from './node-defaults.ts';
 export * from './plan.ts';
 export * from './processes.ts';
 export * from './project.ts';
+export * from './project-sidebar.ts';
 export * from './project-migrate.ts';
 export * from './project-split.ts';
 export * from './protocol.ts';
@@ -300,6 +302,7 @@ export const REQUEST_SCHEMAS = {
     'chat.stopSubagent': { payload: ChatStopSubagentPayloadSchema, result: EmptySchema },
     'skills.list': { payload: SkillsListPayloadSchema, result: SkillsListResultSchema },
     'provider.list': { payload: EmptySchema, result: ProviderListResultSchema },
+    'project.sidebar': { payload: EmptySchema, result: ProjectSidebarResultSchema },
     'project.list': { payload: EmptySchema, result: ProjectListResultSchema },
     'project.open': { payload: ProjectOpenPayloadSchema, result: ProjectOpenResultSchema },
     'project.save': { payload: ProjectSavePayloadSchema, result: ProjectSaveResultSchema },
