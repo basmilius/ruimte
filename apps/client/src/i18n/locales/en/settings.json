@@ -190,7 +190,7 @@
       "previous": "Previous view",
       "next": "Next view",
       "new": "New canvas view",
-      "rename": "Rename the focused sidebar item"
+      "rename": "Rename a node, or open the settings of a view"
     },
     "split": {
       "title": "Split",

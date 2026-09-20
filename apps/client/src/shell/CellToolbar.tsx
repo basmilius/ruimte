@@ -179,7 +179,7 @@ export function CellToolbar({ at, view, focused, children }: { at: CellAt; view:
                 <ContextMenu.Portal>
                     <ContextMenu.Positioner className="z-(--z-popup)">
                         <ContextMenu.Popup className="menu-popup">
-                            <SplitItems at={at} />
+                            <SplitItems at={at} separated />
                             <ViewMenuItems viewId={view.id} kind={view.kind} />
                         </ContextMenu.Popup>
                     </ContextMenu.Positioner>

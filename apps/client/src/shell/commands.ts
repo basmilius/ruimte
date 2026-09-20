@@ -6,7 +6,7 @@ import { nearestFreeNodeRect } from '@/canvas/place-node';
 import {
     askDeleteView,
     askOpenAsView,
-    askRenameView,
+    askViewSettings,
     canOpenAsView,
     newCanvasView,
     newDiagramView,
@@ -171,7 +171,7 @@ export const appCommands = (): Command[] => {
                   },
                   ...(activeViewId
                       ? [
-                            { id: 'view-rename', label: i18next.t('shell:viewMenu.renameView'), run: () => askRenameView(activeViewId) },
+                            { id: 'view-settings', label: i18next.t('shell:viewMenu.viewSettings'), run: () => askViewSettings(activeViewId) },
                             { id: 'view-delete', label: i18next.t('shell:viewMenu.deleteView'), run: () => askDeleteView(activeViewId) }
                         ]
                       : []),
@@ -203,7 +203,7 @@ export const appCommands = (): Command[] => {
                             }
                         ]
                       : []),
-                  ...(activeView && isSessionView(activeView)
+                  ...(activeView && isSessionView(activeView) && views.some(isCanvasView)
                       ? [
                             {
                                 id: 'view-demote',

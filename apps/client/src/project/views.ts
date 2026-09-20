@@ -4,11 +4,11 @@ import {
     isCanvasView,
     isDiagramView,
     isDrawingView,
-    isFileView,
     isOpenableView,
     isSessionView,
     MAIN_VIEW_NAME,
     sessionNodesOfView,
+    type AgentKind,
     type ProjectView
 } from '@ruimte/contracts';
 import { askBeforeEndingAgents } from '@/agents/end-children';
@@ -193,12 +193,6 @@ export const showFileOnCanvas = (path: string, at?: Point): string | null => {
 /* A file as a view of its own, a column beside the canvas rather than a frame on it. */
 export const newFileView = (path: string): string | null => useDocument.getState().addFileView(basenameOf(path), storedFilePath(path));
 
-/* "Show on the canvas" for every view that offers it: a drawing or a diagram is mirrored, a file is read again. */
-export const showViewOnCanvas = (viewId: string): string | null => {
-    const view = useDocument.getState().views.find((candidate) => candidate.id === viewId);
-    return view && isFileView(view) ? showFileOnCanvas(view.path) : showOnCanvas(viewId);
-};
-
 /*
  * Puts a view in the shared file, or takes it back out, and says what happened with a way back. No
  * dialog: nothing reaches anyone until the person commits, so there is nothing here to confirm. The
@@ -217,6 +211,36 @@ export const setViewShared = (viewId: string, shared: boolean): void => {
         title: i18next.t(shared ? 'shell:share.shared' : 'shell:share.private', { name: view.name }),
         action: { label: i18next.t('common:action.undo'), run: () => useDocument.getState().setShared(viewId, !shared) }
     });
+};
+
+/* What a session view hands the other kind of view: which CLI, which session, and where it works. */
+export interface SessionHandoff {
+    provider: AgentKind;
+    resume: string;
+    cwd?: string;
+}
+
+/*
+ * The same CLI session in the other kind of view: a chat for what a terminal is running, a terminal
+ * for the CLI's own screen of a chat. Nothing is copied and neither view moves; both read the one
+ * session, and the daemon owns the resume. It lands right under the view it came from, the way a
+ * fork does, since a list is where a person looks for what they just opened.
+ */
+export const openSessionInKind = (viewId: string, kind: 'chat' | 'terminal', handoff: SessionHandoff): string | null => {
+    const { views, addStandaloneView } = useDocument.getState();
+    const source = views.find((view) => view.id === viewId);
+    const at = views.findIndex((view) => view.id === viewId);
+    if (!source || at === -1) {
+        return null;
+    }
+    const id = addStandaloneView({
+        kind,
+        name: source.name ?? i18next.t('project:view.fallbackName'),
+        // A chat that goes on with a terminal's session is that CLI; another one cannot pick it up.
+        node: kind === 'chat' ? { ...handoff, providerFixed: true } : handoff
+    });
+    useDocument.getState().moveView(id, at + 1);
+    return id;
 };
 
 /* Copies a canvas, a drawing or a diagram view. What a drawing or a diagram holds is copied by the daemon, not here. */
@@ -354,6 +378,5 @@ const deleteViewAsking = (view: ProjectView): void => {
     useDocument.getState().deleteView(id);
 };
 
-export const askRenameView = (id: string): void => useUi.getState().setViewDialog({ kind: 'rename', viewId: id });
-
-export const askViewIcon = (id: string): void => useUi.getState().setViewDialog({ kind: 'icon', viewId: id });
+/* What a view is called and what it wears, in the one dialog that holds both. */
+export const askViewSettings = (id: string): void => useUi.getState().setViewDialog({ kind: 'settings', viewId: id });

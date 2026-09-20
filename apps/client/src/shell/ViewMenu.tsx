@@ -156,8 +156,7 @@ export function ViewMenu() {
                 <div className={MENU_LABEL}>{t('viewMenu.newView')}</div>
                 <NewViewItems />
                 <Menu.Separator className={MENU_SEPARATOR} />
-                <SplitItems />
-                <Menu.Separator className={MENU_SEPARATOR} />
+                <SplitItems separated />
                 <ViewMenuItems viewId={active.id} kind={active.kind} />
             </MenuPopup>
         </Menu.Root>

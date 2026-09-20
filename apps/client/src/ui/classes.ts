@@ -21,8 +21,10 @@ export const SECTION_LABEL = 'text-xs/[inherit] font-medium text-text-faint';
    `<kbd>`, which `.menu-item` already pushes to the right. */
 export const MENU_HINT = 'ml-auto pl-3 text-xs/[inherit] text-text-faint';
 
-/* The hairline between two groups of menu rows. */
-export const MENU_SEPARATOR = 'mx-1.5 my-1 h-px bg-border';
+/* The hairline between two groups of menu rows. It runs the whole width of the popup, which is what
+   the negative margin buys back from its 4px of padding, and it is softer than a border a surface
+   ends with: it divides rows that are already on one surface. */
+export const MENU_SEPARATOR = '-mx-1 my-1 h-px bg-border-soft';
 
 /* A shortcut next to a label: in a tooltip, in the palette and on the buttons of a pending question. */
 export const TOOLTIP_KBD = 'rounded-sm bg-surface-sunken px-[5px] py-px font-sans text-xs/[inherit] text-text-muted';

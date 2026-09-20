@@ -108,11 +108,15 @@
         "placeholder": "Naam"
     },
     "viewIcon": {
-        "title": "Icoon van de weergave",
-        "separator": "Scheiding",
         "pickedHere": "Hier gekozen",
         "defaultForKind": "Standaard voor dit soort",
         "useDefault": "Standaard gebruiken"
+    },
+    "viewSettings": {
+        "title": "Instellingen van de weergave",
+        "name": "Naam",
+        "nameLabel": "Naam van de weergave",
+        "nameHint": "Iedereen met de map ziet deze naam. Laat hem leeg voor de naam die de weergave zichzelf geeft."
     },
     "projectBanner": {
         "stayHere": "Hier blijven",
@@ -127,12 +131,6 @@
         }
     },
     "viewDialogs": {
-        "rename": {
-            "title": "Weergave hernoemen",
-            "description": "Iedereen met de map ziet deze naam.",
-            "label": "Naam van de weergave",
-            "placeholder": "Naam"
-        },
         "newBrowser": {
             "title": "Nieuwe browserweergave",
             "description": "Een adres zonder scheme opent via https.",
@@ -202,7 +200,11 @@
         "newView": "Weergave",
         "putOnCanvas": "Op het canvas zetten",
         "showOnCanvas": "Op het canvas tonen",
-        "changeIcon": "Icoon wijzigen…"
+        "openInChat": "In een chat openen",
+        "openInTerminal": "In een terminal openen",
+        "viewSettings": "Instellingen…",
+        "deleteView": "Weergave verwijderen",
+        "reveal": "Tonen in {{app}}"
     },
     "share": {
         "start": "Delen met je team",
@@ -281,7 +283,6 @@
     "projectSettings": {
         "title": "Projectinstellingen",
         "name": "Naam",
-        "symbol": "Symbool",
         "fromFile": "Uit {{file}}",
         "firstLetter": "De eerste letter van de naam",
         "chooseImage": "Afbeelding kiezen…",

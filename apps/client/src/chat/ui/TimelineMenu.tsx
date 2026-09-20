@@ -10,7 +10,8 @@ import { useChatRow } from '@/state/chats';
 import { useProject } from '@/state/project';
 import { useSettings } from '@/state/settings';
 import { useUi } from '@/state/ui';
-import { MENU_HINT, MENU_SEPARATOR } from '@/ui/classes';
+import { MENU_SEPARATOR } from '@/ui/classes';
+import { DisabledReason } from '@/ui/DisabledReason';
 import { copyText } from '@/ui/clipboard';
 import { Icon } from '@/ui/Icon';
 import { selectAllWithin } from '@/ui/selection';
@@ -69,14 +70,15 @@ export function TimelineMenuPopup({
                         </ContextMenu.Item>
                     )}
                     {chatId !== null && turnId !== null && (
-                        <ContextMenu.Item
-                            className="menu-item"
-                            disabled={forkBlocked !== null}
-                            onClick={() => useUi.getState().setForkDialog({ chatId, turnId })}
-                        >
-                            <Icon icon={GitFork} size={14} /> {t('timeline.menu.forkFromHere')}
-                            {forkBlocked !== null && <span className={MENU_HINT}>{forkBlocked}</span>}
-                        </ContextMenu.Item>
+                        <DisabledReason reason={forkBlocked}>
+                            <ContextMenu.Item
+                                className="menu-item"
+                                disabled={forkBlocked !== null}
+                                onClick={() => useUi.getState().setForkDialog({ chatId, turnId })}
+                            >
+                                <Icon icon={GitFork} size={14} /> {t('timeline.menu.forkFromHere')}
+                            </ContextMenu.Item>
+                        </DisabledReason>
                     )}
                     <ContextMenu.Separator className={MENU_SEPARATOR} />
                     <ContextMenu.Item className="menu-item" onClick={() => selectAllWithin(thread.current)}>

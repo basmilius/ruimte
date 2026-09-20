@@ -547,6 +547,12 @@
     .menu-item[data-highlighted] { background: var(--surface-active); }
     :root[data-modality='pointer'] .menu-item[data-highlighted] { background: var(--surface-hover); }
     .menu-item[data-disabled] { opacity: .45; }
+    /* Two lines against each other divide nothing, and so does a line at the top or the bottom of a
+       menu. A menu is composed out of rows that each decide whether they are there, so the last word
+       on this is here rather than in every list that draws one. */
+    .menu-popup > [role='separator'] + [role='separator'],
+    .menu-popup > [role='separator']:first-child,
+    .menu-popup > [role='separator']:last-child { display: none; }
     .project-menu-row { gap: 1px; }
     .project-menu-row > .menu-item:first-child { border-radius: 6px 0 0 6px; }
     .project-menu-actions {

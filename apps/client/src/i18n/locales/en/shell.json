@@ -108,11 +108,15 @@
         "placeholder": "Name"
     },
     "viewIcon": {
-        "title": "View icon",
-        "separator": "Separator",
         "pickedHere": "Picked here",
         "defaultForKind": "Default for its kind",
         "useDefault": "Use the default"
+    },
+    "viewSettings": {
+        "title": "View settings",
+        "name": "Name",
+        "nameLabel": "View name",
+        "nameHint": "Everyone with the folder sees this name. Leave it empty for the name the view gives itself."
     },
     "projectBanner": {
         "stayHere": "Stay here",
@@ -127,12 +131,6 @@
         }
     },
     "viewDialogs": {
-        "rename": {
-            "title": "Rename view",
-            "description": "Everyone with the folder sees this name.",
-            "label": "View name",
-            "placeholder": "Name"
-        },
         "newBrowser": {
             "title": "New browser view",
             "description": "An address without a scheme opens over https.",
@@ -202,7 +200,11 @@
         "newView": "View",
         "putOnCanvas": "Put on canvas",
         "showOnCanvas": "Show on the canvas",
-        "changeIcon": "Change icon…"
+        "openInChat": "Open in chat",
+        "openInTerminal": "Open in terminal",
+        "viewSettings": "View settings…",
+        "deleteView": "Delete view",
+        "reveal": "Reveal in {{app}}"
     },
     "share": {
         "start": "Share with your team",
@@ -281,7 +283,6 @@
     "projectSettings": {
         "title": "Project settings",
         "name": "Name",
-        "symbol": "Symbol",
         "fromFile": "From {{file}}",
         "firstLetter": "The first letter of the name",
         "chooseImage": "Choose image…",

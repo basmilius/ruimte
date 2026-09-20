@@ -1,16 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@base-ui-components/react/dialog';
 import { Trash } from 'lucide-react';
-import { renameViewAction } from '@/actions/client-actions';
 import { viewIsBusy } from '@/project/views';
-import { ViewIconDialog } from '@/shell/ViewIconDialog';
+import { ViewSettingsDialog } from '@/shell/ViewSettingsDialog';
 import { useCanvas } from '@/state/canvas';
-import { resetTitle } from '@/nodes/node-host';
 import { useDocument } from '@/state/document';
 import { useUi } from '@/state/ui';
 import { PromptDialog } from '@/ui/PromptDialog';
 
-/* Renaming, deleting, promoting, picking a mark and a new page: everything a view asks before it happens. */
+/* Settings, deleting, promoting and a new page: everything a view asks before it happens. */
 export function ViewDialogs() {
     const { t } = useTranslation(['shell', 'common']);
     const dialog = useUi((s) => s.viewDialog);
@@ -25,27 +23,6 @@ export function ViewDialogs() {
 
     return (
         <>
-            <PromptDialog
-                open={present && dialog.kind === 'rename'}
-                title={t('viewDialogs.rename.title')}
-                description={t('viewDialogs.rename.description')}
-                field={{ ariaLabel: t('viewDialogs.rename.label'), placeholder: t('viewDialogs.rename.placeholder'), initial: view?.name ?? '' }}
-                confirmLabel={t('common:action.rename')}
-                // An empty field is not a name: the view goes back to the one its own source gives it.
-                allowEmpty
-                onConfirm={(name) => {
-                    if (view) {
-                        if (name === '') {
-                            resetTitle(view.id);
-                        } else {
-                            renameViewAction(view.id, name);
-                        }
-                    }
-                    close();
-                }}
-                onClose={close}
-            />
-
             <PromptDialog
                 open={present && dialog.kind === 'new-browser'}
                 title={t('viewDialogs.newBrowser.title')}
@@ -89,11 +66,11 @@ export function ViewDialogs() {
                 onClose={close}
             />
 
-            {/* Not a question: the icon dialog writes on every click and carries its own way out. */}
-            <Dialog.Root open={present && dialog.kind === 'icon'} onOpenChange={(next) => !next && close()}>
+            {/* Not a question: the settings dialog writes as it goes and carries its own way out. */}
+            <Dialog.Root open={present && dialog.kind === 'settings'} onOpenChange={(next) => !next && close()}>
                 <Dialog.Portal>
                     <Dialog.Backdrop className="dialog-backdrop" />
-                    <Dialog.Popup className="dialog-popup w-[420px] p-5">{view && <ViewIconDialog view={view} onClose={close} />}</Dialog.Popup>
+                    <Dialog.Popup className="dialog-popup w-[420px] p-5">{view && <ViewSettingsDialog view={view} onClose={close} />}</Dialog.Popup>
                 </Dialog.Portal>
             </Dialog.Root>
         </>

@@ -1,12 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@base-ui-components/react/menu';
 import { Columns2, Copy, CornerUpRight, Folder, Frame, Globe, RefreshCw } from 'lucide-react';
+import { isCanvasView } from '@ruimte/contracts';
 import { newFileView, showFileOnCanvas } from '@/project/views';
 import { isHtmlName } from '@/shell/panels/file-kind';
 import { localFileUrl } from '@/shell/panels/file-url';
 import { basenameOf, relativeTo, revealableInFiles } from '@/shell/panels/files-tree';
 import { addNodeAtCenter } from '@/shell/commands';
 import { focusedCanvas } from '@/state/canvas';
+import { useDocument } from '@/state/document';
 import { useFiles } from '@/state/files';
 import { useProject } from '@/state/project';
 import { fileManagerName, useServer } from '@/state/server';
@@ -37,6 +39,8 @@ export function FileActionItems({ path, on, onRefresh }: FileActionItemsProps) {
     const platform = useServer((s) => s.platform);
     const folder = useProject((s) => s.current?.folder ?? null);
     const transport = useTransport();
+    /* No canvas in the project is no place to put the file, so that row is left out. */
+    const hasCanvas = useDocument((state) => state.views.some(isCanvasView));
     const name = basenameOf(path);
 
     const openInBrowserNode = (): void => {
@@ -67,7 +71,7 @@ export function FileActionItems({ path, on, onRefresh }: FileActionItemsProps) {
                 </Menu.Item>
             )}
             <Menu.Separator className={MENU_SEPARATOR} />
-            {on !== 'node' && (
+            {on !== 'node' && hasCanvas && (
                 <Menu.Item className="menu-item" onClick={() => showFileOnCanvas(path)}>
                     <Icon icon={Frame} size={14} /> {t('file.menu.showOnCanvas')}
                 </Menu.Item>

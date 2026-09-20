@@ -30,7 +30,7 @@ import { isUnseen, useAttention } from '@/state/attention';
 import { useProcessWarnings } from '@/state/processes';
 import { carriesFiles, carriesPaths, dropEffectFor, droppedPaths } from '@/canvas/drop';
 import { finderPaths } from '@/canvas/finder-drop';
-import { askDeleteView, newFileView, revealNode, showView } from '@/project/views';
+import { askDeleteView, askViewSettings, newFileView, revealNode, showView } from '@/project/views';
 import { focusedCanvas, useCanvas } from '@/state/canvas';
 import { useChats } from '@/state/chats';
 import { useDocument } from '@/state/document';
@@ -296,13 +296,15 @@ function SeparatorRow({ row, tabbable, onFocus, onArrow, onDelete, onDrag }: Omi
                 data-sidebar-row={row.rowId}
                 data-view-index={row.index}
                 tabIndex={tabbable ? 0 : -1}
-                className="flex h-6 w-full cursor-default items-center gap-2 px-2 outline-none focus-visible:ring-1 focus-visible:ring-accent"
+                className="flex h-6 w-full cursor-default items-center outline-none focus-visible:ring-1 focus-visible:ring-accent"
                 onFocus={onFocus}
                 onDragStart={(event) => onDrag(view.id, event.dataTransfer)}
                 onDragEnd={() => onDrag(null)}
                 onKeyDown={(e) => arrowStep(e, onArrow)}
             >
-                <span className="h-px grow bg-border" />
+                {/* Edge to edge: the negative margin takes back the padding of the list around it,
+                    the way the line in a menu takes back the padding of its popup. */}
+                <span className="-mx-2 h-px grow bg-border-soft" />
             </ContextMenu.Trigger>
             <DeleteRowMenu onDelete={onDelete} />
         </ContextMenu.Root>
@@ -387,8 +389,10 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
                 onKeyDown={(e) => {
                     arrowStep(e, onArrow);
                     if (e.key === 'F2') {
+                        // A double click still renames the row in place; the key goes to the dialog,
+                        // where the name and the mark sit together.
                         e.preventDefault();
-                        setRenaming(true);
+                        askViewSettings(view.id);
                     }
                     if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && row.expandable && row.expanded !== (e.key === 'ArrowRight')) {
                         e.preventDefault();
@@ -451,7 +455,7 @@ function ViewRow({ row, tabbable, onFocus, onArrow, onToggle, onDrag }: ViewRowP
             <ContextMenu.Portal>
                 <ContextMenu.Positioner className="z-(--z-popup)">
                     <ContextMenu.Popup className="menu-popup">
-                        <ViewMenuItems viewId={view.id} kind={view.kind} onRename={() => setRenaming(true)} />
+                        <ViewMenuItems viewId={view.id} kind={view.kind} onSidebar />
                     </ContextMenu.Popup>
                 </ContextMenu.Positioner>
             </ContextMenu.Portal>

@@ -7,8 +7,19 @@ import { useChatRow } from '@/state/chats';
 import { useToasts } from '@/state/toasts';
 import { useUi } from '@/state/ui';
 import { useTransport } from '@/transport/context';
-import { MENU_HINT } from '@/ui/classes';
+import { DisabledReason } from '@/ui/DisabledReason';
 import { Icon } from '@/ui/Icon';
+
+/*
+ * Whether `ForkMenuItem` draws anything at all. A menu that puts a line above the row has to know
+ * that before it draws the line, or a chat nobody has written in yet gets two lines against each
+ * other. It asks the same two questions the component asks, so the two move together.
+ */
+export const useOffersFork = (chatId: string): boolean => {
+    const settled = useChatRow(chatId, (row) => (row ? lastSettledTurn(row.structure, row.order) !== null : false));
+    const forked = useChatRow(chatId, (row) => row?.info.forkOf !== undefined);
+    return settled || forked;
+};
 
 /*
  * "Fork conversation..." in the menu of a chat node or a chat view: a fork after the last turn that
@@ -23,10 +34,11 @@ export function ForkMenuItem({ chatId }: { chatId: string }) {
     return (
         <>
             {turnId !== null && (
-                <ContextMenu.Item className="menu-item" disabled={refusal !== null} onClick={() => useUi.getState().setForkDialog({ chatId, turnId })}>
-                    <Icon icon={GitFork} size={14} /> {t('fork.menu.fork')}
-                    {refusal !== null && <span className={MENU_HINT}>{refusal}</span>}
-                </ContextMenu.Item>
+                <DisabledReason reason={refusal}>
+                    <ContextMenu.Item className="menu-item" disabled={refusal !== null} onClick={() => useUi.getState().setForkDialog({ chatId, turnId })}>
+                        <Icon icon={GitFork} size={14} /> {t('fork.menu.fork')}
+                    </ContextMenu.Item>
+                </DisabledReason>
             )}
             {forked && <ForkBackItems chatId={chatId} />}
         </>
@@ -47,14 +59,17 @@ function ForkBackItems({ chatId }: { chatId: string }) {
     };
     return (
         <>
-            <ContextMenu.Item className="menu-item" disabled={refusal !== null} onClick={summarize}>
-                <Icon icon={MessageSquareShare} size={14} />{' '}
-                {original.title === null ? t('fork.menu.summarize') : t('fork.menu.summarizeFor', { title: original.title })}
-                {refusal !== null && <span className={MENU_HINT}>{refusal}</span>}
-            </ContextMenu.Item>
-            <ContextMenu.Item className="menu-item" disabled={original.title === null} onClick={original.go}>
-                <Icon icon={Undo2} size={14} /> {t('fork.menu.showOriginal')}
-            </ContextMenu.Item>
+            <DisabledReason reason={refusal}>
+                <ContextMenu.Item className="menu-item" disabled={refusal !== null} onClick={summarize}>
+                    <Icon icon={MessageSquareShare} size={14} />{' '}
+                    {original.title === null ? t('fork.menu.summarize') : t('fork.menu.summarizeFor', { title: original.title })}
+                </ContextMenu.Item>
+            </DisabledReason>
+            <DisabledReason reason={original.title === null ? t('fork.refusal.originalGone') : null}>
+                <ContextMenu.Item className="menu-item" disabled={original.title === null} onClick={original.go}>
+                    <Icon icon={Undo2} size={14} /> {t('fork.menu.showOriginal')}
+                </ContextMenu.Item>
+            </DisabledReason>
         </>
     );
 }
