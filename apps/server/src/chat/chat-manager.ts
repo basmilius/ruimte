@@ -351,6 +351,7 @@ export class ChatManager {
             info,
             items: stored?.items ?? [],
             preambles: stored?.preambles ?? [],
+            clearedTaskIds: stored?.clearedTaskIds ?? [],
             provider,
             command: this.commands[kind] ?? provider.command,
             ...(this.spawn ? { spawn: this.spawn } : {}),
@@ -664,7 +665,7 @@ export class ChatManager {
     /* Empties the thread and drops the CLI's session and the chat's plans; `force` stops a turn that is in the way. */
     async clear(chatId: string, force = false): Promise<void> {
         const session = this.require(chatId);
-        session.clear(force);
+        session.clear(force, this.taskRows(chatId));
         // A debounced write still waiting holds the old thread and must not land after the empty one.
         this.cancelWaiting(chatId);
         // Folded right away: every line before the reset describes a thread that is gone.
@@ -874,7 +875,7 @@ export class ChatManager {
             const log = this.logs.get(chatId);
             // Not folded here: an older write still in flight may land after this one, and the log is what covers for it.
             try {
-                this.store.writeSync(chatId, info, items, { seq: log?.seq ?? 0, resetSeq: log?.resetSeq ?? 0 }, session.preambles);
+                this.store.writeSync(chatId, info, items, { seq: log?.seq ?? 0, resetSeq: log?.resetSeq ?? 0 }, session.preambles, session.clearedTaskIds);
             } catch (e) {
                 console.error(`Chat record for ${chatId} failed:`, errorText(e));
             }
@@ -927,7 +928,7 @@ export class ChatManager {
             this.coalescers.get(chatId)?.flush();
             const { info, items } = session.thread.snapshot();
             const at = { seq: log.seq, resetSeq: log.resetSeq };
-            this.sizes.set(chatId, await this.store.write(chatId, info, items, at, session.preambles));
+            this.sizes.set(chatId, await this.store.write(chatId, info, items, at, session.preambles, session.clearedTaskIds));
             // A chat killed while the write was out has no log left to fold.
             if (this.logs.get(chatId) === log && (fold || log.size > COMPACT_ABOVE_BYTES)) {
                 log.compact(at.seq);

@@ -18,7 +18,8 @@ const RecordSchema = z.object({
     seq: z.number().int().nonnegative().optional(),
     resetSeq: z.number().int().nonnegative().optional(),
     // Never on the wire: what goes in front of the next real prompt, once (a fork's note for its agent).
-    preambles: z.array(z.string()).optional()
+    preambles: z.array(z.string()).optional(),
+    clearedTaskIds: z.array(z.string()).optional()
 });
 
 /* A thread as it stood when the daemon last wrote down anything about it: the snapshot with the log played over it. */
@@ -28,6 +29,7 @@ export interface ChatRecord {
     seq: number;
     resetSeq: number;
     preambles: string[];
+    clearedTaskIds: string[];
     // The log as it is on disk, for the lines an attach with `since` may still be answered from.
     lines: ChatLogLine[];
 }
@@ -40,8 +42,8 @@ export interface ChatSeq {
 
 const logName = (chatId: string): string => `${encodeURIComponent(chatId)}.log`;
 
-const recordBody = (info: ChatInfo, items: ChatItem[], at: ChatSeq, preambles: readonly string[]): string =>
-    JSON.stringify({ info, items, ...at, ...(preambles.length === 0 ? {} : { preambles }) });
+const recordBody = (info: ChatInfo, items: ChatItem[], at: ChatSeq, preambles: readonly string[], clearedTaskIds: readonly string[]): string =>
+    JSON.stringify({ info, items, ...at, ...(preambles.length === 0 ? {} : { preambles }), ...(clearedTaskIds.length === 0 ? {} : { clearedTaskIds }) });
 
 /*
  * One JSON file per chat under `$RUIMTE_HOME/chats`, written while a turn runs and on shutdown, with
@@ -91,8 +93,15 @@ export class ChatStore {
     }
 
     /* Answers how many bytes the record took, which is what tells a caller whether writing it is cheap. */
-    async write(chatId: string, info: ChatInfo, items: ChatItem[], at: ChatSeq = { seq: 0, resetSeq: 0 }, preambles: readonly string[] = []): Promise<number> {
-        const body = recordBody(info, items, at, preambles);
+    async write(
+        chatId: string,
+        info: ChatInfo,
+        items: ChatItem[],
+        at: ChatSeq = { seq: 0, resetSeq: 0 },
+        preambles: readonly string[] = [],
+        clearedTaskIds: readonly string[] = []
+    ): Promise<number> {
+        const body = recordBody(info, items, at, preambles, clearedTaskIds);
         await mkdir(this.dir, { recursive: true, mode: 0o700 });
         await writeAtomic(join(this.dir, recordFileName(chatId)), body);
         return body.length;
@@ -102,9 +111,16 @@ export class ChatStore {
      * The same write without a turn of the event loop. A `bun --watch` reload restarts the module
      * before an awaited write comes back, so a shutdown has to put the threads down synchronously.
      */
-    writeSync(chatId: string, info: ChatInfo, items: ChatItem[], at: ChatSeq = { seq: 0, resetSeq: 0 }, preambles: readonly string[] = []): void {
+    writeSync(
+        chatId: string,
+        info: ChatInfo,
+        items: ChatItem[],
+        at: ChatSeq = { seq: 0, resetSeq: 0 },
+        preambles: readonly string[] = [],
+        clearedTaskIds: readonly string[] = []
+    ): void {
         mkdirSync(this.dir, { recursive: true, mode: 0o700 });
-        writeAtomicSync(join(this.dir, recordFileName(chatId)), recordBody(info, items, at, preambles));
+        writeAtomicSync(join(this.dir, recordFileName(chatId)), recordBody(info, items, at, preambles, clearedTaskIds));
     }
 
     async read(chatId: string): Promise<ChatRecord | null> {
@@ -126,7 +142,7 @@ export class ChatStore {
                 resetSeq = line.seq;
             }
         }
-        return { ...thread.snapshot(), seq, resetSeq, preambles: snapshot.preambles ?? [], lines };
+        return { ...thread.snapshot(), seq, resetSeq, preambles: snapshot.preambles ?? [], clearedTaskIds: snapshot.clearedTaskIds ?? [], lines };
     }
 
     private async readSnapshot(chatId: string): Promise<z.infer<typeof RecordSchema> | null> {
@@ -190,5 +206,5 @@ const fromLogAlone = (lines: ChatLogLine[]): ChatRecord | null => {
             resetSeq = line.seq;
         }
     }
-    return { ...thread.snapshot(), seq: 0, resetSeq, preambles: [], lines };
+    return { ...thread.snapshot(), seq: 0, resetSeq, preambles: [], clearedTaskIds: [], lines };
 };

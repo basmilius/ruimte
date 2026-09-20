@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ChatAttachResult, ChatEvent } from '@ruimte/contracts';
+import type { ChatAttachResult, ChatEvent, Task } from '@ruimte/contracts';
 import { ProviderRegistry } from '../providers/registry.ts';
 import { AttachmentStore } from './attachment-store.ts';
 import { ChatManager } from './chat-manager.ts';
@@ -108,6 +108,51 @@ describe('the stream of a chat', () => {
         expect(back.events).toBeUndefined();
         expect(back.items.filter((item) => item.kind === 'user').map((item) => (item.kind === 'user' ? item.text : ''))).toEqual(['again']);
         expect(back.seq).toBeGreaterThan(before);
+    });
+
+    test('cleared task rows stay gone after updates and restarts while new tasks still appear', async () => {
+        const tasks: Task[] = [
+            {
+                id: 'old',
+                projectId: 'project',
+                parentId: 'chat',
+                childId: 'child',
+                title: 'Old task',
+                prompt: 'Work',
+                status: 'open',
+                result: null,
+                createdAt: 1,
+                settledAt: null,
+                wake: 'pending'
+            }
+        ];
+        const first = boot({ taskRows: () => tasks });
+        await first.manager.create({ chatId: 'chat', cwd: home });
+        expect(first.manager.attach('chat', 'watcher').items).toHaveLength(1);
+
+        await first.manager.clear('chat');
+        tasks[0] = { ...tasks[0]!, status: 'done', settledAt: 2 };
+        first.manager.syncTaskRow(tasks[0]!);
+        expect(first.manager.attach('chat', 'watcher').items).toEqual([]);
+        expect((await new ChatStore(home).read('chat'))?.clearedTaskIds).toEqual(['old']);
+        first.manager.persistAllSync();
+        await first.manager.shutdown();
+
+        const second = boot({ taskRows: () => tasks });
+        await second.manager.create({ chatId: 'chat' });
+        expect(second.manager.attach('chat', 'watcher').items).toEqual([]);
+        tasks.push({ ...tasks[0]!, id: 'new', childId: 'new-child', status: 'open', settledAt: null });
+        second.manager.syncTaskRow(tasks[1]!);
+        expect(second.manager.attach('chat', 'watcher').items.map((item) => item.id)).toEqual(['task-new']);
+
+        await second.manager.clear('chat');
+        await second.manager.shutdown();
+        const third = boot({ taskRows: () => tasks });
+        await third.manager.create({ chatId: 'chat' });
+        for (const task of tasks) {
+            third.manager.syncTaskRow(task);
+        }
+        expect(third.manager.attach('chat', 'watcher').items).toEqual([]);
     });
 
     test('after a restart the stream goes on, and a seq the folded log no longer covers gets the whole thread', async () => {

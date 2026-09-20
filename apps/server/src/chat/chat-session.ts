@@ -31,6 +31,7 @@ interface ChatSessionOptions {
     items?: ChatItem[];
     // Said once, in front of the next real prompt, and kept in the record until then (a fork's note for its agent).
     preambles?: string[];
+    clearedTaskIds?: string[];
     provider: ChatProvider;
     // The executable and leading arguments; a test points this at a fake CLI.
     command: string[];
@@ -104,10 +105,12 @@ export class ChatSession {
     private frozen = false;
     // Background subagents a load found running whose transcript did not show an end yet; no CLI here will report them.
     private readonly orphans = new Set<string>();
+    private readonly clearedTasks: Set<string>;
     private pendingPreambles: readonly string[];
 
     constructor(options: ChatSessionOptions) {
         this.options = options;
+        this.clearedTasks = new Set(options.clearedTaskIds);
         this.pendingPreambles = options.preambles ?? [];
         this.thread = new ChatThread(options.info, options.items);
         this.projector = new ThreadProjector(this.thread, { providerName: options.provider.name });
@@ -128,6 +131,10 @@ export class ChatSession {
     /* What still waits for the next real prompt, for the record. */
     get preambles(): readonly string[] {
         return this.pendingPreambles;
+    }
+
+    get clearedTaskIds(): string[] {
+        return [...this.clearedTasks];
     }
 
     get pid(): number | null {
@@ -318,9 +325,12 @@ export class ChatSession {
      * A turn in the way is refused unless forced, and a forced clear does not wait for it to end,
      * since the turn disappears with the thread anyway. Writing the empty thread is the caller's.
      */
-    clear(force: boolean): void {
+    clear(force: boolean, tasks: readonly Task[] = []): void {
         if (this.busy && !force) {
             throw new ChatError('chat-busy', `Chat ${this.id} is still working on the previous message`);
+        }
+        for (const task of tasks) {
+            this.clearedTasks.add(task.id);
         }
         this.dispose();
         this.generation += 1;
@@ -503,6 +513,9 @@ export class ChatSession {
      * that ran the verb; a cancelled task gets a note saying why its row failed.
      */
     upsertTaskRow(task: Task): void {
+        if (this.clearedTasks.has(task.id)) {
+            return;
+        }
         const id = `task-${task.id}`;
         const existing = this.thread.get(id);
         const row: ChatSubagentItem = {
