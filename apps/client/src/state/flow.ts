@@ -10,7 +10,7 @@ import {
     type FlowPort,
     type ProjectViewLocal
 } from '@ruimte/contracts';
-import { defaultArgsOf, portsOf } from '@ruimte/flow';
+import { defaultArgsOf, portsOf, takesInput } from '@ruimte/flow';
 import { createCameraSlice, type CameraSlice } from '@/canvas/camera-slice';
 import { cameraOfView, snapToGrid, type Point } from '@/canvas/math';
 import { boundsOf } from '@/flow/geometry';
@@ -48,6 +48,8 @@ export interface FlowState extends CameraSlice {
     addCard(kind: FlowCardKind, card: string | undefined, at: Point): string;
     /* `first` says this is the first step of a drag, which is the one that goes into the history. */
     moveCard(id: string, at: Point, first: boolean): void;
+    /* Puts another card in this one's place, keeping where it stands and the lines that still hold. */
+    replaceCard(id: string, kind: FlowCardKind, card: string | undefined): void;
     setArg(id: string, name: string, value: FlowArgValue): void;
     setInverted(id: string, inverted: boolean): void;
     removeCards(ids: readonly string[]): void;
@@ -190,6 +192,26 @@ export const createFlowStore = (): StoreApi<FlowState> =>
             if (content !== null) {
                 set(changed(state, content, first));
             }
+        },
+
+        replaceCard(id, kind, card) {
+            const state = get();
+            const before = state.content.cards[id];
+            if (before === undefined) {
+                return;
+            }
+            const made: FlowCard = {
+                kind,
+                ...(card === undefined ? {} : { card }),
+                args: defaultArgsOf(kind, card),
+                x: before.x,
+                y: before.y
+            };
+            const ports = new Set(portsOf(made));
+            /* A line out of a port the new card does not offer has nowhere left to leave from, and one
+               into a card that takes nothing in has nowhere to land. The rest of the drawing stands. */
+            const links = state.content.links.filter((link) => (link.from !== id || ports.has(link.fromPort)) && (link.to !== id || takesInput(made)));
+            set(changed(state, { ...state.content, cards: { ...state.content.cards, [id]: made }, links }));
         },
 
         setArg(id, name, value) {

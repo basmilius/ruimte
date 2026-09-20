@@ -873,6 +873,22 @@
     .file-preview-webview { background: transparent; }
     .file-preview-webview[data-loaded] { background: #ffffff; }
 
+    /* The flash over a flow card the moment it settled in a run. A layer of its own, so the card
+       keeps its own background while the mark fades; with motion off it stays until the next card
+       settles or the run's afterglow ends. */
+    .flow-card-flash {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: var(--accent-soft);
+        pointer-events: none;
+        animation: flow-card-flash 1.2s ease-out forwards;
+    }
+    @keyframes flow-card-flash {
+        from { opacity: 1; }
+        to { opacity: 0; }
+    }
+
     /* ---------------------------------------------------------------- Motion */
 
     @media (prefers-reduced-motion: reduce) {

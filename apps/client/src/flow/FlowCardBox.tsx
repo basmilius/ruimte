@@ -5,6 +5,7 @@ import type { FlowCard, FlowContent } from '@ruimte/contracts';
 import { missingArgsOf, portsOf, textArg } from '@ruimte/flow';
 import { cardRect, ICON_SIZE, roundingOf } from '@/flow/geometry';
 import { glyphOf } from '@/flow/glyphs';
+import type { CardLight } from '@/flow/live-look';
 import { cardLabel, cardSentence, cardSource } from '@/flow/labels';
 import { Icon } from '@/ui/Icon';
 
@@ -16,7 +17,23 @@ const isPill = (card: FlowCard): boolean => card.kind === 'delay' || card.kind =
  * and an action has one or two: whether it can fail is in its own schema. That is what tells them
  * apart at a glance, and it works for anyone who reads color poorly.
  */
-export function FlowCardBox({ id, card, content, selected }: { id: string; card: FlowCard; content: FlowContent; selected: boolean }) {
+export function FlowCardBox({
+    id,
+    card,
+    content,
+    selected,
+    light,
+    pulse
+}: {
+    id: string;
+    card: FlowCard;
+    content: FlowContent;
+    selected: boolean;
+    /* Where a run that is going on right now stands on this card. */
+    light?: CardLight;
+    /* Flashes once, the moment this card settled. */
+    pulse?: number;
+}) {
     const { t } = useTranslation('flow');
     const ports = portsOf(card);
     const missing = missingArgsOf(card);
@@ -29,6 +46,11 @@ export function FlowCardBox({ id, card, content, selected }: { id: string; card:
         height: rect.h,
         borderRadius: `${rounding.left}px ${rounding.right}px ${rounding.right}px ${rounding.left}px`
     };
+
+    /* A branch that died fades back rather than turning red: reaching a port nobody drew from is not
+       a failure, it is where that branch ends. */
+    const lit = clsx(light === 'dead' && 'opacity-40', light === 'ran' && 'border-accent');
+    const flash = pulse === undefined ? null : <span key={pulse} className="flow-card-flash" />;
 
     if (card.kind === 'note') {
         return (
@@ -45,13 +67,14 @@ export function FlowCardBox({ id, card, content, selected }: { id: string; card:
         );
     }
 
-    const shell = clsx('pointer-events-auto absolute border border-border bg-surface-raised shadow-float', selected && 'ring-2 ring-accent');
+    const shell = clsx('pointer-events-auto absolute border border-border bg-surface-raised shadow-float', selected && 'ring-2 ring-accent', lit);
 
     if (card.kind === 'start') {
         return (
             <div data-flow-card={id} className={clsx(shell, 'grid place-items-center')} style={style} aria-label={cardLabel(t, card)}>
                 <Icon icon={Play} size={20} className="text-text-muted" />
                 <span className="sr-only">{cardLabel(t, card)}</span>
+                {flash}
             </div>
         );
     }
@@ -61,6 +84,7 @@ export function FlowCardBox({ id, card, content, selected }: { id: string; card:
             <div data-flow-card={id} className={clsx(shell, 'flex items-center justify-center gap-2 px-4')} style={style}>
                 <Icon icon={glyphOf(card)} size={16} className="shrink-0 text-text-muted" />
                 <span className="truncate text-sm text-text">{sentenceOf(t, content, card)}</span>
+                {flash}
             </div>
         );
     }
@@ -83,6 +107,7 @@ export function FlowCardBox({ id, card, content, selected }: { id: string; card:
                 {ports.map((port) => t(`ports.${port}`)).join(', ')}
                 {missing.length > 0 && ` ${t('inspector.missing', { fields: missing.join(', ') })}`}
             </span>
+            {flash}
         </div>
     );
 }

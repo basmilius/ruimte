@@ -163,7 +163,8 @@
     },
     "panel": {
         "close": "Close this column",
-        "failed": "This column failed to draw"
+        "failed": "This column failed to draw",
+        "replace": "Pick another card for this place"
     },
     "runs": {
         "title": "Runs",

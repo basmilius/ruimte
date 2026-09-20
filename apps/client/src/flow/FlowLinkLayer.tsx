@@ -7,6 +7,7 @@ import { routeDraft, routeEdge, type EdgeRoute } from '@/canvas/edge-route';
 import { HINT_HOT, HINT_REACH, hintStrength } from '@/canvas/port-hints';
 import { PortDot } from '@/canvas/PortDot';
 import { bandOf, cardRect, obstaclesOf, portDot } from '@/flow/geometry';
+import type { FlowLights } from '@/flow/live-look';
 import type { Point } from '@/canvas/math';
 
 export interface FlowDraft {
@@ -25,6 +26,8 @@ interface FlowLinkLayerProps {
     hovered: string | null;
     /* The line a person picked, by its key, which is what Delete acts on. */
     selected: string | null;
+    /* Where a run that is going on right now stands, or null while none is. */
+    lights: FlowLights | null;
     onHover(key: string | null): void;
     onSelect(link: FlowLink): void;
     onRemove(link: FlowLink): void;
@@ -49,7 +52,7 @@ export const linkKey = (link: FlowLink): string => `${link.from}:${link.fromPort
  * a card, which is the same rule a canvas keeps. It is drawn with what the canvas draws with, down to
  * the distance a port opens up over, so the two surfaces are one drawing with two tables of looks.
  */
-export function FlowLinkLayer({ content, zoom, pointer, draft, hovered, selected, onHover, onSelect, onRemove }: FlowLinkLayerProps) {
+export function FlowLinkLayer({ content, zoom, pointer, draft, hovered, selected, lights, onHover, onSelect, onRemove }: FlowLinkLayerProps) {
     const { t } = useTranslation('flow');
     const taken = new Set(content.links.map((link) => `${link.from}:${link.fromPort}`));
     const obstacles = obstaclesOf(content);
@@ -75,23 +78,26 @@ export function FlowLinkLayer({ content, zoom, pointer, draft, hovered, selected
                     return null;
                 }
                 const key = linkKey(link);
-                const active = hovered === key || selected === key;
+                const light = lights?.links[key] ?? null;
+                // A line the run went along is drawn the way a line under the pointer is: a step heavier.
+                const active = hovered === key || selected === key || light === 'live';
                 return (
-                    <EdgePath
-                        key={key}
-                        route={route}
-                        look={flowLook(link.fromPort)}
-                        zoom={zoom}
-                        active={active}
-                        onEnter={() => onHover(key)}
-                        onLeave={() => onHover(null)}
-                        onPress={(e) => {
-                            e.stopPropagation();
-                            onSelect(link);
-                        }}
-                        removeLabel={t('link.remove')}
-                        onRemove={() => onRemove(link)}
-                    />
+                    <g key={key} className={light === 'dead' ? 'opacity-40' : undefined}>
+                        <EdgePath
+                            route={route}
+                            look={flowLook(link.fromPort)}
+                            zoom={zoom}
+                            active={active}
+                            onEnter={() => onHover(key)}
+                            onLeave={() => onHover(null)}
+                            onPress={(e) => {
+                                e.stopPropagation();
+                                onSelect(link);
+                            }}
+                            removeLabel={t('link.remove')}
+                            onRemove={() => onRemove(link)}
+                        />
+                    </g>
                 );
             })}
 

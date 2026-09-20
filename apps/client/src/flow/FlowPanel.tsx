@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
-import { X } from 'lucide-react';
+import { ChevronDown, X } from 'lucide-react';
 import { hasOverlayControls } from '@/desktop/bridge';
+import { FlowCardPicker } from '@/flow/FlowCardPicker';
 import { FlowInspector } from '@/flow/FlowInspector';
 import { FlowRuns } from '@/flow/FlowRuns';
 import { cardLabel } from '@/flow/labels';
@@ -40,6 +42,7 @@ export function FlowPanel() {
     const content = useFlow((s) => s.content);
     const selection = useFlow((s) => s.selection);
     const flow = useFlowState(viewId ?? '');
+    const [replacing, setReplacing] = useState(false);
 
     const cardId = selection.length === 1 ? (selection[0] as string) : null;
     const card = cardId === null ? undefined : content.cards[cardId];
@@ -55,7 +58,20 @@ export function FlowPanel() {
                     open && !rightOfIt && hasOverlayControls() && 'toolbar-overlay-inset'
                 )}
             >
-                <span className="min-w-0 grow truncate text-xs font-medium text-text-muted">{card === undefined ? t('runs.title') : cardLabel(t, card)}</span>
+                {card === undefined ? (
+                    <span className="min-w-0 grow truncate text-xs font-medium text-text-muted">{t('runs.title')}</span>
+                ) : (
+                    <Tooltip label={t('panel.replace')}>
+                        <button
+                            type="button"
+                            className="flex min-w-0 grow items-center gap-1 rounded-md px-1 py-0.5 text-left text-xs font-medium text-text-muted hover:text-text"
+                            onClick={() => setReplacing(true)}
+                        >
+                            <span className="min-w-0 truncate">{cardLabel(t, card)}</span>
+                            <Icon icon={ChevronDown} size={12} className="shrink-0" />
+                        </button>
+                    </Tooltip>
+                )}
                 <Tooltip label={t('panel.close')} name>
                     <button
                         type="button"
@@ -86,6 +102,19 @@ export function FlowPanel() {
                     />
                 )}
             </ErrorBoundary>
+            {replacing && cardId !== null && card !== undefined && (
+                <FlowCardPicker
+                    /* Only its own kind: an action on a trigger's place is not a choice, and the lines
+                       around this card were drawn for what it is. */
+                    kinds={[card.kind]}
+                    current={card.card === undefined ? { kind: card.kind } : { kind: card.kind, card: card.card }}
+                    onPick={(choice) => {
+                        setReplacing(false);
+                        store.getState().replaceCard(cardId, choice.kind, choice.card);
+                    }}
+                    onClose={() => setReplacing(false)}
+                />
+            )}
         </SlidingColumn>
     );
 }

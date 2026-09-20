@@ -1,17 +1,27 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { FlowPort } from '@ruimte/contracts';
+import type { FlowCardKind, FlowPort } from '@ruimte/contracts';
 import { GRID, snapToGrid, toWorld, type Point } from '@/canvas/math';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { FlowCardBox } from '@/flow/FlowCardBox';
+import { FlowCardPicker, type FlowCardChoice } from '@/flow/FlowCardPicker';
 import { FlowDock } from '@/flow/FlowDock';
 import { FlowLinkLayer, linkKey, type FlowDraft } from '@/flow/FlowLinkLayer';
-import { cardRect } from '@/flow/geometry';
+import { CARD_H, cardRect } from '@/flow/geometry';
+import { flowLights } from '@/flow/live-look';
+import { useLiveRun } from '@/flow/use-live-run';
 import { useFlow, useFlowStore } from '@/state/flow';
 import { isInFloatingLayer } from '@/ui/floating';
 
 /* Screen pixels a press on a card may travel before it is a drag rather than a click. */
 const DRAG_THRESHOLD = 3;
+
+/*
+ * What a line let go on bare worksheet may become. A line leaves a port and carries a run on, so the
+ * card it lands on is one that answers something or does something; the cards about the graph itself
+ * are added from the dock, where there is no line waiting on the answer.
+ */
+const NEXT_KINDS: readonly FlowCardKind[] = ['condition', 'action'];
 
 const isChrome = (target: EventTarget | null): boolean =>
     isInFloatingLayer(target) || (target instanceof Element && target.closest('[data-flow-chrome]') !== null);
@@ -52,11 +62,15 @@ export function FlowView({ id }: { id: string }) {
     const [pointer, setPointer] = useState<Point | null>(null);
     const [draft, setDraft] = useState<FlowDraft | null>(null);
     const [hovered, setHovered] = useState<string | null>(null);
+    /* A line let go over nothing: the picker opens on what may follow it, and the line waits here. */
+    const [landing, setLanding] = useState<{ at: Point; from: string; fromPort: FlowPort } | null>(null);
     const camera = useFlow((s) => s.camera);
     const content = useFlow((s) => s.content);
     const selection = useFlow((s) => s.selection);
     const selectedLink = useFlow((s) => s.selectedLink);
     const viewId = useFlow((s) => s.viewId);
+    const live = useLiveRun(viewId ?? '');
+    const lights = useMemo(() => flowLights(content, live), [content, live]);
 
     useLayoutEffect(() => {
         const root = rootRef.current;
@@ -139,6 +153,8 @@ export function FlowView({ id }: { id: string }) {
             });
             if (landed !== undefined) {
                 store.getState().link(draft.from, draft.fromPort, landed[0]);
+            } else {
+                setLanding({ at, from: draft.from, fromPort: draft.fromPort });
             }
             setDraft(null);
         }
@@ -153,6 +169,16 @@ export function FlowView({ id }: { id: string }) {
         panFrom.current = null;
         drag.current = null;
         setGesture(null);
+    };
+
+    /* A card the picker made lands where the line was let go, so its way in is under the pointer. */
+    const land = (choice: FlowCardChoice): void => {
+        if (landing === null) {
+            return;
+        }
+        const made = store.getState().addCard(choice.kind, choice.card, { x: landing.at.x, y: landing.at.y - CARD_H / 2 });
+        store.getState().link(landing.from, landing.fromPort, made);
+        setLanding(null);
     };
 
     const gridStep = GRID * 3 * camera.zoom;
@@ -184,6 +210,7 @@ export function FlowView({ id }: { id: string }) {
                         draft={draft}
                         hovered={hovered}
                         selected={selectedLink === null ? null : linkKey(selectedLink)}
+                        lights={lights}
                         onHover={setHovered}
                         onSelect={(link) => store.getState().selectLink(link)}
                         onRemove={(link) => store.getState().unlink(link.from, link.fromPort, link.to)}
@@ -195,7 +222,15 @@ export function FlowView({ id }: { id: string }) {
                 style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})` }}
             >
                 {Object.entries(content.cards).map(([cardId, card]) => (
-                    <FlowCardBox key={cardId} id={cardId} card={card} content={content} selected={selection.includes(cardId)} />
+                    <FlowCardBox
+                        key={cardId}
+                        id={cardId}
+                        card={card}
+                        content={content}
+                        selected={selection.includes(cardId)}
+                        light={lights?.cards[cardId]}
+                        pulse={lights?.pulse === cardId ? live?.lastAt : undefined}
+                    />
                 ))}
             </div>
 
@@ -205,6 +240,7 @@ export function FlowView({ id }: { id: string }) {
                 </div>
             )}
 
+            {landing !== null && <FlowCardPicker kinds={NEXT_KINDS} onPick={land} onClose={() => setLanding(null)} />}
             <FlowDock viewId={id} />
         </div>
     );

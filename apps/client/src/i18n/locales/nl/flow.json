@@ -163,7 +163,8 @@
     },
     "panel": {
         "close": "Deze kolom sluiten",
-        "failed": "Deze kolom kon niet getekend worden"
+        "failed": "Deze kolom kon niet getekend worden",
+        "replace": "Kies een andere kaart voor deze plek"
     },
     "runs": {
         "title": "Runs",
