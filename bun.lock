@@ -215,6 +215,17 @@
         "typescript": "~6.0.2",
       },
     },
+    "packages/flow": {
+      "name": "@ruimte/flow",
+      "version": "0.0.0",
+      "dependencies": {
+        "@ruimte/contracts": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.4.0",
+        "typescript": "~6.0.2",
+      },
+    },
     "packages/npm": {
       "name": "@ruimte/npm",
       "version": "0.0.0",
@@ -632,6 +643,8 @@
     "@ruimte/diagram": ["@ruimte/diagram@workspace:packages/diagram"],
 
     "@ruimte/drawing": ["@ruimte/drawing@workspace:packages/drawing"],
+
+    "@ruimte/flow": ["@ruimte/flow@workspace:packages/flow"],
 
     "@ruimte/npm": ["@ruimte/npm@workspace:packages/npm"],
 
