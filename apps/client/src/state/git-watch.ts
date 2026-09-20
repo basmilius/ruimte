@@ -90,3 +90,35 @@ export const useGitStatus = (cwd: string | null): GitStatus | null => {
     // The path on the machine that left says nothing about the same path here.
     return held?.key === key ? held.status : null;
 };
+
+/*
+ * A count that goes up whenever the working tree of a checkout moved, for a surface that reads git
+ * itself and only needs to know that something did. It holds the watch of its own, so a diff tab
+ * keeps up with no panel open beside it.
+ */
+export const useGitSignal = (cwd: string | null): number => {
+    const endpointId = useEndpointId();
+    const [held, setHeld] = useState<{ key: string; count: number } | null>(null);
+    const key = endpointKey(endpointId, String(cwd));
+
+    useEffect(() => {
+        if (cwd === null) {
+            return;
+        }
+        const watch = watchGit(cwd);
+        return () => {
+            watch.release();
+        };
+    }, [cwd, endpointId, key]);
+
+    useEffect(() => {
+        return transportFor(endpointId)?.on('git.changed', (payload) => {
+            if (payload.cwd === cwd) {
+                setHeld((previous) => ({ key, count: (previous?.key === key ? previous.count : 0) + 1 }));
+            }
+        });
+    }, [cwd, endpointId, key]);
+
+    // A checkout that just changed starts over, so the reader is not told it moved when it did not.
+    return held?.key === key ? held.count : 0;
+};

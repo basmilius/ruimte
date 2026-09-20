@@ -10,6 +10,7 @@ import { FileToolbar, FileToolbarToggle } from '@/shell/panels/FileToolbar';
 import { relativeTo } from '@/shell/panels/files-tree';
 import { isCheckoutDiff, useFiles, type FileTabView } from '@/state/files';
 import { useGit } from '@/state/git';
+import { useGitSignal } from '@/state/git-watch';
 import { useSettings } from '@/state/settings';
 import { useTransport } from '@/transport/context';
 import { BTN_GROUP } from '@/ui/classes';
@@ -46,10 +47,14 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
     const whitespace = useSettings((s) => s.diffWhitespace);
     const [wrap, setWrap] = useState(true);
     const [nonce, setNonce] = useState(0);
+    /* Goes up whenever the checkout moved, which is the tab reading itself again. */
+    const signal = useGitSignal(view.cwd);
     const relative = useMemo(() => relativeTo(view.cwd, path), [view.cwd, path]);
     /* Which diff was asked for, so an answer to the question before this one is not drawn and a
-       switch of scope reads as loading without an effect that has to empty the state first. */
-    const asked = `${view.cwd}\u0000${relative}\u0000${view.scope}\u0000${String(view.staged)}\u0000${String(whitespace)}\u0000${view.base ?? ''}\u0000${nonce}`;
+       switch of scope reads as loading without an effect that has to empty the state first. A
+       reread of the same question is not part of it: the diff on screen stays up until the new
+       one lands, or every write would blink the tab back to its spinner. */
+    const asked = `${view.cwd}\u0000${relative}\u0000${view.scope}\u0000${String(view.staged)}\u0000${String(whitespace)}\u0000${view.base ?? ''}`;
     const [held, setHeld] = useState<{ asked: string; state: DiffState } | null>(null);
     const transport = useTransport();
     const state: DiffState = held !== null && held.asked === asked ? held.state : { status: 'loading' };
@@ -79,7 +84,7 @@ function FileDiffView({ tabKey, path, name, view }: { tabKey: string; path: stri
         return () => {
             alive = false;
         };
-    }, [transport, asked, relative, tabKey, view.cwd, view.scope, view.staged, view.base, whitespace]);
+    }, [transport, asked, nonce, signal, relative, tabKey, view.cwd, view.scope, view.staged, view.base, whitespace]);
 
     const refresh = useCallback(() => setNonce((count) => count + 1), []);
     const actions = useMemo(() => ({ path, name, on: 'tab' as const, tabKey, refresh }), [tabKey, path, name, refresh]);
@@ -194,9 +199,11 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
     const [wrap, setWrap] = useState(true);
     const [now] = useState(() => Math.floor(Date.now() / 1000));
     const [nonce, setNonce] = useState(0);
+    /* A commit never changes, so only the changes of a checkout follow the tree. */
+    const signal = useGitSignal(commit === undefined ? cwd : null);
     /* Which commit was asked for, so a tab that just changed reads as loading without an effect
-       that has to empty the state first. */
-    const asked = `${cwd}\u0000${commit ?? ''}\u0000${base ?? ''}\u0000${nonce}`;
+       that has to empty the state first. A reread of the same one keeps what is on screen. */
+    const asked = `${cwd}\u0000${commit ?? ''}\u0000${base ?? ''}`;
 
     const [held, setHeld] = useState<{ asked: string; state: CommitState } | null>(null);
     const transport = useTransport();
@@ -222,7 +229,7 @@ function CommitDiff({ tabKey, cwd, commit, base }: { tabKey: string; cwd: string
         return () => {
             alive = false;
         };
-    }, [transport, asked, commit, base, cwd, tabKey]);
+    }, [transport, asked, nonce, signal, commit, base, cwd, tabKey]);
 
     const meta = state.status === 'ready' ? state.diff.commit : undefined;
     const files: readonly GitDiffFile[] = state.status === 'ready' ? (state.diff.files ?? []) : [];

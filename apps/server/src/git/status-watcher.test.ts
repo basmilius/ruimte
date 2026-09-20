@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { GitStatusEvent } from '@ruimte/contracts';
+import type { GitChangedEvent, GitStatusEvent } from '@ruimte/contracts';
 import { FakeWatch } from '../fs/watch-test-helpers.ts';
 import { GitStatusWatcher } from './status-watcher.ts';
 import { forgetBase } from './status.ts';
@@ -12,6 +12,7 @@ let repo: string;
 let fake: FakeWatch;
 let watcher: GitStatusWatcher;
 let events: GitStatusEvent[];
+let changed: GitChangedEvent[];
 let unsubscribe: () => void;
 
 const git = async (args: string[]): Promise<void> => {
@@ -38,6 +39,9 @@ const watcherWith = (runMs: number): GitStatusWatcher => {
         if (frame.event === 'git.status') {
             events.push(frame.payload);
         }
+        if (frame.event === 'git.changed') {
+            changed.push(frame.payload);
+        }
     });
     return next;
 };
@@ -53,6 +57,7 @@ beforeEach(async () => {
     await git(['commit', '-q', '-m', 'init']);
     forgetBase();
     events = [];
+    changed = [];
     fake = new FakeWatch();
     watcher = watcherWith(0);
 });
@@ -88,6 +93,20 @@ describe('GitStatusWatcher', () => {
         await fake.settle();
 
         expect(events).toHaveLength(1);
+    });
+
+    test('a burst the status slept through is still reported as a change', async () => {
+        await watcher.watch('c1', repo);
+        await writeFile(join(repo, 'tracked.txt'), 'one\ntwo\n');
+        fake.on(repo).emit('tracked.txt');
+        await fake.settle();
+        // The same file again: every word of the status reads the same, the bytes of its diff do not.
+        await writeFile(join(repo, 'tracked.txt'), 'one\nthree\n');
+        fake.on(repo).emit('tracked.txt');
+        await fake.settle();
+
+        expect(events).toHaveLength(1);
+        expect(changed.map((event) => event.cwd)).toEqual([repo, repo]);
     });
 
     test('a write git ignores, and git moving its own objects and locks, are not worth a status run', async () => {

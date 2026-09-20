@@ -153,6 +153,7 @@ public enum WireEvent: String, CaseIterable, Sendable {
     case `diagramChanged` = "diagram.changed"
     case `fsChanged` = "fs.changed"
     case `gitStatus` = "git.status"
+    case `gitChanged` = "git.changed"
     case `gitProgress` = "git.progress"
     case `gitWorktrees` = "git.worktrees"
     case `usageChanged` = "usage.changed"

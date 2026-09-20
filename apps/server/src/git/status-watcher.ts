@@ -141,6 +141,8 @@ export class GitStatusWatcher {
                 state.fingerprint = fingerprint;
                 this.sinks.to(clientId, { event: 'git.status', payload: { cwd: state.cwd, status } });
             }
+            // A diff reads the bytes, not the status, so it is told about a burst the status slept through.
+            this.sinks.to(clientId, { event: 'git.changed', payload: { cwd: state.cwd } });
         } finally {
             state.running = false;
         }

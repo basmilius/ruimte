@@ -23,6 +23,7 @@ import { GitChoice, type Choice } from '@/shell/panels/GitDialogs';
 import { PromptDialog } from '@/ui/PromptDialog';
 import { GitFileList } from '@/shell/panels/GitFileList';
 import { isUnmergedRefusal, pushButton } from '@/shell/panels/git-actions';
+import { GIT_PANEL_PACE_MS, paced } from '@/shell/panels/pace';
 import { activeDiffPath, allDirs } from '@/shell/panels/git-tree';
 import { stageFiles } from '@/shell/panels/stage-files';
 import { useGitActions } from '@/shell/panels/use-git-actions';
@@ -131,19 +132,36 @@ export function GitPanel() {
     const roomForPills = (useUi((s) => s.panelWidth) ?? 540) >= PILLS_FROM_WIDTH;
     const run = useGitActions();
 
+    /* Every status the panel draws goes through here, so the pace below covers a read of its own
+       as well as one the daemon pushed. */
+    const show = useCallback(
+        (status: GitStatus): void => {
+            if (cwd === null) {
+                return;
+            }
+            setHeld({ cwd, status, failure: null });
+            setRevision((count) => count + 1);
+        },
+        [cwd]
+    );
+
+    /* A status the daemon pushed waits its turn; one the panel read itself is drawn at once and
+       opens the next window, so an action and the push that follows it are one redraw. */
+    const pace = useMemo(() => paced(GIT_PANEL_PACE_MS, show), [show]);
+
     const refresh = useCallback(async (): Promise<void> => {
         if (cwd === null) {
             return;
         }
         try {
             const answer = await transport.request('git.status', { cwd });
-            setHeld({ cwd, status: answer, failure: null });
-            setRevision((count) => count + 1);
+            show(answer);
+            pace.mark();
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : i18next.t('panels:git.panel.statusFailed');
             setHeld((previous) => ({ cwd, status: previous?.cwd === cwd ? previous.status : null, failure: message }));
         }
-    }, [transport, cwd]);
+    }, [transport, cwd, show, pace]);
 
     const loadRefs = useCallback((): void => {
         if (cwd === null) {
@@ -180,13 +198,16 @@ export function GitPanel() {
     }, [transport, cwd, refresh]);
 
     useEffect(() => {
+        return () => pace.stop();
+    }, [pace]);
+
+    useEffect(() => {
         return transport.on('git.status', (payload) => {
             if (payload.cwd === cwd) {
-                setHeld({ cwd, status: payload.status, failure: null });
-                setRevision((count) => count + 1);
+                pace.offer(payload.status);
             }
         });
-    }, [transport, cwd]);
+    }, [transport, cwd, pace]);
 
     useEffect(() => {
         // A repository the daemon gave up watching only moves when this window asks it to.

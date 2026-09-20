@@ -138,6 +138,14 @@ export const GitStatusEventSchema = z.object({
 });
 export type GitStatusEvent = z.infer<typeof GitStatusEventSchema>;
 
+// The working tree of a checkout moved. Said apart from `git.status`, which only goes out when the
+// status itself reads differently: a second edit to a file that was already modified leaves every
+// word of the status alone while the diff of that file is another one.
+export const GitChangedEventSchema = z.object({
+    cwd: z.string()
+});
+export type GitChangedEvent = z.infer<typeof GitChangedEventSchema>;
+
 // Scopes compare the working tree, all work over a base branch, or one commit with its parent.
 export const GitDiffScopeSchema = z.enum(['worktree', 'base', 'commit']);
 export type GitDiffScope = z.infer<typeof GitDiffScopeSchema>;

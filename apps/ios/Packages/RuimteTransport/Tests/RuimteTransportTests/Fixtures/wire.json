@@ -241,6 +241,7 @@
     "diagram.changed",
     "fs.changed",
     "git.status",
+    "git.changed",
     "git.progress",
     "git.worktrees",
     "usage.changed",

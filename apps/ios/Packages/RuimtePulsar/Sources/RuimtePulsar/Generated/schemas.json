@@ -35474,6 +35474,18 @@
       "status"
     ]
   },
+  "event.git.changed": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "cwd": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "cwd"
+    ]
+  },
   "event.git.progress": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
