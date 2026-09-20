@@ -64,7 +64,6 @@
             "label": "Op een tijdstip",
             "sentence_day": "elke dag om {{at}}",
             "sentence_weekday": "elke werkdag om {{at}}",
-            "sentence_minutes": "elke {{minutes}} minuten",
             "sentence": "op een tijdstip",
             "args": {
                 "every": "Herhaling",
@@ -79,7 +78,9 @@
             "tokens": {
                 "time": "de tijd",
                 "day": "de dag"
-            }
+            },
+            "sentence_minutes_one": "elke minuut",
+            "sentence_minutes_other": "elke {{minutes}} minuten"
         },
         "files_changed": {
             "label": "Een bestand veranderde",
@@ -142,20 +143,21 @@
                 "unit": "Eenheid"
             },
             "choices": {
-                "seconds": "seconden",
-                "minutes": "minuten",
-                "hours": "uren"
+                "seconds_one": "seconde",
+                "seconds_other": "seconden",
+                "minutes_one": "minuut",
+                "minutes_other": "minuten",
+                "hours_one": "uur",
+                "hours_other": "uur"
             },
             "tokens": {}
         },
         "any": {
             "label": "Een van",
-            "sentence": "ga door met de eerste tak die aankomt",
             "tokens": {}
         },
         "all": {
             "label": "Alle",
-            "sentence": "wacht op elke tak",
             "tokens": {}
         },
         "note": {

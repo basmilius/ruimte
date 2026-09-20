@@ -64,7 +64,6 @@
             "label": "On a time",
             "sentence_day": "every day at {{at}}",
             "sentence_weekday": "every weekday at {{at}}",
-            "sentence_minutes": "every {{minutes}} minutes",
             "sentence": "on a time",
             "args": {
                 "every": "Repeat",
@@ -79,7 +78,9 @@
             "tokens": {
                 "time": "the time",
                 "day": "the day"
-            }
+            },
+            "sentence_minutes_one": "every minute",
+            "sentence_minutes_other": "every {{minutes}} minutes"
         },
         "files_changed": {
             "label": "A file changed",
@@ -142,20 +143,21 @@
                 "unit": "Unit"
             },
             "choices": {
-                "seconds": "seconds",
-                "minutes": "minutes",
-                "hours": "hours"
+                "seconds_one": "second",
+                "seconds_other": "seconds",
+                "minutes_one": "minute",
+                "minutes_other": "minutes",
+                "hours_one": "hour",
+                "hours_other": "hours"
             },
             "tokens": {}
         },
         "any": {
             "label": "Any",
-            "sentence": "go on with the first branch that arrives",
             "tokens": {}
         },
         "all": {
             "label": "All",
-            "sentence": "wait for every branch",
             "tokens": {}
         },
         "note": {

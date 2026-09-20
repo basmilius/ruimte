@@ -203,7 +203,9 @@ export function FlowView({ id }: { id: string }) {
     return (
         <div
             ref={rootRef}
-            className="relative h-full w-full touch-none overflow-hidden bg-canvas-bg bg-[image:radial-gradient(circle,var(--canvas-dot)_1px,transparent_1px)]"
+            /* Fainter than the canvas grid: a worksheet is read as a few cards and the lines between
+               them, so the paper under them has to stay paper. */
+            className="relative h-full w-full touch-none overflow-hidden bg-canvas-bg bg-[image:radial-gradient(circle,color-mix(in_srgb,var(--canvas-dot)_50%,transparent)_1px,transparent_1px)]"
             style={{
                 backgroundSize: `${gridStep}px ${gridStep}px`,
                 backgroundPosition: `${camera.x}px ${camera.y}px`,

@@ -77,7 +77,7 @@ export function FlowCardBox({ id, card, content, selected, problems, light, puls
             <div
                 data-flow-card={id}
                 className={clsx(
-                    'pointer-events-auto absolute overflow-hidden border border-border bg-note-yellow p-3 text-sm whitespace-pre-wrap text-text',
+                    'pointer-events-auto absolute overflow-hidden border border-border-soft bg-note-yellow p-3 text-sm whitespace-pre-wrap text-text',
                     selected && 'ring-2 ring-accent'
                 )}
                 style={style}
@@ -87,7 +87,10 @@ export function FlowCardBox({ id, card, content, selected, problems, light, puls
         );
     }
 
-    const shell = clsx('pointer-events-auto absolute border border-border bg-surface-raised shadow-float', selected && 'ring-2 ring-accent', lit);
+    /* The shadow lifts a card off the worksheet on its own. A full border around it as well draws a
+       box where there is only a lift, so the line is the softest one there is: it finishes the
+       shadow rather than edging the card. */
+    const shell = clsx('pointer-events-auto absolute border border-border-soft bg-surface-raised shadow-float', selected && 'ring-2 ring-accent', lit);
 
     if (card.kind === 'start') {
         return (

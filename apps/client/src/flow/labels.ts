@@ -1,6 +1,6 @@
 import type { TFunction } from 'i18next';
 import { flowCardDefinition, type FlowCard, type FlowContent } from '@ruimte/contracts';
-import { argsOf, parseTokenRefs, textArg } from '@ruimte/flow';
+import { argApplies, argsOf, numberArg, parseTokenRefs, textArg } from '@ruimte/flow';
 
 /*
  * A card is `files.changed` in the catalog and `files_changed` in the words: a key reads a dot as a
@@ -56,14 +56,27 @@ export const cardSource = (t: TFunction, card: FlowCard): string => {
 };
 
 /*
+ * The number a card's sentence is written around, when it has one. "every 1 minutes" is not a
+ * sentence, so the words are asked for in the plural of the number on the card. A card with no
+ * number in it hands nothing over and reads the one form it has.
+ */
+export const countOf = (card: FlowCard): number | undefined => {
+    const counted = argsOf(card).find((arg) => arg.type === 'number' && argApplies(card, arg));
+    return counted === undefined ? undefined : numberArg(card, counted.name, 0);
+};
+
+/*
  * The sentence of a card, with the values it holds. A card with a choice among its fields reads a
  * sentence per choice, because "every day at 08:00" and "every 15 minutes" are not one sentence.
  */
 export const cardSentence = (t: TFunction, content: FlowContent, card: FlowCard): SentencePart[] => {
     const choice = argsOf(card).find((arg) => arg.type === 'choice');
     const key = keyOf(card);
-    const variant = choice === undefined ? '' : t(`${key}.sentence_${textArg(card, choice.name)}`, { defaultValue: '', skipInterpolation: true });
-    const template = variant === '' ? t(`${key}.sentence`, { defaultValue: '', skipInterpolation: true }) : variant;
+    /* The values are drawn as controls rather than written into the words, so the interpolation is
+       ours; the count still goes in, because that is what picks the plural of the words. */
+    const options = { defaultValue: '', skipInterpolation: true, count: countOf(card) };
+    const variant = choice === undefined ? '' : t(`${key}.sentence_${textArg(card, choice.name)}`, options);
+    const template = variant === '' ? t(`${key}.sentence`, options) : variant;
     const values = Object.fromEntries(argsOf(card).map((arg) => [arg.name, withTokenLabels(t, content, argValue(t, card, arg.name))]));
     return sentenceParts(String(template), values);
 };
@@ -75,12 +88,14 @@ export const argValue = (t: TFunction, card: FlowCard, name: string): string => 
     if (arg?.type !== 'choice' || raw === '') {
         return raw;
     }
-    return choiceLabel(t, card, raw);
+    return choiceLabel(t, card, raw, countOf(card));
 };
 
 export const argLabel = (t: TFunction, card: FlowCard, name: string): string => t(`${keyOf(card)}.args.${name}`, { defaultValue: name });
 
-export const choiceLabel = (t: TFunction, card: FlowCard, value: string): string => t(`${keyOf(card)}.choices.${value}`, { defaultValue: value });
+/* A choice a person reads, in the plural of the number beside it when the card carries one. */
+export const choiceLabel = (t: TFunction, card: FlowCard, value: string, count?: number): string =>
+    t(`${keyOf(card)}.choices.${value}`, { defaultValue: value, count });
 
 /*
  * A text with its token references written out as the words they stand for. A person never reads

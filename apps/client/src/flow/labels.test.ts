@@ -41,6 +41,26 @@ describe('the sentence on a card', () => {
         expect(reads(content, 'often')).toBe('every 15 minutes');
     });
 
+    test('a sentence with a number in it is written in the plural of that number', () => {
+        const content = flow({
+            once: card({ kind: 'trigger', card: 'time.at', args: { every: 'minutes', minutes: 1 } }),
+            often: card({ kind: 'trigger', card: 'time.at', args: { every: 'minutes', minutes: 15 } }),
+            brief: card({ kind: 'delay', args: { amount: 1, unit: 'seconds' } }),
+            longer: card({ kind: 'delay', args: { amount: 30, unit: 'seconds' } })
+        });
+        expect(reads(content, 'once')).toBe('every minute');
+        expect(reads(content, 'often')).toBe('every 15 minutes');
+        expect(reads(content, 'brief')).toBe('wait 1 second');
+        expect(reads(content, 'longer')).toBe('wait 30 seconds');
+    });
+
+    test('a card about the graph itself says its one word and nothing more', () => {
+        const content = flow({ join: card({ kind: 'all' }), first: card({ kind: 'any' }) });
+        // No sentence at all, so the chip falls back to the label, which is what fits on one line.
+        expect(cardSentence(t, content, content.cards.join as FlowCard)).toEqual([]);
+        expect(cardLabel(t, content.cards.first as FlowCard)).toBe('Any');
+    });
+
     test('a token in a text reads as what it stands for, never as its plumbing', () => {
         const content = flow({
             trigger: card({ kind: 'trigger', card: 'files.changed', args: { path: 'README.md' } }),

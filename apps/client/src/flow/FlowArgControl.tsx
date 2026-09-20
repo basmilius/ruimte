@@ -6,7 +6,7 @@ import type { FlowArgDefinition, FlowCard, FlowContent } from '@ruimte/contracts
 import { textArg, tokensForArg } from '@ruimte/flow';
 import { chatChoices } from '@/flow/chats';
 import { FlowTokenField } from '@/flow/FlowTokenField';
-import { argLabel, choiceLabel } from '@/flow/labels';
+import { argLabel, choiceLabel, countOf } from '@/flow/labels';
 import { useDocument } from '@/state/document';
 import { useFlowStore } from '@/state/flow';
 import { SECTION_LABEL } from '@/ui/classes';
@@ -68,7 +68,7 @@ export function FlowArgControl({ id, card, content, arg, onDone }: FlowArgContro
                     <Pick
                         key={choice}
                         picked={choice === value}
-                        label={choiceLabel(t, card, choice)}
+                        label={choiceLabel(t, card, choice, countOf(card))}
                         onPick={() => {
                             set(choice);
                             onDone();
