@@ -69,7 +69,8 @@ export const fakeClaude: FakeCli = (io) => {
             num_turns: 1,
             total_cost_usd: 0.01,
             usage,
-            modelUsage: { [model]: { contextWindow: 200000 } },
+            // The window the CLI reports follows the `[1m]` it was started with, as the real one does.
+            modelUsage: { [model]: { contextWindow: model.endsWith('[1m]') ? 1000000 : 200000 } },
             session_id: sessionId
         });
     };

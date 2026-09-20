@@ -241,6 +241,29 @@ describe('ChatManager', () => {
         expect(recorder.ofKind('assistant').map((item) => item.text)).toEqual(['echo: first', 'echo: argv?']);
     });
 
+    test('the window the CLI of the pick before reports does not land on a meter that already reads the new one', async () => {
+        await manager.create({ chatId: 'chat-w', cwd: home, selection: { model: 'opus', options: { contextWindow: '1m' } } });
+        manager.attach('chat-w', 'c1');
+        await manager.send('chat-w', 'ask: Which color?');
+        await recorder.until(() => recorder.info?.status === 'needs-you');
+        expect(recorder.info?.usage.contextWindow).toBe(1_000_000);
+
+        expect(manager.configure({ chatId: 'chat-w', selection: { model: 'opus', options: { contextWindow: '200k' } } })).toMatchObject({
+            usage: { contextWindow: 200_000 }
+        });
+        // The turn in flight is the 1M process's, and the result it ends with reports that window.
+        manager.answer('chat-w', 'req-q', { '0': 'Blue' });
+        await recorder.until(idle);
+        expect(recorder.info?.usage.contextWindow).toBe(200_000);
+
+        // The restart runs on the new pick, so what it reports is the chat's own again.
+        const turns = recorder.info!.usage.turns;
+        await manager.send('chat-w', 'after');
+        await recorder.until(() => recorder.info?.usage.turns === turns + 1 && idle());
+        expect(recorder.info?.model).toBe('claude-opus-5');
+        expect(recorder.info?.usage.contextWindow).toBe(200_000);
+    });
+
     test('a thread survives a new manager and the next send resumes the same CLI session', async () => {
         await manager.create({ chatId: 'chat-5', cwd: home });
         manager.attach('chat-5', 'c1');
@@ -535,6 +558,35 @@ describe('clearing a chat', () => {
         expect(recorder.info?.agentSessionId).not.toBe(first.agentSessionId);
         expect(manager.attach('chat-clear', 'c1').items.map((item) => item.kind)).toEqual(['turn', 'user', 'thinking', 'assistant']);
         expect(recorder.ofKind('user').map((item) => item.text)).toEqual(['second']);
+    });
+
+    test('the window is the pick\u2019s again, not the one the session that went reported', async () => {
+        const chatId = 'chat-clear-window';
+        // A chat left behind by a CLI that ran on 1M while the pick had moved to 200k.
+        await store.write(
+            chatId,
+            {
+                chatId,
+                provider: 'claude',
+                cwd: home,
+                agentSessionId: 'fake-old',
+                model: 'claude-opus-5[1m]',
+                selection: { model: 'claude-opus-5', options: { effort: 'high', contextWindow: '200k', fastMode: false } },
+                runtimeMode: 'full-access',
+                status: 'idle',
+                running: false,
+                activeTurnId: null,
+                slashCommands: [],
+                usage: { contextTokens: 1200, contextWindow: 1_000_000, costUsd: 0.5, turns: 3 },
+                createdAt: 1
+            },
+            []
+        );
+        expect((await manager.create({ chatId })).usage.contextWindow).toBe(1_000_000);
+        manager.attach(chatId, 'c1');
+
+        await manager.clear(chatId);
+        expect(recorder.info?.usage).toMatchObject({ contextTokens: 0, contextWindow: 200_000, turns: 3 });
     });
 
     test('a running turn is refused without force; with force the CLI goes and nothing of the turn comes back', async () => {

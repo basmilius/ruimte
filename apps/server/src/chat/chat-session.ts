@@ -88,6 +88,8 @@ export class ChatSession {
     private generation = 0;
     // Set by configure: the running process has the old settings, the next send starts a new one.
     private restartPending = false;
+    // The selection the running CLI was started on; a window it reports is that one's, not a newer pick's.
+    private launchedSelection: ModelSelection | null = null;
     // The links at the previous turn; null until the first turn, whose backend hears about them at launch.
     private lastSources: ContextSource[] | null = null;
     // The checkpoint of the turn in flight; everything queued for that turn waits for it.
@@ -328,6 +330,7 @@ export class ChatSession {
         this.pendingPreambles = [];
         this.staleResults = 0;
         this.restartPending = false;
+        this.launchedSelection = null;
         this.turnReady = Promise.resolve();
         const usage = this.thread.info.usage;
         this.emit([
@@ -338,7 +341,8 @@ export class ChatSession {
                 activeTurnId: null,
                 queue: [],
                 slashCommands: [],
-                usage: { ...usage, contextTokens: 0 }
+                // The next CLI starts on the current pick, so the window the one that just went reported is not its.
+                usage: { ...usage, contextTokens: 0, contextWindow: this.options.provider.catalog.contextWindowFor(this.thread.info.selection) }
             })
         ]);
     }
@@ -846,6 +850,7 @@ export class ChatSession {
         this.generation += 1;
         const generation = this.generation;
         const info = this.thread.info;
+        this.launchedSelection = info.selection;
         const launch: BackendLaunch = {
             command: this.options.command,
             cwd: info.cwd,
@@ -910,6 +915,17 @@ export class ChatSession {
             this.applyTitle(event.title);
             return;
         }
+        /*
+         * A CLI reports the window it was started on. A pick made since waits for the restart the next
+         * send does, so its report may not put the old size back under a meter that already reads the new one.
+         */
+        if (event.type === 'usage' && event.contextWindow !== undefined && !this.reportsCurrentWindow()) {
+            if (event.contextTokens === undefined) {
+                return;
+            }
+            this.emit(this.projector.project(generation, { type: 'usage', contextTokens: event.contextTokens }));
+            return;
+        }
         // A request that failed after the turn already ended has nothing left to report.
         if (event.type === 'failed' && this.thread.info.activeTurnId === null) {
             return;
@@ -969,6 +985,12 @@ export class ChatSession {
             }
             this.drainQueue();
         }
+    }
+
+    /* Whether the CLI that reports was started on a pick standing for the same window as the chat's own. */
+    private reportsCurrentWindow(): boolean {
+        const catalog = this.options.provider.catalog;
+        return this.launchedSelection === null || catalog.contextWindowFor(this.launchedSelection) === catalog.contextWindowFor(this.thread.info.selection);
     }
 
     /* Rides on the info patch: a client that has the chat open hears it, and a reload finds it stored. */
