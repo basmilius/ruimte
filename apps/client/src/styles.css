@@ -661,8 +661,8 @@
 
     /* A text element is a `contenteditable`, so its placeholder is drawn from an attribute and its
        caret has to lose to the `cursor-default` the view puts on it while it is not being edited. */
-    .text-element[contenteditable] { outline: none; cursor: text; user-select: text; }
-    .text-element[contenteditable]:empty::before { content: attr(data-placeholder); color: var(--text-faint); }
+    .text-element[contenteditable="plaintext-only"] { outline: none; cursor: text; user-select: text; }
+    .text-element[contenteditable="plaintext-only"]:empty::before { content: attr(data-placeholder); color: var(--text-faint); }
 
     /* ---------------------------------------------------------------- Shell */
 

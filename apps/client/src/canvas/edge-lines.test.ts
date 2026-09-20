@@ -51,7 +51,9 @@ describe('selectedLine', () => {
 
 describe('what an edge aims at', () => {
     test('a text is aimed at by the box its words take up', () => {
-        expect(textRect({ x: 10, y: 20, size: 16, text: 'hello' })).toEqual({ x: 10, y: 20, w: 44, h: 22.4 });
+        expect(textRect({ x: 10, y: 20, size: 16, text: 'hello' })).toEqual({ x: 10, y: 20, w: 52, h: 24 });
+        expect(textRect({ x: 0, y: 0, size: 16, text: 'hello\nworld' }).h).toBe(44);
+        expect(textRect({ x: 0, y: 0, size: 16, text: 'helloworld', maxWidth: 52 })).toEqual({ x: 0, y: 0, w: 52, h: 44 });
         // Never narrower than something you can aim at.
         expect(textRect({ x: 0, y: 0, size: 16, text: '' }).w).toBe(40);
     });

@@ -161,7 +161,12 @@ export const ProjectTextSchema = z.object({
     // Absent means 'sans', the face the app itself is set in.
     font: DrawingFontSchema.optional(),
     bold: z.boolean().optional(),
-    italic: z.boolean().optional()
+    italic: z.boolean().optional(),
+    underline: z.boolean().optional(),
+    strikethrough: z.boolean().optional(),
+    align: z.enum(['left', 'center', 'right']).optional(),
+    maxWidth: z.number().positive().optional(),
+    color: z.string().optional()
 });
 export type ProjectText = z.infer<typeof ProjectTextSchema>;
 

@@ -1,5 +1,5 @@
 import { createStore, type StoreApi } from 'zustand';
-import { canLink } from '@/canvas/edge-lines';
+import { canLink, textRect } from '@/canvas/edge-lines';
 import { editorBindings } from '@/state/editor-bindings';
 import { mergeSelection } from '@/state/selection';
 import { createEditorRegistry } from '@/state/editors';
@@ -53,9 +53,6 @@ export interface AddNodeOptions {
 
 /* A label on the canvas. Style belongs to the whole element; the text itself holds no runs. */
 export type TextElement = ProjectText;
-
-/* The box a label takes up, guessed from its size, since a text is measured by the browser, never here. */
-const textRect = (text: TextElement): Rect => ({ x: text.x, y: text.y, w: text.size * 12, h: text.size * 1.4 });
 
 /* A line as the project file holds it, extra fields and all, since a shape of its own here would drop
    whatever a newer Ruimte wrote on an edge the moment this store handed the canvas back. */
@@ -173,8 +170,12 @@ export interface CanvasState extends CameraSlice {
     groupSelection(): string | null;
     addText(at: Point): string;
     updateText(id: string, text: string): void;
-    /* The face, the weight, the slant and the size of a text element, all of it the whole element's. */
-    styleText(id: string, patch: Partial<Pick<TextElement, 'font' | 'bold' | 'italic' | 'size'>>): void;
+    styleText(
+        id: string,
+        patch: Partial<Pick<TextElement, 'font' | 'bold' | 'italic' | 'size' | 'underline' | 'strikethrough' | 'align' | 'maxWidth' | 'color'>>,
+        undoable?: boolean
+    ): void;
+    resizeText(id: string, x: number, maxWidth: number, undoable?: boolean): void;
     setEditingText(id: string | null): void;
     deleteSelected(): void;
     toggleLock(key: keyof Locks): void;
@@ -183,7 +184,7 @@ export interface CanvasState extends CameraSlice {
     toggleGroupCollapse(id: string): void;
     setGroupWorktree(id: string, worktree: { path: string; branch: string } | null): void;
     /*
-     * Edges: any node or text to any other. Into an agent node (terminal or chat) the edge also makes
+     * Edges: nodes connect to other nodes. Into an agent node (terminal or chat) the edge also makes
      * the source readable, so between two agents this draws both ways at once and answers with the id
      * of the one that was asked for.
      */
@@ -498,8 +499,11 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         updateText(id, text) {
             set((s) => (s.texts[id] ? { texts: { ...s.texts, [id]: { ...s.texts[id], text } } } : {}));
         },
-        styleText(id, patch) {
-            set((s) => (s.texts[id] ? { texts: { ...s.texts, [id]: { ...s.texts[id], ...patch } }, ...remember(s) } : {}));
+        styleText(id, patch, undoable = true) {
+            set((s) => (s.texts[id] ? { texts: { ...s.texts, [id]: { ...s.texts[id], ...patch } }, ...(undoable ? remember(s) : {}) } : {}));
+        },
+        resizeText(id, x, maxWidth, undoable = true) {
+            set((s) => (s.texts[id] ? { texts: { ...s.texts, [id]: { ...s.texts[id], x, maxWidth } }, ...(undoable ? remember(s) : {}) } : {}));
         },
         setEditingText(id) {
             set({ editingTextId: id });
@@ -561,7 +565,7 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         },
         addEdge(from, to, sides) {
             const s = get();
-            const exists = (id: string): boolean => Boolean(s.nodes[id] || s.texts[id]);
+            const exists = (id: string): boolean => Boolean(s.nodes[id]);
             if (!exists(from) || !exists(to) || !canLink(s.edges, from, to)) {
                 return null;
             }
@@ -591,11 +595,10 @@ export const createCanvasStore = (): StoreApi<CanvasState> =>
         startLink(from) {
             const s = get();
             const node = s.nodes[from];
-            const text = s.texts[from];
-            if (!node && !text) {
+            if (!node) {
                 return;
             }
-            const to = node ? center(node) : { x: text!.x, y: text!.y };
+            const to = center(node);
             set({ linkDraft: { from, to, aiming: true }, selection: [from] });
         },
         removeEdge(id) {

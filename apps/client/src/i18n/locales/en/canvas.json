@@ -160,7 +160,19 @@
       "sans": "Sans",
       "hand": "Hand",
       "mono": "Mono"
-    }
+    },
+    "format": "Text formatting",
+    "underline": "Underline",
+    "strikethrough": "Strikethrough",
+    "align": {
+      "left": "Align left",
+      "center": "Center",
+      "right": "Align right"
+    },
+    "alignment": "Alignment",
+    "color": "Text color",
+    "defaultColor": "Default text color",
+    "resizeWidth": "Drag to resize width. Double-click for automatic width."
   },
   "delete": {
     "nodes_one": "{{count}} node",

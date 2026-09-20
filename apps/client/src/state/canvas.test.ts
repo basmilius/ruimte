@@ -84,14 +84,22 @@ describe('edges', () => {
         });
     };
 
-    test('any node or text connects to any other, and only a line into an agent is labeled context', () => {
+    test('nodes connect to each other, and only a line into an agent is labeled context', () => {
         seed();
         const s = canvas();
         expect(s.addEdge('page', 'memo')).not.toBeNull();
         expect(s.addEdge('memo', 'frame')).not.toBeNull();
-        expect(s.addEdge('frame', 't1')).not.toBeNull();
-        expect(s.addEdge('t1', 'shell')).not.toBeNull();
-        expect(canvas().edges.map((edge) => edge.label)).toEqual([undefined, undefined, undefined, 'context']);
+        expect(s.addEdge('frame', 'shell')).not.toBeNull();
+        expect(canvas().edges.map((edge) => edge.label)).toEqual([undefined, undefined, 'context']);
+    });
+
+    test('text cannot start or receive a connector', () => {
+        seed();
+        expect(canvas().addEdge('frame', 't1')).toBeNull();
+        expect(canvas().addEdge('t1', 'shell')).toBeNull();
+        canvas().startLink('t1');
+        expect(canvas().linkDraft).toBeNull();
+        expect(canvas().edges).toEqual([]);
     });
 
     test('the way back is a line of its own, and nothing connects to itself, to a stranger or twice the same way', () => {
@@ -351,6 +359,38 @@ describe('text elements', () => {
 
         canvas().styleText(id, { bold: false });
         expect(canvas().texts[id]).toMatchObject({ bold: false, font: 'hand' });
+    });
+
+    test('text layout and decorations survive schema validation and undo', () => {
+        focusedCanvas().setState({ nodes: {}, texts: {}, order: [], edges: [], selection: [], viewId: 'main' });
+        const id = canvas().addText({ x: 40, y: 40 });
+        canvas().updateText(id, 'A long label\nwith two lines');
+        const style = { underline: true, strikethrough: true, align: 'center' as const, maxWidth: 240, color: 'violet' };
+        canvas().styleText(id, style);
+        const saved = ProjectCanvasViewSchema.parse({ ...canvas().exportContent(), kind: 'canvas', id: 'main', name: 'Canvas' });
+        expect(saved.texts[0]).toMatchObject(style);
+        canvas().styleText(id, { maxWidth: undefined, align: 'right', underline: false });
+        expect(canvas().texts[id]!.maxWidth).toBeUndefined();
+        canvas().undo();
+        expect(canvas().texts[id]).toMatchObject(style);
+    });
+
+    test('resizing text records the whole drag as one undo step', () => {
+        focusedCanvas().setState({ nodes: {}, texts: {}, order: [], edges: [], selection: [], viewId: 'main' });
+        const id = canvas().addText({ x: 40, y: 40 });
+        canvas().updateText(id, 'A label');
+        canvas().styleText(id, { color: 'blue' });
+        canvas().resizeText(id, 20, 240);
+        canvas().resizeText(id, -20, 280, false);
+        canvas().resizeText(id, -60, 320, false);
+        expect(canvas().texts[id]).toMatchObject({ x: -60, maxWidth: 320 });
+        canvas().undo();
+        expect(canvas().texts[id]!.maxWidth).toBeUndefined();
+        expect(canvas().texts[id]).toMatchObject({ x: 40, color: 'blue' });
+        canvas().redo();
+        expect(canvas().texts[id]).toMatchObject({ x: -60, maxWidth: 320 });
+        canvas().styleText(id, { color: undefined });
+        expect(canvas().texts[id]!.color).toBeUndefined();
     });
 
     test('styling a text that is gone changes nothing', () => {

@@ -63,10 +63,11 @@ export const fixedSides = (line: EdgeLine): FixedSides => ({
 export const selectedLine = (lines: readonly EdgeLine[], selection: readonly string[]): EdgeLine | null =>
     lines.find((line) => line.ids.length === selection.length && line.ids.every((id) => selection.includes(id))) ?? null;
 
-// A text has no box of its own; this is close enough to aim an edge at.
-export const textRect = (text: { x: number; y: number; size: number; text: string }): Rect => ({
-    x: text.x,
-    y: text.y,
-    w: Math.max(40, text.text.length * text.size * 0.55),
-    h: text.size * 1.4
-});
+// Geometry outside the DOM estimates glyph widths; explicit line breaks and wrapping still count.
+export const textRect = (text: { x: number; y: number; size: number; text: string; maxWidth?: number }): Rect => {
+    const widths = text.text.split('\n').map((line) => line.length * text.size * 0.55);
+    const width = text.maxWidth ?? Math.max(40, ...widths.map((value) => value + 8));
+    const available = Math.max(1, width - 8);
+    const lines = widths.reduce((count, value) => count + Math.max(1, Math.ceil(value / available)), 0);
+    return { x: text.x, y: text.y, w: width, h: lines * text.size * 1.25 + 4 };
+};

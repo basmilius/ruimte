@@ -8,6 +8,7 @@ import { isSpaceDown } from '@/canvas/canvas-shortcuts';
 import type { NodeSide } from '@ruimte/contracts';
 import { rectFromPoints } from '@ruimte/drawing';
 import { canLink } from '@/canvas/edge-lines';
+import { resizedText } from '@/canvas/text-resize';
 import { framePressHandsKeyboard } from '@/canvas/frame-press';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
 import { isNodeActive, NODE_SIZE, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
@@ -26,6 +27,7 @@ type Gesture =
     | { kind: 'pan'; last: Point }
     | { kind: 'box'; origin: Point; current: Point; additive: boolean }
     | { kind: 'move'; start: Point; applied: Point; moved: boolean }
+    | { kind: 'text-resize'; textId: string; start: Point; x: number; width: number; side: 'left' | 'right'; moved: boolean }
     | { kind: 'link'; from: string; fromSide?: NodeSide }
     | {
           kind: 'resize';
@@ -56,10 +58,6 @@ const linkTargetUnder = (clientX: number, clientY: number): { id: string; side?:
         const node = element.closest<HTMLElement>('[data-node-id]')?.dataset.nodeId;
         if (node) {
             return { id: node };
-        }
-        const text = element.closest<HTMLElement>('[data-text-id]')?.dataset.textId;
-        if (text) {
-            return { id: text };
         }
     }
     return null;
@@ -178,7 +176,9 @@ export function Canvas() {
         if (g.kind !== 'move') {
             setActiveGesture(g.kind);
         }
-        rootRef.current!.setPointerCapture(e.pointerId);
+        // Capture on text itself so a click still targets it when the browser builds a double-click.
+        const capture = (e.target as HTMLElement).closest<HTMLElement>('[data-text-resize], [data-text-id]') ?? rootRef.current!;
+        capture.setPointerCapture(e.pointerId);
     };
 
     /*
@@ -223,7 +223,7 @@ export function Canvas() {
         // "Connect to..." is waiting for this click; on empty canvas it is a cancel.
         if (s.linkDraft?.aiming) {
             e.preventDefault();
-            const targetId = nodeId ?? textId;
+            const targetId = nodeId;
             if (targetId) {
                 s.addEdge(s.linkDraft.from, targetId);
             }
@@ -240,6 +240,28 @@ export function Canvas() {
             const fromSide = portElement?.dataset.portSide as NodeSide | undefined;
             s.setLinkDraft({ from: port, to: toWorld(s.camera, point), fromSide });
             startGesture({ kind: 'link', from: port, fromSide }, e);
+            return;
+        }
+
+        const textResize = target.closest<HTMLElement>('[data-text-resize]')?.dataset.textResize;
+        if (textId && (textResize === 'left' || textResize === 'right')) {
+            e.preventDefault();
+            if (!s.locks.resize) {
+                const element = target.closest<HTMLElement>('[data-text-id]')!;
+                s.select([textId]);
+                startGesture(
+                    {
+                        kind: 'text-resize',
+                        textId,
+                        start: point,
+                        x: s.texts[textId]!.x,
+                        width: element.getBoundingClientRect().width / s.camera.zoom,
+                        side: textResize,
+                        moved: false
+                    },
+                    e
+                );
+            }
             return;
         }
 
@@ -392,6 +414,14 @@ export function Canvas() {
                     h: Math.abs(point.y - g.origin.y)
                 });
                 break;
+            case 'text-resize': {
+                const { x, maxWidth } = resizedText(g.x, g.width, g.side, (point.x - g.start.x) / s.camera.zoom);
+                if (maxWidth !== s.texts[g.textId]?.maxWidth && (g.moved || Math.abs(point.x - g.start.x) > 2)) {
+                    s.resizeText(g.textId, x, maxWidth, !g.moved);
+                    g.moved = true;
+                }
+                break;
+            }
             case 'resize':
                 s.resizeNode(g.nodeId, resizedRect(g.rect, g.edge, (point.x - g.start.x) / s.camera.zoom, (point.y - g.start.y) / s.camera.zoom));
                 break;

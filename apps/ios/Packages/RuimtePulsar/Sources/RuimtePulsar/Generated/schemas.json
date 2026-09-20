@@ -16569,6 +16569,27 @@
                           },
                           "italic": {
                             "type": "boolean"
+                          },
+                          "underline": {
+                            "type": "boolean"
+                          },
+                          "strikethrough": {
+                            "type": "boolean"
+                          },
+                          "align": {
+                            "type": "string",
+                            "enum": [
+                              "left",
+                              "center",
+                              "right"
+                            ]
+                          },
+                          "maxWidth": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "color": {
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -18556,6 +18577,27 @@
                           },
                           "italic": {
                             "type": "boolean"
+                          },
+                          "underline": {
+                            "type": "boolean"
+                          },
+                          "strikethrough": {
+                            "type": "boolean"
+                          },
+                          "align": {
+                            "type": "string",
+                            "enum": [
+                              "left",
+                              "center",
+                              "right"
+                            ]
+                          },
+                          "maxWidth": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "color": {
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -33053,6 +33095,27 @@
                           },
                           "italic": {
                             "type": "boolean"
+                          },
+                          "underline": {
+                            "type": "boolean"
+                          },
+                          "strikethrough": {
+                            "type": "boolean"
+                          },
+                          "align": {
+                            "type": "string",
+                            "enum": [
+                              "left",
+                              "center",
+                              "right"
+                            ]
+                          },
+                          "maxWidth": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          },
+                          "color": {
+                            "type": "string"
                           }
                         },
                         "required": [

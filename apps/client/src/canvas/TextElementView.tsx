@@ -2,6 +2,7 @@ import { memo, useEffect, useRef } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import type { DrawingFont } from '@ruimte/contracts';
+import { accentColor } from '@/canvas/accents';
 import { loadDrawingFont } from '@/drawing/fonts';
 import { useCanvas, useCanvasStore } from '@/state/canvas';
 
@@ -17,9 +18,9 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
     const canvasStore = useCanvasStore();
     const text = useCanvas((s) => s.texts[id]);
     const selected = useCanvas((s) => s.selection.includes(id));
-    // The line being drawn would land here, which is the same thing to show as a selection.
-    const linkTarget = useCanvas((s) => s.linkDraft?.over === id);
     const editing = useCanvas((s) => s.editingTextId === id);
+    const resizeLocked = useCanvas((s) => s.locks.resize);
+    const zoom = useCanvas((s) => s.camera.zoom);
     const hidden = useCanvas((s) => s.hidden.has(id));
     const ref = useRef<HTMLDivElement>(null);
     const hand = text?.font === 'hand';
@@ -36,7 +37,6 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
             ref.current.focus();
             const range = document.createRange();
             range.selectNodeContents(ref.current);
-            range.collapse(false);
             window.getSelection()?.removeAllRanges();
             window.getSelection()?.addRange(range);
         }
@@ -62,13 +62,25 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
             data-text-id={id}
             data-placeholder={t('text.placeholder')}
             className={clsx(
-                'text-element absolute whitespace-pre rounded-sm px-1 py-0.5 leading-tight text-text',
+                'text-element absolute rounded-sm px-1 py-0.5 leading-tight text-text',
                 text.bold ? 'font-bold' : 'font-medium',
                 text.italic && 'italic',
-                (selected || linkTarget) && !editing && 'outline-2 outline-accent',
+                selected && !editing && 'outline-2 outline-accent',
                 !editing && 'cursor-default'
             )}
-            style={{ left: text.x, top: text.y, fontSize: text.size, fontFamily: FONT_STACK[text.font ?? 'sans'] }}
+            style={{
+                left: text.x,
+                top: text.y,
+                fontSize: text.size,
+                color: accentColor(text.color),
+                fontFamily: FONT_STACK[text.font ?? 'sans'],
+                width: text.maxWidth,
+                maxWidth: text.maxWidth,
+                whiteSpace: text.maxWidth ? 'pre-wrap' : 'pre',
+                overflowWrap: 'anywhere',
+                textAlign: text.align ?? 'left',
+                textDecorationLine: [text.underline && 'underline', text.strikethrough && 'line-through'].filter(Boolean).join(' ') || 'none'
+            }}
             contentEditable={editing ? 'plaintext-only' : false}
             suppressContentEditableWarning
             onDoubleClick={(e) => {
@@ -87,13 +99,21 @@ export const TextElementView = memo(function TextElementView({ id }: { id: strin
             }}
         >
             {text.text}
-            {selected && !editing && (
-                <span
-                    data-port={id}
-                    contentEditable={false}
-                    className="absolute -right-3 top-1/2 h-4 w-4 -translate-y-1/2 cursor-crosshair rounded-full border-2 border-accent bg-surface shadow-[0_0_0_2px_var(--surface)] hover:bg-accent"
-                />
-            )}
+            {!editing &&
+                !resizeLocked &&
+                (['left', 'right'] as const).map((side) => (
+                    <span
+                        key={side}
+                        data-text-resize={side}
+                        contentEditable={false}
+                        className="absolute inset-y-0 cursor-ew-resize"
+                        style={{ [side]: -4 / zoom, width: 8 / zoom }}
+                        onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            canvasStore.getState().styleText(id, { maxWidth: undefined });
+                        }}
+                    />
+                ))}
         </div>
     );
 });

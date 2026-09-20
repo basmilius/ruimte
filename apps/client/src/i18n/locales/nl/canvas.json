@@ -160,7 +160,19 @@
       "sans": "Sans",
       "hand": "Hand",
       "mono": "Mono"
-    }
+    },
+    "format": "Tekstopmaak",
+    "underline": "Onderstrepen",
+    "strikethrough": "Doorhalen",
+    "align": {
+      "left": "Links uitlijnen",
+      "center": "Centreren",
+      "right": "Rechts uitlijnen"
+    },
+    "alignment": "Uitlijning",
+    "color": "Tekstkleur",
+    "defaultColor": "Standaard tekstkleur",
+    "resizeWidth": "Sleep om de breedte aan te passen. Dubbelklik voor automatische breedte."
   },
   "delete": {
     "nodes_one": "{{count}} node",
