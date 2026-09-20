@@ -1,21 +1,41 @@
 import { createHash, randomBytes } from 'node:crypto';
-import type { FlowArgValue, FlowCard, FlowDocument, FlowEnablePayload, FlowNoticeEvent, FlowPort, FlowRun, FlowStateResult } from '@ruimte/contracts';
+import type {
+    FlowArgValue,
+    FlowArmPayload,
+    FlowCard,
+    FlowDocument,
+    FlowEnablePayload,
+    FlowNoticeEvent,
+    FlowPort,
+    FlowRun,
+    FlowRunStep,
+    FlowRunTest,
+    FlowStartPayload,
+    FlowStateResult,
+    FlowStepEvent,
+    FlowTestPayload
+} from '@ruimte/contracts';
 import {
     argApplies,
     argsOf,
+    cardsInTest,
     fillTokens,
     isTriggerCard,
+    needsCeiling,
     numberArg,
     portForOutcome,
     portsOf,
     readyCards,
     recipeFingerprint,
+    runsForReal,
     settleCard,
+    skippedWhenDry,
     textArg,
     tokenKey,
     type FlowRunState
 } from '@ruimte/flow';
 import type { FlowTriggerEntry, OutboxStore, RunFlowEntry } from '../outbox/outbox.ts';
+import type { FlowArmStore } from './arm-store.ts';
 import type { FlowCardHandler } from './cards.ts';
 import { flowKey, type FlowSwitchStore } from './switch-store.ts';
 import type { FlowTimeline } from './timeline.ts';
@@ -37,11 +57,20 @@ export interface FlowRunnerDeps {
     /* The name a person sees for this flow. */
     nameOf(projectId: string, viewId: string): Promise<string>;
     switches: FlowSwitchStore;
+    armed: FlowArmStore;
     timeline: FlowTimeline;
     outbox: OutboxStore;
     enqueue(projectId: string, target: string, work: FlowWork, notBefore?: number): Promise<void>;
     handlers: Record<string, FlowCardHandler>;
     notify(event: FlowNoticeEvent): void;
+    /* One card of a run, the moment it settled, which is what makes the worksheet light up. */
+    step(event: FlowStepEvent): void;
+    /*
+     * Everything that listens outside the outbox, looked at again. A flow that is off with a test
+     * waiting on it still watches a folder, so what the daemon listens for changes without the
+     * switch changing.
+     */
+    listens?(): Promise<void>;
     now?(): number;
     mintId?(): string;
 }
@@ -54,6 +83,20 @@ export type FlowWork =
 export interface FlowTriggerFiring {
     cardId: string;
     tokens?: Record<string, FlowArgValue>;
+}
+
+/* What a run needs to begin, whether a trigger brought it or a person did. */
+interface FlowRunStart {
+    projectId: string;
+    viewId: string;
+    document: FlowDocument;
+    /* The card the run begins at: a trigger, or any card on the worksheet when a person is testing. */
+    cardId: string;
+    tokens: Record<string, FlowArgValue>;
+    depth: number;
+    /* Nothing this run does leaves the machine, beyond the cards the catalog calls harmless. */
+    dry: boolean;
+    test?: FlowRunTest;
 }
 
 /* The fingerprint of a recipe, as the switch stores it. */
@@ -80,12 +123,18 @@ export class FlowRunner {
 
     /* The switch and the history of one flow, which is what the editor draws beside the worksheet. */
     async state(projectId: string, viewId: string): Promise<FlowStateResult> {
-        return { switch: this.deps.switches.of(projectId, viewId), runs: await this.deps.timeline.runs(projectId, viewId) };
+        const armed = this.deps.armed.of(projectId, viewId);
+        return {
+            switch: this.deps.switches.of(projectId, viewId),
+            runs: await this.deps.timeline.runs(projectId, viewId),
+            ...(armed === null ? {} : { armed })
+        };
     }
 
     /*
      * A person turns a flow on or off. Turning it on writes down the recipe it was turned on for, so
-     * a later change to the recipe is a different flow and has to be said yes to again.
+     * a later change to the recipe is a different flow and has to be said yes to again. Watching is a
+     * third state beside those two: it fires on its triggers and carries nothing out.
      */
     async enable(payload: FlowEnablePayload, by: string): Promise<FlowStateResult> {
         const document = await this.deps.read(payload.projectId, payload.viewId);
@@ -98,6 +147,7 @@ export class FlowRunner {
                   enabledBy: by,
                   enabledAt: this.now(),
                   recipeHash: hashRecipe(document),
+                  ...(payload.watching === undefined ? {} : { watching: payload.watching }),
                   ...(payload.ceiling === undefined ? {} : { ceiling: payload.ceiling }),
                   ...(payload.budget === undefined ? {} : { budget: payload.budget })
               }
@@ -108,15 +158,38 @@ export class FlowRunner {
     }
 
     /*
-     * Owes the moments of every time trigger of this flow, or takes them back when it is off. Called
-     * at the start and after anything that could have changed either side.
+     * A person puts a test on the next real firing, or takes the one waiting back. This is the answer
+     * to where the tokens of the cards above a test come from: not made up, but the ones the trigger
+     * brings. The flow itself stays as it was, on or off.
+     */
+    async armTest(payload: FlowArmPayload, by: string): Promise<FlowStateResult> {
+        const document = await this.deps.read(payload.projectId, payload.viewId);
+        if (document === null) {
+            throw new Error(`No flow ${payload.viewId} in project ${payload.projectId}`);
+        }
+        if (payload.test === null) {
+            await this.deps.armed.clear(payload.projectId, payload.viewId);
+        } else {
+            if (document.cards[payload.test.from] === undefined) {
+                throw new Error(`No card ${payload.test.from} on flow ${payload.viewId}`);
+            }
+            await this.deps.armed.set(payload.projectId, payload.viewId, { ...payload.test, by, armedAt: this.now() });
+        }
+        await this.arm(payload.projectId, payload.viewId);
+        await this.deps.listens?.();
+        return this.state(payload.projectId, payload.viewId);
+    }
+
+    /*
+     * Owes the moments of every time trigger of this flow, or takes them back when nothing listens
+     * for them any more. Called at the start and after anything that could have changed either side.
      */
     async arm(projectId: string, viewId: string): Promise<void> {
         const owed = this.deps.outbox
             .list()
             .filter((entry): entry is FlowTriggerEntry => entry.kind === 'flow-trigger' && entry.projectId === projectId && entry.payload.viewId === viewId);
         const document = await this.deps.read(projectId, viewId);
-        const live = document === null ? null : await this.liveRecipe(projectId, viewId, document);
+        const live = document === null ? null : await this.listeningRecipe(projectId, viewId, document);
         const cards = live === null ? [] : Object.entries(live.cards).filter(([, card]) => card.kind === 'trigger' && card.card === 'time.at');
         for (const entry of owed) {
             if (!cards.some(([cardId]) => cardId === entry.payload.cardId)) {
@@ -133,25 +206,22 @@ export class FlowRunner {
 
     /* Arms every flow this machine was left with. */
     async armAll(): Promise<void> {
-        for (const record of this.deps.switches.all()) {
-            await this.arm(record.projectId, record.viewId).catch((e: unknown) => {
-                console.error(`Arming flow ${record.viewId} failed:`, e instanceof Error ? e.message : e);
+        for (const flow of this.watched()) {
+            await this.arm(flow.projectId, flow.viewId).catch((e: unknown) => {
+                console.error(`Arming flow ${flow.viewId} failed:`, e instanceof Error ? e.message : e);
             });
         }
     }
 
-    /* Every flow that is on and has a card of this kind, for the parts that have to listen somewhere. */
+    /* Every flow that listens and has a card of this kind, for the parts that have to listen somewhere. */
     async listening(cardId: string): Promise<{ projectId: string; viewId: string; cards: [string, FlowCard][] }[]> {
         const listening: { projectId: string; viewId: string; cards: [string, FlowCard][] }[] = [];
-        for (const record of this.deps.switches.all()) {
-            if (!record.enabled) {
-                continue;
-            }
-            const document = await this.deps.read(record.projectId, record.viewId).catch(() => null);
-            const live = document === null ? null : await this.liveRecipe(record.projectId, record.viewId, document);
+        for (const flow of this.watched()) {
+            const document = await this.deps.read(flow.projectId, flow.viewId).catch(() => null);
+            const live = document === null ? null : await this.listeningRecipe(flow.projectId, flow.viewId, document);
             const cards = live === null ? [] : Object.entries(live.cards).filter(([, card]) => card.card === cardId);
             if (cards.length > 0) {
-                listening.push({ projectId: record.projectId, viewId: record.viewId, cards });
+                listening.push({ projectId: flow.projectId, viewId: flow.viewId, cards });
             }
         }
         return listening;
@@ -161,41 +231,91 @@ export class FlowRunner {
      * A trigger fired. Everything that could stop a run is here and nowhere else, and each refusal
      * leaves a line behind: a flow that did nothing has to be able to say why.
      */
-    async fire(projectId: string, viewId: string, firing: FlowTriggerFiring, depth = 1): Promise<void> {
+    async fire(projectId: string, viewId: string, firing: FlowTriggerFiring, depth = 1): Promise<FlowRun | null> {
         const document = await this.deps.read(projectId, viewId);
         if (document === null || document.cards[firing.cardId] === undefined) {
-            return;
+            return null;
+        }
+        const armed = this.deps.armed.of(projectId, viewId);
+        if (armed !== null && document.cards[armed.from] !== undefined) {
+            // One shot, spent the moment it is used, whether the test it starts gets as far as a run or not.
+            await this.deps.armed.clear(projectId, viewId);
+            await this.deps.listens?.();
+            return this.begin({
+                projectId,
+                viewId,
+                document,
+                cardId: armed.from,
+                tokens: firing.tokens ?? {},
+                depth: 1,
+                dry: armed.dry,
+                test: { from: armed.from, scope: armed.scope, ...(armed.by === undefined ? {} : { by: armed.by }) }
+            });
         }
         if ((await this.liveRecipe(projectId, viewId, document)) === null) {
-            return;
+            return null;
         }
-        if (depth > FLOW_MAX_DEPTH) {
-            await this.line(projectId, viewId, firing, 'refused', `A chain of flows stops at ${FLOW_MAX_DEPTH} deep`, depth);
-            return;
-        }
-        if ((await this.deps.timeline.since(projectId, viewId, 60_000)) >= FLOW_RUNS_PER_MINUTE) {
-            const note = `More than ${FLOW_RUNS_PER_MINUTE} runs in a minute, so this flow is sleeping it off`;
-            await this.line(projectId, viewId, firing, 'skipped', note, depth);
-            this.deps.notify({ projectId, viewId, flow: await this.deps.nameOf(projectId, viewId), text: note, at: this.now() });
-            return;
-        }
-        if ((await this.deps.timeline.openRun(projectId, viewId)) !== null) {
-            await this.line(projectId, viewId, firing, 'skipped', 'The run before this one is still going', depth);
-            return;
-        }
-        const run: FlowRun = {
-            id: `run-${this.mintId()}`,
-            trigger: firing.cardId,
-            startedAt: this.now(),
-            outcome: 'running',
+        return this.begin({
+            projectId,
+            viewId,
+            document,
+            cardId: firing.cardId,
+            tokens: firing.tokens ?? {},
             depth,
-            steps: [],
-            settled: {},
-            waiting: [],
-            tokens: firing.tokens ?? {}
-        };
-        await this.deps.timeline.put(projectId, viewId, run);
-        await this.deps.enqueue(projectId, flowKey(projectId, viewId), { kind: 'run-flow', payload: { viewId, runId: run.id } });
+            dry: this.deps.switches.of(projectId, viewId).watching === true
+        });
+    }
+
+    /*
+     * A person runs the flow now, without waiting for a trigger to come round. It is the real thing:
+     * the same guards as a firing, the switch included, so a flow that is off cannot be run this way.
+     * Trying an off flow is what a test is for.
+     */
+    async start(payload: FlowStartPayload, _by: string): Promise<FlowRun | null> {
+        const { projectId, viewId, cardId } = payload;
+        const document = await this.deps.read(projectId, viewId);
+        const card = document?.cards[cardId];
+        if (document === null || card === undefined) {
+            throw new Error(`No card ${cardId} on flow ${viewId}`);
+        }
+        if (!isTriggerCard(card)) {
+            throw new Error(`The card ${cardId} is not one a run can begin at`);
+        }
+        if ((await this.liveRecipe(projectId, viewId, document)) === null) {
+            return null;
+        }
+        return this.begin({
+            projectId,
+            viewId,
+            document,
+            cardId,
+            // The trigger did not happen, so what it would have published is filled in where that is free.
+            tokens: card.card === 'time.at' ? momentTokens(cardId, new Date(this.now())) : {},
+            depth: 1,
+            dry: this.deps.switches.of(projectId, viewId).watching === true
+        });
+    }
+
+    /*
+     * A person tries the flow out, from any card on the worksheet. The switch is not asked: building
+     * a flow, trying it and only then turning it on is the order this feature is for.
+     */
+    async test(payload: FlowTestPayload, by: string): Promise<FlowRun | null> {
+        const { projectId, viewId, from, scope } = payload;
+        const document = await this.deps.read(projectId, viewId);
+        if (document === null || document.cards[from] === undefined) {
+            throw new Error(`No card ${from} on flow ${viewId}`);
+        }
+        return this.begin({
+            projectId,
+            viewId,
+            document,
+            cardId: from,
+            tokens: payload.tokens ?? {},
+            depth: 1,
+            dry: payload.dry,
+            test: { from, scope, by }
+        });
     }
 
     /*
@@ -217,25 +337,40 @@ export class FlowRunner {
             return;
         }
         const flowName = await this.deps.nameOf(projectId, viewId);
+        const dry = run.dry === true;
+        const test = run.test !== undefined;
+        // One card and no lines: the only card this run may ever hand out is the one it began at.
+        const only = run.test?.scope === 'card' ? run.test.from : null;
         let state: FlowRunState = { entry: run.trigger, settled: { ...(run.settled ?? {}) }, running: [...(run.waiting ?? [])] };
         const steps = [...run.steps];
         const tokens: Record<string, FlowArgValue> = { ...run.tokens };
+        const wrote = (step: FlowRunStep): void => {
+            steps.push(step);
+            this.deps.step({ projectId, viewId, runId, step, settled: state.settled, waiting: state.running });
+        };
         if (entry.payload.resume !== undefined && state.running.includes(entry.payload.resume)) {
-            steps.push({ cardId: entry.payload.resume, at: this.now(), port: 'done', note: 'waited' });
-            state = settleCard(state, entry.payload.resume, 'done');
+            const resumed = entry.payload.resume;
+            state = settleCard(state, resumed, 'done');
+            wrote({ cardId: resumed, at: this.now(), port: 'done', note: 'waited' });
         }
         for (;;) {
-            const ready = readyCards(document, state);
+            const ready = readyCards(document, state).filter((cardId) => only === null || cardId === only);
             if (ready.length === 0) {
                 break;
             }
             for (const cardId of ready) {
                 const card = document.cards[cardId] as FlowCard;
+                if (skippedWhenDry(card, dry)) {
+                    const note = card.kind === 'delay' ? `would have waited ${Math.round(waitMsOf(card) / 1000)} s` : 'walked past in a dry run';
+                    state = settleCard(state, cardId, 'done');
+                    wrote({ cardId, at: this.now(), port: 'done', note, dry: true });
+                    continue;
+                }
                 if (card.kind === 'delay') {
                     /* A wait is an entry with a time on it, never a timer: a restart at 03:02 keeps it. */
-                    const waitMs = Math.max(0, numberArg(card, 'amount', 0)) * (UNIT_MS[textArg(card, 'unit')] ?? (UNIT_MS.seconds as number));
+                    const waitMs = waitMsOf(card);
                     state = { ...state, running: [...state.running, cardId] };
-                    steps.push({ cardId, at: this.now(), note: `waiting ${Math.round(waitMs / 1000)} s` });
+                    wrote({ cardId, at: this.now(), note: `waiting ${Math.round(waitMs / 1000)} s` });
                     await this.deps.enqueue(
                         projectId,
                         flowKey(projectId, viewId),
@@ -244,17 +379,18 @@ export class FlowRunner {
                     );
                     continue;
                 }
-                const outcome = await this.runCard({ projectId, viewId, flowName, runId, cardId, card, tokens });
+                const outcome = await this.runCard({ projectId, viewId, flowName, runId, cardId, card, tokens, dry, test });
                 for (const [name, value] of Object.entries(outcome.tokens ?? {})) {
                     tokens[tokenKey(cardId, name)] = value;
                 }
-                steps.push({
+                state = settleCard(state, cardId, outcome.port);
+                wrote({
                     cardId,
                     at: this.now(),
                     ...(outcome.port === null ? {} : { port: outcome.port }),
-                    ...(outcome.note === undefined ? {} : { note: outcome.note })
+                    ...(outcome.note === undefined ? {} : { note: outcome.note }),
+                    ...(outcome.dry === undefined ? {} : { dry: outcome.dry })
                 });
-                state = settleCard(state, cardId, outcome.port);
             }
         }
         const going = { ...run, steps, settled: state.settled, waiting: state.running, tokens };
@@ -290,6 +426,93 @@ export class FlowRunner {
     }
 
     /*
+     * Writes a run down and hands it to the outbox, once everything that could stop it had its say.
+     * Both ways into a run come through here, so a test cannot be the way round a guard.
+     */
+    private async begin(work: FlowRunStart): Promise<FlowRun | null> {
+        const { projectId, viewId, depth, test } = work;
+        const marks = { ...(work.dry ? { dry: true as const } : {}), ...(test === undefined ? {} : { test }) };
+        if (depth > FLOW_MAX_DEPTH) {
+            await this.line(projectId, viewId, { cardId: work.cardId }, 'refused', `A chain of flows stops at ${FLOW_MAX_DEPTH} deep`, depth, marks);
+            return null;
+        }
+        if (test !== undefined && !work.dry && this.deps.switches.of(projectId, viewId).ceiling === undefined && this.actsForSomeone(work)) {
+            const note = 'A real test of a card that acts on your behalf asks for the mode ceiling, the same as turning this flow on does';
+            await this.line(projectId, viewId, { cardId: work.cardId }, 'refused', note, depth, marks);
+            return null;
+        }
+        /*
+         * A test counts here like any other run: twenty tests that each ask a model is money. The
+         * budget on the switch is the other half of that sentence and nothing reads it yet, so this
+         * is the whole of the brake until the card that spends something arrives.
+         */
+        if ((await this.deps.timeline.since(projectId, viewId, 60_000)) >= FLOW_RUNS_PER_MINUTE) {
+            const note = `More than ${FLOW_RUNS_PER_MINUTE} runs in a minute, so this flow is sleeping it off`;
+            await this.line(projectId, viewId, { cardId: work.cardId }, 'skipped', note, depth, marks);
+            this.deps.notify({ projectId, viewId, flow: await this.deps.nameOf(projectId, viewId), text: note, at: this.now() });
+            return null;
+        }
+        if ((await this.deps.timeline.openRun(projectId, viewId)) !== null) {
+            await this.line(projectId, viewId, { cardId: work.cardId }, 'skipped', 'The run before this one is still going', depth, marks);
+            return null;
+        }
+        const run: FlowRun = {
+            id: `run-${this.mintId()}`,
+            trigger: work.cardId,
+            startedAt: this.now(),
+            outcome: 'running',
+            depth,
+            steps: [],
+            settled: {},
+            waiting: [],
+            tokens: work.tokens,
+            ...marks
+        };
+        await this.deps.timeline.put(projectId, viewId, run);
+        await this.deps.enqueue(projectId, flowKey(projectId, viewId), { kind: 'run-flow', payload: { viewId, runId: run.id } });
+        return run;
+    }
+
+    /*
+     * Whether this test would carry out a card that acts with the permission of whoever turned the
+     * flow on. No card in the catalog says so yet; the one that starts an agent is the first that
+     * will, and the guard stands before it rather than after.
+     */
+    private actsForSomeone(work: FlowRunStart): boolean {
+        if (work.test === undefined) {
+            return false;
+        }
+        return [...cardsInTest(work.document, work.test.from, work.test.scope)].some((cardId) => {
+            const card = work.document.cards[cardId];
+            return card !== undefined && needsCeiling(card);
+        });
+    }
+
+    /* Every flow this machine listens for: one that was turned on, and one with a test waiting on it. */
+    private watched(): { projectId: string; viewId: string }[] {
+        const flows = new Map<string, { projectId: string; viewId: string }>();
+        for (const record of [...this.deps.switches.all(), ...this.deps.armed.all()]) {
+            flows.set(flowKey(record.projectId, record.viewId), { projectId: record.projectId, viewId: record.viewId });
+        }
+        return [...flows.values()];
+    }
+
+    /*
+     * The recipe as far as anything may act on a trigger of it: the flow is on, or a person is
+     * waiting to try it. The second half is the price the armed test pays for real tokens, and it is
+     * deliberately the only thing a flow that is off does.
+     */
+    private async listeningRecipe(projectId: string, viewId: string, document: FlowDocument): Promise<FlowDocument | null> {
+        const live = await this.liveRecipe(projectId, viewId, document);
+        if (live !== null) {
+            return live;
+        }
+        const armed = this.deps.armed.of(projectId, viewId);
+        // A recipe that lost the card the test starts from listens for nothing until that card is back.
+        return armed !== null && document.cards[armed.from] !== undefined ? document : null;
+    }
+
+    /*
      * The recipe as far as it is allowed to run: null when the flow is off, and null after turning it
      * off because the recipe is not the one a person said yes to. That last part is the whole of the
      * guard against an agent, which may write a flow and may never turn one on.
@@ -318,7 +541,9 @@ export class FlowRunner {
         cardId: string;
         card: FlowCard;
         tokens: Readonly<Record<string, FlowArgValue>>;
-    }): Promise<{ port: FlowPort | null; note?: string; tokens?: Record<string, FlowArgValue> }> {
+        dry: boolean;
+        test: boolean;
+    }): Promise<{ port: FlowPort | null; note?: string; tokens?: Record<string, FlowArgValue>; dry?: true }> {
         const { card } = work;
         // A trigger already happened, and the cards about the graph itself carry the run on as they are.
         if (isTriggerCard(card) || card.kind === 'any' || card.kind === 'all') {
@@ -332,6 +557,10 @@ export class FlowRunner {
         const missing = argsOf(card).filter((arg) => arg.optional !== true && argApplies(card, arg) && text(arg.name).trim() === '');
         if (missing.length > 0) {
             return { port: null, note: `This card is missing ${missing.map((arg) => arg.name).join(', ')}` };
+        }
+        if (!runsForReal(card, work.dry)) {
+            // Written down with the tokens filled in, so the text of that notification can be read back.
+            return { port: 'done', note: wouldDo(card, text), dry: true };
         }
         let outcome;
         try {
@@ -363,7 +592,8 @@ export class FlowRunner {
         firing: { cardId?: string },
         outcome: FlowRun['outcome'],
         note: string,
-        depth: number
+        depth: number,
+        marks: { dry?: true; test?: FlowRunTest } = {}
     ): Promise<void> {
         await this.deps.timeline.put(projectId, viewId, {
             id: `run-${this.mintId()}`,
@@ -374,13 +604,27 @@ export class FlowRunner {
             note,
             depth,
             steps: [],
-            tokens: {}
+            tokens: {},
+            ...marks
         });
     }
 }
 
 /* Where a failure goes: out of the error port when the card has one, and nowhere when it has not. */
 const errorPortOf = (card: FlowCard): FlowPort | null => (portsOf(card).includes('error') ? 'error' : null);
+
+/* How long a wait card stands for. */
+const waitMsOf = (card: FlowCard): number => Math.max(0, numberArg(card, 'amount', 0)) * (UNIT_MS[textArg(card, 'unit')] ?? (UNIT_MS.seconds as number));
+
+/* What a card would have done, as the one line a person reads back after a dry run. */
+const wouldDo = (card: FlowCard, text: (name: string) => string): string => {
+    const fields = argsOf(card)
+        .filter((arg) => argApplies(card, arg))
+        .map((arg) => `${arg.name}: ${text(arg.name)}`)
+        .join(', ');
+    const what = card.card ?? card.kind;
+    return fields === '' ? `would have run ${what}` : `would have run ${what} with ${fields}`;
+};
 
 /* The tokens a moment publishes: the time it stood for and the day it fell on. */
 export const momentTokens = (cardId: string, at: Date): Record<string, FlowArgValue> => ({

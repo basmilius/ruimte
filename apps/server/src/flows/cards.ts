@@ -8,6 +8,13 @@ export interface FlowCardContext {
     runId: string;
     cardId: string;
     card: FlowCard;
+    /*
+     * Whether a person started this run to try the flow out. A card that could set another flow off
+     * refuses while it is set, and that has to hold in the real mode too, where every card is carried
+     * out: otherwise you test one flow and start a chain. Nothing in today's catalog can, so nothing
+     * reads it yet; the webhook and the card that fires a flow are the first that will.
+     */
+    test: boolean;
     /* A field of the card with the tokens of this run written into it. */
     text(name: string): string;
 }

@@ -9,6 +9,7 @@ import type { FlowStore } from '../projects/flow-store.ts';
 import { PROJECT_DIR } from '../projects/project-files.ts';
 import type { ProjectStore } from '../projects/project-store.ts';
 import type { SessionSink } from '../sessions/manager.ts';
+import { FlowArmStore } from './arm-store.ts';
 import { flowCardHandlers } from './cards.ts';
 import { FlowFileWatcher } from './file-trigger.ts';
 import { FlowRunner } from './runner.ts';
@@ -30,6 +31,7 @@ export interface FlowWiringDeps {
 
 export interface FlowWiring {
     switches: FlowSwitchStore;
+    armed: FlowArmStore;
     timeline: FlowTimeline;
     runner: FlowRunner;
     watcher: FlowFileWatcher;
@@ -54,24 +56,29 @@ export const wireFlows = (deps: FlowWiringDeps): FlowWiring => {
     const sinks = new ClientSinks();
     const now = deps.now ?? Date.now;
     const switches = new FlowSwitchStore(deps.home, (event) => sinks.emit(event));
+    const armed = new FlowArmStore(deps.home);
     const timeline = new FlowTimeline(deps.home, { now, emit: (event) => sinks.emit(event) });
     const notify = (event: FlowNoticeEvent): void => sinks.emit({ event: 'flow.notice', payload: event });
-    const runner = new FlowRunner({
+    // The runner reaches the watcher and the watcher reaches the runner, so neither type is inferred.
+    const runner: FlowRunner = new FlowRunner({
         read: (projectId, viewId) => deps.flows.read(projectId, viewId),
         nameOf: async (projectId, viewId) => {
             const place = await deps.projects.place(projectId).catch(() => null);
             return place?.views.find((view) => view.id === viewId)?.name ?? 'a flow';
         },
         switches,
+        armed,
         timeline,
         outbox: deps.outbox,
         enqueue: (projectId, target, work, notBefore) => deps.link.enqueue(projectId, target, work, notBefore),
         handlers: flowCardHandlers({ notify, message: deps.message, now }),
         notify,
+        step: (event) => sinks.emit({ event: 'flow.step', payload: event }),
+        listens: (): Promise<void> => watcher.refresh(),
         now,
         ...(deps.mintId ? { mintId: deps.mintId } : {})
     });
-    const watcher = new FlowFileWatcher({
+    const watcher: FlowFileWatcher = new FlowFileWatcher({
         runner,
         folderOf: async (projectId) => {
             const place = await deps.projects.place(projectId).catch(() => null);
@@ -102,6 +109,7 @@ export const wireFlows = (deps: FlowWiringDeps): FlowWiring => {
 
     return {
         switches,
+        armed,
         timeline,
         runner,
         watcher,
@@ -118,6 +126,7 @@ export const wireFlows = (deps: FlowWiringDeps): FlowWiring => {
         },
         async start() {
             await switches.load();
+            await armed.load();
             await runner.armAll();
             await watcher.refresh();
         },
