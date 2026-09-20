@@ -11,3 +11,9 @@ test('the minimum width keeps the opposite edge fixed even when crossing it', ()
     expect(resizedText(100, 200, 'left', 300)).toEqual({ x: 260, maxWidth: 40 });
     expect(resizedText(100, 200, 'right', -300)).toEqual({ x: 100, maxWidth: 40 });
 });
+
+test('Alt keeps text centered when resizing from either side', () => {
+    expect(resizedText(100, 200, 'right', 60, true)).toEqual({ x: 40, maxWidth: 320 });
+    expect(resizedText(100, 200, 'left', -60, true)).toEqual({ x: 40, maxWidth: 320 });
+    expect(resizedText(100, 200, 'left', 300, true)).toEqual({ x: 180, maxWidth: 40 });
+});

@@ -7,11 +7,14 @@ import { GRID, snapToGrid, toWorld, type Point, type Rect } from '@/canvas/math'
 import { isSpaceDown } from '@/canvas/canvas-shortcuts';
 import type { NodeSide } from '@ruimte/contracts';
 import { rectFromPoints } from '@ruimte/drawing';
+import { alignmentGuides, type AlignmentGuide } from '@/canvas/alignment-guides';
+import { AlignmentGuides } from '@/canvas/AlignmentGuides';
+import { resizedRect } from '@/canvas/resize';
 import { canLink } from '@/canvas/edge-lines';
 import { resizedText } from '@/canvas/text-resize';
 import { framePressHandsKeyboard } from '@/canvas/frame-press';
 import { useWheelCamera } from '@/canvas/use-wheel-camera';
-import { isNodeActive, NODE_SIZE, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
+import { carriedByGroups, isNodeActive, NODE_SIZE, useCanvas, useCanvasStore, type CanvasState } from '@/state/canvas';
 import { useEndpointId } from '@/state/keys';
 import { showFileOnCanvas } from '@/project/views';
 import { CanvasMenuPopup } from '@/canvas/CanvasMenu';
@@ -40,7 +43,6 @@ type Gesture =
 /* World units between two files dropped at once: a node's own width and a gutter, so the second one
    stands beside the first instead of over it. */
 const DROP_STEP = NODE_SIZE.file.w + 24;
-const MIN_NODE = { w: 240, h: 160 };
 
 /*
  * What a line being drawn would land on: whatever the canvas shows under the pointer. The pointer is
@@ -72,34 +74,13 @@ const linkTargetAt = (state: CanvasState, from: string, clientX: number, clientY
 /* Hands the keyboard back to the page, so the node that had it stops answering keys. */
 const blurActive = (): void => (document.activeElement as HTMLElement | null)?.blur();
 
-/* Snapped rect for a resize from `edge`, keeping the opposite edge fixed. */
-const resizedRect = (rect: Rect, edge: string, dx: number, dy: number): Rect => {
-    const r = { ...rect };
-    const right = rect.x + rect.w;
-    const bottom = rect.y + rect.h;
-    if (edge.includes('e')) {
-        r.w = Math.max(MIN_NODE.w, snapToGrid(rect.w + dx));
-    }
-    if (edge.includes('s')) {
-        r.h = Math.max(MIN_NODE.h, snapToGrid(rect.h + dy));
-    }
-    if (edge.includes('w')) {
-        r.x = Math.min(snapToGrid(rect.x + dx), right - MIN_NODE.w);
-        r.w = right - r.x;
-    }
-    if (edge.includes('n')) {
-        r.y = Math.min(snapToGrid(rect.y + dy), bottom - MIN_NODE.h);
-        r.h = bottom - r.y;
-    }
-    return r;
-};
-
 export function Canvas() {
     /* The editor of this cell. Everything below a render (an effect, a gesture, a menu) goes through
        it, because the cell this canvas is drawn in is not always the cell that has the focus. */
     const canvasStore = useCanvasStore();
     const rootRef = useRef<HTMLDivElement>(null);
     const gestureRef = useRef<Gesture | null>(null);
+    const [guides, setGuides] = useState<AlignmentGuide[]>([]);
     const [box, setBox] = useState<Rect | null>(null);
     const [activeGesture, setActiveGesture] = useState<Gesture['kind'] | null>(null);
     /* A drag carrying files is hanging over the canvas, which the border says so nobody has to
@@ -131,6 +112,50 @@ export function Canvas() {
         const rest = order.filter((id) => nodes[id]?.kind !== 'group');
         return Object.fromEntries([...groups, ...rest].map((id, index) => [id, index + 1]));
     }, [order, nodes]);
+
+    useLayoutEffect(() => {
+        const gesture = gestureRef.current;
+        if (!gesture || (gesture.kind !== 'move' && gesture.kind !== 'resize' && gesture.kind !== 'text-resize')) {
+            return;
+        }
+        if (gesture.kind === 'move' && !gesture.moved) {
+            return;
+        }
+        const movingGroups = gesture.kind === 'move';
+        const ids = gesture.kind === 'move' ? canvasStore.getState().selection : [gesture.kind === 'resize' ? gesture.nodeId : gesture.textId];
+        const state = canvasStore.getState();
+        const active = new Set(ids);
+        const excluded = new Set([...ids, ...(movingGroups ? carriedByGroups(state.nodes, state.texts, ids) : [])]);
+        const moving: Rect[] = [];
+        const stationary: Rect[] = [];
+        for (const node of Object.values(state.nodes)) {
+            if (state.hidden.has(node.id)) {
+                continue;
+            }
+            if (active.has(node.id)) {
+                moving.push(node);
+            } else if (!excluded.has(node.id)) {
+                stationary.push(node);
+            }
+        }
+        const root = rootRef.current!;
+        const bounds = root.getBoundingClientRect();
+        for (const element of root.querySelectorAll<HTMLElement>('[data-text-id]')) {
+            const id = element.dataset.textId!;
+            if (excluded.has(id) && !active.has(id)) {
+                continue;
+            }
+            const rect = element.getBoundingClientRect();
+            const origin = toWorld(state.camera, { x: rect.x - bounds.x, y: rect.y - bounds.y });
+            const measured = { ...origin, w: rect.width / state.camera.zoom, h: rect.height / state.camera.zoom };
+            if (active.has(id)) {
+                moving.push(measured);
+            } else {
+                stationary.push(measured);
+            }
+        }
+        setGuides(alignmentGuides(moving, stationary));
+    }, [activeGesture, nodes, texts, camera, canvasStore]);
 
     // The pages park outside this transform and may not swallow the pointer mid-gesture.
     useEffect(() => {
@@ -387,6 +412,9 @@ export function Canvas() {
                 g.last = point;
                 break;
             case 'move': {
+                if (s.locks.move) {
+                    break;
+                }
                 /* Snap the total offset, not each delta: positions stay on the grid throughout the drag. */
                 const wanted = {
                     x: snapToGrid((point.x - g.start.x) / s.camera.zoom),
@@ -415,15 +443,21 @@ export function Canvas() {
                 });
                 break;
             case 'text-resize': {
-                const { x, maxWidth } = resizedText(g.x, g.width, g.side, (point.x - g.start.x) / s.camera.zoom);
-                if (maxWidth !== s.texts[g.textId]?.maxWidth && (g.moved || Math.abs(point.x - g.start.x) > 2)) {
+                const { x, maxWidth } = resizedText(g.x, g.width, g.side, (point.x - g.start.x) / s.camera.zoom, e.altKey);
+                if ((maxWidth !== s.texts[g.textId]?.maxWidth || x !== s.texts[g.textId]?.x) && (g.moved || Math.abs(point.x - g.start.x) > 2)) {
                     s.resizeText(g.textId, x, maxWidth, !g.moved);
                     g.moved = true;
                 }
                 break;
             }
             case 'resize':
-                s.resizeNode(g.nodeId, resizedRect(g.rect, g.edge, (point.x - g.start.x) / s.camera.zoom, (point.y - g.start.y) / s.camera.zoom));
+                s.resizeNode(
+                    g.nodeId,
+                    resizedRect(g.rect, g.edge, (point.x - g.start.x) / s.camera.zoom, (point.y - g.start.y) / s.camera.zoom, {
+                        centered: e.altKey,
+                        proportional: e.shiftKey
+                    })
+                );
                 break;
             case 'link':
                 s.setLinkDraft({
@@ -440,6 +474,7 @@ export function Canvas() {
         const g = gestureRef.current;
         gestureRef.current = null;
         setActiveGesture(null);
+        setGuides([]);
         if (!g) {
             return;
         }
@@ -560,6 +595,7 @@ export function Canvas() {
                     {/* Over the nodes, so a port beside one is never covered by the node standing next to it. */}
                     <PortHints rootRef={rootRef} />
                 </div>
+                <AlignmentGuides guides={guides} camera={camera} />
                 <TextToolbar />
                 {drawIds.length === 0 && textIds.length === 0 && <EmptyCanvas />}
                 {dropping && <div className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-accent ring-inset" aria-hidden />}
