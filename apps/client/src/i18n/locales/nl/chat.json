@@ -42,6 +42,12 @@
       "summaryFailed": "De samenvatting kon niet worden gevraagd"
     }
   },
+  "resumeCompaction": {
+    "title": "Hervatten met minder context",
+    "carried": "{{tokens}} tokens van eerder",
+    "keep": "Hele geschiedenis houden",
+    "compact": "Comprimeren"
+  },
   "contextMeter": {
     "aria": "{{percent}}% van de context gebruikt",
     "percent": "{{percent}}% van de context",
@@ -192,6 +198,7 @@
     },
     "notice": {
       "clearFailed": "De thread kon niet worden gewist",
+      "compactFailed": "De context kon niet worden gecomprimeerd",
       "noAttachments": "{{agent}} neemt geen bijlagen aan",
       "thisAgent": "Deze agent",
       "rejected": "{{name}}: {{reason}}",

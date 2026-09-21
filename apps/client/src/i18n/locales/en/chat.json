@@ -42,6 +42,12 @@
       "summaryFailed": "The summary could not be asked for"
     }
   },
+  "resumeCompaction": {
+    "title": "Resume with less context",
+    "carried": "{{tokens}} tokens from earlier",
+    "keep": "Keep full history",
+    "compact": "Compact"
+  },
   "contextMeter": {
     "aria": "{{percent}}% of the context used",
     "percent": "{{percent}}% of context",
@@ -192,6 +198,7 @@
     },
     "notice": {
       "clearFailed": "The thread could not be cleared",
+      "compactFailed": "The context could not be compacted",
       "noAttachments": "{{agent}} takes no attachments",
       "thisAgent": "This agent",
       "rejected": "{{name}}: {{reason}}",

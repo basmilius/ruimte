@@ -8,7 +8,7 @@ import type { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import clsx from 'clsx';
 import { ArrowUp, ChevronDown, Clock, Copy, FastForward, Paperclip, Square, SquareSlash, X, Zap } from 'lucide-react';
-import type { AgentKind, ChatApprovalItem, ChatInfo, ChatQuestionItem, ChatSkill, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
+import type { AgentKind, ChatApprovalItem, ChatInfo, ChatItem, ChatQuestionItem, ChatSkill, ModelInfo, ModelSelection, RuntimeMode } from '@ruimte/contracts';
 import { askBeforeStoppingSubagents } from '@/agents/end-children';
 import { chatClient, type ChatSendExtras } from '@/chat';
 import { checkAttachmentLimits, filesOf, formatBytes, isImageAttachment, readAttachments, uploadBytes } from '@/chat/attachments';
@@ -24,6 +24,8 @@ import {
     type MentionQuery,
     type TextRange
 } from '@/chat/mentions';
+import { RESUME_COMPACTION_TOKENS, resumeCompactionOffer } from '@/chat/logic/resume-compaction';
+import { dismissResumeCompaction, useResumeCompactionDismissal } from '@/chat/resume-compaction-dismissals';
 import { composerStopLabel, composerStopOf } from '@/chat/subagent-list';
 import { PROMPT_MAX_CHARS, pasteBecomesAttachment, pastedTextName, promptGuard, usableSlashCommands } from '@/chat/guards';
 import { rememberChatPreferences, rememberChatSelection } from '@/chat/preferences';
@@ -34,6 +36,7 @@ import { enterAction, inCode, inFenceBody, inOpenFence, listItemAt, recallDirect
 import { ComposerInput, type ComposerInputHandle } from '@/chat/ui/ComposerInput';
 import { ContextMeter } from '@/chat/ui/ContextMeter';
 import { PromptComposer } from '@/chat/ui/PromptComposer';
+import { ResumeCompactionDock } from '@/chat/ui/ResumeCompactionDock';
 import { PROMPTS_IN_NODES } from '@/prompts/placement';
 import { ModelPicker, ModePicker, OptionsPicker, StashPicker } from '@/chat/ui/Pickers';
 import { UploadThumb } from '@/chat/ui/UploadThumb';
@@ -51,6 +54,7 @@ import { Tooltip } from '@/ui/Tooltip';
 import { FileIcon } from '@/ui/FileIcon';
 import { Icon } from '@/ui/Icon';
 import { KEY_SHORTCUTS, isModHeld, matchesShortcut } from '@/ui/shortcut';
+import { useNow } from '@/ui/useNow';
 
 const SEARCH_DEBOUNCE_MS = 80;
 // What fits above the composer without turning the picker into a file tree.
@@ -135,6 +139,21 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
     const provider = providers.find((entry) => entry.kind === info.provider);
     // Absent until the daemon answered `provider.list`, so only an explicit false hides anything.
     const capabilities = provider?.capabilities;
+    const compaction = capabilities?.compaction;
+    const dismissedTurnId = useResumeCompactionDismissal(chatId);
+    /* The cheap half of the offer, so a chat that can never make one keeps no timer. */
+    const couldOfferCompaction = compaction !== undefined && compaction !== 'none' && info.usage.contextTokens >= RESUME_COMPACTION_TOKENS;
+    const now = useNow(60_000, couldOfferCompaction);
+    /* Left to the compiler: a dependency on `capabilities` is one it cannot prove stable, so a `useMemo` here would turn the whole component off. */
+    const compactionOffer = !couldOfferCompaction
+        ? null
+        : resumeCompactionOffer({
+              info,
+              compaction,
+              items: (order ?? []).map((id) => items?.[id]).filter((item): item is ChatItem => item !== undefined),
+              dismissedTurnId,
+              now
+          });
     const models: ModelInfo[] = provider?.models ?? [];
     const model = models.find((entry) => entry.slug === info.selection.model);
     const busy = info.activeTurnId !== null;
@@ -321,6 +340,10 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
             }
             setNotice(t('composer.notice.clearFailed'));
         }
+    };
+
+    const compact = (): void => {
+        void chatClient.compact(chatId).catch(() => setNotice(t('composer.notice.compactFailed')));
     };
 
     const runCommand = (name: string): boolean => {
@@ -721,6 +744,13 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                     denyReason={capabilities?.denyReason === true}
                     onAllAnswered={() => inputRef.current?.focus()}
                 >
+                    {compactionOffer && (
+                        <ResumeCompactionDock
+                            tokens={compactionOffer.tokens}
+                            onCompact={compact}
+                            onDismiss={() => dismissResumeCompaction(endpointId, chatId, compactionOffer.turnId)}
+                        />
+                    )}
                     {commandMenuOpen && (
                         <div className="border-b border-border px-1.5 py-1.5">
                             {commands.map((command, index) => (
@@ -926,7 +956,7 @@ export function Composer({ chatId, info, focused, onCanvas, disabled, providerFi
                         <ModePicker runtimeMode={info.runtimeMode} onChange={(runtimeMode) => configure({ runtimeMode })} />
                         <StashPicker onRestore={restoreStashed} />
                         <span className="grow" />
-                        <ContextMeter usage={info.usage} disabled={busy || disabled} onCompact={() => void chatClient.compact(chatId).catch(() => undefined)} />
+                        <ContextMeter usage={info.usage} disabled={busy || disabled} onCompact={compact} />
                         <div ref={setDictationToolbar} className="flex shrink-0 items-center" />
                         {busy && (
                             <Tooltip label={composerStopLabel()} name>

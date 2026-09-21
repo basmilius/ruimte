@@ -185,11 +185,11 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
 <body>
 <a class="skip" href="#kort">Naar de samenvatting</a>
 <header>
-  <p class="eyebrow">RUIMTE / ONTWERP / 16 SEPTEMBER 2026</p>
+  <p class="eyebrow">RUIMTE / ONTWERP / 16 SEPTEMBER 2026, BIJGEWERKT 21 SEPTEMBER 2026</p>
   <h1>Hervatten met minder context</h1>
   <p class="intro">Een chat die lang stil lag en veel context draagt, kost bij de volgende boodschap veel: de CLI stuurt het hele gesprek opnieuw, en na een uur is daar niets meer van in de cache. Dit ontwerp laat de composer dat moment herkennen en in één klik aanbieden om de context eerst te compacteren.</p>
-  <p class="status">Ontwerp, tegen <code>5b3b2d69</code>; nog geen code geschreven</p>
-  <p class="caption">Bronnen: <code>apps/client/src/chat/ui</code> (<code>Composer.tsx</code>, <code>ContextMeter.tsx</code>, <code>PendingDock.tsx</code>), <code>apps/client/src/shell/usage/limits.ts</code>, <code>apps/server/src/chat</code> (<code>chat-session.ts</code>, <code>claude-protocol.ts</code>, <code>codex-protocol.ts</code>, <code>projector.ts</code>), <code>packages/contracts/src/chat.ts</code>. <span class="badge confirmed">geverifieerd</span> staat bij wat in de code is nagelezen, <span class="badge warning">afgeleid</span> bij wat pas tijdens de bouw hard wordt.</p>
+  <p class="status">Gebouwd op 21 september 2026, boven op <code>ee79d504</code></p>
+  <p class="caption">Bronnen: <code>apps/client/src/chat/ui</code> (<code>Composer.tsx</code>, <code>ContextMeter.tsx</code>, <code>PromptComposer.tsx</code>), <code>apps/client/src/ui/useNow.ts</code>, <code>apps/client/src/format/number.ts</code>, <code>apps/server/src/chat</code> (<code>chat-session.ts</code>, <code>claude-protocol.ts</code>, <code>codex-protocol.ts</code>, <code>projector.ts</code>), <code>packages/contracts/src/chat.ts</code>. <span class="badge confirmed">geverifieerd</span> staat bij wat in de code is nagelezen, <span class="badge warning">afgeleid</span> bij wat pas tijdens de bouw hard wordt.</p>
   <nav aria-label="Inhoud">
     <a href="#kort">Kort</a>
     <a href="#nu">Wat er al is</a>
@@ -210,11 +210,11 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
     <h2>Wat er al is</h2>
     <ul>
       <li><span class="badge confirmed">geverifieerd</span> <code>ChatInfo.usage</code> (<code>ChatUsageSchema</code>, <code>chat.ts:9</code>) draagt <code>contextTokens</code>, <code>contextWindow</code>, <code>costUsd</code> en <code>turns</code>. Claude vult <code>contextTokens</code> met input plus cache-creatie plus cache-lezen van het laatste <code>assistant</code>-frame (<code>claude-protocol.ts:31</code>), het venster uit <code>modelUsage</code> van het <code>result</code>-frame. Codex neemt <code>tokenUsage.last.totalTokens</code> en <code>modelContextWindow</code> uit <code>thread/tokenUsage/updated</code>.</li>
-      <li><span class="badge confirmed">geverifieerd</span> <code>ContextMeter</code> tekent een ring in de werkbalk van de composer, met een popover die percentage, tokens, beurten, kosten en een knop "Compact context" toont. Die knop, en <code>/compact</code> in de composer, roepen <code>chatClient.compact(chatId)</code> aan.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>ContextMeter</code> tekent een ring in de werkbalk van de composer, met een popover die percentage, tokens, beurten, kosten en een knop "Compact context" toont. Die knop, en <code>/compact</code> in de composer, roepen <code>chatClient.compact(chatId)</code> aan. <code>formatTokens</code> staat al in <code>format/number.ts</code>; het verplaatsen dat dit ontwerp eerst voorstelde is niet meer nodig.</li>
       <li><span class="badge confirmed">geverifieerd</span> <code>ChatSession.compact()</code> kiest per CLI: Claude (<code>'prompt'</code>) krijgt <code>/compact</code> als gewone beurt, Codex (<code>'native'</code>) een beurt zonder boodschap met <code>thread/compact/start</code>, een terminal-provider weigert met <code>chat-unsupported</code>. Claude's <code>compact_boundary</code> (met <code>pre_tokens</code>) en Codex' <code>contextCompaction</code> worden een <code>compaction</code>-item, dat de client als <code>CompactionRow</code> tekent.</li>
       <li><span class="badge confirmed">geverifieerd</span> Het einde van een beurt staat al op de wire: <code>ChatTurnItemSchema.endedAt</code>. Er is dus geen nieuw veld nodig om te weten hoe lang een chat stil ligt.</li>
-      <li><span class="badge confirmed">geverifieerd</span> <code>QuestionDock</code> en <code>ApprovalDock</code> zitten bovenaan de kaart van de composer, één tegelijk, vóór de menu's en de invoer (<code>Composer.tsx:692</code>). Dat is de plek en de vorm voor het nieuwe dock.</li>
-      <li><span class="badge confirmed">geverifieerd</span> <code>limits.ts</code> heeft een klok die per minuut <code>Date.now()</code> ververst (regel 67), maar die is lokaal voor die module.</li>
+      <li><span class="badge danger">veranderd</span> <code>QuestionDock</code> en <code>ApprovalDock</code> bestaan niet meer. Een openstaande vraag of goedkeuring is een promptkaart: <code>PromptComposer</code> (<code>chat/ui/PromptComposer.tsx</code>) zet een <code>PromptView</code> in de plaats van de hele composer, of, met de promptstapel op het canvas, een regel die naar beneden wijst. De inhoud van de composer is de <code>children</code> van dat component, dus wat daar staat verdwijnt vanzelf zolang een prompt openstaat.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <code>useNow(intervalMs, ticking)</code> in <code>ui/useNow.ts</code> is al de gedeelde klok, met een vlag zodat hij alleen loopt als er iets te tellen valt. <code>limits.ts</code> houdt daarnaast nog een eigen <code>useMinute</code>; die dubbeling hoort niet bij dit werk.</li>
     </ul>
     <p class="note">De meter laat al zien hoe vol de context is, en compacteren kan al. Wat ontbreekt is het moment: een persoon die na een lunch of een nacht terugkomt, ziet niet dat de volgende boodschap het hele gesprek zonder cache opnieuw laat lezen.</p>
   </section>
@@ -236,7 +236,7 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
       <li><strong>Compact</strong> roept <code>chatClient.compact(chatId)</code> aan. De chat wordt daarmee bezig, dus het dock verdwijnt; na afloop staat de compactierij in de thread en zakt de ring.</li>
       <li><strong>Keep full history</strong> onthoudt de weigering voor deze chat tot er een nieuwe beurt is geweest. Ligt de chat daarna weer 70 minuten stil, dan komt het dock terug.</li>
       <li>Een persoon die gewoon typt en verstuurt, kiest daarmee de volle geschiedenis. Het dock blokkeert niets en vangt geen toetsen af; Enter blijft versturen.</li>
-      <li>Een vraag of goedkeuring gaat voor: zolang <code>QuestionDock</code> of <code>ApprovalDock</code> staat, verschijnt dit dock niet.</li>
+      <li>Een vraag of goedkeuring gaat voor, en dat kost geen regel: het dock staat in de <code>children</code> van <code>PromptComposer</code>, die zijn kinderen verbergt zolang er een promptkaart is.</li>
     </ul>
     <p>Het dock telt niet mee als aandacht (<code>state/attention.ts</code>). Het is een aanbod binnen een chat die iemand al voor zich heeft, geen reden om een node op te lichten.</p>
   </section>
@@ -251,7 +251,7 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
           <tr><th scope="row"><code>capabilities.compaction !== 'none'</code></th><td>Claude (<code>'prompt'</code>) en Codex (<code>'native'</code>) kunnen compacteren; een terminal-provider niet. <code>ProviderCapabilities.compaction</code> (<code>model.ts:72</code>) is in de composer al bekend, dus de regel noemt geen provider bij naam.</td></tr>
           <tr><th scope="row"><code>usage.contextTokens &gt;= 100_000</code></th><td>Een absoluut aantal, geen percentage: de kosten van opnieuw lezen hangen af van de tokens, niet van hoe groot het venster is. Bij een venster van 1M is 100k maar 10% en toch duur.</td></tr>
           <tr><th scope="row">laatste <code>turn.endedAt</code> minstens 70 min geleden</th><td><span class="badge warning">afgeleid</span> De langste promptcache van Claude houdt een uur; 70 minuten ligt daar zeker voorbij. Een drempel onder het uur zou compacteren aanbieden terwijl de cache nog warm is. Voor Codex geldt dezelfde drempel; hoe lang zijn cache houdt, is niet nagegaan.</td></tr>
-          <tr><th scope="row">niet bezig, geen wachtrij, geen vraag of goedkeuring</th><td>Compacteren tijdens een beurt kan niet, en wat op de persoon wacht gaat voor.</td></tr>
+          <tr><th scope="row">niet bezig en geen wachtrij</th><td>Compacteren tijdens een beurt kan niet, en een wachtrij is een beurt die eraan komt. Een openstaande vraag of goedkeuring staat niet in de beslisfunctie: <code>PromptComposer</code> verbergt het dock dan al.</td></tr>
           <tr><th scope="row">geen <code>compaction</code>-item in de laatste beurt</th><td><span class="badge warning">afgeleid</span> Na een compactie kan <code>contextTokens</code> nog het oude getal tonen tot het volgende verzoek. Zonder deze regel zou het dock direct terugkomen. De regel kijkt naar de beurt en niet naar de laatste boodschap, omdat de compactie van Codex een beurt zonder boodschap van de persoon is.</td></tr>
           <tr><th scope="row">niet geweigerd voor deze laatste beurt</th><td>"Keep full history" geldt tot de volgende beurt.</td></tr>
         </tbody>
@@ -273,30 +273,40 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
         <p class="accept">Klaar als de tests slagen zonder timers of <code>Date.now()</code>.</p>
       </div></li>
       <li class="step"><div>
-        <h3>De klok en de weigering</h3>
+        <h3>De weigering en de klok</h3>
         <ul>
-          <li>De minutenklok uit <code>limits.ts</code> wordt een gedeelde hook (bijvoorbeeld <code>useMinuteNow</code>), en <code>limits.ts</code> gebruikt die ook. De composer zet hem alleen aan als de chat kan compacteren en genoeg tokens draagt, zodat niet elke chat op het canvas een timer heeft.</li>
-          <li>De weigering is lokale state per client, niet in <code>project.json</code>: een zustand-map van chat naar <code>dismissedTurnId</code>, met de sleutel uit <code>state/keys.ts</code>. Alleen in het geheugen: na herladen komt het aanbod terug, en dat is prima voor iets wat hooguit een keer per stilte verschijnt.</li>
+          <li>De weigering is lokale state per client, niet in <code>project.json</code>: een zustand-map van chat naar <code>dismissedTurnId</code> in <code>chat/resume-compaction-dismissals.ts</code>, met de sleutel uit <code>state/keys.ts</code>. Alleen in het geheugen: na herladen komt het aanbod terug, en dat is prima voor iets wat hooguit een keer per stilte verschijnt.</li>
+          <li>De klok is <code>useNow(60_000, ticking)</code> uit <code>ui/useNow.ts</code>. De composer zet hem alleen aan als de chat kan compacteren en genoeg tokens draagt, zodat niet elke chat op het canvas een timer heeft.</li>
         </ul>
-        <p class="accept">Klaar als de bestaande tests van <code>limits.ts</code> nog slagen en <code>bun run check</code> geen nieuwe selector meldt die per aanroep een object bouwt.</p>
+        <p class="accept">Klaar als de map per machine gesleuteld is en <code>bun run check</code> geen selector meldt die per aanroep een object bouwt.</p>
       </div></li>
       <li class="step"><div>
         <h3>Het dock</h3>
         <ul>
-          <li><code>ResumeCompactionDock</code> in <code>chat/ui/PendingDock.tsx</code>, naast de twee andere docks en met dezelfde rand en afstanden. Icoon <code>Minimize2</code> via <code>Icon</code>, titel, tokens met <code>formatTokens</code> uit <code>ContextMeter.tsx</code> (die functie gaat naar een gedeelde plek), en twee <code>Button</code>s.</li>
-          <li><code>Composer.tsx</code>: toont het dock als <code>!question &amp;&amp; !approvals[0] &amp;&amp; offer</code>. Compact deelt de handler met de <code>ContextMeter</code>; een fout wordt de bestaande <code>notice</code>-regel in plaats van een stille <code>catch</code>.</li>
+          <li><code>ResumeCompactionDock</code> in <code>chat/ui/ResumeCompactionDock.tsx</code>: icoon <code>Minimize2</code> via <code>Icon</code>, titel, tokens met <code>formatTokens</code> uit <code>format/number</code>, en twee knoppen. Rand en afstanden volgen de regel die <code>PromptComposer</code> gebruikt voor "wacht hieronder".</li>
+          <li><code>Composer.tsx</code>: het dock is het eerste kind van <code>PromptComposer</code>, boven de menu's. Een promptkaart verbergt het dus zonder dat de beslisfunctie van prompts hoeft te weten. Compact deelt de handler met de <code>ContextMeter</code>; een fout wordt de bestaande <code>notice</code>-regel in plaats van een stille <code>catch</code>.</li>
+          <li>Het aanbod wordt in de render berekend, zonder <code>useMemo</code>. <code>capabilities</code> komt uit <code>providers.find</code>, en die kan de React-compiler niet als stabiel bewijzen, dus een handmatige memo op die afhankelijkheid zet de optimalisatie van het hele component uit. De goedkope helft van de voorwaarde staat ervoor, en die bepaalt ook of de klok loopt.</li>
           <li>Geen sneltoets: dit aanbod verdient er geen, en een toets zonder modifier mag niet.</li>
         </ul>
         <p class="accept">Klaar als in de Electron-dev-app een Claude-chat en een Codex-chat met elk ruim 100k tokens, waarvan <code>endedAt</code> van de laatste beurt handmatig 71 minuten terug is gezet in het record, het dock tonen; Compact bij beide een compactierij oplevert en het dock weghaalt; Keep full history het dock weghaalt tot na de volgende beurt; een openstaande goedkeuring het dock verbergt; het dock in licht en donker alleen semantische tokens gebruikt.</p>
       </div></li>
+      <li class="step"><div>
+        <h3>De woorden</h3>
+        <ul>
+          <li>Vier sleutels onder <code>resumeCompaction</code> in <code>i18n/locales/en/chat.json</code> en <code>nl/chat.json</code>: titel, de regel met tokens, en de twee knoppen. Engels is de bron, <code>locales.test.ts</code> laat de twee niet uit elkaar lopen.</li>
+          <li>Het Nederlands volgt de woordenlijst: token, chat en context blijven staan, comprimeren is wat <code>contextMeter.compact</code> al zegt.</li>
+        </ul>
+        <p class="accept">Klaar als <code>locales.test.ts</code> slaagt en geen sleutel in de UI zichtbaar is.</p>
+      </div></li>
     </ol>
-    <p>Omvang: drie nieuwe of aangepaste bestanden in <code>chat</code>, een verplaatste hook en een verplaatste formatter. Geen wijziging in <code>packages/contracts</code>, dus geen Swift-generatie.</p>
+    <p class="note">Gebouwd op 21 september 2026: <code>chat/logic/resume-compaction.ts</code> met zeven tests, <code>chat/resume-compaction-dismissals.ts</code>, <code>chat/ui/ResumeCompactionDock.tsx</code>, de aansluiting in <code>Composer.tsx</code> en de sleutels in beide talen. <code>bun run format</code>, <code>bun run check</code> en <code>bun run test</code> (4163 tests) slagen. De acceptatie in de Electron-dev-app, met een beurt waarvan <code>endedAt</code> handmatig 71 minuten terug staat, is nog niet gedaan.</p>
+    <p>Omvang: drie nieuwe bestanden in <code>chat</code>, een aanpassing in <code>Composer.tsx</code> en twee locale-bestanden. Geen wijziging in <code>packages/contracts</code>, dus geen Swift-generatie.</p>
   </section>
 
   <section id="grenzen">
     <h2>Grenzen en risico's</h2>
     <ul>
-      <li><span class="badge confirmed">geverifieerd</span> <strong>Na een herstart van de daemon.</strong> Het chatrecord bewaart de hele <code>ChatInfo</code>, dus ook <code>usage</code> (<code>chat-store.ts:42</code>); alleen een nieuwe chat begint op 0 (<code>chat-manager.ts:298</code>). Een chat die een nacht stil lag en waarvan de daemon intussen herstartte, krijgt het dock dus ook.</li>
+      <li><span class="badge confirmed">geverifieerd</span> <strong>Na een herstart van de daemon.</strong> Het chatrecord bewaart de hele <code>ChatInfo</code>, dus ook <code>usage</code> (<code>chat-store.ts:16</code>); alleen een nieuwe chat begint op 0 (<code>chat-manager.ts:341</code>). Een chat die een nacht stil lag en waarvan de daemon intussen herstartte, krijgt het dock dus ook.</li>
       <li><span class="badge warning">afgeleid</span> <strong>De samenvatting is die van de CLI.</strong> Wat Claude of Codex na een compactie onthoudt, bepaalt die CLI. De tekst van het dock belooft daarom minder context, geen behoud van alles.</li>
       <li><strong>De drempels zijn geen meting.</strong> 70 minuten volgt uit de cacheduur van Claude en is voor Codex overgenomen, 100.000 tokens is een oordeel. Beide zijn één constante om bij te stellen.</li>
       <li><strong>De iPhone-app</strong> krijgt het dock niet in deze ronde. Er verandert niets op de wire, dus de app kan dezelfde regel later zelf toepassen.</li>
@@ -305,6 +315,6 @@ summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--accen
   </section>
 
 </main>
-<footer><p>Nagelezen: <code>ChatUsageSchema</code> en <code>ChatTurnItemSchema</code> in contracts, <code>ChatSession.compact</code>, het parsen van usage en compactie in beide protocollen, <code>projector.ts</code>, <code>ContextMeter.tsx</code>, de plek van de docks in <code>Composer.tsx</code> en de klok in <code>limits.ts</code>. Ook nagelezen: het bewaren van <code>usage</code> in het chatrecord. Afgeleid: de cacheduur als grond voor 70 minuten, ook voor Codex, en het oude <code>contextTokens</code> direct na een compactie. Niet gedaan: code geschreven, een drempel gemeten, dit rapport in een browser gerenderd.</p></footer>
+<footer><p>Opnieuw nagelezen op 21 september 2026 tegen <code>ee79d504</code>: <code>ChatUsageSchema</code> en <code>ChatTurnItemSchema</code> in contracts, <code>ChatSession.compact</code>, het parsen van usage en compactie in beide protocollen, <code>projector.ts</code>, <code>ContextMeter.tsx</code>, <code>Composer.tsx</code>, <code>PromptComposer.tsx</code>, <code>ui/useNow.ts</code>, <code>format/number.ts</code> en het bewaren van <code>usage</code> in het chatrecord. Drie dingen waren verlopen: de twee docks zijn promptkaarten geworden, <code>formatTokens</code> staat al op een gedeelde plek en de gedeelde minutenklok bestaat al. Afgeleid: de cacheduur als grond voor 70 minuten, ook voor Codex, en het oude <code>contextTokens</code> direct na een compactie. Niet gedaan: een drempel gemeten, dit rapport in een browser gerenderd.</p></footer>
 </body>
 </html>
