@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { isAgentKind, useCanvas, useCanvasStore } from '@/state/canvas';
 import { edgeLines, fixedSides, selectedLine, textRect } from '@/canvas/edge-lines';
-import { edgeLook, lineRole } from '@/canvas/edge-look';
+import { edgeLook, lineMeaning } from '@/canvas/edge-look';
 import { routeDraft, routeEdge, selfRoute, SIDE_NORMAL, type Obstacle, type Side } from '@/canvas/edge-route';
 import { markerPath, type MarkerShape } from '@/canvas/marker-path';
 import type { Point, Rect } from '@/canvas/math';
@@ -162,7 +162,7 @@ export function EdgeLayer() {
                 // A line a task went along says how the task stands, and only looks open while it is.
                 const task = edgeTask(tasks, line.edge.from, line.edge.to) ?? (line.back === null ? null : edgeTask(tasks, line.back.from, line.back.to));
                 const label = task === null ? line.label : taskEdgeLabel(task.status);
-                const look = edgeLook(lineRole(line, readsContext, drivenByAgent), {
+                const look = edgeLook(lineMeaning(line, readsContext, drivenByAgent), {
                     pair: line.back !== null,
                     openTask: task !== null && task.status === 'open'
                 });

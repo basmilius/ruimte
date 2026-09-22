@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ProjectEdge } from '@ruimte/contracts';
 import type { EdgeLine } from './edge-lines';
-import { edgeLook, lineRole, type EdgeLook } from './edge-look';
+import { edgeLook, lineMeaning, type EdgeLook } from './edge-look';
 
 const edgeOf = (from: string, to: string, role?: string): ProjectEdge => ({ id: `${from}-${to}`, from, to, ...(role === undefined ? {} : { role }) });
 
@@ -20,73 +20,81 @@ const driven = (nodeId: string): boolean => nodeId === 'page' || nodeId === 'pho
 
 const solo = { pair: false, openTask: false };
 
-describe('lineRole', () => {
+const roleOf = (line: EdgeLine): string => lineMeaning(line, reads, driven).role;
+
+const look = (role: 'context' | 'target' | 'origin' | 'plain', options = solo): EdgeLook => edgeLook({ role, reversed: false }, options);
+
+describe('lineMeaning', () => {
     test('a line without a role into an agent still reads, which is every project drawn so far', () => {
-        expect(lineRole(lineOf(edgeOf('note', 'agent')), reads, driven)).toBe('context');
-        expect(lineRole(lineOf(edgeOf('note', 'page')), reads, driven)).toBe('plain');
+        expect(roleOf(lineOf(edgeOf('note', 'agent')))).toBe('context');
+        expect(roleOf(lineOf(edgeOf('note', 'page')))).toBe('plain');
     });
 
     test('a line out of an agent into something that never reads is the same context line', () => {
-        expect(lineRole(lineOf(edgeOf('agent', 'note')), reads, driven)).toBe('context');
+        expect(roleOf(lineOf(edgeOf('agent', 'note')))).toBe('context');
     });
 
-    test('a line out of an agent into a device or a page says the agent works there', () => {
-        expect(lineRole(lineOf(edgeOf('agent', 'phone')), reads, driven)).toBe('target');
-        expect(lineRole(lineOf(edgeOf('agent', 'page')), reads, driven)).toBe('target');
+    test('a line between an agent and a device or a page says the agent works there, drawn either way', () => {
+        expect(roleOf(lineOf(edgeOf('agent', 'phone')))).toBe('target');
+        expect(roleOf(lineOf(edgeOf('page', 'agent')))).toBe('target');
+        expect(roleOf(lineOf(edgeOf('agent', 'phone'), edgeOf('phone', 'agent')))).toBe('target');
     });
 
-    test('the same line drawn the other way is what the agent reads, so it stays a context line', () => {
-        expect(lineRole(lineOf(edgeOf('phone', 'agent')), reads, driven)).toBe('context');
-        expect(lineRole(lineOf(edgeOf('page', 'agent')), reads, driven)).toBe('context');
-    });
-
-    test('a pair between an agent and a device says the reading out loud, so it is drawn as one', () => {
-        expect(lineRole(lineOf(edgeOf('agent', 'phone'), edgeOf('phone', 'agent')), reads, driven)).toBe('context');
+    test('the head of a target line sits at the node being worked on, however the line was drawn', () => {
+        expect(lineMeaning(lineOf(edgeOf('agent', 'page')), reads, driven).reversed).toBe(false);
+        expect(lineMeaning(lineOf(edgeOf('page', 'agent')), reads, driven).reversed).toBe(true);
+        expect(edgeLook(lineMeaning(lineOf(edgeOf('page', 'agent')), reads, driven), solo)).toEqual({
+            tail: 'chevron',
+            head: 'none',
+            dashed: false,
+            accent: false,
+            width: 2
+        });
     });
 
     test('between two agents a line keeps reading into its head, whatever lies at the tail', () => {
-        expect(lineRole(lineOf(edgeOf('agent', 'other-agent')), reads, driven)).toBe('context');
+        expect(roleOf(lineOf(edgeOf('agent', 'other-agent')))).toBe('context');
     });
 
     test('the role written on the line decides, whichever direction of a pair carries it', () => {
-        expect(lineRole(lineOf(edgeOf('agent', 'page', 'target')), reads, driven)).toBe('target');
-        expect(lineRole(lineOf(edgeOf('phone', 'agent', 'target')), reads, driven)).toBe('target');
-        expect(lineRole(lineOf(edgeOf('agent', 'other-agent'), edgeOf('other-agent', 'agent', 'origin')), reads, driven)).toBe('origin');
+        expect(roleOf(lineOf(edgeOf('agent', 'page', 'target')))).toBe('target');
+        expect(roleOf(lineOf(edgeOf('phone', 'agent', 'target')))).toBe('target');
+        expect(roleOf(lineOf(edgeOf('agent', 'other-agent'), edgeOf('other-agent', 'agent', 'origin')))).toBe('origin');
     });
 
     test('a role a newer Ruimte wrote is no role here, so the line is drawn the way it was', () => {
-        expect(lineRole(lineOf(edgeOf('note', 'agent', 'beams')), reads, driven)).toBe('context');
-        expect(lineRole(lineOf(edgeOf('note', 'page', 'beams')), reads, driven)).toBe('plain');
+        expect(roleOf(lineOf(edgeOf('note', 'agent', 'beams')))).toBe('context');
+        expect(roleOf(lineOf(edgeOf('note', 'page', 'beams')))).toBe('plain');
     });
 });
 
 describe('edgeLook', () => {
     test('a context line one way gives at its tail and is read at its head', () => {
-        expect(edgeLook('context', solo)).toEqual({ tail: 'none', head: 'dot', dashed: false, accent: true, width: 2 });
+        expect(look('context')).toEqual({ tail: 'none', head: 'dot', dashed: false, accent: true, width: 2 });
     });
 
     test('a pair reads both ways, so both ends are closed off the same', () => {
-        expect(edgeLook('context', { pair: true, openTask: false })).toEqual({ tail: 'dot', head: 'dot', dashed: false, accent: true, width: 2 });
+        expect(look('context', { pair: true, openTask: false })).toEqual({ tail: 'dot', head: 'dot', dashed: false, accent: true, width: 2 });
     });
 
     test('a task still out dashes the context line it runs along, however the pair stands', () => {
         const open: EdgeLook = { tail: 'none', head: 'dot', dashed: true, accent: true, width: 2 };
-        expect(edgeLook('context', { pair: false, openTask: true })).toEqual(open);
-        expect(edgeLook('context', { pair: true, openTask: true })).toEqual(open);
+        expect(look('context', { pair: false, openTask: true })).toEqual(open);
+        expect(look('context', { pair: true, openTask: true })).toEqual(open);
         // Settled, the line is a context line again and says so only in its label.
-        expect(edgeLook('context', solo).dashed).toBe(false);
+        expect(look('context').dashed).toBe(false);
     });
 
     test('a target points into the thing it drives and stays neutral', () => {
-        expect(edgeLook('target', solo)).toEqual({ tail: 'none', head: 'chevron', dashed: false, accent: false, width: 2 });
+        expect(look('target')).toEqual({ tail: 'none', head: 'chevron', dashed: false, accent: false, width: 2 });
     });
 
     test('an origin points at what was opened, thinner than the rest', () => {
-        expect(edgeLook('origin', solo)).toEqual({ tail: 'dot', head: 'arrow', dashed: true, accent: false, width: 1 });
-        expect(edgeLook('origin', solo).width).toBeLessThan(edgeLook('plain', solo).width);
+        expect(look('origin')).toEqual({ tail: 'dot', head: 'arrow', dashed: true, accent: false, width: 1 });
+        expect(look('origin').width).toBeLessThan(look('plain').width);
     });
 
     test('a plain line carries nothing, so neither end points anywhere', () => {
-        expect(edgeLook('plain', solo)).toEqual({ tail: 'dot', head: 'dot', dashed: false, accent: false, width: 2 });
+        expect(look('plain')).toEqual({ tail: 'dot', head: 'dot', dashed: false, accent: false, width: 2 });
     });
 });
